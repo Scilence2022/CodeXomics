@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genome Browser</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="app-title">
+                    <i class="fas fa-dna"></i>
+                    Genome Browser
+                </h1>
+            </div>
+            <div class="header-center">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search sequence or gene..." class="search-input">
+                    <button id="searchBtn" class="search-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="position-container">
+                    <input type="text" id="positionInput" placeholder="Chr:start-end" class="position-input">
+                    <button id="goToBtn" class="goto-btn">Go</button>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="openFileBtn" class="btn btn-primary">
+                    <i class="fas fa-folder-open"></i>
+                    Open File
+                </button>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <label for="chromosomeSelect">Chromosome:</label>
+                <select id="chromosomeSelect" class="select">
+                    <option value="">Select chromosome...</option>
+                </select>
+            </div>
+            <div class="toolbar-section">
+                <label>Zoom:</label>
+                <button id="zoomInBtn" class="btn btn-sm">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button id="zoomOutBtn" class="btn btn-sm">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button id="resetZoomBtn" class="btn btn-sm">Reset</button>
+            </div>
+            <div class="toolbar-section">
+                <label for="trackSelect">Tracks:</label>
+                <select id="trackSelect" class="select" multiple>
+                    <option value="sequence">Sequence</option>
+                    <option value="genes">Genes</option>
+                    <option value="variants">Variants</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>File Information</h3>
+                    <div id="fileInfo" class="file-info">
+                        <p class="no-file">No file loaded</p>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Navigation</h3>
+                    <div class="navigation-controls">
+                        <button id="prevBtn" class="btn btn-block">
+                            <i class="fas fa-chevron-left"></i>
+                            Previous
+                        </button>
+                        <button id="nextBtn" class="btn btn-block">
+                            Next
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Statistics</h3>
+                    <div id="stats" class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Length:</span>
+                            <span class="stat-value" id="sequenceLength">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">GC Content:</span>
+                            <span class="stat-value" id="gcContent">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Current Position:</span>
+                            <span class="stat-value" id="currentPosition">-</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Viewer Area -->
+            <div class="viewer-container">
+                <div id="genomeViewer" class="genome-viewer">
+                    <div class="welcome-screen">
+                        <div class="welcome-content">
+                            <i class="fas fa-dna welcome-icon"></i>
+                            <h2>Welcome to Genome Browser</h2>
+                            <p>Open a genome file to start exploring</p>
+                            <button id="welcomeOpenBtn" class="btn btn-primary btn-lg">
+                                <i class="fas fa-folder-open"></i>
+                                Open Genome File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sequence Display -->
+                <div id="sequenceDisplay" class="sequence-display" style="display: none;">
+                    <div class="sequence-header">
+                        <h4 id="sequenceTitle">Sequence View</h4>
+                        <div class="sequence-controls">
+                            <button id="copySequenceBtn" class="btn btn-sm">
+                                <i class="fas fa-copy"></i>
+                                Copy
+                            </button>
+                            <button id="exportBtn" class="btn btn-sm">
+                                <i class="fas fa-download"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sequenceContent" class="sequence-content"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="statusText">Ready</span>
+            </div>
+            <div class="status-right">
+                <span id="coordinateDisplay">Position: -</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="searchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Search Sequence</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="modalSearchInput" placeholder="Enter sequence to search..." class="input-full">
+                <div class="search-options">
+                    <label>
+                        <input type="checkbox" id="caseSensitive"> Case sensitive
+                    </label>
+                    <label>
+                        <input type="checkbox" id="reverseComplement"> Include reverse complement
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modalSearchBtn" class="btn btn-primary">Search</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gotoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Go to Position</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="modalPositionInput" placeholder="Chr:start-end or position" class="input-full">
+                <p class="help-text">Examples: chr1:1000-2000, 1500, chr2:500000</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalGotoBtn" class="btn btn-primary">Go</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Loading genome data...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html> 

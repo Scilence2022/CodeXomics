@@ -1,0 +1,54 @@
+{
+  "name": "electron-genome-viewer",
+  "version": "1.0.0",
+  "description": "A modern genome browser built with Electron",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "genome",
+    "browser",
+    "bioinformatics",
+    "electron",
+    "genomics"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.3.11",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "d3": "^7.8.5",
+    "file-saver": "^2.0.5",
+    "igv": "^2.15.8",
+    "papaparse": "^5.4.1"
+  },
+  "build": {
+    "appId": "com.yourcompany.genome-viewer",
+    "productName": "Genome Viewer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
