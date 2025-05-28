@@ -114,6 +114,9 @@ class GenomeBrowser {
         document.getElementById('copySequenceBtn').addEventListener('click', () => this.copySequence());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportSequence());
 
+        // Sequence panel toggle
+        document.getElementById('toggleSequencePanel').addEventListener('click', () => this.toggleSequencePanel());
+
         // Modal controls
         this.setupModalControls();
 
@@ -1736,57 +1739,21 @@ class GenomeBrowser {
         const sidebar = document.getElementById('sidebar');
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
-        const button = document.getElementById('toggleSidebar');
-        const splitterToggleBtn = document.getElementById('splitterToggleBtn');
-        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
         
         if (sidebar.classList.contains('collapsed')) {
             // Show sidebar
             sidebar.classList.remove('collapsed');
             horizontalSplitter.classList.remove('hidden');
             mainContent.classList.remove('sidebar-collapsed');
-            
-            // Update toolbar button
-            if (button) {
-                button.classList.remove('active');
-                button.innerHTML = '<i class="fas fa-sidebar"></i>';
-            }
-            
-            // Update splitter toggle button
-            if (splitterToggleBtn) {
-                splitterToggleBtn.classList.remove('collapsed');
-                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                splitterToggleBtn.title = 'Hide Sidebar';
-            }
-            
-            // Hide floating toggle button
-            if (floatingToggleBtn) {
-                floatingToggleBtn.style.display = 'none';
-            }
         } else {
             // Hide sidebar
             sidebar.classList.add('collapsed');
             horizontalSplitter.classList.add('hidden');
             mainContent.classList.add('sidebar-collapsed');
-            
-            // Update toolbar button
-            if (button) {
-                button.classList.add('active');
-                button.innerHTML = '<i class="fas fa-eye-slash"></i>';
-            }
-            
-            // Update splitter toggle button
-            if (splitterToggleBtn) {
-                splitterToggleBtn.classList.add('collapsed');
-                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                splitterToggleBtn.title = 'Show Sidebar';
-            }
-            
-            // Show floating toggle button
-            if (floatingToggleBtn) {
-                floatingToggleBtn.style.display = 'flex';
-            }
         }
+        
+        // Update all toggle button states
+        this.updateToggleButtonStates();
         
         // Trigger a resize event to ensure proper layout adjustment
         window.dispatchEvent(new Event('resize'));
@@ -2490,6 +2457,11 @@ class GenomeBrowser {
             if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
                 sidebar.style.width = `${newSidebarWidth}px`;
                 sidebar.style.flex = 'none';
+                
+                // Ensure sidebar is visible when resizing
+                if (sidebar.classList.contains('collapsed')) {
+                    this.showSidebarIfHidden();
+                }
             }
         });
         
@@ -2499,6 +2471,9 @@ class GenomeBrowser {
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
                 horizontalSplitter.classList.remove('active');
+                
+                // Update toggle button state after resize
+                this.updateToggleButtonStates();
             }
         });
         
@@ -2522,6 +2497,8 @@ class GenomeBrowser {
                     // Reset to default width
                     sidebar.style.width = '280px';
                     sidebar.style.flex = 'none';
+                    this.showSidebarIfHidden();
+                    this.updateToggleButtonStates();
                     e.preventDefault();
                     return;
                 default:
@@ -2540,6 +2517,12 @@ class GenomeBrowser {
             if (newWidth >= minWidth && newWidth <= maxWidth) {
                 sidebar.style.width = `${newWidth}px`;
                 sidebar.style.flex = 'none';
+                
+                // Ensure sidebar is visible when resizing
+                if (sidebar.classList.contains('collapsed')) {
+                    this.showSidebarIfHidden();
+                }
+                this.updateToggleButtonStates();
             }
         });
         
@@ -2547,7 +2530,47 @@ class GenomeBrowser {
         horizontalSplitter.addEventListener('dblclick', () => {
             sidebar.style.width = '280px';
             sidebar.style.flex = 'none';
+            this.showSidebarIfHidden();
+            this.updateToggleButtonStates();
         });
+    }
+
+    updateToggleButtonStates() {
+        const sidebar = document.getElementById('sidebar');
+        const splitterToggleBtn = document.getElementById('splitterToggleBtn');
+        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
+        const toggleSidebarBtn = document.getElementById('toggleSidebar');
+        
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        
+        // Update splitter toggle button
+        if (splitterToggleBtn) {
+            if (isCollapsed) {
+                splitterToggleBtn.classList.add('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                splitterToggleBtn.title = 'Show Sidebar';
+            } else {
+                splitterToggleBtn.classList.remove('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                splitterToggleBtn.title = 'Hide Sidebar';
+            }
+        }
+        
+        // Update floating toggle button
+        if (floatingToggleBtn) {
+            floatingToggleBtn.style.display = isCollapsed ? 'flex' : 'none';
+        }
+        
+        // Update toolbar toggle button
+        if (toggleSidebarBtn) {
+            if (isCollapsed) {
+                toggleSidebarBtn.classList.add('active');
+                toggleSidebarBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                toggleSidebarBtn.classList.remove('active');
+                toggleSidebarBtn.innerHTML = '<i class="fas fa-sidebar"></i>';
+            }
+        }
     }
 
     toggleSidebarFromSplitter() {
@@ -2561,6 +2584,7 @@ class GenomeBrowser {
         let startPosition = 0;
         let dragThreshold = 5; // Minimum pixels to move before considering it a drag
         let hasDragged = false;
+        let lastUpdateX = 0; // Track last update position to prevent excessive updates
         
         element.style.cursor = 'grab';
         element.title = 'Drag left or right to navigate through the genome\nKeyboard: ← → arrows, Home, End';
@@ -2572,6 +2596,7 @@ class GenomeBrowser {
             isDragging = true;
             hasDragged = false;
             startX = e.clientX;
+            lastUpdateX = e.clientX;
             startPosition = this.currentPosition.start;
             element.style.cursor = 'grabbing';
             element.classList.add('dragging');
@@ -2594,26 +2619,37 @@ class GenomeBrowser {
             
             if (!hasDragged) return;
             
-            // Calculate the movement in base pairs with reduced sensitivity
+            // Only update if mouse moved significantly since last update
+            const deltaFromLastUpdate = Math.abs(e.clientX - lastUpdateX);
+            if (deltaFromLastUpdate < 3) return; // Reduce update frequency
+            
+            lastUpdateX = e.clientX;
+            
+            // Calculate movement with much more conservative approach
             const currentRange = this.currentPosition.end - this.currentPosition.start;
-            const elementWidth = element.offsetWidth;
-            
-            // Reduce sensitivity by using a smaller multiplier
-            // The sensitivity factor controls how much the genome moves relative to mouse movement
-            const sensitivityFactor = 0.3; // Reduced from 1.0 to 0.3 for slower movement
-            const basesPerPixel = (currentRange / elementWidth) * sensitivityFactor;
-            const deltaPosition = Math.round(deltaX * basesPerPixel);
-            
-            // Calculate new position
-            const newStart = Math.max(0, startPosition - deltaPosition);
+            const elementWidth = element.offsetWidth || 800; // fallback width
             const sequence = this.currentSequence[chromosome];
-            const maxStart = Math.max(0, sequence.length - currentRange);
-            const clampedStart = Math.min(newStart, maxStart);
-            const newEnd = clampedStart + currentRange;
             
-            // Update position if it's different
-            if (clampedStart !== this.currentPosition.start) {
-                this.currentPosition = { start: clampedStart, end: newEnd };
+            // Calculate how much of the genome each pixel represents
+            // Use a much smaller sensitivity factor for fine control
+            const genomeFraction = currentRange / sequence.length; // What fraction of genome is currently visible
+            const pixelMovement = deltaX; // Total pixel movement from start
+            
+            // Convert pixel movement to genome position change
+            // Use a very conservative multiplier to prevent jumping
+            const movementFactor = 0.15; // Increased from 0.05 for better responsiveness
+            const positionChange = Math.round(pixelMovement * currentRange * movementFactor / elementWidth);
+            
+            // Calculate new position (drag right = move left in genome, drag left = move right)
+            const newStart = Math.max(0, Math.min(
+                sequence.length - currentRange,
+                startPosition - positionChange
+            ));
+            const newEnd = newStart + currentRange;
+            
+            // Only update if position actually changed
+            if (newStart !== this.currentPosition.start) {
+                this.currentPosition = { start: newStart, end: newEnd };
                 
                 // Throttle updates for better performance
                 if (!this.dragUpdateTimeout) {
@@ -2621,7 +2657,7 @@ class GenomeBrowser {
                         this.updateStatistics(chromosome, sequence);
                         this.displayGenomeView(chromosome, sequence);
                         this.dragUpdateTimeout = null;
-                    }, 16); // ~60fps
+                    }, 32); // Reduced frequency for smoother performance
                 }
             }
         };
@@ -2707,6 +2743,47 @@ class GenomeBrowser {
             document.removeEventListener('mouseup', handleMouseUp);
             element.removeEventListener('mouseleave', handleMouseLeave);
         };
+    }
+
+    toggleSequencePanel() {
+        const sequenceContent = document.getElementById('sequenceContent');
+        const toggleButton = document.getElementById('toggleSequencePanel');
+        const splitter = document.getElementById('splitter');
+        const sequenceSection = document.getElementById('sequenceDisplaySection');
+        
+        if (sequenceContent.style.display === 'none') {
+            // Show sequence content
+            sequenceContent.style.display = 'flex';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            toggleButton.title = 'Hide Sequence Panel';
+            
+            // Restore splitter functionality
+            splitter.style.display = 'flex';
+            
+            // Restore section height
+            sequenceSection.style.minHeight = '200px';
+            sequenceSection.style.maxHeight = '60vh';
+        } else {
+            // Hide sequence content
+            sequenceContent.style.display = 'none';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            toggleButton.title = 'Show Sequence Panel';
+            
+            // Hide splitter when content is hidden
+            splitter.style.display = 'none';
+            
+            // Minimize section height to just show header
+            sequenceSection.style.minHeight = 'auto';
+            sequenceSection.style.maxHeight = 'auto';
+            
+            // Reset genome section to take full space
+            const genomeSection = document.getElementById('genomeViewerSection');
+            genomeSection.style.flex = '1';
+            genomeSection.style.height = 'auto';
+        }
+        
+        // Trigger resize event for layout adjustment
+        window.dispatchEvent(new Event('resize'));
     }
 }
 
