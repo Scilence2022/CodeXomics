@@ -438,7 +438,7 @@ class GenomeBrowser {
         
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Genes';
+        trackHeader.textContent = 'Genes & Features';
         track.appendChild(trackHeader);
         
         const trackContent = document.createElement('div');
@@ -449,17 +449,28 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const range = end - start;
         
-        // Filter genes in current view
-        const visibleGenes = annotations.filter(feature => 
-            feature.type === 'gene' || feature.type === 'CDS' || feature.type === 'mRNA'
-        ).filter(gene => 
+        // Include all relevant gene types and features
+        const visibleGenes = annotations.filter(feature => {
+            const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
+                              'regulatory', 'promoter', 'terminator', 'repeat_region'];
+            return validTypes.includes(feature.type) || feature.type.includes('RNA');
+        }).filter(gene => 
             gene.start && gene.end && 
             gene.start <= end && gene.end >= start
         );
         
-        visibleGenes.forEach(gene => {
+        console.log(`Displaying ${visibleGenes.length} genes/features in region ${start}-${end}`);
+        
+        visibleGenes.forEach((gene, index) => {
             const geneElement = document.createElement('div');
-            geneElement.className = `gene-element ${gene.type}`;
+            
+            // Normalize gene type for CSS class
+            let geneType = gene.type.toLowerCase();
+            if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
+                geneType = 'misc_feature';
+            }
+            
+            geneElement.className = `gene-element ${geneType}`;
             
             const geneStart = Math.max(gene.start, start);
             const geneEnd = Math.min(gene.end, end);
@@ -467,22 +478,78 @@ class GenomeBrowser {
             const width = ((geneEnd - geneStart) / range) * 100;
             
             geneElement.style.left = `${left}%`;
-            geneElement.style.width = `${Math.max(width, 0.5)}%`;
+            geneElement.style.width = `${Math.max(width, 0.3)}%`;
+            
+            // Ensure minimum visibility
+            if (width < 0.5) {
+                geneElement.style.minWidth = '8px';
+            }
             
             if (gene.strand === -1) {
                 geneElement.classList.add('reverse-strand');
             }
             
-            // Add gene label
-            const label = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || 'Unknown';
-            geneElement.title = `${label} (${gene.start}-${gene.end})`;
-            geneElement.textContent = label.length > 10 ? label.substring(0, 10) + '...' : label;
+            // Create comprehensive gene label
+            const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+            const geneInfo = `${geneName} (${gene.type})`;
+            const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+            
+            geneElement.title = `${geneInfo}\nPosition: ${positionInfo}`;
+            
+            // Set text content based on available space
+            if (width > 2) {
+                geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
+            } else if (width > 0.8) {
+                geneElement.textContent = geneName.substring(0, 3);
+            } else {
+                geneElement.textContent = '';
+            }
+            
+            // Add click handler for detailed info
+            geneElement.addEventListener('click', () => {
+                this.showGeneDetails(gene);
+            });
             
             trackContent.appendChild(geneElement);
         });
         
+        // Add message if no genes found
+        if (visibleGenes.length === 0) {
+            const noGenesMsg = document.createElement('div');
+            noGenesMsg.className = 'no-genes-message';
+            noGenesMsg.textContent = 'No genes/features in this region';
+            noGenesMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noGenesMsg);
+        }
+        
         track.appendChild(trackContent);
         return track;
+    }
+
+    showGeneDetails(gene) {
+        const details = [];
+        details.push(`Type: ${gene.type}`);
+        details.push(`Position: ${gene.start}-${gene.end}`);
+        details.push(`Strand: ${gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
+        details.push(`Length: ${gene.end - gene.start + 1} bp`);
+        
+        if (gene.qualifiers) {
+            Object.entries(gene.qualifiers).forEach(([key, value]) => {
+                if (value && value !== 'Unknown') {
+                    details.push(`${key}: ${value}`);
+                }
+            });
+        }
+        
+        alert(details.join('\n'));
     }
 
     createSequenceTrack(chromosome, sequence) {

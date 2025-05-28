@@ -710,65 +710,174 @@ body {
 
 .track-content {
     position: relative;
-    height: 60px;
+    height: 80px;
     padding: 10px 0;
+    background: #fafafa;
 }
 
 .gene-element {
     position: absolute;
-    height: 20px;
+    height: 18px;
     border-radius: 4px;
     font-size: 10px;
     color: white;
-    padding: 2px 4px;
+    padding: 2px 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 16px;
+    line-height: 14px;
+    border: 1px solid rgba(0,0,0,0.2);
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
 }
 
 .gene-element:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 10;
+    border-color: rgba(0,0,0,0.4);
 }
 
+/* Strong, contrasting colors for different gene types */
 .gene-element.gene {
-    background: #28a745;
+    background: linear-gradient(135deg, #2d5a27, #4caf50);
+    border-color: #2d5a27;
     top: 5px;
 }
 
 .gene-element.CDS {
-    background: #007bff;
-    top: 30px;
+    background: linear-gradient(135deg, #1565c0, #2196f3);
+    border-color: #1565c0;
+    top: 35px;
 }
 
 .gene-element.mRNA {
-    background: #ffc107;
-    color: #212529;
-    top: 15px;
+    background: linear-gradient(135deg, #e65100, #ff9800);
+    border-color: #e65100;
+    color: white;
+    top: 20px;
 }
 
+/* Additional gene types with distinct colors */
+.gene-element.tRNA {
+    background: linear-gradient(135deg, #7b1fa2, #9c27b0);
+    border-color: #7b1fa2;
+    top: 50px;
+}
+
+.gene-element.rRNA {
+    background: linear-gradient(135deg, #c62828, #f44336);
+    border-color: #c62828;
+    top: 50px;
+}
+
+.gene-element.misc_feature {
+    background: linear-gradient(135deg, #455a64, #607d8b);
+    border-color: #455a64;
+    top: 50px;
+}
+
+.gene-element.regulatory {
+    background: linear-gradient(135deg, #8e24aa, #ba68c8);
+    border-color: #8e24aa;
+    top: 55px;
+}
+
+.gene-element.promoter {
+    background: linear-gradient(135deg, #d32f2f, #ef5350);
+    border-color: #d32f2f;
+    top: 55px;
+}
+
+.gene-element.terminator {
+    background: linear-gradient(135deg, #f57c00, #ffb74d);
+    border-color: #f57c00;
+    color: white;
+    top: 55px;
+}
+
+.gene-element.repeat_region {
+    background: linear-gradient(135deg, #5d4037, #8d6e63);
+    border-color: #5d4037;
+    top: 55px;
+}
+
+/* Fallback for unknown gene types */
+.gene-element:not(.gene):not(.CDS):not(.mRNA):not(.tRNA):not(.rRNA):not(.misc_feature):not(.regulatory):not(.promoter):not(.terminator):not(.repeat_region) {
+    background: linear-gradient(135deg, #424242, #757575);
+    border-color: #424242;
+    top: 60px;
+}
+
+/* Enhanced visibility for small genes */
+.gene-element[style*="width: 0.3%"],
+.gene-element[style*="width: 0.4%"],
+.gene-element[style*="width: 0.5%"] {
+    min-width: 12px !important;
+    border-width: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* No genes message styling */
+.no-genes-message {
+    background: rgba(255,255,255,0.9);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px dashed #ccc;
+}
+
+/* Reverse strand styling - use diagonal stripes but maintain visibility */
 .gene-element.reverse-strand {
-    background: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 2px,
-        rgba(255,255,255,0.3) 2px,
-        rgba(255,255,255,0.3) 4px
-    );
+    position: relative;
 }
 
+.gene-element.reverse-strand::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.2) 3px,
+        rgba(255,255,255,0.2) 6px
+    );
+    pointer-events: none;
+}
+
+/* Direction arrows */
 .gene-element.reverse-strand::before {
     content: '◀';
-    margin-right: 2px;
+    margin-right: 3px;
+    font-weight: bold;
 }
 
-.gene-element:not(.reverse-strand)::after {
+.gene-element:not(.reverse-strand)::before {
     content: '▶';
-    margin-left: 2px;
+    margin-right: 3px;
+    font-weight: bold;
+}
+
+/* Enhanced hover effects */
+.gene-element:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+/* Ensure text is always visible */
+.gene-element {
+    min-width: 20px;
+    text-align: center;
+}
+
+.gene-element:empty::after {
+    content: '●';
+    font-size: 8px;
 }
 
 /* Sequence Track Styles */
