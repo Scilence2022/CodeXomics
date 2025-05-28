@@ -14,8 +14,11 @@ class GenomeBrowser {
         this.zoomLevel = 1;
         this.genes = [];
         
-        // Default visible tracks - only show Genes & Features and Sequence by default
-        this.visibleTracks = new Set(['genes', 'sequence']);
+        // Default visible tracks - show Genes & Features, Sequence (top), and GC Content by default
+        this.visibleTracks = new Set(['genes', 'sequence', 'gc']);
+        
+        // Separate control for bottom sequence display
+        this.showBottomSequence = true;
         
         // Gene filter settings
         this.geneFilters = {
@@ -103,6 +106,7 @@ class GenomeBrowser {
         document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackReads').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackBottomSequence').addEventListener('change', () => this.updateBottomSequenceVisibility());
 
         // Sidebar track controls
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
@@ -111,6 +115,7 @@ class GenomeBrowser {
         document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackReads').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackBottomSequence').addEventListener('change', () => this.updateBottomSequenceVisibilityFromSidebar());
 
         // Panel close buttons
         document.querySelectorAll('.close-panel-btn').forEach(btn => {
@@ -585,7 +590,7 @@ class GenomeBrowser {
             browserContainer.appendChild(geneTrack);
         }
         
-        // 2. Sequence track (only if sequence track is selected)
+        // 2. Sequence track (only if sequence track is selected) - TOP sequence track
         if (this.visibleTracks.has('sequence')) {
             const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
             browserContainer.appendChild(sequenceTrack);
@@ -597,14 +602,14 @@ class GenomeBrowser {
             browserContainer.appendChild(gcTrack);
         }
         
-        // 4. Variants track (only if variants track is selected and we have variant data)
-        if (this.visibleTracks.has('variants') && this.currentVariants && this.currentVariants[chromosome]) {
+        // 4. Variants track (show if selected, even without data)
+        if (this.visibleTracks.has('variants')) {
             const variantTrack = this.createVariantTrack(chromosome);
             browserContainer.appendChild(variantTrack);
         }
         
-        // 5. Aligned reads track (only if reads track is selected and we have read data)
-        if (this.visibleTracks.has('reads') && this.currentReads && this.currentReads[chromosome]) {
+        // 5. Aligned reads track (show if selected, even without data)
+        if (this.visibleTracks.has('reads')) {
             const readsTrack = this.createReadsTrack(chromosome);
             browserContainer.appendChild(readsTrack);
         }
@@ -617,11 +622,11 @@ class GenomeBrowser {
         
         container.appendChild(browserContainer);
         
-        // Update sequence display with enhanced information when zoomed in
-        if (this.visibleTracks.has('sequence')) {
+        // Update BOTTOM sequence display - controlled separately
+        if (this.showBottomSequence) {
             this.displayEnhancedSequence(chromosome, sequence);
         } else {
-            // Hide sequence display if sequence track is not selected
+            // Hide sequence display if bottom sequence is not enabled
             document.getElementById('sequenceDisplay').style.display = 'none';
         }
     }
@@ -870,49 +875,56 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const range = end - start;
         
+        // Check if we have any reads data at all
+        if (!this.currentReads || Object.keys(this.currentReads).length === 0) {
+            const noDataMsg = document.createElement('div');
+            noDataMsg.className = 'no-reads-message';
+            noDataMsg.textContent = 'No SAM/BAM file loaded. Load a SAM/BAM file to see aligned reads.';
+            noDataMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noDataMsg);
+            track.appendChild(trackContent);
+            return track;
+        }
+        
         // Filter reads that overlap with current region
         const visibleReads = reads.filter(read => 
+            read.start && read.end && 
             read.start <= end && read.end >= start
         );
         
         console.log(`Displaying ${visibleReads.length} reads in region ${start}-${end}`);
         
-        // Create read elements with stacking to avoid overlap
-        const readLanes = [];
         visibleReads.forEach((read, index) => {
-            // Find available lane for this read
-            let lane = 0;
-            while (lane < readLanes.length && readLanes[lane] > read.start) {
-                lane++;
-            }
-            if (lane >= readLanes.length) {
-                readLanes.push(0);
-            }
-            readLanes[lane] = read.end;
-            
             const readElement = document.createElement('div');
             readElement.className = 'read-element';
             
             const readStart = Math.max(read.start, start);
             const readEnd = Math.min(read.end, end);
             const left = ((readStart - start) / range) * 100;
-            const width = Math.max(((readEnd - readStart) / range) * 100, 0.5);
+            const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
             
             readElement.style.left = `${left}%`;
             readElement.style.width = `${width}%`;
-            readElement.style.height = '8px';
-            readElement.style.top = `${10 + (lane * 12)}px`;
+            readElement.style.height = '12px';
+            readElement.style.top = '20px';
             readElement.style.position = 'absolute';
-            readElement.style.background = read.strand === -1 ? '#ff6b6b' : '#4ecdc4';
+            readElement.style.background = read.strand === '+' ? '#00b894' : '#f39c12';
             readElement.style.borderRadius = '2px';
             readElement.style.cursor = 'pointer';
-            readElement.style.border = '1px solid rgba(0,0,0,0.2)';
             
             // Create read tooltip
-            const readInfo = `Read: ${read.name || 'Unknown'}\n` +
-                            `Position: ${read.start}-${read.end}\n` +
-                            `Strand: ${read.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}\n` +
-                            `Quality: ${read.quality || 'N/A'}`;
+            const readInfo = `Read: ${read.id || 'Unknown'}\n` +
+                              `Position: ${read.start}-${read.end}\n` +
+                              `Strand: ${read.strand || 'N/A'}\n` +
+                              `Mapping Quality: ${read.mappingQuality || 'N/A'}`;
             
             readElement.title = readInfo;
             
@@ -924,11 +936,11 @@ class GenomeBrowser {
             trackContent.appendChild(readElement);
         });
         
-        // Add message if no reads found
+        // Add message if no reads found in this region
         if (visibleReads.length === 0) {
             const noReadsMsg = document.createElement('div');
             noReadsMsg.className = 'no-reads-message';
-            noReadsMsg.textContent = 'No aligned reads in this region';
+            noReadsMsg.textContent = 'No reads in this region';
             noReadsMsg.style.cssText = `
                 position: absolute;
                 top: 50%;
@@ -939,763 +951,6 @@ class GenomeBrowser {
                 font-size: 12px;
             `;
             trackContent.appendChild(noReadsMsg);
-        }
-        
-        track.appendChild(trackContent);
-        return track;
-    }
-
-    createGCContentVisualization(sequence) {
-        const container = document.createElement('div');
-        container.className = 'gc-content-visualization';
-        
-        const windowSize = Math.max(1, Math.floor(sequence.length / 100));
-        
-        for (let i = 0; i < sequence.length; i += windowSize) {
-            const window = sequence.substring(i, i + windowSize);
-            const gcCount = (window.match(/[GC]/g) || []).length;
-            const gcPercent = (gcCount / window.length) * 100;
-            
-            const bar = document.createElement('div');
-            bar.className = 'gc-bar';
-            bar.style.height = `${gcPercent}%`;
-            bar.style.backgroundColor = `hsl(${120 - gcPercent}, 70%, 50%)`;
-            bar.title = `GC: ${gcPercent.toFixed(1)}%`;
-            
-            container.appendChild(bar);
-        }
-        
-        return container;
-    }
-
-    displaySequence(chromosome, sequence) {
-        const container = document.getElementById('sequenceContent');
-        const start = this.currentPosition.start;
-        const end = this.currentPosition.end;
-        const subsequence = sequence.substring(start, end);
-        
-        // Calculate optimal line length based on container width
-        const containerWidth = container.offsetWidth || 800; // fallback width
-        const charWidth = 12; // approximate character width in pixels
-        const positionWidth = 120; // space for position numbers
-        const availableWidth = containerWidth - positionWidth - 40; // padding
-        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
-        
-        // Create formatted sequence display with responsive line length
-        let html = '';
-        
-        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const line = subsequence.substring(i, i + optimalLineLength);
-            const position = start + i + 1;
-            
-            html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position" style="user-select: none;">${position.toLocaleString()}</span>`;
-            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
-            html += `</div>`;
-        }
-        
-        container.innerHTML = html;
-        
-        // Update sequence title
-        document.getElementById('sequenceTitle').textContent = 
-            `${chromosome}:${start + 1}-${end}`;
-        
-        // Show sequence display
-        document.getElementById('sequenceDisplay').style.display = 'flex';
-    }
-
-    colorizeSequence(sequence) {
-        return sequence.split('').map(base => {
-            const className = `base-${base.toLowerCase()}`;
-            return `<span class="${className}">${base}</span>`;
-        }).join('');
-    }
-
-    hideWelcomeScreen() {
-        const welcomeScreen = document.querySelector('.welcome-screen');
-        if (welcomeScreen) {
-            welcomeScreen.style.display = 'none';
-        }
-    }
-
-    updateFileInfo() {
-        const fileInfo = document.getElementById('fileInfo');
-        const info = this.currentFile.info;
-        
-        fileInfo.innerHTML = `
-            <div class="file-details">
-                <div class="file-name">${info.name}</div>
-                <div class="file-meta">Size: ${this.formatFileSize(info.size)}</div>
-                <div class="file-meta">Modified: ${new Date(info.modified).toLocaleDateString()}</div>
-                <div class="file-meta">Type: ${info.extension.toUpperCase()}</div>
-            </div>
-        `;
-    }
-
-    formatFileSize(bytes) {
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        if (bytes === 0) return '0 Bytes';
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    // Navigation methods
-    navigatePrevious() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const windowSize = this.currentPosition.end - this.currentPosition.start;
-        const newStart = Math.max(0, this.currentPosition.start - windowSize);
-        const newEnd = newStart + windowSize;
-
-        this.currentPosition = { start: newStart, end: newEnd };
-        this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-        this.updateStatistics(currentChr, this.currentSequence[currentChr]);
-    }
-
-    navigateNext() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        const windowSize = this.currentPosition.end - this.currentPosition.start;
-        const newStart = Math.min(sequence.length - windowSize, this.currentPosition.start + windowSize);
-        const newEnd = Math.min(sequence.length, newStart + windowSize);
-
-        this.currentPosition = { start: newStart, end: newEnd };
-        this.displayGenomeView(currentChr, sequence);
-        this.updateStatistics(currentChr, sequence);
-    }
-
-    // Zoom methods
-    zoomIn() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const center = Math.floor((this.currentPosition.start + this.currentPosition.end) / 2);
-        const newWindowSize = Math.max(100, Math.floor((this.currentPosition.end - this.currentPosition.start) / 2));
-        const newStart = Math.max(0, center - Math.floor(newWindowSize / 2));
-        const newEnd = Math.min(this.currentSequence[currentChr].length, newStart + newWindowSize);
-
-        this.currentPosition = { start: newStart, end: newEnd };
-        this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-        this.updateStatistics(currentChr, this.currentSequence[currentChr]);
-    }
-
-    zoomOut() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        const center = Math.floor((this.currentPosition.start + this.currentPosition.end) / 2);
-        const newWindowSize = Math.min(sequence.length, (this.currentPosition.end - this.currentPosition.start) * 2);
-        const newStart = Math.max(0, center - Math.floor(newWindowSize / 2));
-        const newEnd = Math.min(sequence.length, newStart + newWindowSize);
-
-        this.currentPosition = { start: newStart, end: newEnd };
-        this.displayGenomeView(currentChr, sequence);
-        this.updateStatistics(currentChr, sequence);
-    }
-
-    resetZoom() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        this.currentPosition = { start: 0, end: Math.min(10000, sequence.length) };
-        this.displayGenomeView(currentChr, sequence);
-        this.updateStatistics(currentChr, sequence);
-    }
-
-    // Search methods
-    showSearchModal() {
-        document.getElementById('searchModal').classList.add('show');
-        document.getElementById('modalSearchInput').focus();
-    }
-
-    showGotoModal() {
-        document.getElementById('gotoModal').classList.add('show');
-        document.getElementById('modalPositionInput').focus();
-    }
-
-    quickSearch() {
-        const query = document.getElementById('searchInput').value.trim();
-        if (query) {
-            this.searchSequence(query);
-        }
-    }
-
-    performSearch() {
-        const query = document.getElementById('modalSearchInput').value.trim();
-        const caseSensitive = document.getElementById('caseSensitive').checked;
-        const reverseComplement = document.getElementById('reverseComplement').checked;
-
-        if (query) {
-            this.searchSequence(query, caseSensitive, reverseComplement);
-            document.getElementById('searchModal').classList.remove('show');
-        }
-    }
-
-    searchSequence(query, caseSensitive = false, reverseComplement = false) {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        const searchQuery = caseSensitive ? query : query.toUpperCase();
-        const searchSequence = caseSensitive ? sequence : sequence.toUpperCase();
-
-        this.searchResults = [];
-        
-        // Search for the query
-        let index = searchSequence.indexOf(searchQuery);
-        while (index !== -1) {
-            this.searchResults.push(index);
-            index = searchSequence.indexOf(searchQuery, index + 1);
-        }
-
-        // Search for reverse complement if requested
-        if (reverseComplement) {
-            const revComp = this.getReverseComplement(searchQuery);
-            let revIndex = searchSequence.indexOf(revComp);
-            while (revIndex !== -1) {
-                this.searchResults.push(revIndex);
-                revIndex = searchSequence.indexOf(revComp, revIndex + 1);
-            }
-        }
-
-        this.searchResults.sort((a, b) => a - b);
-        this.currentSearchIndex = 0;
-
-        if (this.searchResults.length > 0) {
-            this.goToSearchResult(0);
-            this.updateStatus(`Found ${this.searchResults.length} matches`);
-        } else {
-            this.updateStatus('No matches found');
-        }
-    }
-
-    getReverseComplement(sequence) {
-        const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
-        return sequence.split('').reverse().map(base => complement[base] || base).join('');
-    }
-
-    goToSearchResult(index) {
-        if (index < 0 || index >= this.searchResults.length) return;
-
-        const position = this.searchResults[index];
-        const windowSize = 1000;
-        const newStart = Math.max(0, position - Math.floor(windowSize / 2));
-        const newEnd = Math.min(this.currentSequence[document.getElementById('chromosomeSelect').value].length, 
-                               newStart + windowSize);
-
-        this.currentPosition = { start: newStart, end: newEnd };
-        this.displayGenomeView(document.getElementById('chromosomeSelect').value, 
-                           this.currentSequence[document.getElementById('chromosomeSelect').value]);
-        this.updateStatistics(document.getElementById('chromosomeSelect').value, 
-                            this.currentSequence[document.getElementById('chromosomeSelect').value]);
-    }
-
-    // Position navigation
-    goToPosition() {
-        const input = document.getElementById('positionInput').value.trim();
-        this.parseAndGoToPosition(input);
-    }
-
-    performGoto() {
-        const input = document.getElementById('modalPositionInput').value.trim();
-        this.parseAndGoToPosition(input);
-        document.getElementById('gotoModal').classList.remove('show');
-    }
-
-    parseAndGoToPosition(input) {
-        if (!input) return;
-
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        let start, end;
-
-        // Parse different position formats
-        if (input.includes(':')) {
-            // Format: chr:start-end or chr:position
-            const [chr, pos] = input.split(':');
-            if (pos.includes('-')) {
-                const [s, e] = pos.split('-');
-                start = parseInt(s) - 1; // Convert to 0-based
-                end = parseInt(e);
-            } else {
-                const position = parseInt(pos) - 1; // Convert to 0-based
-                start = Math.max(0, position - 500);
-                end = Math.min(sequence.length, position + 500);
-            }
-        } else {
-            // Just a position number
-            const position = parseInt(input) - 1; // Convert to 0-based
-            start = Math.max(0, position - 500);
-            end = Math.min(sequence.length, position + 500);
-        }
-
-        // Validate and adjust positions
-        start = Math.max(0, Math.min(start, sequence.length - 1));
-        end = Math.max(start + 1, Math.min(end, sequence.length));
-
-        this.currentPosition = { start, end };
-        this.displayGenomeView(currentChr, sequence);
-        this.updateStatistics(currentChr, sequence);
-        this.updateStatus(`Navigated to position ${start + 1}-${end}`);
-    }
-
-    // Utility methods
-    copySequence() {
-        // Check if there's any selected text first
-        const selectedText = window.getSelection().toString();
-        
-        if (selectedText) {
-            // Filter out line numbers and only keep DNA sequence characters
-            const cleanSequence = selectedText.replace(/[\d,\s\n\r]/g, '').replace(/[^ATCGN]/gi, '');
-            
-            if (cleanSequence.length > 0) {
-                navigator.clipboard.writeText(cleanSequence).then(() => {
-                    this.updateStatus(`Copied ${cleanSequence.length} bases to clipboard`);
-                    alert(`Sequence copied!\nLength: ${cleanSequence.length} bases`);
-                }).catch(err => {
-                    console.error('Failed to copy selected sequence:', err);
-                    this.updateStatus('Failed to copy selected sequence');
-                });
-            } else {
-                alert('Please select DNA sequence text (not line numbers).\nSelect the sequence letters (A, T, C, G) in the sequence display.');
-            }
-            return;
-        }
-        
-        // If no text is selected, prompt user to select sequence
-        alert('Please select a sequence portion to copy.\nYou can select DNA sequence text in the sequence display area below.\nNote: Line numbers will be automatically filtered out.');
-    }
-
-    exportSequence() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        const subsequence = sequence.substring(this.currentPosition.start, this.currentPosition.end);
-        const fasta = `>${currentChr}:${this.currentPosition.start + 1}-${this.currentPosition.end}\n${subsequence}`;
-        
-        const blob = new Blob([fasta], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${currentChr}_${this.currentPosition.start + 1}-${this.currentPosition.end}.fasta`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        this.updateStatus('Sequence exported');
-    }
-
-    showLoading(show) {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.style.display = show ? 'flex' : 'none';
-        }
-    }
-
-    updateStatus(message) {
-        const statusElement = document.getElementById('statusText');
-        if (statusElement) {
-            statusElement.textContent = message;
-        }
-    }
-
-    async parseGFF() {
-        // Basic GFF parser - for demonstration
-        const lines = this.currentFile.data.split('\n');
-        const annotations = {};
-        
-        for (const line of lines) {
-            if (line.startsWith('#') || !line.trim()) continue;
-            
-            const parts = line.split('\t');
-            if (parts.length >= 9) {
-                const [seqname, source, feature, start, end, score, strand, frame, attributes] = parts;
-                
-                if (!annotations[seqname]) {
-                    annotations[seqname] = [];
-                }
-                
-                annotations[seqname].push({
-                    type: feature,
-                    start: parseInt(start),
-                    end: parseInt(end),
-                    strand: strand === '-' ? -1 : 1,
-                    qualifiers: this.parseGFFAttributes(attributes)
-                });
-            }
-        }
-        
-        this.currentAnnotations = annotations;
-        this.updateStatus('GFF file loaded - annotations only');
-    }
-
-    parseGFFAttributes(attributeString) {
-        const attributes = {};
-        const pairs = attributeString.split(';');
-        
-        for (const pair of pairs) {
-            const [key, value] = pair.split('=');
-            if (key && value) {
-                attributes[key.trim()] = value.trim().replace(/"/g, '');
-            }
-        }
-        
-        return attributes;
-    }
-
-    async parseBED() {
-        // Basic BED parser - for demonstration
-        const lines = this.currentFile.data.split('\n');
-        const annotations = {};
-        
-        for (const line of lines) {
-            if (line.startsWith('#') || !line.trim()) continue;
-            
-            const parts = line.split('\t');
-            if (parts.length >= 3) {
-                const [chrom, start, end, name, score, strand] = parts;
-                
-                if (!annotations[chrom]) {
-                    annotations[chrom] = [];
-                }
-                
-                annotations[chrom].push({
-                    type: 'region',
-                    start: parseInt(start) + 1, // BED is 0-based, convert to 1-based
-                    end: parseInt(end),
-                    strand: strand === '-' ? -1 : 1,
-                    qualifiers: { name: name || 'Unknown' }
-                });
-            }
-        }
-        
-        this.currentAnnotations = annotations;
-        this.updateStatus('BED file loaded - annotations only');
-    }
-
-    async parseVCF() {
-        // Enhanced VCF parser
-        const lines = this.currentFile.data.split('\n');
-        const variants = {};
-        
-        for (const line of lines) {
-            if (line.startsWith('#') || !line.trim()) continue;
-            
-            const parts = line.split('\t');
-            if (parts.length >= 8) {
-                const [chrom, pos, id, ref, alt, qual, filter, info] = parts;
-                
-                if (!variants[chrom]) {
-                    variants[chrom] = [];
-                }
-                
-                variants[chrom].push({
-                    start: parseInt(pos),
-                    end: parseInt(pos) + ref.length - 1,
-                    id: id === '.' ? null : id,
-                    ref: ref,
-                    alt: alt,
-                    quality: qual === '.' ? null : parseFloat(qual),
-                    filter: filter,
-                    info: info
-                });
-            }
-        }
-        
-        this.currentVariants = variants;
-        this.updateStatus('VCF file loaded - variants available');
-        console.log('Loaded variants:', variants);
-    }
-
-    async parseSAM() {
-        // Basic SAM parser - for demonstration (simplified)
-        const lines = this.currentFile.data.split('\n');
-        const reads = {};
-        
-        for (const line of lines) {
-            if (line.startsWith('@') || !line.trim()) continue; // Skip header lines
-            
-            const parts = line.split('\t');
-            if (parts.length >= 11) {
-                const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = parts;
-                
-                if (rname === '*') continue; // Skip unmapped reads
-                
-                if (!reads[rname]) {
-                    reads[rname] = [];
-                }
-                
-                // Calculate read end position based on CIGAR string
-                const readLength = seq.length;
-                const startPos = parseInt(pos);
-                const endPos = startPos + readLength - 1;
-                
-                // Determine strand from flag
-                const flagInt = parseInt(flag);
-                const isReverse = (flagInt & 16) !== 0;
-                
-                reads[rname].push({
-                    name: qname,
-                    start: startPos,
-                    end: endPos,
-                    strand: isReverse ? -1 : 1,
-                    quality: parseInt(mapq),
-                    sequence: seq,
-                    cigar: cigar
-                });
-            }
-        }
-        
-        this.currentReads = reads;
-        this.updateStatus('SAM file loaded - aligned reads available');
-        console.log('Loaded reads:', reads);
-    }
-
-    // Panel management methods
-    closePanel(panelId) {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-            panel.style.display = 'none';
-            this.checkSidebarVisibility();
-        }
-    }
-
-    showPanel(panelId) {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-            panel.style.display = 'block';
-            this.showSidebar();
-        }
-    }
-
-    showAllPanels() {
-        const panels = ['fileInfoSection', 'navigationSection', 'statisticsSection', 'tracksSection', 'featuresSection'];
-        panels.forEach(panelId => {
-            const panel = document.getElementById(panelId);
-            if (panel) {
-                panel.style.display = 'block';
-            }
-        });
-        this.showSidebar();
-    }
-
-    checkSidebarVisibility() {
-        const panels = ['fileInfoSection', 'navigationSection', 'statisticsSection', 'tracksSection', 'featuresSection'];
-        const visiblePanels = panels.filter(panelId => {
-            const panel = document.getElementById(panelId);
-            return panel && panel.style.display !== 'none';
-        });
-
-        if (visiblePanels.length === 0) {
-            this.hideSidebar();
-        }
-    }
-
-    hideSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.querySelector('.main-content');
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('sidebar-collapsed');
-    }
-
-    showSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.querySelector('.main-content');
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('sidebar-collapsed');
-    }
-
-    // Track selection methods
-    updateVisibleTracks() {
-        // Get selected tracks from toolbar checkboxes
-        const tracks = new Set();
-        if (document.getElementById('trackGenes').checked) tracks.add('genes');
-        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
-        if (document.getElementById('trackGC').checked) tracks.add('gc');
-        if (document.getElementById('trackVariants').checked) tracks.add('variants');
-        if (document.getElementById('trackReads').checked) tracks.add('reads');
-        if (document.getElementById('trackProteins').checked) tracks.add('proteins');
-        
-        this.visibleTracks = tracks;
-        
-        // Sync with sidebar
-        document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
-        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
-        document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
-        document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
-        document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
-        document.getElementById('sidebarTrackProteins').checked = tracks.has('proteins');
-        
-        console.log('Visible tracks:', Array.from(this.visibleTracks));
-        
-        // Refresh the genome view if a file is loaded
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-        }
-    }
-
-    updateVisibleTracksFromSidebar() {
-        // Get selected tracks from sidebar checkboxes
-        const tracks = new Set();
-        if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
-        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
-        if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
-        if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
-        if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
-        if (document.getElementById('sidebarTrackProteins').checked) tracks.add('proteins');
-        
-        this.visibleTracks = tracks;
-        
-        // Sync with toolbar
-        document.getElementById('trackGenes').checked = tracks.has('genes');
-        document.getElementById('trackSequence').checked = tracks.has('sequence');
-        document.getElementById('trackGC').checked = tracks.has('gc');
-        document.getElementById('trackVariants').checked = tracks.has('variants');
-        document.getElementById('trackReads').checked = tracks.has('reads');
-        document.getElementById('trackProteins').checked = tracks.has('proteins');
-        
-        console.log('Visible tracks:', Array.from(this.visibleTracks));
-        
-        // Refresh the genome view if a file is loaded
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-        }
-    }
-
-    // Feature filter methods
-    toggleFeatureFilters() {
-        const filterDiv = document.getElementById('featureFilterCheckboxes');
-        const toggleBtn = document.getElementById('toggleFeatureFilters');
-        
-        if (filterDiv.style.display === 'none') {
-            filterDiv.style.display = 'grid';
-            toggleBtn.classList.add('active');
-        } else {
-            filterDiv.style.display = 'none';
-            toggleBtn.classList.remove('active');
-        }
-    }
-
-    syncSidebarFeatureFilter(sidebarId, checked) {
-        const sidebarElement = document.getElementById(sidebarId);
-        if (sidebarElement) {
-            sidebarElement.checked = checked;
-        }
-    }
-
-    syncToolbarFeatureFilter(toolbarId, checked) {
-        const toolbarElement = document.getElementById(toolbarId);
-        if (toolbarElement) {
-            toolbarElement.checked = checked;
-        }
-    }
-
-    // Gene filtering methods
-    updateGeneDisplay() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
-        }
-    }
-
-    shouldShowGeneType(geneType) {
-        const type = geneType.toLowerCase();
-        if (type === 'gene') return this.geneFilters.genes;
-        if (type === 'cds') return this.geneFilters.CDS;
-        if (type === 'mrna') return this.geneFilters.mRNA;
-        if (type === 'trna') return this.geneFilters.tRNA;
-        if (type === 'rrna') return this.geneFilters.rRNA;
-        if (type === 'promoter') return this.geneFilters.promoter;
-        if (type === 'terminator') return this.geneFilters.terminator;
-        if (type === 'regulatory') return this.geneFilters.regulatory;
-        return this.geneFilters.other;
-    }
-
-    createVariantTrack(chromosome) {
-        const track = document.createElement('div');
-        track.className = 'variant-track';
-        
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'VCF Variants';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        trackContent.style.height = '60px';
-        
-        const variants = this.currentVariants[chromosome] || [];
-        const start = this.currentPosition.start;
-        const end = this.currentPosition.end;
-        const range = end - start;
-        
-        // Filter for variants in the current region
-        const visibleVariants = variants.filter(variant => 
-            variant.start && variant.end && 
-            variant.start <= end && variant.end >= start
-        );
-        
-        console.log(`Displaying ${visibleVariants.length} variants in region ${start}-${end}`);
-        
-        visibleVariants.forEach((variant, index) => {
-            const variantElement = document.createElement('div');
-            variantElement.className = 'variant-element';
-            
-            const variantStart = Math.max(variant.start, start);
-            const variantEnd = Math.min(variant.end, end);
-            const left = ((variantStart - start) / range) * 100;
-            const width = Math.max(((variantEnd - variantStart) / range) * 100, 0.2);
-            
-            variantElement.style.left = `${left}%`;
-            variantElement.style.width = `${width}%`;
-            variantElement.style.height = '12px';
-            variantElement.style.top = '20px';
-            variantElement.style.position = 'absolute';
-            variantElement.style.background = '#e74c3c';
-            variantElement.style.borderRadius = '2px';
-            variantElement.style.cursor = 'pointer';
-            
-            // Create variant tooltip
-            const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
-                              `Position: ${variant.start}-${variant.end}\n` +
-                              `Ref: ${variant.ref || 'N/A'}\n` +
-                              `Alt: ${variant.alt || 'N/A'}\n` +
-                              `Quality: ${variant.quality || 'N/A'}`;
-            
-            variantElement.title = variantInfo;
-            
-            // Add click handler for detailed info
-            variantElement.addEventListener('click', () => {
-                alert(variantInfo);
-            });
-            
-            trackContent.appendChild(variantElement);
-        });
-        
-        // Add message if no variants found
-        if (visibleVariants.length === 0) {
-            const noVariantsMsg = document.createElement('div');
-            noVariantsMsg.className = 'no-variants-message';
-            noVariantsMsg.textContent = 'No variants in this region';
-            noVariantsMsg.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #666;
-                font-style: italic;
-                font-size: 12px;
-            `;
-            trackContent.appendChild(noVariantsMsg);
         }
         
         track.appendChild(trackContent);
@@ -1971,6 +1226,629 @@ class GenomeBrowser {
             const color = aaColors[aa] || '#74b9ff';
             return `<span style="color: ${color}; font-weight: bold;">${aa}</span>`;
         }).join('');
+    }
+
+    updateBottomSequenceVisibility() {
+        this.showBottomSequence = document.getElementById('trackBottomSequence').checked;
+        
+        // Sync with sidebar
+        document.getElementById('sidebarTrackBottomSequence').checked = this.showBottomSequence;
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    updateBottomSequenceVisibilityFromSidebar() {
+        this.showBottomSequence = document.getElementById('sidebarTrackBottomSequence').checked;
+        
+        // Sync with toolbar
+        document.getElementById('trackBottomSequence').checked = this.showBottomSequence;
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    updateVisibleTracks() {
+        // Get selected tracks from toolbar checkboxes
+        const tracks = new Set();
+        if (document.getElementById('trackGenes').checked) tracks.add('genes');
+        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('trackGC').checked) tracks.add('gc');
+        if (document.getElementById('trackVariants').checked) tracks.add('variants');
+        if (document.getElementById('trackReads').checked) tracks.add('reads');
+        if (document.getElementById('trackProteins').checked) tracks.add('proteins');
+        
+        this.visibleTracks = tracks;
+        
+        // Sync with sidebar
+        document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
+        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
+        document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
+        document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
+        document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
+        document.getElementById('sidebarTrackProteins').checked = tracks.has('proteins');
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    updateVisibleTracksFromSidebar() {
+        // Get selected tracks from sidebar checkboxes
+        const tracks = new Set();
+        if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
+        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
+        if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
+        if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
+        if (document.getElementById('sidebarTrackProteins').checked) tracks.add('proteins');
+        
+        this.visibleTracks = tracks;
+        
+        // Sync with toolbar
+        document.getElementById('trackGenes').checked = tracks.has('genes');
+        document.getElementById('trackSequence').checked = tracks.has('sequence');
+        document.getElementById('trackGC').checked = tracks.has('gc');
+        document.getElementById('trackVariants').checked = tracks.has('variants');
+        document.getElementById('trackReads').checked = tracks.has('reads');
+        document.getElementById('trackProteins').checked = tracks.has('proteins');
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    createVariantTrack(chromosome) {
+        const track = document.createElement('div');
+        track.className = 'variant-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'VCF Variants';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = '60px';
+        
+        const variants = this.currentVariants[chromosome] || [];
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const range = end - start;
+        
+        // Check if we have any variant data at all
+        if (!this.currentVariants || Object.keys(this.currentVariants).length === 0) {
+            const noDataMsg = document.createElement('div');
+            noDataMsg.className = 'no-variants-message';
+            noDataMsg.textContent = 'No VCF file loaded. Load a VCF file to see variants.';
+            noDataMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noDataMsg);
+            track.appendChild(trackContent);
+            return track;
+        }
+        
+        // Filter for variants in the current region
+        const visibleVariants = variants.filter(variant => 
+            variant.start && variant.end && 
+            variant.start <= end && variant.end >= start
+        );
+        
+        console.log(`Displaying ${visibleVariants.length} variants in region ${start}-${end}`);
+        
+        visibleVariants.forEach((variant, index) => {
+            const variantElement = document.createElement('div');
+            variantElement.className = 'variant-element';
+            
+            const variantStart = Math.max(variant.start, start);
+            const variantEnd = Math.min(variant.end, end);
+            const left = ((variantStart - start) / range) * 100;
+            const width = Math.max(((variantEnd - variantStart) / range) * 100, 0.2);
+            
+            variantElement.style.left = `${left}%`;
+            variantElement.style.width = `${width}%`;
+            variantElement.style.height = '12px';
+            variantElement.style.top = '20px';
+            variantElement.style.position = 'absolute';
+            variantElement.style.background = '#e74c3c';
+            variantElement.style.borderRadius = '2px';
+            variantElement.style.cursor = 'pointer';
+            
+            // Create variant tooltip
+            const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
+                              `Position: ${variant.start}-${variant.end}\n` +
+                              `Ref: ${variant.ref || 'N/A'}\n` +
+                              `Alt: ${variant.alt || 'N/A'}\n` +
+                              `Quality: ${variant.quality || 'N/A'}`;
+            
+            variantElement.title = variantInfo;
+            
+            // Add click handler for detailed info
+            variantElement.addEventListener('click', () => {
+                alert(variantInfo);
+            });
+            
+            trackContent.appendChild(variantElement);
+        });
+        
+        // Add message if no variants found in this region
+        if (visibleVariants.length === 0) {
+            const noVariantsMsg = document.createElement('div');
+            noVariantsMsg.className = 'no-variants-message';
+            noVariantsMsg.textContent = 'No variants in this region';
+            noVariantsMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noVariantsMsg);
+        }
+        
+        track.appendChild(trackContent);
+        return track;
+    }
+
+    shouldShowGeneType(type) {
+        const typeMap = {
+            'gene': 'genes',
+            'CDS': 'CDS',
+            'mRNA': 'mRNA',
+            'tRNA': 'tRNA',
+            'rRNA': 'rRNA',
+            'promoter': 'promoter',
+            'terminator': 'terminator',
+            'regulatory': 'regulatory',
+            'misc_feature': 'other',
+            'repeat_region': 'other'
+        };
+        
+        const filterKey = typeMap[type] || 'other';
+        return this.geneFilters[filterKey];
+    }
+
+    updateGeneDisplay() {
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    syncSidebarFeatureFilter(sidebarId, checked) {
+        const sidebarElement = document.getElementById(sidebarId);
+        if (sidebarElement) {
+            sidebarElement.checked = checked;
+        }
+    }
+
+    syncToolbarFeatureFilter(toolbarId, checked) {
+        const toolbarElement = document.getElementById(toolbarId);
+        if (toolbarElement) {
+            toolbarElement.checked = checked;
+        }
+    }
+
+    toggleFeatureFilters() {
+        const checkboxes = document.getElementById('featureFilterCheckboxes');
+        if (checkboxes.style.display === 'none') {
+            checkboxes.style.display = 'flex';
+        } else {
+            checkboxes.style.display = 'none';
+        }
+    }
+
+    showPanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.style.display = 'block';
+        }
+    }
+
+    closePanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.style.display = 'none';
+        }
+    }
+
+    showAllPanels() {
+        const panels = document.querySelectorAll('.sidebar-section');
+        panels.forEach(panel => {
+            panel.style.display = 'block';
+        });
+    }
+
+    updateFileInfo() {
+        const fileInfo = document.getElementById('fileInfo');
+        if (this.currentFile) {
+            const info = this.currentFile.info;
+            fileInfo.innerHTML = `
+                <div class="file-detail">
+                    <strong>Name:</strong> ${info.name}
+                </div>
+                <div class="file-detail">
+                    <strong>Size:</strong> ${(info.size / 1024).toFixed(2)} KB
+                </div>
+                <div class="file-detail">
+                    <strong>Type:</strong> ${info.extension}
+                </div>
+                <div class="file-detail">
+                    <strong>Sequences:</strong> ${Object.keys(this.currentSequence || {}).length}
+                </div>
+            `;
+        } else {
+            fileInfo.innerHTML = '<p class="no-file">No file loaded</p>';
+        }
+    }
+
+    hideWelcomeScreen() {
+        const welcomeScreen = document.querySelector('.welcome-screen');
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'none';
+        }
+    }
+
+    updateStatus(message) {
+        document.getElementById('statusText').textContent = message;
+    }
+
+    showLoading(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    displaySequence(chromosome, sequence) {
+        const container = document.getElementById('sequenceContent');
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const subsequence = sequence.substring(start, end);
+        
+        // Calculate optimal line length based on container width
+        const containerWidth = container.offsetWidth || 800; // fallback width
+        const charWidth = 12; // approximate character width in pixels
+        const positionWidth = 120; // space for position numbers
+        const availableWidth = containerWidth - positionWidth - 40; // padding
+        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
+        
+        // Create formatted sequence display
+        let html = '';
+        
+        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+            const line = subsequence.substring(i, i + optimalLineLength);
+            const position = start + i + 1;
+            
+            html += `<div class="sequence-line">`;
+            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
+            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
+            html += `</div>`;
+        }
+        
+        container.innerHTML = html;
+    }
+
+    colorizeSequence(sequence) {
+        return sequence.split('').map(base => {
+            const className = `base-${base.toLowerCase()}`;
+            return `<span class="${className}">${base}</span>`;
+        }).join('');
+    }
+
+    createGCContentVisualization(sequence) {
+        const gcDisplay = document.createElement('div');
+        gcDisplay.className = 'gc-content-display';
+        gcDisplay.style.position = 'relative';
+        gcDisplay.style.height = '60px';
+        gcDisplay.style.background = 'rgba(255, 255, 255, 0.1)';
+        gcDisplay.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+        gcDisplay.style.borderRadius = '4px';
+        
+        const windowSize = Math.max(10, Math.floor(sequence.length / 50));
+        
+        for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+            const window = sequence.substring(i, i + windowSize);
+            const gcCount = (window.match(/[GC]/g) || []).length;
+            const gcPercent = (gcCount / windowSize) * 100;
+            
+            const bar = document.createElement('div');
+            bar.className = 'gc-bar';
+            bar.style.position = 'absolute';
+            bar.style.left = `${(i / sequence.length) * 100}%`;
+            bar.style.width = `${(windowSize / sequence.length) * 100}%`;
+            bar.style.height = `${(gcPercent / 100) * 50}px`;
+            bar.style.bottom = '5px';
+            bar.style.background = `hsl(${120 - (gcPercent * 1.2)}, 70%, 50%)`;
+            bar.style.borderRadius = '2px';
+            bar.title = `GC Content: ${gcPercent.toFixed(1)}%`;
+            
+            gcDisplay.appendChild(bar);
+        }
+        
+        return gcDisplay;
+    }
+
+    getReverseComplement(sequence) {
+        const complement = {
+            'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
+            'N': 'N', 'R': 'Y', 'Y': 'R', 'S': 'S',
+            'W': 'W', 'K': 'M', 'M': 'K', 'B': 'V',
+            'D': 'H', 'H': 'D', 'V': 'B'
+        };
+        
+        return sequence.split('').reverse().map(base => complement[base] || base).join('');
+    }
+
+    // Navigation methods
+    navigatePrevious() {
+        const range = this.currentPosition.end - this.currentPosition.start;
+        const newStart = Math.max(0, this.currentPosition.start - range);
+        const newEnd = newStart + range;
+        
+        this.currentPosition = { start: newStart, end: newEnd };
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.updateStatistics(currentChr, this.currentSequence[currentChr]);
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    navigateNext() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) return;
+        
+        const sequence = this.currentSequence[currentChr];
+        const range = this.currentPosition.end - this.currentPosition.start;
+        const newStart = this.currentPosition.start + range;
+        const newEnd = Math.min(sequence.length, newStart + range);
+        
+        if (newStart < sequence.length) {
+            this.currentPosition = { start: newStart, end: newEnd };
+            this.updateStatistics(currentChr, sequence);
+            this.displayGenomeView(currentChr, sequence);
+        }
+    }
+
+    // Zoom methods
+    zoomIn() {
+        const currentRange = this.currentPosition.end - this.currentPosition.start;
+        const newRange = Math.max(100, Math.floor(currentRange / 2));
+        const center = Math.floor((this.currentPosition.start + this.currentPosition.end) / 2);
+        const newStart = Math.max(0, center - Math.floor(newRange / 2));
+        const newEnd = newStart + newRange;
+        
+        this.currentPosition = { start: newStart, end: newEnd };
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.updateStatistics(currentChr, this.currentSequence[currentChr]);
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    zoomOut() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) return;
+        
+        const sequence = this.currentSequence[currentChr];
+        const currentRange = this.currentPosition.end - this.currentPosition.start;
+        const newRange = Math.min(sequence.length, currentRange * 2);
+        const center = Math.floor((this.currentPosition.start + this.currentPosition.end) / 2);
+        const newStart = Math.max(0, center - Math.floor(newRange / 2));
+        const newEnd = Math.min(sequence.length, newStart + newRange);
+        
+        this.currentPosition = { start: newStart, end: newEnd };
+        this.updateStatistics(currentChr, sequence);
+        this.displayGenomeView(currentChr, sequence);
+    }
+
+    resetZoom() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) return;
+        
+        const sequence = this.currentSequence[currentChr];
+        this.currentPosition = { start: 0, end: Math.min(10000, sequence.length) };
+        this.updateStatistics(currentChr, sequence);
+        this.displayGenomeView(currentChr, sequence);
+    }
+
+    // Search and navigation methods
+    showSearchModal() {
+        const modal = document.getElementById('searchModal');
+        if (modal) {
+            modal.classList.add('show');
+            document.getElementById('modalSearchInput').focus();
+        }
+    }
+
+    showGotoModal() {
+        const modal = document.getElementById('gotoModal');
+        if (modal) {
+            modal.classList.add('show');
+            document.getElementById('modalPositionInput').focus();
+        }
+    }
+
+    goToPosition() {
+        const input = document.getElementById('positionInput').value.trim();
+        this.parseAndGoToPosition(input);
+    }
+
+    performGoto() {
+        const input = document.getElementById('modalPositionInput').value.trim();
+        this.parseAndGoToPosition(input);
+        document.getElementById('gotoModal').classList.remove('show');
+    }
+
+    parseAndGoToPosition(input) {
+        if (!input) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('Please select a chromosome first');
+            return;
+        }
+        
+        const sequence = this.currentSequence[currentChr];
+        let start, end;
+        
+        // Parse different formats: "1000", "1000-2000", "chr1:1000-2000"
+        if (input.includes(':')) {
+            const [chr, range] = input.split(':');
+            if (range.includes('-')) {
+                const [s, e] = range.split('-');
+                start = parseInt(s) - 1; // Convert to 0-based
+                end = parseInt(e);
+            } else {
+                start = parseInt(range) - 1;
+                end = start + 1000;
+            }
+        } else if (input.includes('-')) {
+            const [s, e] = input.split('-');
+            start = parseInt(s) - 1;
+            end = parseInt(e);
+        } else {
+            start = parseInt(input) - 1;
+            end = start + 1000;
+        }
+        
+        // Validate and adjust bounds
+        start = Math.max(0, start);
+        end = Math.min(sequence.length, end);
+        
+        if (start >= end) {
+            alert('Invalid position range');
+            return;
+        }
+        
+        this.currentPosition = { start, end };
+        this.updateStatistics(currentChr, sequence);
+        this.displayGenomeView(currentChr, sequence);
+    }
+
+    quickSearch() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) {
+            this.performSearch(query);
+        }
+    }
+
+    performSearch(query = null) {
+        const searchQuery = query || document.getElementById('modalSearchInput').value.trim();
+        if (!searchQuery) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('Please select a chromosome first');
+            return;
+        }
+        
+        const sequence = this.currentSequence[currentChr];
+        const upperQuery = searchQuery.toUpperCase();
+        const results = [];
+        
+        // Search for exact matches
+        let index = sequence.indexOf(upperQuery);
+        while (index !== -1) {
+            results.push(index);
+            index = sequence.indexOf(upperQuery, index + 1);
+        }
+        
+        if (results.length > 0) {
+            // Go to first result
+            const start = results[0];
+            const end = Math.min(sequence.length, start + Math.max(1000, upperQuery.length * 10));
+            this.currentPosition = { start, end };
+            this.updateStatistics(currentChr, sequence);
+            this.displayGenomeView(currentChr, sequence);
+            
+            alert(`Found ${results.length} matches. Showing first match at position ${start + 1}.`);
+        } else {
+            alert('No matches found');
+        }
+        
+        // Close modal if it was opened
+        const modal = document.getElementById('searchModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    copySequence() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('No sequence to copy');
+            return;
+        }
+        
+        const sequence = this.currentSequence[currentChr];
+        const subsequence = sequence.substring(this.currentPosition.start, this.currentPosition.end);
+        
+        // Check if there's a text selection
+        const selection = window.getSelection();
+        let textToCopy = subsequence;
+        
+        if (selection.toString().length > 0) {
+            // Use selected text
+            textToCopy = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
+        } else {
+            // Prompt user to select a region or copy all
+            const userChoice = confirm('No text selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.');
+            if (!userChoice) {
+                alert('Please select the text you want to copy, then click the Copy button again.');
+                return;
+            }
+        }
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert(`Copied ${textToCopy.length} bases to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
+    }
+
+    exportSequence() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('No sequence to export');
+            return;
+        }
+        
+        const sequence = this.currentSequence[currentChr];
+        const subsequence = sequence.substring(this.currentPosition.start, this.currentPosition.end);
+        
+        const fastaContent = `>${currentChr}:${this.currentPosition.start + 1}-${this.currentPosition.end}\n${subsequence}`;
+        
+        const blob = new Blob([fastaContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentChr}_${this.currentPosition.start + 1}-${this.currentPosition.end}.fasta`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 }
 

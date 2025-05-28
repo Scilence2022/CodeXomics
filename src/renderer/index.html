@@ -63,10 +63,10 @@
                         <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence
+                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence (Top)
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackGC" value="gc"> GC Content
+                        <input type="checkbox" id="trackGC" value="gc" checked> GC Content
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackVariants" value="variants"> VCF Variants
@@ -76,6 +76,9 @@
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackProteins" value="proteins"> Proteins
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackBottomSequence" value="bottomSequence" checked> Sequence (Bottom)
                     </label>
                 </div>
             </div>
@@ -188,10 +191,10 @@
                         </label>
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackSequence" value="sequence" checked>
-                            <span>Sequence Track</span>
+                            <span>Sequence Track (Top)</span>
                         </label>
                         <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackGC" value="gc">
+                            <input type="checkbox" id="sidebarTrackGC" value="gc" checked>
                             <span>GC Content Track</span>
                         </label>
                         <label class="track-control-item">
@@ -205,6 +208,10 @@
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackProteins" value="proteins">
                             <span>Protein Track</span>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackBottomSequence" value="bottomSequence" checked>
+                            <span>Sequence Track (Bottom)</span>
                         </label>
                     </div>
                 </div>
