@@ -112,6 +112,12 @@
                 </div>
             </div>
             <div class="toolbar-section">
+                <label>Sidebar:</label>
+                <button id="toggleSidebar" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-sidebar"></i>
+                </button>
+            </div>
+            <div class="toolbar-section">
                 <label>Show Features:</label>
                 <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
                     <i class="fas fa-filter"></i>
@@ -292,6 +298,9 @@
                     </div>
                 </div>
             </aside>
+
+            <!-- Horizontal Splitter -->
+            <div class="horizontal-splitter" id="horizontalSplitter" style="display: flex;"></div>
 
             <!-- Viewer Area -->
             <div class="viewer-container" id="viewerContainer">

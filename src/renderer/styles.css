@@ -620,17 +620,101 @@ body {
     }
     
     .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .toolbar-section {
+        justify-content: flex-start;
         flex-wrap: wrap;
-        gap: 16px;
     }
     
+    .track-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+    
+    .track-checkbox {
+        padding: 8px 12px;
+        min-height: 44px;
+        align-items: center;
+    }
+    
+    .feature-filter-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        grid-template-columns: 1fr;
+    }
+    
+    .feature-checkbox {
+        padding: 8px 4px;
+        min-height: 44px;
+    }
+    
+    .splitter {
+        height: 12px;
+    }
+    
+    .splitter:hover {
+        height: 14px;
+    }
+    
+    .splitter::before {
+        width: 60px;
+        height: 4px;
+    }
+    
+    .track-control-item,
+    .feature-control-item {
+        padding: 10px 12px;
+        min-height: 48px;
+        align-items: center;
+    }
+    
+    .sidebar-section {
+        padding: 16px;
+    }
+    
+    /* Mobile sidebar behavior */
     .sidebar {
-        width: 200px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: 280px !important;
     }
     
-    .modal-content {
-        width: 95%;
-        margin: 20px;
+    .sidebar:not(.collapsed) {
+        transform: translateX(0);
+    }
+    
+    .horizontal-splitter {
+        display: none !important;
+    }
+    
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .viewer-container {
+        width: 100%;
     }
 }
 
@@ -1311,6 +1395,34 @@ body {
     .sidebar-section {
         padding: 16px;
     }
+    
+    /* Mobile sidebar behavior */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: 280px !important;
+    }
+    
+    .sidebar:not(.collapsed) {
+        transform: translateX(0);
+    }
+    
+    .horizontal-splitter {
+        display: none !important;
+    }
+    
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .viewer-container {
+        width: 100%;
+    }
 }
 
 /* Dark Theme Support */
@@ -1795,6 +1907,94 @@ body {
     min-height: 300px;
     overflow: auto;
     position: relative;
+}
+
+/* Horizontal Splitter between sidebar and viewer */
+.horizontal-splitter {
+    width: 8px;
+    background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+    cursor: col-resize;
+    position: relative;
+    border-left: 1px solid #ced4da;
+    border-right: 1px solid #ced4da;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.horizontal-splitter:hover {
+    background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+    width: 10px;
+}
+
+.horizontal-splitter::before {
+    content: '';
+    height: 40px;
+    width: 3px;
+    background: #6c757d;
+    border-radius: 2px;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.horizontal-splitter:hover::before {
+    opacity: 1;
+    height: 60px;
+    width: 4px;
+}
+
+.horizontal-splitter:active {
+    background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+}
+
+.horizontal-splitter:active::before {
+    background: #343a40;
+    opacity: 1;
+}
+
+.horizontal-splitter.active {
+    background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+    width: 10px;
+}
+
+.horizontal-splitter.active::before {
+    background: #343a40;
+    opacity: 1;
+    height: 60px;
+    width: 4px;
+}
+
+.horizontal-splitter:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.horizontal-splitter:focus::before {
+    background: var(--primary-color);
+    opacity: 1;
+}
+
+/* Sidebar auto-hide functionality */
+.sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+.horizontal-splitter.hidden {
+    display: none;
+}
+
+.main-content.sidebar-collapsed {
+    /* When sidebar is collapsed, viewer takes full width */
+}
+
+.main-content.sidebar-collapsed .viewer-container {
+    flex: 1;
 }
 
 .splitter {

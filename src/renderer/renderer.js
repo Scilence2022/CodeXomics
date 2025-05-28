@@ -44,6 +44,9 @@ class GenomeBrowser {
         // Initialize splitter functionality
         this.initializeSplitter();
         
+        // Initialize horizontal splitter functionality
+        this.initializeHorizontalSplitter();
+        
         // Add window resize listener for responsive sequence display
         window.addEventListener('resize', () => {
             this.handleWindowResize();
@@ -247,6 +250,11 @@ class GenomeBrowser {
         // Toggle buttons for toolbar sections
         document.getElementById('toggleTracks').addEventListener('click', () => {
             this.toggleTracks();
+        });
+        
+        // Sidebar toggle button
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+            this.toggleSidebar();
         });
     }
 
@@ -1705,10 +1713,36 @@ class GenomeBrowser {
         }
     }
 
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const horizontalSplitter = document.getElementById('horizontalSplitter');
+        const mainContent = document.querySelector('.main-content');
+        const button = document.getElementById('toggleSidebar');
+        
+        if (sidebar.classList.contains('collapsed')) {
+            // Show sidebar
+            sidebar.classList.remove('collapsed');
+            horizontalSplitter.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-collapsed');
+            button.classList.remove('active');
+            button.innerHTML = '<i class="fas fa-sidebar"></i>';
+        } else {
+            // Hide sidebar
+            sidebar.classList.add('collapsed');
+            horizontalSplitter.classList.add('hidden');
+            mainContent.classList.add('sidebar-collapsed');
+            button.classList.add('active');
+            button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+        }
+    }
+
     showPanel(panelId) {
         const panel = document.getElementById(panelId);
         if (panel) {
             panel.style.display = 'block';
+            
+            // Show sidebar and splitter if they were hidden
+            this.showSidebarIfHidden();
         }
     }
 
@@ -1716,6 +1750,41 @@ class GenomeBrowser {
         const panel = document.getElementById(panelId);
         if (panel) {
             panel.style.display = 'none';
+            
+            // Check if all panels are closed and hide sidebar if so
+            this.checkAndHideSidebarIfAllPanelsClosed();
+        }
+    }
+
+    checkAndHideSidebarIfAllPanelsClosed() {
+        const sidebar = document.getElementById('sidebar');
+        const horizontalSplitter = document.getElementById('horizontalSplitter');
+        const mainContent = document.querySelector('.main-content');
+        
+        // Get all sidebar sections
+        const allPanels = document.querySelectorAll('.sidebar-section');
+        const visiblePanels = Array.from(allPanels).filter(panel => 
+            panel.style.display !== 'none'
+        );
+        
+        if (visiblePanels.length === 0) {
+            // All panels are closed, hide sidebar
+            sidebar.classList.add('collapsed');
+            horizontalSplitter.classList.add('hidden');
+            mainContent.classList.add('sidebar-collapsed');
+        }
+    }
+
+    showSidebarIfHidden() {
+        const sidebar = document.getElementById('sidebar');
+        const horizontalSplitter = document.getElementById('horizontalSplitter');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (sidebar.classList.contains('collapsed')) {
+            // Show sidebar and splitter
+            sidebar.classList.remove('collapsed');
+            horizontalSplitter.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-collapsed');
         }
     }
 
@@ -2288,6 +2357,108 @@ class GenomeBrowser {
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
         }
+    }
+
+    // Initialize horizontal splitter functionality
+    initializeHorizontalSplitter() {
+        const horizontalSplitter = document.getElementById('horizontalSplitter');
+        const sidebar = document.getElementById('sidebar');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (!horizontalSplitter || !sidebar || !viewerContainer || !mainContent) {
+            console.warn('Horizontal splitter elements not found, skipping initialization');
+            return;
+        }
+        
+        let isResizing = false;
+        let startX = 0;
+        let startSidebarWidth = 0;
+        
+        // Mouse events for dragging
+        horizontalSplitter.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startSidebarWidth = sidebar.offsetWidth;
+            
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            horizontalSplitter.classList.add('active');
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const newSidebarWidth = startSidebarWidth + deltaX;
+            
+            // Set minimum and maximum widths
+            const minWidth = 200;
+            const maxWidth = window.innerWidth * 0.5; // Max 50% of window width
+            
+            if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
+                sidebar.style.width = `${newSidebarWidth}px`;
+                sidebar.style.flex = 'none';
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                horizontalSplitter.classList.remove('active');
+            }
+        });
+        
+        // Keyboard accessibility
+        horizontalSplitter.setAttribute('tabindex', '0');
+        horizontalSplitter.setAttribute('role', 'separator');
+        horizontalSplitter.setAttribute('aria-label', 'Resize sidebar');
+        
+        horizontalSplitter.addEventListener('keydown', (e) => {
+            const step = 20; // pixels to move per keypress
+            let deltaX = 0;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    deltaX = -step;
+                    break;
+                case 'ArrowRight':
+                    deltaX = step;
+                    break;
+                case 'Home':
+                    // Reset to default width
+                    sidebar.style.width = '280px';
+                    sidebar.style.flex = 'none';
+                    e.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+            
+            e.preventDefault();
+            
+            // Apply keyboard movement
+            const currentWidth = sidebar.offsetWidth;
+            const newWidth = currentWidth + deltaX;
+            
+            const minWidth = 200;
+            const maxWidth = window.innerWidth * 0.5;
+            
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                sidebar.style.width = `${newWidth}px`;
+                sidebar.style.flex = 'none';
+            }
+        });
+        
+        // Double-click to reset to default width
+        horizontalSplitter.addEventListener('dblclick', () => {
+            sidebar.style.width = '280px';
+            sidebar.style.flex = 'none';
+        });
     }
 }
 
