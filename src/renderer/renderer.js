@@ -2637,7 +2637,7 @@ class GenomeBrowser {
             
             // Convert pixel movement to genome position change
             // Use a very conservative multiplier to prevent jumping
-            const movementFactor = 0.15; // Increased from 0.05 for better responsiveness
+            const movementFactor = 1.50; // Increased from 0.05 for better responsiveness
             const positionChange = Math.round(pixelMovement * currentRange * movementFactor / elementWidth);
             
             // Calculate new position (drag right = move left in genome, drag left = move right)
