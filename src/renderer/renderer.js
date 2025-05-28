@@ -14,8 +14,8 @@ class GenomeBrowser {
         this.zoomLevel = 1;
         this.genes = [];
         
-        // Default visible tracks - only show Genes & Features, Sequence, and GC Content by default
-        this.visibleTracks = new Set(['genes', 'sequence', 'gc']);
+        // Default visible tracks - only show Genes & Features and Sequence by default
+        this.visibleTracks = new Set(['genes', 'sequence']);
         
         // Gene filter settings
         this.geneFilters = {
@@ -37,6 +37,21 @@ class GenomeBrowser {
         this.setupEventListeners();
         this.setupIPC();
         this.updateStatus('Ready');
+        
+        // Add window resize listener for responsive sequence display
+        window.addEventListener('resize', () => {
+            this.handleWindowResize();
+        });
+    }
+
+    handleWindowResize() {
+        // Recalculate sequence display if visible
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            if (this.visibleTracks.has('sequence')) {
+                this.displayEnhancedSequence(currentChr, this.currentSequence[currentChr]);
+            }
+        }
     }
 
     setupEventListeners() {
@@ -767,19 +782,47 @@ class GenomeBrowser {
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
         const subsequence = sequence.substring(start, end);
+        const range = end - start;
         
-        // Show sequence if zoomed in enough
-        if (end - start <= 1000) {
-            const seqDisplay = document.createElement('div');
-            seqDisplay.className = 'sequence-bases-display';
-            seqDisplay.innerHTML = this.colorizeSequence(subsequence);
-            trackContent.appendChild(seqDisplay);
-        } else {
-            // Show GC content visualization for larger regions
-            const gcDisplay = this.createGCContentVisualization(subsequence);
-            trackContent.appendChild(gcDisplay);
+        // Create single-line sequence display with dynamic sizing
+        const seqDisplay = document.createElement('div');
+        seqDisplay.className = 'sequence-single-line';
+        seqDisplay.style.position = 'relative';
+        seqDisplay.style.height = '30px';
+        seqDisplay.style.overflow = 'hidden';
+        seqDisplay.style.display = 'flex';
+        seqDisplay.style.alignItems = 'center';
+        
+        // Calculate font size based on available space and sequence length
+        const containerWidth = trackContent.offsetWidth || 800; // fallback width
+        const maxFontSize = 16;
+        const minFontSize = 4;
+        const calculatedFontSize = Math.max(minFontSize, Math.min(maxFontSize, containerWidth / range * 0.8));
+        
+        // Create sequence bases with dynamic positioning
+        for (let i = 0; i < subsequence.length; i++) {
+            const base = subsequence[i];
+            const baseElement = document.createElement('span');
+            baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
+            baseElement.textContent = base;
+            baseElement.style.position = 'absolute';
+            baseElement.style.left = `${(i / range) * 100}%`;
+            baseElement.style.fontSize = `${calculatedFontSize}px`;
+            baseElement.style.fontFamily = 'monospace';
+            baseElement.style.fontWeight = 'bold';
+            baseElement.style.textAlign = 'center';
+            baseElement.style.lineHeight = '30px';
+            baseElement.style.userSelect = 'text';
+            baseElement.style.cursor = 'text';
+            
+            // Add tooltip with position info
+            const position = start + i + 1;
+            baseElement.title = `Position: ${position}, Base: ${base}`;
+            
+            seqDisplay.appendChild(baseElement);
         }
         
+        trackContent.appendChild(seqDisplay);
         track.appendChild(trackContent);
         return track;
     }
@@ -931,12 +974,18 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const subsequence = sequence.substring(start, end);
         
-        // Create formatted sequence display
-        let html = '';
-        const lineLength = 60;
+        // Calculate optimal line length based on container width
+        const containerWidth = container.offsetWidth || 800; // fallback width
+        const charWidth = 12; // approximate character width in pixels
+        const positionWidth = 120; // space for position numbers
+        const availableWidth = containerWidth - positionWidth - 40; // padding
+        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
         
-        for (let i = 0; i < subsequence.length; i += lineLength) {
-            const line = subsequence.substring(i, i + lineLength);
+        // Create formatted sequence display with responsive line length
+        let html = '';
+        
+        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+            const line = subsequence.substring(i, i + optimalLineLength);
             const position = start + i + 1;
             
             html += `<div class="sequence-line">`;
@@ -1830,14 +1879,19 @@ class GenomeBrowser {
         const container = document.getElementById('sequenceContent');
         const annotations = this.currentAnnotations[chromosome] || [];
         
+        // Calculate optimal line length based on container width
+        const containerWidth = container.offsetWidth || 800;
+        const charWidth = 12;
+        const positionWidth = 120;
+        const availableWidth = containerWidth - positionWidth - 40;
+        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
+        
         // Create formatted sequence display with annotations
         let html = '<div class="detailed-sequence-view">';
         html += '<div class="sequence-info"><strong>DNA Sequence:</strong></div>';
         
-        const lineLength = 60;
-        
-        for (let i = 0; i < subsequence.length; i += lineLength) {
-            const line = subsequence.substring(i, i + lineLength);
+        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+            const line = subsequence.substring(i, i + optimalLineLength);
             const position = start + i + 1;
             
             html += `<div class="sequence-line">`;
@@ -1880,12 +1934,18 @@ class GenomeBrowser {
     displaySequenceWithAnnotations(chromosome, subsequence, start) {
         const container = document.getElementById('sequenceContent');
         
+        // Calculate optimal line length based on container width
+        const containerWidth = container.offsetWidth || 800;
+        const charWidth = 12;
+        const positionWidth = 120;
+        const availableWidth = containerWidth - positionWidth - 40;
+        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
+        
         // Create formatted sequence display with basic annotations
         let html = '';
-        const lineLength = 60;
         
-        for (let i = 0; i < subsequence.length; i += lineLength) {
-            const line = subsequence.substring(i, i + lineLength);
+        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+            const line = subsequence.substring(i, i + optimalLineLength);
             const position = start + i + 1;
             
             html += `<div class="sequence-line">`;

@@ -882,9 +882,75 @@ body {
 
 /* Sequence Track Styles */
 .sequence-track {
-    background: white;
+    margin-bottom: 10px;
 }
 
+.sequence-single-line {
+    position: relative;
+    height: 30px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.sequence-base-inline {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    text-align: center;
+    line-height: 30px;
+    user-select: text;
+    cursor: text;
+    transition: font-size 0.2s ease;
+}
+
+.sequence-base-inline:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+/* Base colors for inline sequence */
+.sequence-base-inline.base-a { 
+    color: #e74c3c; 
+    font-weight: bold;
+}
+
+.sequence-base-inline.base-t { 
+    color: #3498db; 
+    font-weight: bold;
+}
+
+.sequence-base-inline.base-g { 
+    color: #2ecc71; 
+    font-weight: bold;
+}
+
+.sequence-base-inline.base-c { 
+    color: #f39c12; 
+    font-weight: bold;
+}
+
+.sequence-base-inline.base-n { 
+    color: #95a5a6; 
+    font-weight: bold;
+}
+
+/* Responsive adjustments for sequence track */
+@media (max-width: 768px) {
+    .sequence-single-line {
+        height: 25px;
+    }
+    
+    .sequence-base-inline {
+        line-height: 25px;
+    }
+}
+
+/* Sequence Visualization */
 .sequence-visualization {
     height: 80px;
     padding: 10px;
