@@ -1925,6 +1925,46 @@ body {
     flex-shrink: 0;
 }
 
+/* Splitter Toggle Button */
+.splitter-toggle-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.splitter-toggle-btn:hover {
+    background: var(--primary-hover);
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.splitter-toggle-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.splitter-toggle-btn.collapsed {
+    background: var(--success-color);
+}
+
+.splitter-toggle-btn.collapsed:hover {
+    background: #0ea5e9;
+}
+
 .horizontal-splitter:hover {
     background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
     width: 10px;
@@ -1987,6 +2027,52 @@ body {
 
 .horizontal-splitter.hidden {
     display: none;
+}
+
+/* When sidebar is collapsed, show a floating toggle button */
+.main-content.sidebar-collapsed::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 0;
+    width: 32px;
+    height: 60px;
+    background: var(--primary-color);
+    border-radius: 0 8px 8px 0;
+    z-index: 1000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.main-content.sidebar-collapsed .floating-toggle-btn {
+    position: fixed;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.main-content.sidebar-collapsed .floating-toggle-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .main-content.sidebar-collapsed {
@@ -2646,4 +2732,36 @@ body {
     margin-top: 1.5rem;
     color: #6c757d;
     font-style: italic;
+}
+
+/* Floating Toggle Button */
+.floating-toggle-btn {
+    position: fixed;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.floating-toggle-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.floating-toggle-btn:active {
+    transform: translateY(-50%) scale(0.95);
 } 

@@ -256,6 +256,16 @@ class GenomeBrowser {
         document.getElementById('toggleSidebar').addEventListener('click', () => {
             this.toggleSidebar();
         });
+        
+        // Splitter toggle button
+        document.getElementById('splitterToggleBtn').addEventListener('click', () => {
+            this.toggleSidebarFromSplitter();
+        });
+        
+        // Floating toggle button
+        document.getElementById('floatingToggleBtn').addEventListener('click', () => {
+            this.toggleSidebarFromSplitter();
+        });
     }
 
     setupModalControls() {
@@ -1718,22 +1728,59 @@ class GenomeBrowser {
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
         const button = document.getElementById('toggleSidebar');
+        const splitterToggleBtn = document.getElementById('splitterToggleBtn');
+        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
         
         if (sidebar.classList.contains('collapsed')) {
             // Show sidebar
             sidebar.classList.remove('collapsed');
             horizontalSplitter.classList.remove('hidden');
             mainContent.classList.remove('sidebar-collapsed');
-            button.classList.remove('active');
-            button.innerHTML = '<i class="fas fa-sidebar"></i>';
+            
+            // Update toolbar button
+            if (button) {
+                button.classList.remove('active');
+                button.innerHTML = '<i class="fas fa-sidebar"></i>';
+            }
+            
+            // Update splitter toggle button
+            if (splitterToggleBtn) {
+                splitterToggleBtn.classList.remove('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                splitterToggleBtn.title = 'Hide Sidebar';
+            }
+            
+            // Hide floating toggle button
+            if (floatingToggleBtn) {
+                floatingToggleBtn.style.display = 'none';
+            }
         } else {
             // Hide sidebar
             sidebar.classList.add('collapsed');
             horizontalSplitter.classList.add('hidden');
             mainContent.classList.add('sidebar-collapsed');
-            button.classList.add('active');
-            button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            
+            // Update toolbar button
+            if (button) {
+                button.classList.add('active');
+                button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            }
+            
+            // Update splitter toggle button
+            if (splitterToggleBtn) {
+                splitterToggleBtn.classList.add('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                splitterToggleBtn.title = 'Show Sidebar';
+            }
+            
+            // Show floating toggle button
+            if (floatingToggleBtn) {
+                floatingToggleBtn.style.display = 'flex';
+            }
         }
+        
+        // Trigger a resize event to ensure proper layout adjustment
+        window.dispatchEvent(new Event('resize'));
     }
 
     showPanel(panelId) {
@@ -1760,6 +1807,8 @@ class GenomeBrowser {
         const sidebar = document.getElementById('sidebar');
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
+        const splitterToggleBtn = document.getElementById('splitterToggleBtn');
+        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
         
         // Get all sidebar sections
         const allPanels = document.querySelectorAll('.sidebar-section');
@@ -1772,6 +1821,21 @@ class GenomeBrowser {
             sidebar.classList.add('collapsed');
             horizontalSplitter.classList.add('hidden');
             mainContent.classList.add('sidebar-collapsed');
+            
+            // Update splitter toggle button
+            if (splitterToggleBtn) {
+                splitterToggleBtn.classList.add('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                splitterToggleBtn.title = 'Show Sidebar';
+            }
+            
+            // Show floating toggle button
+            if (floatingToggleBtn) {
+                floatingToggleBtn.style.display = 'flex';
+            }
+            
+            // Trigger resize event
+            window.dispatchEvent(new Event('resize'));
         }
     }
 
@@ -1779,12 +1843,23 @@ class GenomeBrowser {
         const sidebar = document.getElementById('sidebar');
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
+        const splitterToggleBtn = document.getElementById('splitterToggleBtn');
         
         if (sidebar.classList.contains('collapsed')) {
             // Show sidebar and splitter
             sidebar.classList.remove('collapsed');
             horizontalSplitter.classList.remove('hidden');
             mainContent.classList.remove('sidebar-collapsed');
+            
+            // Update splitter toggle button
+            if (splitterToggleBtn) {
+                splitterToggleBtn.classList.remove('collapsed');
+                splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                splitterToggleBtn.title = 'Hide Sidebar';
+            }
+            
+            // Trigger resize event
+            window.dispatchEvent(new Event('resize'));
         }
     }
 
@@ -2377,6 +2452,11 @@ class GenomeBrowser {
         
         // Mouse events for dragging
         horizontalSplitter.addEventListener('mousedown', (e) => {
+            // Don't start resizing if clicking on the toggle button
+            if (e.target.closest('.splitter-toggle-btn')) {
+                return;
+            }
+            
             isResizing = true;
             startX = e.clientX;
             startSidebarWidth = sidebar.offsetWidth;
@@ -2459,6 +2539,10 @@ class GenomeBrowser {
             sidebar.style.width = '280px';
             sidebar.style.flex = 'none';
         });
+    }
+
+    toggleSidebarFromSplitter() {
+        this.toggleSidebar();
     }
 }
 

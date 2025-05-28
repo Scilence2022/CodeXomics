@@ -156,6 +156,11 @@
 
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Floating Toggle Button (shown when sidebar is collapsed) -->
+            <button class="floating-toggle-btn" id="floatingToggleBtn" style="display: none;" title="Show Sidebar">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-section" id="fileInfoSection">
@@ -300,7 +305,11 @@
             </aside>
 
             <!-- Horizontal Splitter -->
-            <div class="horizontal-splitter" id="horizontalSplitter" style="display: flex;"></div>
+            <div class="horizontal-splitter" id="horizontalSplitter" style="display: flex;">
+                <button class="splitter-toggle-btn" id="splitterToggleBtn" title="Toggle Sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
 
             <!-- Viewer Area -->
             <div class="viewer-container" id="viewerContainer">
