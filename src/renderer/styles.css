@@ -793,6 +793,24 @@ body {
     font-size: 14px;
     color: #495057;
     border-bottom: 1px solid #dee2e6;
+    position: relative;
+}
+
+.track-header::after {
+    content: '⇄';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.track-header:hover::after {
+    opacity: 1;
+    color: #495057;
 }
 
 .track-content {
@@ -800,6 +818,38 @@ body {
     height: 80px;
     padding: 10px 0;
     background: #fafafa;
+    transition: background-color 0.2s ease;
+}
+
+.track-content:hover {
+    background: #f0f0f0;
+}
+
+.track-content.dragging {
+    background: #e8f4fd;
+    cursor: grabbing !important;
+}
+
+/* Draggable cursor states */
+.track-content[style*="cursor: grab"] {
+    cursor: grab !important;
+}
+
+.track-content[style*="cursor: grabbing"] {
+    cursor: grabbing !important;
+}
+
+/* Focus styles for keyboard navigation */
+.track-content:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    background: #e8f4fd;
+}
+
+.track-content:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    background: #e8f4fd;
 }
 
 .gene-element {

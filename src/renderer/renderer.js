@@ -750,6 +750,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
+        
         const annotations = this.currentAnnotations[chromosome] || [];
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
@@ -871,6 +874,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content sequence-visualization';
         
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
+        
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
         const subsequence = sequence.substring(start, end);
@@ -931,6 +937,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         trackContent.style.height = '80px';
+        
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
         
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
@@ -2543,6 +2552,161 @@ class GenomeBrowser {
 
     toggleSidebarFromSplitter() {
         this.toggleSidebar();
+    }
+
+    // Make track content draggable for navigation
+    makeDraggable(element, chromosome) {
+        let isDragging = false;
+        let startX = 0;
+        let startPosition = 0;
+        let dragThreshold = 5; // Minimum pixels to move before considering it a drag
+        let hasDragged = false;
+        
+        element.style.cursor = 'grab';
+        element.title = 'Drag left or right to navigate through the genome\nKeyboard: ← → arrows, Home, End';
+        
+        const handleMouseDown = (e) => {
+            // Only handle left mouse button
+            if (e.button !== 0) return;
+            
+            isDragging = true;
+            hasDragged = false;
+            startX = e.clientX;
+            startPosition = this.currentPosition.start;
+            element.style.cursor = 'grabbing';
+            element.classList.add('dragging');
+            
+            // Prevent text selection during drag
+            document.body.style.userSelect = 'none';
+            
+            e.preventDefault();
+        };
+        
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            
+            // Check if we've moved enough to consider this a drag
+            if (Math.abs(deltaX) > dragThreshold) {
+                hasDragged = true;
+            }
+            
+            if (!hasDragged) return;
+            
+            // Calculate the movement in base pairs with reduced sensitivity
+            const currentRange = this.currentPosition.end - this.currentPosition.start;
+            const elementWidth = element.offsetWidth;
+            
+            // Reduce sensitivity by using a smaller multiplier
+            // The sensitivity factor controls how much the genome moves relative to mouse movement
+            const sensitivityFactor = 0.3; // Reduced from 1.0 to 0.3 for slower movement
+            const basesPerPixel = (currentRange / elementWidth) * sensitivityFactor;
+            const deltaPosition = Math.round(deltaX * basesPerPixel);
+            
+            // Calculate new position
+            const newStart = Math.max(0, startPosition - deltaPosition);
+            const sequence = this.currentSequence[chromosome];
+            const maxStart = Math.max(0, sequence.length - currentRange);
+            const clampedStart = Math.min(newStart, maxStart);
+            const newEnd = clampedStart + currentRange;
+            
+            // Update position if it's different
+            if (clampedStart !== this.currentPosition.start) {
+                this.currentPosition = { start: clampedStart, end: newEnd };
+                
+                // Throttle updates for better performance
+                if (!this.dragUpdateTimeout) {
+                    this.dragUpdateTimeout = setTimeout(() => {
+                        this.updateStatistics(chromosome, sequence);
+                        this.displayGenomeView(chromosome, sequence);
+                        this.dragUpdateTimeout = null;
+                    }, 16); // ~60fps
+                }
+            }
+        };
+        
+        const handleMouseUp = (e) => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            element.style.cursor = 'grab';
+            element.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            
+            // If we didn't drag much, allow click events to propagate
+            if (!hasDragged) {
+                // Let click events on gene elements work normally
+                return;
+            }
+            
+            // Final update after drag ends
+            if (this.dragUpdateTimeout) {
+                clearTimeout(this.dragUpdateTimeout);
+                this.dragUpdateTimeout = null;
+            }
+            
+            const sequence = this.currentSequence[chromosome];
+            this.updateStatistics(chromosome, sequence);
+            this.displayGenomeView(chromosome, sequence);
+            
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        
+        const handleMouseLeave = () => {
+            if (isDragging) {
+                handleMouseUp();
+            }
+        };
+        
+        // Add event listeners
+        element.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        element.addEventListener('mouseleave', handleMouseLeave);
+        
+        // Add keyboard navigation
+        element.setAttribute('tabindex', '0');
+        element.addEventListener('keydown', (e) => {
+            const sequence = this.currentSequence[chromosome];
+            const currentRange = this.currentPosition.end - this.currentPosition.start;
+            const step = Math.max(1, Math.floor(currentRange * 0.1)); // 10% of current view
+            
+            let newStart = this.currentPosition.start;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    newStart = Math.max(0, this.currentPosition.start - step);
+                    break;
+                case 'ArrowRight':
+                    newStart = Math.min(sequence.length - currentRange, this.currentPosition.start + step);
+                    break;
+                case 'Home':
+                    newStart = 0;
+                    break;
+                case 'End':
+                    newStart = Math.max(0, sequence.length - currentRange);
+                    break;
+                default:
+                    return; // Don't prevent default for other keys
+            }
+            
+            e.preventDefault();
+            
+            const newEnd = newStart + currentRange;
+            this.currentPosition = { start: newStart, end: newEnd };
+            this.updateStatistics(chromosome, sequence);
+            this.displayGenomeView(chromosome, sequence);
+        });
+        
+        // Store cleanup function for later removal if needed
+        element._dragCleanup = () => {
+            element.removeEventListener('mousedown', handleMouseDown);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            element.removeEventListener('mouseleave', handleMouseLeave);
+        };
     }
 }
 
