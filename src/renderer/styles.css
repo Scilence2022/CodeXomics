@@ -1939,4 +1939,105 @@ body {
     .detailed-sequence-view {
         padding: 10px;
     }
+}
+
+/* GC Content Track */
+.gc-track {
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+}
+
+.gc-content-visualization {
+    display: flex;
+    height: 60px;
+    align-items: end;
+    padding: 5px;
+    background: linear-gradient(to top, #f0f0f0 0%, #f0f0f0 50%, transparent 50%);
+}
+
+.gc-bar {
+    flex: 1;
+    min-width: 1px;
+    background-color: #4CAF50;
+    margin-right: 1px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.gc-bar:hover {
+    background-color: #45a049 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Aligned Reads Track */
+.reads-track {
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+}
+
+.reads-track .track-content {
+    position: relative;
+    background: #fafafa;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.read-element {
+    position: absolute;
+    height: 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.read-element:hover {
+    transform: scaleY(1.2);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.reads-legend {
+    background: rgba(255,255,255,0.9);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    font-size: 10px;
+}
+
+.no-reads-message {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Track Alignment - Ensure all tracks have consistent left margin */
+.gene-track .track-content,
+.sequence-track .track-content,
+.gc-track .track-content,
+.reads-track .track-content,
+.variant-track .track-content,
+.protein-track .track-content {
+    margin-left: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Ensure ruler aligns with tracks */
+.genome-ruler {
+    margin-left: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Make sequence position numbers non-selectable */
+.sequence-position {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 } 

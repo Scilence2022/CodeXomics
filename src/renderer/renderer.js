@@ -3,15 +3,21 @@ const { ipcRenderer } = require('electron');
 class GenomeBrowser {
     constructor() {
         this.currentFile = null;
-        this.currentSequence = null;
-        this.currentAnnotations = null;
-        this.currentPosition = { start: 0, end: 1000 };
+        this.currentSequence = {};
+        this.currentAnnotations = {};
+        this.currentVariants = {};
+        this.currentReads = {};
+        this.currentPosition = { start: 0, end: 10000 };
         this.igvBrowser = null;
         this.searchResults = [];
         this.currentSearchIndex = 0;
         this.zoomLevel = 1;
         this.genes = [];
-        this.visibleTracks = new Set(['sequence', 'genes']);
+        
+        // Default visible tracks - only show Genes & Features, Sequence, and GC Content by default
+        this.visibleTracks = new Set(['genes', 'sequence', 'gc']);
+        
+        // Gene filter settings
         this.geneFilters = {
             genes: true,
             CDS: true,
@@ -78,12 +84,17 @@ class GenomeBrowser {
         // Track selection (toolbar checkboxes)
         document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackGenes').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackGC').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackReads').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
 
         // Sidebar track controls
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackGC').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackReads').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
 
         // Panel close buttons
@@ -328,6 +339,9 @@ class GenomeBrowser {
             case '.vcf':
                 await this.parseVCF();
                 break;
+            case '.sam':
+                await this.parseSAM();
+                break;
             default:
                 // Try to parse as FASTA by default
                 await this.parseFasta();
@@ -549,25 +563,38 @@ class GenomeBrowser {
         const ruler = this.createRuler();
         browserContainer.appendChild(ruler);
         
-        // Create gene track (only if genes track is selected and annotations exist)
+        // Create tracks in order for proper alignment
+        // 1. Gene track (only if genes track is selected and annotations exist)
         if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const geneTrack = this.createGeneTrack(chromosome);
             browserContainer.appendChild(geneTrack);
         }
         
-        // Create sequence track (only if sequence track is selected)
+        // 2. Sequence track (only if sequence track is selected)
         if (this.visibleTracks.has('sequence')) {
             const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
             browserContainer.appendChild(sequenceTrack);
         }
         
-        // Create variants track (only if variants track is selected and we have variant data)
-        if (this.visibleTracks.has('variants') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
+        // 3. GC Content track (only if GC track is selected)
+        if (this.visibleTracks.has('gc')) {
+            const gcTrack = this.createGCTrack(chromosome, sequence);
+            browserContainer.appendChild(gcTrack);
+        }
+        
+        // 4. Variants track (only if variants track is selected and we have variant data)
+        if (this.visibleTracks.has('variants') && this.currentVariants && this.currentVariants[chromosome]) {
             const variantTrack = this.createVariantTrack(chromosome);
             browserContainer.appendChild(variantTrack);
         }
         
-        // Create protein track (only if proteins track is selected and we have CDS annotations)
+        // 5. Aligned reads track (only if reads track is selected and we have read data)
+        if (this.visibleTracks.has('reads') && this.currentReads && this.currentReads[chromosome]) {
+            const readsTrack = this.createReadsTrack(chromosome);
+            browserContainer.appendChild(readsTrack);
+        }
+        
+        // 6. Protein track (only if proteins track is selected and we have CDS annotations)
         if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const proteinTrack = this.createProteinTrack(chromosome);
             browserContainer.appendChild(proteinTrack);
@@ -757,6 +784,124 @@ class GenomeBrowser {
         return track;
     }
 
+    createGCTrack(chromosome, sequence) {
+        const track = document.createElement('div');
+        track.className = 'gc-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'GC Content';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = '80px';
+        
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const subsequence = sequence.substring(start, end);
+        
+        // Create GC content visualization
+        const gcDisplay = this.createGCContentVisualization(subsequence);
+        trackContent.appendChild(gcDisplay);
+        
+        track.appendChild(trackContent);
+        return track;
+    }
+
+    createReadsTrack(chromosome) {
+        const track = document.createElement('div');
+        track.className = 'reads-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'Aligned Reads';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = '120px';
+        
+        const reads = this.currentReads[chromosome] || [];
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const range = end - start;
+        
+        // Filter reads that overlap with current region
+        const visibleReads = reads.filter(read => 
+            read.start <= end && read.end >= start
+        );
+        
+        console.log(`Displaying ${visibleReads.length} reads in region ${start}-${end}`);
+        
+        // Create read elements with stacking to avoid overlap
+        const readLanes = [];
+        visibleReads.forEach((read, index) => {
+            // Find available lane for this read
+            let lane = 0;
+            while (lane < readLanes.length && readLanes[lane] > read.start) {
+                lane++;
+            }
+            if (lane >= readLanes.length) {
+                readLanes.push(0);
+            }
+            readLanes[lane] = read.end;
+            
+            const readElement = document.createElement('div');
+            readElement.className = 'read-element';
+            
+            const readStart = Math.max(read.start, start);
+            const readEnd = Math.min(read.end, end);
+            const left = ((readStart - start) / range) * 100;
+            const width = Math.max(((readEnd - readStart) / range) * 100, 0.5);
+            
+            readElement.style.left = `${left}%`;
+            readElement.style.width = `${width}%`;
+            readElement.style.height = '8px';
+            readElement.style.top = `${10 + (lane * 12)}px`;
+            readElement.style.position = 'absolute';
+            readElement.style.background = read.strand === -1 ? '#ff6b6b' : '#4ecdc4';
+            readElement.style.borderRadius = '2px';
+            readElement.style.cursor = 'pointer';
+            readElement.style.border = '1px solid rgba(0,0,0,0.2)';
+            
+            // Create read tooltip
+            const readInfo = `Read: ${read.name || 'Unknown'}\n` +
+                            `Position: ${read.start}-${read.end}\n` +
+                            `Strand: ${read.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}\n` +
+                            `Quality: ${read.quality || 'N/A'}`;
+            
+            readElement.title = readInfo;
+            
+            // Add click handler for detailed info
+            readElement.addEventListener('click', () => {
+                alert(readInfo);
+            });
+            
+            trackContent.appendChild(readElement);
+        });
+        
+        // Add message if no reads found
+        if (visibleReads.length === 0) {
+            const noReadsMsg = document.createElement('div');
+            noReadsMsg.className = 'no-reads-message';
+            noReadsMsg.textContent = 'No aligned reads in this region';
+            noReadsMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noReadsMsg);
+        }
+        
+        track.appendChild(trackContent);
+        return track;
+    }
+
     createGCContentVisualization(sequence) {
         const container = document.createElement('div');
         container.className = 'gc-content-visualization';
@@ -795,7 +940,7 @@ class GenomeBrowser {
             const position = start + i + 1;
             
             html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
+            html += `<span class="sequence-position" style="user-select: none;">${position.toLocaleString()}</span>`;
             html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
             html += `</div>`;
         }
@@ -1054,18 +1199,29 @@ class GenomeBrowser {
 
     // Utility methods
     copySequence() {
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (!currentChr || !this.currentSequence[currentChr]) return;
-
-        const sequence = this.currentSequence[currentChr];
-        const subsequence = sequence.substring(this.currentPosition.start, this.currentPosition.end);
+        // Check if there's any selected text first
+        const selectedText = window.getSelection().toString();
         
-        navigator.clipboard.writeText(subsequence).then(() => {
-            this.updateStatus('Sequence copied to clipboard');
-        }).catch(err => {
-            console.error('Failed to copy sequence:', err);
-            this.updateStatus('Failed to copy sequence');
-        });
+        if (selectedText) {
+            // Filter out line numbers and only keep DNA sequence characters
+            const cleanSequence = selectedText.replace(/[\d,\s\n\r]/g, '').replace(/[^ATCGN]/gi, '');
+            
+            if (cleanSequence.length > 0) {
+                navigator.clipboard.writeText(cleanSequence).then(() => {
+                    this.updateStatus(`Copied ${cleanSequence.length} bases to clipboard`);
+                    alert(`Sequence copied!\nLength: ${cleanSequence.length} bases`);
+                }).catch(err => {
+                    console.error('Failed to copy selected sequence:', err);
+                    this.updateStatus('Failed to copy selected sequence');
+                });
+            } else {
+                alert('Please select DNA sequence text (not line numbers).\nSelect the sequence letters (A, T, C, G) in the sequence display.');
+            }
+            return;
+        }
+        
+        // If no text is selected, prompt user to select sequence
+        alert('Please select a sequence portion to copy.\nYou can select DNA sequence text in the sequence display area below.\nNote: Line numbers will be automatically filtered out.');
     }
 
     exportSequence() {
@@ -1176,9 +1332,9 @@ class GenomeBrowser {
     }
 
     async parseVCF() {
-        // Basic VCF parser - for demonstration
+        // Enhanced VCF parser
         const lines = this.currentFile.data.split('\n');
-        const annotations = {};
+        const variants = {};
         
         for (const line of lines) {
             if (line.startsWith('#') || !line.trim()) continue;
@@ -1187,27 +1343,70 @@ class GenomeBrowser {
             if (parts.length >= 8) {
                 const [chrom, pos, id, ref, alt, qual, filter, info] = parts;
                 
-                if (!annotations[chrom]) {
-                    annotations[chrom] = [];
+                if (!variants[chrom]) {
+                    variants[chrom] = [];
                 }
                 
-                annotations[chrom].push({
-                    type: 'variant',
+                variants[chrom].push({
                     start: parseInt(pos),
                     end: parseInt(pos) + ref.length - 1,
-                    strand: 1,
-                    qualifiers: { 
-                        id: id || 'Unknown',
-                        ref: ref,
-                        alt: alt,
-                        quality: qual
-                    }
+                    id: id === '.' ? null : id,
+                    ref: ref,
+                    alt: alt,
+                    quality: qual === '.' ? null : parseFloat(qual),
+                    filter: filter,
+                    info: info
                 });
             }
         }
         
-        this.currentAnnotations = annotations;
-        this.updateStatus('VCF file loaded - variants only');
+        this.currentVariants = variants;
+        this.updateStatus('VCF file loaded - variants available');
+        console.log('Loaded variants:', variants);
+    }
+
+    async parseSAM() {
+        // Basic SAM parser - for demonstration (simplified)
+        const lines = this.currentFile.data.split('\n');
+        const reads = {};
+        
+        for (const line of lines) {
+            if (line.startsWith('@') || !line.trim()) continue; // Skip header lines
+            
+            const parts = line.split('\t');
+            if (parts.length >= 11) {
+                const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = parts;
+                
+                if (rname === '*') continue; // Skip unmapped reads
+                
+                if (!reads[rname]) {
+                    reads[rname] = [];
+                }
+                
+                // Calculate read end position based on CIGAR string
+                const readLength = seq.length;
+                const startPos = parseInt(pos);
+                const endPos = startPos + readLength - 1;
+                
+                // Determine strand from flag
+                const flagInt = parseInt(flag);
+                const isReverse = (flagInt & 16) !== 0;
+                
+                reads[rname].push({
+                    name: qname,
+                    start: startPos,
+                    end: endPos,
+                    strand: isReverse ? -1 : 1,
+                    quality: parseInt(mapq),
+                    sequence: seq,
+                    cigar: cigar
+                });
+            }
+        }
+        
+        this.currentReads = reads;
+        this.updateStatus('SAM file loaded - aligned reads available');
+        console.log('Loaded reads:', reads);
     }
 
     // Panel management methods
@@ -1268,16 +1467,22 @@ class GenomeBrowser {
     updateVisibleTracks() {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
-        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
         if (document.getElementById('trackGenes').checked) tracks.add('genes');
+        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('trackGC').checked) tracks.add('gc');
         if (document.getElementById('trackVariants').checked) tracks.add('variants');
+        if (document.getElementById('trackReads').checked) tracks.add('reads');
+        if (document.getElementById('trackProteins').checked) tracks.add('proteins');
         
         this.visibleTracks = tracks;
         
         // Sync with sidebar
-        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
         document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
+        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
+        document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
         document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
+        document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
+        document.getElementById('sidebarTrackProteins').checked = tracks.has('proteins');
         
         console.log('Visible tracks:', Array.from(this.visibleTracks));
         
@@ -1291,17 +1496,22 @@ class GenomeBrowser {
     updateVisibleTracksFromSidebar() {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
-        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
         if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
+        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
         if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
+        if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
         if (document.getElementById('sidebarTrackProteins').checked) tracks.add('proteins');
         
         this.visibleTracks = tracks;
         
         // Sync with toolbar
-        document.getElementById('trackSequence').checked = tracks.has('sequence');
         document.getElementById('trackGenes').checked = tracks.has('genes');
+        document.getElementById('trackSequence').checked = tracks.has('sequence');
+        document.getElementById('trackGC').checked = tracks.has('gc');
         document.getElementById('trackVariants').checked = tracks.has('variants');
+        document.getElementById('trackReads').checked = tracks.has('reads');
+        document.getElementById('trackProteins').checked = tracks.has('proteins');
         
         console.log('Visible tracks:', Array.from(this.visibleTracks));
         
@@ -1367,28 +1577,27 @@ class GenomeBrowser {
         
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Variants';
+        trackHeader.textContent = 'VCF Variants';
         track.appendChild(trackHeader);
         
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         trackContent.style.height = '60px';
         
-        const annotations = this.currentAnnotations[chromosome] || [];
+        const variants = this.currentVariants[chromosome] || [];
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
         const range = end - start;
         
-        // Filter for variant features
-        const variants = annotations.filter(feature => 
-            feature.type === 'variant' &&
-            feature.start && feature.end && 
-            feature.start <= end && feature.end >= start
+        // Filter for variants in the current region
+        const visibleVariants = variants.filter(variant => 
+            variant.start && variant.end && 
+            variant.start <= end && variant.end >= start
         );
         
-        console.log(`Displaying ${variants.length} variants in region ${start}-${end}`);
+        console.log(`Displaying ${visibleVariants.length} variants in region ${start}-${end}`);
         
-        variants.forEach((variant, index) => {
+        visibleVariants.forEach((variant, index) => {
             const variantElement = document.createElement('div');
             variantElement.className = 'variant-element';
             
@@ -1407,10 +1616,11 @@ class GenomeBrowser {
             variantElement.style.cursor = 'pointer';
             
             // Create variant tooltip
-            const variantInfo = `Variant: ${variant.qualifiers.id || 'Unknown'}\n` +
+            const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
                               `Position: ${variant.start}-${variant.end}\n` +
-                              `Ref: ${variant.qualifiers.ref || 'N/A'}\n` +
-                              `Alt: ${variant.qualifiers.alt || 'N/A'}`;
+                              `Ref: ${variant.ref || 'N/A'}\n` +
+                              `Alt: ${variant.alt || 'N/A'}\n` +
+                              `Quality: ${variant.quality || 'N/A'}`;
             
             variantElement.title = variantInfo;
             
@@ -1423,7 +1633,7 @@ class GenomeBrowser {
         });
         
         // Add message if no variants found
-        if (variants.length === 0) {
+        if (visibleVariants.length === 0) {
             const noVariantsMsg = document.createElement('div');
             noVariantsMsg.className = 'no-variants-message';
             noVariantsMsg.textContent = 'No variants in this region';

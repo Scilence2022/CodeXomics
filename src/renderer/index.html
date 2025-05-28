@@ -60,13 +60,22 @@
                 <label>Tracks:</label>
                 <div class="track-checkboxes">
                     <label class="track-checkbox">
+                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
+                    </label>
+                    <label class="track-checkbox">
                         <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes
+                        <input type="checkbox" id="trackGC" value="gc" checked> GC Content
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackVariants" value="variants"> Variants
+                        <input type="checkbox" id="trackVariants" value="variants"> VCF Variants
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackReads" value="reads"> Aligned Reads
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackProteins" value="proteins"> Proteins
                     </label>
                 </div>
             </div>
@@ -174,16 +183,24 @@
                     </div>
                     <div class="track-controls">
                         <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
+                            <span>Genes & Features Track</span>
+                        </label>
+                        <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackSequence" value="sequence" checked>
                             <span>Sequence Track</span>
                         </label>
                         <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
-                            <span>Genes Track</span>
+                            <input type="checkbox" id="sidebarTrackGC" value="gc" checked>
+                            <span>GC Content Track</span>
                         </label>
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackVariants" value="variants">
-                            <span>Variants Track</span>
+                            <span>VCF Variants Track</span>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackReads" value="reads">
+                            <span>Aligned Reads Track</span>
                         </label>
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackProteins" value="proteins">
