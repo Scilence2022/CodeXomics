@@ -84,7 +84,10 @@
             </div>
             <div class="toolbar-section">
                 <label>Tracks:</label>
-                <div class="track-checkboxes">
+                <button id="toggleTracks" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
                     </label>
@@ -302,53 +305,61 @@
                     </button>
                 </div>
 
-                <div id="genomeViewer" class="genome-viewer">
-                    <div class="welcome-screen">
-                        <div class="welcome-content">
-                            <i class="fas fa-dna welcome-icon"></i>
-                            <h2>Welcome to Genome Browser</h2>
-                            <p>Choose a file type to start exploring</p>
-                            <div class="welcome-buttons">
-                                <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-dna"></i>
-                                    Genome File
-                                </button>
-                                <button id="welcomeOpenAnnotationBtn" class="btn btn-secondary btn-lg">
-                                    <i class="fas fa-tags"></i>
-                                    Annotation File
-                                </button>
-                                <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    Variant File
-                                </button>
-                                <button id="welcomeOpenReadsBtn" class="btn btn-secondary btn-lg">
-                                    <i class="fas fa-align-left"></i>
-                                    Reads File
-                                </button>
+                <!-- Main Genome Viewer Section -->
+                <div class="genome-viewer-section" id="genomeViewerSection">
+                    <div id="genomeViewer" class="genome-viewer">
+                        <div class="welcome-screen">
+                            <div class="welcome-content">
+                                <i class="fas fa-dna welcome-icon"></i>
+                                <h2>Welcome to Genome Browser</h2>
+                                <p>Choose a file type to start exploring</p>
+                                <div class="welcome-buttons">
+                                    <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-dna"></i>
+                                        Genome File
+                                    </button>
+                                    <button id="welcomeOpenAnnotationBtn" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-tags"></i>
+                                        Annotation File
+                                    </button>
+                                    <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Variant File
+                                    </button>
+                                    <button id="welcomeOpenReadsBtn" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-align-left"></i>
+                                        Reads File
+                                    </button>
+                                </div>
+                                <p class="welcome-note">
+                                    <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM</small>
+                                </p>
                             </div>
-                            <p class="welcome-note">
-                                <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM</small>
-                            </p>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Sequence Display -->
-                <div id="sequenceDisplay" class="sequence-display" style="display: none;">
-                    <div class="sequence-header">
-                        <h4 id="sequenceTitle">Sequence View</h4>
-                        <div class="sequence-controls">
-                            <button id="copySequenceBtn" class="btn btn-sm">
-                                <i class="fas fa-copy"></i>
-                                Copy
-                            </button>
-                            <button id="exportBtn" class="btn btn-sm">
-                                <i class="fas fa-download"></i>
-                                Export
-                            </button>
+                <!-- Resizable Splitter -->
+                <div class="splitter" id="splitter" style="display: none;"></div>
+                
+                <!-- Bottom Sequence Display Section -->
+                <div class="sequence-display-section" id="sequenceDisplaySection" style="display: none;">
+                    <div id="sequenceDisplay" class="sequence-display">
+                        <div class="sequence-header">
+                            <h4 id="sequenceTitle">Sequence View</h4>
+                            <div class="sequence-controls">
+                                <button id="copySequenceBtn" class="btn btn-sm">
+                                    <i class="fas fa-copy"></i>
+                                    Copy
+                                </button>
+                                <button id="exportBtn" class="btn btn-sm">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                            </div>
                         </div>
+                        <div id="sequenceContent" class="sequence-content"></div>
                     </div>
-                    <div id="sequenceContent" class="sequence-content"></div>
                 </div>
             </div>
         </main>

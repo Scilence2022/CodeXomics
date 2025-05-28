@@ -148,6 +148,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
 }
 
 .toolbar-section label {
@@ -241,6 +242,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 .genome-viewer {
@@ -1247,31 +1249,67 @@ body {
     }
     
     .toolbar-section {
-        justify-content: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
     
-    .main-content {
-        flex-direction: column;
+    .track-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
+        justify-content: flex-start;
+        gap: 8px;
     }
     
-    .sidebar {
-        order: 2;
-        width: 100%;
-        max-width: none;
+    .track-checkbox {
+        padding: 8px 12px;
+        min-height: 44px;
+        align-items: center;
     }
     
-    .viewer {
-        order: 1;
+    .feature-filter-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        grid-template-columns: 1fr;
     }
     
-    .sequence-line {
-        flex-direction: column;
-        gap: 5px;
+    .feature-checkbox {
+        padding: 8px 4px;
+        min-height: 44px;
     }
     
-    .sequence-position {
-        width: auto;
-        text-align: left;
+    .splitter {
+        height: 12px;
+    }
+    
+    .splitter:hover {
+        height: 14px;
+    }
+    
+    .splitter::before {
+        width: 60px;
+        height: 4px;
+    }
+    
+    .track-control-item,
+    .feature-control-item {
+        padding: 10px 12px;
+        min-height: 48px;
+        align-items: center;
+    }
+    
+    .sidebar-section {
+        padding: 16px;
     }
 }
 
@@ -1445,15 +1483,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Viewer container adjustments */
-.viewer-container {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
 /* Track selection improvements */
 .toolbar-section select[multiple] {
     min-height: 80px;
@@ -1483,23 +1512,24 @@ body {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
-    .gene-filter-controls {
+@media (max-width: 1200px) {
+    .track-checkboxes {
         position: relative;
         top: auto;
-        right: auto;
-        margin: 10px;
-        width: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
     }
     
-    .filter-options {
+    .feature-filter-checkboxes {
         grid-template-columns: 1fr;
-    }
-    
-    .nav-btn {
-        width: 35px;
-        height: 35px;
-        font-size: 14px;
+        min-width: 150px;
     }
 }
 
@@ -1570,31 +1600,57 @@ body {
 
 /* Track Checkboxes in Toolbar */
 .track-checkboxes {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+    min-width: 250px;
     display: flex;
-    gap: 12px;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: nowrap;
 }
 
 .track-checkbox {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 14px;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-radius: var(--radius-sm);
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border: 1px solid transparent;
 }
 
 .track-checkbox:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.track-checkbox:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .track-checkbox input[type="checkbox"] {
     margin: 0;
     cursor: pointer;
+    flex-shrink: 0;
+}
+
+.track-checkbox input[type="checkbox"]:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 /* Feature Filter Controls in Toolbar */
@@ -1602,15 +1658,33 @@ body {
     background: var(--primary-color);
     color: white;
     border: none;
+    position: relative;
+    transition: all 0.2s ease;
 }
 
 .toggle-btn:hover {
     background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .toggle-btn.active {
     background: var(--primary-hover);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    transform: translateY(1px);
+}
+
+.toggle-btn.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid var(--primary-color);
 }
 
 .feature-filter-checkboxes {
@@ -1633,20 +1707,35 @@ body {
 .feature-checkbox {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 13px;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px 0;
+    padding: 6px 4px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .feature-checkbox:hover {
     color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.feature-checkbox:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .feature-checkbox input[type="checkbox"] {
     margin: 0;
     cursor: pointer;
+    flex-shrink: 0;
+}
+
+.feature-checkbox input[type="checkbox"]:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 /* Sidebar Track and Feature Controls */
@@ -1661,12 +1750,15 @@ body {
 .feature-control-item {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 8px;
     padding: 6px 8px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: background-color 0.2s;
     font-size: 14px;
+    text-align: left;
+    width: 100%;
 }
 
 .track-control-item:hover,
@@ -1678,12 +1770,18 @@ body {
 .feature-control-item input[type="checkbox"] {
     margin: 0;
     cursor: pointer;
+    flex-shrink: 0;
+    order: 1;
 }
 
 .track-control-item span,
 .feature-control-item span {
     color: var(--text-secondary);
     transition: color 0.2s;
+    text-align: left;
+    flex: 1;
+    order: 2;
+    margin-left: 0;
 }
 
 .track-control-item:hover span,
@@ -1691,30 +1789,97 @@ body {
     color: var(--text-primary);
 }
 
-/* Enhanced toolbar layout */
-.toolbar {
-    background: linear-gradient(to bottom, #ffffff, #f8f9fa);
-    border-bottom: 2px solid #dee2e6;
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    gap: 25px;
-    flex-wrap: wrap;
+/* Enhanced Resizable split layout */
+.genome-viewer-section {
+    flex: 1;
+    min-height: 300px;
+    overflow: auto;
     position: relative;
 }
 
-.toolbar-section {
+.splitter {
+    height: 8px;
+    background: linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef);
+    cursor: row-resize;
+    position: relative;
+    border-top: 1px solid #ced4da;
+    border-bottom: 1px solid #ced4da;
     display: flex;
     align-items: center;
-    gap: 8px;
-    position: relative;
+    justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
 }
 
-.toolbar-section label {
-    font-weight: 600;
-    color: #495057;
-    font-size: 14px;
-    white-space: nowrap;
+.splitter:hover {
+    background: linear-gradient(to bottom, #dee2e6, #ced4da, #dee2e6);
+    height: 10px;
+}
+
+.splitter::before {
+    content: '';
+    width: 40px;
+    height: 3px;
+    background: #6c757d;
+    border-radius: 2px;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.splitter:hover::before {
+    opacity: 1;
+    width: 60px;
+    height: 4px;
+}
+
+.splitter:active {
+    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
+}
+
+.splitter:active::before {
+    background: #343a40;
+    opacity: 1;
+}
+
+.splitter.active {
+    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
+    height: 10px;
+}
+
+.splitter.active::before {
+    background: #343a40;
+    opacity: 1;
+    width: 60px;
+    height: 4px;
+}
+
+.splitter:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.splitter:focus::before {
+    background: var(--primary-color);
+    opacity: 1;
+}
+
+.sequence-display-section {
+    min-height: 200px;
+    max-height: 60vh;
+    overflow: auto;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.sequence-display-section.collapsed {
+    min-height: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.splitter.hidden {
+    display: none;
 }
 
 /* Protein track styles */
@@ -1794,8 +1959,17 @@ body {
 /* Responsive improvements */
 @media (max-width: 1200px) {
     .track-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
         flex-direction: column;
         gap: 6px;
+        align-items: flex-start;
     }
     
     .feature-filter-checkboxes {
@@ -1812,12 +1986,27 @@ body {
     }
     
     .toolbar-section {
-        justify-content: center;
+        justify-content: flex-start;
         flex-wrap: wrap;
     }
     
     .track-checkboxes {
-        justify-content: center;
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+    
+    .track-checkbox {
+        padding: 8px 12px;
+        min-height: 44px;
+        align-items: center;
     }
     
     .feature-filter-checkboxes {
@@ -1828,6 +2017,36 @@ body {
         box-shadow: none;
         border: none;
         padding: 0;
+        grid-template-columns: 1fr;
+    }
+    
+    .feature-checkbox {
+        padding: 8px 4px;
+        min-height: 44px;
+    }
+    
+    .splitter {
+        height: 12px;
+    }
+    
+    .splitter:hover {
+        height: 14px;
+    }
+    
+    .splitter::before {
+        width: 60px;
+        height: 4px;
+    }
+    
+    .track-control-item,
+    .feature-control-item {
+        padding: 10px 12px;
+        min-height: 48px;
+        align-items: center;
+    }
+    
+    .sidebar-section {
+        padding: 16px;
     }
 }
 

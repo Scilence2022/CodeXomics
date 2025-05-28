@@ -41,6 +41,9 @@ class GenomeBrowser {
         this.setupIPC();
         this.updateStatus('Ready');
         
+        // Initialize splitter functionality
+        this.initializeSplitter();
+        
         // Add window resize listener for responsive sequence display
         window.addEventListener('resize', () => {
             this.handleWindowResize();
@@ -239,6 +242,15 @@ class GenomeBrowser {
             this.geneFilters.other = e.target.checked;
             this.syncToolbarFeatureFilter('showOther', e.target.checked);
             this.updateGeneDisplay();
+        });
+
+        // Toggle buttons for toolbar sections
+        document.getElementById('toggleFeatureFilters').addEventListener('click', () => {
+            this.toggleFeatureFilters();
+        });
+        
+        document.getElementById('toggleTracks').addEventListener('click', () => {
+            this.toggleTracks();
         });
     }
 
@@ -1168,13 +1180,12 @@ class GenomeBrowser {
     }
 
     displayEnhancedSequence(chromosome, sequence) {
-        const container = document.getElementById('sequenceContent');
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
-        const subsequence = sequence.substring(start, end);
         const windowSize = end - start;
+        const subsequence = sequence.substring(start, end);
         
-        // Show detailed sequence information when zoomed in enough
+        // Choose display method based on window size
         if (windowSize <= 500) {
             this.displayDetailedSequence(chromosome, subsequence, start);
         } else if (windowSize <= 2000) {
@@ -1187,8 +1198,140 @@ class GenomeBrowser {
         document.getElementById('sequenceTitle').textContent = 
             `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
         
-        // Show sequence display
+        // Show sequence display section and splitter
+        document.getElementById('sequenceDisplaySection').style.display = 'block';
+        document.getElementById('splitter').style.display = 'flex';
         document.getElementById('sequenceDisplay').style.display = 'flex';
+    }
+
+    // Initialize splitter functionality
+    initializeSplitter() {
+        const splitter = document.getElementById('splitter');
+        const genomeSection = document.getElementById('genomeViewerSection');
+        const sequenceSection = document.getElementById('sequenceDisplaySection');
+        const viewerContainer = document.getElementById('viewerContainer');
+        
+        if (!splitter || !genomeSection || !sequenceSection || !viewerContainer) {
+            console.warn('Splitter elements not found, skipping initialization');
+            return;
+        }
+        
+        let isResizing = false;
+        let startY = 0;
+        let startGenomeHeight = 0;
+        let startSequenceHeight = 0;
+        
+        // Mouse events for dragging
+        splitter.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startY = e.clientY;
+            startGenomeHeight = genomeSection.offsetHeight;
+            startSequenceHeight = sequenceSection.offsetHeight;
+            
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            splitter.classList.add('active');
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaY = e.clientY - startY;
+            const containerHeight = viewerContainer.offsetHeight;
+            const splitterHeight = splitter.offsetHeight;
+            
+            // Calculate new heights
+            const newGenomeHeight = startGenomeHeight + deltaY;
+            const newSequenceHeight = startSequenceHeight - deltaY;
+            
+            // Set minimum heights (increased for better usability)
+            const minHeight = 200;
+            const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
+            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
+            
+            if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
+                newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
+                
+                genomeSection.style.flex = 'none';
+                genomeSection.style.height = `${newGenomeHeight}px`;
+                
+                sequenceSection.style.flex = 'none';
+                sequenceSection.style.height = `${newSequenceHeight}px`;
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                splitter.classList.remove('active');
+            }
+        });
+        
+        // Keyboard accessibility
+        splitter.setAttribute('tabindex', '0');
+        splitter.setAttribute('role', 'separator');
+        splitter.setAttribute('aria-label', 'Resize panels');
+        
+        splitter.addEventListener('keydown', (e) => {
+            const step = 20; // pixels to move per keypress
+            let deltaY = 0;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    deltaY = -step;
+                    break;
+                case 'ArrowDown':
+                    deltaY = step;
+                    break;
+                case 'Home':
+                    // Reset to default split
+                    genomeSection.style.flex = '1';
+                    genomeSection.style.height = 'auto';
+                    sequenceSection.style.flex = 'none';
+                    sequenceSection.style.height = '300px';
+                    e.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+            
+            e.preventDefault();
+            
+            // Apply keyboard movement
+            const currentGenomeHeight = genomeSection.offsetHeight;
+            const currentSequenceHeight = sequenceSection.offsetHeight;
+            const containerHeight = viewerContainer.offsetHeight;
+            const splitterHeight = splitter.offsetHeight;
+            
+            const newGenomeHeight = currentGenomeHeight + deltaY;
+            const newSequenceHeight = currentSequenceHeight - deltaY;
+            
+            const minHeight = 200;
+            const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
+            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
+            
+            if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
+                newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
+                
+                genomeSection.style.flex = 'none';
+                genomeSection.style.height = `${newGenomeHeight}px`;
+                
+                sequenceSection.style.flex = 'none';
+                sequenceSection.style.height = `${newSequenceHeight}px`;
+            }
+        });
+        
+        // Double-click to reset to default split
+        splitter.addEventListener('dblclick', () => {
+            genomeSection.style.flex = '1';
+            genomeSection.style.height = 'auto';
+            sequenceSection.style.flex = 'none';
+            sequenceSection.style.height = '300px';
+        });
     }
 
     displayDetailedSequence(chromosome, subsequence, start) {
@@ -1295,10 +1438,25 @@ class GenomeBrowser {
         // Sync with sidebar
         document.getElementById('sidebarTrackBottomSequence').checked = this.showBottomSequence;
         
-        // Refresh the genome view if a file is loaded
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        // Show/hide sequence display section and splitter
+        const sequenceSection = document.getElementById('sequenceDisplaySection');
+        const splitter = document.getElementById('splitter');
+        
+        if (this.showBottomSequence) {
+            // Refresh the genome view if a file is loaded
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+                this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+            }
+        } else {
+            // Hide sequence display section and splitter
+            sequenceSection.style.display = 'none';
+            splitter.style.display = 'none';
+            
+            // Reset genome section to take full space
+            const genomeSection = document.getElementById('genomeViewerSection');
+            genomeSection.style.flex = '1';
+            genomeSection.style.height = 'auto';
         }
     }
 
@@ -1308,10 +1466,25 @@ class GenomeBrowser {
         // Sync with toolbar
         document.getElementById('trackBottomSequence').checked = this.showBottomSequence;
         
-        // Refresh the genome view if a file is loaded
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        // Show/hide sequence display section and splitter
+        const sequenceSection = document.getElementById('sequenceDisplaySection');
+        const splitter = document.getElementById('splitter');
+        
+        if (this.showBottomSequence) {
+            // Refresh the genome view if a file is loaded
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+                this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+            }
+        } else {
+            // Hide sequence display section and splitter
+            sequenceSection.style.display = 'none';
+            splitter.style.display = 'none';
+            
+            // Reset genome section to take full space
+            const genomeSection = document.getElementById('genomeViewerSection');
+            genomeSection.style.flex = '1';
+            genomeSection.style.height = 'auto';
         }
     }
 
@@ -1512,10 +1685,27 @@ class GenomeBrowser {
 
     toggleFeatureFilters() {
         const checkboxes = document.getElementById('featureFilterCheckboxes');
-        if (checkboxes.style.display === 'none') {
-            checkboxes.style.display = 'flex';
+        const button = document.getElementById('toggleFeatureFilters');
+        
+        if (checkboxes.style.display === 'none' || checkboxes.style.display === '') {
+            checkboxes.style.display = 'grid'; // Use grid as defined in CSS
+            button.classList.add('active');
         } else {
             checkboxes.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+    
+    toggleTracks() {
+        const checkboxes = document.getElementById('trackCheckboxes');
+        const button = document.getElementById('toggleTracks');
+        
+        if (checkboxes.style.display === 'none' || checkboxes.style.display === '') {
+            checkboxes.style.display = 'flex'; // Use flex as defined in CSS
+            button.classList.add('active');
+        } else {
+            checkboxes.style.display = 'none';
+            button.classList.remove('active');
         }
     }
 
