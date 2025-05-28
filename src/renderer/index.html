@@ -57,28 +57,79 @@
                 <button id="resetZoomBtn" class="btn btn-sm">Reset</button>
             </div>
             <div class="toolbar-section">
-                <label for="trackSelect">Tracks:</label>
-                <select id="trackSelect" class="select" multiple>
-                    <option value="sequence">Sequence</option>
-                    <option value="genes">Genes</option>
-                    <option value="variants">Variants</option>
-                </select>
+                <label>Tracks:</label>
+                <div class="track-checkboxes">
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackVariants" value="variants"> Variants
+                    </label>
+                </div>
+            </div>
+            <div class="toolbar-section">
+                <label>Show Features:</label>
+                <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-filter"></i>
+                </button>
+                <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showGenes" checked> Genes
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showCDS" checked> CDS
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showMRNA" checked> mRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showTRNA" checked> tRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showRRNA" checked> rRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showPromoter" checked> Promoters
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showTerminator" checked> Terminators
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showRegulatory" checked> Regulatory
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showOther" checked> Other
+                    </label>
+                </div>
             </div>
         </div>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h3>File Information</h3>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section" id="fileInfoSection">
+                    <div class="section-header">
+                        <h3>File Information</h3>
+                        <button class="close-panel-btn" data-panel="fileInfoSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                     <div id="fileInfo" class="file-info">
                         <p class="no-file">No file loaded</p>
                     </div>
                 </div>
                 
-                <div class="sidebar-section">
-                    <h3>Navigation</h3>
+                <div class="sidebar-section" id="navigationSection">
+                    <div class="section-header">
+                        <h3>Navigation</h3>
+                        <button class="close-panel-btn" data-panel="navigationSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                     <div class="navigation-controls">
                         <button id="prevBtn" class="btn btn-block">
                             <i class="fas fa-chevron-left"></i>
@@ -91,8 +142,13 @@
                     </div>
                 </div>
 
-                <div class="sidebar-section">
-                    <h3>Statistics</h3>
+                <div class="sidebar-section" id="statisticsSection">
+                    <div class="section-header">
+                        <h3>Statistics</h3>
+                        <button class="close-panel-btn" data-panel="statisticsSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                     <div id="stats" class="stats">
                         <div class="stat-item">
                             <span class="stat-label">Length:</span>
@@ -108,10 +164,94 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="sidebar-section" id="tracksSection">
+                    <div class="section-header">
+                        <h3>Tracks</h3>
+                        <button class="close-panel-btn" data-panel="tracksSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="track-controls">
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackSequence" value="sequence" checked>
+                            <span>Sequence Track</span>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
+                            <span>Genes Track</span>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackVariants" value="variants">
+                            <span>Variants Track</span>
+                        </label>
+                        <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackProteins" value="proteins">
+                            <span>Protein Track</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="featuresSection">
+                    <div class="section-header">
+                        <h3>Show Features</h3>
+                        <button class="close-panel-btn" data-panel="featuresSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="feature-controls">
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowGenes" checked>
+                            <span>Genes</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowCDS" checked>
+                            <span>CDS</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowMRNA" checked>
+                            <span>mRNA</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowTRNA" checked>
+                            <span>tRNA</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowRRNA" checked>
+                            <span>rRNA</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowPromoter" checked>
+                            <span>Promoters</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowTerminator" checked>
+                            <span>Terminators</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowRegulatory" checked>
+                            <span>Regulatory Sites</span>
+                        </label>
+                        <label class="feature-control-item">
+                            <input type="checkbox" id="sidebarShowOther" checked>
+                            <span>Other Features</span>
+                        </label>
+                    </div>
+                </div>
             </aside>
 
             <!-- Viewer Area -->
-            <div class="viewer-container">
+            <div class="viewer-container" id="viewerContainer">
+                <!-- Navigation Controls for Genome View -->
+                <div class="genome-navigation" id="genomeNavigation" style="display: none;">
+                    <button id="prevBtnGenome" class="nav-btn nav-btn-left">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextBtnGenome" class="nav-btn nav-btn-right">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+
                 <div id="genomeViewer" class="genome-viewer">
                     <div class="welcome-screen">
                         <div class="welcome-content">

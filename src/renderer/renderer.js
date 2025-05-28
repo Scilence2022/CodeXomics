@@ -11,6 +11,18 @@ class GenomeBrowser {
         this.currentSearchIndex = 0;
         this.zoomLevel = 1;
         this.genes = [];
+        this.visibleTracks = new Set(['sequence', 'genes']);
+        this.geneFilters = {
+            genes: true,
+            CDS: true,
+            mRNA: true,
+            tRNA: true,
+            rRNA: true,
+            promoter: true,
+            terminator: true,
+            regulatory: true,
+            other: true
+        };
         
         this.init();
     }
@@ -38,9 +50,13 @@ class GenomeBrowser {
             if (e.key === 'Enter') this.goToPosition();
         });
 
-        // Navigation controls
+        // Navigation controls (sidebar)
         document.getElementById('prevBtn').addEventListener('click', () => this.navigatePrevious());
         document.getElementById('nextBtn').addEventListener('click', () => this.navigateNext());
+
+        // Navigation controls (genome view)
+        document.getElementById('prevBtnGenome').addEventListener('click', () => this.navigatePrevious());
+        document.getElementById('nextBtnGenome').addEventListener('click', () => this.navigateNext());
 
         // Zoom controls
         document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
@@ -57,6 +73,124 @@ class GenomeBrowser {
         // Chromosome selection
         document.getElementById('chromosomeSelect').addEventListener('change', (e) => {
             this.selectChromosome(e.target.value);
+        });
+
+        // Track selection (toolbar checkboxes)
+        document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackGenes').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
+
+        // Sidebar track controls
+        document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+
+        // Panel close buttons
+        document.querySelectorAll('.close-panel-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const panelId = e.target.closest('.close-panel-btn').dataset.panel;
+                this.closePanel(panelId);
+            });
+        });
+
+        // Feature filter toggle button
+        document.getElementById('toggleFeatureFilters').addEventListener('click', () => {
+            this.toggleFeatureFilters();
+        });
+
+        // Toolbar feature filter controls
+        document.getElementById('showGenes').addEventListener('change', (e) => {
+            this.geneFilters.genes = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowGenes', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showCDS').addEventListener('change', (e) => {
+            this.geneFilters.CDS = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowCDS', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showMRNA').addEventListener('change', (e) => {
+            this.geneFilters.mRNA = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowMRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showTRNA').addEventListener('change', (e) => {
+            this.geneFilters.tRNA = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowTRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showRRNA').addEventListener('change', (e) => {
+            this.geneFilters.rRNA = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowRRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showPromoter').addEventListener('change', (e) => {
+            this.geneFilters.promoter = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowPromoter', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showTerminator').addEventListener('change', (e) => {
+            this.geneFilters.terminator = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowTerminator', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showRegulatory').addEventListener('change', (e) => {
+            this.geneFilters.regulatory = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowRegulatory', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('showOther').addEventListener('change', (e) => {
+            this.geneFilters.other = e.target.checked;
+            this.syncSidebarFeatureFilter('sidebarShowOther', e.target.checked);
+            this.updateGeneDisplay();
+        });
+
+        // Sidebar feature filter controls
+        document.getElementById('sidebarShowGenes').addEventListener('change', (e) => {
+            this.geneFilters.genes = e.target.checked;
+            this.syncToolbarFeatureFilter('showGenes', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowCDS').addEventListener('change', (e) => {
+            this.geneFilters.CDS = e.target.checked;
+            this.syncToolbarFeatureFilter('showCDS', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowMRNA').addEventListener('change', (e) => {
+            this.geneFilters.mRNA = e.target.checked;
+            this.syncToolbarFeatureFilter('showMRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowTRNA').addEventListener('change', (e) => {
+            this.geneFilters.tRNA = e.target.checked;
+            this.syncToolbarFeatureFilter('showTRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowRRNA').addEventListener('change', (e) => {
+            this.geneFilters.rRNA = e.target.checked;
+            this.syncToolbarFeatureFilter('showRRNA', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowPromoter').addEventListener('change', (e) => {
+            this.geneFilters.promoter = e.target.checked;
+            this.syncToolbarFeatureFilter('showPromoter', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowTerminator').addEventListener('change', (e) => {
+            this.geneFilters.terminator = e.target.checked;
+            this.syncToolbarFeatureFilter('showTerminator', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowRegulatory').addEventListener('change', (e) => {
+            this.geneFilters.regulatory = e.target.checked;
+            this.syncToolbarFeatureFilter('showRegulatory', e.target.checked);
+            this.updateGeneDisplay();
+        });
+        document.getElementById('sidebarShowOther').addEventListener('change', (e) => {
+            this.geneFilters.other = e.target.checked;
+            this.syncToolbarFeatureFilter('showOther', e.target.checked);
+            this.updateGeneDisplay();
         });
     }
 
@@ -105,6 +239,15 @@ class GenomeBrowser {
 
         ipcRenderer.on('show-goto', () => {
             this.showGotoModal();
+        });
+
+        // Handle panel management
+        ipcRenderer.on('show-panel', (event, panelId) => {
+            this.showPanel(panelId);
+        });
+
+        ipcRenderer.on('show-all-panels', () => {
+            this.showAllPanels();
         });
     }
 
@@ -365,6 +508,13 @@ class GenomeBrowser {
         // Update chromosome select
         document.getElementById('chromosomeSelect').value = chromosome;
         
+        // Initialize track checkboxes if not already done
+        if (!document.getElementById('trackSequence').checked && !document.getElementById('trackGenes').checked) {
+            document.getElementById('trackSequence').checked = true;
+            document.getElementById('trackGenes').checked = true;
+            this.updateVisibleTracks();
+        }
+        
         // Update statistics
         this.updateStatistics(chromosome, sequence);
         
@@ -388,28 +538,50 @@ class GenomeBrowser {
         const container = document.getElementById('genomeViewer');
         container.innerHTML = '';
         
+        // Show navigation controls
+        document.getElementById('genomeNavigation').style.display = 'block';
+        
         // Create genome browser container
         const browserContainer = document.createElement('div');
         browserContainer.className = 'genome-browser-container';
         
-        // Create ruler
+        // Create ruler (always show)
         const ruler = this.createRuler();
         browserContainer.appendChild(ruler);
         
-        // Create gene track
-        if (this.currentAnnotations && this.currentAnnotations[chromosome]) {
+        // Create gene track (only if genes track is selected and annotations exist)
+        if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const geneTrack = this.createGeneTrack(chromosome);
             browserContainer.appendChild(geneTrack);
         }
         
-        // Create sequence track
-        const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
-        browserContainer.appendChild(sequenceTrack);
+        // Create sequence track (only if sequence track is selected)
+        if (this.visibleTracks.has('sequence')) {
+            const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
+            browserContainer.appendChild(sequenceTrack);
+        }
+        
+        // Create variants track (only if variants track is selected and we have variant data)
+        if (this.visibleTracks.has('variants') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
+            const variantTrack = this.createVariantTrack(chromosome);
+            browserContainer.appendChild(variantTrack);
+        }
+        
+        // Create protein track (only if proteins track is selected and we have CDS annotations)
+        if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
+            const proteinTrack = this.createProteinTrack(chromosome);
+            browserContainer.appendChild(proteinTrack);
+        }
         
         container.appendChild(browserContainer);
         
-        // Update sequence display
-        this.displaySequence(chromosome, sequence);
+        // Update sequence display with enhanced information when zoomed in
+        if (this.visibleTracks.has('sequence')) {
+            this.displayEnhancedSequence(chromosome, sequence);
+        } else {
+            // Hide sequence display if sequence track is not selected
+            document.getElementById('sequenceDisplay').style.display = 'none';
+        }
     }
 
     createRuler() {
@@ -449,11 +621,12 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const range = end - start;
         
-        // Include all relevant gene types and features
+        // Include all relevant gene types and features, filtered by user preferences
         const visibleGenes = annotations.filter(feature => {
             const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
                               'regulatory', 'promoter', 'terminator', 'repeat_region'];
-            return validTypes.includes(feature.type) || feature.type.includes('RNA');
+            return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
+                   this.shouldShowGeneType(feature.type);
         }).filter(gene => 
             gene.start && gene.end && 
             gene.start <= end && gene.end >= start
@@ -517,7 +690,7 @@ class GenomeBrowser {
         if (visibleGenes.length === 0) {
             const noGenesMsg = document.createElement('div');
             noGenesMsg.className = 'no-genes-message';
-            noGenesMsg.textContent = 'No genes/features in this region';
+            noGenesMsg.textContent = 'No genes/features in this region or all filtered out';
             noGenesMsg.style.cssText = `
                 position: absolute;
                 top: 50%;
@@ -1035,6 +1208,499 @@ class GenomeBrowser {
         
         this.currentAnnotations = annotations;
         this.updateStatus('VCF file loaded - variants only');
+    }
+
+    // Panel management methods
+    closePanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.style.display = 'none';
+            this.checkSidebarVisibility();
+        }
+    }
+
+    showPanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.style.display = 'block';
+            this.showSidebar();
+        }
+    }
+
+    showAllPanels() {
+        const panels = ['fileInfoSection', 'navigationSection', 'statisticsSection', 'tracksSection', 'featuresSection'];
+        panels.forEach(panelId => {
+            const panel = document.getElementById(panelId);
+            if (panel) {
+                panel.style.display = 'block';
+            }
+        });
+        this.showSidebar();
+    }
+
+    checkSidebarVisibility() {
+        const panels = ['fileInfoSection', 'navigationSection', 'statisticsSection', 'tracksSection', 'featuresSection'];
+        const visiblePanels = panels.filter(panelId => {
+            const panel = document.getElementById(panelId);
+            return panel && panel.style.display !== 'none';
+        });
+
+        if (visiblePanels.length === 0) {
+            this.hideSidebar();
+        }
+    }
+
+    hideSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.main-content');
+        sidebar.classList.add('collapsed');
+        mainContent.classList.add('sidebar-collapsed');
+    }
+
+    showSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.main-content');
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('sidebar-collapsed');
+    }
+
+    // Track selection methods
+    updateVisibleTracks() {
+        // Get selected tracks from toolbar checkboxes
+        const tracks = new Set();
+        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('trackGenes').checked) tracks.add('genes');
+        if (document.getElementById('trackVariants').checked) tracks.add('variants');
+        
+        this.visibleTracks = tracks;
+        
+        // Sync with sidebar
+        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
+        document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
+        document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
+        
+        console.log('Visible tracks:', Array.from(this.visibleTracks));
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    updateVisibleTracksFromSidebar() {
+        // Get selected tracks from sidebar checkboxes
+        const tracks = new Set();
+        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
+        if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
+        if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
+        if (document.getElementById('sidebarTrackProteins').checked) tracks.add('proteins');
+        
+        this.visibleTracks = tracks;
+        
+        // Sync with toolbar
+        document.getElementById('trackSequence').checked = tracks.has('sequence');
+        document.getElementById('trackGenes').checked = tracks.has('genes');
+        document.getElementById('trackVariants').checked = tracks.has('variants');
+        
+        console.log('Visible tracks:', Array.from(this.visibleTracks));
+        
+        // Refresh the genome view if a file is loaded
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    // Feature filter methods
+    toggleFeatureFilters() {
+        const filterDiv = document.getElementById('featureFilterCheckboxes');
+        const toggleBtn = document.getElementById('toggleFeatureFilters');
+        
+        if (filterDiv.style.display === 'none') {
+            filterDiv.style.display = 'grid';
+            toggleBtn.classList.add('active');
+        } else {
+            filterDiv.style.display = 'none';
+            toggleBtn.classList.remove('active');
+        }
+    }
+
+    syncSidebarFeatureFilter(sidebarId, checked) {
+        const sidebarElement = document.getElementById(sidebarId);
+        if (sidebarElement) {
+            sidebarElement.checked = checked;
+        }
+    }
+
+    syncToolbarFeatureFilter(toolbarId, checked) {
+        const toolbarElement = document.getElementById(toolbarId);
+        if (toolbarElement) {
+            toolbarElement.checked = checked;
+        }
+    }
+
+    // Gene filtering methods
+    updateGeneDisplay() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    shouldShowGeneType(geneType) {
+        const type = geneType.toLowerCase();
+        if (type === 'gene') return this.geneFilters.genes;
+        if (type === 'cds') return this.geneFilters.CDS;
+        if (type === 'mrna') return this.geneFilters.mRNA;
+        if (type === 'trna') return this.geneFilters.tRNA;
+        if (type === 'rrna') return this.geneFilters.rRNA;
+        if (type === 'promoter') return this.geneFilters.promoter;
+        if (type === 'terminator') return this.geneFilters.terminator;
+        if (type === 'regulatory') return this.geneFilters.regulatory;
+        return this.geneFilters.other;
+    }
+
+    createVariantTrack(chromosome) {
+        const track = document.createElement('div');
+        track.className = 'variant-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'Variants';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = '60px';
+        
+        const annotations = this.currentAnnotations[chromosome] || [];
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const range = end - start;
+        
+        // Filter for variant features
+        const variants = annotations.filter(feature => 
+            feature.type === 'variant' &&
+            feature.start && feature.end && 
+            feature.start <= end && feature.end >= start
+        );
+        
+        console.log(`Displaying ${variants.length} variants in region ${start}-${end}`);
+        
+        variants.forEach((variant, index) => {
+            const variantElement = document.createElement('div');
+            variantElement.className = 'variant-element';
+            
+            const variantStart = Math.max(variant.start, start);
+            const variantEnd = Math.min(variant.end, end);
+            const left = ((variantStart - start) / range) * 100;
+            const width = Math.max(((variantEnd - variantStart) / range) * 100, 0.2);
+            
+            variantElement.style.left = `${left}%`;
+            variantElement.style.width = `${width}%`;
+            variantElement.style.height = '12px';
+            variantElement.style.top = '20px';
+            variantElement.style.position = 'absolute';
+            variantElement.style.background = '#e74c3c';
+            variantElement.style.borderRadius = '2px';
+            variantElement.style.cursor = 'pointer';
+            
+            // Create variant tooltip
+            const variantInfo = `Variant: ${variant.qualifiers.id || 'Unknown'}\n` +
+                              `Position: ${variant.start}-${variant.end}\n` +
+                              `Ref: ${variant.qualifiers.ref || 'N/A'}\n` +
+                              `Alt: ${variant.qualifiers.alt || 'N/A'}`;
+            
+            variantElement.title = variantInfo;
+            
+            // Add click handler for detailed info
+            variantElement.addEventListener('click', () => {
+                alert(variantInfo);
+            });
+            
+            trackContent.appendChild(variantElement);
+        });
+        
+        // Add message if no variants found
+        if (variants.length === 0) {
+            const noVariantsMsg = document.createElement('div');
+            noVariantsMsg.className = 'no-variants-message';
+            noVariantsMsg.textContent = 'No variants in this region';
+            noVariantsMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noVariantsMsg);
+        }
+        
+        track.appendChild(trackContent);
+        return track;
+    }
+
+    createProteinTrack(chromosome) {
+        const track = document.createElement('div');
+        track.className = 'protein-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'Proteins';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = '80px';
+        
+        const annotations = this.currentAnnotations[chromosome] || [];
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const range = end - start;
+        
+        // Filter for CDS features that can be translated to proteins
+        const proteins = annotations.filter(feature => 
+            feature.type === 'CDS' &&
+            feature.start && feature.end && 
+            feature.start <= end && feature.end >= start &&
+            this.shouldShowGeneType('CDS')
+        );
+        
+        console.log(`Displaying ${proteins.length} proteins in region ${start}-${end}`);
+        
+        proteins.forEach((protein, index) => {
+            const proteinElement = document.createElement('div');
+            proteinElement.className = 'protein-element';
+            
+            const proteinStart = Math.max(protein.start, start);
+            const proteinEnd = Math.min(protein.end, end);
+            const left = ((proteinStart - start) / range) * 100;
+            const width = Math.max(((proteinEnd - proteinStart) / range) * 100, 0.3);
+            
+            proteinElement.style.left = `${left}%`;
+            proteinElement.style.width = `${Math.max(width, 0.3)}%`;
+            
+            if (protein.strand === -1) {
+                proteinElement.classList.add('reverse-strand');
+            }
+            
+            // Create protein label
+            const proteinName = protein.qualifiers.product || protein.qualifiers.gene || protein.qualifiers.locus_tag || 'Protein';
+            const proteinInfo = `${proteinName} (CDS)`;
+            const positionInfo = `${protein.start}-${protein.end} (${protein.strand === -1 ? '-' : '+'} strand)`;
+            
+            proteinElement.title = `${proteinInfo}\nPosition: ${positionInfo}`;
+            
+            // Set text content based on available space
+            if (width > 2) {
+                proteinElement.textContent = proteinName.length > 10 ? proteinName.substring(0, 10) + '...' : proteinName;
+            } else if (width > 0.8) {
+                proteinElement.textContent = proteinName.substring(0, 3);
+            } else {
+                proteinElement.textContent = '';
+            }
+            
+            // Add click handler for detailed info
+            proteinElement.addEventListener('click', () => {
+                this.showProteinDetails(protein, chromosome);
+            });
+            
+            trackContent.appendChild(proteinElement);
+        });
+        
+        // Add message if no proteins found
+        if (proteins.length === 0) {
+            const noProteinsMsg = document.createElement('div');
+            noProteinsMsg.className = 'no-proteins-message';
+            noProteinsMsg.textContent = 'No proteins in this region or CDS filtered out';
+            noProteinsMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(noProteinsMsg);
+        }
+        
+        track.appendChild(trackContent);
+        return track;
+    }
+
+    showProteinDetails(protein, chromosome) {
+        const sequence = this.currentSequence[chromosome];
+        const dnaSequence = sequence.substring(protein.start - 1, protein.end);
+        const proteinSequence = this.translateDNA(dnaSequence, protein.strand);
+        
+        const details = [];
+        details.push(`Type: Protein (CDS)`);
+        details.push(`Position: ${protein.start}-${protein.end}`);
+        details.push(`Strand: ${protein.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
+        details.push(`Length: ${protein.end - protein.start + 1} bp (${Math.floor((protein.end - protein.start + 1) / 3)} aa)`);
+        details.push(`DNA Sequence: ${dnaSequence.substring(0, 60)}${dnaSequence.length > 60 ? '...' : ''}`);
+        details.push(`Protein Sequence: ${proteinSequence.substring(0, 20)}${proteinSequence.length > 20 ? '...' : ''}`);
+        
+        if (protein.qualifiers) {
+            Object.entries(protein.qualifiers).forEach(([key, value]) => {
+                if (value && value !== 'Unknown') {
+                    details.push(`${key}: ${value}`);
+                }
+            });
+        }
+        
+        alert(details.join('\n'));
+    }
+
+    translateDNA(dnaSequence, strand = 1) {
+        const geneticCode = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        };
+
+        let sequence = dnaSequence.toUpperCase();
+        
+        // Reverse complement if on negative strand
+        if (strand === -1) {
+            sequence = this.getReverseComplement(sequence);
+        }
+        
+        let protein = '';
+        for (let i = 0; i < sequence.length - 2; i += 3) {
+            const codon = sequence.substring(i, i + 3);
+            protein += geneticCode[codon] || 'X';
+        }
+        
+        return protein;
+    }
+
+    displayEnhancedSequence(chromosome, sequence) {
+        const container = document.getElementById('sequenceContent');
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const subsequence = sequence.substring(start, end);
+        const windowSize = end - start;
+        
+        // Show detailed sequence information when zoomed in enough
+        if (windowSize <= 500) {
+            this.displayDetailedSequence(chromosome, subsequence, start);
+        } else if (windowSize <= 2000) {
+            this.displaySequenceWithAnnotations(chromosome, subsequence, start);
+        } else {
+            this.displaySequence(chromosome, sequence);
+        }
+        
+        // Update sequence title
+        document.getElementById('sequenceTitle').textContent = 
+            `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
+        
+        // Show sequence display
+        document.getElementById('sequenceDisplay').style.display = 'flex';
+    }
+
+    displayDetailedSequence(chromosome, subsequence, start) {
+        const container = document.getElementById('sequenceContent');
+        const annotations = this.currentAnnotations[chromosome] || [];
+        
+        // Create formatted sequence display with annotations
+        let html = '<div class="detailed-sequence-view">';
+        html += '<div class="sequence-info"><strong>DNA Sequence:</strong></div>';
+        
+        const lineLength = 60;
+        
+        for (let i = 0; i < subsequence.length; i += lineLength) {
+            const line = subsequence.substring(i, i + lineLength);
+            const position = start + i + 1;
+            
+            html += `<div class="sequence-line">`;
+            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
+            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
+            html += `</div>`;
+        }
+        
+        // Add protein translations for CDS regions
+        const cdsFeatures = annotations.filter(feature => 
+            feature.type === 'CDS' &&
+            feature.start <= start + subsequence.length &&
+            feature.end >= start
+        );
+        
+        if (cdsFeatures.length > 0) {
+            html += '<div class="protein-translations">';
+            html += '<div class="sequence-info"><strong>Protein Translations:</strong></div>';
+            
+            cdsFeatures.forEach(cds => {
+                const cdsStart = Math.max(cds.start - start, 0);
+                const cdsEnd = Math.min(cds.end - start, subsequence.length);
+                const cdsSequence = subsequence.substring(cdsStart, cdsEnd);
+                const proteinSequence = this.translateDNA(cdsSequence, cds.strand);
+                const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
+                
+                html += `<div class="protein-sequence">`;
+                html += `<div class="protein-header">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):</div>`;
+                html += `<div class="protein-seq">${this.colorizeProteinSequence(proteinSequence)}</div>`;
+                html += `</div>`;
+            });
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    displaySequenceWithAnnotations(chromosome, subsequence, start) {
+        const container = document.getElementById('sequenceContent');
+        
+        // Create formatted sequence display with basic annotations
+        let html = '';
+        const lineLength = 60;
+        
+        for (let i = 0; i < subsequence.length; i += lineLength) {
+            const line = subsequence.substring(i, i + lineLength);
+            const position = start + i + 1;
+            
+            html += `<div class="sequence-line">`;
+            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
+            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
+            html += `</div>`;
+        }
+        
+        container.innerHTML = html;
+    }
+
+    colorizeProteinSequence(sequence) {
+        const aaColors = {
+            'A': '#ff6b6b', 'R': '#4ecdc4', 'N': '#45b7d1', 'D': '#f9ca24',
+            'C': '#f0932b', 'Q': '#eb4d4b', 'E': '#6c5ce7', 'G': '#a29bfe',
+            'H': '#fd79a8', 'I': '#00b894', 'L': '#00cec9', 'K': '#0984e3',
+            'M': '#e17055', 'F': '#81ecec', 'P': '#fab1a0', 'S': '#00b894',
+            'T': '#55a3ff', 'W': '#fd79a8', 'Y': '#fdcb6e', 'V': '#6c5ce7',
+            '*': '#2d3436'
+        };
+        
+        return sequence.split('').map(aa => {
+            const color = aaColors[aa] || '#74b9ff';
+            return `<span style="color: ${color}; font-weight: bold;">${aa}</span>`;
+        }).join('');
     }
 }
 

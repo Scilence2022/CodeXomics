@@ -88,7 +88,51 @@ function createMenu() {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen' }
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        {
+          label: 'Show File Information',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'fileInfoSection');
+          }
+        },
+        {
+          label: 'Show Navigation',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'navigationSection');
+          }
+        },
+        {
+          label: 'Show Statistics',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'statisticsSection');
+          }
+        },
+        {
+          label: 'Show All Panels',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            mainWindow.webContents.send('show-all-panels');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Show Tracks Panel',
+          accelerator: 'CmdOrCtrl+4',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'tracksSection');
+          }
+        },
+        {
+          label: 'Show Features Panel',
+          accelerator: 'CmdOrCtrl+5',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'featuresSection');
+          }
+        }
       ]
     },
     {
