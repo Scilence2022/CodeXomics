@@ -245,10 +245,6 @@ class GenomeBrowser {
         });
 
         // Toggle buttons for toolbar sections
-        document.getElementById('toggleFeatureFilters').addEventListener('click', () => {
-            this.toggleFeatureFilters();
-        });
-        
         document.getElementById('toggleTracks').addEventListener('click', () => {
             this.toggleTracks();
         });
