@@ -31,10 +31,36 @@
                 </div>
             </div>
             <div class="header-right">
-                <button id="openFileBtn" class="btn btn-primary">
-                    <i class="fas fa-folder-open"></i>
-                    Open File
-                </button>
+                <div class="file-menu-container">
+                    <button id="openFileBtn" class="btn btn-primary dropdown-toggle">
+                        <i class="fas fa-folder-open"></i>
+                        Open File
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="fileDropdownMenu">
+                        <button class="dropdown-item" id="openGenomeBtn">
+                            <i class="fas fa-dna"></i>
+                            Genome File (FASTA, GenBank)
+                        </button>
+                        <button class="dropdown-item" id="openAnnotationBtn">
+                            <i class="fas fa-tags"></i>
+                            Annotation File (GFF, BED)
+                        </button>
+                        <button class="dropdown-item" id="openVariantBtn">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Variant File (VCF)
+                        </button>
+                        <button class="dropdown-item" id="openReadsBtn">
+                            <i class="fas fa-align-left"></i>
+                            Reads File (SAM/BAM)
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="openAnyBtn">
+                            <i class="fas fa-file"></i>
+                            Any Supported File
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -281,11 +307,28 @@
                         <div class="welcome-content">
                             <i class="fas fa-dna welcome-icon"></i>
                             <h2>Welcome to Genome Browser</h2>
-                            <p>Open a genome file to start exploring</p>
-                            <button id="welcomeOpenBtn" class="btn btn-primary btn-lg">
-                                <i class="fas fa-folder-open"></i>
-                                Open Genome File
-                            </button>
+                            <p>Choose a file type to start exploring</p>
+                            <div class="welcome-buttons">
+                                <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-dna"></i>
+                                    Genome File
+                                </button>
+                                <button id="welcomeOpenAnnotationBtn" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-tags"></i>
+                                    Annotation File
+                                </button>
+                                <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Variant File
+                                </button>
+                                <button id="welcomeOpenReadsBtn" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-align-left"></i>
+                                    Reads File
+                                </button>
+                            </div>
+                            <p class="welcome-note">
+                                <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM</small>
+                            </p>
                         </div>
                     </div>
                 </div>

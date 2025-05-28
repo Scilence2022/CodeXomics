@@ -58,9 +58,26 @@ class GenomeBrowser {
     }
 
     setupEventListeners() {
-        // File operations
-        document.getElementById('openFileBtn').addEventListener('click', () => this.openFile());
-        document.getElementById('welcomeOpenBtn').addEventListener('click', () => this.openFile());
+        // File operations - dropdown menu
+        document.getElementById('openFileBtn').addEventListener('click', () => this.toggleFileDropdown());
+        document.getElementById('openGenomeBtn').addEventListener('click', () => this.openSpecificFileType('genome'));
+        document.getElementById('openAnnotationBtn').addEventListener('click', () => this.openSpecificFileType('annotation'));
+        document.getElementById('openVariantBtn').addEventListener('click', () => this.openSpecificFileType('variant'));
+        document.getElementById('openReadsBtn').addEventListener('click', () => this.openSpecificFileType('reads'));
+        document.getElementById('openAnyBtn').addEventListener('click', () => this.openSpecificFileType('any'));
+
+        // Welcome screen buttons
+        document.getElementById('welcomeOpenGenomeBtn').addEventListener('click', () => this.openSpecificFileType('genome'));
+        document.getElementById('welcomeOpenAnnotationBtn').addEventListener('click', () => this.openSpecificFileType('annotation'));
+        document.getElementById('welcomeOpenVariantBtn').addEventListener('click', () => this.openSpecificFileType('variant'));
+        document.getElementById('welcomeOpenReadsBtn').addEventListener('click', () => this.openSpecificFileType('reads'));
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.file-menu-container')) {
+                this.closeFileDropdown();
+            }
+        });
 
         // Search functionality
         document.getElementById('searchBtn').addEventListener('click', () => this.showSearchModal());
@@ -288,6 +305,50 @@ class GenomeBrowser {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.genbank';
+        input.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                this.loadFile(e.target.files[0].path);
+            }
+        };
+        input.click();
+    }
+
+    toggleFileDropdown() {
+        const dropdown = document.getElementById('fileDropdownMenu');
+        dropdown.classList.toggle('show');
+    }
+
+    closeFileDropdown() {
+        const dropdown = document.getElementById('fileDropdownMenu');
+        dropdown.classList.remove('show');
+    }
+
+    openSpecificFileType(fileType) {
+        this.closeFileDropdown();
+        
+        const input = document.createElement('input');
+        input.type = 'file';
+        
+        // Set specific file filters based on type
+        switch (fileType) {
+            case 'genome':
+                input.accept = '.fasta,.fa,.gb,.gbk,.genbank';
+                break;
+            case 'annotation':
+                input.accept = '.gff,.gtf,.bed';
+                break;
+            case 'variant':
+                input.accept = '.vcf';
+                break;
+            case 'reads':
+                input.accept = '.sam,.bam';
+                break;
+            case 'any':
+            default:
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.genbank';
+                break;
+        }
+        
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
                 this.loadFile(e.target.files[0].path);
@@ -1849,6 +1910,198 @@ class GenomeBrowser {
         a.download = `${currentChr}_${this.currentPosition.start + 1}-${this.currentPosition.end}.fasta`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    async parseVCF() {
+        const lines = this.currentFile.data.split('\n');
+        const variants = {};
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Skip header lines and empty lines
+            if (trimmed.startsWith('#') || !trimmed) continue;
+            
+            const fields = trimmed.split('\t');
+            if (fields.length < 8) continue;
+            
+            const [chrom, pos, id, ref, alt, qual, filter, info] = fields;
+            
+            if (!variants[chrom]) {
+                variants[chrom] = [];
+            }
+            
+            const variant = {
+                chromosome: chrom,
+                start: parseInt(pos) - 1, // Convert to 0-based
+                end: parseInt(pos) - 1 + ref.length,
+                id: id === '.' ? null : id,
+                ref: ref,
+                alt: alt,
+                quality: qual === '.' ? null : parseFloat(qual),
+                filter: filter,
+                info: info
+            };
+            
+            variants[chrom].push(variant);
+        }
+        
+        this.currentVariants = variants;
+        this.updateStatus(`Loaded VCF file with variants for ${Object.keys(variants).length} chromosome(s)`);
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    async parseSAM() {
+        const lines = this.currentFile.data.split('\n');
+        const reads = {};
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Skip header lines and empty lines
+            if (trimmed.startsWith('@') || !trimmed) continue;
+            
+            const fields = trimmed.split('\t');
+            if (fields.length < 11) continue;
+            
+            const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
+            
+            // Skip unmapped reads
+            if (rname === '*' || pos === '0') continue;
+            
+            if (!reads[rname]) {
+                reads[rname] = [];
+            }
+            
+            const read = {
+                id: qname,
+                chromosome: rname,
+                start: parseInt(pos) - 1, // Convert to 0-based
+                end: parseInt(pos) - 1 + seq.length, // Approximate end position
+                strand: (parseInt(flag) & 16) ? '-' : '+',
+                mappingQuality: parseInt(mapq),
+                cigar: cigar,
+                sequence: seq,
+                quality: qual
+            };
+            
+            reads[rname].push(read);
+        }
+        
+        this.currentReads = reads;
+        this.updateStatus(`Loaded SAM file with reads for ${Object.keys(reads).length} chromosome(s)`);
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    async parseGFF() {
+        const lines = this.currentFile.data.split('\n');
+        const annotations = {};
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Skip header lines and empty lines
+            if (trimmed.startsWith('#') || !trimmed) continue;
+            
+            const fields = trimmed.split('\t');
+            if (fields.length < 9) continue;
+            
+            const [seqname, source, feature, start, end, score, strand, frame, attribute] = fields;
+            
+            if (!annotations[seqname]) {
+                annotations[seqname] = [];
+            }
+            
+            // Parse attributes
+            const qualifiers = {};
+            const attrs = attribute.split(';');
+            for (const attr of attrs) {
+                const [key, value] = attr.split('=');
+                if (key && value) {
+                    qualifiers[key.trim()] = value.trim().replace(/"/g, '');
+                }
+            }
+            
+            const annotation = {
+                type: feature,
+                start: parseInt(start),
+                end: parseInt(end),
+                strand: strand === '-' ? -1 : 1,
+                score: score === '.' ? null : parseFloat(score),
+                source: source,
+                qualifiers: qualifiers
+            };
+            
+            annotations[seqname].push(annotation);
+        }
+        
+        this.currentAnnotations = annotations;
+        this.updateStatus(`Loaded GFF file with annotations for ${Object.keys(annotations).length} sequence(s)`);
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    async parseBED() {
+        const lines = this.currentFile.data.split('\n');
+        const annotations = {};
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // Skip header lines and empty lines
+            if (trimmed.startsWith('#') || trimmed.startsWith('track') || !trimmed) continue;
+            
+            const fields = trimmed.split('\t');
+            if (fields.length < 3) continue;
+            
+            const chrom = fields[0];
+            const start = parseInt(fields[1]);
+            const end = parseInt(fields[2]);
+            const name = fields[3] || 'BED_feature';
+            const score = fields[4] ? parseFloat(fields[4]) : null;
+            const strand = fields[5] === '-' ? -1 : 1;
+            
+            if (!annotations[chrom]) {
+                annotations[chrom] = [];
+            }
+            
+            const annotation = {
+                type: 'BED_feature',
+                start: start + 1, // Convert to 1-based
+                end: end,
+                strand: strand,
+                score: score,
+                qualifiers: {
+                    name: name,
+                    score: score
+                }
+            };
+            
+            annotations[chrom].push(annotation);
+        }
+        
+        this.currentAnnotations = annotations;
+        this.updateStatus(`Loaded BED file with features for ${Object.keys(annotations).length} chromosome(s)`);
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
     }
 }
 
