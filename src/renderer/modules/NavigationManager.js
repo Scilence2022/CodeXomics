@@ -383,6 +383,9 @@ class NavigationManager {
             // Only handle left mouse button
             if (e.button !== 0) return;
             
+            // Don't start dragging if a splitter is being resized
+            if (document.body.hasAttribute('data-splitter-resizing')) return;
+            
             isDragging = true;
             hasDragged = false;
             startX = e.clientX;
@@ -399,6 +402,9 @@ class NavigationManager {
         
         const handleMouseMove = (e) => {
             if (!isDragging) return;
+            
+            // Don't update if a splitter is being resized
+            if (document.body.hasAttribute('data-splitter-resizing')) return;
             
             const deltaX = e.clientX - startX;
             

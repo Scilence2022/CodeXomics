@@ -660,6 +660,21 @@ class GenomeBrowser {
     displayGenomeView(chromosome, sequence) {
         // Create EcoCyc-like genome browser view
         const container = document.getElementById('genomeViewer');
+        
+        // PRESERVE TRACK HEIGHTS before clearing container
+        const preservedHeights = new Map();
+        const existingTracks = container.querySelectorAll('[class*="-track"]');
+        existingTracks.forEach(track => {
+            const trackContent = track.querySelector('.track-content');
+            if (trackContent && trackContent.style.height) {
+                // Extract track type from class name
+                const trackType = Array.from(track.classList).find(cls => cls.endsWith('-track'))?.replace('-track', '');
+                if (trackType) {
+                    preservedHeights.set(trackType, trackContent.style.height);
+                }
+            }
+        });
+        
         container.innerHTML = '';
         
         // Show navigation controls
@@ -710,6 +725,12 @@ class GenomeBrowser {
         tracksToShow.forEach((track, index) => {
             // Add the track
             browserContainer.appendChild(track.element);
+            
+            // RESTORE PRESERVED HEIGHT if it exists
+            const trackContent = track.element.querySelector('.track-content');
+            if (trackContent && preservedHeights.has(track.type)) {
+                trackContent.style.height = preservedHeights.get(track.type);
+            }
             
             // Add splitter after each track except the last one
             if (index < tracksToShow.length - 1) {
@@ -2730,6 +2751,9 @@ class GenomeBrowser {
             // Only handle left mouse button
             if (e.button !== 0) return;
             
+            // Don't start dragging if a splitter is being resized
+            if (document.body.hasAttribute('data-splitter-resizing')) return;
+            
             isDragging = true;
             hasDragged = false;
             startX = e.clientX;
@@ -2746,6 +2770,9 @@ class GenomeBrowser {
         
         const handleMouseMove = (e) => {
             if (!isDragging) return;
+            
+            // Don't update if a splitter is being resized
+            if (document.body.hasAttribute('data-splitter-resizing')) return;
             
             const deltaX = e.clientX - startX;
             
@@ -2919,6 +2946,9 @@ class GenomeBrowser {
             startY = e.clientY || e.touches[0].clientY;
             currentDeltaY = 0;
             
+            // Set a global flag to prevent track content dragging during splitter resize
+            document.body.setAttribute('data-splitter-resizing', 'true');
+            
             // Find the tracks above and below this splitter
             topTrack = splitter.previousElementSibling;
             bottomTrack = splitter.nextElementSibling;
@@ -2960,6 +2990,9 @@ class GenomeBrowser {
             splitter.classList.remove('resizing');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            
+            // Remove the global flag to allow track content dragging again
+            document.body.removeAttribute('data-splitter-resizing');
             
             // Reset splitter visual position
             splitter.style.transform = '';
