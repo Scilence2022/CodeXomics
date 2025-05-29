@@ -885,29 +885,33 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 19px;
-    border: 3px solid rgba(0,0,0,0.3);
+    line-height: 23px;
+    border: 2px solid rgba(0,0,0,0.3);
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .gene-element:hover {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 16px rgba(0,0,0,0.4);
     z-index: 10;
-    border-width: 4px;
+    border-width: 3px;
 }
 
 /* Operon grouping visual indicator */
 .gene-element.in-operon {
     border-style: solid;
-    border-width: 3px;
+    border-width: 2px;
 }
 
 .gene-element.single-gene {
     border-style: dashed;
-    border-width: 3px;
+    border-width: 2px;
     opacity: 0.9;
 }
 
@@ -916,7 +920,7 @@ body {
 .gene-element[style*="width: 0.4%"],
 .gene-element[style*="width: 0.5%"] {
     min-width: 12px !important;
-    border-width: 4px;
+    border-width: 3px;
     box-shadow: 0 3px 6px rgba(0,0,0,0.4);
 }
 
@@ -977,7 +981,8 @@ body {
     font-size: 8px;
 }
 
-/* Operon Legend */
+/* Operon Legend - DEPRECATED: Moved to sidebar panel */
+/*
 .operon-legend {
     position: absolute;
     top: 10px;
@@ -1020,6 +1025,7 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+*/
 
 /* Sequence Track Styles */
 .sequence-track {
@@ -2215,20 +2221,24 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 17px;
-    border: 3px solid rgba(0,0,0,0.2);
+    line-height: 21px;
+    border: 2px solid rgba(0,0,0,0.2);
     font-weight: 600;
     text-shadow: 0 1px 1px rgba(0,0,0,0.3);
     background: linear-gradient(135deg, #6a1b9a, #9c27b0);
     border-color: #6a1b9a;
     top: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .protein-element:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 10;
-    border-width: 4px;
+    border-width: 3px;
 }
 
 /* Enhanced promoter and terminator styles */
@@ -2237,7 +2247,8 @@ body {
     border-color: #d32f2f;
     top: 55px;
     height: 16px;
-    border-width: 3px;
+    border-width: 2px;
+    line-height: 16px;
 }
 
 .gene-element.promoter::before {
@@ -2252,7 +2263,8 @@ body {
     color: white;
     top: 55px;
     height: 16px;
-    border-width: 3px;
+    border-width: 2px;
+    line-height: 16px;
 }
 
 .gene-element.terminator::before {
@@ -2266,7 +2278,8 @@ body {
     border-color: #8e24aa;
     top: 55px;
     height: 16px;
-    border-width: 3px;
+    border-width: 2px;
+    line-height: 16px;
 }
 
 .gene-element.regulatory::before {
@@ -2769,3 +2782,74 @@ body {
 
 /* Floating Toggle Button */
 /* Removed - floating toggle button no longer needed */
+
+/* Operons List Panel */
+.operons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.no-operons {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 14px;
+    text-align: center;
+    padding: 12px;
+}
+
+.operon-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.operon-item:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+    transform: translateX(2px);
+}
+
+.operon-color-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 2px solid rgba(0,0,0,0.3);
+    flex-shrink: 0;
+}
+
+.operon-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.operon-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.operon-details {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.operon-gene-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}

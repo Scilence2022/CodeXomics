@@ -170,44 +170,8 @@ class TrackRenderer {
                 }
             });
             
-            if (visibleOperons.size > 0) {
-                const legend = document.createElement('div');
-                legend.className = 'operon-legend';
-                
-                const title = document.createElement('div');
-                title.className = 'operon-legend-title';
-                title.textContent = 'Operons in View';
-                legend.appendChild(title);
-                
-                Array.from(visibleOperons).slice(0, 5).forEach(operonName => {
-                    const color = this.genomeBrowser.assignOperonColor(operonName);
-                    const item = document.createElement('div');
-                    item.className = 'operon-legend-item';
-                    
-                    const colorBox = document.createElement('div');
-                    colorBox.className = 'operon-legend-color';
-                    colorBox.style.background = `linear-gradient(135deg, ${color}, ${this.lightenColor(color, 20)})`;
-                    colorBox.style.borderColor = this.darkenColor(color, 20);
-                    
-                    const label = document.createElement('div');
-                    label.className = 'operon-legend-label';
-                    label.textContent = operonName.replace('_operon', '');
-                    
-                    item.appendChild(colorBox);
-                    item.appendChild(label);
-                    legend.appendChild(item);
-                });
-                
-                if (visibleOperons.size > 5) {
-                    const moreItem = document.createElement('div');
-                    moreItem.className = 'operon-legend-item';
-                    moreItem.style.fontStyle = 'italic';
-                    moreItem.textContent = `... and ${visibleOperons.size - 5} more`;
-                    legend.appendChild(moreItem);
-                }
-                
-                trackContent.appendChild(legend);
-            }
+            // Update sidebar operons panel instead of adding legend to track
+            this.updateOperonsPanel(operons, visibleOperons);
         }
         
         track.appendChild(trackContent);
@@ -690,6 +654,91 @@ class TrackRenderer {
         const G = (num >> 8 & 0x00FF) - amt;
         const B = (num & 0x0000FF) - amt;
         return '#' + (0x1000000 + (R < 0 ? 0 : R) * 0x10000 + (G < 0 ? 0 : G) * 0x100 + (B < 0 ? 0 : B)).toString(16).slice(1);
+    }
+
+    updateOperonsPanel(operons, visibleOperons) {
+        const operonsList = document.getElementById('operonsList');
+        
+        if (!operonsList) return;
+        
+        // Clear existing content
+        operonsList.innerHTML = '';
+        
+        if (visibleOperons.size === 0) {
+            const noOperons = document.createElement('p');
+            noOperons.className = 'no-operons';
+            noOperons.textContent = 'No operons detected in current view';
+            operonsList.appendChild(noOperons);
+            return;
+        }
+        
+        // Create operon items for visible operons
+        Array.from(visibleOperons).forEach(operonName => {
+            // Find the operon data
+            const operonData = operons.find(op => op.name === operonName);
+            if (!operonData) return;
+            
+            const color = this.genomeBrowser.assignOperonColor(operonName);
+            
+            const operonItem = document.createElement('div');
+            operonItem.className = 'operon-item';
+            
+            // Color indicator
+            const colorIndicator = document.createElement('div');
+            colorIndicator.className = 'operon-color-indicator';
+            colorIndicator.style.background = `linear-gradient(135deg, ${color}, ${this.lightenColor(color, 20)})`;
+            colorIndicator.style.borderColor = this.darkenColor(color, 20);
+            
+            // Operon info
+            const operonInfo = document.createElement('div');
+            operonInfo.className = 'operon-info';
+            
+            const operonNameEl = document.createElement('div');
+            operonNameEl.className = 'operon-name';
+            operonNameEl.textContent = operonName.replace('_operon', '');
+            
+            const operonDetails = document.createElement('div');
+            operonDetails.className = 'operon-details';
+            operonDetails.textContent = `${operonData.start.toLocaleString()}-${operonData.end.toLocaleString()} (${operonData.strand === -1 ? '-' : '+'})`;
+            
+            operonInfo.appendChild(operonNameEl);
+            operonInfo.appendChild(operonDetails);
+            
+            // Gene count badge
+            const geneCount = document.createElement('div');
+            geneCount.className = 'operon-gene-count';
+            geneCount.textContent = operonData.genes.length.toString();
+            geneCount.title = `${operonData.genes.length} genes in this operon`;
+            
+            // Add click handler to navigate to operon
+            operonItem.addEventListener('click', () => {
+                this.navigateToOperon(operonData);
+            });
+            
+            operonItem.appendChild(colorIndicator);
+            operonItem.appendChild(operonInfo);
+            operonItem.appendChild(geneCount);
+            
+            operonsList.appendChild(operonItem);
+        });
+    }
+    
+    navigateToOperon(operonData) {
+        // Navigate to the operon location
+        const padding = Math.max(1000, (operonData.end - operonData.start) * 0.2);
+        const newStart = Math.max(0, operonData.start - padding);
+        const newEnd = operonData.end + padding;
+        
+        this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+        
+        // Refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        }
+        
+        // Update statistics
+        this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
     }
 }
 

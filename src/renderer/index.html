@@ -199,57 +199,15 @@
         <main class="main-content">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
-                <div class="sidebar-section" id="fileInfoSection">
+                <div class="sidebar-section" id="operonsSection">
                     <div class="section-header">
-                        <h3>File Information</h3>
-                        <button class="close-panel-btn" data-panel="fileInfoSection">
+                        <h3>Operons in View</h3>
+                        <button class="close-panel-btn" data-panel="operonsSection">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div id="fileInfo" class="file-info">
-                        <p class="no-file">No file loaded</p>
-                    </div>
-                </div>
-                
-                <div class="sidebar-section" id="navigationSection">
-                    <div class="section-header">
-                        <h3>Navigation</h3>
-                        <button class="close-panel-btn" data-panel="navigationSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="navigation-controls">
-                        <button id="prevBtn" class="btn btn-block">
-                            <i class="fas fa-chevron-left"></i>
-                            Previous
-                        </button>
-                        <button id="nextBtn" class="btn btn-block">
-                            Next
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="statisticsSection">
-                    <div class="section-header">
-                        <h3>Statistics</h3>
-                        <button class="close-panel-btn" data-panel="statisticsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="stats" class="stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Length:</span>
-                            <span class="stat-value" id="sequenceLength">-</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">GC Content:</span>
-                            <span class="stat-value" id="gcContent">-</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Current Position:</span>
-                            <span class="stat-value" id="currentPosition">-</span>
-                        </div>
+                    <div id="operonsList" class="operons-list">
+                        <p class="no-operons">No operons detected in current view</p>
                     </div>
                 </div>
 
@@ -336,6 +294,60 @@
                             <input type="checkbox" id="sidebarShowOther" checked>
                             <span>Other Features</span>
                         </label>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section" id="fileInfoSection">
+                    <div class="section-header">
+                        <h3>File Information</h3>
+                        <button class="close-panel-btn" data-panel="fileInfoSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="fileInfo" class="file-info">
+                        <p class="no-file">No file loaded</p>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section" id="navigationSection">
+                    <div class="section-header">
+                        <h3>Navigation</h3>
+                        <button class="close-panel-btn" data-panel="navigationSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="navigation-controls">
+                        <button id="prevBtn" class="btn btn-block">
+                            <i class="fas fa-chevron-left"></i>
+                            Previous
+                        </button>
+                        <button id="nextBtn" class="btn btn-block">
+                            Next
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="statisticsSection">
+                    <div class="section-header">
+                        <h3>Statistics</h3>
+                        <button class="close-panel-btn" data-panel="statisticsSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="stats" class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Length:</span>
+                            <span class="stat-value" id="sequenceLength">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">GC Content:</span>
+                            <span class="stat-value" id="gcContent">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Current Position:</span>
+                            <span class="stat-value" id="currentPosition">-</span>
+                        </div>
                     </div>
                 </div>
             </aside>
