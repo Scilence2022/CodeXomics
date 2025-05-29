@@ -44,8 +44,8 @@ class SequenceUtils {
         const charWidth = 12; // Increased for more conservative line length calculation
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40; // 40 for padding/margins
-        // Ensure at least some bases are shown, e.g., 10, and max reasonable number e.g. 100
-        const optimalLineLength = Math.max(10, Math.min(100, Math.floor(availableWidth / charWidth)));
+        // Ensure at least some bases are shown, e.g., 10, and remove upper cap to fill width
+        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
         let html = '<div class="detailed-sequence-view">';
         html += '<div class="sequence-info"><strong>DNA Sequence (colored by features):</strong></div>';
@@ -101,7 +101,8 @@ class SequenceUtils {
         const charWidth = 12; // Increased for more conservative line length calculation
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40;
-        const optimalLineLength = Math.max(10, Math.min(120, Math.floor(availableWidth / charWidth)));
+        // Remove upper cap to fill width
+        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
         let html = '';
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
@@ -126,7 +127,8 @@ class SequenceUtils {
         const charWidth = 12; // Increased for more conservative line length calculation
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40;
-        const optimalLineLength = Math.max(10, Math.min(150, Math.floor(availableWidth / charWidth)));
+        // Remove upper cap to fill width
+        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
 
         let html = '';
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {

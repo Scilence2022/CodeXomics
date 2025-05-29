@@ -243,6 +243,8 @@ body {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    /* Ensure it takes full height of its parent if necessary, e.g. body or #app */
+    height: 100%; 
 }
 
 .genome-viewer {
@@ -1991,10 +1993,13 @@ body {
 
 /* Enhanced Resizable split layout */
 .genome-viewer-section {
-    flex: 1;
-    min-height: 300px;
-    overflow: auto;
+    /* flex: 1; Remove or change this */
+    flex-shrink: 0; /* Prevent shrinking when bottom panel grows */
+    flex-basis: 50%; /* Initial height, can be adjusted by splitter */
+    /* Or set a specific initial height: height: 300px; */
+    overflow-y: auto;
     position: relative;
+    min-height: 100px; /* Minimum height for the top tracks panel */
 }
 
 /* Horizontal Splitter between sidebar and viewer */
@@ -2213,12 +2218,15 @@ body {
 }
 
 .sequence-display-section {
-    min-height: 200px;
-    max-height: 60vh;
-    overflow: auto;
-    background: white;
-    border-top: 1px solid #dee2e6;
-    transition: all 0.3s ease;
+    /* background: var(--bg-secondary); Old background */
+    background-color: rgba(248, 250, 252, 0.2); /* var(--bg-secondary) is #f8fafc. 80% transparent means 0.2 alpha */
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-grow: 1; /* Allow this section to grow and fill available space */
+    min-height: 150px; /* Minimum height for the sequence panel, includes header */
+    /* flex-basis: 0;  Ensures flex-grow is the primary factor for sizing */
 }
 
 .sequence-display-section.collapsed {
