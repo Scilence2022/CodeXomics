@@ -419,6 +419,80 @@ class GenomeBrowser {
             bottomTrack = null;
         };
         
+        // Auto-adjust height on double-click
+        const autoAdjustHeight = () => {
+            const topTrack = splitter.previousElementSibling;
+            const bottomTrack = splitter.nextElementSibling;
+            
+            if (topTrack && bottomTrack) {
+                const topContent = topTrack.querySelector('.track-content');
+                const bottomContent = bottomTrack.querySelector('.track-content');
+                
+                if (topContent && bottomContent) {
+                    // Add visual feedback
+                    splitter.classList.add('auto-adjusting');
+                    
+                    // Calculate optimal height for top track based on its content
+                    let optimalHeight = 60; // Default minimum
+                    
+                    // Get track type from data attributes or class names
+                    const topTrackType = splitter.getAttribute('data-top-track');
+                    
+                    switch (topTrackType) {
+                        case 'genes':
+                            // For gene tracks, calculate based on number of rows needed
+                            const geneElements = topContent.querySelectorAll('.gene-element');
+                            if (geneElements.length > 0) {
+                                // Find the maximum row (top position) used
+                                let maxRow = 0;
+                                geneElements.forEach(gene => {
+                                    const top = parseInt(gene.style.top) || 0;
+                                    maxRow = Math.max(maxRow, top);
+                                });
+                                optimalHeight = Math.max(60, maxRow + 35); // Add padding
+                            }
+                            break;
+                        case 'reads':
+                            // For reads tracks, calculate based on number of rows
+                            const readElements = topContent.querySelectorAll('.read-element');
+                            if (readElements.length > 0) {
+                                let maxRow = 0;
+                                readElements.forEach(read => {
+                                    const top = parseInt(read.style.top) || 0;
+                                    maxRow = Math.max(maxRow, top);
+                                });
+                                optimalHeight = Math.max(40, maxRow + 25); // Add padding
+                            }
+                            break;
+                        case 'sequence':
+                            optimalHeight = 40; // Fixed height for sequence tracks
+                            break;
+                        case 'gc':
+                            optimalHeight = 70; // Fixed height for GC content
+                            break;
+                        case 'variants':
+                            optimalHeight = 50; // Fixed height for variants
+                            break;
+                        case 'proteins':
+                            optimalHeight = 60; // Fixed height for proteins
+                            break;
+                        default:
+                            optimalHeight = 60;
+                    }
+                    
+                    // Apply the optimal height with smooth transition
+                    topContent.style.transition = 'height 0.3s ease';
+                    topContent.style.height = `${optimalHeight}px`;
+                    
+                    // Remove transition and animation classes after animation completes
+                    setTimeout(() => {
+                        topContent.style.transition = '';
+                        splitter.classList.remove('auto-adjusting');
+                    }, 300);
+                }
+            }
+        };
+        
         // Mouse events
         splitter.addEventListener('mousedown', startResize);
         document.addEventListener('mousemove', doResize);
@@ -429,10 +503,13 @@ class GenomeBrowser {
         document.addEventListener('touchmove', doResize);
         document.addEventListener('touchend', stopResize);
         
+        // Double-click for auto-adjust
+        splitter.addEventListener('dblclick', autoAdjustHeight);
+        
         // Keyboard accessibility
         splitter.setAttribute('tabindex', '0');
         splitter.setAttribute('role', 'separator');
-        splitter.setAttribute('aria-label', 'Resize tracks');
+        splitter.setAttribute('aria-label', 'Resize tracks (double-click to auto-adjust)');
         
         splitter.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -451,6 +528,10 @@ class GenomeBrowser {
                     bottomContent.style.height = `${newBottomHeight}px`;
                 }
                 
+                e.preventDefault();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                // Auto-adjust on Enter or Space
+                autoAdjustHeight();
                 e.preventDefault();
             }
         });

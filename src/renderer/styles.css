@@ -2911,6 +2911,7 @@ body {
     transition: all 0.2s ease;
     pointer-events: none;
     letter-spacing: 2px;
+    position: relative;
 }
 
 .track-splitter:hover .track-splitter-handle {
@@ -2934,6 +2935,47 @@ body {
 .track-splitter:focus .track-splitter-handle {
     color: var(--primary-color);
     opacity: 1;
+}
+
+/* Double-click hint tooltip */
+.track-splitter::after {
+    content: 'Double-click to auto-adjust';
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.track-splitter:hover::after {
+    opacity: 1;
+}
+
+/* Auto-adjust animation effect */
+.track-splitter.auto-adjusting {
+    background: linear-gradient(to bottom, #28a745, #20c997, #28a745);
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.track-splitter.auto-adjusting .track-splitter-handle {
+    color: white;
+    opacity: 1;
+    animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
 
 /* Track content height adjustments for splitter functionality */
@@ -2991,6 +3033,8 @@ body {
     .track-splitter:hover .track-splitter-handle {
         font-size: 16px;
     }
+    
+    .track-splitter::after {
+        display: none; /* Hide tooltip on mobile */
+    }
 }
-
-/* Operons List Panel */

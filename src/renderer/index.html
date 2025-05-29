@@ -108,6 +108,12 @@
         <!-- Toolbar -->
         <div class="toolbar">
             <div class="toolbar-section">
+                <label>Sidebar:</label>
+                <button id="toggleSidebar" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-sidebar"></i>
+                </button>
+            </div>
+            <div class="toolbar-section">
                 <label for="chromosomeSelect">Chromosome:</label>
                 <select id="chromosomeSelect" class="select">
                     <option value="">Select chromosome...</option>
@@ -130,7 +136,7 @@
                 </button>
                 <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackGenes" value="genes"> Genes & Features
+                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence (Top)
@@ -153,19 +159,13 @@
                 </div>
             </div>
             <div class="toolbar-section">
-                <label>Sidebar:</label>
-                <button id="toggleSidebar" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-sidebar"></i>
-                </button>
-            </div>
-            <div class="toolbar-section">
                 <label>Show Features:</label>
                 <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
                     <i class="fas fa-filter"></i>
                 </button>
                 <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
                     <label class="feature-checkbox">
-                        <input type="checkbox" id="showGenes" checked> Genes
+                        <input type="checkbox" id="showGenes"> Genes
                     </label>
                     <label class="feature-checkbox">
                         <input type="checkbox" id="showCDS" checked> CDS
@@ -220,7 +220,7 @@
                     </div>
                     <div class="track-controls">
                         <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackGenes" value="genes">
+                            <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
                             <span>Genes & Features Track</span>
                         </label>
                         <label class="track-control-item">
