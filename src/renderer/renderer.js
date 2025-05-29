@@ -53,8 +53,27 @@ class GenomeBrowser {
         if (genomeViewerSection && !genomeViewerSection.dataset.originalFlexBasis) {
             genomeViewerSection.dataset.originalFlexBasis = getComputedStyle(genomeViewerSection).flexBasis || '50%';
         }
+        
+        // Reposition welcome screen to cover entire viewer container
+        this.repositionWelcomeScreen();
+        
         // Set initial panel layout
         this.updateBottomSequenceVisibility(); 
+    }
+
+    repositionWelcomeScreen() {
+        const welcomeScreen = document.querySelector('.welcome-screen');
+        const viewerContainer = document.getElementById('viewerContainer');
+        
+        if (welcomeScreen && viewerContainer) {
+            // Remove welcome screen from its current location (inside genome-viewer)
+            welcomeScreen.remove();
+            
+            // Add it as the first child of viewer-container so it covers everything
+            viewerContainer.insertBefore(welcomeScreen, viewerContainer.firstChild);
+            
+            console.log('Welcome screen repositioned to cover entire viewer container');
+        }
     }
 
     handleWindowResize() {

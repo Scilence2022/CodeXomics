@@ -5,6 +5,10 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%; /* Establish base height for the height chain */
+}
+
 :root {
     --primary-color: #3b82f6;
     --primary-hover: #2563eb;
@@ -42,6 +46,9 @@ body {
     color: var(--text-primary);
     line-height: 1.5;
     overflow: hidden;
+    height: 100%; /* Add explicit height for proper height chain */
+    margin: 0; /* Ensure no default margins */
+    padding: 0; /* Ensure no default padding */
 }
 
 /* Layout */
@@ -242,23 +249,38 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
+    position: relative; /* Make this a positioning context for absolute children */
     /* Ensure it takes full height of its parent if necessary, e.g. body or #app */
     height: 100%; 
 }
 
+/* Genome Viewer */
 .genome-viewer {
     flex: 1;
-    position: relative;
+    position: relative; /* Keep as positioning context for any internal absolute elements */
     background: var(--bg-primary);
+    z-index: 1; /* Lower z-index than welcome screen */
 }
 
 .welcome-screen {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    background: var(--bg-secondary);
+    min-height: 400px; /* Keep min-height as fallback */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    position: absolute; /* Position relative to .viewer-container (nearest positioned ancestor) */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15; /* Higher z-index to appear above both genome viewer and sequence sections */
+}
+
+/* When welcome screen is hidden, it shouldn't take space */
+.welcome-screen[style*="display: none"] {
+    position: static;
 }
 
 .welcome-content {
@@ -791,6 +813,8 @@ body {
     border-radius: 8px;
     margin: 10px 0;
     overflow: hidden;
+    position: relative;
+    z-index: 2; /* Lower than welcome screen but higher than basic genome viewer */
 }
 
 .genome-ruler {
@@ -1060,10 +1084,12 @@ body {
 /* Sequence Track Styles */
 .sequence-track {
     margin-bottom: 10px;
+    position: relative; /* Establish stacking context */
+    z-index: 1; /* Base layer for sequence tracks */
 }
 
 .sequence-single-line {
-    position: relative;
+    position: relative; /* Changed from default to establish stacking context */
     height: 30px;
     overflow: hidden;
     display: flex;
@@ -1071,6 +1097,7 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 4px;
+    z-index: 1; /* Base layer for sequence line */
 }
 
 .sequence-base-inline {
@@ -1082,12 +1109,13 @@ body {
     user-select: text;
     cursor: text;
     transition: font-size 0.2s ease;
+    z-index: 1; /* Base z-index for sequence bases */
 }
 
 .sequence-base-inline:hover {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
-    z-index: 10;
+    z-index: 2; /* Reduced from 10 to prevent conflicts with other UI elements */
 }
 
 /* Base colors for inline sequence */
@@ -1324,6 +1352,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
 /* Welcome Screen Enhancement */
@@ -1331,11 +1361,21 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    min-height: 400px;
+    min-height: 400px; /* Keep min-height as fallback */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     text-align: center;
+    position: absolute; /* Position relative to .viewer-container (nearest positioned ancestor) */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15; /* Higher z-index to appear above both genome viewer and sequence sections */
+}
+
+/* When welcome screen is hidden, it shouldn't take space */
+.welcome-screen[style*="display: none"] {
+    position: static;
 }
 
 .welcome-content {
@@ -2228,6 +2268,8 @@ body {
     overflow: hidden;
     flex-grow: 1; /* Allow this section to grow and fill available space */
     min-height: 150px; /* Minimum height for the sequence panel, includes header */
+    position: relative; /* Establish stacking context */
+    z-index: 2; /* Changed from 3 to 2 - same level as genome browser */
     /* flex-basis: 0;  Ensures flex-grow is the primary factor for sizing */
 }
 
@@ -2236,6 +2278,8 @@ body {
     background: rgba(255, 255, 255, 0.9); /* More opaque for better readability */
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
+    position: relative; /* Establish stacking context */
+    z-index: 1; /* Stay within sequence display section */
 }
 
 /* Sequence header should also be more visible */
@@ -2243,6 +2287,8 @@ body {
     background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
+    position: relative; /* Establish stacking context */
+    z-index: 2; /* Above sequence content */
 }
 
 .sequence-display-section.collapsed {
