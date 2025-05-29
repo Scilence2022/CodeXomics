@@ -208,15 +208,26 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
   try {
     const stats = fs.statSync(filePath);
     const fileSize = stats.size;
-    const chunks = [];
     let totalRead = 0;
+    let buffer = '';
+    let lineCount = 0;
     
     return new Promise((resolve, reject) => {
       const stream = fs.createReadStream(filePath, { encoding: 'utf8', highWaterMark: chunkSize });
       
       stream.on('data', (chunk) => {
-        chunks.push(chunk);
-        totalRead += chunk.length;
+        totalRead += Buffer.byteLength(chunk, 'utf8');
+        buffer += chunk;
+        
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Keep incomplete line in buffer
+        
+        // Send lines to renderer for processing
+        if (lines.length > 0) {
+          lineCount += lines.length;
+          event.sender.send('file-lines-chunk', { lines, lineCount });
+        }
         
         // Send progress update
         const progress = Math.round((totalRead / fileSize) * 100);
@@ -224,8 +235,15 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
       });
       
       stream.on('end', () => {
-        const data = chunks.join('');
-        resolve({ success: true, data, size: totalRead });
+        // Process any remaining data in buffer
+        if (buffer.trim()) {
+          lineCount += 1;
+          event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
+        }
+        
+        // Signal completion
+        event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
+        resolve({ success: true, totalLines: lineCount, size: totalRead });
       });
       
       stream.on('error', (error) => {
