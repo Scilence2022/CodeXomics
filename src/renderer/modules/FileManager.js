@@ -62,7 +62,20 @@ class FileManager {
                 throw new Error(fileInfo.error);
             }
 
+            // Check file size and warn for very large files
+            const fileSizeMB = fileInfo.info.size / (1024 * 1024);
+            if (fileSizeMB > 50) {
+                const proceed = confirm(
+                    `This file is ${fileSizeMB.toFixed(1)} MB. Large files may take time to load and parse. Continue?`
+                );
+                if (!proceed) {
+                    this.genomeBrowser.updateStatus('File loading cancelled');
+                    return;
+                }
+            }
+
             // Read file content
+            this.genomeBrowser.updateStatus('Reading file content...');
             const fileData = await ipcRenderer.invoke('read-file', filePath);
             if (!fileData.success) {
                 throw new Error(fileData.error);
@@ -173,10 +186,29 @@ class FileManager {
         let inOrigin = false;
         let features = [];
         let currentFeature = null;
+        
+        // Progress tracking for large files
+        const totalLines = lines.length;
+        let processedLines = 0;
+        const updateInterval = Math.max(1000, Math.floor(totalLines / 100)); // Update every 1% or 1000 lines
+        
+        this.genomeBrowser.updateStatus('Parsing GenBank file...');
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmed = line.trim();
+            
+            // Update progress for large files
+            processedLines++;
+            if (processedLines % updateInterval === 0) {
+                const progress = Math.round((processedLines / totalLines) * 100);
+                this.genomeBrowser.updateStatus(`Parsing GenBank file... ${progress}%`);
+                
+                // Allow UI to update for large files
+                if (totalLines > 50000) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
 
             // Parse LOCUS line for sequence name
             if (line.startsWith('LOCUS')) {
@@ -185,6 +217,7 @@ class FileManager {
                 sequences[currentSeq] = '';
                 annotations[currentSeq] = [];
                 features = [];
+                continue;
             }
 
             // Parse FEATURES section
@@ -192,39 +225,104 @@ class FileManager {
                 continue;
             }
 
-            // Parse individual features
-            if (line.startsWith('     ') && !inOrigin && currentSeq) {
-                const featureMatch = line.match(/^\s+(\w+)\s+(.+)/);
+            // Parse individual features - improved pattern matching
+            if (line.match(/^\s{5}\w+\s+/) && !inOrigin && currentSeq) {
+                const featureMatch = line.match(/^\s{5}(\w+)\s+(.+)/);
                 if (featureMatch) {
                     const [, type, location] = featureMatch;
+                    
+                    // Save previous feature if it exists
+                    if (currentFeature) {
+                        // Add name from qualifiers if available
+                        if (currentFeature.qualifiers.gene) {
+                            currentFeature.name = currentFeature.qualifiers.gene;
+                        } else if (currentFeature.qualifiers.locus_tag) {
+                            currentFeature.name = currentFeature.qualifiers.locus_tag;
+                        } else if (currentFeature.qualifiers.product) {
+                            currentFeature.name = currentFeature.qualifiers.product;
+                        }
+                        
+                        // Add product information
+                        if (currentFeature.qualifiers.product) {
+                            currentFeature.product = currentFeature.qualifiers.product;
+                        }
+                        
+                        // Add note information
+                        if (currentFeature.qualifiers.note) {
+                            currentFeature.note = currentFeature.qualifiers.note;
+                        }
+                    }
+                    
                     currentFeature = {
                         type: type,
                         location: location,
                         qualifiers: {},
                         start: null,
                         end: null,
-                        strand: 1
+                        strand: 1,
+                        name: null,
+                        product: null,
+                        note: null
                     };
                     
                     // Parse location
                     this.parseGenBankLocation(currentFeature, location);
                     features.push(currentFeature);
                 }
+                continue;
             }
 
-            // Parse qualifiers
-            if (line.startsWith('                     /') && currentFeature) {
-                const qualMatch = line.match(/^\s+\/(\w+)=?"?([^"]*)"?/);
+            // Parse qualifiers - improved pattern matching
+            if (line.match(/^\s{21}\//) && currentFeature) {
+                const qualMatch = line.match(/^\s{21}\/(\w+)(?:=(.*))?$/);
                 if (qualMatch) {
                     const [, key, value] = qualMatch;
-                    currentFeature.qualifiers[key] = value.replace(/"/g, '');
+                    if (value) {
+                        // Handle quoted values and multi-line values
+                        let cleanValue = value.replace(/^"/, '').replace(/"$/, '');
+                        currentFeature.qualifiers[key] = cleanValue;
+                    } else {
+                        currentFeature.qualifiers[key] = true;
+                    }
                 }
+                continue;
+            }
+            
+            // Handle multi-line qualifier values
+            if (line.match(/^\s{21}[^\/]/) && currentFeature) {
+                const lastKey = Object.keys(currentFeature.qualifiers).pop();
+                if (lastKey && typeof currentFeature.qualifiers[lastKey] === 'string') {
+                    const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
+                    currentFeature.qualifiers[lastKey] += ' ' + continuationValue;
+                }
+                continue;
             }
 
             // Parse ORIGIN section
             if (line.startsWith('ORIGIN')) {
                 inOrigin = true;
+                
+                // Process the last feature
+                if (currentFeature) {
+                    if (currentFeature.qualifiers.gene) {
+                        currentFeature.name = currentFeature.qualifiers.gene;
+                    } else if (currentFeature.qualifiers.locus_tag) {
+                        currentFeature.name = currentFeature.qualifiers.locus_tag;
+                    } else if (currentFeature.qualifiers.product) {
+                        currentFeature.name = currentFeature.qualifiers.product;
+                    }
+                    
+                    if (currentFeature.qualifiers.product) {
+                        currentFeature.product = currentFeature.qualifiers.product;
+                    }
+                    
+                    if (currentFeature.qualifiers.note) {
+                        currentFeature.note = currentFeature.qualifiers.note;
+                    }
+                }
+                
                 annotations[currentSeq] = features;
+                this.genomeBrowser.updateStatus(`Parsed ${features.length} features, reading sequence...`);
                 continue;
             }
 
@@ -232,6 +330,7 @@ class FileManager {
             if (inOrigin && trimmed && !line.startsWith('//')) {
                 const seqData = line.replace(/\d+/g, '').replace(/\s+/g, '').toUpperCase();
                 currentData += seqData;
+                continue;
             }
 
             // End of record
@@ -241,11 +340,18 @@ class FileManager {
                 }
                 inOrigin = false;
                 currentData = '';
+                currentFeature = null;
+                continue;
             }
         }
 
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.currentAnnotations = annotations;
+        
+        // Log parsing results
+        const totalFeatures = Object.values(annotations).reduce((sum, feats) => sum + feats.length, 0);
+        console.log(`GenBank parsing complete: ${Object.keys(sequences).length} sequence(s), ${totalFeatures} features`);
+        
         this.genomeBrowser.populateChromosomeSelect();
         
         // Update export menu state
@@ -261,26 +367,55 @@ class FileManager {
     }
 
     parseGenBankLocation(feature, location) {
-        // Simple location parsing - handles basic cases like "123..456" and "complement(123..456)"
+        // Enhanced location parsing - handles various GenBank location formats
         let isComplement = false;
         let cleanLocation = location;
 
+        // Handle complement locations
         if (location.includes('complement')) {
             isComplement = true;
             feature.strand = -1;
             cleanLocation = location.replace(/complement\(|\)/g, '');
         }
 
+        // Handle join locations (take first range for simplicity)
+        if (cleanLocation.includes('join')) {
+            const joinMatch = cleanLocation.match(/join\(([^)]+)\)/);
+            if (joinMatch) {
+                const ranges = joinMatch[1].split(',');
+                cleanLocation = ranges[0].trim();
+            }
+        }
+
+        // Handle order locations (take first range for simplicity)
+        if (cleanLocation.includes('order')) {
+            const orderMatch = cleanLocation.match(/order\(([^)]+)\)/);
+            if (orderMatch) {
+                const ranges = orderMatch[1].split(',');
+                cleanLocation = ranges[0].trim();
+            }
+        }
+
+        // Remove any remaining parentheses and angle brackets
+        cleanLocation = cleanLocation.replace(/[<>()]/g, '');
+
+        // Parse range (e.g., "123..456")
         const rangeMatch = cleanLocation.match(/(\d+)\.\.(\d+)/);
         if (rangeMatch) {
             feature.start = parseInt(rangeMatch[1]);
             feature.end = parseInt(rangeMatch[2]);
         } else {
+            // Single position (e.g., "123")
             const singleMatch = cleanLocation.match(/(\d+)/);
             if (singleMatch) {
                 feature.start = parseInt(singleMatch[1]);
                 feature.end = feature.start;
             }
+        }
+
+        // Ensure start is always less than or equal to end
+        if (feature.start && feature.end && feature.start > feature.end) {
+            [feature.start, feature.end] = [feature.end, feature.start];
         }
     }
 
