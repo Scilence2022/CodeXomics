@@ -83,6 +83,15 @@ class GenomeBrowser {
             if (!e.target.closest('.file-menu-container')) {
                 this.closeFileDropdown();
             }
+            
+            // Auto-hide toggle panels when clicking outside
+            if (!e.target.closest('#toggleTracks') && !e.target.closest('#trackCheckboxes')) {
+                this.hideTracksPanel();
+            }
+            
+            if (!e.target.closest('#toggleFeatureFilters') && !e.target.closest('#featureFilterCheckboxes')) {
+                this.hideFeatureFiltersPanel();
+            }
         });
 
         // Search functionality
@@ -1770,6 +1779,26 @@ class GenomeBrowser {
         }
     }
 
+    hideTracksPanel() {
+        const checkboxes = document.getElementById('trackCheckboxes');
+        const button = document.getElementById('toggleTracks');
+        
+        if (checkboxes && checkboxes.style.display !== 'none') {
+            checkboxes.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+
+    hideFeatureFiltersPanel() {
+        const checkboxes = document.getElementById('featureFilterCheckboxes');
+        const button = document.getElementById('toggleFeatureFilters');
+        
+        if (checkboxes && checkboxes.style.display !== 'none') {
+            checkboxes.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const horizontalSplitter = document.getElementById('horizontalSplitter');
@@ -2880,6 +2909,7 @@ class GenomeBrowser {
         let startBottomHeight = 0;
         let topTrack = null;
         let bottomTrack = null;
+        let currentDeltaY = 0; // Track the current delta for visual feedback
         
         // Add unique identifier for this splitter's auto-adjust setting
         const splitterId = `${splitter.getAttribute('data-top-track')}-${splitter.getAttribute('data-bottom-track')}`;
@@ -2887,6 +2917,7 @@ class GenomeBrowser {
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
+            currentDeltaY = 0;
             
             // Find the tracks above and below this splitter
             topTrack = splitter.previousElementSibling;
@@ -2913,18 +2944,11 @@ class GenomeBrowser {
             if (!isResizing || !topTrack || !bottomTrack) return;
             
             const currentY = e.clientY || e.touches[0].clientY;
-            const deltaY = currentY - startY;
+            currentDeltaY = currentY - startY;
             
-            const topContent = topTrack.querySelector('.track-content');
-            const bottomContent = bottomTrack.querySelector('.track-content');
-            
-            if (topContent && bottomContent) {
-                const newTopHeight = Math.max(30, startTopHeight + deltaY);
-                const newBottomHeight = Math.max(30, startBottomHeight - deltaY);
-                
-                topContent.style.height = `${newTopHeight}px`;
-                bottomContent.style.height = `${newBottomHeight}px`;
-            }
+            // Only provide visual feedback by moving the splitter position
+            // Do NOT change track heights during dragging
+            splitter.style.transform = `translateY(${currentDeltaY}px)`;
             
             e.preventDefault();
         };
@@ -2937,8 +2961,26 @@ class GenomeBrowser {
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             
+            // Reset splitter visual position
+            splitter.style.transform = '';
+            
+            // NOW apply the height changes based on the final delta
+            if (topTrack && bottomTrack && Math.abs(currentDeltaY) > 5) { // Only apply if meaningful drag
+                const topContent = topTrack.querySelector('.track-content');
+                const bottomContent = bottomTrack.querySelector('.track-content');
+                
+                if (topContent && bottomContent) {
+                    const newTopHeight = Math.max(30, startTopHeight + currentDeltaY);
+                    const newBottomHeight = Math.max(30, startBottomHeight - currentDeltaY);
+                    
+                    topContent.style.height = `${newTopHeight}px`;
+                    bottomContent.style.height = `${newBottomHeight}px`;
+                }
+            }
+            
             topTrack = null;
             bottomTrack = null;
+            currentDeltaY = 0;
         };
         
         // Improved auto-adjust height calculation - only triggered on double-click

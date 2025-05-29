@@ -178,6 +178,26 @@ class UIManager {
         }
     }
 
+    hideTracksPanel() {
+        const checkboxes = document.getElementById('trackCheckboxes');
+        const button = document.getElementById('toggleTracks');
+        
+        if (checkboxes && checkboxes.style.display !== 'none') {
+            checkboxes.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+
+    hideFeatureFiltersPanel() {
+        const checkboxes = document.getElementById('featureFilterCheckboxes');
+        const button = document.getElementById('toggleFeatureFilters');
+        
+        if (checkboxes && checkboxes.style.display !== 'none') {
+            checkboxes.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+
     toggleSequencePanel() {
         const sequenceContent = document.getElementById('sequenceContent');
         const toggleButton = document.getElementById('toggleSequencePanel');
