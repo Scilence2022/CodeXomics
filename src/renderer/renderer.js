@@ -672,42 +672,56 @@ class GenomeBrowser {
         const ruler = this.createRuler();
         browserContainer.appendChild(ruler);
         
-        // Create tracks in order for proper alignment
+        // Collect all tracks to be displayed
+        const tracksToShow = [];
+        
         // 1. Gene track (only if genes track is selected and annotations exist)
         if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const geneTrack = this.createGeneTrack(chromosome);
-            browserContainer.appendChild(geneTrack);
+            tracksToShow.push({ element: geneTrack, type: 'genes' });
         }
         
         // 2. Sequence track (only if sequence track is selected) - TOP sequence track
         if (this.visibleTracks.has('sequence')) {
             const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
-            browserContainer.appendChild(sequenceTrack);
+            tracksToShow.push({ element: sequenceTrack, type: 'sequence' });
         }
         
         // 3. GC Content track (only if GC track is selected)
         if (this.visibleTracks.has('gc')) {
             const gcTrack = this.createGCTrack(chromosome, sequence);
-            browserContainer.appendChild(gcTrack);
+            tracksToShow.push({ element: gcTrack, type: 'gc' });
         }
         
         // 4. Variants track (show if selected, even without data)
         if (this.visibleTracks.has('variants')) {
             const variantTrack = this.createVariantTrack(chromosome);
-            browserContainer.appendChild(variantTrack);
+            tracksToShow.push({ element: variantTrack, type: 'variants' });
         }
         
         // 5. Aligned reads track (show if selected, even without data)
         if (this.visibleTracks.has('reads')) {
             const readsTrack = this.createReadsTrack(chromosome);
-            browserContainer.appendChild(readsTrack);
+            tracksToShow.push({ element: readsTrack, type: 'reads' });
         }
         
         // 6. Protein track (only if proteins track is selected and we have CDS annotations)
         if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const proteinTrack = this.createProteinTrack(chromosome);
-            browserContainer.appendChild(proteinTrack);
+            tracksToShow.push({ element: proteinTrack, type: 'proteins' });
         }
+        
+        // Add tracks with splitters between them
+        tracksToShow.forEach((track, index) => {
+            // Add the track
+            browserContainer.appendChild(track.element);
+            
+            // Add splitter after each track except the last one
+            if (index < tracksToShow.length - 1) {
+                const splitter = this.createTrackSplitter(track.type, tracksToShow[index + 1].type);
+                browserContainer.appendChild(splitter);
+            }
+        });
         
         container.appendChild(browserContainer);
         
@@ -2742,6 +2756,128 @@ class GenomeBrowser {
             document.removeEventListener('mouseup', handleMouseUp);
             element.removeEventListener('mouseleave', handleMouseLeave);
         };
+    }
+
+    // Create a resizable splitter between tracks
+    createTrackSplitter(topTrackType, bottomTrackType) {
+        const splitter = document.createElement('div');
+        splitter.className = 'track-splitter';
+        splitter.setAttribute('data-top-track', topTrackType);
+        splitter.setAttribute('data-bottom-track', bottomTrackType);
+        
+        // Add visual indicator
+        const handle = document.createElement('div');
+        handle.className = 'track-splitter-handle';
+        handle.innerHTML = '⋯';
+        splitter.appendChild(handle);
+        
+        // Add resize functionality
+        this.makeTrackSplitterResizable(splitter);
+        
+        return splitter;
+    }
+
+    // Make track splitter resizable
+    makeTrackSplitterResizable(splitter) {
+        let isResizing = false;
+        let startY = 0;
+        let startTopHeight = 0;
+        let startBottomHeight = 0;
+        let topTrack = null;
+        let bottomTrack = null;
+        
+        const startResize = (e) => {
+            isResizing = true;
+            startY = e.clientY || e.touches[0].clientY;
+            
+            // Find the tracks above and below this splitter
+            topTrack = splitter.previousElementSibling;
+            bottomTrack = splitter.nextElementSibling;
+            
+            if (topTrack && bottomTrack) {
+                const topContent = topTrack.querySelector('.track-content');
+                const bottomContent = bottomTrack.querySelector('.track-content');
+                
+                if (topContent && bottomContent) {
+                    startTopHeight = topContent.offsetHeight;
+                    startBottomHeight = bottomContent.offsetHeight;
+                }
+            }
+            
+            splitter.classList.add('resizing');
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            
+            e.preventDefault();
+        };
+        
+        const doResize = (e) => {
+            if (!isResizing || !topTrack || !bottomTrack) return;
+            
+            const currentY = e.clientY || e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            
+            const topContent = topTrack.querySelector('.track-content');
+            const bottomContent = bottomTrack.querySelector('.track-content');
+            
+            if (topContent && bottomContent) {
+                const newTopHeight = Math.max(30, startTopHeight + deltaY);
+                const newBottomHeight = Math.max(30, startBottomHeight - deltaY);
+                
+                topContent.style.height = `${newTopHeight}px`;
+                bottomContent.style.height = `${newBottomHeight}px`;
+            }
+            
+            e.preventDefault();
+        };
+        
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            splitter.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            topTrack = null;
+            bottomTrack = null;
+        };
+        
+        // Mouse events
+        splitter.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+        
+        // Touch events for mobile
+        splitter.addEventListener('touchstart', startResize);
+        document.addEventListener('touchmove', doResize);
+        document.addEventListener('touchend', stopResize);
+        
+        // Keyboard accessibility
+        splitter.setAttribute('tabindex', '0');
+        splitter.setAttribute('role', 'separator');
+        splitter.setAttribute('aria-label', 'Resize tracks');
+        
+        splitter.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                const topContent = splitter.previousElementSibling?.querySelector('.track-content');
+                const bottomContent = splitter.nextElementSibling?.querySelector('.track-content');
+                
+                if (topContent && bottomContent) {
+                    const delta = e.key === 'ArrowUp' ? -10 : 10;
+                    const currentTopHeight = topContent.offsetHeight;
+                    const currentBottomHeight = bottomContent.offsetHeight;
+                    
+                    const newTopHeight = Math.max(30, currentTopHeight + delta);
+                    const newBottomHeight = Math.max(30, currentBottomHeight - delta);
+                    
+                    topContent.style.height = `${newTopHeight}px`;
+                    bottomContent.style.height = `${newBottomHeight}px`;
+                }
+                
+                e.preventDefault();
+            }
+        });
     }
 
     toggleSequencePanel() {

@@ -2873,3 +2873,124 @@ body {
     text-align: center;
     flex-shrink: 0;
 }
+
+/* Track Splitters */
+.track-splitter {
+    height: 8px;
+    background: linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef);
+    cursor: row-resize;
+    position: relative;
+    border-top: 1px solid #ced4da;
+    border-bottom: 1px solid #ced4da;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin: 2px 0;
+}
+
+.track-splitter:hover {
+    background: linear-gradient(to bottom, #dee2e6, #ced4da, #dee2e6);
+    height: 10px;
+    margin: 1px 0;
+}
+
+.track-splitter.resizing {
+    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
+    height: 10px;
+    margin: 1px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.track-splitter-handle {
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    letter-spacing: 2px;
+}
+
+.track-splitter:hover .track-splitter-handle {
+    opacity: 1;
+    color: #495057;
+    font-size: 14px;
+}
+
+.track-splitter.resizing .track-splitter-handle {
+    opacity: 1;
+    color: #343a40;
+    font-size: 14px;
+}
+
+.track-splitter:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    background: linear-gradient(to bottom, #dee2e6, #ced4da, #dee2e6);
+}
+
+.track-splitter:focus .track-splitter-handle {
+    color: var(--primary-color);
+    opacity: 1;
+}
+
+/* Track content height adjustments for splitter functionality */
+.gene-track .track-content,
+.sequence-track .track-content,
+.gc-track .track-content,
+.reads-track .track-content,
+.variant-track .track-content,
+.protein-track .track-content {
+    transition: height 0.1s ease;
+    overflow: hidden;
+}
+
+/* Ensure tracks maintain minimum heights when resized */
+.gene-track .track-content {
+    min-height: 60px;
+}
+
+.sequence-track .track-content {
+    min-height: 40px;
+}
+
+.gc-track .track-content {
+    min-height: 50px;
+}
+
+.reads-track .track-content {
+    min-height: 40px;
+}
+
+.variant-track .track-content {
+    min-height: 40px;
+}
+
+.protein-track .track-content {
+    min-height: 50px;
+}
+
+/* Responsive adjustments for track splitters */
+@media (max-width: 768px) {
+    .track-splitter {
+        height: 12px;
+        margin: 3px 0;
+    }
+    
+    .track-splitter:hover {
+        height: 14px;
+        margin: 2px 0;
+    }
+    
+    .track-splitter-handle {
+        font-size: 14px;
+    }
+    
+    .track-splitter:hover .track-splitter-handle {
+        font-size: 16px;
+    }
+}
+
+/* Operons List Panel */

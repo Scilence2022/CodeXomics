@@ -14,12 +14,17 @@ A modern, cross-platform genome browser built with Electron, featuring an EcoCyc
 
 ### Visualization Features
 - **EcoCyc-style genome browser** with multiple tracks
-- **Gene track** showing genes, CDS, and mRNA features
+- **Resizable track splitters** for customizing track heights
+- **Gene track** showing genes, CDS, and mRNA features with operon detection
 - **Sequence track** with color-coded nucleotides
 - **Ruler track** for position reference
 - **GC content visualization** for large regions
+- **Variant track** for VCF file visualization
+- **Aligned reads track** with multi-row layout
+- **Protein track** for CDS translation
 - **Interactive gene elements** with hover information
 - **Strand-specific visualization** (forward/reverse)
+- **Multi-row layouts** preventing feature overlaps
 
 ### Navigation & Search
 - **Position-based navigation** with zoom controls
@@ -71,6 +76,13 @@ npm start
 - Green: genes, Blue: CDS, Yellow: mRNA
 - Hover over genes to see detailed information
 - Reverse strand genes have diagonal stripes and left-pointing arrows
+
+### Resizing Tracks
+- **Track splitters** appear between each visible track
+- **Drag splitters** up/down to adjust individual track heights
+- **Keyboard navigation**: Tab to focus splitter, Arrow keys to resize
+- **Minimum heights** ensure tracks remain functional
+- See [TRACK_SPLITTERS.md](TRACK_SPLITTERS.md) for detailed documentation
 
 ### Sample Data
 The `sample_data/` folder contains:
