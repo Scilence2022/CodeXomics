@@ -204,6 +204,39 @@ ipcMain.handle('read-file', async (event, filePath) => {
   }
 });
 
+ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {
+  try {
+    const stats = fs.statSync(filePath);
+    const fileSize = stats.size;
+    const chunks = [];
+    let totalRead = 0;
+    
+    return new Promise((resolve, reject) => {
+      const stream = fs.createReadStream(filePath, { encoding: 'utf8', highWaterMark: chunkSize });
+      
+      stream.on('data', (chunk) => {
+        chunks.push(chunk);
+        totalRead += chunk.length;
+        
+        // Send progress update
+        const progress = Math.round((totalRead / fileSize) * 100);
+        event.sender.send('file-read-progress', { progress, totalRead, fileSize });
+      });
+      
+      stream.on('end', () => {
+        const data = chunks.join('');
+        resolve({ success: true, data, size: totalRead });
+      });
+      
+      stream.on('error', (error) => {
+        reject({ success: false, error: error.message });
+      });
+    });
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('get-file-info', async (event, filePath) => {
   try {
     const stats = fs.statSync(filePath);

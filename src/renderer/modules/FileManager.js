@@ -10,7 +10,7 @@ class FileManager {
     async openFile() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.gbff,.genbank';
+        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank';
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
                 this.loadFile(e.target.files[0].path);
@@ -39,7 +39,7 @@ class FileManager {
                 break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.gbff,.genbank';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank';
                 break;
         }
         
@@ -64,6 +64,8 @@ class FileManager {
 
             // Check file size and warn for very large files
             const fileSizeMB = fileInfo.info.size / (1024 * 1024);
+            const extension = fileInfo.info.extension.toLowerCase();
+            
             if (fileSizeMB > 50) {
                 const proceed = confirm(
                     `This file is ${fileSizeMB.toFixed(1)} MB. Large files may take time to load and parse. Continue?`
@@ -74,9 +76,31 @@ class FileManager {
                 }
             }
 
-            // Read file content
+            // Set up progress listener for streaming reads
+            const progressHandler = (event, progressData) => {
+                const { progress, totalRead, fileSize } = progressData;
+                const readMB = (totalRead / (1024 * 1024)).toFixed(1);
+                const totalMB = (fileSize / (1024 * 1024)).toFixed(1);
+                this.genomeBrowser.updateStatus(`Reading file... ${progress}% (${readMB}/${totalMB} MB)`);
+            };
+            
+            ipcRenderer.on('file-read-progress', progressHandler);
+
+            // Read file content - use streaming for large files or SAM files
             this.genomeBrowser.updateStatus('Reading file content...');
-            const fileData = await ipcRenderer.invoke('read-file', filePath);
+            let fileData;
+            
+            if (fileSizeMB > 100 || extension === '.sam') {
+                // Use streaming for large files or SAM files
+                fileData = await ipcRenderer.invoke('read-file-stream', filePath);
+            } else {
+                // Use regular reading for smaller files
+                fileData = await ipcRenderer.invoke('read-file', filePath);
+            }
+            
+            // Remove progress listener
+            ipcRenderer.removeListener('file-read-progress', progressHandler);
+            
             if (!fileData.success) {
                 throw new Error(fileData.error);
             }
@@ -131,9 +155,11 @@ class FileManager {
             case '.sam':
                 await this.parseSAM();
                 break;
+            case '.bam':
+                await this.parseBAM();
+                break;
             default:
-                // Try to parse as FASTA by default
-                await this.parseFasta();
+                throw new Error(`Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam). Note: BAM files require conversion to SAM format first.`);
         }
     }
 
@@ -497,9 +523,27 @@ class FileManager {
     async parseSAM() {
         const lines = this.currentFile.data.split('\n');
         const reads = {};
+        let processedLines = 0;
+        const totalLines = lines.length;
+        const updateInterval = Math.max(1000, Math.floor(totalLines / 100)); // Update every 1% or 1000 lines
         
-        for (const line of lines) {
+        this.genomeBrowser.updateStatus('Parsing SAM file...');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
             const trimmed = line.trim();
+            
+            // Update progress for large files
+            processedLines++;
+            if (processedLines % updateInterval === 0) {
+                const progress = Math.round((processedLines / totalLines) * 100);
+                this.genomeBrowser.updateStatus(`Parsing SAM file... ${progress}%`);
+                
+                // Allow UI to update for large files
+                if (totalLines > 50000) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
             
             // Skip header lines and empty lines
             if (trimmed.startsWith('@') || !trimmed) continue;
@@ -529,16 +573,38 @@ class FileManager {
             };
             
             reads[rname].push(read);
+            
+            // For very large files, limit the number of reads per chromosome to prevent memory issues
+            if (reads[rname].length > 100000) {
+                console.warn(`Limiting reads for chromosome ${rname} to 100,000 to prevent memory issues`);
+                // Keep only the first 100,000 reads for this chromosome
+                reads[rname] = reads[rname].slice(0, 100000);
+            }
         }
         
         this.genomeBrowser.currentReads = reads;
-        this.genomeBrowser.updateStatus(`Loaded SAM file with reads for ${Object.keys(reads).length} chromosome(s)`);
+        
+        // Log parsing results
+        const totalReads = Object.values(reads).reduce((sum, chrReads) => sum + chrReads.length, 0);
+        console.log(`SAM parsing complete: ${Object.keys(reads).length} chromosome(s), ${totalReads} reads`);
+        
+        this.genomeBrowser.updateStatus(`Loaded SAM file with ${totalReads} reads for ${Object.keys(reads).length} chromosome(s)`);
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
+    }
+
+    async parseBAM() {
+        // BAM files are binary format and require special parsing libraries
+        // For now, we'll show an informative error message
+        throw new Error(`BAM files are binary format and not currently supported. Please convert your BAM file to SAM format using tools like samtools:
+        
+samtools view -h your_file.bam > your_file.sam
+
+Then load the SAM file instead. SAM files contain the same alignment data in text format that can be parsed by this application.`);
     }
 
     async parseGFF() {
