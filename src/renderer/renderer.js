@@ -57,7 +57,8 @@ class GenomeBrowser {
         // Recalculate sequence display if visible
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
-            if (this.visibleTracks.has('sequence')) {
+            // Check if the bottom sequence panel is supposed to be shown
+            if (this.showBottomSequence) { 
                 this.displayEnhancedSequence(currentChr, this.currentSequence[currentChr]);
             }
         }
@@ -812,7 +813,6 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         
-        // Add draggable functionality
         this.makeDraggable(trackContent, chromosome);
         
         const annotations = this.currentAnnotations[chromosome] || [];
@@ -820,13 +820,12 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const range = end - start;
         
-        // Detect operons for color assignment (IF operon logic is also ported or simplified)
-        // For now, we'll assume no complex operon coloring in this non-modular version
-        // to keep the change focused on arrangement.
-        // const operons = this.detectOperons ? this.detectOperons(annotations) : [];
+        // Detect operons using the methods available in GenomeBrowser class
+        const operons = this.detectOperons ? this.detectOperons(annotations) : [];
+        const operonColors = this.getOperonColors ? this.getOperonColors() : this.getDefaultOperonColors();
 
         const visibleGenes = annotations.filter(feature => {
-            const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
+            const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature',
                               'regulatory', 'promoter', 'terminator', 'repeat_region'];
             return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
                    this.shouldShowGeneType(feature.type);
@@ -834,8 +833,6 @@ class GenomeBrowser {
             gene.start && gene.end && 
             gene.start <= end && gene.end >= start
         );
-        
-        console.log(`[renderer.js] Displaying ${visibleGenes.length} genes/features in region ${start}-${end}`);
         
         if (visibleGenes.length === 0) {
             const noGenesMsg = document.createElement('div');
@@ -851,28 +848,22 @@ class GenomeBrowser {
                 font-size: 12px;
             `;
             trackContent.appendChild(noGenesMsg);
-            trackContent.style.height = '80px'; // Default height for empty track
+            trackContent.style.height = '80px';
             track.appendChild(trackContent);
             return track;
         }
 
-        // Arrange genes into rows
         const geneRows = this.arrangeGenesInRows(visibleGenes, start, end);
-        
-        // Calculate adaptive track height
-        const geneHeight = 23; // Height of each gene element (consistent with TrackRenderer.js)
-        const rowSpacing = 6;  // Space between rows (consistent with TrackRenderer.js)
-        const topPadding = 10; // Top padding (consistent with TrackRenderer.js)
-        const bottomPadding = 10; // Bottom padding (consistent with TrackRenderer.js)
-        
+        const geneHeight = 23;
+        const rowSpacing = 6;
+        const topPadding = 10;
+        const bottomPadding = 10;
         const trackHeight = topPadding + (geneRows.length * (geneHeight + rowSpacing)) - (geneRows.length > 0 ? rowSpacing : 0) + bottomPadding;
-        trackContent.style.height = `${Math.max(trackHeight, 80)}px`; // Ensure minimum height
+        trackContent.style.height = `${Math.max(trackHeight, 80)}px`;
 
-        // Create gene elements
         geneRows.forEach((rowGenes, rowIndex) => {
             rowGenes.forEach((gene) => {
                 const geneElement = document.createElement('div');
-                
                 let geneType = gene.type.toLowerCase();
                 if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
                     geneType = 'misc_feature';
@@ -888,9 +879,14 @@ class GenomeBrowser {
                 geneElement.style.width = `${Math.max(width, 0.3)}%`;
                 if (width < 0.5) geneElement.style.minWidth = '8px';
 
-                // Simplified styling without operons for now
-                geneElement.style.background = '#3498db'; // Default color
-                geneElement.style.borderColor = '#2980b9';
+                // Apply consistent coloring
+                const operonInfo = operons && gene.type !== 'promoter' && gene.type !== 'terminator' ? this.getGeneOperonInfo(gene, operons, operonColors) : null;
+                const bgColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type);
+                const borderColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type, true); // Get a darker shade for border
+                
+                geneElement.style.background = bgColor;
+                geneElement.style.borderColor = borderColor;
+                geneElement.style.color = this.getContrastingTextColor(bgColor);
 
                 geneElement.style.top = `${topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
                 
@@ -898,31 +894,30 @@ class GenomeBrowser {
                     geneElement.classList.add('reverse-strand');
                 }
                 
-                const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
-                const geneInfo = `${geneName} (${gene.type})`;
+                const geneNameDisplay = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+                const geneInfo = `${geneNameDisplay} (${gene.type})`;
                 const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
-                const rowInfo = `\\nRow: ${rowIndex + 1}`;
-                geneElement.title = `${geneInfo}\\nPosition: ${positionInfo}${rowInfo}`;
+                const rowInfo = operonInfo ? `\\nOperon: ${operonInfo.name}` : ''
+                geneElement.title = `${geneInfo}\\nPosition: ${positionInfo}${rowInfo}\\nRow: ${rowIndex + 1}`;
                 
                 if (width > 2) {
-                    geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
+                    geneElement.textContent = geneNameDisplay.length > 12 ? geneNameDisplay.substring(0, 12) + '...' : geneNameDisplay;
                 } else if (width > 0.8) {
-                    geneElement.textContent = geneName.substring(0, 3);
+                    geneElement.textContent = geneNameDisplay.substring(0, 3);
                 } else {
                     geneElement.textContent = '';
                 }
                 
                 geneElement.addEventListener('click', () => {
-                    this.showGeneDetails(gene); // Assuming operonInfo is not available or needed here
+                    this.showGeneDetails(gene, operonInfo);
                 });
                 
                 trackContent.appendChild(geneElement);
             });
         });
         
-        // Add gene statistics
         const statsElement = document.createElement('div');
-        statsElement.className = 'gene-stats'; // Use class for styling
+        statsElement.className = 'gene-stats';
         statsElement.textContent = `${visibleGenes.length} features in ${geneRows.length} rows`;
         trackContent.appendChild(statsElement);
         
@@ -930,12 +925,16 @@ class GenomeBrowser {
         return track;
     }
 
-    showGeneDetails(gene) {
+    showGeneDetails(gene, operonInfo = null) { // Added operonInfo parameter
         const details = [];
         details.push(`Type: ${gene.type}`);
         details.push(`Position: ${gene.start}-${gene.end}`);
         details.push(`Strand: ${gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
         details.push(`Length: ${gene.end - gene.start + 1} bp`);
+
+        if (operonInfo) {
+            details.push(`Operon: ${operonInfo.name} (Color: ${operonInfo.color})`);
+        }
         
         if (gene.qualifiers) {
             Object.entries(gene.qualifiers).forEach(([key, value]) => {
@@ -1292,237 +1291,219 @@ class GenomeBrowser {
         const start = this.currentPosition.start;
         const end = this.currentPosition.end;
         const windowSize = end - start;
-        const subsequence = sequence.substring(start, end);
-        
+
         // Choose display method based on window size
         if (windowSize <= 500) {
-            this.displayDetailedSequence(chromosome, subsequence, start);
+            this.displayDetailedSequence(chromosome, sequence, start, end);
         } else if (windowSize <= 2000) {
-            this.displaySequenceWithAnnotations(chromosome, subsequence, start);
+            this.displaySequenceWithAnnotations(chromosome, sequence, start, end);
         } else {
-            this.displaySequence(chromosome, sequence);
+            this.displaySequence(chromosome, sequence, start, end); // Pass full sequence and view range
         }
-        
+
         // Update sequence title
-        document.getElementById('sequenceTitle').textContent = 
+        document.getElementById('sequenceTitle').textContent =
             `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
-        
-        // Show sequence display section and splitter
-        document.getElementById('sequenceDisplaySection').style.display = 'block';
-        document.getElementById('splitter').style.display = 'flex';
-        document.getElementById('sequenceDisplay').style.display = 'flex';
-    }
 
-    // Initialize splitter functionality
-    initializeSplitter() {
-        const splitter = document.getElementById('splitter');
-        const genomeSection = document.getElementById('genomeViewerSection');
-        const sequenceSection = document.getElementById('sequenceDisplaySection');
-        const viewerContainer = document.getElementById('viewerContainer');
-        
-        if (!splitter || !genomeSection || !sequenceSection || !viewerContainer) {
-            console.warn('Splitter elements not found, skipping initialization');
-            return;
+        // Show sequence display section and splitter if not already visible
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        if (this.showBottomSequence && sequenceDisplaySection.style.display === 'none') {
+            sequenceDisplaySection.style.display = 'block';
+            document.getElementById('splitter').style.display = 'flex';
         }
-        
-        let isResizing = false;
-        let startY = 0;
-        let startGenomeHeight = 0;
-        let startSequenceHeight = 0;
-        
-        // Mouse events for dragging
-        splitter.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startY = e.clientY;
-            startGenomeHeight = genomeSection.offsetHeight;
-            startSequenceHeight = sequenceSection.offsetHeight;
-            
-            document.body.style.cursor = 'row-resize';
-            document.body.style.userSelect = 'none';
-            splitter.classList.add('active');
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            
-            const deltaY = e.clientY - startY;
-            const containerHeight = viewerContainer.offsetHeight;
-            const splitterHeight = splitter.offsetHeight;
-            
-            // Calculate new heights
-            const newGenomeHeight = startGenomeHeight + deltaY;
-            const newSequenceHeight = startSequenceHeight - deltaY;
-            
-            // Set minimum heights (increased for better usability)
-            const minHeight = 200;
-            const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
-            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
-            
-            if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
-                newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
-                
-                genomeSection.style.flex = 'none';
-                genomeSection.style.height = `${newGenomeHeight}px`;
-                
-                sequenceSection.style.flex = 'none';
-                sequenceSection.style.height = `${newSequenceHeight}px`;
-            }
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                splitter.classList.remove('active');
-            }
-        });
-        
-        // Keyboard accessibility
-        splitter.setAttribute('tabindex', '0');
-        splitter.setAttribute('role', 'separator');
-        splitter.setAttribute('aria-label', 'Resize panels');
-        
-        splitter.addEventListener('keydown', (e) => {
-            const step = 20; // pixels to move per keypress
-            let deltaY = 0;
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                    deltaY = -step;
-                    break;
-                case 'ArrowDown':
-                    deltaY = step;
-                    break;
-                case 'Home':
-                    // Reset to default split
-                    genomeSection.style.flex = '1';
-                    genomeSection.style.height = 'auto';
-                    sequenceSection.style.flex = 'none';
-                    sequenceSection.style.height = '300px';
-                    e.preventDefault();
-                    return;
-                default:
-                    return;
-            }
-            
-            e.preventDefault();
-            
-            // Apply keyboard movement
-            const currentGenomeHeight = genomeSection.offsetHeight;
-            const currentSequenceHeight = sequenceSection.offsetHeight;
-            const containerHeight = viewerContainer.offsetHeight;
-            const splitterHeight = splitter.offsetHeight;
-            
-            const newGenomeHeight = currentGenomeHeight + deltaY;
-            const newSequenceHeight = currentSequenceHeight - deltaY;
-            
-            const minHeight = 200;
-            const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
-            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
-            
-            if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
-                newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
-                
-                genomeSection.style.flex = 'none';
-                genomeSection.style.height = `${newGenomeHeight}px`;
-                
-                sequenceSection.style.flex = 'none';
-                sequenceSection.style.height = `${newSequenceHeight}px`;
-            }
-        });
-        
-        // Double-click to reset to default split
-        splitter.addEventListener('dblclick', () => {
-            genomeSection.style.flex = '1';
-            genomeSection.style.height = 'auto';
-            sequenceSection.style.flex = 'none';
-            sequenceSection.style.height = '300px';
-        });
+        if (this.showBottomSequence) {
+             document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
+        }
     }
 
-    displayDetailedSequence(chromosome, subsequence, start) {
+    displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
         const container = document.getElementById('sequenceContent');
+        const subsequence = fullSequence.substring(viewStart, viewEnd);
         const annotations = this.currentAnnotations[chromosome] || [];
-        
-        // Calculate optimal line length based on container width
+        const operons = this.detectOperons ? this.detectOperons(annotations) : [];
+
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12;
-        const positionWidth = 120;
-        const availableWidth = containerWidth - positionWidth - 40;
-        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
-        
-        // Create formatted sequence display with annotations
+        const charWidth = 12; // Increased for more conservative line length calculation
+        const positionWidth = 100;
+        const availableWidth = containerWidth - positionWidth - 40; // 40 for padding/margins
+        const optimalLineLength = Math.max(10, Math.min(100, Math.floor(availableWidth / charWidth)));
+
         let html = '<div class="detailed-sequence-view">';
-        html += '<div class="sequence-info"><strong>DNA Sequence:</strong></div>';
-        
+        html += '<div class="sequence-info"><strong>DNA Sequence (colored by features):</strong></div>';
+
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const line = subsequence.substring(i, i + optimalLineLength);
-            const position = start + i + 1;
-            
+            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
+            const lineStartPos = viewStart + i;
+
             html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
-            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
+            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
+            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</span>`;
             html += `</div>`;
         }
-        
-        // Add protein translations for CDS regions
-        const cdsFeatures = annotations.filter(feature => 
+
+        const cdsFeatures = annotations.filter(feature =>
             feature.type === 'CDS' &&
-            feature.start <= start + subsequence.length &&
-            feature.end >= start
+            feature.start <= viewEnd && feature.end >= viewStart &&
+            this.shouldShowGeneType('CDS')
         );
-        
+
         if (cdsFeatures.length > 0) {
             html += '<div class="protein-translations">';
             html += '<div class="sequence-info"><strong>Protein Translations:</strong></div>';
-            
+
             cdsFeatures.forEach(cds => {
-                const cdsStart = Math.max(cds.start - start, 0);
-                const cdsEnd = Math.min(cds.end - start, subsequence.length);
-                const cdsSequence = subsequence.substring(cdsStart, cdsEnd);
-                const proteinSequence = this.translateDNA(cdsSequence, cds.strand);
+                const cdsDnaStart = Math.max(cds.start, viewStart);
+                const cdsDnaEnd = Math.min(cds.end, viewEnd);
+                const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
+
+                const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
                 const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
-                
+
                 html += `<div class="protein-sequence">`;
                 html += `<div class="protein-header">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):</div>`;
                 html += `<div class="protein-seq">${this.colorizeProteinSequence(proteinSequence)}</div>`;
                 html += `</div>`;
             });
-            
             html += '</div>';
         }
-        
         html += '</div>';
         container.innerHTML = html;
     }
 
-    displaySequenceWithAnnotations(chromosome, subsequence, start) {
+    displaySequenceWithAnnotations(chromosome, fullSequence, viewStart, viewEnd) {
         const container = document.getElementById('sequenceContent');
-        
-        // Calculate optimal line length based on container width
+        const subsequence = fullSequence.substring(viewStart, viewEnd);
+        const annotations = this.currentAnnotations[chromosome] || [];
+        const operons = this.detectOperons ? this.detectOperons(annotations) : [];
+
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12;
-        const positionWidth = 120;
+        const charWidth = 12; // Increased for more conservative line length calculation
+        const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40;
-        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
-        
-        // Create formatted sequence display with basic annotations
+        const optimalLineLength = Math.max(10, Math.min(120, Math.floor(availableWidth / charWidth)));
+
         let html = '';
-        
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const line = subsequence.substring(i, i + optimalLineLength);
-            const position = start + i + 1;
-            
+            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
+            const lineStartPos = viewStart + i;
             html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
-            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
+            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
+            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</span>`;
             html += `</div>`;
         }
-        
         container.innerHTML = html;
+    }
+
+    displaySequence(chromosome, fullSequence, viewStart, viewEnd) {
+        const container = document.getElementById('sequenceContent');
+        const subsequence = fullSequence.substring(viewStart, viewEnd);
+        const annotations = this.currentAnnotations[chromosome] || [];
+        const operons = this.detectOperons ? this.detectOperons(annotations) : []; 
+
+        const containerWidth = container.offsetWidth || 800;
+        const charWidth = 12; // Increased for more conservative line length calculation
+        const positionWidth = 100;
+        const availableWidth = containerWidth - positionWidth - 40;
+        const optimalLineLength = Math.max(10, Math.min(150, Math.floor(availableWidth / charWidth)));
+
+        let html = '';
+        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
+            const lineStartPos = viewStart + i;
+            html += `<div class="sequence-line">`;
+            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
+            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons, false)}</span>`;
+            html += `</div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    colorizeSequenceWithFeatures(sequence, lineStartAbs, annotations, operons, simplified = false) {
+        let html = '';
+        const baseFontSize = '14px'; // Define a base font size to be applied to individual bases
+
+        for (let i = 0; i < sequence.length; i++) {
+            const base = sequence[i];
+            const absPos = lineStartAbs + i + 1; 
+            let featureHexColor = null; 
+            let featureTitle = '';
+            const baseTextColor = this.getBaseColor(base); 
+
+            const overlappingFeatures = annotations.filter(f => 
+                absPos >= f.start && absPos <= f.end && this.shouldShowGeneType(f.type)
+            );
+
+            if (overlappingFeatures.length > 0) {
+                const sortedFeatures = overlappingFeatures.sort((a,b) => {
+                    const typeOrder = { 'CDS': 1, 'mRNA': 2, 'tRNA': 2, 'rRNA': 2, 'promoter': 3, 'terminator': 3, 'regulatory': 3, 'gene': 4 }; 
+                    return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
+                });
+                const mainFeature = sortedFeatures[0];
+                const operonInfo = operons && mainFeature.type !== 'promoter' && mainFeature.type !== 'terminator' ? this.getGeneOperonInfo(mainFeature, operons) : null;
+                featureHexColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(mainFeature.type);
+                featureTitle = `${mainFeature.qualifiers.gene || mainFeature.qualifiers.locus_tag || mainFeature.type} (${mainFeature.start}-${mainFeature.end})`;
+            }
+
+            let style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top;`;
+            if (featureHexColor) {
+                const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.5);
+                style += ` background-color: ${backgroundColorRgba};`;
+            } else {
+                style += ` background-color: transparent;`;
+            }
+
+            const className = `base-${base.toLowerCase()}`;
+            const titleAttr = featureTitle ? `title="${featureTitle}"` : '';
+            html += `<span class="${className}" style="${style}" ${titleAttr}>${base}</span>`;
+        }
+        return html;
+    }
+
+    getBaseColor(base) {
+        switch (base.toUpperCase()) {
+            case 'A': return '#2ecc71'; // Green
+            case 'T': return '#e74c3c'; // Red
+            case 'G': return '#f39c12'; // Orange
+            case 'C': return '#3498db'; // Blue
+            default: return '#7f8c8d'; // Grey for N etc.
+        }
+    }
+
+    getFeatureTypeColor(type, forBorder = false) {
+        let color;
+        switch (type) {
+            case 'CDS': color = '#8e44ad'; break; // Purple
+            case 'mRNA': color = '#16a085'; break; // Teal
+            case 'tRNA': color = '#27ae60'; break; // Green variant
+            case 'rRNA': color = '#2980b9'; break; // Blue variant
+            case 'promoter': color = '#f1c40f'; break; // Yellow
+            case 'terminator': color = '#d35400'; break; // Orange-Red
+            case 'regulatory': color = '#c0392b'; break; // Dark Red
+            case 'gene': color = '#7f8c8d'; break; // Mid-grey for general gene (was bdc3c7, darker for better contrast)
+            default: color = '#95a5a6'; break; // Default grey for other features
+        }
+        if (forBorder) {
+            // Return a slightly darker version for border
+            return this.shadeColor(color, -20);
+        }
+        return color;
+    }
+
+    getContrastingTextColor(backgroundColor) {
+        if (!backgroundColor || backgroundColor === 'transparent') return '#333333'; // Default text color if no background
+        const color = (backgroundColor.charAt(0) === '#') ? backgroundColor.substring(1, 7) : backgroundColor;
+        const r = parseInt(color.substring(0, 2), 16); // hexToR
+        const g = parseInt(color.substring(2, 4), 16); // hexToG
+        const b = parseInt(color.substring(4, 6), 16); // hexToB
+        const uicolors = [r / 255, g / 255, b / 255];
+        const c = uicolors.map((col) => {
+            if (col <= 0.03928) {
+                return col / 12.92;
+            }
+            return Math.pow((col + 0.055) / 1.055, 2.4);
+        });
+        const L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
+        return (L > 0.179) ? '#000000' : '#FFFFFF';
     }
 
     colorizeProteinSequence(sequence) {
@@ -2068,42 +2049,6 @@ class GenomeBrowser {
         if (overlay) {
             overlay.style.display = show ? 'flex' : 'none';
         }
-    }
-
-    displaySequence(chromosome, sequence) {
-        const container = document.getElementById('sequenceContent');
-        const start = this.currentPosition.start;
-        const end = this.currentPosition.end;
-        const subsequence = sequence.substring(start, end);
-        
-        // Calculate optimal line length based on container width
-        const containerWidth = container.offsetWidth || 800; // fallback width
-        const charWidth = 12; // approximate character width in pixels
-        const positionWidth = 120; // space for position numbers
-        const availableWidth = containerWidth - positionWidth - 40; // padding
-        const optimalLineLength = Math.max(40, Math.min(120, Math.floor(availableWidth / charWidth)));
-        
-        // Create formatted sequence display
-        let html = '';
-        
-        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const line = subsequence.substring(i, i + optimalLineLength);
-            const position = start + i + 1;
-            
-            html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${position.toLocaleString()}</span>`;
-            html += `<span class="sequence-bases">${this.colorizeSequence(line)}</span>`;
-            html += `</div>`;
-        }
-        
-        container.innerHTML = html;
-    }
-
-    colorizeSequence(sequence) {
-        return sequence.split('').map(base => {
-            const className = `base-${base.toLowerCase()}`;
-            return `<span class="${className}">${base}</span>`;
-        }).join('');
     }
 
     createGCContentVisualization(sequence) {
@@ -3369,6 +3314,44 @@ class GenomeBrowser {
         
         // Update status
         this.updateStatus(`Showing result ${index + 1} of ${this.searchResults.length}: ${result.name}`);
+    }
+
+    // Helper to darken/lighten a hex color
+    shadeColor(color, percent) {
+        let R = parseInt(color.substring(1, 3), 16);
+        let G = parseInt(color.substring(3, 5), 16);
+        let B = parseInt(color.substring(5, 7), 16);
+
+        R = parseInt(R * (100 + percent) / 100);
+        G = parseInt(G * (100 + percent) / 100);
+        B = parseInt(B * (100 + percent) / 100);
+
+        R = (R < 255) ? R : 255;
+        G = (G < 255) ? G : 255;
+        B = (B < 255) ? B : 255;
+
+        R = (R > 0) ? R : 0;
+        G = (G > 0) ? G : 0;
+        B = (B > 0) ? B : 0;
+
+        const RR = ((R.toString(16).length === 1) ? "0" + R.toString(16) : R.toString(16));
+        const GG = ((G.toString(16).length === 1) ? "0" + G.toString(16) : G.toString(16));
+        const BB = ((B.toString(16).length === 1) ? "0" + B.toString(16) : B.toString(16));
+
+        return "#" + RR + GG + BB;
+    }
+
+    // Helper function to convert hex color to RGBA
+    hexToRgba(hex, alpha) {
+        if (!hex) return 'transparent'; // Fallback for safety
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+
+        if (typeof alpha === 'number' && alpha >= 0 && alpha <= 1) {
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return `rgb(${r}, ${g}, ${b})`; // Fallback to RGB if alpha is invalid
     }
 }
 
