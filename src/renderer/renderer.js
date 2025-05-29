@@ -14,8 +14,8 @@ class GenomeBrowser {
         this.zoomLevel = 1;
         this.genes = [];
         
-        // Default visible tracks - show Genes & Features, Sequence (top), and GC Content by default
-        this.visibleTracks = new Set(['genes', 'sequence', 'gc']);
+        // Default visible tracks - show Genes & Features and GC Content by default
+        this.visibleTracks = new Set(['genes', 'gc']);
         
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
@@ -126,7 +126,6 @@ class GenomeBrowser {
         });
 
         // Track selection (toolbar checkboxes)
-        document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackGenes').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackGC').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
@@ -135,7 +134,6 @@ class GenomeBrowser {
         document.getElementById('trackBottomSequence').addEventListener('change', () => this.updateBottomSequenceVisibility());
 
         // Sidebar track controls
-        document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackGC').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
@@ -681,31 +679,25 @@ class GenomeBrowser {
             tracksToShow.push({ element: geneTrack, type: 'genes' });
         }
         
-        // 2. Sequence track (only if sequence track is selected) - TOP sequence track
-        if (this.visibleTracks.has('sequence')) {
-            const sequenceTrack = this.createSequenceTrack(chromosome, sequence);
-            tracksToShow.push({ element: sequenceTrack, type: 'sequence' });
-        }
-        
-        // 3. GC Content track (only if GC track is selected)
+        // 2. GC Content track (only if GC track is selected)
         if (this.visibleTracks.has('gc')) {
             const gcTrack = this.createGCTrack(chromosome, sequence);
             tracksToShow.push({ element: gcTrack, type: 'gc' });
         }
         
-        // 4. Variants track (show if selected, even without data)
+        // 3. Variants track (show if selected, even without data)
         if (this.visibleTracks.has('variants')) {
             const variantTrack = this.createVariantTrack(chromosome);
             tracksToShow.push({ element: variantTrack, type: 'variants' });
         }
         
-        // 5. Aligned reads track (show if selected, even without data)
+        // 4. Aligned reads track (show if selected, even without data)
         if (this.visibleTracks.has('reads')) {
             const readsTrack = this.createReadsTrack(chromosome);
             tracksToShow.push({ element: readsTrack, type: 'reads' });
         }
         
-        // 6. Protein track (only if proteins track is selected and we have CDS annotations)
+        // 5. Protein track (only if proteins track is selected and we have CDS annotations)
         if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const proteinTrack = this.createProteinTrack(chromosome);
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
@@ -1531,7 +1523,6 @@ class GenomeBrowser {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
         if (document.getElementById('trackGenes').checked) tracks.add('genes');
-        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
         if (document.getElementById('trackGC').checked) tracks.add('gc');
         if (document.getElementById('trackVariants').checked) tracks.add('variants');
         if (document.getElementById('trackReads').checked) tracks.add('reads');
@@ -1541,7 +1532,6 @@ class GenomeBrowser {
         
         // Sync with sidebar
         document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
-        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
         document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
         document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
         document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
@@ -1558,7 +1548,6 @@ class GenomeBrowser {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
         if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
-        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
         if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
         if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
         if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
@@ -1568,7 +1557,6 @@ class GenomeBrowser {
         
         // Sync with toolbar
         document.getElementById('trackGenes').checked = tracks.has('genes');
-        document.getElementById('trackSequence').checked = tracks.has('sequence');
         document.getElementById('trackGC').checked = tracks.has('gc');
         document.getElementById('trackVariants').checked = tracks.has('variants');
         document.getElementById('trackReads').checked = tracks.has('reads');
@@ -2221,34 +2209,25 @@ class GenomeBrowser {
         results.sort((a, b) => a.position - b.position);
         
         if (results.length > 0) {
-            // Go to first result
-            const firstResult = results[0];
-            const start = Math.max(0, firstResult.position - 500); // Show some context
-            const end = Math.min(sequence.length, firstResult.end + 500);
+            // Store results for navigation
+            this.searchResults = results;
+            this.currentSearchIndex = 0;
             
-            this.currentPosition = { start, end };
-            this.updateStatistics(currentChr, sequence);
-            this.displayGenomeView(currentChr, sequence);
+            // Populate search results panel
+            this.populateSearchResults(results, searchQuery);
             
-            // Create detailed results message
-            let message = `Found ${results.length} match${results.length > 1 ? 'es' : ''}:\n\n`;
-            results.slice(0, 5).forEach((result, index) => {
-                message += `${index + 1}. ${result.name} (${result.position + 1}-${result.end})\n   ${result.details}\n\n`;
-            });
+            // Navigate to first result automatically
+            this.navigateToSearchResult(0);
             
-            if (results.length > 5) {
-                message += `... and ${results.length - 5} more matches.\n\n`;
-            }
-            
-            message += `Showing first match at position ${firstResult.position + 1}.`;
-            alert(message);
+            // Show brief success message
+            this.updateStatus(`Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"`);
         } else {
             let searchInfo = `No matches found for "${searchQuery}"`;
             if (includeReverseComplement && searchQuery.match(/^[ATGC]+$/i)) {
                 const rc = this.getReverseComplement(searchQuery);
-                searchInfo += `\n(Also searched for reverse complement: "${rc}")`;
+                searchInfo += ` (also searched for reverse complement: "${rc}")`;
             }
-            alert(searchInfo);
+            this.updateStatus(searchInfo);
         }
         
         // Close modal if it was opened
@@ -3082,6 +3061,80 @@ class GenomeBrowser {
         
         // Trigger resize event for layout adjustment
         window.dispatchEvent(new Event('resize'));
+    }
+
+    // Populate the search results panel
+    populateSearchResults(results, searchQuery) {
+        const searchResultsSection = document.getElementById('searchResultsSection');
+        const searchResultsList = document.getElementById('searchResultsList');
+        
+        if (results.length === 0) {
+            searchResultsList.innerHTML = '<p class="no-results">No search results</p>';
+            searchResultsSection.style.display = 'none';
+            return;
+        }
+        
+        // Show the search results panel at the top
+        searchResultsSection.style.display = 'block';
+        
+        // Create header
+        let html = `<div class="search-results-header">Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"</div>`;
+        
+        // Create result items
+        results.forEach((result, index) => {
+            html += `
+                <div class="search-result-item" data-index="${index}">
+                    <div class="search-result-header">
+                        <span class="search-result-name">${result.name}</span>
+                        <span class="search-result-type ${result.type}">${result.type}</span>
+                    </div>
+                    <div class="search-result-position">Position: ${result.position + 1}-${result.end}</div>
+                    <div class="search-result-details">${result.details}</div>
+                </div>
+            `;
+        });
+        
+        searchResultsList.innerHTML = html;
+        
+        // Add click handlers for navigation
+        searchResultsList.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.navigateToSearchResult(index);
+                
+                // Highlight selected result
+                searchResultsList.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
+                e.currentTarget.classList.add('selected');
+            });
+        });
+        
+        // Highlight first result as selected
+        const firstItem = searchResultsList.querySelector('.search-result-item');
+        if (firstItem) {
+            firstItem.classList.add('selected');
+        }
+    }
+
+    // Navigate to a specific search result
+    navigateToSearchResult(index) {
+        if (!this.searchResults || index < 0 || index >= this.searchResults.length) return;
+        
+        const result = this.searchResults[index];
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        const sequence = this.currentSequence[currentChr];
+        
+        // Calculate view range with context
+        const start = Math.max(0, result.position - 500);
+        const end = Math.min(sequence.length, result.end + 500);
+        
+        this.currentPosition = { start, end };
+        this.updateStatistics(currentChr, sequence);
+        this.displayGenomeView(currentChr, sequence);
+        
+        this.currentSearchIndex = index;
+        
+        // Update status
+        this.updateStatus(`Showing result ${index + 1} of ${this.searchResults.length}: ${result.name}`);
     }
 }
 

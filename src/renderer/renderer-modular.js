@@ -13,8 +13,8 @@ class GenomeBrowser {
         this.currentPosition = { start: 0, end: 10000 };
         this.zoomLevel = 1;
         
-        // Default visible tracks - show Genes & Features, Sequence (top), and GC Content by default
-        this.visibleTracks = new Set(['genes', 'sequence', 'gc']);
+        // Default visible tracks - show Genes & Features and GC Content by default
+        this.visibleTracks = new Set(['genes', 'gc']);
         
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
@@ -142,7 +142,6 @@ class GenomeBrowser {
         });
 
         // Track selection (toolbar checkboxes)
-        document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackGenes').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackGC').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
@@ -151,7 +150,6 @@ class GenomeBrowser {
         document.getElementById('trackBottomSequence').addEventListener('change', () => this.updateBottomSequenceVisibility());
 
         // Sidebar track controls
-        document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackGC').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
@@ -281,31 +279,25 @@ class GenomeBrowser {
             tracksToShow.push({ element: geneTrack, type: 'genes' });
         }
         
-        // 2. Sequence track (only if sequence track is selected) - TOP sequence track
-        if (this.visibleTracks.has('sequence')) {
-            const sequenceTrack = this.trackRenderer.createSequenceTrack(chromosome, sequence);
-            tracksToShow.push({ element: sequenceTrack, type: 'sequence' });
-        }
-        
-        // 3. GC Content track (only if GC track is selected)
+        // 2. GC Content track (only if GC track is selected)
         if (this.visibleTracks.has('gc')) {
             const gcTrack = this.trackRenderer.createGCTrack(chromosome, sequence);
             tracksToShow.push({ element: gcTrack, type: 'gc' });
         }
         
-        // 4. Variants track (show if selected, even without data)
+        // 3. Variants track (show if selected, even without data)
         if (this.visibleTracks.has('variants')) {
             const variantTrack = this.trackRenderer.createVariantTrack(chromosome);
             tracksToShow.push({ element: variantTrack, type: 'variants' });
         }
         
-        // 5. Aligned reads track (show if selected, even without data)
+        // 4. Aligned reads track (show if selected, even without data)
         if (this.visibleTracks.has('reads')) {
             const readsTrack = this.trackRenderer.createReadsTrack(chromosome);
             tracksToShow.push({ element: readsTrack, type: 'reads' });
         }
         
-        // 6. Protein track (only if proteins track is selected and we have CDS annotations)
+        // 5. Protein track (only if proteins track is selected and we have CDS annotations)
         if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const proteinTrack = this.trackRenderer.createProteinTrack(chromosome);
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
@@ -542,7 +534,6 @@ class GenomeBrowser {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
         if (document.getElementById('trackGenes').checked) tracks.add('genes');
-        if (document.getElementById('trackSequence').checked) tracks.add('sequence');
         if (document.getElementById('trackGC').checked) tracks.add('gc');
         if (document.getElementById('trackVariants').checked) tracks.add('variants');
         if (document.getElementById('trackReads').checked) tracks.add('reads');
@@ -552,7 +543,6 @@ class GenomeBrowser {
         
         // Sync with sidebar
         document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
-        document.getElementById('sidebarTrackSequence').checked = tracks.has('sequence');
         document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
         document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
         document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
@@ -569,7 +559,6 @@ class GenomeBrowser {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
         if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
-        if (document.getElementById('sidebarTrackSequence').checked) tracks.add('sequence');
         if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
         if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
         if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
@@ -579,7 +568,6 @@ class GenomeBrowser {
         
         // Sync with toolbar
         document.getElementById('trackGenes').checked = tracks.has('genes');
-        document.getElementById('trackSequence').checked = tracks.has('sequence');
         document.getElementById('trackGC').checked = tracks.has('gc');
         document.getElementById('trackVariants').checked = tracks.has('variants');
         document.getElementById('trackReads').checked = tracks.has('reads');

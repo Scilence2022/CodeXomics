@@ -249,35 +249,26 @@ class NavigationManager {
         // Sort results by position
         results.sort((a, b) => a.position - b.position);
         
+        // Store results for navigation
+        this.searchResults = results;
+        this.currentSearchIndex = 0;
+        
+        // Populate search results panel
+        this.populateSearchResults(results, searchQuery);
+        
         if (results.length > 0) {
-            // Go to first result
-            const firstResult = results[0];
-            const start = Math.max(0, firstResult.position - 500); // Show some context
-            const end = Math.min(sequence.length, firstResult.end + 500);
+            // Navigate to first result automatically
+            this.navigateToSearchResult(0);
             
-            this.genomeBrowser.currentPosition = { start, end };
-            this.genomeBrowser.updateStatistics(currentChr, sequence);
-            this.genomeBrowser.displayGenomeView(currentChr, sequence);
-            
-            // Create detailed results message
-            let message = `Found ${results.length} match${results.length > 1 ? 'es' : ''}:\n\n`;
-            results.slice(0, 5).forEach((result, index) => {
-                message += `${index + 1}. ${result.name} (${result.position + 1}-${result.end})\n   ${result.details}\n\n`;
-            });
-            
-            if (results.length > 5) {
-                message += `... and ${results.length - 5} more matches.\n\n`;
-            }
-            
-            message += `Showing first match at position ${firstResult.position + 1}.`;
-            alert(message);
+            // Show brief success message
+            this.genomeBrowser.updateStatus(`Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"`);
         } else {
             let searchInfo = `No matches found for "${searchQuery}"`;
             if (includeReverseComplement && searchQuery.match(/^[ATGC]+$/i)) {
                 const rc = this.getReverseComplement(searchQuery);
-                searchInfo += `\n(Also searched for reverse complement: "${rc}")`;
+                searchInfo += ` (also searched for reverse complement: "${rc}")`;
             }
-            alert(searchInfo);
+            this.genomeBrowser.updateStatus(searchInfo);
         }
         
         // Close modal if it was opened
@@ -285,6 +276,80 @@ class NavigationManager {
         if (modal) {
             modal.classList.remove('show');
         }
+    }
+
+    // Populate the search results panel
+    populateSearchResults(results, searchQuery) {
+        const searchResultsSection = document.getElementById('searchResultsSection');
+        const searchResultsList = document.getElementById('searchResultsList');
+        
+        if (results.length === 0) {
+            searchResultsList.innerHTML = '<p class="no-results">No search results</p>';
+            searchResultsSection.style.display = 'none';
+            return;
+        }
+        
+        // Show the search results panel at the top
+        searchResultsSection.style.display = 'block';
+        
+        // Create header
+        let html = `<div class="search-results-header">Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"</div>`;
+        
+        // Create result items
+        results.forEach((result, index) => {
+            html += `
+                <div class="search-result-item" data-index="${index}">
+                    <div class="search-result-header">
+                        <span class="search-result-name">${result.name}</span>
+                        <span class="search-result-type ${result.type}">${result.type}</span>
+                    </div>
+                    <div class="search-result-position">Position: ${result.position + 1}-${result.end}</div>
+                    <div class="search-result-details">${result.details}</div>
+                </div>
+            `;
+        });
+        
+        searchResultsList.innerHTML = html;
+        
+        // Add click handlers for navigation
+        searchResultsList.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.navigateToSearchResult(index);
+                
+                // Highlight selected result
+                searchResultsList.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
+                e.currentTarget.classList.add('selected');
+            });
+        });
+        
+        // Highlight first result as selected
+        const firstItem = searchResultsList.querySelector('.search-result-item');
+        if (firstItem) {
+            firstItem.classList.add('selected');
+        }
+    }
+
+    // Navigate to a specific search result
+    navigateToSearchResult(index) {
+        if (!this.searchResults || index < 0 || index >= this.searchResults.length) return;
+        
+        const result = this.searchResults[index];
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        const sequence = this.genomeBrowser.currentSequence[currentChr];
+        
+        // Calculate view range with context
+        const start = Math.max(0, result.position - 500);
+        const end = Math.min(sequence.length, result.end + 500);
+        
+        this.genomeBrowser.currentPosition = { start, end };
+        this.genomeBrowser.updateStatistics(currentChr, sequence);
+        this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        
+        this.currentSearchIndex = index;
+        
+        // Update status
+        this.genomeBrowser.updateStatus(`Showing result ${index + 1} of ${this.searchResults.length}: ${result.name}`);
     }
 
     // Helper method to get reverse complement

@@ -139,9 +139,6 @@
                         <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence (Top)
-                    </label>
-                    <label class="track-checkbox">
                         <input type="checkbox" id="trackGC" value="gc" checked> GC Content
                     </label>
                     <label class="track-checkbox">
@@ -199,6 +196,18 @@
         <main class="main-content">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section" id="searchResultsSection" style="display: none;">
+                    <div class="section-header">
+                        <h3>Search Results</h3>
+                        <button class="close-panel-btn" data-panel="searchResultsSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="searchResultsList" class="search-results-list">
+                        <p class="no-results">No search results</p>
+                    </div>
+                </div>
+
                 <div class="sidebar-section" id="operonsSection">
                     <div class="section-header">
                         <h3>Operons in View</h3>
@@ -222,10 +231,6 @@
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackGenes" value="genes" checked>
                             <span>Genes & Features Track</span>
-                        </label>
-                        <label class="track-control-item">
-                            <input type="checkbox" id="sidebarTrackSequence" value="sequence" checked>
-                            <span>Sequence Track (Top)</span>
                         </label>
                         <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackGC" value="gc" checked>
