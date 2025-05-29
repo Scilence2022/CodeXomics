@@ -61,6 +61,47 @@
                         </button>
                     </div>
                 </div>
+                
+                <div class="file-menu-container">
+                    <button id="exportFileBtn" class="btn btn-secondary dropdown-toggle" disabled>
+                        <i class="fas fa-download"></i>
+                        Export As
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="exportDropdownMenu">
+                        <button class="dropdown-item" id="exportFastaBtn">
+                            <i class="fas fa-dna"></i>
+                            FASTA Sequence
+                        </button>
+                        <button class="dropdown-item" id="exportGenbankBtn">
+                            <i class="fas fa-file-alt"></i>
+                            GenBank Format
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="exportCDSFastaBtn">
+                            <i class="fas fa-code"></i>
+                            CDS FASTA
+                        </button>
+                        <button class="dropdown-item" id="exportProteinFastaBtn">
+                            <i class="fas fa-shapes"></i>
+                            Protein FASTA
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="exportGFFBtn">
+                            <i class="fas fa-tags"></i>
+                            GFF Annotations
+                        </button>
+                        <button class="dropdown-item" id="exportBEDBtn">
+                            <i class="fas fa-bed"></i>
+                            BED Format
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="exportCurrentViewBtn">
+                            <i class="fas fa-eye"></i>
+                            Current View (FASTA)
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -451,6 +492,7 @@
     <script src="modules/NavigationManager.js"></script>
     <script src="modules/UIManager.js"></script>
     <script src="modules/SequenceUtils.js"></script>
+    <script src="modules/ExportManager.js"></script>
     
     <!-- Main application -->
     <script src="renderer-modular.js"></script>

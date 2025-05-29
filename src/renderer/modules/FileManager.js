@@ -152,6 +152,11 @@ class FileManager {
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.populateChromosomeSelect();
         
+        // Update export menu state
+        if (this.genomeBrowser.exportManager) {
+            this.genomeBrowser.exportManager.updateExportMenuState();
+        }
+        
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
@@ -242,6 +247,11 @@ class FileManager {
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.currentAnnotations = annotations;
         this.genomeBrowser.populateChromosomeSelect();
+        
+        // Update export menu state
+        if (this.genomeBrowser.exportManager) {
+            this.genomeBrowser.exportManager.updateExportMenuState();
+        }
         
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];

@@ -38,6 +38,7 @@ class GenomeBrowser {
         this.navigationManager = new NavigationManager(this);
         this.uiManager = new UIManager(this);
         this.sequenceUtils = new SequenceUtils(this);
+        this.exportManager = new ExportManager(this);
         
         this.init();
     }
@@ -66,6 +67,16 @@ class GenomeBrowser {
         document.getElementById('openReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
         document.getElementById('openAnyBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('any'));
 
+        // Export operations - dropdown menu
+        document.getElementById('exportFileBtn').addEventListener('click', () => this.uiManager.toggleExportDropdown());
+        document.getElementById('exportFastaBtn').addEventListener('click', () => this.exportManager.exportAsFasta());
+        document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
+        document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
+        document.getElementById('exportProteinFastaBtn').addEventListener('click', () => this.exportManager.exportProteinAsFasta());
+        document.getElementById('exportGFFBtn').addEventListener('click', () => this.exportManager.exportAsGFF());
+        document.getElementById('exportBEDBtn').addEventListener('click', () => this.exportManager.exportAsBED());
+        document.getElementById('exportCurrentViewBtn').addEventListener('click', () => this.exportManager.exportCurrentViewAsFasta());
+
         // Welcome screen buttons
         document.getElementById('welcomeOpenGenomeBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
         document.getElementById('welcomeOpenAnnotationBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation'));
@@ -76,6 +87,7 @@ class GenomeBrowser {
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.file-menu-container')) {
                 this.uiManager.closeFileDropdown();
+                this.uiManager.closeExportDropdown();
             }
         });
 

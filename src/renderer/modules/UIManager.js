@@ -263,6 +263,17 @@ class UIManager {
         dropdown.classList.remove('show');
     }
 
+    // Export dropdown management
+    toggleExportDropdown() {
+        const dropdown = document.getElementById('exportDropdownMenu');
+        dropdown.classList.toggle('show');
+    }
+
+    closeExportDropdown() {
+        const dropdown = document.getElementById('exportDropdownMenu');
+        dropdown.classList.remove('show');
+    }
+
     // Modal management
     setupModalControls() {
         // Search modal
