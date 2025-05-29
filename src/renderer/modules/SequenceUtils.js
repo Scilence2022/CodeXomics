@@ -4,6 +4,7 @@
 class SequenceUtils {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
+        this._cachedCharWidth = null; // Cache for character width measurement
     }
 
     // Sequence display methods
@@ -34,6 +35,30 @@ class SequenceUtils {
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
     }
 
+    measureCharacterWidth(container) {
+        // Return cached value if available
+        if (this._cachedCharWidth) {
+            return this._cachedCharWidth;
+        }
+        
+        // Create a temporary element to measure character width
+        const testElement = document.createElement('span');
+        testElement.textContent = 'ATCG'; // Use representative DNA bases
+        testElement.style.fontFamily = "'Courier New', monospace";
+        testElement.style.fontSize = '14px';
+        testElement.style.fontWeight = '600';
+        testElement.style.visibility = 'hidden';
+        testElement.style.position = 'absolute';
+        testElement.style.whiteSpace = 'nowrap';
+        
+        container.appendChild(testElement);
+        const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
+        container.removeChild(testElement);
+        
+        this._cachedCharWidth = 9.5; //width; //Math.ceil(width); // Round up to be conservative and cache result
+        return this._cachedCharWidth;
+    }
+
     displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
         const container = document.getElementById('sequenceContent');
         const subsequence = fullSequence.substring(viewStart, viewEnd);
@@ -41,9 +66,9 @@ class SequenceUtils {
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 40; // 40 for padding/margins
+        const availableWidth = containerWidth - positionWidth - 30; // 40 for padding/margins
         // Ensure at least some bases are shown, e.g., 10, and remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
@@ -98,9 +123,9 @@ class SequenceUtils {
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 40;
+        const availableWidth = containerWidth - positionWidth - 30;
         // Remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
@@ -124,9 +149,9 @@ class SequenceUtils {
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 40;
+        const availableWidth = containerWidth - positionWidth - 30;
         // Remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
 

@@ -7,7 +7,7 @@ class GenomeBrowser {
         this.currentAnnotations = {};
         this.currentVariants = {};
         this.currentReads = {};
-        this.currentPosition = { start: 0, end: 10000 };
+        this.currentPosition = { start: 0, end: 1000 };
         this.igvBrowser = null;
         this.searchResults = [];
         this.currentSearchIndex = 0;
@@ -15,7 +15,7 @@ class GenomeBrowser {
         this.genes = [];
         
         // Default visible tracks - show Genes & Features and GC Content by default
-        this.visibleTracks = new Set(['genes', 'gc']);
+        this.visibleTracks = new Set(['genes', 'gc', 'bottomSequence']);
         
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
@@ -32,6 +32,8 @@ class GenomeBrowser {
             regulatory: true,
             other: true
         };
+        
+        this._cachedCharWidth = null; // Cache for character width measurement
         
         this.init();
     }
@@ -1385,6 +1387,30 @@ class GenomeBrowser {
         }
     }
 
+    measureCharacterWidth(container) {
+        // Return cached value if available
+        if (this._cachedCharWidth) {
+            return this._cachedCharWidth;
+        }
+        
+        // Create a temporary element to measure character width
+        const testElement = document.createElement('span');
+        testElement.textContent = 'ATCG'; // Use representative DNA bases
+        testElement.style.fontFamily = "'Courier New', monospace";
+        testElement.style.fontSize = '14px';
+        testElement.style.fontWeight = '600';
+        testElement.style.visibility = 'hidden';
+        testElement.style.position = 'absolute';
+        testElement.style.whiteSpace = 'nowrap';
+        
+        container.appendChild(testElement);
+        const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
+        container.removeChild(testElement);
+        
+        this._cachedCharWidth = Math.ceil(width); // Round up to be conservative and cache result
+        return this._cachedCharWidth;
+    }
+
     displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
         const container = document.getElementById('sequenceContent');
         const subsequence = fullSequence.substring(viewStart, viewEnd);
@@ -1392,7 +1418,7 @@ class GenomeBrowser {
         const operons = this.detectOperons ? this.detectOperons(annotations) : [];
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40; // 40 for padding/margins
         // Remove upper cap to fill width
@@ -1447,7 +1473,7 @@ class GenomeBrowser {
         const operons = this.detectOperons ? this.detectOperons(annotations) : [];
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40;
         // Remove upper cap to fill width
@@ -1472,7 +1498,7 @@ class GenomeBrowser {
         const operons = this.detectOperons ? this.detectOperons(annotations) : []; 
 
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = 12; // Increased for more conservative line length calculation
+        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
         const positionWidth = 100;
         const availableWidth = containerWidth - positionWidth - 40;
         // Remove upper cap to fill width
