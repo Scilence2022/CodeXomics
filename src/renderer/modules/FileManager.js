@@ -20,6 +20,9 @@ class FileManager {
     }
 
     openSpecificFileType(fileType) {
+        // Close the dropdown menu before opening file dialog
+        this.genomeBrowser.uiManager.closeFileDropdown();
+        
         const input = document.createElement('input');
         input.type = 'file';
         

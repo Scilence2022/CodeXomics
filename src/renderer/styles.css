@@ -2916,6 +2916,7 @@ body {
     height: 10px;
     margin: 1px 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: none !important; /* Disable transitions during resizing */
 }
 
 .track-splitter-handle {
@@ -3002,6 +3003,22 @@ body {
 .protein-track .track-content {
     transition: height 0.1s ease;
     overflow: hidden;
+}
+
+/* Disable transitions during splitter resizing to prevent jumping */
+.track-splitter.resizing ~ .gene-track .track-content,
+.track-splitter.resizing ~ .sequence-track .track-content,
+.track-splitter.resizing ~ .gc-track .track-content,
+.track-splitter.resizing ~ .reads-track .track-content,
+.track-splitter.resizing ~ .variant-track .track-content,
+.track-splitter.resizing ~ .protein-track .track-content,
+.track-splitter.resizing + .gene-track .track-content,
+.track-splitter.resizing + .sequence-track .track-content,
+.track-splitter.resizing + .gc-track .track-content,
+.track-splitter.resizing + .reads-track .track-content,
+.track-splitter.resizing + .variant-track .track-content,
+.track-splitter.resizing + .protein-track .track-content {
+    transition: none !important;
 }
 
 /* Ensure tracks maintain minimum heights when resized */

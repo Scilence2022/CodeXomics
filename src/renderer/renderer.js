@@ -630,12 +630,6 @@ class GenomeBrowser {
         // Update chromosome select
         document.getElementById('chromosomeSelect').value = chromosome;
         
-        // Initialize track checkboxes if not already done - only check sequence track by default
-        if (!document.getElementById('trackSequence').checked) {
-            document.getElementById('trackSequence').checked = true;
-            this.updateVisibleTracks();
-        }
-        
         // Update statistics
         this.updateStatistics(chromosome, sequence);
         
@@ -1464,10 +1458,16 @@ class GenomeBrowser {
     }
 
     updateBottomSequenceVisibility() {
-        this.showBottomSequence = document.getElementById('trackBottomSequence').checked;
+        const trackBottomSequence = document.getElementById('trackBottomSequence');
+        if (!trackBottomSequence) return;
+        
+        this.showBottomSequence = trackBottomSequence.checked;
         
         // Sync with sidebar
-        document.getElementById('sidebarTrackBottomSequence').checked = this.showBottomSequence;
+        const sidebarTrackBottomSequence = document.getElementById('sidebarTrackBottomSequence');
+        if (sidebarTrackBottomSequence) {
+            sidebarTrackBottomSequence.checked = this.showBottomSequence;
+        }
         
         // Show/hide sequence display section and splitter
         const sequenceSection = document.getElementById('sequenceDisplaySection');
@@ -1481,21 +1481,29 @@ class GenomeBrowser {
             }
         } else {
             // Hide sequence display section and splitter
-            sequenceSection.style.display = 'none';
-            splitter.style.display = 'none';
+            if (sequenceSection) sequenceSection.style.display = 'none';
+            if (splitter) splitter.style.display = 'none';
             
             // Reset genome section to take full space
             const genomeSection = document.getElementById('genomeViewerSection');
-            genomeSection.style.flex = '1';
-            genomeSection.style.height = 'auto';
+            if (genomeSection) {
+                genomeSection.style.flex = '1';
+                genomeSection.style.height = 'auto';
+            }
         }
     }
 
     updateBottomSequenceVisibilityFromSidebar() {
-        this.showBottomSequence = document.getElementById('sidebarTrackBottomSequence').checked;
+        const sidebarTrackBottomSequence = document.getElementById('sidebarTrackBottomSequence');
+        if (!sidebarTrackBottomSequence) return;
+        
+        this.showBottomSequence = sidebarTrackBottomSequence.checked;
         
         // Sync with toolbar
-        document.getElementById('trackBottomSequence').checked = this.showBottomSequence;
+        const trackBottomSequence = document.getElementById('trackBottomSequence');
+        if (trackBottomSequence) {
+            trackBottomSequence.checked = this.showBottomSequence;
+        }
         
         // Show/hide sequence display section and splitter
         const sequenceSection = document.getElementById('sequenceDisplaySection');
@@ -1509,33 +1517,47 @@ class GenomeBrowser {
             }
         } else {
             // Hide sequence display section and splitter
-            sequenceSection.style.display = 'none';
-            splitter.style.display = 'none';
+            if (sequenceSection) sequenceSection.style.display = 'none';
+            if (splitter) splitter.style.display = 'none';
             
             // Reset genome section to take full space
             const genomeSection = document.getElementById('genomeViewerSection');
-            genomeSection.style.flex = '1';
-            genomeSection.style.height = 'auto';
+            if (genomeSection) {
+                genomeSection.style.flex = '1';
+                genomeSection.style.height = 'auto';
+            }
         }
     }
 
     updateVisibleTracks() {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
-        if (document.getElementById('trackGenes').checked) tracks.add('genes');
-        if (document.getElementById('trackGC').checked) tracks.add('gc');
-        if (document.getElementById('trackVariants').checked) tracks.add('variants');
-        if (document.getElementById('trackReads').checked) tracks.add('reads');
-        if (document.getElementById('trackProteins').checked) tracks.add('proteins');
+        const trackGenes = document.getElementById('trackGenes');
+        const trackGC = document.getElementById('trackGC');
+        const trackVariants = document.getElementById('trackVariants');
+        const trackReads = document.getElementById('trackReads');
+        const trackProteins = document.getElementById('trackProteins');
+        
+        if (trackGenes && trackGenes.checked) tracks.add('genes');
+        if (trackGC && trackGC.checked) tracks.add('gc');
+        if (trackVariants && trackVariants.checked) tracks.add('variants');
+        if (trackReads && trackReads.checked) tracks.add('reads');
+        if (trackProteins && trackProteins.checked) tracks.add('proteins');
         
         this.visibleTracks = tracks;
         
         // Sync with sidebar
-        document.getElementById('sidebarTrackGenes').checked = tracks.has('genes');
-        document.getElementById('sidebarTrackGC').checked = tracks.has('gc');
-        document.getElementById('sidebarTrackVariants').checked = tracks.has('variants');
-        document.getElementById('sidebarTrackReads').checked = tracks.has('reads');
-        document.getElementById('sidebarTrackProteins').checked = tracks.has('proteins');
+        const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');
+        const sidebarTrackGC = document.getElementById('sidebarTrackGC');
+        const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
+        const sidebarTrackReads = document.getElementById('sidebarTrackReads');
+        const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
+        
+        if (sidebarTrackGenes) sidebarTrackGenes.checked = tracks.has('genes');
+        if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
+        if (sidebarTrackVariants) sidebarTrackVariants.checked = tracks.has('variants');
+        if (sidebarTrackReads) sidebarTrackReads.checked = tracks.has('reads');
+        if (sidebarTrackProteins) sidebarTrackProteins.checked = tracks.has('proteins');
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -1547,20 +1569,32 @@ class GenomeBrowser {
     updateVisibleTracksFromSidebar() {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
-        if (document.getElementById('sidebarTrackGenes').checked) tracks.add('genes');
-        if (document.getElementById('sidebarTrackGC').checked) tracks.add('gc');
-        if (document.getElementById('sidebarTrackVariants').checked) tracks.add('variants');
-        if (document.getElementById('sidebarTrackReads').checked) tracks.add('reads');
-        if (document.getElementById('sidebarTrackProteins').checked) tracks.add('proteins');
+        const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');
+        const sidebarTrackGC = document.getElementById('sidebarTrackGC');
+        const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
+        const sidebarTrackReads = document.getElementById('sidebarTrackReads');
+        const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
+        
+        if (sidebarTrackGenes && sidebarTrackGenes.checked) tracks.add('genes');
+        if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
+        if (sidebarTrackVariants && sidebarTrackVariants.checked) tracks.add('variants');
+        if (sidebarTrackReads && sidebarTrackReads.checked) tracks.add('reads');
+        if (sidebarTrackProteins && sidebarTrackProteins.checked) tracks.add('proteins');
         
         this.visibleTracks = tracks;
         
         // Sync with toolbar
-        document.getElementById('trackGenes').checked = tracks.has('genes');
-        document.getElementById('trackGC').checked = tracks.has('gc');
-        document.getElementById('trackVariants').checked = tracks.has('variants');
-        document.getElementById('trackReads').checked = tracks.has('reads');
-        document.getElementById('trackProteins').checked = tracks.has('proteins');
+        const trackGenes = document.getElementById('trackGenes');
+        const trackGC = document.getElementById('trackGC');
+        const trackVariants = document.getElementById('trackVariants');
+        const trackReads = document.getElementById('trackReads');
+        const trackProteins = document.getElementById('trackProteins');
+        
+        if (trackGenes) trackGenes.checked = tracks.has('genes');
+        if (trackGC) trackGC.checked = tracks.has('gc');
+        if (trackVariants) trackVariants.checked = tracks.has('variants');
+        if (trackReads) trackReads.checked = tracks.has('reads');
+        if (trackProteins) trackProteins.checked = tracks.has('proteins');
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2847,6 +2881,9 @@ class GenomeBrowser {
         let topTrack = null;
         let bottomTrack = null;
         
+        // Add unique identifier for this splitter's auto-adjust setting
+        const splitterId = `${splitter.getAttribute('data-top-track')}-${splitter.getAttribute('data-bottom-track')}`;
+        
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
@@ -2904,7 +2941,7 @@ class GenomeBrowser {
             bottomTrack = null;
         };
         
-        // Auto-adjust height on double-click
+        // Improved auto-adjust height calculation - only triggered on double-click
         const autoAdjustHeight = () => {
             const topTrack = splitter.previousElementSibling;
             const bottomTrack = splitter.nextElementSibling;
@@ -2918,9 +2955,9 @@ class GenomeBrowser {
                     splitter.classList.add('auto-adjusting');
                     
                     // Calculate optimal height for top track based on its content
-                    let optimalHeight = 60; // Default minimum
+                    let optimalHeight = 80; // Increased default minimum
                     
-                    // Get track type from data attributes or class names
+                    // Get track type from data attributes
                     const topTrackType = splitter.getAttribute('data-top-track');
                     
                     switch (topTrackType) {
@@ -2928,13 +2965,17 @@ class GenomeBrowser {
                             // For gene tracks, calculate based on number of rows needed
                             const geneElements = topContent.querySelectorAll('.gene-element');
                             if (geneElements.length > 0) {
-                                // Find the maximum row (top position) used
+                                // Find the maximum row (top position) used and add element height
                                 let maxRow = 0;
+                                let elementHeight = 23; // Default gene element height
                                 geneElements.forEach(gene => {
                                     const top = parseInt(gene.style.top) || 0;
-                                    maxRow = Math.max(maxRow, top);
+                                    const height = parseInt(gene.style.height) || elementHeight;
+                                    maxRow = Math.max(maxRow, top + height);
                                 });
-                                optimalHeight = Math.max(60, maxRow + 35); // Add padding
+                                optimalHeight = Math.max(100, maxRow + 60); // Increased padding
+                            } else {
+                                optimalHeight = 100; // Default for empty gene tracks
                             }
                             break;
                         case 'reads':
@@ -2942,27 +2983,45 @@ class GenomeBrowser {
                             const readElements = topContent.querySelectorAll('.read-element');
                             if (readElements.length > 0) {
                                 let maxRow = 0;
+                                let elementHeight = 12; // Default read element height
                                 readElements.forEach(read => {
                                     const top = parseInt(read.style.top) || 0;
-                                    maxRow = Math.max(maxRow, top);
+                                    const height = parseInt(read.style.height) || elementHeight;
+                                    maxRow = Math.max(maxRow, top + height);
                                 });
-                                optimalHeight = Math.max(40, maxRow + 25); // Add padding
+                                optimalHeight = Math.max(80, maxRow + 40); // Increased padding
+                            } else {
+                                optimalHeight = 80; // Default for empty reads tracks
                             }
                             break;
-                        case 'sequence':
-                            optimalHeight = 40; // Fixed height for sequence tracks
-                            break;
                         case 'gc':
-                            optimalHeight = 70; // Fixed height for GC content
+                            optimalHeight = 100; // Increased height for GC content
                             break;
                         case 'variants':
-                            optimalHeight = 50; // Fixed height for variants
+                            const variantElements = topContent.querySelectorAll('.variant-element');
+                            if (variantElements.length > 0) {
+                                optimalHeight = 80; // Good height for variants with data
+                            } else {
+                                optimalHeight = 60; // Smaller for empty variant tracks
+                            }
                             break;
                         case 'proteins':
-                            optimalHeight = 60; // Fixed height for proteins
+                            const proteinElements = topContent.querySelectorAll('.protein-element');
+                            if (proteinElements.length > 0) {
+                                let maxRow = 0;
+                                let elementHeight = 21; // Default protein element height
+                                proteinElements.forEach(protein => {
+                                    const top = parseInt(protein.style.top) || 0;
+                                    const height = parseInt(protein.style.height) || elementHeight;
+                                    maxRow = Math.max(maxRow, top + height);
+                                });
+                                optimalHeight = Math.max(90, maxRow + 50); // Increased padding
+                            } else {
+                                optimalHeight = 90; // Default for empty protein tracks
+                            }
                             break;
                         default:
-                            optimalHeight = 60;
+                            optimalHeight = 80; // Increased default
                     }
                     
                     // Apply the optimal height with smooth transition
@@ -2974,6 +3033,8 @@ class GenomeBrowser {
                         topContent.style.transition = '';
                         splitter.classList.remove('auto-adjusting');
                     }, 300);
+                    
+                    console.log(`Auto-adjusted ${topTrackType} track to ${optimalHeight}px for splitter ${splitterId}`);
                 }
             }
         };
@@ -2988,7 +3049,7 @@ class GenomeBrowser {
         document.addEventListener('touchmove', doResize);
         document.addEventListener('touchend', stopResize);
         
-        // Double-click for auto-adjust
+        // Double-click for auto-adjust - this is the ONLY way to trigger auto-adjust
         splitter.addEventListener('dblclick', autoAdjustHeight);
         
         // Keyboard accessibility
@@ -3015,7 +3076,7 @@ class GenomeBrowser {
                 
                 e.preventDefault();
             } else if (e.key === 'Enter' || e.key === ' ') {
-                // Auto-adjust on Enter or Space
+                // Auto-adjust on Enter or Space - separate trigger from manual resizing
                 autoAdjustHeight();
                 e.preventDefault();
             }
