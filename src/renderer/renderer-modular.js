@@ -269,17 +269,42 @@ class GenomeBrowser {
         
         // PRESERVE TRACK HEIGHTS before clearing container
         const preservedHeights = new Map();
+        const trackTypeMapping = {
+            'gene': 'genes',
+            'gc': 'gc',
+            'variant': 'variants',
+            'reads': 'reads',
+            'protein': 'proteins'
+        };
+
         const existingTracks = container.querySelectorAll('[class*="-track"]');
+        console.log('[displayGenomeView] Existing tracks found for height preservation:', existingTracks.length);
         existingTracks.forEach(track => {
             const trackContent = track.querySelector('.track-content');
-            if (trackContent && trackContent.style.height) {
-                // Extract track type from class name
-                const trackType = Array.from(track.classList).find(cls => cls.endsWith('-track'))?.replace('-track', '');
-                if (trackType) {
-                    preservedHeights.set(trackType, trackContent.style.height);
+            if (trackContent && trackContent.style.height && trackContent.style.height !== '') {
+                let baseType = null;
+                for (const cls of track.classList) {
+                    if (cls.endsWith('-track') && !cls.startsWith('track-splitter')) { // Ensure it's a main track div
+                        baseType = cls.replace('-track', '');
+                        break;
+                    }
                 }
+                if (baseType) {
+                    const mappedType = trackTypeMapping[baseType];
+                    if (mappedType) {
+                        preservedHeights.set(mappedType, trackContent.style.height);
+                        console.log(`[displayGenomeView] Preserving height for ${mappedType} (from class ${baseType}-track): ${trackContent.style.height}`);
+                    } else {
+                        console.warn(`[displayGenomeView] No mapping found for base track type: ${baseType} from classList:`, track.classList);
+                    }
+                } else {
+                    // console.log('[displayGenomeView] Could not determine baseType for track:', track.className);
+                }
+            } else if (trackContent) {
+                // console.log('[displayGenomeView] No style.height to preserve for track (or height is empty string):', track.className, 'Height:', trackContent.style.height);
             }
         });
+        console.log('[displayGenomeView] Preserved heights map:', preservedHeights);
         
         container.innerHTML = '';
         
@@ -334,8 +359,13 @@ class GenomeBrowser {
             
             // RESTORE PRESERVED HEIGHT if it exists
             const trackContent = track.element.querySelector('.track-content');
-            if (trackContent && preservedHeights.has(track.type)) {
-                trackContent.style.height = preservedHeights.get(track.type);
+            const typeToRestore = track.type;
+            if (trackContent && preservedHeights.has(typeToRestore)) {
+                const heightToRestore = preservedHeights.get(typeToRestore);
+                trackContent.style.height = heightToRestore;
+                console.log(`[displayGenomeView] Restored height for ${typeToRestore}: ${heightToRestore}`);
+            } else if (trackContent) {
+                 console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
             }
             
             // Add splitter after each track except the last one
