@@ -186,6 +186,7 @@ class FileManager {
         let inOrigin = false;
         let features = [];
         let currentFeature = null;
+        let currentQualifierKey = null;
         
         // Progress tracking for large files
         const totalLines = lines.length;
@@ -217,6 +218,8 @@ class FileManager {
                 sequences[currentSeq] = '';
                 annotations[currentSeq] = [];
                 features = [];
+                currentFeature = null;
+                currentQualifierKey = null;
                 continue;
             }
 
@@ -233,24 +236,7 @@ class FileManager {
                     
                     // Save previous feature if it exists
                     if (currentFeature) {
-                        // Add name from qualifiers if available
-                        if (currentFeature.qualifiers.gene) {
-                            currentFeature.name = currentFeature.qualifiers.gene;
-                        } else if (currentFeature.qualifiers.locus_tag) {
-                            currentFeature.name = currentFeature.qualifiers.locus_tag;
-                        } else if (currentFeature.qualifiers.product) {
-                            currentFeature.name = currentFeature.qualifiers.product;
-                        }
-                        
-                        // Add product information
-                        if (currentFeature.qualifiers.product) {
-                            currentFeature.product = currentFeature.qualifiers.product;
-                        }
-                        
-                        // Add note information
-                        if (currentFeature.qualifiers.note) {
-                            currentFeature.note = currentFeature.qualifiers.note;
-                        }
+                        this.finalizeFeature(currentFeature);
                     }
                     
                     currentFeature = {
@@ -265,6 +251,8 @@ class FileManager {
                         note: null
                     };
                     
+                    currentQualifierKey = null;
+                    
                     // Parse location
                     this.parseGenBankLocation(currentFeature, location);
                     features.push(currentFeature);
@@ -277,23 +265,46 @@ class FileManager {
                 const qualMatch = line.match(/^\s{21}\/(\w+)(?:=(.*))?$/);
                 if (qualMatch) {
                     const [, key, value] = qualMatch;
-                    if (value) {
-                        // Handle quoted values and multi-line values
+                    currentQualifierKey = key;
+                    
+                    if (value !== undefined) {
+                        // Handle quoted values and start of multi-line values
                         let cleanValue = value.replace(/^"/, '').replace(/"$/, '');
-                        currentFeature.qualifiers[key] = cleanValue;
+                        
+                        // For very long qualifiers like translation, limit initial storage
+                        if (key === 'translation' && cleanValue.length > 1000) {
+                            // Store only first part for memory efficiency
+                            currentFeature.qualifiers[key] = cleanValue.substring(0, 100) + '...';
+                        } else {
+                            currentFeature.qualifiers[key] = cleanValue;
+                        }
                     } else {
                         currentFeature.qualifiers[key] = true;
+                        currentQualifierKey = null; // No continuation expected
                     }
                 }
                 continue;
             }
             
-            // Handle multi-line qualifier values
-            if (line.match(/^\s{21}[^\/]/) && currentFeature) {
-                const lastKey = Object.keys(currentFeature.qualifiers).pop();
-                if (lastKey && typeof currentFeature.qualifiers[lastKey] === 'string') {
-                    const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
-                    currentFeature.qualifiers[lastKey] += ' ' + continuationValue;
+            // Handle multi-line qualifier values - improved efficiency
+            if (line.match(/^\s{21}[^\/]/) && currentFeature && currentQualifierKey) {
+                const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
+                
+                // For translation qualifiers, skip most of the content to save memory
+                if (currentQualifierKey === 'translation') {
+                    // Only keep the first part, ignore the rest
+                    if (!currentFeature.qualifiers[currentQualifierKey].includes('...')) {
+                        currentFeature.qualifiers[currentQualifierKey] += continuationValue.substring(0, 50);
+                        if (currentFeature.qualifiers[currentQualifierKey].length > 100) {
+                            currentFeature.qualifiers[currentQualifierKey] = 
+                                currentFeature.qualifiers[currentQualifierKey].substring(0, 100) + '...';
+                        }
+                    }
+                } else {
+                    // For other qualifiers, keep the full content but with reasonable limits
+                    if (currentFeature.qualifiers[currentQualifierKey].length < 2000) {
+                        currentFeature.qualifiers[currentQualifierKey] += ' ' + continuationValue;
+                    }
                 }
                 continue;
             }
@@ -304,21 +315,7 @@ class FileManager {
                 
                 // Process the last feature
                 if (currentFeature) {
-                    if (currentFeature.qualifiers.gene) {
-                        currentFeature.name = currentFeature.qualifiers.gene;
-                    } else if (currentFeature.qualifiers.locus_tag) {
-                        currentFeature.name = currentFeature.qualifiers.locus_tag;
-                    } else if (currentFeature.qualifiers.product) {
-                        currentFeature.name = currentFeature.qualifiers.product;
-                    }
-                    
-                    if (currentFeature.qualifiers.product) {
-                        currentFeature.product = currentFeature.qualifiers.product;
-                    }
-                    
-                    if (currentFeature.qualifiers.note) {
-                        currentFeature.note = currentFeature.qualifiers.note;
-                    }
+                    this.finalizeFeature(currentFeature);
                 }
                 
                 annotations[currentSeq] = features;
@@ -341,6 +338,7 @@ class FileManager {
                 inOrigin = false;
                 currentData = '';
                 currentFeature = null;
+                currentQualifierKey = null;
                 continue;
             }
         }
@@ -363,6 +361,27 @@ class FileManager {
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
             this.genomeBrowser.selectChromosome(firstChr);
+        }
+    }
+
+    finalizeFeature(feature) {
+        // Add name from qualifiers if available
+        if (feature.qualifiers.gene) {
+            feature.name = feature.qualifiers.gene;
+        } else if (feature.qualifiers.locus_tag) {
+            feature.name = feature.qualifiers.locus_tag;
+        } else if (feature.qualifiers.product) {
+            feature.name = feature.qualifiers.product;
+        }
+        
+        // Add product information
+        if (feature.qualifiers.product) {
+            feature.product = feature.qualifiers.product;
+        }
+        
+        // Add note information
+        if (feature.qualifiers.note) {
+            feature.note = feature.qualifiers.note;
         }
     }
 
