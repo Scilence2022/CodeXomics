@@ -2098,32 +2098,7 @@ body {
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed .floating-toggle-btn {
-    position: fixed;
-    top: 50%;
-    left: 8px;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    z-index: 1001;
-}
 
-.main-content.sidebar-collapsed .floating-toggle-btn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
 
 .main-content.sidebar-collapsed {
     /* When sidebar is collapsed, viewer takes full width */
@@ -2785,33 +2760,4 @@ body {
 }
 
 /* Floating Toggle Button */
-.floating-toggle-btn {
-    position: fixed;
-    top: 50%;
-    left: 8px;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    z-index: 1001;
-}
-
-.floating-toggle-btn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.floating-toggle-btn:active {
-    transform: translateY(-50%) scale(0.95);
-} 
+/* Removed - floating toggle button no longer needed */

@@ -39,7 +39,6 @@ class UIManager {
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
         const splitterToggleBtn = document.getElementById('splitterToggleBtn');
-        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
         
         // Get all sidebar sections
         const allPanels = document.querySelectorAll('.sidebar-section');
@@ -60,11 +59,6 @@ class UIManager {
                 splitterToggleBtn.title = 'Show Sidebar';
             }
             
-            // Show floating toggle button
-            if (floatingToggleBtn) {
-                floatingToggleBtn.style.display = 'flex';
-            }
-            
             // Trigger resize event
             window.dispatchEvent(new Event('resize'));
         }
@@ -76,11 +70,23 @@ class UIManager {
         const mainContent = document.querySelector('.main-content');
         const splitterToggleBtn = document.getElementById('splitterToggleBtn');
         
-        if (sidebar.classList.contains('collapsed')) {
+        // Check if sidebar is actually hidden (either by class or by width)
+        const isHidden = sidebar.classList.contains('collapsed') || sidebar.offsetWidth === 0;
+        
+        if (isHidden) {
             // Show sidebar and splitter
             sidebar.classList.remove('collapsed');
             horizontalSplitter.classList.remove('hidden');
             mainContent.classList.remove('sidebar-collapsed');
+            
+            // Restore width if it was set to 0
+            if (sidebar.style.width === '0px' || sidebar.offsetWidth === 0) {
+                const previousWidth = sidebar.dataset.previousWidth || '280px';
+                sidebar.style.width = previousWidth;
+                sidebar.style.minWidth = '';
+                sidebar.style.overflow = '';
+                sidebar.style.flex = 'none';
+            }
             
             // Update splitter toggle button
             if (splitterToggleBtn) {
@@ -100,16 +106,39 @@ class UIManager {
         const horizontalSplitter = document.getElementById('horizontalSplitter');
         const mainContent = document.querySelector('.main-content');
         
-        if (sidebar.classList.contains('collapsed')) {
-            // Show sidebar
-            sidebar.classList.remove('collapsed');
-            horizontalSplitter.classList.remove('hidden');
-            mainContent.classList.remove('sidebar-collapsed');
-        } else {
+        // Check if sidebar is currently visible (either by class or by having a width)
+        const isCurrentlyVisible = !sidebar.classList.contains('collapsed') && 
+                                  sidebar.offsetWidth > 0;
+        
+        if (isCurrentlyVisible) {
             // Hide sidebar
             sidebar.classList.add('collapsed');
             horizontalSplitter.classList.add('hidden');
             mainContent.classList.add('sidebar-collapsed');
+            
+            // Store current width before hiding
+            if (sidebar.style.width) {
+                sidebar.dataset.previousWidth = sidebar.style.width;
+            } else {
+                sidebar.dataset.previousWidth = '280px'; // default width
+            }
+            
+            // Set width to 0 to hide
+            sidebar.style.width = '0px';
+            sidebar.style.minWidth = '0px';
+            sidebar.style.overflow = 'hidden';
+        } else {
+            // Show sidebar
+            sidebar.classList.remove('collapsed');
+            horizontalSplitter.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-collapsed');
+            
+            // Restore previous width or use default
+            const previousWidth = sidebar.dataset.previousWidth || '280px';
+            sidebar.style.width = previousWidth;
+            sidebar.style.minWidth = '';
+            sidebar.style.overflow = '';
+            sidebar.style.flex = 'none';
         }
         
         // Update all toggle button states
@@ -193,10 +222,10 @@ class UIManager {
     updateToggleButtonStates() {
         const sidebar = document.getElementById('sidebar');
         const splitterToggleBtn = document.getElementById('splitterToggleBtn');
-        const floatingToggleBtn = document.getElementById('floatingToggleBtn');
         const toggleSidebarBtn = document.getElementById('toggleSidebar');
         
-        const isCollapsed = sidebar.classList.contains('collapsed');
+        // Check if sidebar is actually collapsed (either by class or by width)
+        const isCollapsed = sidebar.classList.contains('collapsed') || sidebar.offsetWidth === 0;
         
         // Update splitter toggle button
         if (splitterToggleBtn) {
@@ -209,11 +238,6 @@ class UIManager {
                 splitterToggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
                 splitterToggleBtn.title = 'Hide Sidebar';
             }
-        }
-        
-        // Update floating toggle button
-        if (floatingToggleBtn) {
-            floatingToggleBtn.style.display = isCollapsed ? 'flex' : 'none';
         }
         
         // Update toolbar toggle button
@@ -453,6 +477,9 @@ class UIManager {
                 if (sidebar.classList.contains('collapsed')) {
                     this.showSidebarIfHidden();
                 }
+                
+                // Update toggle button states during resize
+                this.updateToggleButtonStates();
             }
         });
         

@@ -167,11 +167,6 @@ class GenomeBrowser {
         document.getElementById('splitterToggleBtn').addEventListener('click', () => {
             this.uiManager.toggleSidebarFromSplitter();
         });
-        
-        // Floating toggle button
-        document.getElementById('floatingToggleBtn').addEventListener('click', () => {
-            this.uiManager.toggleSidebarFromSplitter();
-        });
     }
 
     setupFeatureFilterListeners() {
