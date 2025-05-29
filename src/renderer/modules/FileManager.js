@@ -10,7 +10,7 @@ class FileManager {
     async openFile() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.genbank';
+        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.gbff,.genbank';
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
                 this.loadFile(e.target.files[0].path);
@@ -26,7 +26,7 @@ class FileManager {
         // Set specific file filters based on type
         switch (fileType) {
             case 'genome':
-                input.accept = '.fasta,.fa,.gb,.gbk,.genbank';
+                input.accept = '.fasta,.fa,.gb,.gbk,.gbff,.genbank';
                 break;
             case 'annotation':
                 input.accept = '.gff,.gtf,.bed';
@@ -39,7 +39,7 @@ class FileManager {
                 break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.genbank';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.bam,.sam,.gb,.gbk,.gbff,.genbank';
                 break;
         }
         
@@ -114,6 +114,7 @@ class FileManager {
                 break;
             case '.gb':
             case '.gbk':
+            case '.gbff':
             case '.genbank':
                 await this.parseGenBank();
                 break;
@@ -178,7 +179,10 @@ class FileManager {
     }
 
     async parseGenBank() {
+        console.log('Starting GenBank parsing...');
         const lines = this.currentFile.data.split('\n');
+        console.log(`Total lines to parse: ${lines.length}`);
+        
         const sequences = {};
         const annotations = {};
         let currentSeq = null;
@@ -215,6 +219,7 @@ class FileManager {
             if (line.startsWith('LOCUS')) {
                 const parts = line.split(/\s+/);
                 currentSeq = parts[1];
+                console.log(`Found LOCUS: ${currentSeq}`);
                 sequences[currentSeq] = '';
                 annotations[currentSeq] = [];
                 features = [];
@@ -225,6 +230,7 @@ class FileManager {
 
             // Parse FEATURES section
             if (line.startsWith('FEATURES')) {
+                console.log('Found FEATURES section');
                 continue;
             }
 
@@ -312,6 +318,7 @@ class FileManager {
             // Parse ORIGIN section
             if (line.startsWith('ORIGIN')) {
                 inOrigin = true;
+                console.log(`Found ORIGIN section, parsed ${features.length} features`);
                 
                 // Process the last feature
                 if (currentFeature) {
@@ -334,6 +341,7 @@ class FileManager {
             if (line.startsWith('//')) {
                 if (currentSeq && currentData) {
                     sequences[currentSeq] = currentData;
+                    console.log(`Completed sequence ${currentSeq}, length: ${currentData.length}`);
                 }
                 inOrigin = false;
                 currentData = '';
@@ -343,6 +351,9 @@ class FileManager {
             }
         }
 
+        console.log(`Final results: ${Object.keys(sequences).length} sequences, ${Object.keys(annotations).length} annotation sets`);
+        console.log('Sequences:', Object.keys(sequences));
+        
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.currentAnnotations = annotations;
         
@@ -360,6 +371,7 @@ class FileManager {
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
+            console.log(`Selecting first chromosome: ${firstChr}`);
             this.genomeBrowser.selectChromosome(firstChr);
         }
     }
