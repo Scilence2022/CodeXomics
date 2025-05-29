@@ -801,9 +801,22 @@ body {
 
 /* Gene Track Styles with Operon Support */
 .gene-track {
-    border-bottom: 1px solid #dee2e6;
-    background: white;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+}
+
+.gene-track .track-content {
     position: relative;
+    background: #fafafa;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    min-height: 80px; /* Minimum height for adaptive sizing */
+}
+
+.gene-stats {
+    z-index: 5;
+    user-select: none;
 }
 
 .track-header {
@@ -2601,21 +2614,23 @@ body {
     position: relative;
     background: #fafafa;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
+    min-height: 60px; /* Minimum height for adaptive sizing */
 }
 
 .read-element {
     position: absolute;
-    height: 8px;
     border-radius: 2px;
     cursor: pointer;
     transition: all 0.2s;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.2);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .read-element:hover {
-    transform: scaleY(1.2);
+    transform: scaleY(1.1) scaleX(1.02);
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    border-color: rgba(0,0,0,0.4);
 }
 
 .reads-legend {
@@ -2624,6 +2639,11 @@ body {
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-color);
     font-size: 10px;
+}
+
+.reads-stats {
+    z-index: 5;
+    user-select: none;
 }
 
 .no-reads-message {
