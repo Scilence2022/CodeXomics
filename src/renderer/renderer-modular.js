@@ -19,9 +19,9 @@ class GenomeBrowser {
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
         
-        // Gene filter settings
+        // Gene filter settings - hide "gene" features by default since they're represented by CDS, ncRNA, etc.
         this.geneFilters = {
-            genes: true,
+            genes: false,  // Hide gene features by default
             CDS: true,
             mRNA: true,
             tRNA: true,
@@ -31,6 +31,16 @@ class GenomeBrowser {
             regulatory: true,
             other: true
         };
+        
+        // Operon color assignment
+        this.operonColors = [
+            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', 
+            '#1abc9c', '#e67e22', '#34495e', '#f1c40f', '#e91e63',
+            '#8e44ad', '#16a085', '#27ae60', '#2980b9', '#d35400',
+            '#c0392b', '#7f8c8d', '#f39c12', '#8e44ad', '#2c3e50'
+        ];
+        this.operonAssignments = new Map(); // Map operon names to color indices
+        this.nextColorIndex = 0;
         
         // Initialize modules
         this.fileManager = new FileManager(this);
@@ -438,6 +448,117 @@ class GenomeBrowser {
         
         const filterKey = typeMap[type] || 'other';
         return this.geneFilters[filterKey];
+    }
+
+    // Operon detection and color assignment methods
+    detectOperons(annotations) {
+        // Simple operon detection based on gene proximity and strand
+        const operons = [];
+        const genes = annotations.filter(feature => 
+            ['CDS', 'mRNA', 'tRNA', 'rRNA'].includes(feature.type)
+        ).sort((a, b) => a.start - b.start);
+
+        if (genes.length === 0) return operons;
+
+        let currentOperon = [genes[0]];
+        const maxGap = 500; // Maximum gap between genes in an operon (bp)
+
+        for (let i = 1; i < genes.length; i++) {
+            const prevGene = genes[i - 1];
+            const currentGene = genes[i];
+            
+            // Check if genes are close enough and on the same strand to be in the same operon
+            const gap = currentGene.start - prevGene.end;
+            const sameStrand = prevGene.strand === currentGene.strand;
+            
+            if (gap <= maxGap && sameStrand && gap >= 0) {
+                currentOperon.push(currentGene);
+            } else {
+                // Finalize current operon if it has multiple genes
+                if (currentOperon.length > 1) {
+                    operons.push({
+                        genes: [...currentOperon],
+                        start: currentOperon[0].start,
+                        end: currentOperon[currentOperon.length - 1].end,
+                        strand: currentOperon[0].strand,
+                        name: this.generateOperonName(currentOperon)
+                    });
+                }
+                currentOperon = [currentGene];
+            }
+        }
+
+        // Don't forget the last operon
+        if (currentOperon.length > 1) {
+            operons.push({
+                genes: [...currentOperon],
+                start: currentOperon[0].start,
+                end: currentOperon[currentOperon.length - 1].end,
+                strand: currentOperon[0].strand,
+                name: this.generateOperonName(currentOperon)
+            });
+        }
+
+        return operons;
+    }
+
+    generateOperonName(genes) {
+        // Generate operon name based on first gene or common prefix
+        const firstGene = genes[0];
+        const geneName = firstGene.qualifiers.gene || firstGene.qualifiers.locus_tag || 'unknown';
+        
+        // Try to find common prefix among gene names
+        const geneNames = genes.map(g => g.qualifiers.gene || g.qualifiers.locus_tag || '').filter(n => n);
+        if (geneNames.length > 1) {
+            const commonPrefix = this.findCommonPrefix(geneNames);
+            if (commonPrefix.length > 2) {
+                return `${commonPrefix}_operon`;
+            }
+        }
+        
+        return `${geneName}_operon`;
+    }
+
+    findCommonPrefix(strings) {
+        if (strings.length === 0) return '';
+        
+        let prefix = strings[0];
+        for (let i = 1; i < strings.length; i++) {
+            while (strings[i].indexOf(prefix) !== 0) {
+                prefix = prefix.substring(0, prefix.length - 1);
+                if (prefix === '') return '';
+            }
+        }
+        return prefix;
+    }
+
+    assignOperonColor(operonName) {
+        if (!this.operonAssignments.has(operonName)) {
+            this.operonAssignments.set(operonName, this.nextColorIndex);
+            this.nextColorIndex = (this.nextColorIndex + 1) % this.operonColors.length;
+        }
+        return this.operonColors[this.operonAssignments.get(operonName)];
+    }
+
+    getGeneOperonInfo(gene, operons) {
+        // Find which operon this gene belongs to
+        for (const operon of operons) {
+            if (operon.genes.some(g => g.start === gene.start && g.end === gene.end)) {
+                return {
+                    operonName: operon.name,
+                    color: this.assignOperonColor(operon.name),
+                    isInOperon: true
+                };
+            }
+        }
+        
+        // Gene is not in an operon, assign individual color
+        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || `${gene.type}_${gene.start}`;
+        return {
+            operonName: geneName,
+            color: this.assignOperonColor(geneName),
+            isInOperon: false
+        };
     }
 
     updateGeneDisplay() {

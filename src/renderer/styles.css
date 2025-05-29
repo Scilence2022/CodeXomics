@@ -799,10 +799,11 @@ body {
     border-left: none;
 }
 
-/* Gene Track Styles */
+/* Gene Track Styles with Operon Support */
 .gene-track {
     border-bottom: 1px solid #dee2e6;
     background: white;
+    position: relative;
 }
 
 .track-header {
@@ -871,9 +872,10 @@ body {
     background: #e8f4fd;
 }
 
+/* Enhanced Gene Element Styles for Operon Coloring */
 .gene-element {
     position: absolute;
-    height: 18px;
+    height: 23px;
     border-radius: 4px;
     font-size: 10px;
     color: white;
@@ -883,88 +885,30 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 14px;
-    border: 1px solid rgba(0,0,0,0.2);
+    line-height: 19px;
+    border: 3px solid rgba(0,0,0,0.3);
     font-weight: 600;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .gene-element:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
     z-index: 10;
-    border-color: rgba(0,0,0,0.4);
+    border-width: 4px;
 }
 
-/* Strong, contrasting colors for different gene types */
-.gene-element.gene {
-    background: linear-gradient(135deg, #2d5a27, #4caf50);
-    border-color: #2d5a27;
-    top: 5px;
+/* Operon grouping visual indicator */
+.gene-element.in-operon {
+    border-style: solid;
+    border-width: 3px;
 }
 
-.gene-element.CDS {
-    background: linear-gradient(135deg, #1565c0, #2196f3);
-    border-color: #1565c0;
-    top: 35px;
-}
-
-.gene-element.mRNA {
-    background: linear-gradient(135deg, #e65100, #ff9800);
-    border-color: #e65100;
-    color: white;
-    top: 20px;
-}
-
-/* Additional gene types with distinct colors */
-.gene-element.tRNA {
-    background: linear-gradient(135deg, #7b1fa2, #9c27b0);
-    border-color: #7b1fa2;
-    top: 50px;
-}
-
-.gene-element.rRNA {
-    background: linear-gradient(135deg, #c62828, #f44336);
-    border-color: #c62828;
-    top: 50px;
-}
-
-.gene-element.misc_feature {
-    background: linear-gradient(135deg, #455a64, #607d8b);
-    border-color: #455a64;
-    top: 50px;
-}
-
-.gene-element.regulatory {
-    background: linear-gradient(135deg, #8e24aa, #ba68c8);
-    border-color: #8e24aa;
-    top: 55px;
-}
-
-.gene-element.promoter {
-    background: linear-gradient(135deg, #d32f2f, #ef5350);
-    border-color: #d32f2f;
-    top: 55px;
-}
-
-.gene-element.terminator {
-    background: linear-gradient(135deg, #f57c00, #ffb74d);
-    border-color: #f57c00;
-    color: white;
-    top: 55px;
-}
-
-.gene-element.repeat_region {
-    background: linear-gradient(135deg, #5d4037, #8d6e63);
-    border-color: #5d4037;
-    top: 55px;
-}
-
-/* Fallback for unknown gene types */
-.gene-element:not(.gene):not(.CDS):not(.mRNA):not(.tRNA):not(.rRNA):not(.misc_feature):not(.regulatory):not(.promoter):not(.terminator):not(.repeat_region) {
-    background: linear-gradient(135deg, #424242, #757575);
-    border-color: #424242;
-    top: 60px;
+.gene-element.single-gene {
+    border-style: dashed;
+    border-width: 3px;
+    opacity: 0.9;
 }
 
 /* Enhanced visibility for small genes */
@@ -972,8 +916,8 @@ body {
 .gene-element[style*="width: 0.4%"],
 .gene-element[style*="width: 0.5%"] {
     min-width: 12px !important;
-    border-width: 2px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border-width: 4px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
 }
 
 /* No genes message styling */
@@ -1000,10 +944,11 @@ body {
         -45deg,
         transparent,
         transparent 3px,
-        rgba(255,255,255,0.2) 3px,
-        rgba(255,255,255,0.2) 6px
+        rgba(255,255,255,0.3) 3px,
+        rgba(255,255,255,0.3) 6px
     );
     pointer-events: none;
+    border-radius: 2px;
 }
 
 /* Direction arrows */
@@ -1011,18 +956,14 @@ body {
     content: '◀';
     margin-right: 3px;
     font-weight: bold;
+    font-size: 8px;
 }
 
 .gene-element:not(.reverse-strand)::before {
     content: '▶';
     margin-right: 3px;
     font-weight: bold;
-}
-
-/* Enhanced hover effects */
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    font-size: 8px;
 }
 
 /* Ensure text is always visible */
@@ -1034,6 +975,50 @@ body {
 .gene-element:empty::after {
     content: '●';
     font-size: 8px;
+}
+
+/* Operon Legend */
+.operon-legend {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 5;
+    max-width: 200px;
+}
+
+.operon-legend-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.operon-legend-item {
+    display: flex;
+    align-items: center;
+    margin: 2px 0;
+    font-size: 10px;
+}
+
+.operon-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    border: 1px solid rgba(0,0,0,0.3);
+}
+
+.operon-legend-label {
+    color: #555;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Sequence Track Styles */
@@ -2220,7 +2205,7 @@ body {
 
 .protein-element {
     position: absolute;
-    height: 16px;
+    height: 21px;
     border-radius: 4px;
     font-size: 10px;
     color: white;
@@ -2230,8 +2215,8 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 12px;
-    border: 1px solid rgba(0,0,0,0.2);
+    line-height: 17px;
+    border: 3px solid rgba(0,0,0,0.2);
     font-weight: 600;
     text-shadow: 0 1px 1px rgba(0,0,0,0.3);
     background: linear-gradient(135deg, #6a1b9a, #9c27b0);
@@ -2243,6 +2228,7 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 10;
+    border-width: 4px;
 }
 
 /* Enhanced promoter and terminator styles */
@@ -2250,7 +2236,8 @@ body {
     background: linear-gradient(135deg, #d32f2f, #ef5350);
     border-color: #d32f2f;
     top: 55px;
-    height: 12px;
+    height: 16px;
+    border-width: 3px;
 }
 
 .gene-element.promoter::before {
@@ -2264,7 +2251,8 @@ body {
     border-color: #f57c00;
     color: white;
     top: 55px;
-    height: 12px;
+    height: 16px;
+    border-width: 3px;
 }
 
 .gene-element.terminator::before {
@@ -2277,7 +2265,8 @@ body {
     background: linear-gradient(135deg, #8e24aa, #ba68c8);
     border-color: #8e24aa;
     top: 55px;
-    height: 12px;
+    height: 16px;
+    border-width: 3px;
 }
 
 .gene-element.regulatory::before {

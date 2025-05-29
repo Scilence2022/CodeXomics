@@ -46,6 +46,10 @@ class TrackRenderer {
         const end = this.genomeBrowser.currentPosition.end;
         const range = end - start;
         
+        // Detect operons for color assignment
+        const operons = this.genomeBrowser.detectOperons(annotations);
+        console.log(`Detected ${operons.length} operons in chromosome ${chromosome}`);
+        
         // Include all relevant gene types and features, filtered by user preferences
         const visibleGenes = annotations.filter(feature => {
             const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
@@ -83,6 +87,35 @@ class TrackRenderer {
                 geneElement.style.minWidth = '8px';
             }
             
+            // Get operon information and assign color
+            const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+            
+            // Override CSS background with operon-based color
+            geneElement.style.background = `linear-gradient(135deg, ${operonInfo.color}, ${this.lightenColor(operonInfo.color, 20)})`;
+            geneElement.style.borderColor = this.darkenColor(operonInfo.color, 20);
+            
+            // Add operon-specific CSS classes
+            if (operonInfo.isInOperon) {
+                geneElement.classList.add('in-operon');
+            } else {
+                geneElement.classList.add('single-gene');
+            }
+            
+            // Position based on gene type (maintain vertical separation)
+            const typePositions = {
+                'gene': 5,
+                'cds': 35,
+                'mrna': 20,
+                'trna': 50,
+                'rrna': 50,
+                'misc_feature': 50,
+                'regulatory': 55,
+                'promoter': 55,
+                'terminator': 55,
+                'repeat_region': 55
+            };
+            geneElement.style.top = `${typePositions[geneType] || 60}px`;
+            
             if (gene.strand === -1) {
                 geneElement.classList.add('reverse-strand');
             }
@@ -91,8 +124,9 @@ class TrackRenderer {
             const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
             const geneInfo = `${geneName} (${gene.type})`;
             const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+            const operonInfo_display = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
             
-            geneElement.title = `${geneInfo}\nPosition: ${positionInfo}`;
+            geneElement.title = `${geneInfo}\nPosition: ${positionInfo}${operonInfo_display}`;
             
             // Set text content based on available space
             if (width > 2) {
@@ -105,7 +139,7 @@ class TrackRenderer {
             
             // Add click handler for detailed info
             geneElement.addEventListener('click', () => {
-                this.showGeneDetails(gene);
+                this.showGeneDetails(gene, operonInfo);
             });
             
             trackContent.appendChild(geneElement);
@@ -126,6 +160,54 @@ class TrackRenderer {
                 font-size: 12px;
             `;
             trackContent.appendChild(noGenesMsg);
+        } else {
+            // Add operon legend if there are operons in the current view
+            const visibleOperons = new Set();
+            visibleGenes.forEach(gene => {
+                const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+                if (operonInfo.isInOperon) {
+                    visibleOperons.add(operonInfo.operonName);
+                }
+            });
+            
+            if (visibleOperons.size > 0) {
+                const legend = document.createElement('div');
+                legend.className = 'operon-legend';
+                
+                const title = document.createElement('div');
+                title.className = 'operon-legend-title';
+                title.textContent = 'Operons in View';
+                legend.appendChild(title);
+                
+                Array.from(visibleOperons).slice(0, 5).forEach(operonName => {
+                    const color = this.genomeBrowser.assignOperonColor(operonName);
+                    const item = document.createElement('div');
+                    item.className = 'operon-legend-item';
+                    
+                    const colorBox = document.createElement('div');
+                    colorBox.className = 'operon-legend-color';
+                    colorBox.style.background = `linear-gradient(135deg, ${color}, ${this.lightenColor(color, 20)})`;
+                    colorBox.style.borderColor = this.darkenColor(color, 20);
+                    
+                    const label = document.createElement('div');
+                    label.className = 'operon-legend-label';
+                    label.textContent = operonName.replace('_operon', '');
+                    
+                    item.appendChild(colorBox);
+                    item.appendChild(label);
+                    legend.appendChild(item);
+                });
+                
+                if (visibleOperons.size > 5) {
+                    const moreItem = document.createElement('div');
+                    moreItem.className = 'operon-legend-item';
+                    moreItem.style.fontStyle = 'italic';
+                    moreItem.textContent = `... and ${visibleOperons.size - 5} more`;
+                    legend.appendChild(moreItem);
+                }
+                
+                trackContent.appendChild(legend);
+            }
         }
         
         track.appendChild(trackContent);
@@ -546,7 +628,7 @@ class TrackRenderer {
         return gcDisplay;
     }
 
-    showGeneDetails(gene) {
+    showGeneDetails(gene, operonInfo) {
         const details = [];
         details.push(`Type: ${gene.type}`);
         details.push(`Position: ${gene.start}-${gene.end}`);
@@ -559,6 +641,10 @@ class TrackRenderer {
                     details.push(`${key}: ${value}`);
                 }
             });
+        }
+        
+        if (operonInfo) {
+            details.push(`Operon: ${operonInfo.operonName}`);
         }
         
         alert(details.join('\n'));
@@ -586,6 +672,24 @@ class TrackRenderer {
         }
         
         alert(details.join('\n'));
+    }
+
+    lightenColor(color, percent) {
+        const num = parseInt(color.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return '#' + (0x1000000 + (R < 255 ? R : 255) * 0x10000 + (G < 255 ? G : 255) * 0x100 + (B < 255 ? B : 255)).toString(16).slice(1);
+    }
+
+    darkenColor(color, percent) {
+        const num = parseInt(color.slice(1), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) - amt;
+        const G = (num >> 8 & 0x00FF) - amt;
+        const B = (num & 0x0000FF) - amt;
+        return '#' + (0x1000000 + (R < 0 ? 0 : R) * 0x10000 + (G < 0 ? 0 : G) * 0x100 + (B < 0 ? 0 : B)).toString(16).slice(1);
     }
 }
 

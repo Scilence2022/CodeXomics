@@ -306,10 +306,9 @@ class SequenceUtils {
         // Update chromosome select
         document.getElementById('chromosomeSelect').value = chromosome;
         
-        // Initialize track checkboxes if not already done
-        if (!document.getElementById('trackSequence').checked && !document.getElementById('trackGenes').checked) {
+        // Initialize track checkboxes if not already done - only check sequence track by default
+        if (!document.getElementById('trackSequence').checked) {
             document.getElementById('trackSequence').checked = true;
-            document.getElementById('trackGenes').checked = true;
             this.genomeBrowser.updateVisibleTracks();
         }
         

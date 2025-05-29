@@ -20,9 +20,9 @@ class GenomeBrowser {
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
         
-        // Gene filter settings
+        // Gene filter settings - hide "gene" features by default since they're represented by CDS, ncRNA, etc.
         this.geneFilters = {
-            genes: true,
+            genes: false,  // Hide gene features by default
             CDS: true,
             mRNA: true,
             tRNA: true,
@@ -632,10 +632,9 @@ class GenomeBrowser {
         // Update chromosome select
         document.getElementById('chromosomeSelect').value = chromosome;
         
-        // Initialize track checkboxes if not already done
-        if (!document.getElementById('trackSequence').checked && !document.getElementById('trackGenes').checked) {
+        // Initialize track checkboxes if not already done - only check sequence track by default
+        if (!document.getElementById('trackSequence').checked) {
             document.getElementById('trackSequence').checked = true;
-            document.getElementById('trackGenes').checked = true;
             this.updateVisibleTracks();
         }
         
