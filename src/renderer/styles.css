@@ -2220,6 +2220,8 @@ body {
 .sequence-display-section {
     /* background: var(--bg-secondary); Old background */
     background-color: rgba(248, 250, 252, 0.2); /* var(--bg-secondary) is #f8fafc. 80% transparent means 0.2 alpha */
+    backdrop-filter: blur(10px); /* Add blur effect for better readability */
+    -webkit-backdrop-filter: blur(10px); /* Safari support */
     border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -2227,6 +2229,20 @@ body {
     flex-grow: 1; /* Allow this section to grow and fill available space */
     min-height: 150px; /* Minimum height for the sequence panel, includes header */
     /* flex-basis: 0;  Ensures flex-grow is the primary factor for sizing */
+}
+
+/* Ensure sequence content is readable with transparent background */
+.sequence-content {
+    background: rgba(255, 255, 255, 0.9); /* More opaque for better readability */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Sequence header should also be more visible */
+.sequence-header {
+    background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .sequence-display-section.collapsed {
