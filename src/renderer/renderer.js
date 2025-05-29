@@ -820,7 +820,11 @@ class GenomeBrowser {
         const end = this.currentPosition.end;
         const range = end - start;
         
-        // Include all relevant gene types and features, filtered by user preferences
+        // Detect operons for color assignment (IF operon logic is also ported or simplified)
+        // For now, we'll assume no complex operon coloring in this non-modular version
+        // to keep the change focused on arrangement.
+        // const operons = this.detectOperons ? this.detectOperons(annotations) : [];
+
         const visibleGenes = annotations.filter(feature => {
             const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
                               'regulatory', 'promoter', 'terminator', 'repeat_region'];
@@ -831,61 +835,8 @@ class GenomeBrowser {
             gene.start <= end && gene.end >= start
         );
         
-        console.log(`Displaying ${visibleGenes.length} genes/features in region ${start}-${end}`);
+        console.log(`[renderer.js] Displaying ${visibleGenes.length} genes/features in region ${start}-${end}`);
         
-        visibleGenes.forEach((gene, index) => {
-            const geneElement = document.createElement('div');
-            
-            // Normalize gene type for CSS class
-            let geneType = gene.type.toLowerCase();
-            if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
-                geneType = 'misc_feature';
-            }
-            
-            geneElement.className = `gene-element ${geneType}`;
-            
-            const geneStart = Math.max(gene.start, start);
-            const geneEnd = Math.min(gene.end, end);
-            const left = ((geneStart - start) / range) * 100;
-            const width = ((geneEnd - geneStart) / range) * 100;
-            
-            geneElement.style.left = `${left}%`;
-            geneElement.style.width = `${Math.max(width, 0.3)}%`;
-            
-            // Ensure minimum visibility
-            if (width < 0.5) {
-                geneElement.style.minWidth = '8px';
-            }
-            
-            if (gene.strand === -1) {
-                geneElement.classList.add('reverse-strand');
-            }
-            
-            // Create comprehensive gene label
-            const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
-            const geneInfo = `${geneName} (${gene.type})`;
-            const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
-            
-            geneElement.title = `${geneInfo}\nPosition: ${positionInfo}`;
-            
-            // Set text content based on available space
-            if (width > 2) {
-                geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
-            } else if (width > 0.8) {
-                geneElement.textContent = geneName.substring(0, 3);
-            } else {
-                geneElement.textContent = '';
-            }
-            
-            // Add click handler for detailed info
-            geneElement.addEventListener('click', () => {
-                this.showGeneDetails(gene);
-            });
-            
-            trackContent.appendChild(geneElement);
-        });
-        
-        // Add message if no genes found
         if (visibleGenes.length === 0) {
             const noGenesMsg = document.createElement('div');
             noGenesMsg.className = 'no-genes-message';
@@ -900,7 +851,80 @@ class GenomeBrowser {
                 font-size: 12px;
             `;
             trackContent.appendChild(noGenesMsg);
+            trackContent.style.height = '80px'; // Default height for empty track
+            track.appendChild(trackContent);
+            return track;
         }
+
+        // Arrange genes into rows
+        const geneRows = this.arrangeGenesInRows(visibleGenes, start, end);
+        
+        // Calculate adaptive track height
+        const geneHeight = 23; // Height of each gene element (consistent with TrackRenderer.js)
+        const rowSpacing = 6;  // Space between rows (consistent with TrackRenderer.js)
+        const topPadding = 10; // Top padding (consistent with TrackRenderer.js)
+        const bottomPadding = 10; // Bottom padding (consistent with TrackRenderer.js)
+        
+        const trackHeight = topPadding + (geneRows.length * (geneHeight + rowSpacing)) - (geneRows.length > 0 ? rowSpacing : 0) + bottomPadding;
+        trackContent.style.height = `${Math.max(trackHeight, 80)}px`; // Ensure minimum height
+
+        // Create gene elements
+        geneRows.forEach((rowGenes, rowIndex) => {
+            rowGenes.forEach((gene) => {
+                const geneElement = document.createElement('div');
+                
+                let geneType = gene.type.toLowerCase();
+                if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
+                    geneType = 'misc_feature';
+                }
+                geneElement.className = `gene-element ${geneType}`;
+                
+                const geneStartPos = Math.max(gene.start, start);
+                const geneEndPos = Math.min(gene.end, end);
+                const left = ((geneStartPos - start) / range) * 100;
+                const width = ((geneEndPos - geneStartPos) / range) * 100;
+                
+                geneElement.style.left = `${left}%`;
+                geneElement.style.width = `${Math.max(width, 0.3)}%`;
+                if (width < 0.5) geneElement.style.minWidth = '8px';
+
+                // Simplified styling without operons for now
+                geneElement.style.background = '#3498db'; // Default color
+                geneElement.style.borderColor = '#2980b9';
+
+                geneElement.style.top = `${topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
+                
+                if (gene.strand === -1) {
+                    geneElement.classList.add('reverse-strand');
+                }
+                
+                const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+                const geneInfo = `${geneName} (${gene.type})`;
+                const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+                const rowInfo = `\\nRow: ${rowIndex + 1}`;
+                geneElement.title = `${geneInfo}\\nPosition: ${positionInfo}${rowInfo}`;
+                
+                if (width > 2) {
+                    geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
+                } else if (width > 0.8) {
+                    geneElement.textContent = geneName.substring(0, 3);
+                } else {
+                    geneElement.textContent = '';
+                }
+                
+                geneElement.addEventListener('click', () => {
+                    this.showGeneDetails(gene); // Assuming operonInfo is not available or needed here
+                });
+                
+                trackContent.appendChild(geneElement);
+            });
+        });
+        
+        // Add gene statistics
+        const statsElement = document.createElement('div');
+        statsElement.className = 'gene-stats'; // Use class for styling
+        statsElement.textContent = `${visibleGenes.length} features in ${geneRows.length} rows`;
+        trackContent.appendChild(statsElement);
         
         track.appendChild(trackContent);
         return track;
@@ -1788,6 +1812,50 @@ class GenomeBrowser {
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
         }
+    }
+
+    // New method to arrange genes into non-overlapping rows (copied from TrackRenderer.js)
+    arrangeGenesInRows(genes, viewStart, viewEnd) {
+        // Sort genes by start position
+        const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
+        const rows = [];
+        
+        sortedGenes.forEach(gene => {
+            let placed = false;
+            
+            // Try to place gene in existing rows
+            for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+                const row = rows[rowIndex];
+                let canPlace = true;
+                
+                // Check if gene overlaps with any gene in this row
+                for (const existingGene of row) {
+                    if (this.genesOverlap(gene, existingGene)) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                if (canPlace) {
+                    row.push(gene);
+                    placed = true;
+                    break;
+                }
+            }
+            
+            // If couldn't place in existing row, create new row
+            if (!placed) {
+                rows.push([gene]);
+            }
+        });
+        
+        return rows;
+    }
+
+    // Helper to check if two genes overlap with a buffer (copied from TrackRenderer.js)
+    genesOverlap(gene1, gene2) {
+        const buffer = 10; // Reduced buffer from 50bp to 10bp for tighter packing
+        return (gene1.start < gene2.end + buffer && gene1.end + buffer > gene2.start);
     }
 
     syncSidebarFeatureFilter(sidebarId, checked) {

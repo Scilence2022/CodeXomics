@@ -880,10 +880,10 @@ class TrackRenderer {
         return rows;
     }
 
-    // Helper method to check if two genes overlap (with small buffer for readability)
+    // Helper to check if two genes overlap with a buffer
     genesOverlap(gene1, gene2) {
-        const buffer = 50; // Small buffer to prevent genes from being too close
-        return !(gene1.end + buffer < gene2.start || gene2.end + buffer < gene1.start);
+        const buffer = 10; // Reduced buffer from 50bp to 10bp for tighter packing
+        return (gene1.start < gene2.end + buffer && gene1.end + buffer > gene2.start);
     }
 }
 
