@@ -175,27 +175,109 @@ class NavigationManager {
         }
         
         const sequence = this.genomeBrowser.currentSequence[currentChr];
-        const upperQuery = searchQuery.toUpperCase();
+        const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
+        const includeReverseComplement = document.getElementById('reverseComplement')?.checked || false;
+        
+        // Prepare search query based on case sensitivity
+        const searchTerm = caseSensitive ? searchQuery : searchQuery.toUpperCase();
+        const sequenceToSearch = caseSensitive ? sequence : sequence.toUpperCase();
+        
         const results = [];
         
-        // Search for exact matches
-        let index = sequence.indexOf(upperQuery);
-        while (index !== -1) {
-            results.push(index);
-            index = sequence.indexOf(upperQuery, index + 1);
+        // 1. Search for gene names in annotations
+        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
+            const annotations = this.genomeBrowser.currentAnnotations[currentChr];
+            
+            annotations.forEach(annotation => {
+                if (annotation.qualifiers) {
+                    // Search in gene names
+                    const geneName = annotation.qualifiers.gene || '';
+                    const locusTag = annotation.qualifiers.locus_tag || '';
+                    const product = annotation.qualifiers.product || '';
+                    const note = annotation.qualifiers.note || '';
+                    
+                    const searchFields = [geneName, locusTag, product, note].join(' ');
+                    const fieldToSearch = caseSensitive ? searchFields : searchFields.toUpperCase();
+                    
+                    if (fieldToSearch.includes(searchTerm)) {
+                        results.push({
+                            type: 'gene',
+                            position: annotation.start,
+                            end: annotation.end,
+                            name: geneName || locusTag || annotation.type,
+                            details: `${annotation.type}: ${product || 'No description'}`,
+                            annotation: annotation
+                        });
+                    }
+                }
+            });
         }
+        
+        // 2. Search for exact sequence matches
+        if (searchTerm.match(/^[ATGCN]+$/i)) { // Only search if it looks like a DNA sequence
+            let index = sequenceToSearch.indexOf(searchTerm);
+            while (index !== -1) {
+                results.push({
+                    type: 'sequence',
+                    position: index,
+                    end: index + searchTerm.length,
+                    name: `Sequence match`,
+                    details: `Found "${searchQuery}" at position ${index + 1}`
+                });
+                index = sequenceToSearch.indexOf(searchTerm, index + 1);
+            }
+            
+            // 3. Search for reverse complement if requested
+            if (includeReverseComplement && searchTerm.match(/^[ATGC]+$/i)) {
+                const reverseComplement = this.getReverseComplement(searchTerm);
+                const rcToSearch = caseSensitive ? reverseComplement : reverseComplement.toUpperCase();
+                
+                let rcIndex = sequenceToSearch.indexOf(rcToSearch);
+                while (rcIndex !== -1) {
+                    results.push({
+                        type: 'sequence',
+                        position: rcIndex,
+                        end: rcIndex + rcToSearch.length,
+                        name: `Reverse complement match`,
+                        details: `Found reverse complement "${reverseComplement}" at position ${rcIndex + 1}`
+                    });
+                    rcIndex = sequenceToSearch.indexOf(rcToSearch, rcIndex + 1);
+                }
+            }
+        }
+        
+        // Sort results by position
+        results.sort((a, b) => a.position - b.position);
         
         if (results.length > 0) {
             // Go to first result
-            const start = results[0];
-            const end = Math.min(sequence.length, start + Math.max(1000, upperQuery.length * 10));
+            const firstResult = results[0];
+            const start = Math.max(0, firstResult.position - 500); // Show some context
+            const end = Math.min(sequence.length, firstResult.end + 500);
+            
             this.genomeBrowser.currentPosition = { start, end };
             this.genomeBrowser.updateStatistics(currentChr, sequence);
             this.genomeBrowser.displayGenomeView(currentChr, sequence);
             
-            alert(`Found ${results.length} matches. Showing first match at position ${start + 1}.`);
+            // Create detailed results message
+            let message = `Found ${results.length} match${results.length > 1 ? 'es' : ''}:\n\n`;
+            results.slice(0, 5).forEach((result, index) => {
+                message += `${index + 1}. ${result.name} (${result.position + 1}-${result.end})\n   ${result.details}\n\n`;
+            });
+            
+            if (results.length > 5) {
+                message += `... and ${results.length - 5} more matches.\n\n`;
+            }
+            
+            message += `Showing first match at position ${firstResult.position + 1}.`;
+            alert(message);
         } else {
-            alert('No matches found');
+            let searchInfo = `No matches found for "${searchQuery}"`;
+            if (includeReverseComplement && searchQuery.match(/^[ATGC]+$/i)) {
+                const rc = this.getReverseComplement(searchQuery);
+                searchInfo += `\n(Also searched for reverse complement: "${rc}")`;
+            }
+            alert(searchInfo);
         }
         
         // Close modal if it was opened
@@ -203,6 +285,21 @@ class NavigationManager {
         if (modal) {
             modal.classList.remove('show');
         }
+    }
+
+    // Helper method to get reverse complement
+    getReverseComplement(sequence) {
+        const complement = {
+            'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G',
+            'a': 't', 't': 'a', 'g': 'c', 'c': 'g',
+            'N': 'N', 'n': 'n'
+        };
+        
+        return sequence
+            .split('')
+            .reverse()
+            .map(base => complement[base] || base)
+            .join('');
     }
 
     // Draggable functionality for tracks

@@ -506,6 +506,21 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
+.modal-footer .btn {
+    min-width: 80px;
+}
+
+.modal-footer .btn.modal-close {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-footer .btn.modal-close:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+}
+
 .search-options {
     margin-top: 16px;
     display: flex;
