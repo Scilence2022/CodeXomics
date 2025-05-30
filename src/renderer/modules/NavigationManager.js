@@ -6,6 +6,7 @@ class NavigationManager {
         this.genomeBrowser = genomeBrowser;
         this.searchResults = [];
         this.currentSearchIndex = 0;
+        this.searchResultsOriginalPosition = null; // Store original position for restoration
     }
 
     // Navigation methods
@@ -174,6 +175,9 @@ class NavigationManager {
             return;
         }
         
+        // Clear previous search results before starting new search
+        this.clearSearchResults();
+        
         const sequence = this.genomeBrowser.currentSequence[currentChr];
         const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
         const includeReverseComplement = document.getElementById('reverseComplement')?.checked || false;
@@ -286,11 +290,19 @@ class NavigationManager {
         if (results.length === 0) {
             searchResultsList.innerHTML = '<p class="no-results">No search results</p>';
             searchResultsSection.style.display = 'none';
+            // Restore original position when no results
+            this.restoreSearchResultsPosition();
             return;
         }
         
-        // Show the search results panel at the top
+        // Move search results panel to the top
+        this.moveSearchResultsToTop();
+        
+        // Show the search results panel
         searchResultsSection.style.display = 'block';
+        
+        // Ensure sidebar is visible when showing search results
+        this.genomeBrowser.uiManager.showSidebarIfHidden();
         
         // Create header
         let html = `<div class="search-results-header">Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"</div>`;
@@ -539,6 +551,64 @@ class NavigationManager {
             document.removeEventListener('mouseup', handleMouseUp);
             element.removeEventListener('mouseleave', handleMouseLeave);
         };
+    }
+
+    // Method to move Search Results panel to the top
+    moveSearchResultsToTop() {
+        const searchResultsSection = document.getElementById('searchResultsSection');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (!searchResultsSection || !sidebar) return;
+        
+        // Store the original position if not already stored
+        if (!this.searchResultsOriginalPosition) {
+            // Find the next sibling to know where to restore it
+            this.searchResultsOriginalPosition = {
+                nextSibling: searchResultsSection.nextElementSibling,
+                parent: searchResultsSection.parentElement
+            };
+        }
+        
+        // Move to the top (first child of sidebar)
+        sidebar.insertBefore(searchResultsSection, sidebar.firstElementChild);
+    }
+
+    // Method to restore Search Results panel to its original position
+    restoreSearchResultsPosition() {
+        const searchResultsSection = document.getElementById('searchResultsSection');
+        
+        if (!searchResultsSection || !this.searchResultsOriginalPosition) return;
+        
+        const { nextSibling, parent } = this.searchResultsOriginalPosition;
+        
+        // Restore to original position
+        if (nextSibling && nextSibling.parentElement === parent) {
+            parent.insertBefore(searchResultsSection, nextSibling);
+        } else {
+            // If nextSibling doesn't exist, append to the end
+            parent.appendChild(searchResultsSection);
+        }
+    }
+
+    // Method to clear search results and restore position
+    clearSearchResults() {
+        const searchResultsSection = document.getElementById('searchResultsSection');
+        const searchResultsList = document.getElementById('searchResultsList');
+        
+        if (searchResultsSection) {
+            searchResultsSection.style.display = 'none';
+        }
+        
+        if (searchResultsList) {
+            searchResultsList.innerHTML = '<p class="no-results">No search results</p>';
+        }
+        
+        // Restore original position
+        this.restoreSearchResultsPosition();
+        
+        // Clear search results array
+        this.searchResults = [];
+        this.currentSearchIndex = 0;
     }
 }
 

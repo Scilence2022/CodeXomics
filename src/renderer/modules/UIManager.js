@@ -27,6 +27,12 @@ class UIManager {
                 this.genomeBrowser.clearGeneSelection();
             }
             
+            // Special handling for search results panel
+            if (panelId === 'searchResultsSection') {
+                this.genomeBrowser.navigationManager.clearSearchResults();
+                return; // Early return as clearSearchResults already handles display
+            }
+            
             // Check if all panels are closed and hide sidebar if so
             this.checkAndHideSidebarIfAllPanelsClosed();
         }
