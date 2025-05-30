@@ -33,6 +33,14 @@ class SequenceUtils {
             document.getElementById('splitter').style.display = 'flex';
         }
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
+        
+        // Re-highlight selected gene sequence if there is one
+        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+            // Use setTimeout to ensure the DOM is updated before highlighting
+            setTimeout(() => {
+                this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
+            }, 100);
+        }
     }
 
     measureCharacterWidth(container) {

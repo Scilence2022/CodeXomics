@@ -34,6 +34,7 @@ class GenomeBrowser {
         };
         
         this._cachedCharWidth = null; // Cache for character width measurement
+        this.selectedGene = null; // Track currently selected gene
         
         this.init();
     }
@@ -42,6 +43,9 @@ class GenomeBrowser {
         this.setupEventListeners();
         this.setupIPC();
         this.updateStatus('Ready');
+        
+        // Make this instance globally available for action buttons
+        window.genomeBrowser = this;
         
         this.initializeSplitter(); // Assuming this handles the main vertical splitter
         this.initializeHorizontalSplitter();
@@ -972,6 +976,14 @@ class GenomeBrowser {
                     this.showGeneDetails(gene, operonInfo);
                 });
                 
+                // Check if this gene should be selected (maintain selection state)
+                if (this.selectedGene && this.selectedGene.gene && 
+                    this.selectedGene.gene.start === gene.start && 
+                    this.selectedGene.gene.end === gene.end &&
+                    this.selectedGene.gene.type === gene.type) {
+                    geneElement.classList.add('selected');
+                }
+                
                 trackContent.appendChild(geneElement);
             });
         });
@@ -996,26 +1008,207 @@ class GenomeBrowser {
         return track;
     }
 
-    showGeneDetails(gene, operonInfo = null) { // Added operonInfo parameter
-        const details = [];
-        details.push(`Type: ${gene.type}`);
-        details.push(`Position: ${gene.start}-${gene.end}`);
-        details.push(`Strand: ${gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
-        details.push(`Length: ${gene.end - gene.start + 1} bp`);
+    showGeneDetails(gene, operonInfo = null) {
+        // Set the selected gene and update visual state
+        this.selectGene(gene, operonInfo);
+        
+        // Show the gene details sidebar if it's hidden
+        this.showGeneDetailsPanel();
+        
+        // Populate the gene details panel
+        this.populateGeneDetails(gene, operonInfo);
+        
+        // Highlight the gene sequence in the sequence track
+        this.highlightGeneSequence(gene);
+    }
 
-        if (operonInfo) {
-            details.push(`Operon: ${operonInfo.name} (Color: ${operonInfo.color})`);
+    selectGene(gene, operonInfo = null) {
+        // Remove selection from previously selected gene
+        if (this.selectedGene) {
+            const prevSelectedElements = document.querySelectorAll('.gene-element.selected');
+            prevSelectedElements.forEach(el => el.classList.remove('selected'));
         }
         
-        if (gene.qualifiers) {
+        // Set new selected gene
+        this.selectedGene = { gene, operonInfo };
+        
+        // Add selection styling to the clicked gene element
+        const geneElements = document.querySelectorAll('.gene-element');
+        geneElements.forEach(el => {
+            // Check if this element represents the selected gene by comparing positions
+            const elementTitle = el.title || '';
+            const genePosition = `${gene.start}-${gene.end}`;
+            if (elementTitle.includes(genePosition)) {
+                el.classList.add('selected');
+            }
+        });
+        
+        console.log('Selected gene:', gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
+    }
+
+    showGeneDetailsPanel() {
+        const geneDetailsSection = document.getElementById('geneDetailsSection');
+        if (geneDetailsSection) {
+            geneDetailsSection.style.display = 'block';
+            this.showSidebarIfHidden();
+        }
+    }
+
+    populateGeneDetails(gene, operonInfo = null) {
+        const geneDetailsContent = document.getElementById('geneDetailsContent');
+        if (!geneDetailsContent) return;
+        
+        // Get basic gene information
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || 'Unknown Gene';
+        const geneType = gene.type;
+        const position = `${gene.start.toLocaleString()}-${gene.end.toLocaleString()}`;
+        const length = (gene.end - gene.start + 1).toLocaleString();
+        const strand = gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
+        
+        // Create the gene details HTML
+        let html = `
+            <div class="gene-details-info">
+                <div class="gene-basic-info">
+                    <div class="gene-name">${geneName}</div>
+                    <div class="gene-type-badge">${geneType}</div>
+                    <div class="gene-position">Position: ${position}</div>
+                    <div class="gene-strand">Strand: ${strand} | Length: ${length} bp</div>
+                </div>
+        `;
+        
+        // Add operon information if available
+        if (operonInfo) {
+            html += `
+                <div class="gene-operon-info">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="width: 16px; height: 16px; background: ${operonInfo.color}; border-radius: 3px; border: 2px solid rgba(0,0,0,0.3);"></div>
+                        <span style="font-weight: 600;">Operon: ${operonInfo.name}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add gene attributes if available
+        if (gene.qualifiers && Object.keys(gene.qualifiers).length > 0) {
+            html += `
+                <div class="gene-attributes">
+                    <h4>Attributes</h4>
+            `;
+            
             Object.entries(gene.qualifiers).forEach(([key, value]) => {
-                if (value && value !== 'Unknown') {
-                    details.push(`${key}: ${value}`);
+                if (value && value !== 'Unknown' && value.trim() !== '') {
+                    html += `
+                        <div class="gene-attribute">
+                            <div class="gene-attribute-label">${key.replace(/_/g, ' ')}</div>
+                            <div class="gene-attribute-value">${value}</div>
+                        </div>
+                    `;
                 }
             });
+            
+            html += `</div>`;
         }
         
-        alert(details.join('\n'));
+        // Add action buttons
+        html += `
+            <div class="gene-actions">
+                <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
+                    <i class="fas fa-search-plus"></i> Zoom to Gene
+                </button>
+                <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneSequence()">
+                    <i class="fas fa-copy"></i> Copy Sequence
+                </button>
+            </div>
+        `;
+        
+        html += `</div>`;
+        
+        geneDetailsContent.innerHTML = html;
+    }
+
+    highlightGeneSequence(gene) {
+        // Clear previous highlights
+        this.clearSequenceHighlights();
+        
+        // Only highlight if the gene is within the current view
+        const currentStart = this.currentPosition.start;
+        const currentEnd = this.currentPosition.end;
+        
+        if (gene.end < currentStart || gene.start > currentEnd) {
+            console.log('Gene is outside current view, skipping sequence highlight');
+            return;
+        }
+        
+        // Find sequence bases within the gene range
+        const sequenceBases = document.querySelectorAll('.sequence-bases span');
+        sequenceBases.forEach(baseElement => {
+            const parentLine = baseElement.closest('.sequence-line');
+            if (!parentLine) return;
+            
+            const positionElement = parentLine.querySelector('.sequence-position');
+            if (!positionElement) return;
+            
+            const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, '')) - 1; // Convert to 0-based
+            const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
+            const absolutePos = lineStartPos + baseIndex + 1; // Convert back to 1-based for comparison
+            
+            // Check if this base is within the gene range
+            if (absolutePos >= gene.start && absolutePos <= gene.end) {
+                baseElement.classList.add('sequence-highlight');
+            }
+        });
+        
+        console.log(`Highlighted sequence for gene ${gene.qualifiers?.gene || gene.type} (${gene.start}-${gene.end})`);
+    }
+
+    clearSequenceHighlights() {
+        const highlightedBases = document.querySelectorAll('.sequence-highlight');
+        highlightedBases.forEach(el => el.classList.remove('sequence-highlight'));
+    }
+
+    // Action methods for gene details buttons
+    zoomToGene() {
+        if (!this.selectedGene) return;
+        
+        const gene = this.selectedGene.gene;
+        const geneLength = gene.end - gene.start;
+        const padding = Math.max(500, Math.floor(geneLength * 0.2)); // 20% padding or 500bp minimum
+        
+        const newStart = Math.max(0, gene.start - padding);
+        const newEnd = gene.end + padding;
+        
+        this.currentPosition = { start: newStart, end: newEnd };
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.updateStatistics(currentChr, this.currentSequence[currentChr]);
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    copyGeneSequence() {
+        if (!this.selectedGene) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('No sequence available to copy');
+            return;
+        }
+        
+        const gene = this.selectedGene.gene;
+        const sequence = this.currentSequence[currentChr];
+        const geneSequence = sequence.substring(gene.start - 1, gene.end); // Convert to 0-based indexing
+        
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+        const fastaHeader = `>${geneName} ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+        const fastaContent = `${fastaHeader}\n${geneSequence}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            alert(`Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
     }
 
     createSequenceTrack(chromosome, sequence) {
@@ -1384,6 +1577,14 @@ class GenomeBrowser {
         }
         if (this.showBottomSequence) {
              document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
+        }
+        
+        // Re-highlight selected gene sequence if there is one
+        if (this.selectedGene && this.selectedGene.gene) {
+            // Use setTimeout to ensure the DOM is updated before highlighting
+            setTimeout(() => {
+                this.highlightGeneSequence(this.selectedGene.gene);
+            }, 100);
         }
     }
 
@@ -2066,9 +2267,28 @@ class GenomeBrowser {
         if (panel) {
             panel.style.display = 'none';
             
+            // Special handling for gene details panel
+            if (panelId === 'geneDetailsSection') {
+                this.clearGeneSelection();
+            }
+            
             // Check if all panels are closed and hide sidebar if so
             this.checkAndHideSidebarIfAllPanelsClosed();
         }
+    }
+
+    clearGeneSelection() {
+        // Clear selected gene
+        this.selectedGene = null;
+        
+        // Remove selection styling from all gene elements
+        const selectedElements = document.querySelectorAll('.gene-element.selected');
+        selectedElements.forEach(el => el.classList.remove('selected'));
+        
+        // Clear sequence highlights
+        this.clearSequenceHighlights();
+        
+        console.log('Cleared gene selection');
     }
 
     checkAndHideSidebarIfAllPanelsClosed() {
@@ -3609,6 +3829,29 @@ class GenomeBrowser {
             genomeViewerSection.style.flexGrow = '0';
             genomeViewerSection.style.flexBasis = '50%';
         });
+    }
+
+    showSidebarIfHidden() {
+        const sidebar = document.querySelector('.sidebar');
+        const horizontalSplitter = document.getElementById('horizontalSplitter');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (sidebar && sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+            if (horizontalSplitter) {
+                horizontalSplitter.style.display = 'flex';
+            }
+            if (mainContent) {
+                mainContent.classList.remove('sidebar-collapsed');
+            }
+            
+            // Update splitter toggle button
+            const toggleBtn = document.getElementById('splitterToggleBtn');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                toggleBtn.classList.remove('collapsed');
+            }
+        }
     }
 }
 

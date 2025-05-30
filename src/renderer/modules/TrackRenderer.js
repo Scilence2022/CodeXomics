@@ -164,6 +164,14 @@ class TrackRenderer {
                     this.showGeneDetails(gene, operonInfo);
                 });
                 
+                // Check if this gene should be selected (maintain selection state)
+                if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene && 
+                    this.genomeBrowser.selectedGene.gene.start === gene.start && 
+                    this.genomeBrowser.selectedGene.gene.end === gene.end &&
+                    this.genomeBrowser.selectedGene.gene.type === gene.type) {
+                    geneElement.classList.add('selected');
+                }
+                
                 trackContent.appendChild(geneElement);
             });
         });
@@ -694,25 +702,11 @@ class TrackRenderer {
     }
 
     showGeneDetails(gene, operonInfo) {
-        const details = [];
-        details.push(`Type: ${gene.type}`);
-        details.push(`Position: ${gene.start}-${gene.end}`);
-        details.push(`Strand: ${gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
-        details.push(`Length: ${gene.end - gene.start + 1} bp`);
-        
-        if (gene.qualifiers) {
-            Object.entries(gene.qualifiers).forEach(([key, value]) => {
-                if (value && value !== 'Unknown') {
-                    details.push(`${key}: ${value}`);
-                }
-            });
-        }
-        
-        if (operonInfo) {
-            details.push(`Operon: ${operonInfo.operonName}`);
-        }
-        
-        alert(details.join('\n'));
+        // Call the main genome browser's gene selection methods
+        this.genomeBrowser.selectGene(gene, operonInfo);
+        this.genomeBrowser.showGeneDetailsPanel();
+        this.genomeBrowser.populateGeneDetails(gene, operonInfo);
+        this.genomeBrowser.highlightGeneSequence(gene);
     }
 
     showProteinDetails(protein, chromosome) {

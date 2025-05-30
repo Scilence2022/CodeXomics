@@ -22,6 +22,11 @@ class UIManager {
         if (panel) {
             panel.style.display = 'none';
             
+            // Special handling for gene details panel
+            if (panelId === 'geneDetailsSection') {
+                this.genomeBrowser.clearGeneSelection();
+            }
+            
             // Check if all panels are closed and hide sidebar if so
             this.checkAndHideSidebarIfAllPanelsClosed();
         }

@@ -3245,4 +3245,217 @@ body {
     font-weight: 500;
 }
 
+/* Gene Details Panel */
+.gene-details-content {
+    padding: 12px 0;
+}
+
+.no-gene-selected {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+}
+
+.no-gene-selected .gene-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.no-gene-selected p {
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.gene-details-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.gene-basic-info {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+
+.gene-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.gene-type-badge {
+    display: inline-block;
+    background: var(--primary-color);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.gene-position {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.gene-strand {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.gene-attributes {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+
+.gene-attributes h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.gene-attribute {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.gene-attribute:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.gene-attribute-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.gene-attribute-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.gene-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gene-action-btn {
+    flex: 1;
+    min-width: 120px;
+    font-size: 12px;
+    padding: 6px 12px;
+    text-align: center;
+}
+
+/* Selected Gene Styling */
+.gene-element.selected {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 6px 20px rgba(0,0,0,0.4);
+    transform: translateY(-2px) scale(1.02);
+    z-index: 15 !important;
+    border-width: 3px !important;
+    border-color: var(--primary-color) !important;
+    animation: selectedPulse 2s infinite;
+}
+
+@keyframes selectedPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 6px 20px rgba(0,0,0,0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.6), 0 8px 25px rgba(0,0,0,0.5);
+    }
+}
+
+/* Sequence Highlighting for Selected Gene */
+.sequence-highlight {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.2) 50%, rgba(59, 130, 246, 0.3) 100%) !important;
+    border: 1px solid rgba(59, 130, 246, 0.5) !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
+    position: relative;
+}
+
+.sequence-highlight::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+    border-radius: 4px;
+    z-index: -1;
+    animation: highlightGlow 3s ease-in-out infinite;
+}
+
+@keyframes highlightGlow {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Gene Details Actions */
+.gene-zoom-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.gene-zoom-btn:hover {
+    background: var(--primary-hover);
+}
+
+.gene-copy-btn {
+    background: var(--success-color);
+    color: white;
+}
+
+.gene-copy-btn:hover {
+    background: #0ea5e9;
+}
+
+/* Responsive Gene Details */
+@media (max-width: 768px) {
+    .gene-actions {
+        flex-direction: column;
+    }
+    
+    .gene-action-btn {
+        min-width: auto;
+    }
+    
+    .gene-basic-info,
+    .gene-attributes {
+        padding: 10px;
+    }
+    
+    .no-gene-selected {
+        padding: 20px 15px;
+    }
+}
+
 /* Track Splitters */
