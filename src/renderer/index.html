@@ -196,6 +196,21 @@
         <main class="main-content">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section" id="geneDetailsSection" style="display: none;">
+                    <div class="section-header">
+                        <h3>Gene Details</h3>
+                        <button class="close-panel-btn" data-panel="geneDetailsSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="geneDetailsContent" class="gene-details-content">
+                        <div class="no-gene-selected">
+                            <i class="fas fa-dna gene-icon"></i>
+                            <p>Click on a gene in the Genes & Features track to view details</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="sidebar-section" id="searchResultsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Search Results</h3>
@@ -352,21 +367,6 @@
                         <div class="stat-item">
                             <span class="stat-label">Current Position:</span>
                             <span class="stat-value" id="currentPosition">-</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="geneDetailsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Gene Details</h3>
-                        <button class="close-panel-btn" data-panel="geneDetailsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="geneDetailsContent" class="gene-details-content">
-                        <div class="no-gene-selected">
-                            <i class="fas fa-dna gene-icon"></i>
-                            <p>Click on a gene in the Genes & Features track to view details</p>
                         </div>
                     </div>
                 </div>
