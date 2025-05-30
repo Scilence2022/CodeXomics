@@ -190,6 +190,51 @@
                     </label>
                 </div>
             </div>
+            
+            <div class="toolbar-section">
+                <label>Add Features:</label>
+                <button id="addGeneBtn" class="btn btn-sm add-feature-btn" title="Add Gene">
+                    <i class="fas fa-dna"></i>
+                    Gene
+                </button>
+                <button id="addCDSBtn" class="btn btn-sm add-feature-btn" title="Add CDS">
+                    <i class="fas fa-code"></i>
+                    CDS
+                </button>
+                <button id="addRRNABtn" class="btn btn-sm add-feature-btn" title="Add rRNA">
+                    <i class="fas fa-cog"></i>
+                    rRNA
+                </button>
+                <button id="addTRNABtn" class="btn btn-sm add-feature-btn" title="Add tRNA">
+                    <i class="fas fa-exchange-alt"></i>
+                    tRNA
+                </button>
+                <button id="addCommentBtn" class="btn btn-sm add-feature-btn" title="Add Comment/Note">
+                    <i class="fas fa-comment"></i>
+                    Note
+                </button>
+                <button id="addMoreFeaturesBtn" class="btn btn-sm toggle-btn" title="More Features">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <div class="more-features-dropdown" id="moreFeaturesDropdown" style="display: none;">
+                    <button class="dropdown-feature-btn" data-type="promoter">
+                        <i class="fas fa-play"></i>
+                        Promoter
+                    </button>
+                    <button class="dropdown-feature-btn" data-type="terminator">
+                        <i class="fas fa-stop"></i>
+                        Terminator
+                    </button>
+                    <button class="dropdown-feature-btn" data-type="regulatory">
+                        <i class="fas fa-sliders-h"></i>
+                        Regulatory
+                    </button>
+                    <button class="dropdown-feature-btn" data-type="misc_feature">
+                        <i class="fas fa-tag"></i>
+                        Other Feature
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -506,6 +551,70 @@
             </div>
             <div class="modal-footer">
                 <button id="modalGotoBtn" class="btn btn-primary">Go</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Feature Modal -->
+    <div id="addFeatureModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="addFeatureModalTitle">Add Feature</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="featureType">Feature Type:</label>
+                    <select id="featureType" class="select">
+                        <option value="gene">Gene</option>
+                        <option value="CDS">CDS</option>
+                        <option value="rRNA">rRNA</option>
+                        <option value="tRNA">tRNA</option>
+                        <option value="promoter">Promoter</option>
+                        <option value="terminator">Terminator</option>
+                        <option value="regulatory">Regulatory</option>
+                        <option value="misc_feature">Other Feature</option>
+                        <option value="comment">Comment/Note</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="featureName">Name/Label:</label>
+                    <input type="text" id="featureName" placeholder="Enter feature name..." class="input-full">
+                </div>
+                <div class="form-group">
+                    <label for="featureChromosome">Chromosome:</label>
+                    <select id="featureChromosome" class="select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="featureStart">Start Position:</label>
+                    <input type="number" id="featureStart" min="1" class="input-full">
+                </div>
+                <div class="form-group">
+                    <label for="featureEnd">End Position:</label>
+                    <input type="number" id="featureEnd" min="1" class="input-full">
+                </div>
+                <div class="form-group">
+                    <label for="featureStrand">Strand:</label>
+                    <select id="featureStrand" class="select">
+                        <option value="1">Forward (+)</option>
+                        <option value="-1">Reverse (-)</option>
+                        <option value="0">Both/Unknown</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="featureDescription">Description (optional):</label>
+                    <textarea id="featureDescription" placeholder="Enter feature description..." class="input-full" rows="3"></textarea>
+                </div>
+                <div class="form-group" id="sequenceSelectionInfo" style="display: none;">
+                    <div class="selection-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="selectionText">Using selected sequence region</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="addFeatureBtn" class="btn btn-primary">Add Feature</button>
                 <button class="btn modal-close">Cancel</button>
             </div>
         </div>

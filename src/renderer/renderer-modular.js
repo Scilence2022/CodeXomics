@@ -5,16 +5,18 @@ const { ipcRenderer } = require('electron');
  */
 class GenomeBrowser {
     constructor() {
-        // Core data
+        this.currentFile = null;
         this.currentSequence = {};
         this.currentAnnotations = {};
         this.currentVariants = {};
         this.currentReads = {};
-        this.currentPosition = { start: 0, end: 10000 };
+        this.currentPosition = { start: 0, end: 1000 };
+        this.searchResults = [];
+        this.currentSearchIndex = 0;
         this.zoomLevel = 1;
         
         // Default visible tracks - show Genes & Features and GC Content by default
-        this.visibleTracks = new Set(['genes', 'gc']);
+        this.visibleTracks = new Set(['genes', 'gc', 'bottomSequence']);
         
         // Separate control for bottom sequence display
         this.showBottomSequence = true;
@@ -32,6 +34,9 @@ class GenomeBrowser {
             other: true
         };
         
+        this._cachedCharWidth = null; // Cache for character width measurement
+        this.selectedGene = null; // Track currently selected gene
+        
         // Operon color assignment
         this.operonColors = [
             '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', 
@@ -42,8 +47,9 @@ class GenomeBrowser {
         this.operonAssignments = new Map(); // Map operon names to color indices
         this.nextColorIndex = 0;
         
-        // Gene selection state
-        this.selectedGene = null; // Track currently selected gene
+        // User-defined features storage
+        this.userDefinedFeatures = {}; // Organized by chromosome
+        this.currentSequenceSelection = null; // Track current sequence selection
         
         // Initialize modules
         this.fileManager = new FileManager(this);
@@ -67,6 +73,9 @@ class GenomeBrowser {
         // Initialize UI components
         this.uiManager.initializeSplitter();
         this.uiManager.initializeHorizontalSplitter();
+        
+        // Initialize user-defined features functionality
+        this.initializeUserFeatures();
         
         // Add window resize listener for responsive sequence display
         window.addEventListener('resize', () => {
@@ -905,7 +914,19 @@ class GenomeBrowser {
         return this.operonColors[this.operonAssignments.get(operonName)];
     }
 
+    // Override getGeneOperonInfo to handle user-defined features
     getGeneOperonInfo(gene, operons) {
+        // If it's a user-defined feature, return a special color
+        if (gene.userDefined) {
+            return {
+                isInOperon: false,
+                operonName: null,
+                color: '#10b981', // Success green for user-defined features
+                name: null
+            };
+        }
+        
+        // Original operon detection logic for loaded features
         // Find which operon this gene belongs to
         for (const operon of operons) {
             if (operon.genes.some(g => g.start === gene.start && g.end === gene.end)) {
@@ -1191,6 +1212,289 @@ class GenomeBrowser {
         this.clearSequenceHighlights();
         
         console.log('Cleared gene selection');
+    }
+
+    // User-defined features functionality
+    initializeUserFeatures() {
+        // Add event listeners for feature buttons
+        document.getElementById('addGeneBtn')?.addEventListener('click', () => this.showAddFeatureModal('gene'));
+        document.getElementById('addCDSBtn')?.addEventListener('click', () => this.showAddFeatureModal('CDS'));
+        document.getElementById('addRRNABtn')?.addEventListener('click', () => this.showAddFeatureModal('rRNA'));
+        document.getElementById('addTRNABtn')?.addEventListener('click', () => this.showAddFeatureModal('tRNA'));
+        document.getElementById('addCommentBtn')?.addEventListener('click', () => this.showAddFeatureModal('comment'));
+        
+        // More features dropdown
+        document.getElementById('addMoreFeaturesBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleMoreFeaturesDropdown();
+        });
+        
+        // Dropdown feature buttons
+        document.querySelectorAll('.dropdown-feature-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const featureType = btn.getAttribute('data-type');
+                this.showAddFeatureModal(featureType);
+                this.hideMoreFeaturesDropdown();
+            });
+        });
+        
+        // Add feature modal
+        document.getElementById('addFeatureBtn')?.addEventListener('click', () => this.addUserFeature());
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => this.hideMoreFeaturesDropdown());
+        
+        // Enable sequence selection in bottom panel
+        this.initializeSequenceSelection();
+    }
+
+    toggleMoreFeaturesDropdown() {
+        const dropdown = document.getElementById('moreFeaturesDropdown');
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+        }
+    }
+
+    hideMoreFeaturesDropdown() {
+        const dropdown = document.getElementById('moreFeaturesDropdown');
+        if (dropdown) {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    showAddFeatureModal(featureType = 'gene') {
+        const modal = document.getElementById('addFeatureModal');
+        const titleElement = document.getElementById('addFeatureModalTitle');
+        const typeSelect = document.getElementById('featureType');
+        const chromosomeSelect = document.getElementById('featureChromosome');
+        const selectionInfo = document.getElementById('sequenceSelectionInfo');
+        
+        if (!modal) return;
+        
+        // Set modal title and feature type
+        titleElement.textContent = `Add ${featureType.charAt(0).toUpperCase() + featureType.slice(1)}`;
+        typeSelect.value = featureType;
+        
+        // Populate chromosome dropdown
+        this.populateChromosomeSelectForFeature(chromosomeSelect);
+        
+        // Handle sequence selection
+        if (this.currentSequenceSelection) {
+            const { chromosome, start, end } = this.currentSequenceSelection;
+            document.getElementById('featureChromosome').value = chromosome;
+            document.getElementById('featureStart').value = start;
+            document.getElementById('featureEnd').value = end;
+            document.getElementById('selectionText').textContent = 
+                `Using selected region: ${chromosome}:${start}-${end} (${end - start + 1} bp)`;
+            selectionInfo.style.display = 'block';
+        } else {
+            // Use current view if no selection
+            const currentChr = document.getElementById('chromosomeSelect')?.value;
+            if (currentChr) {
+                document.getElementById('featureChromosome').value = currentChr;
+                document.getElementById('featureStart').value = this.currentPosition.start + 1;
+                document.getElementById('featureEnd').value = this.currentPosition.end;
+            }
+            selectionInfo.style.display = 'none';
+        }
+        
+        // Clear previous values
+        document.getElementById('featureName').value = '';
+        document.getElementById('featureDescription').value = '';
+        
+        // Show modal
+        modal.classList.add('show');
+    }
+
+    populateChromosomeSelectForFeature(selectElement) {
+        if (!selectElement) return;
+        
+        selectElement.innerHTML = '';
+        
+        // Add chromosomes from current sequence data
+        if (this.currentSequence) {
+            Object.keys(this.currentSequence).forEach(chr => {
+                const option = document.createElement('option');
+                option.value = chr;
+                option.textContent = chr;
+                selectElement.appendChild(option);
+            });
+        }
+    }
+
+    addUserFeature() {
+        const featureType = document.getElementById('featureType').value;
+        const featureName = document.getElementById('featureName').value.trim();
+        const chromosome = document.getElementById('featureChromosome').value;
+        const start = parseInt(document.getElementById('featureStart').value);
+        const end = parseInt(document.getElementById('featureEnd').value);
+        const strand = parseInt(document.getElementById('featureStrand').value);
+        const description = document.getElementById('featureDescription').value.trim();
+        
+        // Validation
+        if (!featureName) {
+            alert('Please enter a feature name');
+            return;
+        }
+        
+        if (!chromosome) {
+            alert('Please select a chromosome');
+            return;
+        }
+        
+        if (isNaN(start) || isNaN(end) || start < 1 || end < 1) {
+            alert('Please enter valid start and end positions');
+            return;
+        }
+        
+        if (start > end) {
+            alert('Start position must be less than or equal to end position');
+            return;
+        }
+        
+        // Check if position is within sequence bounds
+        if (this.currentSequence[chromosome]) {
+            const seqLength = this.currentSequence[chromosome].length;
+            if (end > seqLength) {
+                alert(`End position (${end}) exceeds sequence length (${seqLength})`);
+                return;
+            }
+        }
+        
+        // Create the feature object
+        const feature = {
+            type: featureType,
+            start: start,
+            end: end,
+            strand: strand,
+            qualifiers: {
+                gene: featureName,
+                product: description || featureName,
+                note: description,
+                user_defined: true
+            },
+            userDefined: true,
+            id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+        
+        // Store the feature
+        if (!this.userDefinedFeatures[chromosome]) {
+            this.userDefinedFeatures[chromosome] = [];
+        }
+        this.userDefinedFeatures[chromosome].push(feature);
+        
+        // Add to current annotations for immediate display
+        if (!this.currentAnnotations[chromosome]) {
+            this.currentAnnotations[chromosome] = [];
+        }
+        this.currentAnnotations[chromosome].push(feature);
+        
+        // Close modal
+        document.getElementById('addFeatureModal').classList.remove('show');
+        
+        // Clear selection
+        this.clearSequenceSelection();
+        
+        // Refresh the view
+        if (chromosome === document.getElementById('chromosomeSelect')?.value) {
+            this.displayGenomeView(chromosome, this.currentSequence[chromosome]);
+            this.sequenceUtils.displayEnhancedSequence(chromosome, this.currentSequence[chromosome]);
+        }
+        
+        alert(`Added ${featureType} "${featureName}" to ${chromosome}:${start}-${end}`);
+    }
+
+    initializeSequenceSelection() {
+        // Add selection capability to sequence content in bottom panel
+        const sequenceContent = document.getElementById('sequenceContent');
+        if (!sequenceContent) return;
+        
+        let isSelecting = false;
+        let selectionStart = null;
+        let selectionEnd = null;
+        
+        sequenceContent.addEventListener('mousedown', (e) => {
+            if (e.target.matches('.sequence-bases span')) {
+                isSelecting = true;
+                selectionStart = this.getSequencePosition(e.target);
+                this.clearSequenceSelection();
+                e.preventDefault();
+            }
+        });
+        
+        sequenceContent.addEventListener('mousemove', (e) => {
+            if (isSelecting && e.target.matches('.sequence-bases span')) {
+                selectionEnd = this.getSequencePosition(e.target);
+                this.updateSequenceSelection(selectionStart, selectionEnd);
+            }
+        });
+        
+        sequenceContent.addEventListener('mouseup', () => {
+            if (isSelecting && selectionStart && selectionEnd) {
+                this.finalizeSequenceSelection(selectionStart, selectionEnd);
+            }
+            isSelecting = false;
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isSelecting = false;
+        });
+    }
+
+    getSequencePosition(baseElement) {
+        const parentLine = baseElement.closest('.sequence-line');
+        if (!parentLine) return null;
+        
+        const positionElement = parentLine.querySelector('.sequence-position');
+        if (!positionElement) return null;
+        
+        const lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''));
+        const baseIndex = Array.from(parentLine.querySelectorAll('.sequence-bases span')).indexOf(baseElement);
+        
+        return {
+            chromosome: document.getElementById('chromosomeSelect')?.value,
+            position: lineStartPos + baseIndex,
+            element: baseElement
+        };
+    }
+
+    updateSequenceSelection(start, end) {
+        if (!start || !end) return;
+        
+        this.clearSequenceSelection();
+        
+        const startPos = Math.min(start.position, end.position);
+        const endPos = Math.max(start.position, end.position);
+        
+        // Highlight selected bases
+        const sequenceBases = document.querySelectorAll('.sequence-bases span');
+        sequenceBases.forEach(baseElement => {
+            const pos = this.getSequencePosition(baseElement);
+            if (pos && pos.position >= startPos && pos.position <= endPos) {
+                baseElement.classList.add('sequence-selection');
+            }
+        });
+    }
+
+    finalizeSequenceSelection(start, end) {
+        if (!start || !end) return;
+        
+        const startPos = Math.min(start.position, end.position);
+        const endPos = Math.max(start.position, end.position);
+        
+        this.currentSequenceSelection = {
+            chromosome: start.chromosome,
+            start: startPos,
+            end: endPos
+        };
+        
+        console.log(`Selected sequence: ${start.chromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
+    }
+
+    clearSequenceSelection() {
+        this.currentSequenceSelection = null;
+        const selectedBases = document.querySelectorAll('.sequence-selection');
+        selectedBases.forEach(el => el.classList.remove('sequence-selection'));
     }
 }
 

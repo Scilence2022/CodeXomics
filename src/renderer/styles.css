@@ -3458,3 +3458,182 @@ body {
 }
 
 /* Track Splitters */
+
+/* Add Feature Buttons */
+.add-feature-btn {
+    background: var(--success-color);
+    color: white;
+    border: none;
+    margin-right: 4px;
+    transition: all 0.2s ease;
+}
+
+.add-feature-btn:hover {
+    background: #0ea5e9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.add-feature-btn:active {
+    transform: translateY(0);
+}
+
+.add-feature-btn i {
+    margin-right: 4px;
+}
+
+/* More Features Dropdown */
+.more-features-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.dropdown-feature-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: left;
+    width: 100%;
+}
+
+.dropdown-feature-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.dropdown-feature-btn i {
+    width: 16px;
+    text-align: center;
+    color: var(--success-color);
+}
+
+/* Add Feature Modal Styles */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.selection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--success-color);
+    font-size: 14px;
+}
+
+.selection-info i {
+    color: var(--success-color);
+}
+
+/* User-defined feature styling */
+.user-defined-feature {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    position: relative;
+}
+
+.user-defined-feature::after {
+    content: '✎';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--success-color);
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+/* Sequence selection highlighting */
+.sequence-selection {
+    background: linear-gradient(120deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.2) 50%, rgba(16, 185, 129, 0.3) 100%) !important;
+    border: 2px solid rgba(16, 185, 129, 0.6) !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4) !important;
+    position: relative;
+}
+
+.sequence-selection::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+    border-radius: 4px;
+    z-index: -1;
+    animation: selectionGlow 2s ease-in-out infinite;
+}
+
+@keyframes selectionGlow {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments for add feature buttons */
+@media (max-width: 768px) {
+    .add-feature-btn {
+        padding: 6px 8px;
+        font-size: 12px;
+        margin-right: 2px;
+    }
+    
+    .add-feature-btn i {
+        margin-right: 2px;
+    }
+    
+    .more-features-dropdown {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 200px;
+        max-width: 90vw;
+    }
+}

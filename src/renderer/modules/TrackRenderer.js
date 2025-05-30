@@ -134,6 +134,11 @@ class TrackRenderer {
                     geneElement.classList.add('single-gene');
                 }
                 
+                // Add user-defined feature styling
+                if (gene.userDefined) {
+                    geneElement.classList.add('user-defined-feature');
+                }
+                
                 // Position based on row arrangement instead of fixed type positions
                 geneElement.style.top = `${topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
                 
