@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="gGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#BDC3C7"/>
+    <stop offset="50%" stop-color="#EAECF0"/>
+    <stop offset="100%" stop-color="#95A5A6"/>
+  </linearGradient>
+   <linearGradient id="helixCoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#5DADE2"/>
+    <stop offset="100%" stop-color="#3498DB"/>
+  </linearGradient>
+  <mask id="gMask">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M512 150C323.52 150 170 303.52 170 492C170 680.48 323.52 834 512 834C600.185 834 681.09 803.851 742.726 753.773L742.726 651.109C687.426 692.248 605.803 718 512 718C388.664 718 286 615.336 286 492C286 368.664 388.664 266 512 266C605.803 266 687.426 291.752 742.726 332.891L742.726 230.227C681.09 180.149 600.185 150 512 150ZM626 492L626 406H482V492H396V578H482V718H512H568V578H712V492H626Z" fill="white"/>
+  </mask>
+</defs>
+
+<!-- 'G' Monogram -->
+<path fill-rule="evenodd" clip-rule="evenodd" d="M512 150C323.52 150 170 303.52 170 492C170 680.48 323.52 834 512 834C600.185 834 681.09 803.851 742.726 753.773L742.726 651.109C687.426 692.248 605.803 718 512 718C388.664 718 286 615.336 286 492C286 368.664 388.664 266 512 266C605.803 266 687.426 291.752 742.726 332.891L742.726 230.227C681.09 180.149 600.185 150 512 150ZM626 492L626 406H482V492H396V578H482V718H512H568V578H712V492H626Z" fill="url(#gGrad)"/>
+
+<!-- Helix Core inside the G -->
+<g mask="url(#gMask)" transform="translate(450, 410) scale(0.35) rotate(15)">
+  <path d="M -150 -200 C -250 -100, -250 100, -150 200 S -50 300, 0 350" stroke="url(#helixCoreGrad)" stroke-width="60" fill="none" stroke-linecap="round"/>
+  <path d="M 150 -200 C 250 -100, 250 100, 150 200 S 50 300, 0 350" stroke="url(#helixCoreGrad)" stroke-width="60" fill="none" stroke-linecap="round"/>
+  <line x1="-150" y1="0" x2="150" y2="0" stroke="#85C1E9" stroke-width="45" stroke-linecap="round"/>
+  <line x1="-80" y1="-120" x2="80" y2="-120" stroke="#85C1E9" stroke-width="45" stroke-linecap="round"/>
+  <line x1="-80" y1="120" x2="80" y2="120" stroke="#85C1E9" stroke-width="45" stroke-linecap="round"/>
+</g>
+
+</svg> 

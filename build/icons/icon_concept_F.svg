@@ -1,0 +1,47 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="unfurlGrad1" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#2C7BE5"/> <!-- Tighter, darker blue -->
+    <stop offset="100%" stop-color="#72B2FD"/> <!-- Looser, lighter blue -->
+  </linearGradient>
+  <linearGradient id="unfurlGrad2" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#1A5FB9"/> <!-- Tighter, slightly darker -->
+    <stop offset="100%" stop-color="#5C9EFF"/> <!-- Looser, slightly lighter -->
+  </linearGradient>
+  <linearGradient id="rungGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#B4D4F7"/>
+    <stop offset="100%" stop-color="#E0EEFD"/>
+  </linearGradient>
+  <radialGradient id="centerGlow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.7"/>
+    <stop offset="60%" stop-color="#E0F2FF" stop-opacity="0.3"/>
+    <stop offset="100%" stop-color="#C0E0FF" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+<!-- Central Glow Point -->
+<circle cx="512" cy="750" r="150" fill="url(#centerGlow)"/>
+
+<g transform="translate(512, 480) scale(1)">
+  <!-- Strand 1: Starts tighter at bottom, wider at top -->
+  <path d="M 0 300 
+           C -20 280, -60 200, -80 100 
+           S -100 -50, -150 -150 
+           S -220 -280, -250 -350" 
+        stroke="url(#unfurlGrad1)" stroke-width="45" fill="none" stroke-linecap="round"/>
+  
+  <!-- Strand 2: Starts tighter at bottom, wider at top -->
+  <path d="M 0 300 
+           C 20 280, 60 200, 80 100 
+           S 100 -50, 150 -150 
+           S 220 -280, 250 -350" 
+        stroke="url(#unfurlGrad2)" stroke-width="45" fill="none" stroke-linecap="round"/>
+
+  <!-- Rungs: Get wider towards the top -->
+  <line x1="0" y1="290" x2="0" y2="290" stroke="url(#rungGrad)" stroke-width="30" stroke-linecap="round"/> <!-- Base point -->
+  <line x1="-70" y1="100" x2="70" y2="100" stroke="url(#rungGrad)" stroke-width="35" stroke-linecap="round"/>
+  <line x1="-140" y1="-150" x2="140" y2="-150" stroke="url(#rungGrad)" stroke-width="40" stroke-linecap="round"/>
+  <line x1="-230" y1="-330" x2="230" y2="-330" stroke="url(#rungGrad)" stroke-width="45" stroke-linecap="round"/>
+</g>
+
+</svg> 

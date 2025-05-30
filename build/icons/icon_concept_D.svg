@@ -1,0 +1,35 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="chromosomeGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+    <stop offset="0%" stop-color="#AABBCB"/>
+    <stop offset="100%" stop-color="#7890A0"/>
+  </linearGradient>
+  <radialGradient id="dotGlow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+    <stop offset="0%" stop-color="#A7FFEB" stop-opacity="1"/>
+    <stop offset="50%" stop-color="#50E3C2" stop-opacity="0.8"/>
+    <stop offset="100%" stop-color="#50E3C2" stop-opacity="0"/>
+  </radialGradient>
+   <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+    <feOffset dx="4" dy="4" result="offsetblur"/>
+    <feComponentTransfer>
+      <feFuncA type="linear" slope="0.2"/>
+    </feComponentTransfer>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+
+<!-- Chromosome Silhouette (Simplified X) -->
+<g transform="translate(512,512) rotate(20) scale(1.1)" filter="url(#softShadow)">
+  <path d="M -180 -300 Q -150 -150 -50 -50 L -50 50 Q -150 150 -180 300 L -120 300 Q -100 150 0 50 L 0 -50 Q -100 -150 -120 -300 Z" fill="url(#chromosomeGrad)"/>
+  <path d="M 180 -300 Q 150 -150 50 -50 L 50 50 Q 150 150 180 300 L 120 300 Q 100 150 0 50 L 0 -50 Q 100 -150 120 -300 Z" fill="url(#chromosomeGrad)"/>
+</g>
+
+<!-- Glowing Data Point -->
+<circle cx="450" cy="480" r="80" fill="url(#dotGlow)"/>
+<circle cx="450" cy="480" r="40" fill="#F0FFF0"/>
+
+</svg> 

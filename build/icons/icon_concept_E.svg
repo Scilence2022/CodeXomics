@@ -1,0 +1,37 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="dnaCircGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#63AEEB"/>
+    <stop offset="100%" stop-color="#3B82C4"/>
+  </linearGradient>
+  <filter id="circleShadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+    <feOffset in="blur" dx="5" dy="5" result="offsetBlur"/>
+    <feComponentTransfer in="offsetBlur" result="shadowOpacity">
+      <feFuncA type="linear" slope="0.3"/>
+    </feComponentTransfer>
+    <feMerge>
+      <feMergeNode in="shadowOpacity"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+
+<!-- Layered Circles -->
+<g filter="url(#circleShadow)">
+  <circle cx="450" cy="480" r="280" fill="#8FBDEA" opacity="0.3"/>
+  <circle cx="512" cy="512" r="250" fill="#70A9D8" opacity="0.4"/>
+  <circle cx="580" cy="460" r="220" fill="#528BC0" opacity="0.5"/>
+</g>
+
+<!-- DNA Snippet -->
+<g transform="translate(512, 512) scale(0.7) rotate(-10)">
+  <path d="M -100 -200 C -180 -100, -180 50, -100 150 S -20 250, 0 280" stroke="url(#dnaCircGrad)" stroke-width="45" fill="none" stroke-linecap="round"/>
+  <path d="M 100 -200 C 180 -100, 180 50, 100 150 S 20 250, 0 280" stroke="url(#dnaCircGrad)" stroke-width="45" fill="none" stroke-linecap="round"/>
+
+  <line x1="-90" y1="-50" x2="90" y2="-50" stroke="#ADD8E6" stroke-width="30" stroke-linecap="round"/>
+  <line x1="-100" y1="50" x2="100" y2="50" stroke="#ADD8E6" stroke-width="30" stroke-linecap="round"/>
+  <line x1="-60" y1="150" x2="60" y2="150" stroke="#ADD8E6" stroke-width="30" stroke-linecap="round"/>
+</g>
+
+</svg> 

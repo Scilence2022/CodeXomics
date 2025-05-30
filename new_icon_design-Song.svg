@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="图层_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1024 1024" style="enable-background:new 0 0 1024 1024;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#F0F4F8;}
+	.st1{filter:url(#dropShadow);}
+	.st2{opacity:0.3;fill:#E0EFFF;}
+	.st3{fill:none;stroke:#B0C4DE;stroke-width:45;}
+	.st4{fill:#B0C4DE;}
+	.st5{fill:#CDD8E8;}
+	.st6{fill:none;stroke:url(#SVGID_1_);stroke-width:31.5;stroke-linecap:round;stroke-miterlimit:2.8;}
+	.st7{fill:none;stroke:url(#SVGID_2_);stroke-width:31.5;stroke-linecap:round;stroke-miterlimit:2.8;}
+	.st8{fill:none;stroke:#ADD8E6;stroke-width:21;stroke-linecap:round;stroke-miterlimit:2.8;}
+	.st9{fill:none;stroke:url(#SVGID_3_);stroke-width:31.5;stroke-linecap:round;stroke-miterlimit:2.8;}
+	.st10{fill:none;stroke:url(#SVGID_4_);stroke-width:31.5;stroke-linecap:round;stroke-miterlimit:2.8;}
+</style>
+<filter  height="140%" id="dropShadow" width="140%" x="-20%" y="-20%">
+	<feGaussianBlur  in="SourceAlpha" stdDeviation="10"></feGaussianBlur>
+	<feOffset  dx="5" dy="5" result="offsetblur"></feOffset>
+	<feComponentTransfer>
+		<feFuncA  slope="0.3" type="linear"></feFuncA>
+	</feComponentTransfer>
+	<feMerge>
+		<feMergeNode></feMergeNode>
+		<feMergeNode  in="SourceGraphic"></feMergeNode>
+	</feMerge>
+</filter>
+<path class="st0" d="M180,0h664c99.4,0,180,80.6,180,180v664c0,99.4-80.6,180-180,180H180C80.6,1024,0,943.4,0,844V180
+	C0,80.6,80.6,0,180,0z"/>
+<g transform="translate(150, 120)" class="st1">
+	<g>
+		<circle class="st2" cx="339.6" cy="343.5" r="220"/>
+	</g>
+	<circle class="st3" cx="339.6" cy="343.5" r="220"/>
+	<path class="st4" d="M193.2,493.6l14.1,14.1c11.7,11.7,11.7,30.7,0,42.4l-99,99c-11.7,11.7-30.7,11.7-42.4,0L51.8,635
+		c-11.7-11.7-11.7-30.7,0-42.4l99-99C162.5,481.9,181.5,481.9,193.2,493.6z"/>
+	<path class="st5" d="M186.2,500.7l14.1,14.1c7.8,7.8,7.8,20.5,0,28.3l-99,99c-7.8,7.8-20.5,7.8-28.3,0L58.9,628
+		c-7.8-7.8-7.8-20.5,0-28.3l99-99C165.7,492.9,178.3,492.9,186.2,500.7z"/>
+</g>
+<g transform="translate(512, 512) scale(0.7) rotate(-10)">
+	
+		<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="-523.8109" y1="517.976" x2="-523.8109" y2="516.976" gradientTransform="matrix(110.2984 58.346 19.4488 -330.8954 47798.668 201526.9062)">
+		<stop  offset="0" style="stop-color:#63AEEB"/>
+		<stop  offset="1" style="stop-color:#3B82C4"/>
+	</linearGradient>
+	<path class="st6" d="M77.2-431.2c-80,100-80,250,0,350s80,100,100,130"/>
+	
+		<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="-523.8109" y1="517.976" x2="-523.8109" y2="516.976" gradientTransform="matrix(110.2984 58.346 19.4488 -330.8954 47958.668 201526.9062)">
+		<stop  offset="0" style="stop-color:#63AEEB"/>
+		<stop  offset="1" style="stop-color:#3B82C4"/>
+	</linearGradient>
+	<path class="st7" d="M277.2-431.2c80,100,80,250,0,350s-80,100-100,130"/>
+	<line class="st8" x1="87.2" y1="-281.2" x2="267.2" y2="-281.2"/>
+	<line class="st8" x1="77.2" y1="-181.2" x2="277.2" y2="-181.2"/>
+	<line class="st8" x1="117.2" y1="-81.2" x2="237.2" y2="-81.2"/>
+</g>
+<g transform="translate(512, 512) scale(0.7) rotate(-10)">
+	
+		<linearGradient id="SVGID_3_" gradientUnits="userSpaceOnUse" x1="-526.9556" y1="517.7036" x2="-526.9556" y2="516.7036" gradientTransform="matrix(-110.2984 -58.346 -19.4488 330.8954 -47799.9414 -201536.1562)">
+		<stop  offset="0" style="stop-color:#63AEEB"/>
+		<stop  offset="1" style="stop-color:#3B82C4"/>
+	</linearGradient>
+	<path class="st9" d="M273.7,515.3c80-100,80-250,0-350s-80-100-100-130"/>
+	
+		<linearGradient id="SVGID_4_" gradientUnits="userSpaceOnUse" x1="-526.9556" y1="517.7036" x2="-526.9556" y2="516.7036" gradientTransform="matrix(-110.2984 -58.346 -19.4488 330.8954 -47959.9414 -201536.1562)">
+		<stop  offset="0" style="stop-color:#63AEEB"/>
+		<stop  offset="1" style="stop-color:#3B82C4"/>
+	</linearGradient>
+	<path class="st10" d="M73.7,515.3c-80-100-80-250,0-350s80-100,100-130"/>
+	<line class="st8" x1="263.7" y1="365.3" x2="83.7" y2="365.3"/>
+	<line class="st8" x1="273.7" y1="265.3" x2="73.7" y2="265.3"/>
+	<line class="st8" x1="233.7" y1="165.3" x2="113.7" y2="165.3"/>
+</g>
+</svg>

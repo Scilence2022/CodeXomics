@@ -454,6 +454,9 @@ class GenomeBrowser {
             this.hideWelcomeScreen();
             this.updateStatus('File loaded successfully');
 
+            // Auto-enable tracks for the loaded file type
+            this.autoEnableTracksForFileType(this.currentFile.info.extension);
+
         } catch (error) {
             console.error('Error loading file:', error);
             this.updateStatus(`Error: ${error.message}`);
@@ -2793,6 +2796,57 @@ class GenomeBrowser {
         URL.revokeObjectURL(url);
     }
 
+    autoEnableTracksForFileType(extension) {
+        // Auto-enable tracks based on the file type that was just loaded
+        const trackCheckboxes = {
+            toolbar: {
+                variants: document.getElementById('trackVariants'),
+                reads: document.getElementById('trackReads')
+            },
+            sidebar: {
+                variants: document.getElementById('sidebarTrackVariants'),
+                reads: document.getElementById('sidebarTrackReads')
+            }
+        };
+
+        let tracksToEnable = [];
+        let statusMessage = '';
+
+        switch (extension.toLowerCase()) {
+            case '.vcf':
+                tracksToEnable = ['variants'];
+                statusMessage = 'VCF Variants track automatically enabled';
+                break;
+            case '.sam':
+            case '.bam':
+                tracksToEnable = ['reads'];
+                statusMessage = 'Aligned Reads track automatically enabled';
+                break;
+        }
+
+        // Enable the tracks
+        if (tracksToEnable.length > 0) {
+            tracksToEnable.forEach(trackType => {
+                // Enable in toolbar
+                if (trackCheckboxes.toolbar[trackType]) {
+                    trackCheckboxes.toolbar[trackType].checked = true;
+                }
+                // Enable in sidebar
+                if (trackCheckboxes.sidebar[trackType]) {
+                    trackCheckboxes.sidebar[trackType].checked = true;
+                }
+                // Add to visible tracks
+                this.visibleTracks.add(trackType);
+            });
+
+            // Update the genome view to show the new tracks
+            this.updateVisibleTracks();
+            
+            // Show status message
+            this.updateStatus(statusMessage);
+        }
+    }
+
     async parseVCF() {
         const lines = this.currentFile.data.split('\n');
         const variants = {};
@@ -2829,6 +2883,9 @@ class GenomeBrowser {
         
         this.currentVariants = variants;
         this.updateStatus(`Loaded VCF file with variants for ${Object.keys(variants).length} chromosome(s)`);
+        
+        // Auto-enable variants track
+        this.autoEnableTracksForFileType('.vcf');
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2876,6 +2933,9 @@ class GenomeBrowser {
         
         this.currentReads = reads;
         this.updateStatus(`Loaded SAM file with reads for ${Object.keys(reads).length} chromosome(s)`);
+        
+        // Auto-enable reads track
+        this.autoEnableTracksForFileType('.sam');
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;

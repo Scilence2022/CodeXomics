@@ -1,0 +1,36 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="barGrad1" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#6DD5FA"/>
+    <stop offset="100%" stop-color="#2980B9"/>
+  </linearGradient>
+  <linearGradient id="barGrad2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#76F2CE"/>
+    <stop offset="100%" stop-color="#2ECC71"/>
+  </linearGradient>
+  <linearGradient id="barGrad3" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#C5A3FF"/>
+    <stop offset="100%" stop-color="#8E44AD"/>
+  </linearGradient>
+  <filter id="focusGlow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="15" result="coloredBlur"/>
+    <feMerge>
+      <feMergeNode in="coloredBlur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+
+<g transform="translate(212, 200) scale(1)">
+  <!-- Sequence Bars -->
+  <rect x="50" y="150" width="80" height="400" rx="20" fill="url(#barGrad1)"/>
+  <rect x="150" y="100" width="80" height="500" rx="20" fill="url(#barGrad2)"/>
+  <rect x="250" y="200" width="80" height="300" rx="20" fill="url(#barGrad3)"/>
+  <rect x="350" y="120" width="80" height="460" rx="20" fill="url(#barGrad1)"/>
+  <rect x="450" y="180" width="80" height="340" rx="20" fill="url(#barGrad2)"/>
+</g>
+
+<!-- Focus Ring -->
+<circle cx="512" cy="460" r="120" stroke="#FFFFFF" stroke-width="20" stroke-opacity="0.9" fill="none" filter="url(#focusGlow)"/>
+<circle cx="512" cy="460" r="110" stroke="#A7DDFC" stroke-width="10" stroke-opacity="0.7" fill="none"/>
+</svg> 

@@ -97,6 +97,9 @@ class FileManager {
             this.genomeBrowser.hideWelcomeScreen();
             this.genomeBrowser.updateStatus('File loaded successfully');
 
+            // Auto-enable tracks for the loaded file type
+            this.autoEnableTracksForFileType(extension);
+
         } catch (error) {
             console.error('Error loading file:', error);
             this.genomeBrowser.updateStatus(`Error: ${error.message}`);
@@ -566,6 +569,9 @@ class FileManager {
         this.genomeBrowser.currentVariants = variants;
         this.genomeBrowser.updateStatus(`Loaded VCF file with variants for ${Object.keys(variants).length} chromosome(s)`);
         
+        // Auto-enable variants track
+        this.autoEnableTracksForFileType('.vcf');
+        
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
@@ -642,6 +648,9 @@ class FileManager {
         console.log(`SAM parsing complete: ${Object.keys(reads).length} chromosome(s), ${totalReads} reads`);
         
         this.genomeBrowser.updateStatus(`Loaded SAM file with ${totalReads} reads for ${Object.keys(reads).length} chromosome(s)`);
+        
+        // Auto-enable reads track
+        this.autoEnableTracksForFileType('.sam');
         
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -837,6 +846,9 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
         
         this.genomeBrowser.updateStatus(`Loaded SAM file with ${totalReads} reads for ${Object.keys(this.streamingData.reads).length} chromosome(s)`);
         
+        // Auto-enable reads track for streaming SAM files
+        this.autoEnableTracksForFileType('.sam');
+        
         // If we already have sequence data, refresh the view
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
@@ -845,6 +857,57 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
         
         // Clean up streaming data
         this.streamingData = null;
+    }
+
+    autoEnableTracksForFileType(extension) {
+        // Auto-enable tracks based on the file type that was just loaded
+        const trackCheckboxes = {
+            toolbar: {
+                variants: document.getElementById('trackVariants'),
+                reads: document.getElementById('trackReads')
+            },
+            sidebar: {
+                variants: document.getElementById('sidebarTrackVariants'),
+                reads: document.getElementById('sidebarTrackReads')
+            }
+        };
+
+        let tracksToEnable = [];
+        let statusMessage = '';
+
+        switch (extension.toLowerCase()) {
+            case '.vcf':
+                tracksToEnable = ['variants'];
+                statusMessage = 'VCF Variants track automatically enabled';
+                break;
+            case '.sam':
+            case '.bam':
+                tracksToEnable = ['reads'];
+                statusMessage = 'Aligned Reads track automatically enabled';
+                break;
+        }
+
+        // Enable the tracks
+        if (tracksToEnable.length > 0) {
+            tracksToEnable.forEach(trackType => {
+                // Enable in toolbar
+                if (trackCheckboxes.toolbar[trackType]) {
+                    trackCheckboxes.toolbar[trackType].checked = true;
+                }
+                // Enable in sidebar
+                if (trackCheckboxes.sidebar[trackType]) {
+                    trackCheckboxes.sidebar[trackType].checked = true;
+                }
+                // Add to visible tracks
+                this.genomeBrowser.visibleTracks.add(trackType);
+            });
+
+            // Update the genome view to show the new tracks
+            this.genomeBrowser.updateVisibleTracks();
+            
+            // Show status message
+            this.genomeBrowser.updateStatus(statusMessage);
+        }
     }
 }
 
