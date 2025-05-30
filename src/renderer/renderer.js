@@ -1544,7 +1544,7 @@ class GenomeBrowser {
 
             let style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top;`;
             if (featureHexColor) {
-                const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.5);
+                const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.1);
                 style += ` background-color: ${backgroundColorRgba};`;
             } else {
                 style += ` background-color: transparent;`;
