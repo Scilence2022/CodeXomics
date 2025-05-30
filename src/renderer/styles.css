@@ -1110,16 +1110,15 @@ body {
     font-weight: bold;
     text-align: center;
     line-height: 30px;
-    user-select: text;
-    cursor: text;
+    user-select: none; /* Changed from text to none to prevent interference with dragging */
+    cursor: inherit; /* Changed from text to inherit the cursor from parent */
     transition: font-size 0.2s ease;
     z-index: 1; /* Base z-index for sequence bases */
+    pointer-events: none; /* Prevent sequence bases from interfering with track dragging */
 }
 
 .sequence-base-inline:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-    z-index: 2; /* Reduced from 10 to prevent conflicts with other UI elements */
 }
 
 /* Base colors for inline sequence */

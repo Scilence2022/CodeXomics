@@ -1262,8 +1262,6 @@ class GenomeBrowser {
             baseElement.style.fontWeight = 'bold';
             baseElement.style.textAlign = 'center';
             baseElement.style.lineHeight = '30px';
-            baseElement.style.userSelect = 'text';
-            baseElement.style.cursor = 'text';
             
             // Add tooltip with position info
             const position = start + i + 1;
@@ -1317,6 +1315,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         trackContent.style.height = '120px';
+        
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
         
         const reads = this.currentReads[chromosome] || [];
         const start = this.currentPosition.start;
@@ -1417,6 +1418,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         trackContent.style.height = '80px';
+        
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
         
         const annotations = this.currentAnnotations[chromosome] || [];
         const start = this.currentPosition.start;
@@ -2012,6 +2016,9 @@ class GenomeBrowser {
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
         trackContent.style.height = '60px';
+        
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
         
         const variants = this.currentVariants[chromosome] || [];
         const start = this.currentPosition.start;
