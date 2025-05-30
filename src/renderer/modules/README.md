@@ -30,15 +30,16 @@ Handles all track creation and visualization.
 
 **Key Features:**
 - Genome ruler creation
-- Gene/feature track rendering
+- Gene/feature track rendering with user-defined feature support
 - Sequence track with dynamic sizing
 - GC content visualization
 - Variant and reads track display
 - Protein track rendering
+- User-defined feature styling and visual distinction
 
 **Main Methods:**
 - `createRuler()` - Position ruler
-- `createGeneTrack()` - Gene annotations
+- `createGeneTrack()` - Gene annotations with user feature integration
 - `createSequenceTrack()` - DNA sequence display
 - `createGCTrack()` - GC content graph
 - `createVariantTrack()` - SNP/variant display
@@ -110,6 +111,9 @@ The main application class that coordinates all modules.
 - IPC communication with main process
 - Track visibility management
 - Gene filter controls
+- User-defined feature creation and management
+- Sequence selection for precise annotation
+- Feature creation modal and validation
 
 ## Usage
 
@@ -198,8 +202,33 @@ Each module receives a reference to the main GenomeBrowser instance, allowing ac
 
 ### To add new UI components:
 1. Add methods to `UIManager.js`
-2. Update HTML structure
-3. Add CSS styling
+2. Update HTML/CSS as needed
+3. Add event listeners in main class
+
+### To add new user feature types:
+1. Update feature type options in HTML modal
+2. Add styling to `TrackRenderer.js` for new types
+3. Update validation logic in main application
+4. Add visual styling in CSS for new feature types
+
+## Recent Enhancements
+
+### User-Defined Features System
+The application now supports creating custom genomic annotations through an interactive interface:
+
+**Key Components:**
+- **Toolbar Integration**: Quick access buttons for common feature types
+- **Sequence Selection**: Click-and-drag selection in sequence panel for precise coordinates  
+- **Modal Interface**: Comprehensive form for feature creation with validation
+- **Visual Integration**: User features display with special styling (dashed borders, green highlighting)
+- **Feature Types**: Support for genes, CDS, regulatory elements, promoters, terminators, and comments
+
+**Implementation Details:**
+- Features stored in memory during session (`userDefinedFeatures` object)
+- Integrated with existing annotation system for seamless display
+- Special rendering logic in `TrackRenderer.js` for visual distinction
+- Real-time validation and error handling
+- Event management for sequence selection and modal interactions
 
 ## File Structure
 

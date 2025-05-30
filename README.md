@@ -16,7 +16,8 @@ A modern, cross-platform genome browser built with Electron, featuring an EcoCyc
 - **EcoCyc-style genome browser** with multiple tracks
 - **Resizable track splitters** for customizing track heights
 - **Gene track** showing genes, CDS, and mRNA features with operon detection
-- **Sequence track** with color-coded nucleotides
+- **User-defined features** - Create custom annotations with sequence selection
+- **Sequence track** with color-coded nucleotides and interactive selection
 - **Ruler track** for position reference
 - **GC content visualization** for large regions
 - **Variant track** for VCF file visualization
@@ -77,12 +78,29 @@ npm start
 - Hover over genes to see detailed information
 - Reverse strand genes have diagonal stripes and left-pointing arrows
 
+### Creating User-Defined Features
+- **Add Features toolbar** - Quick access buttons for common feature types (Gene, CDS, rRNA, tRNA, Comment/Note)
+- **More Features dropdown** - Access additional types (Promoter, Terminator, Regulatory, Other)
+- **Sequence selection** - Click and drag in the sequence panel to select regions
+- **Feature creation modal** - Fill in details like name, type, position, strand, and description
+- **Visual distinction** - User-created features appear with dashed borders and green highlighting
+- **Persistent during session** - Added features remain visible until browser restart
+
 ### Resizing Tracks
 - **Track splitters** appear between each visible track
 - **Drag splitters** up/down to adjust individual track heights
 - **Keyboard navigation**: Tab to focus splitter, Arrow keys to resize
 - **Minimum heights** ensure tracks remain functional
 - See [TRACK_SPLITTERS.md](TRACK_SPLITTERS.md) for detailed documentation
+
+## Documentation
+
+For detailed information about specific features:
+- [USER_DEFINED_FEATURES.md](USER_DEFINED_FEATURES.md) - Creating custom annotations
+- [TRACK_SPLITTERS.md](TRACK_SPLITTERS.md) - Track height customization
+- [SEARCH_FUNCTIONALITY.md](SEARCH_FUNCTIONALITY.md) - Search and navigation
+- [SEARCH_RESULTS_PANEL.md](SEARCH_RESULTS_PANEL.md) - Search results interface
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Technical implementation details
 
 ### Sample Data
 The `sample_data/` folder contains:
