@@ -307,40 +307,51 @@ class ChatManager {
     async exportData(params) {
         const { format, chromosome, start, end } = params;
         
-        if (this.app && this.app.exportManager) {
-            let exportFunction;
-            
+        if (!this.app || !this.app.exportManager) {
+            throw new Error('Export functionality not available');
+        }
+
+        // For now, we'll use the existing export methods that export entire genome
+        // In the future, we could extend ExportManager to support region-specific exports
+        let result;
+        
+        try {
             switch (format.toLowerCase()) {
                 case 'fasta':
-                    exportFunction = this.app.exportManager.exportFasta;
+                    result = await this.app.exportManager.exportAsFasta();
                     break;
                 case 'genbank':
-                    exportFunction = this.app.exportManager.exportGenBank;
+                case 'gbk':
+                    result = await this.app.exportManager.exportAsGenBank();
                     break;
                 case 'gff':
-                    exportFunction = this.app.exportManager.exportGFF;
+                    result = await this.app.exportManager.exportAsGFF();
                     break;
                 case 'bed':
-                    exportFunction = this.app.exportManager.exportBED;
+                    result = await this.app.exportManager.exportAsBED();
+                    break;
+                case 'cds':
+                    result = await this.app.exportManager.exportCDSAsFasta();
+                    break;
+                case 'protein':
+                    result = await this.app.exportManager.exportProteinAsFasta();
                     break;
                 default:
-                    throw new Error(`Unsupported export format: ${format}`);
+                    throw new Error(`Unsupported export format: ${format}. Supported formats: fasta, genbank, gff, bed, cds, protein`);
             }
-            
-            const exportData = await exportFunction.call(this.app.exportManager, 
-                chromosome, start, end);
-            
+
             return {
+                success: true,
                 format: format,
-                chromosome: chromosome,
-                start: start,
-                end: end,
-                data: exportData,
-                message: `Exported ${format} data for ${chromosome}:${start}-${end}`
+                chromosome: chromosome || 'all',
+                start: start || 'full',
+                end: end || 'full',
+                message: `Exported ${format.toUpperCase()} data successfully. File has been downloaded.`
             };
+            
+        } catch (error) {
+            throw new Error(`Export failed: ${error.message}`);
         }
-        
-        throw new Error('Export functionality not available');
     }
 
     getVisibleTracks() {
@@ -617,29 +628,87 @@ class ChatManager {
             // Send conversation history to configured LLM
             const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
             
+            console.log('LLM Raw Response:', response);
+            
             // Check if the response is a tool call (JSON format)
             const toolCall = this.parseToolCall(response);
             if (toolCall) {
                 console.log('Detected tool call:', toolCall);
                 
-                // Execute the tool
-                const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
-                
-                // Send the tool result back to the LLM for a user-friendly response
-                const followUpHistory = [...conversationHistory, 
-                    { role: 'assistant', content: response },
-                    { role: 'user', content: `I executed the ${toolCall.tool_name} tool with the following result: ${JSON.stringify(toolResult, null, 2)}. Please provide a user-friendly summary of these results.` }
-                ];
-                const finalResponse = await this.llmConfigManager.sendMessageWithHistory(followUpHistory, context);
-                
-                return finalResponse;
+                try {
+                    // Execute the tool directly
+                    const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
+                    
+                    // If tool execution was successful, provide a user-friendly summary
+                    if (toolResult && !toolResult.error) {
+                        return this.formatToolResult(toolCall.tool_name, toolCall.parameters, toolResult);
+                    } else {
+                        return `I tried to execute ${toolCall.tool_name} but encountered an error: ${toolResult.error || 'Unknown error'}`;
+                    }
+                } catch (error) {
+                    console.error('Tool execution error:', error);
+                    return `Sorry, I encountered an error while executing the ${toolCall.tool_name} tool: ${error.message}`;
+                }
             }
             
+            // If not a tool call, return the conversational response
             return response;
+            
         } catch (error) {
             console.error('Error communicating with LLM:', error);
             return `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
         }
+    }
+
+    formatToolResult(toolName, parameters, result) {
+        // Provide user-friendly summaries of tool execution results
+        switch (toolName) {
+            case 'navigate_to_position':
+                if (result.success) {
+                    return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}`;
+                }
+                break;
+                
+            case 'search_features':
+                return `🔍 Found ${result.count} features matching "${result.query}"${result.caseSensitive ? ' (case-sensitive)' : ''}`;
+                
+            case 'get_current_state':
+                return `📊 Current state: Chromosome ${result.currentChromosome || 'None'}, ${result.annotationsCount} annotations loaded, ${result.userDefinedFeaturesCount} user features`;
+                
+            case 'get_sequence':
+                return `🧬 Retrieved ${result.length} base sequence from ${result.chromosome}:${result.start}-${result.end}`;
+                
+            case 'toggle_track':
+                return `👁️ Track "${result.track}" is now ${result.visible ? 'visible' : 'hidden'}`;
+                
+            case 'create_annotation':
+                if (result.success) {
+                    return `✨ Created ${result.feature.type} annotation "${result.feature.name}" at ${result.feature.chromosome}:${result.feature.start}-${result.feature.end}`;
+                }
+                break;
+                
+            case 'analyze_region':
+                let summary = `📈 Analyzed region ${result.chromosome}:${result.start}-${result.end} (${result.length} bp)`;
+                if (result.gcContent) {
+                    summary += `, GC content: ${result.gcContent}%`;
+                }
+                if (result.features) {
+                    summary += `, ${result.features.length} features found`;
+                }
+                return summary;
+                
+            case 'export_data':
+                if (result.success) {
+                    return `💾 ${result.message}`;
+                }
+                break;
+                
+            default:
+                return `✅ Executed ${toolName} successfully`;
+        }
+        
+        // Fallback for unsuccessful operations
+        return `❌ Failed to execute ${toolName}: ${result.error || 'Unknown error'}`;
     }
 
     buildConversationHistory(newMessage) {
@@ -681,7 +750,8 @@ Current Genome Browser State:
 Available Tools:
 ${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
 
-When a user asks you to perform an action that requires using one of these tools, respond with a JSON object in this format:
+IMPORTANT: When a user asks you to perform an action that requires using one of these tools, you MUST respond with ONLY a JSON object in this exact format:
+
 {
   "tool_name": "tool_name_here",
   "parameters": {
@@ -690,12 +760,24 @@ When a user asks you to perform an action that requires using one of these tools
   }
 }
 
-Otherwise, provide helpful conversational responses about genome analysis, biology, or the current state of the genome browser.`;
+Tool Examples:
+- To navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- To search: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
+- To get current state: {"tool_name": "get_current_state", "parameters": {}}
+- To get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- To toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+- To create annotation: {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000, "strand": 1, "description": "Test gene"}}
+- To analyze region: {"tool_name": "analyze_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "includeFeatures": true, "includeGC": true}}
+- To export data: {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
+
+Do NOT include any explanatory text, markdown formatting, or code blocks around the JSON. Return ONLY the raw JSON object.
+
+If the user is asking a general question or doesn't need a tool, respond normally with conversational text.`;
     }
 
     parseToolCall(response) {
         try {
-            // Remove any potential thinking tags or extra text
+            // Clean the response by removing any leading/trailing whitespace
             let cleanResponse = response.trim();
             
             // If response contains thinking tags, extract content after them
@@ -704,31 +786,40 @@ Otherwise, provide helpful conversational responses about genome analysis, biolo
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
             }
             
-            // Try to extract JSON from markdown code blocks
-            const markdownJsonMatch = cleanResponse.match(/```json\s*(\{[^`]*\})\s*```/i);
-            if (markdownJsonMatch) {
-                const parsed = JSON.parse(markdownJsonMatch[1]);
-                if (parsed.tool_name && parsed.parameters) {
+            // Remove any potential code block markers
+            cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
+            cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
+            
+            // Try to parse the entire response as JSON first (most direct approach)
+            try {
+                const parsed = JSON.parse(cleanResponse);
+                if (parsed.tool_name && parsed.parameters !== undefined) {
                     return parsed;
+                }
+            } catch (e) {
+                // Continue to other parsing methods if direct parse fails
+            }
+            
+            // Try to extract JSON from potential markdown or mixed content
+            const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
+            if (jsonMatches) {
+                try {
+                    const parsed = JSON.parse(jsonMatches[0]);
+                    if (parsed.tool_name && parsed.parameters !== undefined) {
+                        return parsed;
+                    }
+                } catch (e) {
+                    // Continue to next method
                 }
             }
             
-            // Try to find JSON object in the response (more flexible pattern)
-            const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                if (parsed.tool_name && parsed.parameters) {
-                    return parsed;
-                }
-            }
-            
-            // Try to extract any valid JSON object that has tool_name and parameters
-            const allJsonMatches = cleanResponse.match(/\{[^}]+\}/g);
+            // Try to find any valid JSON object that has tool_name and parameters
+            const allJsonMatches = cleanResponse.match(/\{[^}]*\}/g);
             if (allJsonMatches) {
                 for (const match of allJsonMatches) {
                     try {
                         const parsed = JSON.parse(match);
-                        if (parsed.tool_name && parsed.parameters) {
+                        if (parsed.tool_name && parsed.parameters !== undefined) {
                             return parsed;
                         }
                     } catch (e) {
@@ -737,49 +828,62 @@ Otherwise, provide helpful conversational responses about genome analysis, biolo
                 }
             }
             
-            // Also try parsing the entire response as JSON
-            const parsed = JSON.parse(cleanResponse);
-            if (parsed.tool_name && parsed.parameters) {
-                return parsed;
-            }
+            // If no valid tool call found, return null
+            return null;
+            
         } catch (error) {
-            // Not a JSON tool call, return null
+            console.warn('Error parsing potential tool call:', error);
+            return null;
         }
-        
-        return null;
     }
 
     async executeToolByName(toolName, parameters) {
+        console.log(`Executing tool: ${toolName} with parameters:`, parameters);
+        
         try {
+            let result;
             switch (toolName) {
                 case 'navigate_to_position':
-                    return await this.navigateToPosition(parameters);
+                    result = await this.navigateToPosition(parameters);
+                    break;
                     
                 case 'search_features':
-                    return await this.searchFeatures(parameters);
+                    result = await this.searchFeatures(parameters);
+                    break;
                     
                 case 'get_current_state':
-                    return this.getCurrentState();
+                    result = this.getCurrentState();
+                    break;
                     
                 case 'get_sequence':
-                    return await this.getSequence(parameters);
+                    result = await this.getSequence(parameters);
+                    break;
                     
                 case 'toggle_track':
-                    return await this.toggleTrack(parameters);
+                    result = await this.toggleTrack(parameters);
+                    break;
                     
                 case 'create_annotation':
-                    return await this.createAnnotation(parameters);
+                    result = await this.createAnnotation(parameters);
+                    break;
                     
                 case 'analyze_region':
-                    return await this.analyzeRegion(parameters);
+                    result = await this.analyzeRegion(parameters);
+                    break;
                     
                 case 'export_data':
-                    return await this.exportData(parameters);
+                    result = await this.exportData(parameters);
+                    break;
                     
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
+            
+            console.log(`Tool ${toolName} execution result:`, result);
+            return result;
+            
         } catch (error) {
+            console.error(`Error executing tool ${toolName}:`, error);
             return {
                 success: false,
                 error: error.message,

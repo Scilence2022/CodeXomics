@@ -892,13 +892,17 @@ You have access to tools that can:
 - Analyze genomic regions (use tool: 'analyze_region', parameters: {chromosome: string, start: number, end: number, includeFeatures?: boolean, includeGC?: boolean})
 - Export data (use tool: 'export_data', parameters: {format: string, chromosome?: string, start?: number, end?: number})
 
-When a user's request requires one of these actions, you should respond ONLY with a JSON object describing the tool call. For example:
-To navigate, respond with: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
-To search, respond with: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
-If you are just providing information or answering a question, respond normally.
-Your primary goal is to assist the user by utilizing these tools effectively when appropriate.
+CRITICAL: When a user's request requires one of these actions, you MUST respond with ONLY a JSON object in this exact format:
 
-The current browser state (obtained via 'get_current_state' or provided in context) includes 'annotationsCount' and 'userDefinedFeaturesCount', which are the total numbers of annotations and user-defined features, respectively. To get details about specific annotations, use the 'search_features' tool.`;
+{"tool_name": "tool_name_here", "parameters": {"param1": "value1", "param2": "value2"}}
+
+Do NOT include any explanation, markdown formatting, or code blocks. Return ONLY the raw JSON object.
+
+Examples:
+- For navigation: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- For search: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
+
+If the user is asking a general question that doesn't require a tool, respond normally with conversational text.`;
 
         if (context && context.genomeBrowser && context.genomeBrowser.currentState) {
             // Debug: Log the actual context structure
