@@ -429,10 +429,6 @@ class GenomeBrowser {
         const browserContainer = document.createElement('div');
         browserContainer.className = 'genome-browser-container';
         
-        // Create ruler (always show)
-        const ruler = this.trackRenderer.createRuler();
-        browserContainer.appendChild(ruler);
-        
         // Collect all tracks to be displayed
         const tracksToShow = [];
         

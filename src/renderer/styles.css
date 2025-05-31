@@ -821,28 +821,7 @@ body {
     z-index: 2; /* Lower than welcome screen but higher than basic genome viewer */
 }
 
-.genome-ruler {
-    height: 40px;
-    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-    border-bottom: 1px solid #dee2e6;
-    position: relative;
-    font-size: 12px;
-    color: #495057;
-}
-
-.ruler-tick {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    border-left: 1px solid #adb5bd;
-    padding: 5px 0 0 5px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.ruler-tick:first-child {
-    border-left: none;
-}
+/* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
 /* Gene Track Styles with Operon Support */
 .gene-track {
@@ -952,6 +931,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
+    z-index: 10; /* Ensure genes appear above ruler */
 }
 
 .gene-element:hover {
@@ -1568,16 +1548,6 @@ body {
     .genome-browser-container {
         background: #2d3748;
         border-color: #4a5568;
-    }
-    
-    .genome-ruler {
-        background: linear-gradient(to bottom, #4a5568, #2d3748);
-        border-color: #4a5568;
-        color: #e2e8f0;
-    }
-    
-    .ruler-tick {
-        border-color: #718096;
     }
     
     .track-header {
@@ -4875,7 +4845,7 @@ body {
 @media (pointer: coarse) {
     .genome-navigation-bar {
         /* Larger touch targets on mobile */
-        height: 50px;
+        height: 40px;
     }
     
     .navigation-canvas {
@@ -4915,5 +4885,83 @@ body {
     
     .navigation-tooltip.range-tooltip::before {
         border-bottom-color: rgba(59, 130, 246, 0.9);
+    }
+}
+
+/* Detailed ruler for gene track viewing region */
+.detailed-ruler-container {
+    position: relative;
+    height: 35px;
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    border-bottom: 0px solid #dee2e6;
+    margin-bottom: 0px;
+    z-index: 15; /* Higher z-index so ruler appears above genes */
+    overflow:   visible;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    pointer-events: none; /* Allow clicks to pass through to genes */
+}
+
+.detailed-ruler-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 16; /* Higher z-index so ruler appears above genes */
+    cursor: crosshair;
+    pointer-events: none; /* Allow clicks to pass through to genes */
+}
+
+.detailed-ruler-canvas:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.navigation-tooltip.range-tooltip::before {
+    border-top-color: #2d3748;
+}
+
+/* Dark mode for detailed ruler */
+.detailed-ruler-container {
+    background: linear-gradient(to bottom, #4a5568, #2d3748);
+    border-bottom-color: #4a5568;
+}
+
+.detailed-ruler-canvas:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+    .genome-navigation-bar {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .navigation-tooltip {
+        background: #1a202c;
+        color: #e2e8f0;
+        border-color: #4a5568;
+    }
+    
+    .navigation-tooltip::before {
+        border-top-color: #1a202c;
+    }
+    
+    .navigation-tooltip.range-tooltip {
+        background: #2d3748;
+        border-color: #667eea;
+    }
+    
+    .navigation-tooltip.range-tooltip::before {
+        border-top-color: #2d3748;
+    }
+    
+    /* Dark mode for detailed ruler */
+    .detailed-ruler-container {
+        background: linear-gradient(to bottom, #4a5568, #2d3748);
+        border-bottom-color: #4a5568;
+    }
+    
+    .detailed-ruler-canvas:hover {
+        background: rgba(102, 126, 234, 0.1);
     }
 }

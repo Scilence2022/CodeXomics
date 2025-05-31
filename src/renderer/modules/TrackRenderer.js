@@ -6,26 +6,6 @@ class TrackRenderer {
         this.genomeBrowser = genomeBrowser;
     }
 
-    createRuler() {
-        const ruler = document.createElement('div');
-        ruler.className = 'genome-ruler';
-        
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const range = end - start;
-        const tickInterval = Math.max(1, Math.floor(range / 10));
-        
-        for (let pos = start; pos <= end; pos += tickInterval) {
-            const tick = document.createElement('div');
-            tick.className = 'ruler-tick';
-            tick.style.left = `${((pos - start) / range) * 100}%`;
-            tick.textContent = pos.toLocaleString();
-            ruler.appendChild(tick);
-        }
-        
-        return ruler;
-    }
-
     createGeneTrack(chromosome) {
         const track = document.createElement('div');
         track.className = 'gene-track';
@@ -37,6 +17,10 @@ class TrackRenderer {
         
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
+        
+        // Add detailed ruler for current viewing region
+        const detailedRuler = this.createDetailedRuler(chromosome);
+        trackContent.appendChild(detailedRuler);
         
         // Add draggable functionality
         this.genomeBrowser.makeDraggable(trackContent, chromosome);
@@ -88,11 +72,12 @@ class TrackRenderer {
         // Calculate adaptive track height based on gene arrangement
         const geneHeight = 23; // Height of each gene element
         const rowSpacing = 6; // Space between rows
-        const topPadding = 10; // Top padding
+        const rulerHeight = 40; // Height of the detailed ruler
+        const topPadding = 10; // Top padding below ruler
         const bottomPadding = 10; // Bottom padding
         
-        const trackHeight = topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding;
-        trackContent.style.height = `${Math.max(trackHeight, 80)}px`; // Minimum 80px height
+        const trackHeight = rulerHeight + topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding;
+        trackContent.style.height = `${Math.max(trackHeight, 120)}px`; // Minimum 120px height to account for ruler
         
         // Create gene elements
         geneRows.forEach((rowGenes, rowIndex) => {
@@ -140,7 +125,7 @@ class TrackRenderer {
                 }
                 
                 // Position based on row arrangement instead of fixed type positions
-                geneElement.style.top = `${topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
+                geneElement.style.top = `${rulerHeight + topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
                 
                 if (gene.strand === -1) {
                     geneElement.classList.add('reverse-strand');
@@ -186,7 +171,7 @@ class TrackRenderer {
         statsElement.className = 'gene-stats';
         statsElement.style.cssText = `
             position: absolute;
-            top: 5px;
+            top: ${rulerHeight + 5}px;
             right: 10px;
             background: rgba(255,255,255,0.9);
             padding: 2px 6px;
@@ -890,6 +875,192 @@ class TrackRenderer {
     genesOverlap(gene1, gene2) {
         const buffer = 10; // Reduced buffer from 50bp to 10bp for tighter packing
         return (gene1.start < gene2.end + buffer && gene1.end + buffer > gene2.start);
+    }
+
+    // Create detailed ruler for current viewing region
+    createDetailedRuler(chromosome) {
+        const rulerContainer = document.createElement('div');
+        rulerContainer.className = 'detailed-ruler-container';
+        rulerContainer.style.cssText = `
+            position: relative;
+            height: 30px;
+            background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 5px;
+            z-index: 10;
+            overflow: hidden;
+        `;
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'detailed-ruler-canvas';
+        canvas.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 11;
+        `;
+
+        rulerContainer.appendChild(canvas);
+
+        // Setup canvas for high-DPI displays
+        const setupCanvas = () => {
+            const rect = rulerContainer.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = 30 * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = '30px';
+            
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            
+            this.drawDetailedRuler(ctx, rect.width, chromosome);
+        };
+
+        // Initial setup
+        setTimeout(setupCanvas, 100);
+
+        // Redraw on window resize
+        const resizeObserver = new ResizeObserver(setupCanvas);
+        resizeObserver.observe(rulerContainer);
+
+        // Store reference for updates
+        rulerContainer._setupCanvas = setupCanvas;
+
+        return rulerContainer;
+    }
+
+    // Draw the detailed ruler
+    drawDetailedRuler(ctx, width, chromosome) {
+        const start = this.genomeBrowser.currentPosition.start;
+        const end = this.genomeBrowser.currentPosition.end;
+        const range = end - start;
+        
+        if (range <= 0 || width <= 0) return;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, 30);
+
+        // Fill background
+        const gradient = ctx.createLinearGradient(0, 0, 0, 30);
+        gradient.addColorStop(0, '#f8f9fa');
+        gradient.addColorStop(1, '#e9ecef');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, 30);
+
+        // Calculate intelligent tick spacing
+        const { majorInterval, minorInterval } = this.calculateDetailedTickSpacing(range, width);
+
+        // Draw ticks and labels
+        ctx.strokeStyle = '#6c757d';
+        ctx.fillStyle = '#495057';
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Major ticks - ensure we don't draw overlapping labels
+        const firstMajorTick = Math.ceil(start / majorInterval) * majorInterval;
+        const drawnPositions = new Set(); // Track drawn positions to avoid duplicates
+        
+        for (let pos = firstMajorTick; pos <= end; pos += majorInterval) {
+            const x = ((pos - start) / range) * width;
+            
+            if (x >= 0 && x <= width && !drawnPositions.has(pos)) {
+                drawnPositions.add(pos);
+                
+                // Draw major tick
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 20);
+                ctx.stroke();
+
+                // Draw label with minimum spacing check
+                const label = this.formatDetailedPosition(pos);
+                const labelWidth = ctx.measureText(label).width;
+                
+                // Check if there's enough space for this label
+                let canDrawLabel = true;
+                for (const drawnPos of drawnPositions) {
+                    if (drawnPos !== pos) {
+                        const drawnX = ((drawnPos - start) / range) * width;
+                        if (Math.abs(x - drawnX) < labelWidth + 10) { // 10px minimum spacing
+                            canDrawLabel = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (canDrawLabel) {
+                    ctx.fillText(label, x, 28);
+                }
+            }
+        }
+
+        // Minor ticks (if there's enough space)
+        if (width / (range / minorInterval) > 8) { // Only show if ticks are spaced enough
+            ctx.strokeStyle = '#adb5bd';
+            const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
+            for (let pos = firstMinorTick; pos <= end; pos += minorInterval) {
+                if (pos % majorInterval !== 0) { // Skip positions that have major ticks
+                    const x = ((pos - start) / range) * width;
+                    
+                    if (x >= 0 && x <= width) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, 10);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Draw border
+        ctx.strokeStyle = '#dee2e6';
+        ctx.beginPath();
+        ctx.moveTo(0, 29.5);
+        ctx.lineTo(width, 29.5);
+        ctx.stroke();
+    }
+
+    // Calculate intelligent tick spacing for detailed view
+    calculateDetailedTickSpacing(range, width) {
+        const targetMajorTicks = Math.max(3, Math.min(8, width / 100));
+        const targetMinorTicks = targetMajorTicks * 5;
+
+        // Base intervals to choose from
+        const baseIntervals = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000];
+
+        // Find best major interval
+        let majorInterval = baseIntervals[0];
+        for (const interval of baseIntervals) {
+            const tickCount = range / interval;
+            if (tickCount <= targetMajorTicks) {
+                majorInterval = interval;
+                break;
+            }
+        }
+
+        // Minor interval is typically 1/5 or 1/10 of major
+        let minorInterval = majorInterval / 5;
+        if (majorInterval % 10 === 0) {
+            minorInterval = majorInterval / 10;
+        } else if (majorInterval % 4 === 0) {
+            minorInterval = majorInterval / 4;
+        }
+
+        return { majorInterval, minorInterval };
+    }
+
+    // Format position for detailed ruler
+    formatDetailedPosition(position) {
+        if (position >= 1000) {
+            return Math.round(position / 1000) + 'K';
+        } else {
+            return position.toString();
+        }
     }
 }
 
