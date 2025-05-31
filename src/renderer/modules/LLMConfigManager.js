@@ -106,6 +106,19 @@ class LLMConfigManager {
             this.testConnection();
         });
 
+        // Local model select change
+        const localModelSelect = document.getElementById('localModel');
+        if (localModelSelect) {
+            localModelSelect.addEventListener('change', (event) => {
+                const otherModelGroup = document.getElementById('localModelOtherGroup');
+                if (event.target.value === 'other') {
+                    otherModelGroup.style.display = 'block';
+                } else {
+                    otherModelGroup.style.display = 'none';
+                }
+            });
+        }
+
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.file-menu-container')) {
@@ -189,18 +202,31 @@ class LLMConfigManager {
             // Update provider configurations from form fields
             Object.keys(this.providers).forEach(providerKey => {
                 const provider = this.providers[providerKey];
-                const prefix = providerKey === 'local' ? 'local' : providerKey;
+                const prefix = providerKey;
                 
-                provider.apiKey = document.getElementById(`${prefix}ApiKey`).value;
-                provider.model = document.getElementById(`${prefix}Model`).value;
-                
-                if (document.getElementById(`${prefix}BaseUrl`)) {
-                    provider.baseUrl = document.getElementById(`${prefix}BaseUrl`).value;
+                const apiKeyField = document.getElementById(`${prefix}ApiKey`);
+                if (apiKeyField) {
+                    provider.apiKey = apiKeyField.value;
                 }
-                
+
                 if (providerKey === 'local') {
+                    const localModelSelect = document.getElementById('localModel');
+                    if (localModelSelect.value === 'other') {
+                        provider.model = document.getElementById('localModelOther').value;
+                    } else {
+                        provider.model = localModelSelect.value;
+                    }
                     provider.baseUrl = document.getElementById('localEndpoint').value;
                     provider.streamingSupport = document.getElementById('localStreamingSupport').checked;
+                } else {
+                    const modelField = document.getElementById(`${prefix}Model`);
+                    if (modelField) {
+                        provider.model = modelField.value;
+                    }
+                    const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
+                    if (baseUrlField) {
+                        provider.baseUrl = baseUrlField.value;
+                    }
                 }
                 
                 // Set as enabled if it has required fields
@@ -233,43 +259,62 @@ class LLMConfigManager {
     loadConfigurationToUI() {
         Object.keys(this.providers).forEach(providerKey => {
             const provider = this.providers[providerKey];
-            const prefix = providerKey === 'local' ? 'local' : providerKey;
+            const prefix = providerKey;
             
             const apiKeyField = document.getElementById(`${prefix}ApiKey`);
             const modelField = document.getElementById(`${prefix}Model`);
-            const baseUrlField = document.getElementById(`${prefix}BaseUrl`) || 
-                                 document.getElementById('localEndpoint');
+            const baseUrlField = document.getElementById(`${prefix}BaseUrl`);
             
             if (apiKeyField) {
                 apiKeyField.value = provider.apiKey || '';
                 
-                // Remove any old paste listener to prevent duplicates if this function is called multiple times
-                // (though for simple anonymous functions, addEventListener handles this implicitly by not adding identical ones)
-                // For clarity and robustness if we were to use a named function that might change:
-                // apiKeyField.removeEventListener('paste', this._handleApiKeyPaste); // Example if we had a bound named function
-
-                // Add paste event listener
-                apiKeyField.addEventListener('paste', (event) => {
-                    console.log(`Paste event triggered for: ${apiKeyField.id}`);
-                    event.preventDefault(); // Prevent the default paste action
-                    event.stopPropagation(); // Stop bubbling
-                    
-                    const pasteData = (event.clipboardData || window.clipboardData).getData('text');
-                    console.log(`Pasted data: ${pasteData}`);
-                    
-                    // Directly set the value.
-                    // Using a timeout can sometimes help with timing issues in complex UIs, but let's try direct first.
-                    apiKeyField.value = pasteData;
-                    console.log(`Set ${apiKeyField.id} value to: ${apiKeyField.value}`);
-                });
-                console.log(`Paste listener added to ${apiKeyField.id}`);
+                // Ensure paste listener is attached
+                if (!apiKeyField.dataset.pasteListenerAttached) {
+                    apiKeyField.addEventListener('paste', (event) => {
+                        console.log(`Paste event triggered for: ${apiKeyField.id}`);
+                        event.preventDefault(); 
+                        event.stopPropagation(); 
+                        const pasteData = (event.clipboardData || window.clipboardData).getData('text');
+                        console.log(`Pasted data for ${apiKeyField.id}: ${pasteData}`);
+                        apiKeyField.value = pasteData;
+                        console.log(`Set ${apiKeyField.id} value to: ${apiKeyField.value}`);
+                    });
+                    apiKeyField.dataset.pasteListenerAttached = 'true';
+                    console.log(`Paste listener added to ${apiKeyField.id}`);
+                }
             }
-            if (modelField) modelField.value = provider.model || '';
-            if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
-            
+
             if (providerKey === 'local') {
-                const streamingField = document.getElementById('localStreamingSupport');
-                if (streamingField) streamingField.checked = provider.streamingSupport || false;
+                const localModelSelect = document.getElementById('localModel');
+                const localModelOther = document.getElementById('localModelOther');
+                const localModelOtherGroup = document.getElementById('localModelOtherGroup');
+                const localEndpointField = document.getElementById('localEndpoint');
+                const localStreamingField = document.getElementById('localStreamingSupport');
+
+                if (localEndpointField) localEndpointField.value = provider.baseUrl || 'http://localhost:11434/v1';
+                if (localStreamingField) localStreamingField.checked = provider.streamingSupport || false;
+
+                let modelIsOther = true;
+                if (localModelSelect) {
+                    for (let i = 0; i < localModelSelect.options.length; i++) {
+                        if (localModelSelect.options[i].value === provider.model) {
+                            localModelSelect.value = provider.model;
+                            modelIsOther = false;
+                            break;
+                        }
+                    }
+                }
+                if (modelIsOther && provider.model) {
+                    if (localModelSelect) localModelSelect.value = 'other';
+                    if (localModelOther) localModelOther.value = provider.model;
+                }
+                if (localModelOtherGroup) {
+                    localModelOtherGroup.style.display = (localModelSelect && localModelSelect.value === 'other') ? 'block' : 'none';
+                }
+
+            } else {
+                if (modelField) modelField.value = provider.model || '';
+                if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
             }
         });
     }

@@ -729,7 +729,20 @@
                         </div>
                         <div class="form-group">
                             <label for="localModel">Model Name:</label>
-                            <input type="text" id="localModel" placeholder="llama3.2" class="input-full">
+                            <select id="localModel" class="select input-full">
+                                <option value="deepseek-r1:70b">deepseek-r1:70b</option>
+                                <option value="deepseek-r1:1.5b">deepseek-r1:1.5b</option>
+                                <option value="mistral-large:latest">mistral-large:latest</option>
+                                <option value="llama3.1:70b">llama3.1:70b</option>
+                                <option value="llama3.1:latest">llama3.1:latest</option>
+                                <option value="llama3:latest">llama3:latest</option>
+                                <option value="qwen2:latest">qwen2:latest</option>
+                                <option value="other">Other (specify below)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="localModelOtherGroup" style="display: none;">
+                            <label for="localModelOther">Custom Model Name:</label>
+                            <input type="text" id="localModelOther" placeholder="Enter custom model name" class="input-full">
                         </div>
                         <div class="form-group">
                             <label for="localApiKey">API Key (if required):</label>
