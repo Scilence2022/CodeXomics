@@ -150,9 +150,18 @@ class ChatManager {
     async navigateToPosition(params) {
         const { chromosome, start, end } = params;
         
+        console.log('navigateToPosition called with params:', params);
+        
         // Use existing navigation functionality
         if (this.app && this.app.navigationManager) {
-            await this.app.navigationManager.goToPosition(chromosome, start, end);
+            console.log('Using navigationManager.parseAndGoToPosition');
+            
+            // Format the position string as expected by parseAndGoToPosition
+            const positionString = `${chromosome}:${start}-${end}`;
+            console.log('Formatted position string:', positionString);
+            
+            // Call the parseAndGoToPosition method
+            this.app.navigationManager.parseAndGoToPosition(positionString);
             
             return {
                 success: true,
@@ -169,19 +178,43 @@ class ChatManager {
     async searchFeatures(params) {
         const { query, caseSensitive } = params;
         
-        // Use existing search functionality
-        if (this.app && this.app.search) {
-            const results = await this.app.search(query, caseSensitive);
+        console.log('searchFeatures called with params:', params);
+        
+        // Use existing search functionality from NavigationManager
+        if (this.app && this.app.navigationManager) {
+            console.log('Using navigationManager.performSearch');
+            
+            // Store original settings
+            const originalCaseSensitive = document.getElementById('caseSensitive')?.checked;
+            
+            // Set case sensitivity for this search
+            const caseSensitiveCheckbox = document.getElementById('caseSensitive');
+            if (caseSensitiveCheckbox) {
+                caseSensitiveCheckbox.checked = caseSensitive || false;
+            }
+            
+            // Perform the search
+            this.app.navigationManager.performSearch(query);
+            
+            // Get the results from NavigationManager
+            const searchResults = this.app.navigationManager.searchResults || [];
+            
+            // Restore original setting
+            if (caseSensitiveCheckbox && originalCaseSensitive !== undefined) {
+                caseSensitiveCheckbox.checked = originalCaseSensitive;
+            }
+            
+            console.log('Search completed, results:', searchResults);
             
             return {
                 query: query,
                 caseSensitive: caseSensitive || false,
-                results: results,
-                count: results.length
+                results: searchResults,
+                count: searchResults.length
             };
         }
         
-        throw new Error('Search functionality not available');
+        throw new Error('Navigation manager not available');
     }
 
     getCurrentState() {
