@@ -3432,15 +3432,10 @@ class GenomeBrowser {
         let startBottomHeight = 0;
         let topTrack = null;
         let bottomTrack = null;
-        let currentDeltaY = 0; // Track the current delta for visual feedback
-        
-        // Add unique identifier for this splitter's auto-adjust setting
-        const splitterId = `${splitter.getAttribute('data-top-track')}-${splitter.getAttribute('data-bottom-track')}`;
         
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
-            currentDeltaY = 0;
             
             // Set a global flag to prevent track content dragging during splitter resize
             document.body.setAttribute('data-splitter-resizing', 'true');
@@ -3470,11 +3465,24 @@ class GenomeBrowser {
             if (!isResizing || !topTrack || !bottomTrack) return;
             
             const currentY = e.clientY || e.touches[0].clientY;
-            currentDeltaY = currentY - startY;
+            const deltaY = currentY - startY;
             
-            // Only provide visual feedback by moving the splitter position
-            // Do NOT change track heights during dragging
-            splitter.style.transform = `translateY(${currentDeltaY}px)`;
+            const topContent = topTrack.querySelector('.track-content');
+            const bottomContent = bottomTrack.querySelector('.track-content');
+            
+            if (topContent && bottomContent) {
+                // Calculate new heights
+                const newTopHeight = startTopHeight + deltaY;
+                const newBottomHeight = startBottomHeight - deltaY;
+                
+                // Set minimum heights
+                const minHeight = 40;
+                
+                if (newTopHeight >= minHeight && newBottomHeight >= minHeight) {
+                    topContent.style.height = `${newTopHeight}px`;
+                    bottomContent.style.height = `${newBottomHeight}px`;
+                }
+            }
             
             e.preventDefault();
         };
@@ -3490,29 +3498,11 @@ class GenomeBrowser {
             // Remove the global flag to allow track content dragging again
             document.body.removeAttribute('data-splitter-resizing');
             
-            // Reset splitter visual position
-            splitter.style.transform = '';
-            
-            // NOW apply the height changes based on the final delta
-            if (topTrack && bottomTrack && Math.abs(currentDeltaY) > 5) { // Only apply if meaningful drag
-                const topContent = topTrack.querySelector('.track-content');
-                const bottomContent = bottomTrack.querySelector('.track-content');
-                
-                if (topContent && bottomContent) {
-                    const newTopHeight = Math.max(30, startTopHeight + currentDeltaY);
-                    const newBottomHeight = Math.max(30, startBottomHeight - currentDeltaY);
-                    
-                    topContent.style.height = `${newTopHeight}px`;
-                    bottomContent.style.height = `${newBottomHeight}px`;
-                }
-            }
-            
             topTrack = null;
             bottomTrack = null;
-            currentDeltaY = 0;
         };
         
-        // Improved auto-adjust height calculation - only triggered on double-click
+        // Auto-adjust height calculation - triggered on double-click
         const autoAdjustHeight = () => {
             const topTrack = splitter.previousElementSibling;
             const bottomTrack = splitter.nextElementSibling;
@@ -3526,73 +3516,70 @@ class GenomeBrowser {
                     splitter.classList.add('auto-adjusting');
                     
                     // Calculate optimal height for top track based on its content
-                    let optimalHeight = 80; // Increased default minimum
+                    let optimalHeight = 80;
                     
                     // Get track type from data attributes
                     const topTrackType = splitter.getAttribute('data-top-track');
                     
                     switch (topTrackType) {
                         case 'genes':
-                            // For gene tracks, calculate based on number of rows needed
                             const geneElements = topContent.querySelectorAll('.gene-element');
                             if (geneElements.length > 0) {
-                                // Find the maximum row (top position) used and add element height
                                 let maxRow = 0;
-                                let elementHeight = 23; // Default gene element height
+                                let elementHeight = 23;
                                 geneElements.forEach(gene => {
                                     const top = parseInt(gene.style.top) || 0;
                                     const height = parseInt(gene.style.height) || elementHeight;
                                     maxRow = Math.max(maxRow, top + height);
                                 });
-                                optimalHeight = Math.max(100, maxRow + 60); // Increased padding
+                                optimalHeight = Math.max(100, maxRow + 60);
                             } else {
-                                optimalHeight = 100; // Default for empty gene tracks
+                                optimalHeight = 100;
                             }
                             break;
                         case 'reads':
-                            // For reads tracks, calculate based on number of rows
                             const readElements = topContent.querySelectorAll('.read-element');
                             if (readElements.length > 0) {
                                 let maxRow = 0;
-                                let elementHeight = 12; // Default read element height
+                                let elementHeight = 12;
                                 readElements.forEach(read => {
                                     const top = parseInt(read.style.top) || 0;
                                     const height = parseInt(read.style.height) || elementHeight;
                                     maxRow = Math.max(maxRow, top + height);
                                 });
-                                optimalHeight = Math.max(80, maxRow + 40); // Increased padding
+                                optimalHeight = Math.max(80, maxRow + 40);
                             } else {
-                                optimalHeight = 80; // Default for empty reads tracks
+                                optimalHeight = 80;
                             }
                             break;
                         case 'gc':
-                            optimalHeight = 100; // Increased height for GC content
+                            optimalHeight = 100;
                             break;
                         case 'variants':
                             const variantElements = topContent.querySelectorAll('.variant-element');
                             if (variantElements.length > 0) {
-                                optimalHeight = 80; // Good height for variants with data
+                                optimalHeight = 80;
                             } else {
-                                optimalHeight = 60; // Smaller for empty variant tracks
+                                optimalHeight = 60;
                             }
                             break;
                         case 'proteins':
                             const proteinElements = topContent.querySelectorAll('.protein-element');
                             if (proteinElements.length > 0) {
                                 let maxRow = 0;
-                                let elementHeight = 21; // Default protein element height
+                                let elementHeight = 21;
                                 proteinElements.forEach(protein => {
                                     const top = parseInt(protein.style.top) || 0;
                                     const height = parseInt(protein.style.height) || elementHeight;
                                     maxRow = Math.max(maxRow, top + height);
                                 });
-                                optimalHeight = Math.max(90, maxRow + 50); // Increased padding
+                                optimalHeight = Math.max(90, maxRow + 50);
                             } else {
-                                optimalHeight = 90; // Default for empty protein tracks
+                                optimalHeight = 90;
                             }
                             break;
                         default:
-                            optimalHeight = 80; // Increased default
+                            optimalHeight = 80;
                     }
                     
                     // Apply the optimal height with smooth transition
@@ -3604,8 +3591,6 @@ class GenomeBrowser {
                         topContent.style.transition = '';
                         splitter.classList.remove('auto-adjusting');
                     }, 300);
-                    
-                    console.log(`Auto-adjusted ${topTrackType} track to ${optimalHeight}px for splitter ${splitterId}`);
                 }
             }
         };
@@ -3615,41 +3600,62 @@ class GenomeBrowser {
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
         
-        // Touch events for mobile
+        // Touch events for mobile support
         splitter.addEventListener('touchstart', startResize);
         document.addEventListener('touchmove', doResize);
         document.addEventListener('touchend', stopResize);
         
-        // Double-click for auto-adjust - this is the ONLY way to trigger auto-adjust
+        // Double-click for auto-adjust
         splitter.addEventListener('dblclick', autoAdjustHeight);
         
         // Keyboard accessibility
         splitter.setAttribute('tabindex', '0');
         splitter.setAttribute('role', 'separator');
-        splitter.setAttribute('aria-label', 'Resize tracks (double-click to auto-adjust)');
+        splitter.setAttribute('aria-label', 'Resize tracks');
         
         splitter.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                const topContent = splitter.previousElementSibling?.querySelector('.track-content');
-                const bottomContent = splitter.nextElementSibling?.querySelector('.track-content');
+            const step = 10; // pixels to move per keypress
+            let deltaY = 0;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    deltaY = -step;
+                    break;
+                case 'ArrowDown':
+                    deltaY = step;
+                    break;
+                case 'Home':
+                    autoAdjustHeight();
+                    e.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+            
+            e.preventDefault();
+            
+            // Apply keyboard movement
+            const topTrack = splitter.previousElementSibling;
+            const bottomTrack = splitter.nextElementSibling;
+            
+            if (topTrack && bottomTrack) {
+                const topContent = topTrack.querySelector('.track-content');
+                const bottomContent = bottomTrack.querySelector('.track-content');
                 
                 if (topContent && bottomContent) {
-                    const delta = e.key === 'ArrowUp' ? -10 : 10;
                     const currentTopHeight = topContent.offsetHeight;
                     const currentBottomHeight = bottomContent.offsetHeight;
                     
-                    const newTopHeight = Math.max(30, currentTopHeight + delta);
-                    const newBottomHeight = Math.max(30, currentBottomHeight - delta);
+                    const newTopHeight = currentTopHeight + deltaY;
+                    const newBottomHeight = currentBottomHeight - deltaY;
                     
-                    topContent.style.height = `${newTopHeight}px`;
-                    bottomContent.style.height = `${newBottomHeight}px`;
+                    const minHeight = 40;
+                    
+                    if (newTopHeight >= minHeight && newBottomHeight >= minHeight) {
+                        topContent.style.height = `${newTopHeight}px`;
+                        bottomContent.style.height = `${newBottomHeight}px`;
+                    }
                 }
-                
-                e.preventDefault();
-            } else if (e.key === 'Enter' || e.key === ' ') {
-                // Auto-adjust on Enter or Space - separate trigger from manual resizing
-                autoAdjustHeight();
-                e.preventDefault();
             }
         });
     }
