@@ -4625,3 +4625,48 @@ body {
     height: 38px; /* Match typical input height */
     line-height: 1.5; /* Adjust if icon is not centered */
 }
+
+.message-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.copy-message-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.copy-message-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #334155;
+}
+
+.copy-message-btn:active {
+    transform: scale(0.95);
+}
+
+.user-message .message-text {
+    /* Enable text selection and copying */
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}

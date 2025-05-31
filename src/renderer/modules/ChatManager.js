@@ -14,6 +14,9 @@ class ChatManager {
         // Initialize LLM configuration manager
         this.llmConfigManager = new LLMConfigManager();
         
+        // Set global reference for copy button functionality
+        window.chatManager = this;
+        
         this.setupMCPConnection();
         this.initializeUI();
     }
@@ -608,8 +611,11 @@ class ChatManager {
             // Get current genome browser context
             const context = this.getCurrentContext();
             
-            // Send message to configured LLM
-            const response = await this.llmConfigManager.sendMessage(message, context);
+            // Build conversation history including the new message
+            const conversationHistory = this.buildConversationHistory(message);
+            
+            // Send conversation history to configured LLM
+            const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
             
             // Check if the response is a tool call (JSON format)
             const toolCall = this.parseToolCall(response);
@@ -620,8 +626,11 @@ class ChatManager {
                 const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
                 
                 // Send the tool result back to the LLM for a user-friendly response
-                const followUpMessage = `I executed the ${toolCall.tool_name} tool with the following result: ${JSON.stringify(toolResult, null, 2)}. Please provide a user-friendly summary of these results.`;
-                const finalResponse = await this.llmConfigManager.sendMessage(followUpMessage, context);
+                const followUpHistory = [...conversationHistory, 
+                    { role: 'assistant', content: response },
+                    { role: 'user', content: `I executed the ${toolCall.tool_name} tool with the following result: ${JSON.stringify(toolResult, null, 2)}. Please provide a user-friendly summary of these results.` }
+                ];
+                const finalResponse = await this.llmConfigManager.sendMessageWithHistory(followUpHistory, context);
                 
                 return finalResponse;
             }
@@ -631,6 +640,57 @@ class ChatManager {
             console.error('Error communicating with LLM:', error);
             return `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
         }
+    }
+
+    buildConversationHistory(newMessage) {
+        const history = [];
+        
+        // Add system context message
+        const systemMessage = this.buildSystemMessage();
+        history.push({ role: 'system', content: systemMessage });
+        
+        // Add previous conversation history
+        for (const msg of this.messageHistory) {
+            if (msg.sender === 'user') {
+                history.push({ role: 'user', content: msg.message });
+            } else if (msg.sender === 'assistant') {
+                history.push({ role: 'assistant', content: msg.message });
+            }
+        }
+        
+        // Add the new user message
+        history.push({ role: 'user', content: newMessage });
+        
+        return history;
+    }
+
+    buildSystemMessage() {
+        const context = this.getCurrentContext();
+        
+        return `You are an AI assistant for a genome browser application. You have access to the following tools and current state:
+
+Current Genome Browser State:
+- Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
+- Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
+- Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
+- Loaded files: ${context.genomeBrowser.currentState.loadedFiles.length} files
+- Sequence length: ${context.genomeBrowser.currentState.sequenceLength}
+- Annotations count: ${context.genomeBrowser.currentState.annotationsCount}
+- User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
+
+Available Tools:
+${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
+
+When a user asks you to perform an action that requires using one of these tools, respond with a JSON object in this format:
+{
+  "tool_name": "tool_name_here",
+  "parameters": {
+    "param1": "value1",
+    "param2": "value2"
+  }
+}
+
+Otherwise, provide helpful conversational responses about genome analysis, biology, or the current state of the genome browser.`;
     }
 
     parseToolCall(response) {
@@ -756,23 +816,59 @@ class ChatManager {
         messageDiv.className = `message ${sender}-message ${isError ? 'error' : ''}`;
         
         const timestamp = new Date().toLocaleTimeString();
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
         messageDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-icon">
                     <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
                 </div>
-                <div class="message-text">
+                <div class="message-text" id="${messageId}">
                     ${this.formatMessage(message)}
                 </div>
-                <div class="message-time">${timestamp}</div>
+                <div class="message-actions">
+                    <button class="copy-message-btn" onclick="chatManager.copyMessage('${messageId}')" title="Copy message">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
             </div>
+            <div class="message-time">${timestamp}</div>
         `;
         
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
-        this.messageHistory.push({ message, sender, timestamp });
+        this.messageHistory.push({ message, sender, timestamp, messageId });
+    }
+
+    copyMessage(messageId) {
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            // Get the text content, stripping HTML but preserving line breaks
+            let textContent = messageElement.innerText || messageElement.textContent;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(textContent).then(() => {
+                // Show brief success indication
+                const copyBtn = messageElement.parentElement.querySelector('.copy-message-btn');
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                copyBtn.style.color = '#10b981';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.style.color = '';
+                }, 1000);
+            }).catch(err => {
+                console.error('Failed to copy message: ', err);
+                // Fallback: select the text
+                const range = document.createRange();
+                range.selectNodeContents(messageElement);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+        }
     }
 
     formatMessage(message) {

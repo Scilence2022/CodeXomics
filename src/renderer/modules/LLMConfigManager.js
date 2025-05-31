@@ -512,6 +512,32 @@ class LLMConfigManager {
         }
     }
 
+    async sendMessageWithHistory(conversationHistory, context = null) {
+        if (!this.currentProvider || !this.providers[this.currentProvider].enabled) {
+            throw new Error('No LLM provider configured');
+        }
+
+        const provider = this.providers[this.currentProvider];
+        
+        try {
+            switch (this.currentProvider) {
+                case 'openai':
+                    return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context);
+                case 'anthropic':
+                    return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context);
+                case 'google':
+                    return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context);
+                case 'local':
+                    return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
+                default:
+                    throw new Error('Unknown provider type');
+            }
+        } catch (error) {
+            console.error('Error sending message with history to LLM:', error);
+            throw error;
+        }
+    }
+
     async sendOpenAIMessage(provider, message, context) {
         const messages = this.buildMessages(message, context);
         console.log('Sending to OpenAI - Request Payload:', JSON.stringify({
@@ -530,6 +556,36 @@ class LLMConfigManager {
             body: JSON.stringify({
                 model: provider.model,
                 messages: messages,
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    async sendOpenAIMessageWithHistory(provider, conversationHistory, context) {
+        console.log('Sending to OpenAI - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: conversationHistory,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: conversationHistory,
                 max_tokens: 2000,
                 temperature: 0.7
             })
@@ -573,6 +629,41 @@ class LLMConfigManager {
         return data.content[0].text;
     }
 
+    async sendAnthropicMessageWithHistory(provider, conversationHistory, context) {
+        // Anthropic requires separate system message
+        const systemMessage = conversationHistory.find(msg => msg.role === 'system');
+        const messages = conversationHistory.filter(msg => msg.role !== 'system');
+        
+        const payload = {
+            model: provider.model,
+            max_tokens: 2000,
+            messages: messages
+        };
+        
+        if (systemMessage) {
+            payload.system = systemMessage.content;
+        }
+        
+        console.log('Sending to Anthropic - Request Payload:', JSON.stringify(payload, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/v1/messages`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': provider.apiKey,
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.content[0].text;
+    }
+
     async sendGoogleMessage(provider, message, context) {
         const prompt = this.buildGooglePrompt(message, context);
         const payload = {
@@ -584,6 +675,59 @@ class LLMConfigManager {
                 temperature: 0.7
             }
         };
+        console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
+        
+        const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('Google API Error:', response.status, errorBody);
+            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
+        }
+
+        const data = await response.json();
+        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+            return data.candidates[0].content.parts[0].text;
+        } else {
+            console.error('Invalid response structure from Google API:', data);
+            throw new Error('Invalid response structure from Google API. Check console for details.');
+        }
+    }
+
+    async sendGoogleMessageWithHistory(provider, conversationHistory, context) {
+        // Google uses a different conversation format
+        const contents = [];
+        
+        for (const message of conversationHistory) {
+            if (message.role === 'system') continue; // Skip system messages for Google
+            
+            let role = 'user';
+            if (message.role === 'assistant') {
+                role = 'model';
+            }
+            
+            contents.push({
+                role: role,
+                parts: [{ text: message.content }]
+            });
+        }
+        
+        const payload = {
+            contents: contents,
+            generationConfig: {
+                maxOutputTokens: 2000,
+                temperature: 0.7
+            }
+        };
+        
         console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
         
         const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
@@ -653,6 +797,50 @@ class LLMConfigManager {
             return data.choices[0].message;
         } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
             // Standard text response
+            return data.choices[0].message.content;
+        } else {
+            console.error('Unexpected response structure from Local LLM:', data);
+            throw new Error('Unexpected response structure from Local LLM. Check console for details.');
+        }
+    }
+
+    async sendLocalMessageWithHistory(provider, conversationHistory, context) {
+        const apiUrl = `${provider.baseUrl}/chat/completions`;
+        const payload = {
+            model: provider.model,
+            messages: conversationHistory,
+            max_tokens: 2000,
+            temperature: 0.7,
+            stream: false
+        };
+        
+        console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
+        console.log('Sending to Local LLM - Request Payload:', JSON.stringify(payload, null, 2));
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: provider.apiKey ? {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            } : {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Local LLM API Error (${response.status}): ${errorBody}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
+        }
+
+        const data = await response.json();
+        console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
+
+        if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
+            console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
+            return data.choices[0].message;
+        } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
             return data.choices[0].message.content;
         } else {
             console.error('Unexpected response structure from Local LLM:', data);
