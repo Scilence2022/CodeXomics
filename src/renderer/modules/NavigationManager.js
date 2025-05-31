@@ -21,6 +21,8 @@ class NavigationManager {
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            // Update navigation bar
+            this.genomeBrowser.genomeNavigationBar.update();
         }
     }
 
@@ -37,6 +39,8 @@ class NavigationManager {
             this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
             this.genomeBrowser.updateStatistics(currentChr, sequence);
             this.genomeBrowser.displayGenomeView(currentChr, sequence);
+            // Update navigation bar
+            this.genomeBrowser.genomeNavigationBar.update();
         }
     }
 
@@ -54,6 +58,8 @@ class NavigationManager {
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            // Update navigation bar
+            this.genomeBrowser.genomeNavigationBar.update();
         }
     }
 
@@ -71,6 +77,8 @@ class NavigationManager {
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
         this.genomeBrowser.updateStatistics(currentChr, sequence);
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        // Update navigation bar
+        this.genomeBrowser.genomeNavigationBar.update();
     }
 
     resetZoom() {
@@ -81,6 +89,8 @@ class NavigationManager {
         this.genomeBrowser.currentPosition = { start: 0, end: Math.min(10000, sequence.length) };
         this.genomeBrowser.updateStatistics(currentChr, sequence);
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        // Update navigation bar
+        this.genomeBrowser.genomeNavigationBar.update();
     }
 
     // Position navigation
@@ -139,6 +149,8 @@ class NavigationManager {
         this.genomeBrowser.currentPosition = { start, end };
         this.genomeBrowser.updateStatistics(currentChr, sequence);
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        // Update navigation bar
+        this.genomeBrowser.genomeNavigationBar.update();
     }
 
     // Search functionality
@@ -357,6 +369,8 @@ class NavigationManager {
         this.genomeBrowser.currentPosition = { start, end };
         this.genomeBrowser.updateStatistics(currentChr, sequence);
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        // Update navigation bar
+        this.genomeBrowser.genomeNavigationBar.update();
         
         this.currentSearchIndex = index;
         
@@ -464,6 +478,8 @@ class NavigationManager {
                     this.dragUpdateTimeout = setTimeout(() => {
                         this.genomeBrowser.updateStatistics(chromosome, sequence);
                         this.genomeBrowser.displayGenomeView(chromosome, sequence);
+                        // Update navigation bar
+                        this.genomeBrowser.genomeNavigationBar.update();
                         this.dragUpdateTimeout = null;
                     }, 32); // Reduced frequency for smoother performance
                 }
@@ -493,6 +509,8 @@ class NavigationManager {
             const sequence = this.genomeBrowser.currentSequence[chromosome];
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
+            // Update navigation bar
+            this.genomeBrowser.genomeNavigationBar.update();
             
             e.preventDefault();
             e.stopPropagation();
@@ -542,6 +560,8 @@ class NavigationManager {
             this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
+            // Update navigation bar
+            this.genomeBrowser.genomeNavigationBar.update();
         });
         
         // Store cleanup function for later removal if needed

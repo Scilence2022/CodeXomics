@@ -9,6 +9,7 @@ class GenomeBrowser {
         this.fileManager = new FileManager(this);
         this.trackRenderer = new TrackRenderer(this);
         this.navigationManager = new NavigationManager(this);
+        this.genomeNavigationBar = new GenomeNavigationBar(this);
         this.uiManager = new UIManager(this);
         this.sequenceUtils = new SequenceUtils(this);
         this.exportManager = new ExportManager(this);
@@ -376,6 +377,9 @@ class GenomeBrowser {
     displayGenomeView(chromosome, sequence) {
         // Create EcoCyc-like genome browser view
         const container = document.getElementById('genomeViewer');
+        
+        // Show and update the navigation bar
+        this.genomeNavigationBar.show(chromosome, sequence.length);
         
         // PRESERVE TRACK HEIGHTS before clearing container
         const preservedHeights = new Map();

@@ -4670,3 +4670,134 @@ body {
     -moz-user-select: text;
     -ms-user-select: text;
 }
+
+/* ===== EXISTING STYLES ABOVE ===== */
+
+/* Genome Navigation Bar */
+.genome-navigation-bar {
+    position: relative;
+    width: 100%;
+    height: 60px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.navigation-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: transparent;
+    cursor: crosshair;
+    user-select: none;
+}
+
+.navigation-canvas:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.position-indicator {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #ef4444;
+    pointer-events: none;
+    z-index: 10;
+    display: none;
+}
+
+.range-indicator {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.2);
+    border: 2px solid #3b82f6;
+    border-top: none;
+    border-bottom: none;
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+}
+
+.navigation-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+    z-index: 20;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+.navigation-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid rgba(0, 0, 0, 0.8);
+}
+
+/* Genome viewer section adjustments */
+.genome-viewer-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.genome-viewer {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+/* Responsive adjustments for navigation bar */
+@media (max-width: 768px) {
+    .genome-navigation-bar {
+        height: 50px;
+        margin-bottom: 6px;
+    }
+    
+    .navigation-tooltip {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+}
+
+/* High DPI display support */
+@media (min-resolution: 2dppx) {
+    .navigation-canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Dark mode support (if implemented later) */
+@media (prefers-color-scheme: dark) {
+    .genome-navigation-bar {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    .navigation-tooltip {
+        background: rgba(255, 255, 255, 0.9);
+        color: #000;
+    }
+    
+    .navigation-tooltip::before {
+        border-bottom-color: rgba(255, 255, 255, 0.9);
+    }
+}
