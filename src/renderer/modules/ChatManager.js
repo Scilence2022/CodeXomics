@@ -7,15 +7,20 @@ class ChatManager {
         this.mcpSocket = null;
         this.clientId = null;
         this.isConnected = false;
-        this.messageHistory = [];
         this.activeRequests = new Map();
         this.pendingMessages = [];
         
-        // Initialize LLM configuration manager
-        this.llmConfigManager = new LLMConfigManager();
+        // Initialize configuration manager
+        this.configManager = new ConfigManager();
+        
+        // Initialize LLM configuration manager with config integration
+        this.llmConfigManager = new LLMConfigManager(this.configManager);
         
         // Set global reference for copy button functionality
         window.chatManager = this;
+        
+        // Load chat history from config
+        this.loadChatHistory();
         
         this.setupMCPConnection();
         this.initializeUI();
@@ -508,6 +513,14 @@ class ChatManager {
                             <i class="fas fa-trash"></i>
                             Clear Chat
                         </button>
+                        <button id="exportChatBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-download"></i>
+                            Export
+                        </button>
+                        <button id="configBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </button>
                         <button id="suggestionsBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-lightbulb"></i>
                             Suggestions
@@ -562,6 +575,14 @@ class ChatManager {
 
         document.getElementById('clearChatBtn')?.addEventListener('click', () => {
             this.clearChat();
+        });
+
+        document.getElementById('exportChatBtn')?.addEventListener('click', () => {
+            this.exportChatHistory();
+        });
+
+        document.getElementById('configBtn')?.addEventListener('click', () => {
+            this.showConfigOptions();
         });
 
         document.getElementById('suggestionsBtn')?.addEventListener('click', () => {
@@ -791,8 +812,13 @@ class ChatManager {
         const systemMessage = this.buildSystemMessage();
         history.push({ role: 'system', content: systemMessage });
         
-        // Add previous conversation history
-        for (const msg of this.messageHistory) {
+        // Get conversation memory setting
+        const conversationMemory = this.configManager.get('llm.conversationMemory', 10);
+        
+        // Add previous conversation history from config
+        const chatHistory = this.configManager.getChatHistory(conversationMemory * 2); // Get more to account for user+assistant pairs
+        
+        for (const msg of chatHistory) {
             if (msg.sender === 'user') {
                 history.push({ role: 'user', content: msg.message });
             } else if (msg.sender === 'assistant') {
@@ -1023,34 +1049,13 @@ If the user is asking a general question or doesn't need a tool, respond normall
     }
 
     addMessageToChat(message, sender, isError = false) {
-        const messagesContainer = document.getElementById('chatMessages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message ${isError ? 'error' : ''}`;
+        const timestamp = new Date().toISOString();
         
-        const timestamp = new Date().toLocaleTimeString();
-        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        // Add to configuration manager for persistence
+        const messageId = this.configManager.addChatMessage(message, sender, timestamp);
         
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <div class="message-icon">
-                    <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
-                </div>
-                <div class="message-text" id="${messageId}">
-                    ${this.formatMessage(message)}
-                </div>
-                <div class="message-actions">
-                    <button class="copy-message-btn" onclick="chatManager.copyMessage('${messageId}')" title="Copy message">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="message-time">${timestamp}</div>
-        `;
-        
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        this.messageHistory.push({ message, sender, timestamp, messageId });
+        // Display the message in UI
+        this.displayChatMessage(message, sender, timestamp, messageId);
     }
 
     copyMessage(messageId) {
@@ -1128,7 +1133,74 @@ If the user is asking a general question or doesn't need a tool, respond normall
         if (welcomeMessage) {
             messagesContainer.appendChild(welcomeMessage);
         }
-        this.messageHistory = [];
+        
+        // Clear chat history from config
+        this.configManager.clearChatHistory();
+    }
+
+    /**
+     * Export chat history
+     */
+    async exportChatHistory(format = 'json') {
+        try {
+            const history = this.configManager.getChatHistory();
+            const exportData = {
+                exported: new Date().toISOString(),
+                messageCount: history.length,
+                format: format,
+                messages: history
+            };
+
+            let content, filename, mimeType;
+
+            switch (format.toLowerCase()) {
+                case 'json':
+                    content = JSON.stringify(exportData, null, 2);
+                    filename = `chat-history-${new Date().toISOString().split('T')[0]}.json`;
+                    mimeType = 'application/json';
+                    break;
+                    
+                case 'txt':
+                    content = history.map(msg => {
+                        const time = new Date(msg.timestamp).toLocaleString();
+                        return `[${time}] ${msg.sender.toUpperCase()}: ${msg.message}`;
+                    }).join('\n\n');
+                    filename = `chat-history-${new Date().toISOString().split('T')[0]}.txt`;
+                    mimeType = 'text/plain';
+                    break;
+                    
+                case 'csv':
+                    const csvHeader = 'Timestamp,Sender,Message\n';
+                    const csvContent = history.map(msg => {
+                        const escapedMessage = msg.message.replace(/"/g, '""');
+                        return `"${msg.timestamp}","${msg.sender}","${escapedMessage}"`;
+                    }).join('\n');
+                    content = csvHeader + csvContent;
+                    filename = `chat-history-${new Date().toISOString().split('T')[0]}.csv`;
+                    mimeType = 'text/csv';
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported export format: ${format}`);
+            }
+
+            // Download the file
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log(`Chat history exported as ${format.toUpperCase()}: ${history.length} messages`);
+            return true;
+        } catch (error) {
+            console.error('Error exporting chat history:', error);
+            throw error;
+        }
     }
 
     showSuggestions() {
@@ -1154,5 +1226,153 @@ If the user is asking a general question or doesn't need a tool, respond normall
             </div>`,
             'assistant'
         );
+    }
+
+    /**
+     * Load chat history from configuration
+     */
+    loadChatHistory() {
+        try {
+            const history = this.configManager.getChatHistory();
+            this.displayChatHistory(history);
+            console.log(`Loaded ${history.length} chat messages from configuration`);
+        } catch (error) {
+            console.error('Error loading chat history:', error);
+        }
+    }
+
+    /**
+     * Display chat history in the UI
+     */
+    displayChatHistory(history) {
+        const messagesContainer = document.getElementById('chatMessages');
+        if (!messagesContainer) return;
+
+        // Clear existing messages except welcome message
+        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+        messagesContainer.innerHTML = '';
+        if (welcomeMessage) {
+            messagesContainer.appendChild(welcomeMessage);
+        }
+
+        // Display historical messages
+        history.forEach(msg => {
+            this.displayChatMessage(msg.message, msg.sender, msg.timestamp, msg.id);
+        });
+
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    /**
+     * Display a single chat message (used for history and new messages)
+     */
+    displayChatMessage(message, sender, timestamp, messageId) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        
+        const displayTime = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+        const displayId = messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <div class="message-icon">
+                    <i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i>
+                </div>
+                <div class="message-text" id="${displayId}">
+                    ${this.formatMessage(message)}
+                </div>
+                <div class="message-actions">
+                    <button class="copy-message-btn" onclick="chatManager.copyMessage('${displayId}')" title="Copy message">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="message-time">${displayTime}</div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    showConfigOptions() {
+        const options = [
+            'Export chat history as JSON',
+            'Export chat history as TXT', 
+            'Export chat history as CSV',
+            'Clear all chat history',
+            'Export all configurations',
+            'Show config summary',
+            'Debug storage info'
+        ];
+
+        const optionsHTML = options.map((option, index) => 
+            `<button class="suggestion-btn" onclick="chatManager.handleConfigOption(${index})">${option}</button>`
+        ).join('');
+
+        this.addMessageToChat(
+            `<div class="config-options-container">
+                <p><i class="fas fa-cog"></i> Configuration Options:</p>
+                ${optionsHTML}
+            </div>`,
+            'assistant'
+        );
+    }
+
+    async handleConfigOption(optionIndex) {
+        try {
+            switch(optionIndex) {
+                case 0: // Export JSON
+                    await this.exportChatHistory('json');
+                    this.addMessageToChat('✅ Chat history exported as JSON', 'assistant');
+                    break;
+                case 1: // Export TXT
+                    await this.exportChatHistory('txt');
+                    this.addMessageToChat('✅ Chat history exported as TXT', 'assistant');
+                    break;
+                case 2: // Export CSV
+                    await this.exportChatHistory('csv');
+                    this.addMessageToChat('✅ Chat history exported as CSV', 'assistant');
+                    break;
+                case 3: // Clear history
+                    this.clearChat();
+                    this.addMessageToChat('🗑️ Chat history cleared', 'assistant');
+                    break;
+                case 4: // Export all config
+                    await this.configManager.exportConfig();
+                    this.addMessageToChat('✅ All configurations exported', 'assistant');
+                    break;
+                case 5: // Show summary
+                    const summary = this.configManager.getConfigSummary();
+                    this.addMessageToChat(
+                        `📊 **Configuration Summary:**\n` +
+                        `• Version: ${summary.version}\n` +
+                        `• LLM Provider: ${summary.llmProvider || 'None'}\n` +
+                        `• Enabled Providers: ${summary.llmProvidersEnabled.join(', ') || 'None'}\n` +
+                        `• Theme: ${summary.theme}\n` +
+                        `• Chat History: ${summary.chatHistoryLength} messages\n` +
+                        `• Recent Files: ${summary.recentFilesCount}\n` +
+                        `• Debug Mode: ${summary.debugMode ? 'On' : 'Off'}`,
+                        'assistant'
+                    );
+                    break;
+                case 6: // Debug storage info
+                    const storageInfo = this.configManager.getStorageInfo();
+                    this.addMessageToChat(
+                        `🔧 **Storage Debug Info:**\n` +
+                        `• Is Electron: ${storageInfo.isElectron}\n` +
+                        `• Using Files: ${storageInfo.usingFiles}\n` +
+                        `• Using localStorage: ${storageInfo.usingLocalStorage}\n` +
+                        `• Is Initialized: ${storageInfo.isInitialized}\n` +
+                        `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
+                        `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
+                        'assistant'
+                    );
+                    break;
+            }
+        } catch (error) {
+            this.addMessageToChat(`❌ Error: ${error.message}`, 'assistant', true);
+        }
     }
 } 

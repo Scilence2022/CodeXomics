@@ -2,7 +2,8 @@
  * LLMConfigManager - Manages LLM provider configurations and API communication
  */
 class LLMConfigManager {
-    constructor() {
+    constructor(configManager = null) {
+        this.configManager = configManager;
         this.currentProvider = null;
         this.providers = {
             openai: {
@@ -36,8 +37,31 @@ class LLMConfigManager {
             }
         };
         
-        this.loadConfiguration();
-        this.initializeUI();
+        // Initialize asynchronously to wait for ConfigManager
+        this.initializeAsync();
+    }
+
+    async initializeAsync() {
+        try {
+            // Wait for ConfigManager to be initialized if available
+            if (this.configManager && this.configManager.waitForInitialization) {
+                console.log('LLMConfigManager: Waiting for ConfigManager initialization...');
+                await this.configManager.waitForInitialization();
+                console.log('LLMConfigManager: ConfigManager initialized, loading configuration...');
+            }
+            
+            // Load configuration after ConfigManager is ready
+            this.loadConfiguration();
+            console.log('LLMConfigManager: Configuration loaded');
+            
+            // Initialize UI
+            this.initializeUI();
+        } catch (error) {
+            console.error('LLMConfigManager initialization error:', error);
+            // Fallback to immediate initialization
+            this.loadConfiguration();
+            this.initializeUI();
+        }
     }
 
     initializeUI() {
@@ -211,19 +235,57 @@ class LLMConfigManager {
     }
 
     loadConfiguration() {
+        console.log('=== LLMConfigManager.loadConfiguration Debug Start ===');
         try {
-            const savedConfig = localStorage.getItem('llmConfiguration');
-            if (savedConfig) {
-                const config = JSON.parse(savedConfig);
-                this.providers = { ...this.providers, ...config.providers };
-                this.currentProvider = config.currentProvider;
+            if (this.configManager) {
+                console.log('Using ConfigManager for loading LLM configuration');
+                // Use ConfigManager if available
+                const llmConfig = this.configManager.get('llm');
+                console.log('Retrieved LLM config from ConfigManager:', llmConfig);
+                
+                if (llmConfig && llmConfig.providers) {
+                    console.log('LLM config has providers, merging...');
+                    console.log('Existing providers:', Object.keys(this.providers));
+                    console.log('Loaded providers:', Object.keys(llmConfig.providers));
+                    
+                    this.providers = { ...this.providers, ...llmConfig.providers };
+                    this.currentProvider = llmConfig.currentProvider;
+                    
+                    console.log('After merge - current provider:', this.currentProvider);
+                    console.log('After merge - providers:', Object.keys(this.providers));
+                    
+                    // Debug each provider's status
+                    Object.entries(this.providers).forEach(([key, provider]) => {
+                        console.log(`Provider ${key}:`, {
+                            enabled: provider.enabled,
+                            hasApiKey: !!provider.apiKey,
+                            model: provider.model
+                        });
+                    });
+                } else {
+                    console.log('No LLM providers found in ConfigManager config');
+                }
+            } else {
+                console.log('No ConfigManager available, using localStorage fallback');
+                // Fallback to localStorage
+                const savedConfig = localStorage.getItem('llmConfiguration');
+                if (savedConfig) {
+                    console.log('Found LLM configuration in localStorage');
+                    const config = JSON.parse(savedConfig);
+                    this.providers = { ...this.providers, ...config.providers };
+                    this.currentProvider = config.currentProvider;
+                    console.log('Loaded from localStorage - current provider:', this.currentProvider);
+                } else {
+                    console.log('No LLM configuration found in localStorage');
+                }
             }
         } catch (error) {
             console.error('Error loading LLM configuration:', error);
         }
+        console.log('=== LLMConfigManager.loadConfiguration Debug End ===');
     }
 
-    saveConfiguration() {
+    async saveConfiguration() {
         try {
             // Collect configuration from UI
             const currentTab = document.querySelector('.tab-button.active').dataset.provider;
@@ -267,12 +329,21 @@ class LLMConfigManager {
                 this.currentProvider = currentTab;
             }
 
-            // Save to localStorage
-            const config = {
-                providers: this.providers,
-                currentProvider: this.currentProvider
-            };
-            localStorage.setItem('llmConfiguration', JSON.stringify(config));
+            if (this.configManager) {
+                // Use ConfigManager if available (now with async support)
+                await this.configManager.set('llm.providers', this.providers);
+                await this.configManager.set('llm.currentProvider', this.currentProvider);
+                await this.configManager.saveConfig();
+                console.log('Configuration saved via ConfigManager');
+            } else {
+                // Fallback to localStorage
+                const config = {
+                    providers: this.providers,
+                    currentProvider: this.currentProvider
+                };
+                localStorage.setItem('llmConfiguration', JSON.stringify(config));
+                console.log('Configuration saved to localStorage');
+            }
             
             this.updateUI();
             this.hideConfigModal();
@@ -281,7 +352,7 @@ class LLMConfigManager {
             this.showNotification('Configuration saved successfully!', 'success');
         } catch (error) {
             console.error('Error saving LLM configuration:', error);
-            this.showNotification('Error saving configuration', 'error');
+            this.showNotification('Error saving configuration: ' + error.message, 'error');
         }
     }
 
