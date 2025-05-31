@@ -14,7 +14,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true
+      enableRemoteModule: true,
+      webSecurity: false,
+      cache: false
     },
     icon: path.join(__dirname, '../assets/icon.png'),
     show: false
@@ -23,15 +25,22 @@ function createWindow() {
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
+  // Clear cache aggressively to ensure fresh file loading
+  mainWindow.webContents.session.clearCache();
+  mainWindow.webContents.session.clearStorageData();
+  
+  // Force reload after cache clear
+  mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.webContents.reload();
+  });
+
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    mainWindow.webContents.openDevTools();
-  }
+  // Open DevTools to debug UI issues (temporarily enabled for debugging)
+  mainWindow.webContents.openDevTools();
 
   // Handle window closed
   mainWindow.on('closed', () => {

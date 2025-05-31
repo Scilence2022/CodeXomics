@@ -17,6 +17,7 @@ A modern, cross-platform genome browser built with Electron, featuring an EcoCyc
 - **Resizable track splitters** for customizing track heights
 - **Gene track** showing genes, CDS, and mRNA features with operon detection
 - **User-defined features** - Create custom annotations with sequence selection
+- **AI Assistant** - Natural language interaction with LLM integration
 - **Sequence track** with color-coded nucleotides and interactive selection
 - **Ruler track** for position reference
 - **GC content visualization** for large regions
@@ -39,6 +40,33 @@ A modern, cross-platform genome browser built with Electron, featuring an EcoCyc
 - **Feature counting** (genes, CDS, variants)
 - **Sequence export** in FASTA format
 - **Copy to clipboard** functionality
+
+## 🤖 AI Assistant
+
+The Genome Browser includes an intelligent AI assistant that provides natural language interaction with your genomic data.
+
+### LLM Configuration
+Configure your preferred AI provider via **Options → Configure LLMs**:
+
+- **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4, GPT-3.5 Turbo
+- **Anthropic**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku  
+- **Google**: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini Pro
+- **Local LLMs**: Ollama, LMStudio, or any OpenAI-compatible API
+
+### Features
+- **Natural Language Queries**: "Show me gene ABC123", "What's the GC content of chr1:1000-2000?"
+- **Smart Navigation**: Navigate to genomic positions using conversational commands
+- **Data Analysis**: Get insights about genomic regions and features
+- **Export Assistance**: Generate and export data in various formats
+- **Annotation Help**: Create custom annotations with AI guidance
+
+### Quick Start
+1. Click **Options** → **Configure LLMs** in the header
+2. Choose your provider and enter API credentials
+3. Test the connection and save
+4. Click the robot icon 🤖 in the toolbar to start chatting
+
+For detailed setup and usage instructions, see [LLM_CHAT_INTEGRATION.md](LLM_CHAT_INTEGRATION.md).
 
 ## Installation
 
@@ -84,7 +112,16 @@ npm start
 - **Sequence selection** - Click and drag in the sequence panel to select regions
 - **Feature creation modal** - Fill in details like name, type, position, strand, and description
 - **Visual distinction** - User-created features appear with dashed borders and green highlighting
-- **Persistent during session** - Added features remain visible until browser restart
+- **Persistent during session** - Added features remain until browser restart
+
+### AI Assistant & Natural Language Interaction
+- **Smart Chat Interface** - Modern chat UI with typing indicators and connection status
+- **Natural Language Commands** - "Navigate to chr1:1000-2000", "Find gene recA", "What's the GC content?"
+- **MCP Integration** - Model Context Protocol for seamless LLM communication
+- **Comprehensive Tools** - Navigation, search, analysis, annotation, and export capabilities
+- **Real-time Interaction** - Live updates and state synchronization with the browser
+- **Multiple LLM Support** - Compatible with OpenAI, Anthropic, and custom models
+- **Quick Start** - Run `npm run start-with-mcp` to launch with AI features enabled
 
 ### Resizing Tracks
 - **Track splitters** appear between each visible track
@@ -96,6 +133,7 @@ npm start
 ## Documentation
 
 For detailed information about specific features:
+- [LLM_CHAT_INTEGRATION.md](LLM_CHAT_INTEGRATION.md) - AI Assistant and MCP integration
 - [USER_DEFINED_FEATURES.md](USER_DEFINED_FEATURES.md) - Creating custom annotations
 - [TRACK_SPLITTERS.md](TRACK_SPLITTERS.md) - Track height customization
 - [SEARCH_FUNCTIONALITY.md](SEARCH_FUNCTIONALITY.md) - Search and navigation

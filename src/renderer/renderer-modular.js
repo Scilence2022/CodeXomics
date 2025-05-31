@@ -1,29 +1,86 @@
 const { ipcRenderer } = require('electron');
 
+// Force reload - timestamp: 2025-05-31 15:01
 /**
  * Main GenomeBrowser class - now modular and organized
  */
 class GenomeBrowser {
     constructor() {
+        this.fileManager = new FileManager(this);
+        this.trackRenderer = new TrackRenderer(this);
+        this.navigationManager = new NavigationManager(this);
+        this.uiManager = new UIManager(this);
+        this.sequenceUtils = new SequenceUtils(this);
+        this.exportManager = new ExportManager(this);
+        
+        // State
+        this.currentChromosome = null;
+        this.currentSequence = '';
+        this.currentAnnotations = [];
+        this.currentPosition = { start: 0, end: 0 };
+        this.loadedFiles = [];
+        this.sequenceLength = 0;
+        this.operons = [];
+        this.selectedGene = null;
+        this.userDefinedFeatures = {};
+        this.nextFeatureId = 1;
+        this.sequenceSelection = { start: null, end: null, active: false };
+
+        // Track visibility state
+        this.trackVisibility = {
+            genes: true,
+            gc: true,
+            variants: false,
+            reads: false,
+            proteins: false,
+            bottomSequence: true
+        };
+
+        // Feature type visibility
+        this.featureVisibility = {
+            genes: false,
+            CDS: true,
+            mRNA: true,
+            tRNA: true,
+            rRNA: true,
+            promoter: true,
+            terminator: true,
+            regulatory: true,
+            other: true
+        };
+
         this.currentFile = null;
-        this.currentSequence = {};
-        this.currentAnnotations = {};
         this.currentVariants = {};
         this.currentReads = {};
-        this.currentPosition = { start: 0, end: 1000 };
         this.searchResults = [];
         this.currentSearchIndex = 0;
-        this.zoomLevel = 1;
         
-        // Default visible tracks - show Genes & Features and GC Content by default
-        this.visibleTracks = new Set(['genes', 'gc', 'bottomSequence']);
+        // Visual settings
+        this.viewMode = 'overview'; // 'overview' or 'detail'
+        this.basePairsPerPixel = 10;
+        this.minBasePairsPerPixel = 0.1;
+        this.maxBasePairsPerPixel = 1000;
+        this.ZOOM_SENSITIVITY = 0.1;
         
-        // Separate control for bottom sequence display
-        this.showBottomSequence = true;
+        this._cachedCharWidth = null; // Cache for character width measurement
         
-        // Gene filter settings - hide "gene" features by default since they're represented by CDS, ncRNA, etc.
+        // Operon color assignment
+        this.operonColors = [
+            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+            '#e67e22', '#1abc9c', '#34495e', '#f1c40f', '#e91e63'
+        ];
+        this.operonColorIndex = 0;
+        this.operonColorMap = new Map(); // Map operon names to colors
+        
+        // User-defined features storage
+        this.currentSequenceSelection = null; // Track current sequence selection
+        
+        // Initialize track visibility
+        this.visibleTracks = new Set(['genes', 'gc']); // Default visible tracks
+        
+        // Initialize gene filters (corresponds to featureVisibility)
         this.geneFilters = {
-            genes: false,  // Hide gene features by default
+            genes: false,
             CDS: true,
             mRNA: true,
             tRNA: true,
@@ -34,53 +91,91 @@ class GenomeBrowser {
             other: true
         };
         
-        this._cachedCharWidth = null; // Cache for character width measurement
-        this.selectedGene = null; // Track currently selected gene
-        
-        // Operon color assignment
-        this.operonColors = [
-            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', 
-            '#1abc9c', '#e67e22', '#34495e', '#f1c40f', '#e91e63',
-            '#8e44ad', '#16a085', '#27ae60', '#2980b9', '#d35400',
-            '#c0392b', '#7f8c8d', '#f39c12', '#8e44ad', '#2c3e50'
-        ];
-        this.operonAssignments = new Map(); // Map operon names to color indices
-        this.nextColorIndex = 0;
-        
-        // User-defined features storage
-        this.userDefinedFeatures = {}; // Organized by chromosome
-        this.currentSequenceSelection = null; // Track current sequence selection
-        
-        // Initialize modules
-        this.fileManager = new FileManager(this);
-        this.trackRenderer = new TrackRenderer(this);
-        this.navigationManager = new NavigationManager(this);
-        this.uiManager = new UIManager(this);
-        this.sequenceUtils = new SequenceUtils(this);
-        this.exportManager = new ExportManager(this);
+        // Initialize bottom sequence visibility
+        this.showBottomSequence = true;
         
         this.init();
     }
 
     init() {
+        // Force reload timestamp: 2025-05-31-15:05
+        console.log('🚀 GenomeBrowser initialization starting...');
+        
+        // Step 1: Setup basic event listeners
+        console.log('📝 Setting up event listeners...');
         this.setupEventListeners();
+        
+        // Step 2: Setup feature filters
+        console.log('🔧 Setting up feature filter listeners...');
+        this.setupFeatureFilterListeners();
+        
+        // Step 3: Initialize user features
+        console.log('👤 Initializing user features...');
+        this.initializeUserFeatures();
+        
+        // Step 4: Initialize LLM configuration
+        console.log('🤖 About to initialize LLMConfigManager...');
+        try {
+            this.llmConfigManager = new LLMConfigManager();
+            console.log('✅ LLMConfigManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing LLMConfigManager:', error);
+        }
+        
+        // Step 5: Initialize ChatManager
+        console.log('💬 About to initialize ChatManager...');
+        try {
+            this.chatManager = new ChatManager(this);
+            console.log('✅ ChatManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing ChatManager:', error);
+        }
+
+        // Step 6: Setup IPC communication
+        console.log('📡 Setting up IPC communication...');
         this.setupIPC();
         this.updateStatus('Ready');
         
-        // Make this instance globally available for action buttons
+        // Step 7: Make globally available
+        console.log('🌐 Making instance globally available...');
         window.genomeBrowser = this;
+        window.genomeApp = this; // For compatibility with ChatManager
         
-        // Initialize UI components
+        // Step 8: Initialize UI components
+        console.log('🎨 Initializing UI components...');
         this.uiManager.initializeSplitter();
         this.uiManager.initializeHorizontalSplitter();
         
-        // Initialize user-defined features functionality
-        this.initializeUserFeatures();
-        
-        // Add window resize listener for responsive sequence display
+        // Step 9: Add resize listener
+        console.log('📏 Adding window resize listener...');
         window.addEventListener('resize', () => {
             this.uiManager.handleWindowResize();
         });
+        
+        // Step 10: Debug Options button after delay
+        console.log('⏱️ Setting up Options button debug...');
+        setTimeout(() => {
+            const optionsBtn = document.getElementById('optionsBtn');
+            console.log('🔍 Debug: Options button found:', !!optionsBtn);
+            if (optionsBtn) {
+                console.log('🎯 Adding fallback click listener to Options button');
+                optionsBtn.addEventListener('click', (e) => {
+                    console.log('🖱️ DEBUG: Fallback Options button clicked!');
+                    e.stopPropagation();
+                    const dropdown = document.getElementById('optionsDropdownMenu');
+                    if (dropdown) {
+                        dropdown.classList.toggle('show');
+                        console.log('📋 DEBUG: Toggled dropdown, classes:', dropdown.className);
+                    } else {
+                        console.error('❌ DEBUG: Dropdown menu not found');
+                    }
+                });
+            } else {
+                console.error('❌ DEBUG: Options button not found in DOM');
+            }
+        }, 1000);
+        
+        console.log('🎉 Genome Browser initialized successfully!');
     }
 
     setupEventListeners() {
@@ -913,11 +1008,12 @@ class GenomeBrowser {
     }
 
     assignOperonColor(operonName) {
-        if (!this.operonAssignments.has(operonName)) {
-            this.operonAssignments.set(operonName, this.nextColorIndex);
-            this.nextColorIndex = (this.nextColorIndex + 1) % this.operonColors.length;
+        if (!this.operonColorMap.has(operonName)) {
+            const color = this.operonColors[this.operonColorIndex];
+            this.operonColorMap.set(operonName, color);
+            this.operonColorIndex = (this.operonColorIndex + 1) % this.operonColors.length;
         }
-        return this.operonColors[this.operonAssignments.get(operonName)];
+        return this.operonColorMap.get(operonName);
     }
 
     // Override getGeneOperonInfo to handle user-defined features
@@ -1499,8 +1595,69 @@ class GenomeBrowser {
 
     clearSequenceSelection() {
         this.currentSequenceSelection = null;
-        const selectedBases = document.querySelectorAll('.sequence-selection');
-        selectedBases.forEach(el => el.classList.remove('sequence-selection'));
+        
+        // Remove visual selection
+        const selectedElements = document.querySelectorAll('.sequence-selection');
+        selectedElements.forEach(element => {
+            element.classList.remove('sequence-selection');
+        });
+        
+        // Hide selection info in modal
+        document.getElementById('sequenceSelectionInfo').style.display = 'none';
+    }
+
+    // Helper methods for ChatManager
+    async search(query, caseSensitive = false) {
+        return this.navigationManager.search(query, caseSensitive);
+    }
+
+    async getSequenceForRegion(chromosome, start, end) {
+        const sequence = this.currentSequence[chromosome];
+        if (!sequence) {
+            throw new Error(`Chromosome ${chromosome} not loaded`);
+        }
+        
+        return sequence.substring(start - 1, end);
+    }
+
+    async addUserDefinedFeature(feature) {
+        const featureId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        if (!this.userDefinedFeatures[feature.chromosome]) {
+            this.userDefinedFeatures[feature.chromosome] = [];
+        }
+        
+        const featureWithId = { ...feature, id: featureId, userDefined: true };
+        this.userDefinedFeatures[feature.chromosome].push(featureWithId);
+        
+        // Refresh the display
+        this.updateGeneDisplay();
+        
+        return featureId;
+    }
+
+    // MCP Integration helpers
+    sendStateUpdate() {
+        if (this.chatManager && this.chatManager.isConnected) {
+            this.chatManager.sendStateUpdate({
+                currentChromosome: this.currentChromosome,
+                currentPosition: this.currentPosition,
+                visibleTracks: Array.from(this.visibleTracks),
+                sequenceLength: this.currentSequence[this.currentChromosome]?.length || 0
+            });
+        }
+    }
+
+    sendNavigationUpdate() {
+        if (this.chatManager && this.chatManager.isConnected) {
+            this.chatManager.sendNavigationUpdate(this.currentChromosome, this.currentPosition);
+        }
+    }
+
+    sendSearchResultsUpdate(results) {
+        if (this.chatManager) {
+            this.chatManager.sendSearchResults(results);
+        }
     }
 }
 

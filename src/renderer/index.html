@@ -32,6 +32,25 @@
             </div>
             <div class="header-right">
                 <div class="file-menu-container">
+                    <button id="optionsBtn" class="btn btn-secondary dropdown-toggle">
+                        <i class="fas fa-cog"></i>
+                        Options
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="optionsDropdownMenu">
+                        <button class="dropdown-item" id="configureLLMBtn">
+                            <i class="fas fa-robot"></i>
+                            Configure LLMs
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="settingsBtn">
+                            <i class="fas fa-sliders-h"></i>
+                            General Settings
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="file-menu-container">
                     <button id="openFileBtn" class="btn btn-primary dropdown-toggle">
                         <i class="fas fa-folder-open"></i>
                         Load File
@@ -620,6 +639,128 @@
         </div>
     </div>
 
+    <!-- LLM Configuration Modal -->
+    <div id="llmConfigModal" class="modal">
+        <div class="modal-content llm-config-modal">
+            <div class="modal-header">
+                <h3>Configure LLMs</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="llm-provider-tabs">
+                    <button class="tab-button active" data-provider="openai">OpenAI</button>
+                    <button class="tab-button" data-provider="anthropic">Anthropic</button>
+                    <button class="tab-button" data-provider="google">Google</button>
+                    <button class="tab-button" data-provider="local">Local LLM</button>
+                </div>
+                
+                <div class="llm-provider-config">
+                    <!-- OpenAI Configuration -->
+                    <div id="openai-config" class="provider-config active">
+                        <div class="form-group">
+                            <label for="openaiApiKey">API Key:</label>
+                            <input type="password" id="openaiApiKey" placeholder="sk-..." class="input-full">
+                            <small class="help-text">Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="openaiModel">Model:</label>
+                            <select id="openaiModel" class="select">
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="openaiBaseUrl">Base URL (optional):</label>
+                            <input type="text" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" class="input-full">
+                        </div>
+                    </div>
+                    
+                    <!-- Anthropic Configuration -->
+                    <div id="anthropic-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="anthropicApiKey">API Key:</label>
+                            <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." class="input-full">
+                            <small class="help-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="anthropicModel">Model:</label>
+                            <select id="anthropicModel" class="select">
+                                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                                <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="anthropicBaseUrl">Base URL (optional):</label>
+                            <input type="text" id="anthropicBaseUrl" placeholder="https://api.anthropic.com" class="input-full">
+                        </div>
+                    </div>
+                    
+                    <!-- Google Configuration -->
+                    <div id="google-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="googleApiKey">API Key:</label>
+                            <input type="password" id="googleApiKey" placeholder="AI..." class="input-full">
+                            <small class="help-text">Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="googleModel">Model:</label>
+                            <select id="googleModel" class="select">
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (New)</option>
+                                <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest)</option>
+                                <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</option>
+                                <option value="gemini-pro">Gemini 1.0 Pro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="googleBaseUrl">Base URL (optional):</label>
+                            <input type="text" id="googleBaseUrl" placeholder="https://generativelanguage.googleapis.com" class="input-full">
+                        </div>
+                    </div>
+                    
+                    <!-- Local LLM Configuration -->
+                    <div id="local-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="localEndpoint">API Endpoint:</label>
+                            <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1" class="input-full">
+                            <small class="help-text">Local LLM endpoint (Ollama, LMStudio, etc.)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="localModel">Model Name:</label>
+                            <input type="text" id="localModel" placeholder="llama3.2" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <label for="localApiKey">API Key (if required):</label>
+                            <input type="password" id="localApiKey" placeholder="Optional API key" class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="localStreamingSupport"> Streaming Support
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="llm-config-status">
+                    <div class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Current Provider: <strong id="currentProvider">None</strong></span>
+                    </div>
+                    <button id="testConnectionBtn" class="btn btn-secondary">
+                        <i class="fas fa-plug"></i>
+                        Test Connection
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveLLMConfigBtn" class="btn btn-primary">Save Configuration</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
@@ -630,7 +771,7 @@
 
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script>
+    <!--script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script -->
     
     <!-- Load modules -->
     <script src="modules/FileManager.js"></script>
@@ -639,6 +780,8 @@
     <script src="modules/UIManager.js"></script>
     <script src="modules/SequenceUtils.js"></script>
     <script src="modules/ExportManager.js"></script>
+    <script src="modules/LLMConfigManager.js"></script>
+    <script src="modules/ChatManager.js"></script>
     
     <!-- Main application -->
     <script src="renderer-modular.js"></script>
