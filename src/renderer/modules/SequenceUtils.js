@@ -29,8 +29,16 @@ class SequenceUtils {
         // Show sequence display section and splitter if not already visible
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         if(sequenceDisplaySection.style.display === 'none') {
-            sequenceDisplaySection.style.display = 'block';
+            sequenceDisplaySection.style.display = 'flex';
             document.getElementById('splitter').style.display = 'flex';
+            
+            // Ensure proper initial layout balance
+            const genomeViewerSection = document.getElementById('genomeViewerSection');
+            if (genomeViewerSection) {
+                // Reset to balanced flex properties
+                genomeViewerSection.style.flex = '1';
+                genomeViewerSection.style.maxHeight = '70%';
+            }
         }
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
         

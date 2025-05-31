@@ -2042,12 +2042,14 @@ body {
 /* Enhanced Resizable split layout */
 .genome-viewer-section {
     /* flex: 1; Remove or change this */
+    flex: 1; /* Allow flexible sizing while maintaining balance */
     flex-shrink: 0; /* Prevent shrinking when bottom panel grows */
-    flex-basis: 50%; /* Initial height, can be adjusted by splitter */
+    /* flex-basis: 50%;  Remove fixed basis to allow flex to work properly */
     /* Or set a specific initial height: height: 300px; */
     overflow-y: auto;
     position: relative;
-    min-height: 100px; /* Minimum height for the top tracks panel */
+    min-height: 200px; /* Increase minimum height for the top tracks panel */
+    max-height: 70%; /* Prevent taking more than 70% of available space */
 }
 
 /* Horizontal Splitter between sidebar and viewer */
@@ -2274,8 +2276,9 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    flex-grow: 1; /* Allow this section to grow and fill available space */
+    flex: 1; /* Allow flexible sizing while maintaining balance */
     min-height: 150px; /* Minimum height for the sequence panel, includes header */
+    max-height: 50%; /* Prevent taking more than 50% of available space */
     position: relative; /* Establish stacking context */
     z-index: 2; /* Changed from 3 to 2 - same level as genome browser */
     /* flex-basis: 0;  Ensures flex-grow is the primary factor for sizing */
@@ -4684,6 +4687,13 @@ body {
     margin-bottom: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    /* Add transition for smooth interactions */
+    transition: box-shadow 0.2s ease;
+}
+
+/* Enhanced hover state for navigation bar */
+.genome-navigation-bar:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .navigation-canvas {
@@ -4693,6 +4703,25 @@ body {
     background: transparent;
     cursor: crosshair;
     user-select: none;
+    /* Smooth cursor transitions */
+    transition: cursor 0.1s ease;
+}
+
+/* Cursor states for different interactions */
+.navigation-canvas.dragging {
+    cursor: grabbing !important;
+}
+
+.navigation-canvas.resizing {
+    cursor: ew-resize !important;
+}
+
+.navigation-canvas.hovering-handle {
+    cursor: ew-resize !important;
+}
+
+.navigation-canvas.hovering-range {
+    cursor: grab !important;
 }
 
 .navigation-canvas:focus {
@@ -4736,6 +4765,12 @@ body {
     z-index: 20;
     white-space: nowrap;
     transform: translateX(-50%);
+    /* Enhanced visibility */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    /* Smooth transitions */
+    transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
 .navigation-tooltip::before {
@@ -4747,6 +4782,33 @@ body {
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
     border-bottom: 4px solid rgba(0, 0, 0, 0.8);
+}
+
+/* Enhanced tooltip for range information */
+.navigation-tooltip.range-tooltip {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+    color: white;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+.navigation-tooltip.range-tooltip::before {
+    border-bottom-color: rgba(59, 130, 246, 0.9);
+}
+
+/* Interaction state classes for smooth animations */
+.genome-navigation-bar.interacting {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.genome-navigation-bar.resizing {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.genome-navigation-bar.dragging {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 /* Genome viewer section adjustments */
@@ -4764,6 +4826,33 @@ body {
     position: relative;
 }
 
+/* Enhanced visual feedback during interactions */
+@keyframes pulseResize {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); 
+    }
+    50% { 
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); 
+    }
+}
+
+@keyframes pulseDrag {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); 
+    }
+    50% { 
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2); 
+    }
+}
+
+.genome-navigation-bar.active-resize {
+    animation: pulseResize 1.5s infinite;
+}
+
+.genome-navigation-bar.active-drag {
+    animation: pulseDrag 1.5s infinite;
+}
+
 /* Responsive adjustments for navigation bar */
 @media (max-width: 768px) {
     .genome-navigation-bar {
@@ -4774,6 +4863,24 @@ body {
     .navigation-tooltip {
         font-size: 11px;
         padding: 3px 6px;
+    }
+    
+    .navigation-tooltip.range-tooltip {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+}
+
+/* Touch device support */
+@media (pointer: coarse) {
+    .genome-navigation-bar {
+        /* Larger touch targets on mobile */
+        height: 50px;
+    }
+    
+    .navigation-canvas {
+        /* Better touch interaction */
+        touch-action: pan-x;
     }
 }
 
@@ -4799,5 +4906,14 @@ body {
     
     .navigation-tooltip::before {
         border-bottom-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .navigation-tooltip.range-tooltip {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+        color: white;
+    }
+    
+    .navigation-tooltip.range-tooltip::before {
+        border-bottom-color: rgba(59, 130, 246, 0.9);
     }
 }

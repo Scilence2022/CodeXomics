@@ -15,6 +15,15 @@ class GenomeNavigationBar {
         this.currentChromosome = null;
         this.sequenceLength = 0;
         
+        // Range interaction state
+        this.isDragging = false;
+        this.isResizing = false;
+        this.resizeHandle = null; // 'left', 'right', or null
+        this.dragStartX = 0;
+        this.dragStartRange = { start: 0, end: 0 };
+        this.tempRange = null; // Temporary range during drag/resize operations
+        this.handleWidth = 8; // Width of resize handles
+        
         this.initialize();
     }
 
@@ -79,12 +88,12 @@ class GenomeNavigationBar {
         });
         resizeObserver.observe(this.container);
 
-        // Mouse events for navigation
-        this.canvas.addEventListener('click', (e) => this.handleClick(e));
-        this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
+        // Mouse events for navigation and range interaction
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseenter', (e) => this.handleMouseEnter(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e));
+        this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
         
         // Keyboard navigation
         this.canvas.addEventListener('keydown', (e) => this.handleKeyDown(e));
@@ -241,8 +250,10 @@ class GenomeNavigationBar {
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const scale = width / this.sequenceLength;
         
-        const startX = this.genomeBrowser.currentPosition.start * scale;
-        const endX = this.genomeBrowser.currentPosition.end * scale;
+        // Use temporary range if dragging/resizing, otherwise use current position
+        const range = this.tempRange || this.genomeBrowser.currentPosition;
+        const startX = range.start * scale;
+        const endX = range.end * scale;
         const rangeWidth = endX - startX;
         
         // Draw highlighted range
@@ -258,12 +269,218 @@ class GenomeNavigationBar {
         this.ctx.moveTo(endX, 0);
         this.ctx.lineTo(endX, this.height);
         this.ctx.stroke();
+        
+        // Draw resize handles
+        this.drawResizeHandles(startX, endX);
     }
 
-    handleClick(e) {
-        const position = this.getPositionFromEvent(e);
-        if (position !== null) {
-            this.navigateToPosition(position);
+    drawResizeHandles(startX, endX) {
+        const handleHeight = this.height;
+        
+        // Left handle
+        this.ctx.fillStyle = '#3b82f6';
+        this.ctx.fillRect(startX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
+        
+        // Right handle
+        this.ctx.fillRect(endX - this.handleWidth / 2, 0, this.handleWidth, handleHeight);
+        
+        // Handle highlights for better visibility
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(startX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
+        this.ctx.fillRect(endX - this.handleWidth / 2 + 1, 2, this.handleWidth - 2, handleHeight - 4);
+    }
+
+    getInteractionType(x) {
+        if (!this.genomeBrowser.currentPosition) return 'none';
+        
+        const width = this.canvas.width / (window.devicePixelRatio || 1);
+        const scale = width / this.sequenceLength;
+        
+        const range = this.tempRange || this.genomeBrowser.currentPosition;
+        const startX = range.start * scale;
+        const endX = range.end * scale;
+        
+        // Check for resize handles
+        if (Math.abs(x - startX) <= this.handleWidth / 2) {
+            return 'resize-left';
+        }
+        if (Math.abs(x - endX) <= this.handleWidth / 2) {
+            return 'resize-right';
+        }
+        
+        // Check if inside range for dragging
+        if (x >= startX && x <= endX) {
+            return 'drag';
+        }
+        
+        return 'navigate';
+    }
+
+    updateCursor(interactionType) {
+        switch (interactionType) {
+            case 'resize-left':
+            case 'resize-right':
+                this.canvas.style.cursor = 'ew-resize';
+                break;
+            case 'drag':
+                this.canvas.style.cursor = this.isDragging ? 'grabbing' : 'grab';
+                break;
+            default:
+                this.canvas.style.cursor = 'crosshair';
+        }
+    }
+
+    handleMouseDown(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const interactionType = this.getInteractionType(x);
+        
+        if (interactionType === 'resize-left' || interactionType === 'resize-right') {
+            this.isResizing = true;
+            this.resizeHandle = interactionType === 'resize-left' ? 'left' : 'right';
+            this.dragStartX = x;
+            this.dragStartRange = { ...this.genomeBrowser.currentPosition };
+            this.tempRange = { ...this.genomeBrowser.currentPosition };
+            this.canvas.style.cursor = 'ew-resize';
+            // Add visual feedback
+            this.container.classList.add('resizing', 'active-resize');
+            this.canvas.classList.add('resizing');
+            e.preventDefault();
+        } else if (interactionType === 'drag') {
+            this.isDragging = true;
+            this.dragStartX = x;
+            this.dragStartRange = { ...this.genomeBrowser.currentPosition };
+            this.tempRange = { ...this.genomeBrowser.currentPosition };
+            this.canvas.style.cursor = 'grabbing';
+            // Add visual feedback
+            this.container.classList.add('dragging', 'active-drag');
+            this.canvas.classList.add('dragging');
+            e.preventDefault();
+        } else if (interactionType === 'navigate') {
+            // Handle single click navigation
+            const position = this.getPositionFromEvent(e);
+            if (position !== null) {
+                this.navigateToPosition(position);
+            }
+        }
+    }
+
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        
+        if (this.isResizing && this.tempRange) {
+            const width = rect.width;
+            const scale = this.sequenceLength / width;
+            const deltaX = x - this.dragStartX;
+            const deltaPosition = deltaX * scale;
+            
+            if (this.resizeHandle === 'left') {
+                const newStart = Math.max(0, this.dragStartRange.start + deltaPosition);
+                const newEnd = this.dragStartRange.end;
+                if (newStart < newEnd - 100) { // Minimum range of 100bp
+                    this.tempRange = { start: newStart, end: newEnd };
+                }
+            } else if (this.resizeHandle === 'right') {
+                const newStart = this.dragStartRange.start;
+                const newEnd = Math.min(this.sequenceLength, this.dragStartRange.end + deltaPosition);
+                if (newEnd > newStart + 100) { // Minimum range of 100bp
+                    this.tempRange = { start: newStart, end: newEnd };
+                }
+            }
+            
+            this.draw();
+            this.showRangeTooltip(e, this.tempRange.start, this.tempRange.end);
+        } else if (this.isDragging && this.tempRange) {
+            const width = rect.width;
+            const scale = this.sequenceLength / width;
+            const deltaX = x - this.dragStartX;
+            const deltaPosition = deltaX * scale;
+            
+            const rangeSize = this.dragStartRange.end - this.dragStartRange.start;
+            let newStart = this.dragStartRange.start + deltaPosition;
+            let newEnd = this.dragStartRange.end + deltaPosition;
+            
+            // Keep within bounds
+            if (newStart < 0) {
+                newStart = 0;
+                newEnd = rangeSize;
+            }
+            if (newEnd > this.sequenceLength) {
+                newEnd = this.sequenceLength;
+                newStart = this.sequenceLength - rangeSize;
+            }
+            
+            this.tempRange = { start: newStart, end: newEnd };
+            this.draw();
+            this.showRangeTooltip(e, this.tempRange.start, this.tempRange.end);
+        } else {
+            // Update cursor based on hover state
+            const interactionType = this.getInteractionType(x);
+            this.updateCursor(interactionType);
+            
+            // Add CSS classes for hover states
+            this.canvas.classList.remove('hovering-handle', 'hovering-range');
+            if (interactionType === 'resize-left' || interactionType === 'resize-right') {
+                this.canvas.classList.add('hovering-handle');
+            } else if (interactionType === 'drag') {
+                this.canvas.classList.add('hovering-range');
+            }
+            
+            // Show position tooltip
+            const position = this.getPositionFromEvent(e);
+            if (position !== null) {
+                this.showTooltip(e, position);
+            }
+        }
+    }
+
+    handleMouseUp(e) {
+        if (this.isResizing || this.isDragging) {
+            // Apply the temporary range to the genome browser
+            if (this.tempRange) {
+                this.genomeBrowser.currentPosition = {
+                    start: Math.round(this.tempRange.start),
+                    end: Math.round(this.tempRange.end)
+                };
+                
+                // Update the genome browser display
+                const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
+                this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
+                this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
+                
+                console.log(`GenomeNavigationBar: Range updated to ${this.genomeBrowser.currentPosition.start}-${this.genomeBrowser.currentPosition.end}`);
+            }
+            
+            // Reset interaction state and remove visual feedback
+            this.isResizing = false;
+            this.isDragging = false;
+            this.resizeHandle = null;
+            this.tempRange = null;
+            
+            // Remove visual feedback classes
+            this.container.classList.remove('resizing', 'dragging', 'active-resize', 'active-drag');
+            this.canvas.classList.remove('resizing', 'dragging');
+            
+            // Update cursor
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const interactionType = this.getInteractionType(x);
+            this.updateCursor(interactionType);
+            
+            this.draw();
+        }
+    }
+
+    handleMouseLeave(e) {
+        this.tooltip.style.display = 'none';
+        
+        // Remove hover state classes
+        this.canvas.classList.remove('hovering-handle', 'hovering-range');
+        
+        // If we're in the middle of an operation, don't reset cursor
+        if (!this.isResizing && !this.isDragging) {
+            this.canvas.style.cursor = 'crosshair';
         }
     }
 
@@ -272,21 +489,6 @@ class GenomeNavigationBar {
         if (position !== null) {
             this.navigateToPositionAndZoom(position);
         }
-    }
-
-    handleMouseMove(e) {
-        const position = this.getPositionFromEvent(e);
-        if (position !== null) {
-            this.showTooltip(e, position);
-        }
-    }
-
-    handleMouseEnter(e) {
-        this.tooltip.style.display = 'block';
-    }
-
-    handleMouseLeave(e) {
-        this.tooltip.style.display = 'none';
     }
 
     handleKeyDown(e) {
@@ -331,13 +533,37 @@ class GenomeNavigationBar {
         return Math.max(0, Math.min(this.sequenceLength, position));
     }
 
-    showTooltip(e, position) {
+    showTooltip(e, startPos, endPos = null) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         
         this.tooltip.style.left = `${x}px`;
         this.tooltip.style.top = `${this.height + 5}px`;
-        this.tooltip.textContent = `Position: ${position.toLocaleString()} bp`;
+        this.tooltip.style.display = 'block';
+        
+        if (endPos !== null) {
+            // Show range tooltip with special styling
+            const rangeSize = Math.round(endPos - startPos);
+            this.tooltip.textContent = `Range: ${Math.round(startPos).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
+            this.tooltip.classList.add('range-tooltip');
+        } else {
+            // Show position tooltip
+            this.tooltip.textContent = `Position: ${startPos.toLocaleString()} bp`;
+            this.tooltip.classList.remove('range-tooltip');
+        }
+    }
+
+    showRangeTooltip(e, startPos, endPos) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        
+        this.tooltip.style.left = `${x}px`;
+        this.tooltip.style.top = `${this.height + 5}px`;
+        this.tooltip.style.display = 'block';
+        
+        const rangeSize = Math.round(endPos - startPos);
+        this.tooltip.textContent = `Range: ${Math.round(startPos).toLocaleString()}-${Math.round(endPos).toLocaleString()} bp (${rangeSize.toLocaleString()} bp)`;
+        this.tooltip.classList.add('range-tooltip');
     }
 
     navigateToPosition(position) {
