@@ -3839,6 +3839,12 @@ body {
     line-height: 1.4;
     border: 1px solid #e9ecef;
     flex: 1;
+    /* Enable text selection and copying */
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
 }
 
 .user-message .message-text {
@@ -3854,6 +3860,8 @@ body {
 
 .message-text p {
     margin: 0 0 8px 0;
+    /* Ensure paragraphs are also selectable */
+    user-select: text;
 }
 
 .message-text p:last-child {
@@ -3863,10 +3871,14 @@ body {
 .message-text ul {
     margin: 8px 0;
     padding-left: 20px;
+    /* Ensure lists are also selectable */
+    user-select: text;
 }
 
 .message-text li {
     margin-bottom: 4px;
+    /* Ensure list items are also selectable */
+    user-select: text;
 }
 
 .message-text code {
@@ -3875,6 +3887,8 @@ body {
     border-radius: 3px;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 13px;
+    /* Ensure code blocks are also selectable */
+    user-select: text;
 }
 
 .user-message .message-text code {
@@ -3886,6 +3900,8 @@ body {
     color: #9ca3af;
     text-align: right;
     margin-top: 2px;
+    /* Enable selection for timestamps too */
+    user-select: text;
 }
 
 .user-message .message-time {
@@ -4589,4 +4605,23 @@ body {
     .notification-content span {
         font-size: 13px;
     }
+}
+
+.llm-config-modal .input-with-button {
+    display: flex;
+    align-items: center;
+}
+
+.llm-config-modal .input-with-button .input-full {
+    flex-grow: 1;
+    margin-right: -1px; /* To make it look connected to the button */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.llm-config-modal .input-with-button .btn-paste {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    height: 38px; /* Match typical input height */
+    line-height: 1.5; /* Adjust if icon is not centered */
 }

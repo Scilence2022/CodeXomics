@@ -659,7 +659,12 @@
                     <div id="openai-config" class="provider-config active">
                         <div class="form-group">
                             <label for="openaiApiKey">API Key:</label>
-                            <input type="password" id="openaiApiKey" placeholder="sk-..." class="input-full">
+                            <div class="input-with-button">
+                                <input type="password" id="openaiApiKey" placeholder="sk-..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenaiApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
                             <small class="help-text">Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
                         </div>
                         <div class="form-group">
@@ -681,7 +686,12 @@
                     <div id="anthropic-config" class="provider-config">
                         <div class="form-group">
                             <label for="anthropicApiKey">API Key:</label>
-                            <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." class="input-full">
+                            <div class="input-with-button">
+                                <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteAnthropicApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
                             <small class="help-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
                         </div>
                         <div class="form-group">
@@ -702,7 +712,12 @@
                     <div id="google-config" class="provider-config">
                         <div class="form-group">
                             <label for="googleApiKey">API Key:</label>
-                            <input type="password" id="googleApiKey" placeholder="AI..." class="input-full">
+                            <div class="input-with-button">
+                                <input type="text" id="googleApiKey" placeholder="AI..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteGoogleApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
                             <small class="help-text">Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
                         </div>
                         <div class="form-group">
@@ -737,6 +752,7 @@
                                 <option value="llama3.1:latest">llama3.1:latest</option>
                                 <option value="llama3:latest">llama3:latest</option>
                                 <option value="qwen2:latest">qwen2:latest</option>
+                                <option value="gemma3:27b">gemma3:27b</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
@@ -746,7 +762,12 @@
                         </div>
                         <div class="form-group">
                             <label for="localApiKey">API Key (if required):</label>
-                            <input type="password" id="localApiKey" placeholder="Optional API key" class="input-full">
+                            <div class="input-with-button">
+                                <input type="password" id="localApiKey" placeholder="Optional API key" class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteLocalApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>

@@ -186,16 +186,23 @@ class ChatManager {
             throw new Error('Genome browser not initialized');
         }
 
+        // Debug logging to understand the app state
+        console.log('ChatManager getCurrentState - this.app:', this.app);
+        console.log('ChatManager getCurrentState - this.app.currentChromosome:', this.app.currentChromosome);
+        console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
+        console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
+
         const state = {
             currentChromosome: this.app.currentChromosome,
             currentPosition: this.app.currentPosition,
             visibleTracks: this.getVisibleTracks(),
             loadedFiles: this.app.loadedFiles || [],
             sequenceLength: this.app.sequenceLength || 0,
-            annotations: this.app.currentAnnotations || [],
-            userDefinedFeatures: Object.keys(this.app.userDefinedFeatures || {}).length
+            annotationsCount: (this.app.currentAnnotations || []).length,
+            userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length
         };
 
+        console.log('ChatManager getCurrentState - final state:', state);
         return state;
     }
 
@@ -603,10 +610,122 @@ class ChatManager {
             
             // Send message to configured LLM
             const response = await this.llmConfigManager.sendMessage(message, context);
+            
+            // Check if the response is a tool call (JSON format)
+            const toolCall = this.parseToolCall(response);
+            if (toolCall) {
+                console.log('Detected tool call:', toolCall);
+                
+                // Execute the tool
+                const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
+                
+                // Send the tool result back to the LLM for a user-friendly response
+                const followUpMessage = `I executed the ${toolCall.tool_name} tool with the following result: ${JSON.stringify(toolResult, null, 2)}. Please provide a user-friendly summary of these results.`;
+                const finalResponse = await this.llmConfigManager.sendMessage(followUpMessage, context);
+                
+                return finalResponse;
+            }
+            
             return response;
         } catch (error) {
             console.error('Error communicating with LLM:', error);
             return `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
+        }
+    }
+
+    parseToolCall(response) {
+        try {
+            // Remove any potential thinking tags or extra text
+            let cleanResponse = response.trim();
+            
+            // If response contains thinking tags, extract content after them
+            if (cleanResponse.includes('</think>')) {
+                const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
+                cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
+            }
+            
+            // Try to extract JSON from markdown code blocks
+            const markdownJsonMatch = cleanResponse.match(/```json\s*(\{[^`]*\})\s*```/i);
+            if (markdownJsonMatch) {
+                const parsed = JSON.parse(markdownJsonMatch[1]);
+                if (parsed.tool_name && parsed.parameters) {
+                    return parsed;
+                }
+            }
+            
+            // Try to find JSON object in the response (more flexible pattern)
+            const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.tool_name && parsed.parameters) {
+                    return parsed;
+                }
+            }
+            
+            // Try to extract any valid JSON object that has tool_name and parameters
+            const allJsonMatches = cleanResponse.match(/\{[^}]+\}/g);
+            if (allJsonMatches) {
+                for (const match of allJsonMatches) {
+                    try {
+                        const parsed = JSON.parse(match);
+                        if (parsed.tool_name && parsed.parameters) {
+                            return parsed;
+                        }
+                    } catch (e) {
+                        // Continue to next match
+                    }
+                }
+            }
+            
+            // Also try parsing the entire response as JSON
+            const parsed = JSON.parse(cleanResponse);
+            if (parsed.tool_name && parsed.parameters) {
+                return parsed;
+            }
+        } catch (error) {
+            // Not a JSON tool call, return null
+        }
+        
+        return null;
+    }
+
+    async executeToolByName(toolName, parameters) {
+        try {
+            switch (toolName) {
+                case 'navigate_to_position':
+                    return await this.navigateToPosition(parameters);
+                    
+                case 'search_features':
+                    return await this.searchFeatures(parameters);
+                    
+                case 'get_current_state':
+                    return this.getCurrentState();
+                    
+                case 'get_sequence':
+                    return await this.getSequence(parameters);
+                    
+                case 'toggle_track':
+                    return await this.toggleTrack(parameters);
+                    
+                case 'create_annotation':
+                    return await this.createAnnotation(parameters);
+                    
+                case 'analyze_region':
+                    return await this.analyzeRegion(parameters);
+                    
+                case 'export_data':
+                    return await this.exportData(parameters);
+                    
+                default:
+                    throw new Error(`Unknown tool: ${toolName}`);
+            }
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                tool: toolName,
+                parameters: parameters
+            };
         }
     }
 

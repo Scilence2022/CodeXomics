@@ -119,9 +119,38 @@ class LLMConfigManager {
             });
         }
 
+        // Add event listeners for all new paste buttons
+        const pasteButtonConfigs = [
+            { btnId: 'pasteOpenaiApiKeyBtn', inputId: 'openaiApiKey' },
+            { btnId: 'pasteAnthropicApiKeyBtn', inputId: 'anthropicApiKey' },
+            { btnId: 'pasteGoogleApiKeyBtn', inputId: 'googleApiKey' },
+            { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' }
+        ];
+
+        pasteButtonConfigs.forEach(config => {
+            const pasteBtn = document.getElementById(config.btnId);
+            const apiKeyInput = document.getElementById(config.inputId);
+
+            if (pasteBtn && apiKeyInput) {
+                pasteBtn.addEventListener('click', async () => {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        apiKeyInput.value = text;
+                        console.log(`Pasted content into ${config.inputId}`);
+                    } catch (err) {
+                        console.error('Failed to read clipboard contents: ', err);
+                        this.showNotification('Failed to paste from clipboard. Ensure permissions are granted if prompted.', 'error');
+                    }
+                });
+            } else {
+                console.warn(`Could not find paste button or input for: ${config.btnId}/${config.inputId}`);
+            }
+        });
+
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.file-menu-container')) {
+            const optionsDropdownMenu = document.getElementById('optionsDropdownMenu');
+            if (optionsDropdownMenu && !e.target.closest('.file-menu-container')) {
                 this.hideOptionsDropdown();
             }
         });
@@ -485,6 +514,12 @@ class LLMConfigManager {
 
     async sendOpenAIMessage(provider, message, context) {
         const messages = this.buildMessages(message, context);
+        console.log('Sending to OpenAI - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: messages,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
         
         const response = await fetch(`${provider.baseUrl}/chat/completions`, {
             method: 'POST',
@@ -510,6 +545,11 @@ class LLMConfigManager {
 
     async sendAnthropicMessage(provider, message, context) {
         const messages = this.buildMessages(message, context, 'anthropic');
+        console.log('Sending to Anthropic - Request Payload:', JSON.stringify({
+            model: provider.model,
+            max_tokens: 2000,
+            messages: messages
+        }, null, 2));
         
         const response = await fetch(`${provider.baseUrl}/v1/messages`, {
             method: 'POST',
@@ -535,6 +575,16 @@ class LLMConfigManager {
 
     async sendGoogleMessage(provider, message, context) {
         const prompt = this.buildGooglePrompt(message, context);
+        const payload = {
+            contents: [{
+                parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+                maxOutputTokens: 2000,
+                temperature: 0.7
+            }
+        };
+        console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
         
         const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
         
@@ -543,15 +593,7 @@ class LLMConfigManager {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }],
-                generationConfig: {
-                    maxOutputTokens: 2000,
-                    temperature: 0.7
-                }
-            })
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
@@ -573,7 +615,15 @@ class LLMConfigManager {
         const messages = this.buildMessages(message, context);
         
         const apiUrl = `${provider.baseUrl}/chat/completions`;
+        const payload = {
+            model: provider.model,
+            messages: messages,
+            max_tokens: 2000,
+            temperature: 0.7,
+            stream: false // Assuming stream is false for now based on previous setup
+        };
         console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
+        console.log('Sending to Local LLM - Request Payload:', JSON.stringify(payload, null, 2));
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -583,13 +633,7 @@ class LLMConfigManager {
             } : {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                model: provider.model,
-                messages: messages,
-                max_tokens: 2000,
-                temperature: 0.7,
-                stream: false
-            })
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
@@ -599,7 +643,21 @@ class LLMConfigManager {
         }
 
         const data = await response.json();
-        return data.choices[0].message.content;
+        // Log the full raw response from the local LLM
+        console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
+
+        // Check if the response structure indicates a tool call (OpenAI-like pattern)
+        if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
+            console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
+            // Return the entire message object, which includes tool_calls, so ChatManager can process it.
+            return data.choices[0].message;
+        } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+            // Standard text response
+            return data.choices[0].message.content;
+        } else {
+            console.error('Unexpected response structure from Local LLM:', data);
+            throw new Error('Unexpected response structure from Local LLM. Check console for details.');
+        }
     }
 
     buildMessages(userMessage, context, providerType = 'openai') {
@@ -637,19 +695,37 @@ class LLMConfigManager {
         let systemMessage = `You are an AI assistant for a Genome Browser application. You help users analyze genomic data, navigate sequences, search for genes, and understand biological features.
 
 You have access to tools that can:
-- Navigate to specific genomic positions
-- Search for genes and features
-- Get current browser state
-- Retrieve DNA sequences
-- Toggle track visibility
-- Create annotations
-- Analyze genomic regions
-- Export data
+- Navigate to specific genomic positions (use tool: 'navigate_to_position', parameters: {chromosome: string, start: number, end: number})
+- Search for genes and features (use tool: 'search_features', parameters: {query: string, caseSensitive: boolean}) - Use this to get details about annotations if needed.
+- Get current browser state (use tool: 'get_current_state') - This will provide general information including counts of annotations and user-defined features.
+- Retrieve DNA sequences (use tool: 'get_sequence', parameters: {chromosome: string, start: number, end: number})
+- Toggle track visibility (use tool: 'toggle_track', parameters: {trackName: string, visible: boolean})
+- Create annotations (use tool: 'create_annotation', parameters: {type: string, name: string, chromosome: string, start: number, end: number, strand: number, description?: string})
+- Analyze genomic regions (use tool: 'analyze_region', parameters: {chromosome: string, start: number, end: number, includeFeatures?: boolean, includeGC?: boolean})
+- Export data (use tool: 'export_data', parameters: {format: string, chromosome?: string, start?: number, end?: number})
 
-When users ask questions about genomic data, you should use the appropriate tools to help them. Be helpful, accurate, and provide clear explanations.`;
+When a user's request requires one of these actions, you should respond ONLY with a JSON object describing the tool call. For example:
+To navigate, respond with: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+To search, respond with: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
+If you are just providing information or answering a question, respond normally.
+Your primary goal is to assist the user by utilizing these tools effectively when appropriate.
 
-        if (context) {
-            systemMessage += `\n\nCurrent context:\n${JSON.stringify(context, null, 2)}`;
+The current browser state (obtained via 'get_current_state' or provided in context) includes 'annotationsCount' and 'userDefinedFeaturesCount', which are the total numbers of annotations and user-defined features, respectively. To get details about specific annotations, use the 'search_features' tool.`;
+
+        if (context && context.genomeBrowser && context.genomeBrowser.currentState) {
+            // Debug: Log the actual context structure
+            console.log('Context structure for system message:', JSON.stringify(context, null, 2));
+            console.log('Current state:', context.genomeBrowser.currentState);
+            
+            // Only append a summary of the context, not the whole thing if it's still too large.
+            // For now, the main change is that the LLM knows annotationsCount is a count.
+            // We can be more sophisticated here later if needed.
+            const currentState = context.genomeBrowser.currentState;
+            systemMessage += `\n\nCurrent context summary:\n- Chromosome: ${currentState.currentChromosome || 'N/A'}\n- Position: ${currentState.currentPosition ? `${currentState.currentPosition.start}-${currentState.currentPosition.end}` : 'N/A'}\n- Annotations Loaded: ${currentState.annotationsCount || 0}\n- User Features: ${currentState.userDefinedFeaturesCount || 0}`;
+        } else if (context) {
+            // Fallback for a differently structured context, though less likely now
+            console.log('Context provided but not in expected structure:', context);
+            systemMessage += `\n\n(Partial context provided)`;
         }
 
         return systemMessage;
