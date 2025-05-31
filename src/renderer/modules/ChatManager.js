@@ -618,45 +618,85 @@ class ChatManager {
             return "I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Local LLM).";
         }
 
+        console.log('=== ChatManager.sendToLLM DEBUG START ===');
+        console.log('User message:', message);
+
         try {
             // Get current genome browser context
             const context = this.getCurrentContext();
+            console.log('Context for LLM:', context);
             
             // Build conversation history including the new message
             const conversationHistory = this.buildConversationHistory(message);
+            console.log('Conversation history length:', conversationHistory.length);
+            console.log('System message preview:', conversationHistory[0].content.substring(0, 200) + '...');
             
             // Send conversation history to configured LLM
+            console.log('Sending to LLM...');
             const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
             
-            console.log('LLM Raw Response:', response);
+            console.log('=== LLM Raw Response ===');
+            console.log('Response type:', typeof response);
+            console.log('Response length:', response ? response.length : 'null');
+            console.log('Full response:', response);
+            console.log('========================');
             
             // Check if the response is a tool call (JSON format)
+            console.log('Attempting to parse tool call...');
             const toolCall = this.parseToolCall(response);
+            console.log('Parsed tool call result:', toolCall);
+            
             if (toolCall) {
-                console.log('Detected tool call:', toolCall);
+                console.log('=== TOOL CALL DETECTED ===');
+                console.log('Tool name:', toolCall.tool_name);
+                console.log('Parameters:', toolCall.parameters);
+                console.log('==========================');
                 
                 try {
+                    console.log('Executing tool...');
                     // Execute the tool directly
                     const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
+                    console.log('Tool execution completed. Result:', toolResult);
                     
                     // If tool execution was successful, provide a user-friendly summary
                     if (toolResult && !toolResult.error) {
-                        return this.formatToolResult(toolCall.tool_name, toolCall.parameters, toolResult);
+                        const formattedResult = this.formatToolResult(toolCall.tool_name, toolCall.parameters, toolResult);
+                        console.log('Formatted result:', formattedResult);
+                        console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
+                        return formattedResult;
                     } else {
-                        return `I tried to execute ${toolCall.tool_name} but encountered an error: ${toolResult.error || 'Unknown error'}`;
+                        const errorMessage = `I tried to execute ${toolCall.tool_name} but encountered an error: ${toolResult.error || 'Unknown error'}`;
+                        console.log('Tool execution failed:', errorMessage);
+                        console.log('=== ChatManager.sendToLLM DEBUG END (TOOL ERROR) ===');
+                        return errorMessage;
                     }
                 } catch (error) {
-                    console.error('Tool execution error:', error);
-                    return `Sorry, I encountered an error while executing the ${toolCall.tool_name} tool: ${error.message}`;
+                    console.error('=== TOOL EXECUTION EXCEPTION ===');
+                    console.error('Error:', error);
+                    console.error('Stack:', error.stack);
+                    console.error('================================');
+                    const errorMessage = `Sorry, I encountered an error while executing the ${toolCall.tool_name} tool: ${error.message}`;
+                    console.log('=== ChatManager.sendToLLM DEBUG END (EXCEPTION) ===');
+                    return errorMessage;
                 }
+            } else {
+                console.log('=== NO TOOL CALL DETECTED ===');
+                console.log('Returning conversational response');
+                console.log('===============================');
             }
             
             // If not a tool call, return the conversational response
+            console.log('=== ChatManager.sendToLLM DEBUG END (CONVERSATION) ===');
             return response;
             
         } catch (error) {
-            console.error('Error communicating with LLM:', error);
-            return `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
+            console.error('=== LLM COMMUNICATION ERROR ===');
+            console.error('Error:', error);
+            console.error('Stack:', error.stack);
+            console.error('==============================');
+            const errorMessage = `Sorry, I encountered an error: ${error.message}. Please check your LLM configuration in Options → Configure LLMs.`;
+            console.log('=== ChatManager.sendToLLM DEBUG END (LLM ERROR) ===');
+            return errorMessage;
         }
     }
 
@@ -776,62 +816,97 @@ If the user is asking a general question or doesn't need a tool, respond normall
     }
 
     parseToolCall(response) {
+        console.log('=== parseToolCall DEBUG START ===');
+        console.log('Input response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Response length:', response ? response.length : 'null');
+        
         try {
             // Clean the response by removing any leading/trailing whitespace
             let cleanResponse = response.trim();
+            console.log('After trim:', cleanResponse);
             
             // If response contains thinking tags, extract content after them
             if (cleanResponse.includes('</think>')) {
                 const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
                 cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
+                console.log('After removing thinking tags:', cleanResponse);
             }
             
             // Remove any potential code block markers
             cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
             cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
+            console.log('After removing code block markers:', cleanResponse);
             
             // Try to parse the entire response as JSON first (most direct approach)
+            console.log('Attempting direct JSON parse...');
             try {
                 const parsed = JSON.parse(cleanResponse);
+                console.log('Direct parse successful:', parsed);
                 if (parsed.tool_name && parsed.parameters !== undefined) {
+                    console.log('Valid tool call found via direct parse');
+                    console.log('=== parseToolCall DEBUG END (SUCCESS - DIRECT) ===');
                     return parsed;
                 }
+                console.log('Direct parse result does not have tool_name/parameters');
             } catch (e) {
+                console.log('Direct parse failed:', e.message);
                 // Continue to other parsing methods if direct parse fails
             }
             
             // Try to extract JSON from potential markdown or mixed content
+            console.log('Attempting regex extraction...');
             const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
+            console.log('Regex matches:', jsonMatches);
             if (jsonMatches) {
                 try {
                     const parsed = JSON.parse(jsonMatches[0]);
+                    console.log('Regex parse successful:', parsed);
                     if (parsed.tool_name && parsed.parameters !== undefined) {
+                        console.log('Valid tool call found via regex');
+                        console.log('=== parseToolCall DEBUG END (SUCCESS - REGEX) ===');
                         return parsed;
                     }
                 } catch (e) {
+                    console.log('Regex parse failed:', e.message);
                     // Continue to next method
                 }
             }
             
             // Try to find any valid JSON object that has tool_name and parameters
+            console.log('Attempting to find any JSON with tool_name...');
             const allJsonMatches = cleanResponse.match(/\{[^}]*\}/g);
+            console.log('All JSON matches found:', allJsonMatches);
             if (allJsonMatches) {
-                for (const match of allJsonMatches) {
+                for (let i = 0; i < allJsonMatches.length; i++) {
+                    const match = allJsonMatches[i];
+                    console.log(`Trying to parse match ${i}:`, match);
                     try {
                         const parsed = JSON.parse(match);
+                        console.log(`Parse ${i} successful:`, parsed);
                         if (parsed.tool_name && parsed.parameters !== undefined) {
+                            console.log(`Valid tool call found in match ${i}`);
+                            console.log('=== parseToolCall DEBUG END (SUCCESS - SEARCH) ===');
                             return parsed;
                         }
+                        console.log(`Match ${i} does not have tool_name/parameters`);
                     } catch (e) {
+                        console.log(`Parse ${i} failed:`, e.message);
                         // Continue to next match
                     }
                 }
             }
             
             // If no valid tool call found, return null
+            console.log('No valid tool call found in response');
+            console.log('=== parseToolCall DEBUG END (NO TOOL CALL) ===');
             return null;
             
         } catch (error) {
+            console.error('=== parseToolCall ERROR ===');
+            console.error('Error:', error);
+            console.error('Stack:', error.stack);
+            console.error('=======================');
             console.warn('Error parsing potential tool call:', error);
             return null;
         }
