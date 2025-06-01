@@ -266,12 +266,12 @@ class TrackRenderer {
         
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
-        trackHeader.textContent = 'GC Content';
+        trackHeader.textContent = 'GC Content & Skew';
         track.appendChild(trackHeader);
         
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
-        trackContent.style.height = '80px';
+        trackContent.style.height = '120px'; // Increased height for dual display
         
         // Add draggable functionality
         this.genomeBrowser.makeDraggable(trackContent, chromosome);
@@ -280,8 +280,8 @@ class TrackRenderer {
         const end = this.genomeBrowser.currentPosition.end;
         const subsequence = sequence.substring(start, end);
         
-        // Create GC content visualization
-        const gcDisplay = this.createGCContentVisualization(subsequence);
+        // Create enhanced GC content and skew visualization
+        const gcDisplay = this.createEnhancedGCVisualization(subsequence, start, end);
         trackContent.appendChild(gcDisplay);
         
         track.appendChild(trackContent);
@@ -665,37 +665,425 @@ class TrackRenderer {
         return track;
     }
 
-    createGCContentVisualization(sequence) {
-        const gcDisplay = document.createElement('div');
-        gcDisplay.className = 'gc-content-display';
-        gcDisplay.style.position = 'relative';
-        gcDisplay.style.height = '60px';
-        gcDisplay.style.background = 'rgba(255, 255, 255, 0.1)';
-        gcDisplay.style.border = '1px solid rgba(0, 0, 0, 0.1)';
-        gcDisplay.style.borderRadius = '4px';
+    createEnhancedGCVisualization(sequence, viewStart, viewEnd) {
+        const container = document.createElement('div');
+        container.className = 'gc-content-skew-display';
+        container.style.cssText = `
+            position: relative;
+            height: 100px;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            overflow: hidden;
+        `;
         
-        const windowSize = Math.max(10, Math.floor(sequence.length / 50));
+        // Create canvas for smooth visualization
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
         
-        for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+        // Set up canvas dimensions
+        const containerWidth = 800; // Will be adjusted dynamically
+        const containerHeight = 100;
+        canvas.width = containerWidth;
+        canvas.height = containerHeight;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        
+        // Calculate window size based on sequence length and zoom level
+        const baseWindowSize = Math.max(20, Math.floor(sequence.length / 200));
+        const windowSize = Math.min(baseWindowSize, 1000);
+        const stepSize = Math.max(1, Math.floor(windowSize / 4));
+        
+        console.log(`GC analysis: sequence length=${sequence.length}, windowSize=${windowSize}, stepSize=${stepSize}`);
+        
+        // Calculate GC content and skew data
+        const gcData = [];
+        const skewData = [];
+        const positions = [];
+        
+        for (let i = 0; i <= sequence.length - windowSize; i += stepSize) {
             const window = sequence.substring(i, i + windowSize);
-            const gcCount = (window.match(/[GC]/g) || []).length;
-            const gcPercent = (gcCount / windowSize) * 100;
+            const gcAnalysis = this.analyzeGCWindow(window);
             
-            const bar = document.createElement('div');
-            bar.className = 'gc-bar';
-            bar.style.position = 'absolute';
-            bar.style.left = `${(i / sequence.length) * 100}%`;
-            bar.style.width = `${(windowSize / sequence.length) * 100}%`;
-            bar.style.height = `${(gcPercent / 100) * 50}px`;
-            bar.style.bottom = '5px';
-            bar.style.background = `hsl(${120 - (gcPercent * 1.2)}, 70%, 50%)`;
-            bar.style.borderRadius = '2px';
-            bar.title = `GC Content: ${gcPercent.toFixed(1)}%`;
-            
-            gcDisplay.appendChild(bar);
+            gcData.push(gcAnalysis.gcPercent);
+            skewData.push(gcAnalysis.gcSkew);
+            positions.push(i + windowSize / 2); // Center position of window
         }
         
-        return gcDisplay;
+        if (gcData.length === 0) {
+            // No data to display
+            const noDataMsg = document.createElement('div');
+            noDataMsg.textContent = 'Sequence too short for GC analysis';
+            noDataMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #6c757d;
+                font-size: 12px;
+                font-style: italic;
+            `;
+            container.appendChild(noDataMsg);
+            return container;
+        }
+        
+        // Find min/max values for scaling
+        const gcMin = Math.min(...gcData);
+        const gcMax = Math.max(...gcData);
+        const skewMin = Math.min(...skewData);
+        const skewMax = Math.max(...skewData);
+        
+        // Draw the visualization
+        this.drawGCVisualization(ctx, containerWidth, containerHeight, {
+            gcData,
+            skewData,
+            positions,
+            gcMin,
+            gcMax,
+            skewMin,
+            skewMax,
+            sequenceLength: sequence.length
+        });
+        
+        // Add legend
+        const legend = this.createGCLegend();
+        container.appendChild(legend);
+        
+        container.appendChild(canvas);
+        
+        // Add interactive tooltip functionality after canvas is appended
+        this.addGCTooltipInteraction(canvas, container, {
+            gcData,
+            skewData,
+            positions,
+            windowSize,
+            viewStart,
+            viewEnd
+        });
+        
+        return container;
+    }
+    
+    analyzeGCWindow(window) {
+        const bases = window.toUpperCase();
+        const gCount = (bases.match(/G/g) || []).length;
+        const cCount = (bases.match(/C/g) || []).length;
+        const aCount = (bases.match(/A/g) || []).length;
+        const tCount = (bases.match(/T/g) || []).length;
+        const totalValidBases = gCount + cCount + aCount + tCount;
+        
+        if (totalValidBases === 0) {
+            return { gcPercent: 0, gcSkew: 0, gCount, cCount };
+        }
+        
+        const gcPercent = ((gCount + cCount) / totalValidBases) * 100;
+        const gcSkew = (gCount + cCount) > 0 ? (gCount - cCount) / (gCount + cCount) : 0;
+        
+        return { gcPercent, gcSkew, gCount, cCount };
+    }
+    
+    drawGCVisualization(ctx, width, height, data) {
+        const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Set up coordinate system
+        const padding = 10;
+        const plotWidth = width - 2 * padding;
+        const plotHeight = height - 2 * padding;
+        const centerY = height / 2;
+        
+        // Draw background grid
+        this.drawGCGrid(ctx, padding, plotWidth, plotHeight, centerY);
+        
+        // Draw GC content (upper half)
+        this.drawGCContent(ctx, gcData, positions, sequenceLength, padding, plotWidth, centerY - padding, gcMin, gcMax);
+        
+        // Draw GC skew (lower half)
+        this.drawGCSkew(ctx, skewData, positions, sequenceLength, padding, plotWidth, centerY + padding, plotHeight - padding, skewMin, skewMax);
+        
+        // Draw axis labels
+        this.drawGCAxisLabels(ctx, width, height, gcMin, gcMax, skewMin, skewMax);
+    }
+    
+    drawGCGrid(ctx, padding, plotWidth, plotHeight, centerY) {
+        ctx.strokeStyle = '#e9ecef';
+        ctx.lineWidth = 0.5;
+        
+        // Horizontal grid lines
+        const gridLines = [0.25, 0.5, 0.75]; // 25%, 50%, 75% positions
+        gridLines.forEach(ratio => {
+            const y1 = padding + ratio * (centerY - padding);
+            const y2 = centerY + padding + ratio * (plotHeight - centerY - padding);
+            
+            // Upper grid (GC content)
+            ctx.beginPath();
+            ctx.moveTo(padding, y1);
+            ctx.lineTo(padding + plotWidth, y1);
+            ctx.stroke();
+            
+            // Lower grid (GC skew)
+            ctx.beginPath();
+            ctx.moveTo(padding, y2);
+            ctx.lineTo(padding + plotWidth, y2);
+            ctx.stroke();
+        });
+        
+        // Center line (zero line for GC skew)
+        ctx.strokeStyle = '#6c757d';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, centerY);
+        ctx.lineTo(padding + plotWidth, centerY);
+        ctx.stroke();
+    }
+    
+    drawGCContent(ctx, gcData, positions, sequenceLength, padding, plotWidth, maxHeight, gcMin, gcMax) {
+        if (gcData.length < 2) return;
+        
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, padding, 0, maxHeight);
+        gradient.addColorStop(0, 'rgba(40, 167, 69, 0.8)');   // Strong green at top
+        gradient.addColorStop(1, 'rgba(40, 167, 69, 0.2)');   // Light green at bottom
+        
+        // Draw filled area
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(padding, maxHeight);
+        
+        for (let i = 0; i < gcData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedGC = (gcData[i] - gcMin) / (gcMax - gcMin);
+            const y = maxHeight - normalizedGC * (maxHeight - padding);
+            
+            if (i === 0) {
+                ctx.lineTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        
+        ctx.lineTo(padding + plotWidth, maxHeight);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw line
+        ctx.strokeStyle = '#28a745';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        for (let i = 0; i < gcData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedGC = (gcData[i] - gcMin) / (gcMax - gcMin);
+            const y = maxHeight - normalizedGC * (maxHeight - padding);
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+    }
+    
+    drawGCSkew(ctx, skewData, positions, sequenceLength, padding, plotWidth, minY, maxY, skewMin, skewMax) {
+        if (skewData.length < 2) return;
+        
+        // Calculate zero line position
+        const skewRange = skewMax - skewMin;
+        const zeroRatio = skewRange !== 0 ? Math.abs(skewMin) / skewRange : 0.5;
+        const zeroY = maxY - zeroRatio * (maxY - minY);
+        
+        // Draw positive skew (above zero)
+        const positiveGradient = ctx.createLinearGradient(0, minY, 0, zeroY);
+        positiveGradient.addColorStop(0, 'rgba(255, 193, 7, 0.8)');   // Strong amber
+        positiveGradient.addColorStop(1, 'rgba(255, 193, 7, 0.2)');   // Light amber
+        
+        // Draw negative skew (below zero)
+        const negativeGradient = ctx.createLinearGradient(0, zeroY, 0, maxY);
+        negativeGradient.addColorStop(0, 'rgba(220, 53, 69, 0.2)');   // Light red
+        negativeGradient.addColorStop(1, 'rgba(220, 53, 69, 0.8)');   // Strong red
+        
+        // Draw positive area
+        ctx.fillStyle = positiveGradient;
+        ctx.beginPath();
+        ctx.moveTo(padding, zeroY);
+        
+        for (let i = 0; i < skewData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
+            const y = maxY - normalizedSkew * (maxY - minY);
+            
+            if (skewData[i] >= 0) {
+                ctx.lineTo(x, Math.min(y, zeroY));
+            } else {
+                ctx.lineTo(x, zeroY);
+            }
+        }
+        
+        ctx.lineTo(padding + plotWidth, zeroY);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw negative area
+        ctx.fillStyle = negativeGradient;
+        ctx.beginPath();
+        ctx.moveTo(padding, zeroY);
+        
+        for (let i = 0; i < skewData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
+            const y = maxY - normalizedSkew * (maxY - minY);
+            
+            if (skewData[i] < 0) {
+                ctx.lineTo(x, Math.max(y, zeroY));
+            } else {
+                ctx.lineTo(x, zeroY);
+            }
+        }
+        
+        ctx.lineTo(padding + plotWidth, zeroY);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw skew line
+        ctx.strokeStyle = '#495057';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        
+        for (let i = 0; i < skewData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
+            const y = maxY - normalizedSkew * (maxY - minY);
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+    }
+    
+    drawGCAxisLabels(ctx, width, height, gcMin, gcMax, skewMin, skewMax) {
+        ctx.fillStyle = '#495057';
+        ctx.font = '10px Inter, sans-serif';
+        
+        // GC Content labels (left side)
+        ctx.textAlign = 'right';
+        ctx.fillText(`${gcMax.toFixed(1)}%`, 8, 15);
+        ctx.fillText(`${((gcMin + gcMax) / 2).toFixed(1)}%`, 8, height / 4);
+        ctx.fillText(`${gcMin.toFixed(1)}%`, 8, height / 2 - 5);
+        
+        // GC Skew labels (left side)
+        ctx.fillText(`${skewMax.toFixed(3)}`, 8, height / 2 + 15);
+        ctx.fillText('0.000', 8, height / 2 + 2);
+        ctx.fillText(`${skewMin.toFixed(3)}`, 8, height - 5);
+        
+        // Track labels (right side)
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#28a745';
+        ctx.fillText('GC%', width - 40, 15);
+        ctx.fillStyle = '#495057';
+        ctx.fillText('Skew', width - 40, height - 5);
+    }
+    
+    createGCLegend() {
+        const legend = document.createElement('div');
+        legend.className = 'gc-legend';
+        legend.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 10px;
+            line-height: 1.2;
+            color: #495057;
+            pointer-events: none;
+        `;
+        
+        legend.innerHTML = `
+            <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                <div style="width: 12px; height: 3px; background: #28a745; margin-right: 4px;"></div>
+                <span>GC Content</span>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div style="width: 12px; height: 3px; background: linear-gradient(to right, #dc3545, #495057, #ffc107); margin-right: 4px;"></div>
+                <span>GC Skew</span>
+            </div>
+        `;
+        
+        return legend;
+    }
+    
+    addGCTooltipInteraction(canvas, container, data) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'gc-tooltip';
+        tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;
+        `;
+        
+        container.appendChild(tooltip);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const canvasX = (x / rect.width) * canvas.width;
+            
+            // Find closest data point
+            const padding = 10;
+            const plotWidth = canvas.width - 2 * padding;
+            const relativeX = (canvasX - padding) / plotWidth;
+            const sequencePos = Math.round(relativeX * data.sequenceLength);
+            
+            // Find closest index
+            let closestIndex = 0;
+            let closestDistance = Math.abs(data.positions[0] - sequencePos);
+            
+            for (let i = 1; i < data.positions.length; i++) {
+                const distance = Math.abs(data.positions[i] - sequencePos);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestIndex = i;
+                }
+            }
+            
+            if (closestIndex < data.gcData.length) {
+                const gcValue = data.gcData[closestIndex];
+                const skewValue = data.skewData[closestIndex];
+                const position = data.viewStart + data.positions[closestIndex];
+                
+                tooltip.innerHTML = `
+                    Position: ${position.toLocaleString()}<br>
+                    GC Content: ${gcValue.toFixed(2)}%<br>
+                    GC Skew: ${skewValue.toFixed(4)}
+                `;
+                
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${e.clientX - rect.left + 10}px`;
+                tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
     }
 
     showGeneDetails(gene, operonInfo) {

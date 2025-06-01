@@ -646,7 +646,7 @@ class GenomeBrowser {
                             }
                             break;
                         case 'gc':
-                            optimalHeight = 100;
+                            optimalHeight = 120; // Updated for enhanced GC Content & Skew track
                             break;
                         case 'variants':
                             const variantElements = topContent.querySelectorAll('.variant-element');
@@ -952,7 +952,7 @@ class GenomeBrowser {
                         }
                         break;
                     case 'gc':
-                        optimalHeight = 100;
+                        optimalHeight = 120; // Updated for enhanced GC Content & Skew track
                         break;
                     case 'variants':
                         optimalHeight = 80;

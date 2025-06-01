@@ -2654,6 +2654,55 @@ body {
     background: var(--bg-primary);
 }
 
+.gc-content-skew-display {
+    position: relative;
+    height: 100px;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.gc-content-skew-display canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+.gc-legend {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.2;
+    color: #495057;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.gc-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Legacy support for old GC visualization */
 .gc-content-visualization {
     display: flex;
     height: 60px;
@@ -3090,7 +3139,7 @@ body {
 }
 
 .gc-track .track-content {
-    min-height: 50px;
+    min-height: 80px;
 }
 
 .reads-track .track-content {
@@ -6328,7 +6377,7 @@ body {
 }
 
 .gc-track .track-content {
-    min-height: 50px;
+    min-height: 80px;
 }
 
 .reads-track .track-content {
