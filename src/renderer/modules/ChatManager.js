@@ -162,6 +162,78 @@ class ChatManager {
                     result = this.getTrackStatus();
                     break;
                     
+                case 'search_motif':
+                    result = await this.searchMotif(parameters);
+                    break;
+                    
+                case 'search_pattern':
+                    result = await this.searchPattern(parameters);
+                    break;
+                    
+                case 'get_nearby_features':
+                    result = await this.getNearbyFeatures(parameters);
+                    break;
+                    
+                case 'find_intergenic_regions':
+                    result = await this.findIntergenicRegions(parameters);
+                    break;
+                    
+                case 'find_restriction_sites':
+                    result = await this.findRestrictionSites(parameters);
+                    break;
+                    
+                case 'virtual_digest':
+                    result = await this.virtualDigest(parameters);
+                    break;
+                    
+                case 'sequence_statistics':
+                    result = await this.sequenceStatistics(parameters);
+                    break;
+                    
+                case 'codon_usage_analysis':
+                    result = await this.codonUsageAnalysis(parameters);
+                    break;
+                    
+                case 'bookmark_position':
+                    result = await this.bookmarkPosition(parameters);
+                    break;
+                    
+                case 'get_bookmarks':
+                    result = this.getBookmarks(parameters);
+                    break;
+                    
+                case 'save_view_state':
+                    result = await this.saveViewState(parameters);
+                    break;
+                    
+                case 'compare_regions':
+                    result = await this.compareRegions(parameters);
+                    break;
+                    
+                case 'find_similar_sequences':
+                    result = await this.findSimilarSequences(parameters);
+                    break;
+                    
+                case 'edit_annotation':
+                    result = await this.editAnnotation(parameters);
+                    break;
+                    
+                case 'delete_annotation':
+                    result = await this.deleteAnnotation(parameters);
+                    break;
+                    
+                case 'batch_create_annotations':
+                    result = await this.batchCreateAnnotations(parameters);
+                    break;
+                    
+                case 'get_file_info':
+                    result = this.getFileInfo(parameters);
+                    break;
+                    
+                case 'export_region_features':
+                    result = await this.exportRegionFeatures(parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -843,9 +915,172 @@ class ChatManager {
                 return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map(chr => `${chr.name} (${(chr.length/1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
                 
             case 'get_track_status':
-                const visibleCount = result.visibleTracks.length;
-                return `👁️ Track status: ${visibleCount}/${result.totalTracks} visible (${result.visibleTracks.join(', ')})`;
+                return `Track Status:\n${Object.entries(result).map(([track, status]) => 
+                    `• ${track}: ${status ? 'visible' : 'hidden'}`).join('\n')}`;
+                    
+            case 'search_motif':
+                return `Motif Search Results for "${result.pattern}":\n` +
+                    `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
+                    `• Allowing up to ${result.allowedMismatches} mismatches\n` +
+                    (result.matches.length > 0 ? 
+                        `• Top matches:\n${result.matches.slice(0, 5).map(m => 
+                            `  - Position ${m.position}: ${m.sequence} (${m.strand} strand, ${m.mismatches} mismatches)`
+                        ).join('\n')}` : '• No matches found');
+
+            case 'search_pattern':
+                return `Pattern Search Results for "${result.regex}":\n` +
+                    `• Found ${result.matchesFound} matches in ${result.searchRegion}\n` +
+                    (result.matches.length > 0 ? 
+                        `• Matches:\n${result.matches.slice(0, 10).map(m => 
+                            `  - Position ${m.position}: ${m.sequence} (length: ${m.length})`
+                        ).join('\n')}` : '• No matches found');
+
+            case 'get_nearby_features':
+                return `Nearby Features (within ${result.searchDistance} bp of position ${result.position}):\n` +
+                    `• Found ${result.featuresFound} features\n` +
+                    (result.features.length > 0 ? 
+                        `• Features:\n${result.features.map(f => 
+                            `  - ${f.name} (${f.type}): ${f.start}-${f.end} ${f.strand} strand, ${f.distance} bp ${f.direction}`
+                        ).join('\n')}` : '• No features found in range');
+
+            case 'find_intergenic_regions':
+                return `Intergenic Regions (min ${result.minLength} bp):\n` +
+                    `• Found ${result.regionsFound} regions\n` +
+                    `• Total intergenic length: ${result.totalIntergenicLength.toLocaleString()} bp\n` +
+                    (result.regions.length > 0 ? 
+                        `• Largest regions:\n${result.regions.slice(0, 5).map(r => 
+                            `  - ${r.start}-${r.end} (${r.length.toLocaleString()} bp) between ${r.upstreamGene} and ${r.downstreamGene}`
+                        ).join('\n')}` : '• No intergenic regions found');
+
+            case 'find_restriction_sites':
+                return `Restriction Sites for ${result.enzyme} (${result.recognitionSite}):\n` +
+                    `• Found ${result.sitesFound} sites in ${result.searchRegion}\n` +
+                    (result.sites.length > 0 ? 
+                        `• Sites:\n${result.sites.map(s => 
+                            `  - Position ${s.position}: ${s.site} (${s.strand} strand)`
+                        ).join('\n')}` : '• No restriction sites found');
+
+            case 'virtual_digest':
+                return `Virtual Digest with ${result.enzymes.join(', ')}:\n` +
+                    `• Total cut sites: ${result.totalSites}\n` +
+                    `• Fragments generated: ${result.fragments}\n` +
+                    `• Average fragment size: ${result.averageFragmentSize.toLocaleString()} bp\n` +
+                    `• Size range: ${result.smallestFragment.toLocaleString()} - ${result.largestFragment.toLocaleString()} bp\n` +
+                    (result.fragmentDetails.length > 0 ? 
+                        `• Largest fragments:\n${result.fragmentDetails.slice(0, 5).map(f => 
+                            `  - ${f.start}-${f.end} (${f.length.toLocaleString()} bp) cut by ${f.cutBy}`
+                        ).join('\n')}` : '');
+
+            case 'sequence_statistics':
+                let statsOutput = `Sequence Statistics for ${result.region}:\n`;
+                if (result.statistics.composition) {
+                    const comp = result.statistics.composition;
+                    statsOutput += `• Length: ${comp.length.toLocaleString()} bp\n`;
+                    statsOutput += `• Composition: A=${comp.A.percentage}%, T=${comp.T.percentage}%, G=${comp.G.percentage}%, C=${comp.C.percentage}%\n`;
+                    statsOutput += `• GC content: ${comp.GC.percentage}%\n`;
+                }
+                if (result.statistics.complexity) {
+                    statsOutput += `• Low complexity regions: ${result.statistics.complexity.lowComplexityRegions}\n`;
+                }
+                if (result.statistics.skew) {
+                    statsOutput += `• AT/GC skew analysis: ${result.statistics.skew.length} data points\n`;
+                }
+                return statsOutput;
+
+            case 'codon_usage_analysis':
+                return `Codon Usage Analysis for ${result.geneName}:\n` +
+                    `• Total codons: ${result.totalCodons}\n` +
+                    `• Unique codons used: ${result.uniqueCodons}/64\n` +
+                    `• Most frequent codons:\n${result.mostFrequentCodons.map(c => 
+                        `  - ${c.codon} (${c.aminoAcid}): ${c.count} times (${c.frequency}%)`
+                    ).join('\n')}`;
+
+            case 'bookmark_position':
+                return `✓ ${result.message}\n` +
+                    `• Bookmark ID: ${result.bookmark.id}\n` +
+                    `• Created: ${new Date(result.bookmark.created).toLocaleString()}\n` +
+                    (result.bookmark.notes ? `• Notes: ${result.bookmark.notes}` : '');
+
+            case 'get_bookmarks':
+                return `Bookmarks ${result.chromosome !== 'all' ? `for ${result.chromosome}` : ''}:\n` +
+                    `• Total bookmarks: ${result.totalBookmarks}\n` +
+                    `• Showing: ${result.filteredBookmarks}\n` +
+                    (result.bookmarks.length > 0 ? 
+                        `• Bookmarks:\n${result.bookmarks.map(b => 
+                            `  - ${b.name}: ${b.chromosome}:${b.start}-${b.end} (${new Date(b.created).toLocaleDateString()})`
+                        ).join('\n')}` : '• No bookmarks found');
+
+            case 'save_view_state':
+                return `✓ ${result.message}\n` +
+                    `• State ID: ${result.viewState.id}\n` +
+                    `• Position: ${result.viewState.chromosome}:${result.viewState.position?.start}-${result.viewState.position?.end}\n` +
+                    `• Visible tracks: ${result.viewState.visibleTracks?.join(', ') || 'none'}\n` +
+                    `• Created: ${new Date(result.viewState.created).toLocaleString()}`;
+
+            case 'compare_regions':
+                return `Region Comparison:\n` +
+                    `• Region 1: ${result.region1} (${result.length1.toLocaleString()} bp)\n` +
+                    `• Region 2: ${result.region2} (${result.length2.toLocaleString()} bp)\n` +
+                    `• Similarity: ${result.similarity}%\n` +
+                    `• Identity: ${result.identity}%\n` +
+                    `• Preview:\n  Region 1: ${result.sequenceData.region1}\n  Region 2: ${result.sequenceData.region2}`;
+
+            case 'find_similar_sequences':
+                return `Similar Sequence Search:\n` +
+                    `• Query: ${result.querySequence}\n` +
+                    `• Found ${result.resultsFound} similar regions (≥${result.minSimilarity} similarity)\n` +
+                    (result.results.length > 0 ? 
+                        `• Top matches:\n${result.results.slice(0, 5).map(r => 
+                            `  - ${r.start}-${r.end}: ${r.similarity} similarity\n    ${r.sequence}`
+                        ).join('\n')}` : '• No similar sequences found');
+
+            case 'edit_annotation':
+                return `✓ ${result.message}\n` +
+                    `• Annotation: ${result.updatedAnnotation.qualifiers?.gene || result.updatedAnnotation.qualifiers?.locus_tag || result.annotationId}\n` +
+                    `• Type: ${result.updatedAnnotation.type}\n` +
+                    `• Position: ${result.updatedAnnotation.start}-${result.updatedAnnotation.end}`;
+
+            case 'delete_annotation':
+                return `✓ ${result.message}\n` +
+                    `• Deleted: ${result.deletedAnnotation.qualifiers?.gene || result.deletedAnnotation.qualifiers?.locus_tag || result.annotationId}\n` +
+                    `• Type: ${result.deletedAnnotation.type}\n` +
+                    `• Position: ${result.deletedAnnotation.start}-${result.deletedAnnotation.end}`;
+
+            case 'batch_create_annotations':
+                return `✓ Batch created ${result.annotationsCreated} annotations on ${result.chromosome}\n` +
+                    (result.annotations.length > 0 ? 
+                        `• Created annotations:\n${result.annotations.map(a => 
+                            `  - ${a.type}: ${a.start}-${a.end} (${a.qualifiers?.gene || a.id})`
+                        ).join('\n')}` : '');
+
+            case 'get_file_info':
+                let fileOutput = `File Information ${result.fileType !== 'all' ? `(${result.fileType})` : ''}:\n`;
                 
+                if (result.fileInfo.genome) {
+                    const genome = result.fileInfo.genome;
+                    fileOutput += `• Genome: ${genome.chromosomes} chromosome(s), ${genome.totalLength.toLocaleString()} bp total\n`;
+                    fileOutput += `• Current: ${genome.currentChromosome || 'none'}\n`;
+                }
+                
+                if (result.fileInfo.annotations) {
+                    const ann = result.fileInfo.annotations;
+                    fileOutput += `• Annotations: ${ann.totalFeatures.toLocaleString()} features across ${ann.chromosomes} chromosome(s)\n`;
+                    fileOutput += `• Feature types: ${ann.featureTypes.join(', ')}\n`;
+                }
+                
+                if (result.fileInfo.tracks) {
+                    const tracks = Object.entries(result.fileInfo.tracks);
+                    const visible = tracks.filter(([_, status]) => status).length;
+                    fileOutput += `• Tracks: ${visible}/${tracks.length} visible\n`;
+                }
+                
+                return fileOutput;
+
+            case 'export_region_features':
+                return `✓ Exported ${result.featuresExported} features from ${result.chromosome}:${result.region}\n` +
+                    `• Format: ${result.format}\n` +
+                    `• Data ready for download`;
+
             default:
                 return `✅ Tool ${toolName} executed successfully`;
         }
@@ -922,6 +1157,36 @@ Tool Examples:
 - To zoom to gene: {"tool_name": "zoom_to_gene", "parameters": {"geneName": "bidA", "padding": 1000}}
 - To list chromosomes: {"tool_name": "get_chromosome_list", "parameters": {}}
 - To check tracks: {"tool_name": "get_track_status", "parameters": {}}
+
+Advanced Genomics Tools:
+- Search DNA motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "chromosome": "U00096", "allowMismatches": 0}}
+- Pattern search: {"tool_name": "search_pattern", "parameters": {"regex": "ATG.{30,100}(TAG|TAA|TGA)", "description": "ORF pattern"}}
+- Find nearby features: {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000, "featureTypes": ["gene", "CDS"]}}
+- Find intergenic regions: {"tool_name": "find_intergenic_regions", "parameters": {"minLength": 500}}
+- Restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
+- Virtual digest: {"tool_name": "virtual_digest", "parameters": {"enzymes": ["EcoRI", "BamHI"]}}
+- Sequence statistics: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition", "skew", "complexity"]}}
+- Codon usage: {"tool_name": "codon_usage_analysis", "parameters": {"geneName": "lacZ"}}
+- Bookmark position: {"tool_name": "bookmark_position", "parameters": {"name": "Origin region", "notes": "oriC location"}}
+- Get bookmarks: {"tool_name": "get_bookmarks", "parameters": {"chromosome": "U00096"}}
+- Save view state: {"tool_name": "save_view_state", "parameters": {"name": "Gene cluster view"}}
+- Compare regions: {"tool_name": "compare_regions", "parameters": {"region1": "U00096:1000-2000", "region2": "U00096:5000-6000"}}
+- Find similar sequences: {"tool_name": "find_similar_sequences", "parameters": {"querySequence": "ATGCGATCG", "minSimilarity": 0.8}}
+- Edit annotation: {"tool_name": "edit_annotation", "parameters": {"annotationId": "lacZ", "updates": {"qualifiers": {"product": "new description"}}}}
+- Delete annotation: {"tool_name": "delete_annotation", "parameters": {"annotationId": "b0344"}}
+- Batch create annotations: {"tool_name": "batch_create_annotations", "parameters": {"annotations": [{"type": "CDS", "start": 1000, "end": 2000}]}}
+- Get file info: {"tool_name": "get_file_info", "parameters": {"fileType": "genome"}}
+- Export region features: {"tool_name": "export_region_features", "parameters": {"start": 1000, "end": 5000, "format": "json"}}
+
+Function Call Examples:
+- "search for EcoRI sites" → find_restriction_sites
+- "find genes near position 123456" → get_nearby_features  
+- "what's the GC content of this region" → sequence_statistics
+- "bookmark this interesting region" → bookmark_position
+- "search for TATAAA motifs allowing 1 mismatch" → search_motif
+- "compare these two regions" → compare_regions
+- "analyze codon usage in lacZ gene" → codon_usage_analysis
+- "virtual digest with multiple enzymes" → virtual_digest
 
 Do NOT include any explanatory text, markdown formatting, or code blocks around the JSON. Return ONLY the raw JSON object.
 
@@ -1095,6 +1360,78 @@ If the user is asking a general question or doesn't need a tool, respond normall
                     result = this.getTrackStatus();
                     break;
                     
+                case 'search_motif':
+                    result = await this.searchMotif(parameters);
+                    break;
+                    
+                case 'search_pattern':
+                    result = await this.searchPattern(parameters);
+                    break;
+                    
+                case 'get_nearby_features':
+                    result = await this.getNearbyFeatures(parameters);
+                    break;
+                    
+                case 'find_intergenic_regions':
+                    result = await this.findIntergenicRegions(parameters);
+                    break;
+                    
+                case 'find_restriction_sites':
+                    result = await this.findRestrictionSites(parameters);
+                    break;
+                    
+                case 'virtual_digest':
+                    result = await this.virtualDigest(parameters);
+                    break;
+                    
+                case 'sequence_statistics':
+                    result = await this.sequenceStatistics(parameters);
+                    break;
+                    
+                case 'codon_usage_analysis':
+                    result = await this.codonUsageAnalysis(parameters);
+                    break;
+                    
+                case 'bookmark_position':
+                    result = await this.bookmarkPosition(parameters);
+                    break;
+                    
+                case 'get_bookmarks':
+                    result = this.getBookmarks(parameters);
+                    break;
+                    
+                case 'save_view_state':
+                    result = await this.saveViewState(parameters);
+                    break;
+                    
+                case 'compare_regions':
+                    result = await this.compareRegions(parameters);
+                    break;
+                    
+                case 'find_similar_sequences':
+                    result = await this.findSimilarSequences(parameters);
+                    break;
+                    
+                case 'edit_annotation':
+                    result = await this.editAnnotation(parameters);
+                    break;
+                    
+                case 'delete_annotation':
+                    result = await this.deleteAnnotation(parameters);
+                    break;
+                    
+                case 'batch_create_annotations':
+                    result = await this.batchCreateAnnotations(parameters);
+                    break;
+                    
+                case 'get_file_info':
+                    result = this.getFileInfo(parameters);
+                    break;
+                    
+                case 'export_region_features':
+                    result = await this.exportRegionFeatures(parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -1134,7 +1471,25 @@ If the user is asking a general question or doesn't need a tool, respond normall
                     'get_operons',
                     'zoom_to_gene',
                     'get_chromosome_list',
-                    'get_track_status'
+                    'get_track_status',
+                    'search_motif',
+                    'search_pattern',
+                    'get_nearby_features',
+                    'find_intergenic_regions',
+                    'find_restriction_sites',
+                    'virtual_digest',
+                    'sequence_statistics',
+                    'codon_usage_analysis',
+                    'bookmark_position',
+                    'get_bookmarks',
+                    'save_view_state',
+                    'compare_regions',
+                    'find_similar_sequences',
+                    'edit_annotation',
+                    'delete_annotation',
+                    'batch_create_annotations',
+                    'get_file_info',
+                    'export_region_features'
                 ]
             }
         };
@@ -1759,5 +2114,929 @@ If the user is asking a general question or doesn't need a tool, respond normall
             proteins: 'Protein coding sequences'
         };
         return descriptions[trackName] || 'Unknown track';
+    }
+
+    // ========================================
+    // NEW COMPREHENSIVE GENOMICS FUNCTION CALLS
+    // ========================================
+
+    // 1. MOTIF AND PATTERN SEARCHING
+    async searchMotif(params) {
+        const { pattern, chromosome, start, end, allowMismatches = 0 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const regionStart = start || this.app.currentPosition?.start || 0;
+        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+        
+        const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
+        const motifPattern = pattern.toUpperCase();
+        const matches = [];
+        
+        // Search for exact matches and with mismatches
+        for (let i = 0; i <= sequence.length - motifPattern.length; i++) {
+            const subsequence = sequence.substring(i, i + motifPattern.length);
+            const mismatches = this.countMismatches(subsequence, motifPattern);
+            
+            if (mismatches <= allowMismatches) {
+                matches.push({
+                    position: regionStart + i,
+                    sequence: subsequence,
+                    mismatches: mismatches,
+                    strand: '+'
+                });
+            }
+        }
+        
+        // Search reverse complement
+        const reverseComplement = this.reverseComplement(motifPattern);
+        for (let i = 0; i <= sequence.length - reverseComplement.length; i++) {
+            const subsequence = sequence.substring(i, i + reverseComplement.length);
+            const mismatches = this.countMismatches(subsequence, reverseComplement);
+            
+            if (mismatches <= allowMismatches) {
+                matches.push({
+                    position: regionStart + i,
+                    sequence: subsequence,
+                    mismatches: mismatches,
+                    strand: '-'
+                });
+            }
+        }
+        
+        return {
+            pattern: pattern,
+            chromosome: chr,
+            searchRegion: `${regionStart}-${regionEnd}`,
+            allowedMismatches: allowMismatches,
+            matchesFound: matches.length,
+            matches: matches.slice(0, 50) // Limit to first 50 matches
+        };
+    }
+
+    async searchPattern(params) {
+        const { regex, chromosome, start, end, description = 'Custom pattern' } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const regionStart = start || this.app.currentPosition?.start || 0;
+        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+        
+        const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
+        const pattern = new RegExp(regex, 'gi');
+        const matches = [];
+        
+        let match;
+        while ((match = pattern.exec(sequence)) !== null) {
+            matches.push({
+                position: regionStart + match.index,
+                sequence: match[0],
+                length: match[0].length
+            });
+            
+            // Prevent infinite loop on zero-length matches
+            if (match.index === pattern.lastIndex) {
+                pattern.lastIndex++;
+            }
+        }
+        
+        return {
+            regex: regex,
+            description: description,
+            chromosome: chr,
+            searchRegion: `${regionStart}-${regionEnd}`,
+            matchesFound: matches.length,
+            matches: matches.slice(0, 50)
+        };
+    }
+
+    // 2. NEARBY FEATURES AND CONTEXT
+    async getNearbyFeatures(params) {
+        const { chromosome, position, distance = 5000, featureTypes = [] } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
+            throw new Error('No annotations loaded for chromosome');
+        }
+        
+        const annotations = this.app.currentAnnotations[chr];
+        const nearbyFeatures = annotations.filter(feature => {
+            if (featureTypes.length > 0 && !featureTypes.includes(feature.type)) {
+                return false;
+            }
+            
+            const featureDistance = Math.min(
+                Math.abs(feature.start - position),
+                Math.abs(feature.end - position)
+            );
+            
+            return featureDistance <= distance;
+        });
+        
+        // Sort by distance
+        nearbyFeatures.sort((a, b) => {
+            const distA = Math.min(Math.abs(a.start - position), Math.abs(a.end - position));
+            const distB = Math.min(Math.abs(b.start - position), Math.abs(b.end - position));
+            return distA - distB;
+        });
+        
+        const featureSummary = nearbyFeatures.map(feature => ({
+            name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
+            type: feature.type,
+            start: feature.start,
+            end: feature.end,
+            strand: feature.strand === -1 ? '-' : '+',
+            distance: Math.min(Math.abs(feature.start - position), Math.abs(feature.end - position)),
+            direction: feature.start > position ? 'downstream' : feature.end < position ? 'upstream' : 'overlapping'
+        }));
+        
+        return {
+            chromosome: chr,
+            position: position,
+            searchDistance: distance,
+            featuresFound: nearbyFeatures.length,
+            features: featureSummary.slice(0, 20)
+        };
+    }
+
+    async findIntergenicRegions(params) {
+        const { chromosome, minLength = 100 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
+            throw new Error('No annotations loaded for chromosome');
+        }
+        
+        const annotations = this.app.currentAnnotations[chr];
+        const genes = annotations.filter(f => f.type === 'gene' || f.type === 'CDS').sort((a, b) => a.start - b.start);
+        const intergenicRegions = [];
+        
+        for (let i = 0; i < genes.length - 1; i++) {
+            const currentGene = genes[i];
+            const nextGene = genes[i + 1];
+            const intergenicStart = currentGene.end + 1;
+            const intergenicEnd = nextGene.start - 1;
+            const length = intergenicEnd - intergenicStart + 1;
+            
+            if (length >= minLength) {
+                intergenicRegions.push({
+                    start: intergenicStart,
+                    end: intergenicEnd,
+                    length: length,
+                    upstreamGene: currentGene.qualifiers?.gene || currentGene.qualifiers?.locus_tag || 'Unknown',
+                    downstreamGene: nextGene.qualifiers?.gene || nextGene.qualifiers?.locus_tag || 'Unknown'
+                });
+            }
+        }
+        
+        return {
+            chromosome: chr,
+            minLength: minLength,
+            regionsFound: intergenicRegions.length,
+            totalIntergenicLength: intergenicRegions.reduce((sum, region) => sum + region.length, 0),
+            regions: intergenicRegions.slice(0, 20)
+        };
+    }
+
+    // 3. RESTRICTION ENZYME ANALYSIS
+    async findRestrictionSites(params) {
+        const { enzyme, chromosome, start, end } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const regionStart = start || this.app.currentPosition?.start || 0;
+        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+        
+        const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
+        
+        // Common restriction enzyme recognition sites
+        const restrictionSites = {
+            'EcoRI': 'GAATTC',
+            'BamHI': 'GGATCC',
+            'HindIII': 'AAGCTT',
+            'XhoI': 'CTCGAG',
+            'SalI': 'GTCGAC',
+            'SpeI': 'ACTAGT',
+            'NotI': 'GCGGCCGC',
+            'KpnI': 'GGTACC',
+            'SacI': 'GAGCTC',
+            'PstI': 'CTGCAG'
+        };
+        
+        const recognitionSite = restrictionSites[enzyme];
+        if (!recognitionSite) {
+            throw new Error(`Unknown restriction enzyme: ${enzyme}. Supported: ${Object.keys(restrictionSites).join(', ')}`);
+        }
+        
+        const sites = [];
+        const siteLength = recognitionSite.length;
+        
+        // Search forward strand
+        for (let i = 0; i <= sequence.length - siteLength; i++) {
+            const subsequence = sequence.substring(i, i + siteLength);
+            if (subsequence === recognitionSite) {
+                sites.push({
+                    position: regionStart + i,
+                    site: subsequence,
+                    strand: '+'
+                });
+            }
+        }
+        
+        // Search reverse strand
+        const reverseComplement = this.reverseComplement(recognitionSite);
+        for (let i = 0; i <= sequence.length - siteLength; i++) {
+            const subsequence = sequence.substring(i, i + siteLength);
+            if (subsequence === reverseComplement) {
+                sites.push({
+                    position: regionStart + i,
+                    site: subsequence,
+                    strand: '-'
+                });
+            }
+        }
+        
+        return {
+            enzyme: enzyme,
+            recognitionSite: recognitionSite,
+            chromosome: chr,
+            searchRegion: `${regionStart}-${regionEnd}`,
+            sitesFound: sites.length,
+            sites: sites
+        };
+    }
+
+    async virtualDigest(params) {
+        const { enzymes, chromosome } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const sequenceLength = this.app.currentSequence[chr]?.length || 0;
+        const allSites = [];
+        
+        // Find all restriction sites for all enzymes
+        for (const enzyme of enzymes) {
+            const result = await this.findRestrictionSites({ enzyme, chromosome: chr, start: 0, end: sequenceLength });
+            result.sites.forEach(site => {
+                allSites.push({ ...site, enzyme });
+            });
+        }
+        
+        // Sort all sites by position
+        allSites.sort((a, b) => a.position - b.position);
+        
+        // Calculate fragment sizes
+        const fragments = [];
+        let lastPosition = 0;
+        
+        allSites.forEach(site => {
+            const fragmentLength = site.position - lastPosition;
+            if (fragmentLength > 0) {
+                fragments.push({
+                    start: lastPosition,
+                    end: site.position,
+                    length: fragmentLength,
+                    cutBy: site.enzyme
+                });
+            }
+            lastPosition = site.position;
+        });
+        
+        // Add final fragment
+        if (lastPosition < sequenceLength) {
+            fragments.push({
+                start: lastPosition,
+                end: sequenceLength,
+                length: sequenceLength - lastPosition,
+                cutBy: 'terminal'
+            });
+        }
+        
+        return {
+            enzymes: enzymes,
+            chromosome: chr,
+            totalSites: allSites.length,
+            fragments: fragments.length,
+            averageFragmentSize: Math.round(fragments.reduce((sum, f) => sum + f.length, 0) / fragments.length),
+            largestFragment: Math.max(...fragments.map(f => f.length)),
+            smallestFragment: Math.min(...fragments.map(f => f.length)),
+            fragmentDetails: fragments.slice(0, 20) // Show first 20 fragments
+        };
+    }
+
+    // 4. ENHANCED SEQUENCE STATISTICS
+    async sequenceStatistics(params) {
+        const { chromosome, start, end, include = ['basic', 'composition', 'complexity'] } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const regionStart = start || this.app.currentPosition?.start || 0;
+        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+        
+        const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
+        const stats = {};
+        
+        // Basic composition
+        if (include.includes('basic') || include.includes('composition')) {
+            const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
+            for (const base of sequence) {
+                counts[base] = (counts[base] || 0) + 1;
+            }
+            
+            const length = sequence.length;
+            stats.composition = {
+                length: length,
+                A: { count: counts.A, percentage: (counts.A / length * 100).toFixed(2) },
+                T: { count: counts.T, percentage: (counts.T / length * 100).toFixed(2) },
+                G: { count: counts.G, percentage: (counts.G / length * 100).toFixed(2) },
+                C: { count: counts.C, percentage: (counts.C / length * 100).toFixed(2) },
+                GC: { percentage: ((counts.G + counts.C) / length * 100).toFixed(2) },
+                AT: { percentage: ((counts.A + counts.T) / length * 100).toFixed(2) }
+            };
+        }
+        
+        // AT/GC skew
+        if (include.includes('skew') || include.includes('at_skew') || include.includes('gc_skew')) {
+            const windowSize = Math.max(100, Math.floor(sequence.length / 50));
+            const skewData = [];
+            
+            for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+                const window = sequence.substring(i, i + windowSize);
+                const A = (window.match(/A/g) || []).length;
+                const T = (window.match(/T/g) || []).length;
+                const G = (window.match(/G/g) || []).length;
+                const C = (window.match(/C/g) || []).length;
+                
+                const atSkew = (A - T) / (A + T) || 0;
+                const gcSkew = (G - C) / (G + C) || 0;
+                
+                skewData.push({
+                    position: regionStart + i + windowSize / 2,
+                    atSkew: parseFloat(atSkew.toFixed(3)),
+                    gcSkew: parseFloat(gcSkew.toFixed(3))
+                });
+            }
+            
+            stats.skew = skewData.slice(0, 20); // Limit data points
+        }
+        
+        // Complexity (low complexity regions)
+        if (include.includes('complexity')) {
+            const windowSize = 50;
+            const lowComplexityRegions = [];
+            
+            for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+                const window = sequence.substring(i, i + windowSize);
+                const uniqueBases = new Set(window).size;
+                const complexity = uniqueBases / 4; // Normalized to 0-1
+                
+                if (complexity < 0.6) { // Low complexity threshold
+                    lowComplexityRegions.push({
+                        start: regionStart + i,
+                        end: regionStart + i + windowSize,
+                        complexity: parseFloat(complexity.toFixed(3))
+                    });
+                }
+            }
+            
+            stats.complexity = {
+                lowComplexityRegions: lowComplexityRegions.length,
+                regions: lowComplexityRegions.slice(0, 10)
+            };
+        }
+        
+        return {
+            chromosome: chr,
+            region: `${regionStart}-${regionEnd}`,
+            analysisTypes: include,
+            statistics: stats
+        };
+    }
+
+    async codonUsageAnalysis(params) {
+        const { geneName, chromosome } = params;
+        
+        const geneDetails = await this.getGeneDetails({ geneName, chromosome });
+        if (!geneDetails.found || geneDetails.genes.length === 0) {
+            throw new Error(`Gene "${geneName}" not found`);
+        }
+        
+        const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
+        const chr = geneDetails.chromosome;
+        
+        const sequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
+        const codonCounts = {};
+        const aminoAcidCounts = {};
+        
+        // Genetic code
+        const geneticCode = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        };
+        
+        // Count codons
+        for (let i = 0; i < sequence.length - 2; i += 3) {
+            const codon = sequence.substring(i, i + 3);
+            const aminoAcid = geneticCode[codon];
+            
+            if (aminoAcid) {
+                codonCounts[codon] = (codonCounts[codon] || 0) + 1;
+                aminoAcidCounts[aminoAcid] = (aminoAcidCounts[aminoAcid] || 0) + 1;
+            }
+        }
+        
+        const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
+        
+        // Calculate relative usage
+        const codonUsage = Object.entries(codonCounts).map(([codon, count]) => ({
+            codon: codon,
+            aminoAcid: geneticCode[codon],
+            count: count,
+            frequency: parseFloat((count / totalCodons * 100).toFixed(2))
+        })).sort((a, b) => b.frequency - a.frequency);
+        
+        return {
+            geneName: geneName,
+            gene: gene,
+            totalCodons: totalCodons,
+            uniqueCodons: Object.keys(codonCounts).length,
+            codonUsage: codonUsage,
+            aminoAcidComposition: aminoAcidCounts,
+            mostFrequentCodons: codonUsage.slice(0, 10)
+        };
+    }
+
+    // 5. BOOKMARK AND SESSION MANAGEMENT
+    async bookmarkPosition(params) {
+        const { name, chromosome, start, end, notes = '' } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        const bookmarkStart = start || this.app.currentPosition?.start;
+        const bookmarkEnd = end || this.app.currentPosition?.end;
+        
+        if (!chr || bookmarkStart === undefined || bookmarkEnd === undefined) {
+            throw new Error('Invalid bookmark parameters');
+        }
+        
+        const bookmark = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            name: name,
+            chromosome: chr,
+            start: bookmarkStart,
+            end: bookmarkEnd,
+            notes: notes,
+            created: new Date().toISOString()
+        };
+        
+        // Store in configuration
+        let bookmarks = this.configManager.get('bookmarks', []);
+        bookmarks.push(bookmark);
+        this.configManager.set('bookmarks', bookmarks);
+        await this.configManager.save();
+        
+        return {
+            success: true,
+            bookmark: bookmark,
+            message: `Bookmarked "${name}" at ${chr}:${bookmarkStart}-${bookmarkEnd}`
+        };
+    }
+
+    getBookmarks(params) {
+        const { chromosome } = params;
+        const bookmarks = this.configManager.get('bookmarks', []);
+        
+        let filteredBookmarks = bookmarks;
+        if (chromosome) {
+            filteredBookmarks = bookmarks.filter(b => b.chromosome === chromosome);
+        }
+        
+        return {
+            totalBookmarks: bookmarks.length,
+            filteredBookmarks: filteredBookmarks.length,
+            chromosome: chromosome || 'all',
+            bookmarks: filteredBookmarks
+        };
+    }
+
+    async saveViewState(params) {
+        const { name, description = '' } = params;
+        
+        const viewState = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            name: name,
+            description: description,
+            chromosome: this.app.currentChromosome,
+            position: this.app.currentPosition,
+            visibleTracks: this.getVisibleTracks(),
+            created: new Date().toISOString()
+        };
+        
+        let savedStates = this.configManager.get('viewStates', []);
+        savedStates.push(viewState);
+        this.configManager.set('viewStates', savedStates);
+        await this.configManager.save();
+        
+        return {
+            success: true,
+            viewState: viewState,
+            message: `Saved view state "${name}"`
+        };
+    }
+
+    // Helper methods
+    countMismatches(seq1, seq2) {
+        if (seq1.length !== seq2.length) return Infinity;
+        let mismatches = 0;
+        for (let i = 0; i < seq1.length; i++) {
+            if (seq1[i] !== seq2[i]) mismatches++;
+        }
+        return mismatches;
+    }
+
+    // 6. SEQUENCE COMPARISON AND ANALYSIS
+    async compareRegions(params) {
+        const { region1, region2, alignmentType = 'simple' } = params;
+        
+        // Parse regions (format: "chr:start-end")
+        const parseRegion = (regionStr) => {
+            const parts = regionStr.split(':');
+            const chromosome = parts[0];
+            const [start, end] = parts[1].split('-').map(Number);
+            return { chromosome, start, end };
+        };
+        
+        const reg1 = parseRegion(region1);
+        const reg2 = parseRegion(region2);
+        
+        const seq1 = await this.app.getSequenceForRegion(reg1.chromosome, reg1.start, reg1.end);
+        const seq2 = await this.app.getSequenceForRegion(reg2.chromosome, reg2.start, reg2.end);
+        
+        // Simple comparison metrics
+        const similarity = this.calculateSimilarity(seq1, seq2);
+        const identity = this.calculateIdentity(seq1, seq2);
+        
+        return {
+            region1: region1,
+            region2: region2,
+            length1: seq1.length,
+            length2: seq2.length,
+            similarity: parseFloat(similarity.toFixed(2)),
+            identity: parseFloat(identity.toFixed(2)),
+            sequenceData: {
+                region1: seq1.substring(0, 100) + (seq1.length > 100 ? '...' : ''),
+                region2: seq2.substring(0, 100) + (seq2.length > 100 ? '...' : '')
+            }
+        };
+    }
+
+    async findSimilarSequences(params) {
+        const { querySequence, chromosome, minSimilarity = 0.8, maxResults = 20 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const chromosomeSequence = this.app.currentSequence[chr];
+        if (!chromosomeSequence) {
+            throw new Error('No sequence loaded for chromosome');
+        }
+        
+        const queryLength = querySequence.length;
+        const similarRegions = [];
+        
+        // Sliding window search
+        for (let i = 0; i <= chromosomeSequence.length - queryLength; i += 100) { // Step by 100 for efficiency
+            const subsequence = chromosomeSequence.substring(i, i + queryLength);
+            const similarity = this.calculateSimilarity(querySequence, subsequence);
+            
+            if (similarity >= minSimilarity) {
+                similarRegions.push({
+                    start: i,
+                    end: i + queryLength,
+                    similarity: parseFloat(similarity.toFixed(3)),
+                    sequence: subsequence.substring(0, 50) + (subsequence.length > 50 ? '...' : '')
+                });
+            }
+        }
+        
+        // Sort by similarity
+        similarRegions.sort((a, b) => b.similarity - a.similarity);
+        
+        return {
+            querySequence: querySequence.substring(0, 50) + (querySequence.length > 50 ? '...' : ''),
+            chromosome: chr,
+            minSimilarity: minSimilarity,
+            resultsFound: similarRegions.length,
+            results: similarRegions.slice(0, maxResults)
+        };
+    }
+
+    // 7. ANNOTATION MANAGEMENT (CRUD)
+    async editAnnotation(params) {
+        const { annotationId, updates } = params;
+        
+        if (!this.app.currentAnnotations) {
+            throw new Error('No annotations loaded');
+        }
+        
+        let annotationFound = false;
+        let updatedAnnotation = null;
+        
+        // Find and update annotation across all chromosomes
+        Object.keys(this.app.currentAnnotations).forEach(chr => {
+            const annotations = this.app.currentAnnotations[chr];
+            const annotationIndex = annotations.findIndex(a => 
+                a.id === annotationId || 
+                a.qualifiers?.locus_tag === annotationId ||
+                a.qualifiers?.gene === annotationId
+            );
+            
+            if (annotationIndex !== -1) {
+                annotationFound = true;
+                const annotation = annotations[annotationIndex];
+                
+                // Apply updates
+                Object.keys(updates).forEach(key => {
+                    if (key === 'qualifiers') {
+                        annotation.qualifiers = { ...annotation.qualifiers, ...updates.qualifiers };
+                    } else {
+                        annotation[key] = updates[key];
+                    }
+                });
+                
+                updatedAnnotation = annotation;
+                annotations[annotationIndex] = annotation;
+            }
+        });
+        
+        if (!annotationFound) {
+            throw new Error(`Annotation "${annotationId}" not found`);
+        }
+        
+        return {
+            success: true,
+            annotationId: annotationId,
+            updatedAnnotation: updatedAnnotation,
+            message: `Updated annotation "${annotationId}"`
+        };
+    }
+
+    async deleteAnnotation(params) {
+        const { annotationId } = params;
+        
+        if (!this.app.currentAnnotations) {
+            throw new Error('No annotations loaded');
+        }
+        
+        let annotationFound = false;
+        let deletedAnnotation = null;
+        
+        // Find and delete annotation across all chromosomes
+        Object.keys(this.app.currentAnnotations).forEach(chr => {
+            const annotations = this.app.currentAnnotations[chr];
+            const annotationIndex = annotations.findIndex(a => 
+                a.id === annotationId || 
+                a.qualifiers?.locus_tag === annotationId ||
+                a.qualifiers?.gene === annotationId
+            );
+            
+            if (annotationIndex !== -1) {
+                annotationFound = true;
+                deletedAnnotation = annotations[annotationIndex];
+                annotations.splice(annotationIndex, 1);
+            }
+        });
+        
+        if (!annotationFound) {
+            throw new Error(`Annotation "${annotationId}" not found`);
+        }
+        
+        return {
+            success: true,
+            annotationId: annotationId,
+            deletedAnnotation: deletedAnnotation,
+            message: `Deleted annotation "${annotationId}"`
+        };
+    }
+
+    async batchCreateAnnotations(params) {
+        const { annotations, chromosome } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified');
+        }
+        
+        if (!this.app.currentAnnotations) {
+            this.app.currentAnnotations = {};
+        }
+        
+        if (!this.app.currentAnnotations[chr]) {
+            this.app.currentAnnotations[chr] = [];
+        }
+        
+        const createdAnnotations = [];
+        
+        annotations.forEach(annotationData => {
+            const annotation = {
+                id: Date.now() + Math.random().toString(36).substr(2, 9),
+                type: annotationData.type || 'feature',
+                start: annotationData.start,
+                end: annotationData.end,
+                strand: annotationData.strand || 1,
+                qualifiers: annotationData.qualifiers || {},
+                created: new Date().toISOString()
+            };
+            
+            this.app.currentAnnotations[chr].push(annotation);
+            createdAnnotations.push(annotation);
+        });
+        
+        return {
+            success: true,
+            chromosome: chr,
+            annotationsCreated: createdAnnotations.length,
+            annotations: createdAnnotations
+        };
+    }
+
+    // 8. FILE AND DATA MANAGEMENT
+    getFileInfo(params) {
+        const { fileType } = params;
+        
+        const fileInfo = {
+            genome: null,
+            annotations: null,
+            tracks: null
+        };
+        
+        // Get genome file info
+        if (this.app.currentSequence && Object.keys(this.app.currentSequence).length > 0) {
+            const chromosomes = Object.keys(this.app.currentSequence);
+            const totalLength = chromosomes.reduce((sum, chr) => 
+                sum + (this.app.currentSequence[chr]?.length || 0), 0);
+            
+            fileInfo.genome = {
+                chromosomes: chromosomes.length,
+                chromosomeList: chromosomes,
+                totalLength: totalLength,
+                currentChromosome: this.app.currentChromosome
+            };
+        }
+        
+        // Get annotation file info
+        if (this.app.currentAnnotations) {
+            const chromosomes = Object.keys(this.app.currentAnnotations);
+            const totalFeatures = chromosomes.reduce((sum, chr) => 
+                sum + (this.app.currentAnnotations[chr]?.length || 0), 0);
+            
+            const featureTypes = new Set();
+            chromosomes.forEach(chr => {
+                this.app.currentAnnotations[chr]?.forEach(feature => {
+                    featureTypes.add(feature.type);
+                });
+            });
+            
+            fileInfo.annotations = {
+                chromosomes: chromosomes.length,
+                totalFeatures: totalFeatures,
+                featureTypes: Array.from(featureTypes),
+                chromosomeList: chromosomes
+            };
+        }
+        
+        // Get track info
+        fileInfo.tracks = this.getTrackStatus();
+        
+        if (fileType && fileInfo[fileType]) {
+            return { fileType, info: fileInfo[fileType] };
+        }
+        
+        return {
+            fileType: fileType || 'all',
+            fileInfo: fileInfo
+        };
+    }
+
+    async exportRegionFeatures(params) {
+        const { chromosome, start, end, featureTypes = [], format = 'json' } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified');
+        }
+        
+        if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
+            throw new Error('No annotations loaded for chromosome');
+        }
+        
+        const regionStart = start || this.app.currentPosition?.start || 0;
+        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+        
+        const annotations = this.app.currentAnnotations[chr];
+        const regionFeatures = annotations.filter(feature => {
+            // Filter by position overlap
+            const overlaps = feature.start <= regionEnd && feature.end >= regionStart;
+            
+            // Filter by feature type if specified
+            const typeMatch = featureTypes.length === 0 || featureTypes.includes(feature.type);
+            
+            return overlaps && typeMatch;
+        });
+        
+        const exportData = {
+            region: `${chr}:${regionStart}-${regionEnd}`,
+            featureCount: regionFeatures.length,
+            exportDate: new Date().toISOString(),
+            features: regionFeatures
+        };
+        
+        return {
+            chromosome: chr,
+            region: `${regionStart}-${regionEnd}`,
+            featuresExported: regionFeatures.length,
+            format: format,
+            data: exportData
+        };
+    }
+
+    // Helper methods for similarity calculations
+    calculateSimilarity(seq1, seq2) {
+        const maxLength = Math.max(seq1.length, seq2.length);
+        if (maxLength === 0) return 1;
+        
+        const minLength = Math.min(seq1.length, seq2.length);
+        let matches = 0;
+        
+        for (let i = 0; i < minLength; i++) {
+            if (seq1[i] === seq2[i]) matches++;
+        }
+        
+        return matches / maxLength;
+    }
+
+    calculateIdentity(seq1, seq2) {
+        const minLength = Math.min(seq1.length, seq2.length);
+        if (minLength === 0) return 0;
+        
+        let matches = 0;
+        for (let i = 0; i < minLength; i++) {
+            if (seq1[i] === seq2[i]) matches++;
+        }
+        
+        return matches / minLength;
+    }
+
+    getVisibleTracks() {
+        // Return list of currently visible tracks
+        const visibleTracks = [];
+        
+        if (this.app.trackManager && this.app.trackManager.tracks) {
+            Object.entries(this.app.trackManager.tracks).forEach(([trackName, track]) => {
+                if (track.visible !== false) {
+                    visibleTracks.push(trackName);
+                }
+            });
+        }
+        
+        return visibleTracks;
     }
 } 
