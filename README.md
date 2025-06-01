@@ -1,4 +1,4 @@
-# Genome AI Studio
+# Genome AI Studio V1.0
 
 A modern, cross-platform genome analysis studio built with Electron, featuring an user-friendly interface for exploring genomic data with AI-powered natural language interaction.
 
@@ -303,14 +303,13 @@ We welcome contributions from the genomics and bioinformatics community!
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Electron** - Cross-platform desktop app framework
 - **D3.js** - Data visualization library
-- **IGV.js** - Genome visualization components
 - **OpenAI/Anthropic** - AI model providers
 - **Bioinformatics Community** - Inspiration and feedback
 
 ---
+**Genome AI Studio** - Intelligent genomic analysis for the modern researcher 
 
-**Genome AI Studio** - Intelligent genomic analysis for the modern researcher 🧬🤖 
