@@ -317,18 +317,13 @@ body {
     flex-direction: column;
 }
 
+/* Sequence header should also be more visible */
 .sequence-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sequence-header h4 {
-    font-size: 16px;
-    font-weight: 600;
+    background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    position: relative; /* Establish stacking context */
+    z-index: 2; /* Above sequence content */
 }
 
 .sequence-controls {
@@ -336,6 +331,7 @@ body {
     gap: 8px;
 }
 
+/* Ensure sequence content is readable with transparent background */
 .sequence-content {
     flex: 1; /* Fill all available vertical space */
     height: 100%; /* Ensure it takes full height of parent */
@@ -2241,19 +2237,63 @@ body {
 
 .sequence-display-section {
     /* background: var(--bg-secondary); Old background */
-    background-color: rgba(248, 250, 252, 0.2); /* var(--bg-secondary) is #f8fafc. 80% transparent means 0.2 alpha */
+    background-color: rgba(248, 250, 252, 0.95); /* More opaque for bottom panel */
     backdrop-filter: blur(10px); /* Add blur effect for better readability */
     -webkit-backdrop-filter: blur(10px); /* Safari support */
-    border-top: 1px solid var(--border-color);
+    border-top: 2px solid var(--border-color); /* Thicker border for bottom panel */
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    flex: 1; /* Allow flexible sizing while maintaining balance */
-    min-height: 150px; /* Minimum height for the sequence panel, includes header */
-    max-height: 50%; /* Prevent taking more than 50% of available space */
+    flex: 0 0 auto; /* Don't grow, don't shrink, auto basis */
+    /* Set reasonable default height and constraints */
+    height: 250px; /* Default height on first load */
+    min-height: 50px; /* Minimum height to show header when collapsed */
+    max-height: 60vh; /* Maximum 60% of viewport height to prevent covering everything */
     position: relative; /* Establish stacking context */
-    z-index: 2; /* Changed from 3 to 2 - same level as genome browser */
-    /* flex-basis: 0;  Ensures flex-grow is the primary factor for sizing */
+    z-index: 10; /* Higher z-index to ensure it appears above genome tracks */
+    /* Always dock to bottom */
+    order: 999; /* Ensure it appears last in flex layout */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); /* Add shadow above for depth */
+}
+
+.sequence-display-section.collapsed {
+    /* Keep header visible when collapsed */
+    height: 50px !important; /* Force collapsed height */
+    min-height: 50px;
+    max-height: 50px;
+    overflow: hidden;
+    flex: 0 0 auto; /* Keep collapsed size fixed */
+}
+
+/* Enhanced sequence header for better clickability */
+.sequence-header {
+    background: rgba(248, 250, 252, 0.98); /* Even more opaque for header */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: relative; /* Establish stacking context */
+    z-index: 11; /* Above sequence content */
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease; /* Smooth hover effect */
+    padding: 12px 20px; /* Consistent padding */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sequence-header:hover {
+    background-color: rgba(233, 236, 239, 0.98); /* Hover feedback */
+}
+
+.sequence-header h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0; /* Remove default margin */
+    cursor: pointer; /* Indicate clickability */
+}
+
+.sequence-controls {
+    display: flex;
+    gap: 8px;
 }
 
 /* Ensure sequence content is readable with transparent background */

@@ -385,8 +385,8 @@ class GenomeBrowser {
             'gc': 'gc',
             'variant': 'variants',
             'reads': 'reads',
-            'protein': 'proteins',
-            'sequence': 'sequence'
+            'proteins': 'proteins'
+            // Remove 'sequence' since it's now handled as bottom panel, not a regular track
         };
 
         const existingTracks = container.querySelectorAll('[class*="-track"]');
@@ -460,12 +460,6 @@ class GenomeBrowser {
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
         }
         
-        // 6. Sequence track (show if selected)
-        if (this.visibleTracks.has('sequence')) {
-            const sequenceTrack = this.createDetailedSequenceTrack(chromosome, sequence);
-            tracksToShow.push({ element: sequenceTrack, type: 'sequence' });
-        }
-        
         // Add tracks without splitters, but make them draggable and resizable
         tracksToShow.forEach((track, index) => {
             // Add the track
@@ -489,12 +483,34 @@ class GenomeBrowser {
         
         container.appendChild(browserContainer);
         
+        // Handle bottom sequence panel separately (always docked to bottom)
+        this.handleBottomSequencePanel(chromosome, sequence);
+        
         // Re-highlight selected gene if there is one
         if (this.selectedGene && this.selectedGene.gene) {
             // Use setTimeout to ensure the DOM is updated before highlighting
             setTimeout(() => {
                 this.highlightGeneSequence(this.selectedGene.gene);
             }, 100);
+        }
+        
+        // Update bottom sequence panel toggle button event listener
+        this.setupToggleButtonListener();
+    }
+    
+    // Setup the existing toggle button to work with new bottom sequence panel
+    setupToggleButtonListener() {
+        const toggleButton = document.getElementById('toggleSequencePanel');
+        if (toggleButton && !toggleButton.hasAttribute('data-updated-listener')) {
+            toggleButton.setAttribute('data-updated-listener', 'true');
+            
+            // Remove old event listeners
+            toggleButton.removeEventListener('click', this.toggleSequencePanel);
+            
+            // Add new event listener
+            toggleButton.addEventListener('click', () => {
+                this.toggleBottomSequencePanel();
+            });
         }
     }
 
@@ -658,9 +674,6 @@ class GenomeBrowser {
                             break;
                         case 'proteins':
                             optimalHeight = 90;
-                            break;
-                        case 'sequence':
-                            optimalHeight = 60; // Sequence track is typically shorter
                             break;
                         default:
                             optimalHeight = 80;
@@ -960,9 +973,6 @@ class GenomeBrowser {
                     case 'proteins':
                         optimalHeight = 90;
                         break;
-                    case 'sequence':
-                        optimalHeight = 60; // Sequence track is typically shorter
-                        break;
                     default:
                         optimalHeight = 80;
                 }
@@ -1046,8 +1056,8 @@ class GenomeBrowser {
                     'gc': 'gc',
                     'variant': 'variants',
                     'reads': 'reads',
-                    'protein': 'proteins',
-                    'sequence': 'sequence'
+                    'proteins': 'proteins'
+                    // Remove 'sequence' since it's now handled as bottom panel, not a regular track
                 };
                 const mappedType = typeMapping[trackType] || trackType;
                 newOrder.push(mappedType);
@@ -1901,42 +1911,145 @@ class GenomeBrowser {
         }
     }
 
-    // New method to create a detailed sequence track
-    createDetailedSequenceTrack(chromosome, sequence) {
-        // Create the track container
-        const track = document.createElement('div');
-        track.className = 'sequence-track';
+    // Handle bottom sequence panel (always docked to bottom when enabled)
+    handleBottomSequencePanel(chromosome, sequence) {
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        const splitter = document.getElementById('splitter');
+        const genomeViewerSection = document.getElementById('genomeViewerSection');
         
-        // Create track header
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Sequence';
-        track.appendChild(trackHeader);
-        
-        // Create track content container
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        trackContent.style.height = '200px'; // Default height for detailed sequence
-        trackContent.style.overflow = 'auto'; // Allow scrolling for detailed content
-        trackContent.style.padding = '10px';
-        trackContent.style.backgroundColor = '#f8f9fa';
-        
-        // Create a container for the sequence content
-        const sequenceContainer = document.createElement('div');
-        sequenceContainer.id = 'sequenceDisplay'; // Use the same ID as the original
-        sequenceContainer.style.width = '100%';
-        sequenceContainer.style.height = '100%';
-        
-        trackContent.appendChild(sequenceContainer);
-        track.appendChild(trackContent);
-        
-        // Use the original sequence display method to populate the content
-        // We'll call this after the track is added to the DOM
-        setTimeout(() => {
+        if (this.visibleTracks.has('sequence')) {
+            // Show bottom sequence panel
+            if (sequenceDisplaySection) {
+                sequenceDisplaySection.style.display = 'flex';
+                // Set proper initial height (not too big on first load)
+                if (!sequenceDisplaySection.style.height || sequenceDisplaySection.style.height === 'auto') {
+                    sequenceDisplaySection.style.height = '250px'; // Default height
+                }
+                // Ensure it's positioned at the bottom
+                sequenceDisplaySection.style.position = 'relative';
+                sequenceDisplaySection.style.bottom = '0';
+                sequenceDisplaySection.style.flex = 'none'; // Don't grow automatically
+            }
+            
+            if (splitter) {
+                splitter.style.display = 'flex';
+            }
+            
+            // Adjust genome viewer to make room for bottom panel
+            if (genomeViewerSection) {
+                // Use flex to fill remaining space, but set a minimum height
+                genomeViewerSection.style.flex = '1';
+                genomeViewerSection.style.minHeight = '200px'; // Ensure minimum space for tracks
+                // Remove any fixed height if set to allow flexible sizing
+                if (genomeViewerSection.style.height === 'auto' || !genomeViewerSection.style.height) {
+                    genomeViewerSection.style.flexBasis = 'auto';
+                }
+            }
+            
+            // Display the sequence content
             this.sequenceUtils.displayEnhancedSequence(chromosome, sequence);
-        }, 100);
+            
+            // Set up collapse/expand functionality for sequence header
+            this.setupSequenceHeaderToggle();
+        } else {
+            // Hide bottom sequence panel
+            if (sequenceDisplaySection) {
+                sequenceDisplaySection.style.display = 'none';
+            }
+            
+            if (splitter) {
+                splitter.style.display = 'none';
+            }
+            
+            // Let genome viewer take full space
+            if (genomeViewerSection) {
+                genomeViewerSection.style.flex = '1';
+                genomeViewerSection.style.flexBasis = '100%';
+                genomeViewerSection.style.minHeight = 'auto';
+            }
+        }
+    }
+
+    // Set up collapse/expand functionality for sequence header
+    setupSequenceHeaderToggle() {
+        const sequenceHeader = document.querySelector('.sequence-header');
+        const sequenceContent = document.getElementById('sequenceContent');
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        const splitter = document.getElementById('splitter');
         
-        return track;
+        if (sequenceHeader && !sequenceHeader.hasAttribute('data-toggle-setup')) {
+            sequenceHeader.setAttribute('data-toggle-setup', 'true');
+            sequenceHeader.style.cursor = 'pointer';
+            
+            // Add visual indicator that it's clickable
+            sequenceHeader.style.userSelect = 'none';
+            sequenceHeader.addEventListener('mouseenter', () => {
+                sequenceHeader.style.backgroundColor = '#e9ecef';
+            });
+            sequenceHeader.addEventListener('mouseleave', () => {
+                sequenceHeader.style.backgroundColor = '';
+            });
+            
+            sequenceHeader.addEventListener('click', () => {
+                this.toggleBottomSequencePanel();
+            });
+        }
+    }
+
+    // Toggle collapse/expand of bottom sequence panel
+    toggleBottomSequencePanel() {
+        const sequenceContent = document.getElementById('sequenceContent');
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        const splitter = document.getElementById('splitter');
+        const genomeViewerSection = document.getElementById('genomeViewerSection');
+        const toggleButton = document.getElementById('toggleSequencePanel');
+        
+        if (sequenceContent && sequenceDisplaySection) {
+            const isCollapsed = sequenceContent.style.display === 'none' || 
+                              sequenceDisplaySection.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                // Expand - show sequence content
+                sequenceContent.style.display = 'flex';
+                sequenceDisplaySection.classList.remove('collapsed');
+                // Remove any height restrictions when expanding
+                sequenceDisplaySection.style.minHeight = '';
+                sequenceDisplaySection.style.maxHeight = '';
+                
+                if (splitter) {
+                    splitter.style.display = 'flex';
+                }
+                
+                if (toggleButton) {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                    toggleButton.title = 'Hide Sequence Panel';
+                }
+            } else {
+                // Collapse - hide only sequence content, keep header visible
+                sequenceContent.style.display = 'none';
+                sequenceDisplaySection.classList.add('collapsed');
+                // Set collapsed height to just show the header (approximately 50px)
+                sequenceDisplaySection.style.minHeight = '50px';
+                sequenceDisplaySection.style.maxHeight = '50px';
+                
+                if (splitter) {
+                    splitter.style.display = 'none';
+                }
+                
+                if (toggleButton) {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                    toggleButton.title = 'Show Sequence Panel';
+                }
+                
+                // Let genome viewer expand to fill space
+                if (genomeViewerSection) {
+                    genomeViewerSection.style.flexGrow = '1';
+                }
+            }
+            
+            // Trigger resize event for layout adjustment
+            window.dispatchEvent(new Event('resize'));
+        }
     }
 }
 

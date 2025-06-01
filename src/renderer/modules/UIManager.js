@@ -375,16 +375,21 @@ class UIManager {
             const deltaY = e.clientY - startY;
             const containerHeight = viewerContainer.offsetHeight;
             const splitterHeight = splitter.offsetHeight;
+            const viewportHeight = window.innerHeight;
             
             // Calculate new heights
             const newGenomeHeight = startGenomeHeight + deltaY;
             const newSequenceHeight = startSequenceHeight - deltaY;
             
-            // Set minimum heights (increased for better usability)
-            const minHeight = 200;
+            // Set minimum heights and viewport-based maximums
+            const minHeight = 150; // Reduced from 200 for more flexibility
+            const maxSequenceHeight = Math.min(
+                containerHeight - minHeight - splitterHeight,
+                viewportHeight * 0.6  // Max 60% of viewport height
+            );
             const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
-            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
             
+            // Ensure sequence window doesn't get too large
             if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
                 newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
                 
@@ -422,11 +427,13 @@ class UIManager {
                     deltaY = step;
                     break;
                 case 'Home':
-                    // Reset to default split
+                    // Reset to default split - sequence gets reasonable height, genome gets the rest
+                    const viewportHeight = window.innerHeight;
+                    const defaultSequenceHeight = Math.min(250, viewportHeight * 0.3); // Max 30% of viewport or 250px
                     genomeSection.style.flex = '1';
                     genomeSection.style.height = 'auto';
                     sequenceSection.style.flex = 'none';
-                    sequenceSection.style.height = '300px';
+                    sequenceSection.style.height = `${defaultSequenceHeight}px`;
                     e.preventDefault();
                     return;
                 default:
@@ -440,13 +447,17 @@ class UIManager {
             const currentSequenceHeight = sequenceSection.offsetHeight;
             const containerHeight = viewerContainer.offsetHeight;
             const splitterHeight = splitter.offsetHeight;
+            const viewportHeight = window.innerHeight;
             
             const newGenomeHeight = currentGenomeHeight + deltaY;
             const newSequenceHeight = currentSequenceHeight - deltaY;
             
-            const minHeight = 200;
+            const minHeight = 150; // Match mouse movement constraints
+            const maxSequenceHeight = Math.min(
+                containerHeight - minHeight - splitterHeight,
+                viewportHeight * 0.6  // Max 60% of viewport height
+            );
             const maxGenomeHeight = containerHeight - minHeight - splitterHeight;
-            const maxSequenceHeight = containerHeight - minHeight - splitterHeight;
             
             if (newGenomeHeight >= minHeight && newGenomeHeight <= maxGenomeHeight &&
                 newSequenceHeight >= minHeight && newSequenceHeight <= maxSequenceHeight) {
@@ -461,10 +472,12 @@ class UIManager {
         
         // Double-click to reset to default split
         splitter.addEventListener('dblclick', () => {
+            const viewportHeight = window.innerHeight;
+            const defaultSequenceHeight = Math.min(250, viewportHeight * 0.3); // Max 30% of viewport or 250px
             genomeSection.style.flex = '1';
             genomeSection.style.height = 'auto';
             sequenceSection.style.flex = 'none';
-            sequenceSection.style.height = '300px';
+            sequenceSection.style.height = `${defaultSequenceHeight}px`;
         });
     }
 
