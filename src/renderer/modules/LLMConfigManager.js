@@ -955,13 +955,20 @@ class LLMConfigManager {
 
 You have access to tools that can:
 - Navigate to specific genomic positions (use tool: 'navigate_to_position', parameters: {chromosome: string, start: number, end: number})
-- Search for genes and features (use tool: 'search_features', parameters: {query: string, caseSensitive: boolean}) - Use this to get details about annotations if needed.
+- Search for genes and features BY NAME/DESCRIPTION (use tool: 'search_features', parameters: {query: string, caseSensitive: boolean}) - Use this when users want to find genes by name, product description, or any text-based search like "DNA polymerase", "ribosomal", "lacZ", etc. This will display results in the search panel.
+- Find features near a specific genomic position (use tool: 'get_nearby_features', parameters: {position: number, distance: number, featureTypes?: array}) - Use this only when users want to find what's near a specific coordinate/position, not for name-based searches.
 - Get current browser state (use tool: 'get_current_state') - This will provide general information including counts of annotations and user-defined features.
 - Retrieve DNA sequences (use tool: 'get_sequence', parameters: {chromosome: string, start: number, end: number})
 - Toggle track visibility (use tool: 'toggle_track', parameters: {trackName: string, visible: boolean})
 - Create annotations (use tool: 'create_annotation', parameters: {type: string, name: string, chromosome: string, start: number, end: number, strand: number, description?: string})
 - Analyze genomic regions (use tool: 'analyze_region', parameters: {chromosome: string, start: number, end: number, includeFeatures?: boolean, includeGC?: boolean})
 - Export data (use tool: 'export_data', parameters: {format: string, chromosome?: string, start?: number, end?: number})
+
+CRITICAL FUNCTION SELECTION RULES:
+- For ANY text-based search (gene names, products, descriptions): ALWAYS use 'search_features'
+  Examples: "find DNA polymerase", "search for lacZ", "show ribosomal genes" → use search_features
+- For position-based searches: ONLY use 'get_nearby_features' 
+  Examples: "what's near position 12345", "features around coordinate 50000" → use get_nearby_features
 
 CRITICAL: When a user's request requires one of these actions, you MUST respond with ONLY a JSON object in this exact format:
 
@@ -971,7 +978,8 @@ Do NOT include any explanation, markdown formatting, or code blocks. Return ONLY
 
 Examples:
 - For navigation: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
-- For search: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
+- For gene/text search: {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+- For position search: {"tool_name": "get_nearby_features", "parameters": {"position": 12345, "distance": 5000}}
 
 If the user is asking a general question that doesn't require a tool, respond normally with conversational text.`;
 

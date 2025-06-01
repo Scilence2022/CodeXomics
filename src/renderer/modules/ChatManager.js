@@ -1428,7 +1428,7 @@ Examples of user requests that REQUIRE tool calls:
 
 Tool Examples:
 - To navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
-- To search: {"tool_name": "search_features", "parameters": {"query": "recA", "caseSensitive": false}}
+- To search by name/text: {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 - To get current state: {"tool_name": "get_current_state", "parameters": {}}
 - To get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - To toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
@@ -1444,10 +1444,21 @@ Tool Examples:
 - To list chromosomes: {"tool_name": "get_chromosome_list", "parameters": {}}
 - To check tracks: {"tool_name": "get_track_status", "parameters": {}}
 
+CRITICAL DISTINCTION - Search Functions:
+1. FOR TEXT-BASED SEARCHES (gene names, products, descriptions): ALWAYS use 'search_features'
+   Examples:
+   - "find DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+   - "search for lacZ" → {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+   - "show ribosomal genes" → {"tool_name": "search_features", "parameters": {"query": "ribosomal", "caseSensitive": false}}
+
+2. FOR POSITION-BASED SEARCHES (features near coordinates): ONLY use 'get_nearby_features'
+   Examples:
+   - "find genes near position 123456" → {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000}}
+   - "what's around coordinate 50000" → {"tool_name": "get_nearby_features", "parameters": {"position": 50000, "distance": 10000}}
+
 Advanced Genomics Tools:
 - Search DNA motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "chromosome": "U00096", "allowMismatches": 0}}
 - Pattern search: {"tool_name": "search_pattern", "parameters": {"regex": "ATG.{30,100}(TAG|TAA|TGA)", "description": "ORF pattern"}}
-- Find nearby features: {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000, "featureTypes": ["gene", "CDS"]}}
 - Find intergenic regions: {"tool_name": "find_intergenic_regions", "parameters": {"minLength": 500}}
 - Restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
 - Virtual digest: {"tool_name": "virtual_digest", "parameters": {"enzymes": ["EcoRI", "BamHI"]}}
@@ -1466,15 +1477,15 @@ Advanced Genomics Tools:
 
 Function Call Examples:
 - "search for EcoRI sites" → find_restriction_sites
+- "search for DNA polymerase" → search_features (NOT get_nearby_features!)
+- "find lacZ gene" → search_features (NOT get_nearby_features!)
 - "find genes near position 123456" → get_nearby_features  
 - "what's the GC content of this region" → sequence_statistics
 - "bookmark this interesting region" → bookmark_position
 - "search for TATAAA motifs allowing 1 mismatch" → search_motif
 - "compare these two regions" → compare_regions
 - "analyze codon usage in lacZ gene" → codon_usage_analysis
-- "virtual digest with multiple enzymes" → virtual_digest
-
-REMEMBER: If the user is asking a general question or doesn't need a tool, respond normally with conversational text. But if they need an action performed, respond with ONLY the JSON tool call.`;
+- "virtual digest with multiple enzymes" → virtual_digest`;
     }
 
     parseToolCall(response) {

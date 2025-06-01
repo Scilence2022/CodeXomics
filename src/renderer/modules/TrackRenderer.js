@@ -1,57 +1,60 @@
 /**
  * TrackRenderer - Handles all track creation and visualization
+ * Optimized with improved function calling structure and workflow
  */
 class TrackRenderer {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
-    }
-
-    createGeneTrack(chromosome) {
-        const track = document.createElement('div');
-        track.className = 'gene-track';
         
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Genes & Features';
-        track.appendChild(trackHeader);
+        // Track configuration for consistent styling and behavior
+        this.trackConfig = {
+            genes: {
+                defaultHeight: '120px',
+                header: 'Genes & Features',
+                className: 'gene-track',
+                requiresData: true,
+                dataSource: 'currentAnnotations'
+            },
+            sequence: {
+                defaultHeight: '30px',
+                header: 'Sequence',
+                className: 'sequence-track',
+                requiresData: true,
+                dataSource: 'currentSequence'
+            },
+            gc: {
+                defaultHeight: '140px',
+                header: 'GC Content & Skew',
+                className: 'gc-track',
+                requiresData: true,
+                dataSource: 'currentSequence'
+            },
+            variants: {
+                defaultHeight: '60px',
+                header: 'VCF Variants',
+                className: 'variant-track',
+                requiresData: false,
+                dataSource: 'currentVariants'
+            },
+            reads: {
+                defaultHeight: '80px',
+                header: 'Aligned Reads',
+                className: 'reads-track',
+                requiresData: false,
+                dataSource: 'readsManager'
+            },
+            proteins: {
+                defaultHeight: '80px',
+                header: 'Proteins',
+                className: 'protein-track',
+                requiresData: true,
+                dataSource: 'currentAnnotations'
+            }
+        };
         
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        
-        // Add detailed ruler for current viewing region
-        const detailedRuler = this.createDetailedRuler(chromosome);
-        trackContent.appendChild(detailedRuler);
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
-        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const range = end - start;
-        
-        // Detect operons for color assignment
-        const operons = this.genomeBrowser.detectOperons(annotations);
-        console.log(`Detected ${operons.length} operons in chromosome ${chromosome}`);
-        
-        // Include all relevant gene types and features, filtered by user preferences
-        const visibleGenes = annotations.filter(feature => {
-            const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
-                              'regulatory', 'promoter', 'terminator', 'repeat_region'];
-            return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
-                   this.genomeBrowser.shouldShowGeneType(feature.type);
-        }).filter(gene => 
-            gene.start && gene.end && 
-            gene.start <= end && gene.end >= start
-        );
-        
-        console.log(`Displaying ${visibleGenes.length} genes/features in region ${start}-${end}`);
-        
-        if (visibleGenes.length === 0) {
-            const noGenesMsg = document.createElement('div');
-            noGenesMsg.className = 'no-genes-message';
-            noGenesMsg.textContent = 'No genes/features in this region or all filtered out';
-            noGenesMsg.style.cssText = `
+        // Common styles for reuse
+        this.commonStyles = {
+            noDataMessage: `
                 position: absolute;
                 top: 50%;
                 left: 50%;
@@ -59,128 +62,336 @@ class TrackRenderer {
                 color: #666;
                 font-style: italic;
                 font-size: 12px;
-            `;
+            `,
+            statsElement: `
+                position: absolute;
+                top: 5px;
+                right: 10px;
+                background: rgba(255,255,255,0.9);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                color: #666;
+                border: 1px solid #ddd;
+            `
+        };
+    }
+    
+    // ============================================================================
+    // CORE TRACK CREATION METHODS
+    // ============================================================================
+    
+    /**
+     * Generic track factory method - reduces code duplication
+     */
+    createTrackBase(trackType, chromosome) {
+        const config = this.trackConfig[trackType];
+        if (!config) {
+            throw new Error(`Unknown track type: ${trackType}`);
+        }
+        
+        const track = document.createElement('div');
+        track.className = config.className;
+        
+        const trackHeader = this.createTrackHeader(config.header);
+        track.appendChild(trackHeader);
+        
+        const trackContent = this.createTrackContent(config.defaultHeight, chromosome);
+        track.appendChild(trackContent);
+        
+        return { track, trackContent, config };
+    }
+    
+    /**
+     * Create standardized track header
+     */
+    createTrackHeader(title) {
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = title;
+        return trackHeader;
+    }
+    
+    /**
+     * Create standardized track content container
+     */
+    createTrackContent(height, chromosome) {
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content';
+        trackContent.style.height = height;
+        
+        // Add draggable functionality
+        this.genomeBrowser.makeDraggable(trackContent, chromosome);
+        
+        return trackContent;
+    }
+    
+    /**
+     * Create standardized no-data message
+     */
+    createNoDataMessage(message, className = 'no-data-message') {
+        const noDataMsg = document.createElement('div');
+        noDataMsg.className = className;
+        noDataMsg.textContent = message;
+        noDataMsg.style.cssText = this.commonStyles.noDataMessage;
+        return noDataMsg;
+    }
+    
+    /**
+     * Create standardized statistics element
+     */
+    createStatsElement(text, className = 'track-stats', additionalStyles = '') {
+        const statsElement = document.createElement('div');
+        statsElement.className = className;
+        statsElement.style.cssText = this.commonStyles.statsElement + additionalStyles;
+        statsElement.textContent = text;
+        return statsElement;
+    }
+    
+    /**
+     * Get current viewport data for consistent access
+     */
+    getCurrentViewport() {
+        return {
+            start: this.genomeBrowser.currentPosition.start,
+            end: this.genomeBrowser.currentPosition.end,
+            range: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start
+        };
+    }
+    
+    /**
+     * Filter features by current viewport with validation
+     */
+    filterFeaturesByViewport(features, viewport) {
+        if (!Array.isArray(features)) return [];
+        
+        return features.filter(feature => 
+            feature && feature.start && feature.end && 
+            feature.start <= viewport.end && feature.end >= viewport.start
+        );
+    }
+    
+    // ============================================================================
+    // SPECIFIC TRACK IMPLEMENTATIONS
+    // ============================================================================
+
+    createGeneTrack(chromosome) {
+        const { track, trackContent } = this.createTrackBase('genes', chromosome);
+        const viewport = this.getCurrentViewport();
+        
+        // Add detailed ruler for current viewing region
+        const detailedRuler = this.createDetailedRuler(chromosome);
+        trackContent.appendChild(detailedRuler);
+        
+        // Get and validate data
+        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+        const operons = this.genomeBrowser.detectOperons(annotations);
+        console.log(`Detected ${operons.length} operons in chromosome ${chromosome}`);
+        
+        // Filter genes using the new helper method
+        const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
+        console.log(`Displaying ${visibleGenes.length} genes/features in region ${viewport.start}-${viewport.end}`);
+        
+        if (visibleGenes.length === 0) {
+            const noGenesMsg = this.createNoDataMessage(
+                'No genes/features in this region or all filtered out',
+                'no-genes-message'
+            );
             trackContent.appendChild(noGenesMsg);
-            trackContent.style.height = '80px'; // Default height for empty track
-            track.appendChild(trackContent);
+            trackContent.style.height = '80px';
             return track;
         }
         
-        // Arrange genes into rows by type to prevent overlapping
-        const geneRows = this.arrangeGenesInRows(visibleGenes, start, end);
+        // Process and render genes
+        this.renderGeneElements(trackContent, visibleGenes, viewport, operons);
         
-        // Calculate adaptive track height based on gene arrangement
-        const geneHeight = 23; // Height of each gene element
-        const rowSpacing = 6; // Space between rows
-        const rulerHeight = 35; // Height of the detailed ruler
-        const topPadding = 10; // Top padding below ruler
-        const bottomPadding = 0; // Bottom padding
+        // Add statistics and update sidebar
+        this.addGeneTrackStatistics(trackContent, visibleGenes, operons);
         
-        const trackHeight = rulerHeight + topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding;
-        trackContent.style.height = `${Math.max(trackHeight, 120)}px`; // Minimum 120px height to account for ruler
+        return track;
+    }
+    
+    /**
+     * Filter gene annotations with type validation
+     */
+    filterGeneAnnotations(annotations, viewport) {
+        const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
+                          'regulatory', 'promoter', 'terminator', 'repeat_region'];
+        
+        return annotations.filter(feature => {
+            return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
+                   this.genomeBrowser.shouldShowGeneType(feature.type);
+        }).filter(gene => this.filterFeaturesByViewport([gene], viewport).length > 0);
+    }
+    
+    /**
+     * Render gene elements with improved organization
+     */
+    renderGeneElements(trackContent, visibleGenes, viewport, operons) {
+        const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end);
+        const layout = this.calculateGeneTrackLayout(geneRows);
+        
+        // Set calculated height
+        trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
         
         // Create gene elements
         geneRows.forEach((rowGenes, rowIndex) => {
             rowGenes.forEach((gene) => {
-                const geneElement = document.createElement('div');
-                
-                // Normalize gene type for CSS class
-                let geneType = gene.type.toLowerCase();
-                if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
-                    geneType = 'misc_feature';
-                }
-                
-                geneElement.className = `gene-element ${geneType}`;
-                
-                const geneStart = Math.max(gene.start, start);
-                const geneEnd = Math.min(gene.end, end);
-                const left = ((geneStart - start) / range) * 100;
-                const width = ((geneEnd - geneStart) / range) * 100;
-                
-                geneElement.style.left = `${left}%`;
-                geneElement.style.width = `${Math.max(width, 0.3)}%`;
-                
-                // Ensure minimum visibility
-                if (width < 0.5) {
-                    geneElement.style.minWidth = '8px';
-                }
-                
-                // Get operon information and assign color
-                const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
-                
-                // Override CSS background with operon-based color
-                geneElement.style.background = `linear-gradient(135deg, ${operonInfo.color}, ${this.lightenColor(operonInfo.color, 20)})`;
-                geneElement.style.borderColor = this.darkenColor(operonInfo.color, 20);
-                
-                // Add operon-specific CSS classes
-                if (operonInfo.isInOperon) {
-                    geneElement.classList.add('in-operon');
-                } else {
-                    geneElement.classList.add('single-gene');
-                }
-                
-                // Add user-defined feature styling
-                if (gene.userDefined) {
-                    geneElement.classList.add('user-defined-feature');
-                }
-                
-                // Position based on row arrangement instead of fixed type positions
-                geneElement.style.top = `${rulerHeight + topPadding + rowIndex * (geneHeight + rowSpacing)}px`;
-                
-                if (gene.strand === -1) {
-                    geneElement.classList.add('reverse-strand');
-                }
-                
-                // Create comprehensive gene label
-                const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
-                const geneInfo = `${geneName} (${gene.type})`;
-                const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
-                const operonInfo_display = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
-                const rowInfo = `\nRow: ${rowIndex + 1}`;
-                
-                geneElement.title = `${geneInfo}\nPosition: ${positionInfo}${operonInfo_display}${rowInfo}`;
-                
-                // Set text content based on available space
-                if (width > 2) {
-                    geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
-                } else if (width > 0.8) {
-                    geneElement.textContent = geneName.substring(0, 3);
-                } else {
-                    geneElement.textContent = '';
-                }
-                
-                // Add click handler for detailed info
-                geneElement.addEventListener('click', () => {
-                    this.showGeneDetails(gene, operonInfo);
-                });
-                
-                // Check if this gene should be selected (maintain selection state)
-                if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene && 
-                    this.genomeBrowser.selectedGene.gene.start === gene.start && 
-                    this.genomeBrowser.selectedGene.gene.end === gene.end &&
-                    this.genomeBrowser.selectedGene.gene.type === gene.type) {
-                    geneElement.classList.add('selected');
-                }
-                
+                const geneElement = this.createGeneElement(gene, viewport, operons, rowIndex, layout);
                 trackContent.appendChild(geneElement);
             });
         });
+    }
+    
+    /**
+     * Calculate layout parameters for gene track
+     */
+    calculateGeneTrackLayout(geneRows) {
+        const geneHeight = 23;
+        const rowSpacing = 6;
+        const rulerHeight = 35;
+        const topPadding = 10;
+        const bottomPadding = 0;
+        
+        return {
+            geneHeight,
+            rowSpacing,
+            rulerHeight,
+            topPadding,
+            bottomPadding,
+            totalHeight: rulerHeight + topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding
+        };
+    }
+    
+    /**
+     * Create individual gene element with improved structure
+     */
+    createGeneElement(gene, viewport, operons, rowIndex, layout) {
+        const geneElement = document.createElement('div');
+        
+        // Configure element class and style
+        this.configureGeneElementAppearance(geneElement, gene, viewport, operons);
+        
+        // Set position
+        this.setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout);
+        
+        // Add interaction handlers
+        this.addGeneElementHandlers(geneElement, gene, operons);
+        
+        return geneElement;
+    }
+    
+    /**
+     * Configure gene element appearance and styling
+     */
+    configureGeneElementAppearance(geneElement, gene, viewport, operons) {
+        // Normalize gene type for CSS class
+        let geneType = gene.type.toLowerCase();
+        if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
+            geneType = 'misc_feature';
+        }
+        
+        geneElement.className = `gene-element ${geneType}`;
+        
+        // Get operon information and assign color
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+        
+        // Override CSS background with operon-based color
+        geneElement.style.background = `linear-gradient(135deg, ${operonInfo.color}, ${this.lightenColor(operonInfo.color, 20)})`;
+        geneElement.style.borderColor = this.darkenColor(operonInfo.color, 20);
+        
+        // Add operon-specific CSS classes
+        if (operonInfo.isInOperon) {
+            geneElement.classList.add('in-operon');
+        } else {
+            geneElement.classList.add('single-gene');
+        }
+        
+        // Add user-defined feature styling
+        if (gene.userDefined) {
+            geneElement.classList.add('user-defined-feature');
+        }
+        
+        if (gene.strand === -1) {
+            geneElement.classList.add('reverse-strand');
+        }
+        
+        // Check if this gene should be selected (maintain selection state)
+        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene && 
+            this.genomeBrowser.selectedGene.gene.start === gene.start && 
+            this.genomeBrowser.selectedGene.gene.end === gene.end &&
+            this.genomeBrowser.selectedGene.gene.type === gene.type) {
+            geneElement.classList.add('selected');
+        }
+    }
+    
+    /**
+     * Set gene element position and dimensions
+     */
+    setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout) {
+        const geneStart = Math.max(gene.start, viewport.start);
+        const geneEnd = Math.min(gene.end, viewport.end);
+        const left = ((geneStart - viewport.start) / viewport.range) * 100;
+        const width = ((geneEnd - geneStart) / viewport.range) * 100;
+        
+        geneElement.style.left = `${left}%`;
+        geneElement.style.width = `${Math.max(width, 0.3)}%`;
+        
+        // Ensure minimum visibility
+        if (width < 0.5) {
+            geneElement.style.minWidth = '8px';
+        }
+        
+        // Position based on row arrangement
+        geneElement.style.top = `${layout.rulerHeight + layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing)}px`;
+        
+        // Set text content based on available space
+        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        if (width > 2) {
+            geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
+        } else if (width > 0.8) {
+            geneElement.textContent = geneName.substring(0, 3);
+        } else {
+            geneElement.textContent = '';
+        }
+        
+        // Create comprehensive tooltip
+        this.setGeneElementTooltip(geneElement, gene, geneName, rowIndex);
+    }
+    
+    /**
+     * Set comprehensive tooltip for gene element
+     */
+    setGeneElementTooltip(geneElement, gene, geneName, rowIndex) {
+        const geneInfo = `${geneName} (${gene.type})`;
+        const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, []);
+        const operonInfo_display = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
+        const rowInfo = `\nRow: ${rowIndex + 1}`;
+        
+        geneElement.title = `${geneInfo}\nPosition: ${positionInfo}${operonInfo_display}${rowInfo}`;
+    }
+    
+    /**
+     * Add interaction handlers to gene element
+     */
+    addGeneElementHandlers(geneElement, gene, operons) {
+        geneElement.addEventListener('click', () => {
+            const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+            this.showGeneDetails(gene, operonInfo);
+        });
+    }
+    
+    /**
+     * Add statistics and update sidebar with improved organization
+     */
+    addGeneTrackStatistics(trackContent, visibleGenes, operons) {
+        const geneRows = this.arrangeGenesInRows(visibleGenes, this.getCurrentViewport().start, this.getCurrentViewport().end);
+        const layout = this.calculateGeneTrackLayout(geneRows);
         
         // Add gene statistics
-        const statsElement = document.createElement('div');
-        statsElement.className = 'gene-stats';
-        statsElement.style.cssText = `
-            position: absolute;
-            top: ${rulerHeight + 5}px;
-            right: 10px;
-            background: rgba(255,255,255,0.9);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            color: #666;
-            border: 1px solid #ddd;
-        `;
-        statsElement.textContent = `${visibleGenes.length} features in ${geneRows.length} rows`;
+        const statsText = `${visibleGenes.length} features in ${geneRows.length} rows`;
+        const statsElement = this.createStatsElement(statsText, 'gene-stats', `top: ${layout.rulerHeight + 5}px;`);
         trackContent.appendChild(statsElement);
         
         // Update sidebar operons panel
@@ -192,204 +403,177 @@ class TrackRenderer {
             }
         });
         
-        // Update sidebar operons panel instead of adding legend to track
         this.updateOperonsPanel(operons, visibleOperons);
-        
-        track.appendChild(trackContent);
-        return track;
     }
 
     createSequenceTrack(chromosome, sequence) {
-        const track = document.createElement('div');
-        track.className = 'sequence-track';
+        const { track, trackContent } = this.createTrackBase('sequence', chromosome);
+        const viewport = this.getCurrentViewport();
         
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Sequence';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content sequence-visualization';
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const subsequence = sequence.substring(start, end);
-        const range = end - start;
+        // Get subsequence for current viewport
+        const subsequence = sequence.substring(viewport.start, viewport.end);
         
         // Create single-line sequence display with dynamic sizing
+        const seqDisplay = this.createSequenceDisplay(subsequence, viewport);
+        trackContent.appendChild(seqDisplay);
+        
+        return track;
+    }
+    
+    /**
+     * Create sequence display with improved organization
+     */
+    createSequenceDisplay(subsequence, viewport) {
         const seqDisplay = document.createElement('div');
         seqDisplay.className = 'sequence-single-line';
-        seqDisplay.style.position = 'relative';
-        seqDisplay.style.height = '30px';
-        seqDisplay.style.overflow = 'hidden';
-        seqDisplay.style.display = 'flex';
-        seqDisplay.style.alignItems = 'center';
+        seqDisplay.style.cssText = `
+            position: relative;
+            height: 30px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        `;
         
-        // Calculate font size based on available space and sequence length
-        const containerWidth = trackContent.offsetWidth || 800; // fallback width
+        // Calculate dynamic font size
+        const containerWidth = 800; // fallback width
         const maxFontSize = 16;
         const minFontSize = 4;
-        const calculatedFontSize = Math.max(minFontSize, Math.min(maxFontSize, containerWidth / range * 0.8));
+        const calculatedFontSize = Math.max(minFontSize, Math.min(maxFontSize, containerWidth / viewport.range * 0.8));
         
-        // Create sequence bases with dynamic positioning
+        // Create sequence bases
         for (let i = 0; i < subsequence.length; i++) {
-            const base = subsequence[i];
-            const baseElement = document.createElement('span');
-            baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
-            baseElement.textContent = base;
-            baseElement.style.position = 'absolute';
-            baseElement.style.left = `${(i / range) * 100}%`;
-            baseElement.style.fontSize = `${calculatedFontSize}px`;
-            baseElement.style.fontFamily = 'monospace';
-            baseElement.style.fontWeight = 'bold';
-            baseElement.style.textAlign = 'center';
-            baseElement.style.lineHeight = '30px';
-            
-            // Add tooltip with position info
-            const position = start + i + 1;
-            baseElement.title = `Position: ${position}, Base: ${base}`;
-            
+            const baseElement = this.createBaseElement(subsequence[i], i, viewport, calculatedFontSize);
             seqDisplay.appendChild(baseElement);
         }
         
-        trackContent.appendChild(seqDisplay);
-        track.appendChild(trackContent);
-        return track;
+        return seqDisplay;
+    }
+    
+    /**
+     * Create individual base element
+     */
+    createBaseElement(base, index, viewport, fontSize) {
+        const baseElement = document.createElement('span');
+        baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
+        baseElement.textContent = base;
+        baseElement.style.cssText = `
+            position: absolute;
+            left: ${(index / viewport.range) * 100}%;
+            font-size: ${fontSize}px;
+            font-family: monospace;
+            font-weight: bold;
+            text-align: center;
+            line-height: 30px;
+        `;
+        
+        // Add tooltip with position info
+        const position = viewport.start + index + 1;
+        baseElement.title = `Position: ${position}, Base: ${base}`;
+        
+        return baseElement;
     }
 
     createGCTrack(chromosome, sequence) {
-        const track = document.createElement('div');
-        track.className = 'gc-track';
+        const { track, trackContent } = this.createTrackBase('gc', chromosome);
+        const viewport = this.getCurrentViewport();
         
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'GC Content & Skew';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        trackContent.style.height = '140px'; // Increased height by 20% (120px * 1.2 = 144px)
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const subsequence = sequence.substring(start, end);
+        // Get subsequence for current viewport
+        const subsequence = sequence.substring(viewport.start, viewport.end);
         
         // Create enhanced GC content and skew visualization
-        const gcDisplay = this.createEnhancedGCVisualization(subsequence, start, end);
+        const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
         trackContent.appendChild(gcDisplay);
         
-        track.appendChild(trackContent);
         return track;
     }
 
     createVariantTrack(chromosome) {
-        const track = document.createElement('div');
-        track.className = 'variant-track';
-        
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'VCF Variants';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        trackContent.style.height = '60px';
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
-        const variants = this.genomeBrowser.currentVariants[chromosome] || [];
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const range = end - start;
+        const { track, trackContent } = this.createTrackBase('variants', chromosome);
+        const viewport = this.getCurrentViewport();
         
         // Check if we have any variant data at all
         if (!this.genomeBrowser.currentVariants || Object.keys(this.genomeBrowser.currentVariants).length === 0) {
-            const noDataMsg = document.createElement('div');
-            noDataMsg.className = 'no-variants-message';
-            noDataMsg.textContent = 'No VCF file loaded. Load a VCF file to see variants.';
-            noDataMsg.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #666;
-                font-style: italic;
-                font-size: 12px;
-            `;
+            const noDataMsg = this.createNoDataMessage(
+                'No VCF file loaded. Load a VCF file to see variants.',
+                'no-variants-message'
+            );
             trackContent.appendChild(noDataMsg);
-            track.appendChild(trackContent);
             return track;
         }
         
-        // Filter for variants in the current region
-        const visibleVariants = variants.filter(variant => 
-            variant.start && variant.end && 
-            variant.start <= end && variant.end >= start
-        );
+        // Get and filter variants
+        const variants = this.genomeBrowser.currentVariants[chromosome] || [];
+        const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
         
-        console.log(`Displaying ${visibleVariants.length} variants in region ${start}-${end}`);
+        console.log(`Displaying ${visibleVariants.length} variants in region ${viewport.start}-${viewport.end}`);
         
-        visibleVariants.forEach((variant, index) => {
-            const variantElement = document.createElement('div');
-            variantElement.className = 'variant-element';
-            
-            const variantStart = Math.max(variant.start, start);
-            const variantEnd = Math.min(variant.end, end);
-            const left = ((variantStart - start) / range) * 100;
-            const width = Math.max(((variantEnd - variantStart) / range) * 100, 0.2);
-            
-            variantElement.style.left = `${left}%`;
-            variantElement.style.width = `${width}%`;
-            variantElement.style.height = '12px';
-            variantElement.style.top = '20px';
-            variantElement.style.position = 'absolute';
-            variantElement.style.background = '#e74c3c';
-            variantElement.style.borderRadius = '2px';
-            variantElement.style.cursor = 'pointer';
-            
-            // Create variant tooltip
-            const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
-                              `Position: ${variant.start}-${variant.end}\n` +
-                              `Ref: ${variant.ref || 'N/A'}\n` +
-                              `Alt: ${variant.alt || 'N/A'}\n` +
-                              `Quality: ${variant.quality || 'N/A'}`;
-            
-            variantElement.title = variantInfo;
-            
-            // Add click handler for detailed info
-            variantElement.addEventListener('click', () => {
-                alert(variantInfo);
-            });
-            
-            trackContent.appendChild(variantElement);
-        });
-        
-        // Add message if no variants found in this region
         if (visibleVariants.length === 0) {
-            const noVariantsMsg = document.createElement('div');
-            noVariantsMsg.className = 'no-variants-message';
-            noVariantsMsg.textContent = 'No variants in this region';
-            noVariantsMsg.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #666;
-                font-style: italic;
-                font-size: 12px;
-            `;
+            const noVariantsMsg = this.createNoDataMessage(
+                'No variants in this region',
+                'no-variants-message'
+            );
             trackContent.appendChild(noVariantsMsg);
+        } else {
+            this.renderVariantElements(trackContent, visibleVariants, viewport);
         }
         
-        track.appendChild(trackContent);
         return track;
+    }
+    
+    /**
+     * Render variant elements
+     */
+    renderVariantElements(trackContent, visibleVariants, viewport) {
+        visibleVariants.forEach((variant, index) => {
+            const variantElement = this.createVariantElement(variant, viewport);
+            trackContent.appendChild(variantElement);
+        });
+    }
+    
+    /**
+     * Create individual variant element
+     */
+    createVariantElement(variant, viewport) {
+        const variantElement = document.createElement('div');
+        variantElement.className = 'variant-element';
+        
+        // Calculate position and dimensions
+        const variantStart = Math.max(variant.start, viewport.start);
+        const variantEnd = Math.min(variant.end, viewport.end);
+        const left = ((variantStart - viewport.start) / viewport.range) * 100;
+        const width = Math.max(((variantEnd - variantStart) / viewport.range) * 100, 0.2);
+        
+        variantElement.style.cssText = `
+            left: ${left}%;
+            width: ${width}%;
+            height: 12px;
+            top: 20px;
+            position: absolute;
+            background: #e74c3c;
+            border-radius: 2px;
+            cursor: pointer;
+        `;
+        
+        // Create variant tooltip and click handler
+        this.addVariantInteraction(variantElement, variant);
+        
+        return variantElement;
+    }
+    
+    /**
+     * Add interaction handlers to variant element
+     */
+    addVariantInteraction(variantElement, variant) {
+        const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
+                          `Position: ${variant.start}-${variant.end}\n` +
+                          `Ref: ${variant.ref || 'N/A'}\n` +
+                          `Alt: ${variant.alt || 'N/A'}\n` +
+                          `Quality: ${variant.quality || 'N/A'}`;
+        
+        variantElement.title = variantInfo;
+        variantElement.addEventListener('click', () => {
+            alert(variantInfo);
+        });
     }
 
     async createReadsTrack(chromosome) {
@@ -615,95 +799,104 @@ class TrackRenderer {
     }
 
     createProteinTrack(chromosome) {
-        const track = document.createElement('div');
-        track.className = 'protein-track';
+        const { track, trackContent } = this.createTrackBase('proteins', chromosome);
+        const viewport = this.getCurrentViewport();
         
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Proteins';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        trackContent.style.height = '80px';
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
+        // Get and filter proteins
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const range = end - start;
+        const proteins = this.filterProteinAnnotations(annotations, viewport);
         
-        // Filter for CDS features that can be translated to proteins
-        const proteins = annotations.filter(feature => 
-            feature.type === 'CDS' &&
-            feature.start && feature.end && 
-            feature.start <= end && feature.end >= start &&
-            this.genomeBrowser.shouldShowGeneType('CDS')
-        );
+        console.log(`Displaying ${proteins.length} proteins in region ${viewport.start}-${viewport.end}`);
         
-        console.log(`Displaying ${proteins.length} proteins in region ${start}-${end}`);
-        
-        proteins.forEach((protein, index) => {
-            const proteinElement = document.createElement('div');
-            proteinElement.className = 'protein-element';
-            
-            const proteinStart = Math.max(protein.start, start);
-            const proteinEnd = Math.min(protein.end, end);
-            const left = ((proteinStart - start) / range) * 100;
-            const width = Math.max(((proteinEnd - proteinStart) / range) * 100, 0.3);
-            
-            proteinElement.style.left = `${left}%`;
-            proteinElement.style.width = `${Math.max(width, 0.3)}%`;
-            
-            if (protein.strand === -1) {
-                proteinElement.classList.add('reverse-strand');
-            }
-            
-            // Create protein label
-            const proteinName = protein.qualifiers.product || protein.qualifiers.gene || protein.qualifiers.locus_tag || 'Protein';
-            const proteinInfo = `${proteinName} (CDS)`;
-            const positionInfo = `${protein.start}-${protein.end} (${protein.strand === -1 ? '-' : '+'} strand)`;
-            
-            proteinElement.title = `${proteinInfo}\nPosition: ${positionInfo}`;
-            
-            // Set text content based on available space
-            if (width > 2) {
-                proteinElement.textContent = proteinName.length > 10 ? proteinName.substring(0, 10) + '...' : proteinName;
-            } else if (width > 0.8) {
-                proteinElement.textContent = proteinName.substring(0, 3);
-            } else {
-                proteinElement.textContent = '';
-            }
-            
-            // Add click handler for detailed info
-            proteinElement.addEventListener('click', () => {
-                this.showProteinDetails(protein, chromosome);
-            });
-            
-            trackContent.appendChild(proteinElement);
-        });
-        
-        // Add message if no proteins found
         if (proteins.length === 0) {
-            const noProteinsMsg = document.createElement('div');
-            noProteinsMsg.className = 'no-proteins-message';
-            noProteinsMsg.textContent = 'No proteins in this region or CDS filtered out';
-            noProteinsMsg.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #666;
-                font-style: italic;
-                font-size: 12px;
-            `;
+            const noProteinsMsg = this.createNoDataMessage(
+                'No proteins in this region or CDS filtered out',
+                'no-proteins-message'
+            );
             trackContent.appendChild(noProteinsMsg);
+        } else {
+            this.renderProteinElements(trackContent, proteins, viewport);
         }
         
-        track.appendChild(trackContent);
         return track;
+    }
+    
+    /**
+     * Filter protein annotations (CDS features)
+     */
+    filterProteinAnnotations(annotations, viewport) {
+        return annotations.filter(feature => 
+            feature.type === 'CDS' &&
+            this.genomeBrowser.shouldShowGeneType('CDS')
+        ).filter(protein => this.filterFeaturesByViewport([protein], viewport).length > 0);
+    }
+    
+    /**
+     * Render protein elements
+     */
+    renderProteinElements(trackContent, proteins, viewport) {
+        proteins.forEach((protein, index) => {
+            const proteinElement = this.createProteinElement(protein, viewport);
+            trackContent.appendChild(proteinElement);
+        });
+    }
+    
+    /**
+     * Create individual protein element
+     */
+    createProteinElement(protein, viewport) {
+        const proteinElement = document.createElement('div');
+        proteinElement.className = 'protein-element';
+        
+        // Calculate position and dimensions
+        const proteinStart = Math.max(protein.start, viewport.start);
+        const proteinEnd = Math.min(protein.end, viewport.end);
+        const left = ((proteinStart - viewport.start) / viewport.range) * 100;
+        const width = Math.max(((proteinEnd - proteinStart) / viewport.range) * 100, 0.3);
+        
+        proteinElement.style.left = `${left}%`;
+        proteinElement.style.width = `${Math.max(width, 0.3)}%`;
+        
+        if (protein.strand === -1) {
+            proteinElement.classList.add('reverse-strand');
+        }
+        
+        // Set protein label and tooltip
+        this.setProteinElementContent(proteinElement, protein, width);
+        
+        // Add interaction handlers
+        this.addProteinElementHandlers(proteinElement, protein);
+        
+        return proteinElement;
+    }
+    
+    /**
+     * Set protein element content and tooltip
+     */
+    setProteinElementContent(proteinElement, protein, width) {
+        const proteinName = protein.qualifiers.product || protein.qualifiers.gene || protein.qualifiers.locus_tag || 'Protein';
+        const proteinInfo = `${proteinName} (CDS)`;
+        const positionInfo = `${protein.start}-${protein.end} (${protein.strand === -1 ? '-' : '+'} strand)`;
+        
+        proteinElement.title = `${proteinInfo}\nPosition: ${positionInfo}`;
+        
+        // Set text content based on available space
+        if (width > 2) {
+            proteinElement.textContent = proteinName.length > 10 ? proteinName.substring(0, 10) + '...' : proteinName;
+        } else if (width > 0.8) {
+            proteinElement.textContent = proteinName.substring(0, 3);
+        } else {
+            proteinElement.textContent = '';
+        }
+    }
+    
+    /**
+     * Add interaction handlers to protein element
+     */
+    addProteinElementHandlers(proteinElement, protein) {
+        proteinElement.addEventListener('click', () => {
+            this.showProteinDetails(protein, this.genomeBrowser.currentChromosome);
+        });
     }
 
     createEnhancedGCVisualization(sequence, viewStart, viewEnd) {
