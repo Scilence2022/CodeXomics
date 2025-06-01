@@ -897,10 +897,10 @@ class TrackRenderer {
         // Clear any existing content
         svg.innerHTML = '';
         
-        // Define dimensions and layout
+        // Define dimensions and layout with minimal padding
         const viewWidth = 800;
         const viewHeight = 100;
-        const padding = 20;
+        const padding = 2; // Reduced from 20 to 2 for minimal padding
         const plotWidth = viewWidth - 2 * padding;
         const plotHeight = viewHeight - 2 * padding;
         const centerY = viewHeight / 2;
@@ -1174,71 +1174,21 @@ class TrackRenderer {
         
         const labelStyle = 'font-family: Inter, sans-serif; font-size: 10px; fill: #495057;';
         
-        // GC Content labels (left side)
-        const gcMaxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        gcMaxLabel.setAttribute('x', '15');
-        gcMaxLabel.setAttribute('y', '15');
-        gcMaxLabel.setAttribute('text-anchor', 'end');
-        gcMaxLabel.setAttribute('style', labelStyle);
-        gcMaxLabel.textContent = `${gcMax.toFixed(1)}%`;
-        
-        const gcMidLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        gcMidLabel.setAttribute('x', '15');
-        gcMidLabel.setAttribute('y', viewHeight / 4);
-        gcMidLabel.setAttribute('text-anchor', 'end');
-        gcMidLabel.setAttribute('style', labelStyle);
-        gcMidLabel.textContent = `${((gcMin + gcMax) / 2).toFixed(1)}%`;
-        
-        const gcMinLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        gcMinLabel.setAttribute('x', '15');
-        gcMinLabel.setAttribute('y', viewHeight / 2 - 5);
-        gcMinLabel.setAttribute('text-anchor', 'end');
-        gcMinLabel.setAttribute('style', labelStyle);
-        gcMinLabel.textContent = `${gcMin.toFixed(1)}%`;
-        
-        // GC Skew labels (left side)
-        const skewMaxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        skewMaxLabel.setAttribute('x', '15');
-        skewMaxLabel.setAttribute('y', viewHeight / 2 + 15);
-        skewMaxLabel.setAttribute('text-anchor', 'end');
-        skewMaxLabel.setAttribute('style', labelStyle);
-        skewMaxLabel.textContent = `${skewMax.toFixed(3)}`;
-        
-        const skewZeroLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        skewZeroLabel.setAttribute('x', '15');
-        skewZeroLabel.setAttribute('y', viewHeight / 2 + 2);
-        skewZeroLabel.setAttribute('text-anchor', 'end');
-        skewZeroLabel.setAttribute('style', labelStyle);
-        skewZeroLabel.textContent = '0.000';
-        
-        const skewMinLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        skewMinLabel.setAttribute('x', '15');
-        skewMinLabel.setAttribute('y', viewHeight - 5);
-        skewMinLabel.setAttribute('text-anchor', 'end');
-        skewMinLabel.setAttribute('style', labelStyle);
-        skewMinLabel.textContent = `${skewMin.toFixed(3)}`;
-        
-        // Track labels (right side)
+        // Track labels (right side) - adjusted for reduced padding
         const gcLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        gcLabel.setAttribute('x', viewWidth - 5);
+        gcLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
         gcLabel.setAttribute('y', '15');
         gcLabel.setAttribute('text-anchor', 'start');
         gcLabel.setAttribute('style', labelStyle + ' fill: #28a745; font-weight: 600;');
         gcLabel.textContent = 'GC%';
         
         const skewLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        skewLabel.setAttribute('x', viewWidth - 5);
+        skewLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
         skewLabel.setAttribute('y', viewHeight - 5);
         skewLabel.setAttribute('text-anchor', 'start');
         skewLabel.setAttribute('style', labelStyle + ' font-weight: 600;');
         skewLabel.textContent = 'Skew';
         
-        labelGroup.appendChild(gcMaxLabel);
-        labelGroup.appendChild(gcMidLabel);
-        labelGroup.appendChild(gcMinLabel);
-        labelGroup.appendChild(skewMaxLabel);
-        labelGroup.appendChild(skewZeroLabel);
-        labelGroup.appendChild(skewMinLabel);
         labelGroup.appendChild(gcLabel);
         labelGroup.appendChild(skewLabel);
         
