@@ -65,11 +65,14 @@ class FileManager {
                 throw new Error(fileInfo.error);
             }
 
-            // Check file size and warn for very large files
+            // Check file size and warn for very large files (excluding SAM/BAM which use dynamic loading)
             const fileSizeMB = fileInfo.info.size / (1024 * 1024);
             const extension = fileInfo.info.extension.toLowerCase();
             
-            if (fileSizeMB > 50) {
+            // Skip warning for SAM/BAM files since they use dynamic loading and can handle large files efficiently
+            const usesDynamicLoading = extension === '.sam' || extension === '.bam';
+            
+            if (fileSizeMB > 50 && !usesDynamicLoading) {
                 const proceed = confirm(
                     `This file is ${fileSizeMB.toFixed(1)} MB. Large files may take time to load and parse. Continue?`
                 );
