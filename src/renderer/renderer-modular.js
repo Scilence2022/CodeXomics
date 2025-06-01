@@ -462,7 +462,7 @@ class GenomeBrowser {
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
         }
         
-        // Add tracks with splitters between them
+        // Add tracks without splitters, but make them draggable and resizable
         tracksToShow.forEach((track, index) => {
             // Add the track
             browserContainer.appendChild(track.element);
@@ -478,11 +478,9 @@ class GenomeBrowser {
                  console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
             }
             
-            // Add splitter after each track except the last one
-            if (index < tracksToShow.length - 1) {
-                const splitter = this.createTrackSplitter(track.type, tracksToShow[index + 1].type);
-                browserContainer.appendChild(splitter);
-            }
+            // Make tracks draggable for reordering and add resize handle
+            this.makeTrackDraggable(track.element, track.type);
+            this.addTrackResizeHandle(track.element, track.type);
         });
         
         container.appendChild(browserContainer);
@@ -699,19 +697,16 @@ class GenomeBrowser {
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
         
-        // Touch events for mobile support
-        splitter.addEventListener('touchstart', startResize);
-        document.addEventListener('touchmove', doResize);
+        // Touch events for mobile
+        splitter.addEventListener('touchstart', startResize, { passive: false });
+        document.addEventListener('touchmove', doResize, { passive: false });
         document.addEventListener('touchend', stopResize);
         
         // Double-click for auto-adjust
         splitter.addEventListener('dblclick', autoAdjustHeight);
         
-        // Keyboard accessibility
+        // Make splitter focusable for keyboard navigation
         splitter.setAttribute('tabindex', '0');
-        splitter.setAttribute('role', 'separator');
-        splitter.setAttribute('aria-label', 'Resize tracks');
-        
         splitter.addEventListener('keydown', (e) => {
             const step = 10; // pixels to move per keypress
             let deltaY = 0;
@@ -757,6 +752,321 @@ class GenomeBrowser {
                 }
             }
         });
+    }
+
+    // Make individual tracks draggable for reordering
+    makeTrackDraggable(trackElement, trackType) {
+        // Add drag handle to track header
+        const trackHeader = trackElement.querySelector('.track-header');
+        if (trackHeader) {
+            trackHeader.style.cursor = 'move';
+            trackHeader.setAttribute('draggable', true);
+            trackHeader.setAttribute('data-track-type', trackType);
+            
+            // Add drag handle icon
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'track-drag-handle';
+            dragHandle.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+            dragHandle.style.cssText = `
+                position: absolute;
+                left: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #6c757d;
+                cursor: grab;
+                font-size: 12px;
+                z-index: 10;
+            `;
+            trackHeader.style.position = 'relative';
+            trackHeader.style.paddingLeft = '30px';
+            trackHeader.insertBefore(dragHandle, trackHeader.firstChild);
+            
+            // Drag event handlers
+            trackHeader.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', trackType);
+                e.dataTransfer.effectAllowed = 'move';
+                trackElement.classList.add('dragging');
+                dragHandle.style.cursor = 'grabbing';
+            });
+            
+            trackHeader.addEventListener('dragend', (e) => {
+                trackElement.classList.remove('dragging');
+                dragHandle.style.cursor = 'grab';
+                
+                // Remove all drop indicators
+                document.querySelectorAll('.track-drop-indicator').forEach(indicator => {
+                    indicator.remove();
+                });
+            });
+        }
+        
+        // Make track a drop target
+        trackElement.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement && draggingElement !== trackElement) {
+                this.showDropIndicator(trackElement, e.clientY);
+            }
+        });
+        
+        trackElement.addEventListener('dragleave', (e) => {
+            if (!trackElement.contains(e.relatedTarget)) {
+                this.hideDropIndicator(trackElement);
+            }
+        });
+        
+        trackElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const draggedTrackType = e.dataTransfer.getData('text/plain');
+            const draggedElement = document.querySelector('.dragging');
+            
+            if (draggedElement && draggedElement !== trackElement) {
+                this.reorderTracks(draggedElement, trackElement, e.clientY);
+            }
+            
+            this.hideDropIndicator(trackElement);
+        });
+    }
+    
+    // Add resize handle to track
+    addTrackResizeHandle(trackElement, trackType) {
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'track-resize-handle';
+        resizeHandle.innerHTML = '<i class="fas fa-grip-horizontal"></i>';
+        resizeHandle.style.cssText = `
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 8px;
+            background: linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef);
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            cursor: row-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 8px;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+            z-index: 10;
+        `;
+        
+        trackElement.style.position = 'relative';
+        trackElement.appendChild(resizeHandle);
+        
+        // Hover effects
+        resizeHandle.addEventListener('mouseenter', () => {
+            resizeHandle.style.opacity = '1';
+            resizeHandle.style.height = '10px';
+            resizeHandle.style.bottom = '-5px';
+        });
+        
+        resizeHandle.addEventListener('mouseleave', () => {
+            resizeHandle.style.opacity = '0.7';
+            resizeHandle.style.height = '8px';
+            resizeHandle.style.bottom = '-4px';
+        });
+        
+        // Resize functionality
+        this.makeResizeHandleResizable(resizeHandle, trackElement, trackType);
+    }
+    
+    // Make resize handle functional
+    makeResizeHandleResizable(resizeHandle, trackElement, trackType) {
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 0;
+        
+        const startResize = (e) => {
+            isResizing = true;
+            startY = e.clientY || e.touches[0].clientY;
+            
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                startHeight = trackContent.offsetHeight;
+            }
+            
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            resizeHandle.style.background = 'linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da)';
+            
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        
+        const doResize = (e) => {
+            if (!isResizing) return;
+            
+            const currentY = e.clientY || e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                const newHeight = Math.max(40, startHeight + deltaY);
+                trackContent.style.height = `${newHeight}px`;
+            }
+            
+            e.preventDefault();
+        };
+        
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            resizeHandle.style.background = 'linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef)';
+        };
+        
+        // Mouse events
+        resizeHandle.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+        
+        // Touch events
+        resizeHandle.addEventListener('touchstart', startResize, { passive: false });
+        document.addEventListener('touchmove', doResize, { passive: false });
+        document.addEventListener('touchend', stopResize);
+        
+        // Double-click to auto-adjust height
+        resizeHandle.addEventListener('dblclick', () => {
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                let optimalHeight = 80;
+                
+                switch (trackType) {
+                    case 'genes':
+                        const geneElements = trackContent.querySelectorAll('.gene-element');
+                        if (geneElements.length > 0) {
+                            let maxRow = 0;
+                            geneElements.forEach(gene => {
+                                const top = parseInt(gene.style.top) || 0;
+                                const height = parseInt(gene.style.height) || 23;
+                                maxRow = Math.max(maxRow, top + height);
+                            });
+                            optimalHeight = Math.max(100, maxRow + 60);
+                        }
+                        break;
+                    case 'reads':
+                        const readElements = trackContent.querySelectorAll('.read-element');
+                        if (readElements.length > 0) {
+                            let maxRow = 0;
+                            readElements.forEach(read => {
+                                const top = parseInt(read.style.top) || 0;
+                                const height = parseInt(read.style.height) || 12;
+                                maxRow = Math.max(maxRow, top + height);
+                            });
+                            optimalHeight = Math.max(80, maxRow + 40);
+                        }
+                        break;
+                    case 'gc':
+                        optimalHeight = 100;
+                        break;
+                    case 'variants':
+                        optimalHeight = 80;
+                        break;
+                    case 'proteins':
+                        optimalHeight = 90;
+                        break;
+                }
+                
+                trackContent.style.height = `${optimalHeight}px`;
+                
+                // Visual feedback
+                resizeHandle.style.background = 'linear-gradient(to bottom, #28a745, #20c997, #28a745)';
+                setTimeout(() => {
+                    resizeHandle.style.background = 'linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef)';
+                }, 300);
+            }
+        });
+    }
+    
+    // Show drop indicator when dragging tracks
+    showDropIndicator(targetElement, mouseY) {
+        this.hideDropIndicator(targetElement);
+        
+        const rect = targetElement.getBoundingClientRect();
+        const midPoint = rect.top + rect.height / 2;
+        const isAbove = mouseY < midPoint;
+        
+        const indicator = document.createElement('div');
+        indicator.className = 'track-drop-indicator';
+        indicator.style.cssText = `
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #007bff;
+            z-index: 1000;
+            box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
+            ${isAbove ? 'top: -2px;' : 'bottom: -2px;'}
+        `;
+        
+        targetElement.style.position = 'relative';
+        targetElement.appendChild(indicator);
+    }
+    
+    // Hide drop indicator
+    hideDropIndicator(targetElement) {
+        const indicator = targetElement.querySelector('.track-drop-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    // Reorder tracks based on drop position
+    reorderTracks(draggedElement, targetElement, mouseY) {
+        const container = targetElement.parentElement;
+        const rect = targetElement.getBoundingClientRect();
+        const midPoint = rect.top + rect.height / 2;
+        const insertBefore = mouseY < midPoint;
+        
+        if (insertBefore) {
+            container.insertBefore(draggedElement, targetElement);
+        } else {
+            container.insertBefore(draggedElement, targetElement.nextSibling);
+        }
+        
+        // Update track visibility state based on new order
+        this.updateTrackOrder();
+    }
+    
+    // Update internal track order state
+    updateTrackOrder() {
+        const container = document.querySelector('.genome-browser-container');
+        if (!container) return;
+        
+        const trackElements = Array.from(container.querySelectorAll('[class*="-track"]'));
+        const newOrder = [];
+        
+        trackElements.forEach(element => {
+            const classList = Array.from(element.classList);
+            const trackClass = classList.find(cls => cls.endsWith('-track'));
+            if (trackClass) {
+                const trackType = trackClass.replace('-track', '');
+                const typeMapping = {
+                    'gene': 'genes',
+                    'gc': 'gc',
+                    'variant': 'variants',
+                    'reads': 'reads',
+                    'protein': 'proteins'
+                };
+                const mappedType = typeMapping[trackType] || trackType;
+                newOrder.push(mappedType);
+            }
+        });
+        
+        console.log('New track order:', newOrder);
+        
+        // Store the order preference if needed
+        if (this.configManager) {
+            this.configManager.set('trackOrder', newOrder);
+        }
     }
 
     // Track management methods

@@ -784,7 +784,7 @@ class GenomeBrowser {
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
         }
         
-        // Add tracks with splitters between them
+        // Add tracks without splitters, but make them draggable and resizable
         tracksToShow.forEach((track, index) => {
             // Add the track
             browserContainer.appendChild(track.element);
@@ -800,11 +800,9 @@ class GenomeBrowser {
                  console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
             }
             
-            // Add splitter after each track except the last one
-            if (index < tracksToShow.length - 1) {
-                const splitter = this.createTrackSplitter(track.type, tracksToShow[index + 1].type);
-                browserContainer.appendChild(splitter);
-            }
+            // Make tracks draggable for reordering and add resize handle
+            this.makeTrackDraggable(track.element, track.type);
+            this.addTrackResizeHandle(track.element, track.type);
         });
         
         container.appendChild(browserContainer);
@@ -3600,19 +3598,16 @@ class GenomeBrowser {
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
         
-        // Touch events for mobile support
-        splitter.addEventListener('touchstart', startResize);
-        document.addEventListener('touchmove', doResize);
+        // Touch events for mobile
+        splitter.addEventListener('touchstart', startResize, { passive: false });
+        document.addEventListener('touchmove', doResize, { passive: false });
         document.addEventListener('touchend', stopResize);
         
         // Double-click for auto-adjust
         splitter.addEventListener('dblclick', autoAdjustHeight);
         
-        // Keyboard accessibility
+        // Make splitter focusable for keyboard navigation
         splitter.setAttribute('tabindex', '0');
-        splitter.setAttribute('role', 'separator');
-        splitter.setAttribute('aria-label', 'Resize tracks');
-        
         splitter.addEventListener('keydown', (e) => {
             const step = 10; // pixels to move per keypress
             let deltaY = 0;
