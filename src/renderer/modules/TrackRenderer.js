@@ -72,9 +72,9 @@ class TrackRenderer {
         // Calculate adaptive track height based on gene arrangement
         const geneHeight = 23; // Height of each gene element
         const rowSpacing = 6; // Space between rows
-        const rulerHeight = 40; // Height of the detailed ruler
+        const rulerHeight = 35; // Height of the detailed ruler
         const topPadding = 10; // Top padding below ruler
-        const bottomPadding = 10; // Bottom padding
+        const bottomPadding = 0; // Bottom padding
         
         const trackHeight = rulerHeight + topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding;
         trackContent.style.height = `${Math.max(trackHeight, 120)}px`; // Minimum 120px height to account for ruler

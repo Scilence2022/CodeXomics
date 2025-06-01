@@ -1330,7 +1330,7 @@ body {
 .genome-viewer {
     flex: 1;
     background: white;
-    border-radius: 8px;
+    border-radius: 4px;
     border: 1px solid #dee2e6;
     overflow: hidden;
     min-height: 400px;
@@ -2019,7 +2019,7 @@ body {
     overflow-y: auto;
     position: relative;
     min-height: 200px; /* Increase minimum height for the top tracks panel */
-    max-height: 70%; /* Prevent taking more than 70% of available space */
+     /*max-height: 70%; Prevent taking more than 70% of available space */
 }
 
 /* Horizontal Splitter between sidebar and viewer */
@@ -2733,15 +2733,15 @@ body {
 .variant-track .track-content,
 .protein-track .track-content {
     margin-left: 0;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 
 /* Ensure ruler aligns with tracks */
 .genome-ruler {
     margin-left: 0;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 
 /* Make sequence position numbers non-selectable */
@@ -4891,7 +4891,7 @@ body {
 /* Detailed ruler for gene track viewing region */
 .detailed-ruler-container {
     position: relative;
-    height: 35px;
+    height: 60px;
     width: 100%;
     background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
     border-bottom: 0px solid #dee2e6;
