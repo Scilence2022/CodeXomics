@@ -4845,7 +4845,7 @@ body {
 @media (pointer: coarse) {
     .genome-navigation-bar {
         /* Larger touch targets on mobile */
-        height: 40px;
+        height: 25px;
     }
     
     .navigation-canvas {
@@ -4892,6 +4892,7 @@ body {
 .detailed-ruler-container {
     position: relative;
     height: 35px;
+    width: 100%;
     background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
     border-bottom: 0px solid #dee2e6;
     margin-bottom: 0px;

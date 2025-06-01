@@ -130,6 +130,38 @@ class ChatManager {
                     result = await this.exportData(parameters);
                     break;
                     
+                case 'get_gene_details':
+                    result = await this.getGeneDetails(parameters);
+                    break;
+                    
+                case 'translate_sequence':
+                    result = await this.translateSequence(parameters);
+                    break;
+                    
+                case 'calculate_gc_content':
+                    result = await this.calculateGCContent(parameters);
+                    break;
+                    
+                case 'find_orfs':
+                    result = await this.findOpenReadingFrames(parameters);
+                    break;
+                    
+                case 'get_operons':
+                    result = await this.getOperons(parameters);
+                    break;
+                    
+                case 'zoom_to_gene':
+                    result = await this.zoomToGene(parameters);
+                    break;
+                    
+                case 'get_chromosome_list':
+                    result = this.getChromosomeList();
+                    break;
+                    
+                case 'get_track_status':
+                    result = this.getTrackStatus();
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -345,51 +377,50 @@ class ChatManager {
     async exportData(params) {
         const { format, chromosome, start, end } = params;
         
-        if (!this.app || !this.app.exportManager) {
-            throw new Error('Export functionality not available');
-        }
-
-        // For now, we'll use the existing export methods that export entire genome
-        // In the future, we could extend ExportManager to support region-specific exports
-        let result;
-        
-        try {
-            switch (format.toLowerCase()) {
-                case 'fasta':
-                    result = await this.app.exportManager.exportAsFasta();
-                    break;
-                case 'genbank':
-                case 'gbk':
-                    result = await this.app.exportManager.exportAsGenBank();
-                    break;
-                case 'gff':
-                    result = await this.app.exportManager.exportAsGFF();
-                    break;
-                case 'bed':
-                    result = await this.app.exportManager.exportAsBED();
-                    break;
-                case 'cds':
-                    result = await this.app.exportManager.exportCDSAsFasta();
-                    break;
-                case 'protein':
-                    result = await this.app.exportManager.exportProteinAsFasta();
-                    break;
-                default:
-                    throw new Error(`Unsupported export format: ${format}. Supported formats: fasta, genbank, gff, bed, cds, protein`);
+        if (this.app && this.app.exportManager) {
+            try {
+                let exportResult;
+                
+                switch (format.toLowerCase()) {
+                    case 'fasta':
+                        if (chromosome && start && end) {
+                            // Export specific region
+                            const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
+                            const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
+                            exportResult = { content: fastaContent, type: 'text' };
+                        } else {
+                            exportResult = await this.app.exportManager.exportFASTA();
+                        }
+                        break;
+                    case 'genbank':
+                    case 'gb':
+                        exportResult = await this.app.exportManager.exportGenBank();
+                        break;
+                    case 'gff':
+                    case 'gff3':
+                        exportResult = await this.app.exportManager.exportGFF();
+                        break;
+                    case 'bed':
+                        exportResult = await this.app.exportManager.exportBED();
+                        break;
+                    default:
+                        throw new Error(`Unsupported export format: ${format}`);
+                }
+                
+                return {
+                    format: format,
+                    chromosome: chromosome,
+                    start: start,
+                    end: end,
+                    exported: true,
+                    message: `Data exported as ${format.toUpperCase()}`
+                };
+            } catch (error) {
+                throw new Error(`Export failed: ${error.message}`);
             }
-
-            return {
-                success: true,
-                format: format,
-                chromosome: chromosome || 'all',
-                start: start || 'full',
-                end: end || 'full',
-                message: `Exported ${format.toUpperCase()} data successfully. File has been downloaded.`
-            };
-            
-        } catch (error) {
-            throw new Error(`Export failed: ${error.message}`);
         }
+        
+        throw new Error('Export manager not available');
     }
 
     getVisibleTracks() {
@@ -755,54 +786,69 @@ class ChatManager {
     }
 
     formatToolResult(toolName, parameters, result) {
-        // Provide user-friendly summaries of tool execution results
+        console.log('formatToolResult called with:', { toolName, parameters, result });
+        
         switch (toolName) {
             case 'navigate_to_position':
-                if (result.success) {
-                    return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}`;
-                }
-                break;
+                return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}`;
                 
             case 'search_features':
-                return `🔍 Found ${result.count} features matching "${result.query}"${result.caseSensitive ? ' (case-sensitive)' : ''}`;
+                if (result.count > 0) {
+                    return `🔍 Found ${result.count} features matching "${result.query}"`;
+                } else {
+                    return `🔍 No features found matching "${result.query}"`;
+                }
                 
             case 'get_current_state':
-                return `📊 Current state: Chromosome ${result.currentChromosome || 'None'}, ${result.annotationsCount} annotations loaded, ${result.userDefinedFeaturesCount} user features`;
+                return `📊 Current state: ${result.currentChromosome || 'No chromosome selected'}, position ${result.currentPosition?.start || 0}-${result.currentPosition?.end || 0}, ${result.annotationsCount || 0} annotations loaded`;
                 
             case 'get_sequence':
-                return `🧬 Retrieved ${result.length} base sequence from ${result.chromosome}:${result.start}-${result.end}`;
+                return `🧬 Retrieved ${result.length}bp sequence from ${result.chromosome}:${result.start}-${result.end}`;
                 
             case 'toggle_track':
-                return `👁️ Track "${result.track}" is now ${result.visible ? 'visible' : 'hidden'}`;
+                return `👁️ Track "${parameters.trackName}" is now ${result.visible ? 'visible' : 'hidden'}`;
                 
             case 'create_annotation':
-                if (result.success) {
-                    return `✨ Created ${result.feature.type} annotation "${result.feature.name}" at ${result.feature.chromosome}:${result.feature.start}-${result.feature.end}`;
-                }
-                break;
+                return `✨ Created ${result.type} annotation "${result.name}" at ${result.chromosome}:${result.start}-${result.end}`;
                 
             case 'analyze_region':
-                let summary = `📈 Analyzed region ${result.chromosome}:${result.start}-${result.end} (${result.length} bp)`;
-                if (result.gcContent) {
-                    summary += `, GC content: ${result.gcContent}%`;
-                }
-                if (result.features) {
-                    summary += `, ${result.features.length} features found`;
-                }
-                return summary;
+                return `🔬 Analyzed region ${result.chromosome}:${result.start}-${result.end} (${result.length}bp, ${result.gcContent}% GC, ${result.featureCount || 0} features)`;
                 
             case 'export_data':
-                if (result.success) {
-                    return `💾 ${result.message}`;
+                return `💾 Exported ${result.format.toUpperCase()} data successfully. File has been downloaded.`;
+                
+            case 'get_gene_details':
+                if (result.found) {
+                    return `🧬 Found ${result.count} gene(s) matching "${result.geneName}": ${result.genes.map(g => `${g.name} (${g.start}-${g.end}, ${g.product})`).slice(0, 3).join(', ')}${result.count > 3 ? '...' : ''}`;
+                } else {
+                    return `❌ No genes found matching "${result.geneName}" in ${result.chromosome}`;
                 }
-                break;
+                
+            case 'translate_sequence':
+                return `🔬 Translated ${result.length.dna}bp DNA sequence to ${result.length.protein}aa protein from ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand)`;
+                
+            case 'calculate_gc_content':
+                return `📊 GC content analysis for ${result.chromosome}:${result.region}: Overall ${result.overallGCContent}% GC (${result.length}bp analyzed in ${result.totalWindows} windows)`;
+                
+            case 'find_orfs':
+                return `🔍 Found ${result.orfsFound} ORFs ≥${result.minLength}bp in ${result.chromosome}:${result.region}`;
+                
+            case 'get_operons':
+                return `🧬 Found ${result.operonsFound} operons in ${result.chromosome}: ${result.operons.slice(0, 3).map(op => `${op.name} (${op.geneCount} genes)`).join(', ')}${result.operonsFound > 3 ? '...' : ''}`;
+                
+            case 'zoom_to_gene':
+                return `🔍 Zoomed to gene ${result.gene.name} at ${result.gene.start}-${result.gene.end} with ${result.padding}bp padding`;
+                
+            case 'get_chromosome_list':
+                return `📋 Available chromosomes (${result.count}): ${result.chromosomes.map(chr => `${chr.name} (${(chr.length/1000000).toFixed(1)}Mbp)${chr.isSelected ? ' *' : ''}`).join(', ')}. Current: ${result.currentChromosome}`;
+                
+            case 'get_track_status':
+                const visibleCount = result.visibleTracks.length;
+                return `👁️ Track status: ${visibleCount}/${result.totalTracks} visible (${result.visibleTracks.join(', ')})`;
                 
             default:
-                return `✅ Executed ${toolName} successfully`;
+                return `✅ Tool ${toolName} executed successfully`;
         }
-        
-        // Fallback for unsuccessful operations
-        return `❌ Failed to execute ${toolName}: ${result.error || 'Unknown error'}`;
     }
 
     buildConversationHistory(newMessage) {
@@ -868,6 +914,14 @@ Tool Examples:
 - To create annotation: {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000, "strand": 1, "description": "Test gene"}}
 - To analyze region: {"tool_name": "analyze_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "includeFeatures": true, "includeGC": true}}
 - To export data: {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
+- To get gene details: {"tool_name": "get_gene_details", "parameters": {"geneName": "bidA", "chromosome": "U00096"}}
+- To translate sequence: {"tool_name": "translate_sequence", "parameters": {"chromosome": "U00096", "start": 1000, "end": 1500, "strand": 1}}
+- To calculate GC content: {"tool_name": "calculate_gc_content", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000, "windowSize": 100}}
+- To find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "U00096", "start": 1000, "end": 5000, "minLength": 300}}
+- To get operons: {"tool_name": "get_operons", "parameters": {"chromosome": "U00096"}}
+- To zoom to gene: {"tool_name": "zoom_to_gene", "parameters": {"geneName": "bidA", "padding": 1000}}
+- To list chromosomes: {"tool_name": "get_chromosome_list", "parameters": {}}
+- To check tracks: {"tool_name": "get_track_status", "parameters": {}}
 
 Do NOT include any explanatory text, markdown formatting, or code blocks around the JSON. Return ONLY the raw JSON object.
 
@@ -1009,6 +1063,38 @@ If the user is asking a general question or doesn't need a tool, respond normall
                     result = await this.exportData(parameters);
                     break;
                     
+                case 'get_gene_details':
+                    result = await this.getGeneDetails(parameters);
+                    break;
+                    
+                case 'translate_sequence':
+                    result = await this.translateSequence(parameters);
+                    break;
+                    
+                case 'calculate_gc_content':
+                    result = await this.calculateGCContent(parameters);
+                    break;
+                    
+                case 'find_orfs':
+                    result = await this.findOpenReadingFrames(parameters);
+                    break;
+                    
+                case 'get_operons':
+                    result = await this.getOperons(parameters);
+                    break;
+                    
+                case 'zoom_to_gene':
+                    result = await this.zoomToGene(parameters);
+                    break;
+                    
+                case 'get_chromosome_list':
+                    result = this.getChromosomeList();
+                    break;
+                    
+                case 'get_track_status':
+                    result = this.getTrackStatus();
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -1040,7 +1126,15 @@ If the user is asking a general question or doesn't need a tool, respond normall
                     'toggle_track',
                     'create_annotation',
                     'analyze_region',
-                    'export_data'
+                    'export_data',
+                    'get_gene_details',
+                    'translate_sequence',
+                    'calculate_gc_content',
+                    'find_orfs',
+                    'get_operons',
+                    'zoom_to_gene',
+                    'get_chromosome_list',
+                    'get_track_status'
                 ]
             }
         };
@@ -1374,5 +1468,296 @@ If the user is asking a general question or doesn't need a tool, respond normall
         } catch (error) {
             this.addMessageToChat(`❌ Error: ${error.message}`, 'assistant', true);
         }
+    }
+
+    // New comprehensive function calls
+    async getGeneDetails(params) {
+        const { geneName, chromosome } = params;
+        
+        if (!this.app || !this.app.currentAnnotations) {
+            throw new Error('No annotations loaded');
+        }
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const annotations = this.app.currentAnnotations[chr] || [];
+        const matchingGenes = annotations.filter(gene => {
+            const name = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || '';
+            return name.toLowerCase().includes(geneName.toLowerCase());
+        });
+        
+        if (matchingGenes.length === 0) {
+            return {
+                geneName: geneName,
+                chromosome: chr,
+                found: false,
+                message: `No genes found matching "${geneName}" in ${chr}`
+            };
+        }
+        
+        const geneDetails = matchingGenes.map(gene => ({
+            name: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || 'Unknown',
+            type: gene.type,
+            start: gene.start,
+            end: gene.end,
+            strand: gene.strand === -1 ? '-' : '+',
+            length: gene.end - gene.start + 1,
+            product: gene.qualifiers?.product || 'Unknown function',
+            locusTag: gene.qualifiers?.locus_tag || 'N/A',
+            note: gene.qualifiers?.note || 'No additional notes'
+        }));
+        
+        return {
+            geneName: geneName,
+            chromosome: chr,
+            found: true,
+            count: matchingGenes.length,
+            genes: geneDetails
+        };
+    }
+
+    async translateSequence(params) {
+        const { chromosome, start, end, strand = 1, frame = 1 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const sequence = await this.app.getSequenceForRegion(chr, start, end);
+        const proteinSequence = this.app.translateDNA(sequence, strand);
+        
+        return {
+            chromosome: chr,
+            start: start,
+            end: end,
+            strand: strand === -1 ? '-' : '+',
+            frame: frame,
+            dnaSequence: sequence.substring(0, 60) + (sequence.length > 60 ? '...' : ''),
+            proteinSequence: proteinSequence,
+            length: {
+                dna: sequence.length,
+                protein: proteinSequence.length
+            }
+        };
+    }
+
+    async calculateGCContent(params) {
+        const { chromosome, start, end, windowSize = 100 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const sequence = await this.app.getSequenceForRegion(chr, start, end);
+        
+        // Overall GC content
+        const gcCount = (sequence.match(/[GC]/gi) || []).length;
+        const overallGC = (gcCount / sequence.length * 100).toFixed(2);
+        
+        // Windowed GC content
+        const windows = [];
+        for (let i = 0; i < sequence.length - windowSize; i += windowSize) {
+            const window = sequence.substring(i, i + windowSize);
+            const windowGC = (window.match(/[GC]/gi) || []).length;
+            const windowGCPercent = (windowGC / windowSize * 100).toFixed(2);
+            windows.push({
+                start: start + i,
+                end: start + i + windowSize,
+                gcContent: parseFloat(windowGCPercent)
+            });
+        }
+        
+        return {
+            chromosome: chr,
+            region: `${start}-${end}`,
+            length: sequence.length,
+            overallGCContent: parseFloat(overallGC),
+            windowSize: windowSize,
+            windows: windows.slice(0, 10), // Limit to first 10 windows
+            totalWindows: windows.length
+        };
+    }
+
+    async findOpenReadingFrames(params) {
+        const { chromosome, start, end, minLength = 300 } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        const sequence = await this.app.getSequenceForRegion(chr, start, end);
+        const orfs = [];
+        
+        // Find ORFs in all 6 reading frames
+        for (let strand = 1; strand >= -1; strand -= 2) {
+            const seq = strand === 1 ? sequence : this.reverseComplement(sequence);
+            
+            for (let frame = 0; frame < 3; frame++) {
+                let currentORF = null;
+                
+                for (let i = frame; i < seq.length - 2; i += 3) {
+                    const codon = seq.substring(i, i + 3);
+                    
+                    if (codon === 'ATG' && !currentORF) {
+                        // Start codon
+                        currentORF = { start: i, frame: frame + 1, strand: strand };
+                    } else if (currentORF && ['TAA', 'TAG', 'TGA'].includes(codon)) {
+                        // Stop codon
+                        currentORF.end = i + 2;
+                        currentORF.length = currentORF.end - currentORF.start + 1;
+                        
+                        if (currentORF.length >= minLength) {
+                            // Convert to original coordinates
+                            if (strand === 1) {
+                                currentORF.start += start;
+                                currentORF.end += start;
+                            } else {
+                                const temp = sequence.length - currentORF.end - 1 + start;
+                                currentORF.end = sequence.length - currentORF.start - 1 + start;
+                                currentORF.start = temp;
+                            }
+                            orfs.push(currentORF);
+                        }
+                        currentORF = null;
+                    }
+                }
+            }
+        }
+        
+        return {
+            chromosome: chr,
+            region: `${start}-${end}`,
+            minLength: minLength,
+            orfsFound: orfs.length,
+            orfs: orfs.slice(0, 20) // Limit to first 20 ORFs
+        };
+    }
+
+    reverseComplement(sequence) {
+        const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
+        return sequence.split('').reverse().map(base => complement[base] || base).join('');
+    }
+
+    async getOperons(params) {
+        const { chromosome } = params;
+        
+        const chr = chromosome || this.app.currentChromosome;
+        if (!chr) {
+            throw new Error('No chromosome specified and none currently selected');
+        }
+        
+        if (!this.app.currentAnnotations || !this.app.currentAnnotations[chr]) {
+            throw new Error('No annotations loaded for chromosome');
+        }
+        
+        const annotations = this.app.currentAnnotations[chr];
+        const operons = this.app.detectOperons(annotations);
+        
+        const operonSummary = operons.map(operon => ({
+            name: operon.name,
+            start: operon.start,
+            end: operon.end,
+            strand: operon.strand === -1 ? '-' : '+',
+            geneCount: operon.genes.length,
+            genes: operon.genes.map(g => g.qualifiers?.gene || g.qualifiers?.locus_tag || 'Unknown').slice(0, 5),
+            length: operon.end - operon.start + 1
+        }));
+        
+        return {
+            chromosome: chr,
+            operonsFound: operons.length,
+            operons: operonSummary
+        };
+    }
+
+    async zoomToGene(params) {
+        const { geneName, chromosome, padding = 1000 } = params;
+        
+        const geneDetails = await this.getGeneDetails({ geneName, chromosome });
+        
+        if (!geneDetails.found || geneDetails.genes.length === 0) {
+            throw new Error(`Gene "${geneName}" not found`);
+        }
+        
+        const gene = geneDetails.genes[0]; // Use first match
+        const newStart = Math.max(0, gene.start - padding);
+        const newEnd = gene.end + padding;
+        
+        // Navigate to the gene location
+        await this.navigateToPosition({
+            chromosome: geneDetails.chromosome,
+            start: newStart,
+            end: newEnd
+        });
+        
+        return {
+            geneName: geneName,
+            gene: gene,
+            zoomedRegion: `${newStart}-${newEnd}`,
+            padding: padding,
+            message: `Zoomed to gene ${gene.name} with ${padding}bp padding`
+        };
+    }
+
+    getChromosomeList() {
+        if (!this.app || !this.app.currentSequence) {
+            return {
+                chromosomes: [],
+                count: 0,
+                message: 'No genome sequence loaded'
+            };
+        }
+        
+        const chromosomes = Object.keys(this.app.currentSequence);
+        const chromosomeInfo = chromosomes.map(chr => ({
+            name: chr,
+            length: this.app.currentSequence[chr].length,
+            isSelected: chr === this.app.currentChromosome
+        }));
+        
+        return {
+            chromosomes: chromosomeInfo,
+            count: chromosomes.length,
+            currentChromosome: this.app.currentChromosome || 'None selected'
+        };
+    }
+
+    getTrackStatus() {
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
+        }
+        
+        const visibleTracks = this.getVisibleTracks();
+        const allTracks = ['genes', 'sequence', 'gc', 'variants', 'reads', 'proteins'];
+        
+        const trackStatus = allTracks.map(track => ({
+            name: track,
+            visible: visibleTracks.includes(track),
+            description: this.getTrackDescription(track)
+        }));
+        
+        return {
+            visibleTracks: visibleTracks,
+            totalTracks: allTracks.length,
+            tracks: trackStatus
+        };
+    }
+
+    getTrackDescription(trackName) {
+        const descriptions = {
+            genes: 'Gene annotations and features',
+            sequence: 'DNA sequence display',
+            gc: 'GC content visualization',
+            variants: 'VCF variant data',
+            reads: 'Aligned sequencing reads',
+            proteins: 'Protein coding sequences'
+        };
+        return descriptions[trackName] || 'Unknown track';
     }
 } 

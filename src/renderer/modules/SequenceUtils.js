@@ -463,6 +463,9 @@ class SequenceUtils {
         const sequence = this.genomeBrowser.currentSequence[chromosome];
         this.genomeBrowser.currentPosition = { start: 0, end: Math.min(10000, sequence.length) };
         
+        // Set the current chromosome property for chat interface
+        this.genomeBrowser.currentChromosome = chromosome;
+        
         // Update chromosome select
         document.getElementById('chromosomeSelect').value = chromosome;
         
