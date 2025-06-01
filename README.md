@@ -1,6 +1,6 @@
 # Genome AI Studio
 
-A modern, cross-platform genome analysis studio built with Electron, featuring an EcoCyc-inspired interface for exploring genomic data with AI-powered natural language interaction.
+A modern, cross-platform genome analysis studio built with Electron, featuring an user-friendly interface for exploring genomic data with AI-powered natural language interaction.
 
 ## ✨ Key Features
 
