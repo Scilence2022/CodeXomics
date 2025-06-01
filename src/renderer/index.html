@@ -212,46 +212,88 @@
             
             <div class="toolbar-section">
                 <label>Add Features:</label>
-                <button id="addGeneBtn" class="btn btn-sm add-feature-btn" title="Add Gene">
-                    <i class="fas fa-dna"></i>
-                    Gene
-                </button>
-                <button id="addCDSBtn" class="btn btn-sm add-feature-btn" title="Add CDS">
-                    <i class="fas fa-code"></i>
-                    CDS
-                </button>
-                <button id="addRRNABtn" class="btn btn-sm add-feature-btn" title="Add rRNA">
-                    <i class="fas fa-cog"></i>
-                    rRNA
-                </button>
-                <button id="addTRNABtn" class="btn btn-sm add-feature-btn" title="Add tRNA">
-                    <i class="fas fa-exchange-alt"></i>
-                    tRNA
-                </button>
-                <button id="addCommentBtn" class="btn btn-sm add-feature-btn" title="Add Comment/Note">
-                    <i class="fas fa-comment"></i>
-                    Note
-                </button>
-                <button id="addMoreFeaturesBtn" class="btn btn-sm toggle-btn" title="More Features">
+                <button id="addFeaturesBtn" class="btn btn-sm toggle-btn" title="Add Features">
                     <i class="fas fa-plus"></i>
+                    <span>Add</span>
                 </button>
-                <div class="more-features-dropdown" id="moreFeaturesDropdown" style="display: none;">
-                    <button class="dropdown-feature-btn" data-type="promoter">
-                        <i class="fas fa-play"></i>
-                        Promoter
-                    </button>
-                    <button class="dropdown-feature-btn" data-type="terminator">
-                        <i class="fas fa-stop"></i>
-                        Terminator
-                    </button>
-                    <button class="dropdown-feature-btn" data-type="regulatory">
-                        <i class="fas fa-sliders-h"></i>
-                        Regulatory
-                    </button>
-                    <button class="dropdown-feature-btn" data-type="misc_feature">
-                        <i class="fas fa-tag"></i>
-                        Other Feature
-                    </button>
+                <div class="add-features-dropdown" id="addFeaturesDropdown" style="display: none;">
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-dna"></i>
+                            Gene Elements
+                        </div>
+                        <button class="dropdown-feature-btn" data-type="gene" title="Add Gene">
+                            <i class="fas fa-dna"></i>
+                            Gene
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="CDS" title="Add Coding Sequence">
+                            <i class="fas fa-code"></i>
+                            CDS (Coding Sequence)
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="mRNA" title="Add mRNA">
+                            <i class="fas fa-share"></i>
+                            mRNA
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-cog"></i>
+                            RNA Elements
+                        </div>
+                        <button class="dropdown-feature-btn" data-type="rRNA" title="Add Ribosomal RNA">
+                            <i class="fas fa-cog"></i>
+                            rRNA (Ribosomal RNA)
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="tRNA" title="Add Transfer RNA">
+                            <i class="fas fa-exchange-alt"></i>
+                            tRNA (Transfer RNA)
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-sliders-h"></i>
+                            Regulatory Elements
+                        </div>
+                        <button class="dropdown-feature-btn" data-type="promoter" title="Add Promoter">
+                            <i class="fas fa-play"></i>
+                            Promoter
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="terminator" title="Add Terminator">
+                            <i class="fas fa-stop"></i>
+                            Terminator
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="regulatory" title="Add Regulatory Element">
+                            <i class="fas fa-sliders-h"></i>
+                            Regulatory Element
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-tags"></i>
+                            Other Features
+                        </div>
+                        <button class="dropdown-feature-btn" data-type="misc_feature" title="Add Miscellaneous Feature">
+                            <i class="fas fa-tag"></i>
+                            Miscellaneous Feature
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="repeat_region" title="Add Repeat Region">
+                            <i class="fas fa-sync"></i>
+                            Repeat Region
+                        </button>
+                        <button class="dropdown-feature-btn" data-type="comment" title="Add Comment/Note">
+                            <i class="fas fa-comment"></i>
+                            Comment/Note
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -587,13 +629,15 @@
                     <label for="featureType">Feature Type:</label>
                     <select id="featureType" class="select">
                         <option value="gene">Gene</option>
-                        <option value="CDS">CDS</option>
-                        <option value="rRNA">rRNA</option>
-                        <option value="tRNA">tRNA</option>
+                        <option value="CDS">CDS (Coding Sequence)</option>
+                        <option value="mRNA">mRNA</option>
+                        <option value="rRNA">rRNA (Ribosomal RNA)</option>
+                        <option value="tRNA">tRNA (Transfer RNA)</option>
                         <option value="promoter">Promoter</option>
                         <option value="terminator">Terminator</option>
-                        <option value="regulatory">Regulatory</option>
-                        <option value="misc_feature">Other Feature</option>
+                        <option value="regulatory">Regulatory Element</option>
+                        <option value="misc_feature">Miscellaneous Feature</option>
+                        <option value="repeat_region">Repeat Region</option>
                         <option value="comment">Comment/Note</option>
                     </select>
                 </div>

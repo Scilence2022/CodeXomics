@@ -1628,17 +1628,10 @@ class GenomeBrowser {
 
     // User-defined features functionality
     initializeUserFeatures() {
-        // Add event listeners for feature buttons
-        document.getElementById('addGeneBtn')?.addEventListener('click', () => this.showAddFeatureModal('gene'));
-        document.getElementById('addCDSBtn')?.addEventListener('click', () => this.showAddFeatureModal('CDS'));
-        document.getElementById('addRRNABtn')?.addEventListener('click', () => this.showAddFeatureModal('rRNA'));
-        document.getElementById('addTRNABtn')?.addEventListener('click', () => this.showAddFeatureModal('tRNA'));
-        document.getElementById('addCommentBtn')?.addEventListener('click', () => this.showAddFeatureModal('comment'));
-        
-        // More features dropdown
-        document.getElementById('addMoreFeaturesBtn')?.addEventListener('click', (e) => {
+        // Add features dropdown toggle
+        document.getElementById('addFeaturesBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.toggleMoreFeaturesDropdown();
+            this.toggleAddFeaturesDropdown();
         });
         
         // Dropdown feature buttons
@@ -1646,7 +1639,7 @@ class GenomeBrowser {
             btn.addEventListener('click', () => {
                 const featureType = btn.getAttribute('data-type');
                 this.showAddFeatureModal(featureType);
-                this.hideMoreFeaturesDropdown();
+                this.hideAddFeaturesDropdown();
             });
         });
         
@@ -1654,23 +1647,30 @@ class GenomeBrowser {
         document.getElementById('addFeatureBtn')?.addEventListener('click', () => this.addUserFeature());
         
         // Close dropdown when clicking outside
-        document.addEventListener('click', () => this.hideMoreFeaturesDropdown());
+        document.addEventListener('click', () => this.hideAddFeaturesDropdown());
         
         // Enable sequence selection in bottom panel
         this.initializeSequenceSelection();
     }
 
-    toggleMoreFeaturesDropdown() {
-        const dropdown = document.getElementById('moreFeaturesDropdown');
-        if (dropdown) {
-            dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+    toggleAddFeaturesDropdown() {
+        const dropdown = document.getElementById('addFeaturesDropdown');
+        const button = document.getElementById('addFeaturesBtn');
+        
+        if (dropdown && button) {
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            button.classList.toggle('active', !isVisible);
         }
     }
 
-    hideMoreFeaturesDropdown() {
-        const dropdown = document.getElementById('moreFeaturesDropdown');
-        if (dropdown) {
+    hideAddFeaturesDropdown() {
+        const dropdown = document.getElementById('addFeaturesDropdown');
+        const button = document.getElementById('addFeaturesBtn');
+        
+        if (dropdown && button) {
             dropdown.style.display = 'none';
+            button.classList.remove('active');
         }
     }
 
