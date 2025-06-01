@@ -710,9 +710,6 @@ class ChatManager {
         const appDiv = document.getElementById('app');
         appDiv.insertAdjacentHTML('beforeend', chatHTML);
 
-        // Initially minimized
-        document.getElementById('llmChatPanel').classList.add('minimized');
-        
         // Setup dragging and resizing
         this.setupChatDragging();
         this.setupChatResizing();
@@ -1026,6 +1023,14 @@ class ChatManager {
                 console.log('=== NO TOOL CALL DETECTED ===');
                 console.log('Returning conversational response');
                 console.log('===============================');
+                
+                // Check if this looks like it should have been a tool call
+                if (response.includes('Navigated to') || response.includes('✅')) {
+                    console.log('Response appears to be a confirmation message - LLM may have misunderstood tool call format');
+                    const fallbackMessage = response + '\n\n⚠️ Note: If you intended to perform an action but got this message instead, please try rephrasing your request more specifically (e.g., "Navigate to position chr1:1000-2000" or "Search for gene recA").';
+                    console.log('=== ChatManager.sendToLLM DEBUG END (FALLBACK MESSAGE) ===');
+                    return fallbackMessage;
+                }
             }
             
             // If not a tool call, return the conversational response
@@ -1316,15 +1321,25 @@ Current Genome Browser State:
 Available Tools:
 ${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
 
-IMPORTANT: When a user asks you to perform an action that requires using one of these tools, you MUST respond with ONLY a JSON object in this exact format:
+===CRITICAL INSTRUCTION FOR TOOL CALLS===
+When a user asks you to perform ANY action that requires using one of these tools, you MUST respond with ONLY a JSON object. Do NOT add any explanatory text, markdown formatting, or conversational responses around the JSON.
 
-{
-  "tool_name": "tool_name_here",
-  "parameters": {
-    "param1": "value1",
-    "param2": "value2"
-  }
-}
+CORRECT format:
+{"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
+
+INCORRECT formats:
+- Adding explanatory text around JSON
+- Using markdown code blocks with JSON
+- Sending confirmation messages instead of tool calls
+
+Examples of user requests that REQUIRE tool calls:
+- "Navigate to position X" → use navigate_to_position
+- "Go to chr1:1000-2000" → use navigate_to_position  
+- "Find gene X" → use search_features or get_gene_details
+- "Zoom to gene Y" → use zoom_to_gene
+- "Show me the current state" → use get_current_state
+- "Get sequence from X to Y" → use get_sequence
+- "Toggle track Z" → use toggle_track
 
 Tool Examples:
 - To navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -1374,9 +1389,7 @@ Function Call Examples:
 - "analyze codon usage in lacZ gene" → codon_usage_analysis
 - "virtual digest with multiple enzymes" → virtual_digest
 
-Do NOT include any explanatory text, markdown formatting, or code blocks around the JSON. Return ONLY the raw JSON object.
-
-If the user is asking a general question or doesn't need a tool, respond normally with conversational text.`;
+REMEMBER: If the user is asking a general question or doesn't need a tool, respond normally with conversational text. But if they need an action performed, respond with ONLY the JSON tool call.`;
     }
 
     parseToolCall(response) {
@@ -1401,6 +1414,24 @@ If the user is asking a general question or doesn't need a tool, respond normall
             cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
             cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
             console.log('After removing code block markers:', cleanResponse);
+            
+            // If the response starts with non-JSON text (like "✅"), check if there's a JSON after it
+            if (!cleanResponse.startsWith('{')) {
+                console.log('Response does not start with {, checking for JSON within text...');
+                const jsonMatch = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/);
+                if (jsonMatch) {
+                    cleanResponse = jsonMatch[0];
+                    console.log('Found JSON within text:', cleanResponse);
+                } else {
+                    console.log('No JSON found within text, checking if this is a confirmation message');
+                    // Check if this is a confirmation message that should have been a tool call
+                    if (cleanResponse.includes('Navigated to') || cleanResponse.includes('✅')) {
+                        console.log('This appears to be a confirmation message instead of a tool call');
+                        console.log('=== parseToolCall DEBUG END (CONFIRMATION MESSAGE) ===');
+                        return null;
+                    }
+                }
+            }
             
             // Try to parse the entire response as JSON first (most direct approach)
             console.log('Attempting direct JSON parse...');
@@ -1434,6 +1465,39 @@ If the user is asking a general question or doesn't need a tool, respond normall
                 } catch (e) {
                     console.log('Regex parse failed:', e.message);
                     // Continue to next method
+                }
+            }
+            
+            // Try a more flexible JSON extraction that can handle nested braces
+            console.log('Attempting flexible JSON extraction...');
+            const startIndex = cleanResponse.indexOf('{');
+            if (startIndex !== -1) {
+                let braceCount = 0;
+                let endIndex = startIndex;
+                
+                for (let i = startIndex; i < cleanResponse.length; i++) {
+                    if (cleanResponse[i] === '{') braceCount++;
+                    if (cleanResponse[i] === '}') braceCount--;
+                    if (braceCount === 0) {
+                        endIndex = i;
+                        break;
+                    }
+                }
+                
+                if (braceCount === 0) {
+                    const jsonCandidate = cleanResponse.substring(startIndex, endIndex + 1);
+                    console.log('JSON candidate from flexible extraction:', jsonCandidate);
+                    try {
+                        const parsed = JSON.parse(jsonCandidate);
+                        console.log('Flexible extraction parse successful:', parsed);
+                        if (parsed.tool_name && parsed.parameters !== undefined) {
+                            console.log('Valid tool call found via flexible extraction');
+                            console.log('=== parseToolCall DEBUG END (SUCCESS - FLEXIBLE) ===');
+                            return parsed;
+                        }
+                    } catch (e) {
+                        console.log('Flexible extraction parse failed:', e.message);
+                    }
                 }
             }
             
