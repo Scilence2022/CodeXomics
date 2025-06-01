@@ -718,43 +718,50 @@ class TrackRenderer {
             overflow: hidden;
         `;
         
-        // Create canvas for smooth visualization
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        // Create SVG for crisp, scalable visualization
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('viewBox', '0 0 800 100');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        `;
         
-        // Set up canvas dimensions
-        const containerWidth = 800; // Will be adjusted dynamically
-        const containerHeight = 100;
-        canvas.width = containerWidth;
-        canvas.height = containerHeight;
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
+        // Calculate dynamic window size based on sequence length and current zoom level
+        const currentRange = viewEnd - viewStart;
+        const basePairsPerPixel = currentRange / 800; // Assuming 800px width
         
-        // Calculate window size based on sequence length and zoom level
-        const baseWindowSize = Math.max(20, Math.floor(sequence.length / 200));
-        const windowSize = Math.min(baseWindowSize, 1000);
-        const stepSize = Math.max(1, Math.floor(windowSize / 4));
-        
-        console.log(`GC analysis: sequence length=${sequence.length}, windowSize=${windowSize}, stepSize=${stepSize}`);
-        
-        // Calculate GC content and skew data
-        const gcData = [];
-        const skewData = [];
-        const positions = [];
-        
-        for (let i = 0; i <= sequence.length - windowSize; i += stepSize) {
-            const window = sequence.substring(i, i + windowSize);
-            const gcAnalysis = this.analyzeGCWindow(window);
-            
-            gcData.push(gcAnalysis.gcPercent);
-            skewData.push(gcAnalysis.gcSkew);
-            positions.push(i + windowSize / 2); // Center position of window
+        // Adaptive window size: smaller for zoomed-in views, larger for zoomed-out views
+        let windowSize;
+        if (basePairsPerPixel <= 1) {
+            // Very zoomed in - use small windows for high resolution
+            windowSize = Math.max(10, Math.floor(currentRange / 200));
+        } else if (basePairsPerPixel <= 10) {
+            // Moderately zoomed in
+            windowSize = Math.max(50, Math.floor(currentRange / 100));
+        } else {
+            // Zoomed out - use larger windows
+            windowSize = Math.max(100, Math.floor(currentRange / 50));
         }
         
-        if (gcData.length === 0) {
+        // Ensure window size doesn't exceed sequence length
+        windowSize = Math.min(windowSize, sequence.length);
+        
+        // Calculate step size for smooth visualization
+        const stepSize = Math.max(1, Math.floor(windowSize / 4));
+        
+        console.log(`Dynamic GC analysis: range=${currentRange}, bpPerPixel=${basePairsPerPixel.toFixed(2)}, windowSize=${windowSize}, stepSize=${stepSize}`);
+        
+        // Calculate GC content and skew data with dynamic parameters
+        const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize);
+        
+        if (!analysisData || analysisData.positions.length === 0) {
             // No data to display
             const noDataMsg = document.createElement('div');
             noDataMsg.textContent = 'Sequence too short for GC analysis';
@@ -771,41 +778,74 @@ class TrackRenderer {
             return container;
         }
         
-        // Find min/max values for scaling
-        const gcMin = Math.min(...gcData);
-        const gcMax = Math.max(...gcData);
-        const skewMin = Math.min(...skewData);
-        const skewMax = Math.max(...skewData);
+        // Create SVG visualization
+        this.renderSVGGCVisualization(svg, analysisData);
         
-        // Draw the visualization
-        this.drawGCVisualization(ctx, containerWidth, containerHeight, {
-            gcData,
-            skewData,
-            positions,
-            gcMin,
-            gcMax,
-            skewMin,
-            skewMax,
-            sequenceLength: sequence.length
-        });
+        // Add interactive tooltip
+        this.addSVGGCTooltip(container, svg, analysisData, viewStart, windowSize);
         
         // Add legend
         const legend = this.createGCLegend();
         container.appendChild(legend);
         
-        container.appendChild(canvas);
+        container.appendChild(svg);
         
-        // Add interactive tooltip functionality after canvas is appended
-        this.addGCTooltipInteraction(canvas, container, {
+        return container;
+    }
+    
+    calculateDynamicGCData(sequence, windowSize, stepSize) {
+        const gcData = [];
+        const skewData = [];
+        const positions = [];
+        const detailedData = []; // Store detailed composition data
+        
+        // Process sequence in windows with specified step size
+        for (let i = 0; i <= sequence.length - windowSize; i += stepSize) {
+            const window = sequence.substring(i, i + windowSize);
+            const analysis = this.analyzeGCWindow(window);
+            
+            if (analysis.totalValidBases > 0) {
+                gcData.push(analysis.gcPercent);
+                skewData.push(analysis.gcSkew);
+                positions.push(i + windowSize / 2); // Center position of window
+                detailedData.push({
+                    position: i + windowSize / 2,
+                    windowStart: i,
+                    windowEnd: i + windowSize,
+                    ...analysis
+                });
+            }
+        }
+        
+        if (gcData.length === 0) {
+            return null;
+        }
+        
+        // Calculate statistics for scaling
+        const gcMin = Math.min(...gcData);
+        const gcMax = Math.max(...gcData);
+        const skewMin = Math.min(...skewData);
+        const skewMax = Math.max(...skewData);
+        
+        // Add some padding to the ranges for better visualization
+        const gcRange = gcMax - gcMin;
+        const skewRange = skewMax - skewMin;
+        const gcPadding = Math.max(1, gcRange * 0.1);
+        const skewPadding = Math.max(0.01, skewRange * 0.1);
+        
+        return {
             gcData,
             skewData,
             positions,
+            detailedData,
+            gcMin: gcMin - gcPadding,
+            gcMax: gcMax + gcPadding,
+            skewMin: skewMin - skewPadding,
+            skewMax: skewMax + skewPadding,
+            sequenceLength: sequence.length,
             windowSize,
-            viewStart,
-            viewEnd
-        });
-        
-        return container;
+            stepSize
+        };
     }
     
     analyzeGCWindow(window) {
@@ -814,315 +854,464 @@ class TrackRenderer {
         const cCount = (bases.match(/C/g) || []).length;
         const aCount = (bases.match(/A/g) || []).length;
         const tCount = (bases.match(/T/g) || []).length;
+        const nCount = (bases.match(/N/g) || []).length;
         const totalValidBases = gCount + cCount + aCount + tCount;
+        const totalBases = totalValidBases + nCount;
         
         if (totalValidBases === 0) {
-            return { gcPercent: 0, gcSkew: 0, gCount, cCount };
+            return { 
+                gcPercent: 0, 
+                gcSkew: 0, 
+                atSkew: 0,
+                gCount, 
+                cCount, 
+                aCount, 
+                tCount, 
+                nCount,
+                totalValidBases,
+                totalBases
+            };
         }
         
         const gcPercent = ((gCount + cCount) / totalValidBases) * 100;
         const gcSkew = (gCount + cCount) > 0 ? (gCount - cCount) / (gCount + cCount) : 0;
+        const atSkew = (aCount + tCount) > 0 ? (aCount - tCount) / (aCount + tCount) : 0;
         
-        return { gcPercent, gcSkew, gCount, cCount };
+        return { 
+            gcPercent, 
+            gcSkew, 
+            atSkew,
+            gCount, 
+            cCount, 
+            aCount, 
+            tCount, 
+            nCount,
+            totalValidBases,
+            totalBases
+        };
     }
     
-    drawGCVisualization(ctx, width, height, data) {
+    renderSVGGCVisualization(svg, data) {
         const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
         
-        // Clear canvas
-        ctx.clearRect(0, 0, width, height);
+        // Clear any existing content
+        svg.innerHTML = '';
         
-        // Set up coordinate system
-        const padding = 10;
-        const plotWidth = width - 2 * padding;
-        const plotHeight = height - 2 * padding;
-        const centerY = height / 2;
+        // Define dimensions and layout
+        const viewWidth = 800;
+        const viewHeight = 100;
+        const padding = 20;
+        const plotWidth = viewWidth - 2 * padding;
+        const plotHeight = viewHeight - 2 * padding;
+        const centerY = viewHeight / 2;
+        const gcHeight = centerY - padding;
+        const skewHeight = centerY - padding;
+        
+        // Create gradient definitions
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        
+        // GC content gradient
+        const gcGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gcGradient.setAttribute('id', 'gcGradient');
+        gcGradient.setAttribute('x1', '0%');
+        gcGradient.setAttribute('y1', '0%');
+        gcGradient.setAttribute('x2', '0%');
+        gcGradient.setAttribute('y2', '100%');
+        
+        const gcStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        gcStop1.setAttribute('offset', '0%');
+        gcStop1.setAttribute('stop-color', '#28a745');
+        gcStop1.setAttribute('stop-opacity', '0.8');
+        
+        const gcStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        gcStop2.setAttribute('offset', '100%');
+        gcStop2.setAttribute('stop-color', '#28a745');
+        gcStop2.setAttribute('stop-opacity', '0.2');
+        
+        gcGradient.appendChild(gcStop1);
+        gcGradient.appendChild(gcStop2);
+        
+        // GC skew gradients (positive and negative)
+        const skewPosGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        skewPosGradient.setAttribute('id', 'skewPosGradient');
+        skewPosGradient.setAttribute('x1', '0%');
+        skewPosGradient.setAttribute('y1', '0%');
+        skewPosGradient.setAttribute('x2', '0%');
+        skewPosGradient.setAttribute('y2', '100%');
+        
+        const skewPosStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        skewPosStop1.setAttribute('offset', '0%');
+        skewPosStop1.setAttribute('stop-color', '#ffc107');
+        skewPosStop1.setAttribute('stop-opacity', '0.8');
+        
+        const skewPosStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        skewPosStop2.setAttribute('offset', '100%');
+        skewPosStop2.setAttribute('stop-color', '#ffc107');
+        skewPosStop2.setAttribute('stop-opacity', '0.2');
+        
+        skewPosGradient.appendChild(skewPosStop1);
+        skewPosGradient.appendChild(skewPosStop2);
+        
+        const skewNegGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        skewNegGradient.setAttribute('id', 'skewNegGradient');
+        skewNegGradient.setAttribute('x1', '0%');
+        skewNegGradient.setAttribute('y1', '0%');
+        skewNegGradient.setAttribute('x2', '0%');
+        skewNegGradient.setAttribute('y2', '100%');
+        
+        const skewNegStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        skewNegStop1.setAttribute('offset', '0%');
+        skewNegStop1.setAttribute('stop-color', '#dc3545');
+        skewNegStop1.setAttribute('stop-opacity', '0.2');
+        
+        const skewNegStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        skewNegStop2.setAttribute('offset', '100%');
+        skewNegStop2.setAttribute('stop-color', '#dc3545');
+        skewNegStop2.setAttribute('stop-opacity', '0.8');
+        
+        skewNegGradient.appendChild(skewNegStop1);
+        skewNegGradient.appendChild(skewNegStop2);
+        
+        defs.appendChild(gcGradient);
+        defs.appendChild(skewPosGradient);
+        defs.appendChild(skewNegGradient);
+        svg.appendChild(defs);
         
         // Draw background grid
-        this.drawGCGrid(ctx, padding, plotWidth, plotHeight, centerY);
+        this.drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY);
         
-        // Draw GC content (upper half)
-        this.drawGCContent(ctx, gcData, positions, sequenceLength, padding, plotWidth, centerY - padding, gcMin, gcMax);
+        // Draw GC content area and line
+        this.drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, gcHeight, gcMin, gcMax);
         
-        // Draw GC skew (lower half)
-        this.drawGCSkew(ctx, skewData, positions, sequenceLength, padding, plotWidth, centerY + padding, plotHeight - padding, skewMin, skewMax);
+        // Draw GC skew areas and line
+        this.drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax);
         
         // Draw axis labels
-        this.drawGCAxisLabels(ctx, width, height, gcMin, gcMax, skewMin, skewMax);
+        this.drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax);
     }
     
-    drawGCGrid(ctx, padding, plotWidth, plotHeight, centerY) {
-        ctx.strokeStyle = '#e9ecef';
-        ctx.lineWidth = 0.5;
+    drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY) {
+        const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        gridGroup.setAttribute('class', 'grid-lines');
         
-        // Horizontal grid lines
-        const gridLines = [0.25, 0.5, 0.75]; // 25%, 50%, 75% positions
-        gridLines.forEach(ratio => {
-            const y1 = padding + ratio * (centerY - padding);
-            const y2 = centerY + padding + ratio * (plotHeight - centerY - padding);
-            
-            // Upper grid (GC content)
-            ctx.beginPath();
-            ctx.moveTo(padding, y1);
-            ctx.lineTo(padding + plotWidth, y1);
-            ctx.stroke();
-            
-            // Lower grid (GC skew)
-            ctx.beginPath();
-            ctx.moveTo(padding, y2);
-            ctx.lineTo(padding + plotWidth, y2);
-            ctx.stroke();
-        });
+        // Grid line style
+        const gridStyle = 'stroke: #e9ecef; stroke-width: 0.5; stroke-dasharray: 2,2; opacity: 0.6;';
+        
+        // Horizontal grid lines for GC content (upper half)
+        for (let i = 1; i <= 3; i++) {
+            const y = padding + (i * (centerY - padding) / 4);
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', padding);
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', padding + plotWidth);
+            line.setAttribute('y2', y);
+            line.setAttribute('style', gridStyle);
+            gridGroup.appendChild(line);
+        }
+        
+        // Horizontal grid lines for GC skew (lower half)
+        for (let i = 1; i <= 3; i++) {
+            const y = centerY + padding + (i * (plotHeight - centerY - padding) / 4);
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', padding);
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', padding + plotWidth);
+            line.setAttribute('y2', y);
+            line.setAttribute('style', gridStyle);
+            gridGroup.appendChild(line);
+        }
         
         // Center line (zero line for GC skew)
-        ctx.strokeStyle = '#6c757d';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(padding, centerY);
-        ctx.lineTo(padding + plotWidth, centerY);
-        ctx.stroke();
+        const centerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        centerLine.setAttribute('x1', padding);
+        centerLine.setAttribute('y1', centerY);
+        centerLine.setAttribute('x2', padding + plotWidth);
+        centerLine.setAttribute('y2', centerY);
+        centerLine.setAttribute('style', 'stroke: #6c757d; stroke-width: 1; opacity: 0.8;');
+        gridGroup.appendChild(centerLine);
+        
+        svg.appendChild(gridGroup);
     }
     
-    drawGCContent(ctx, gcData, positions, sequenceLength, padding, plotWidth, maxHeight, gcMin, gcMax) {
+    drawSVGGCContent(svg, gcData, positions, sequenceLength, padding, plotWidth, maxHeight, gcMin, gcMax) {
         if (gcData.length < 2) return;
         
-        // Create gradient
-        const gradient = ctx.createLinearGradient(0, padding, 0, maxHeight);
-        gradient.addColorStop(0, 'rgba(40, 167, 69, 0.8)');   // Strong green at top
-        gradient.addColorStop(1, 'rgba(40, 167, 69, 0.2)');   // Light green at bottom
+        const gcRange = gcMax - gcMin;
         
-        // Draw filled area
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.moveTo(padding, maxHeight);
+        // Create path for filled area
+        const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData = `M ${padding} ${maxHeight}`;
+        
+        // Add points for the area
+        for (let i = 0; i < gcData.length; i++) {
+            const x = padding + (positions[i] / sequenceLength) * plotWidth;
+            const normalizedGC = gcRange > 0 ? (gcData[i] - gcMin) / gcRange : 0.5;
+            const y = maxHeight - normalizedGC * (maxHeight - padding);
+            pathData += ` L ${x} ${y}`;
+        }
+        
+        pathData += ` L ${padding + plotWidth} ${maxHeight} Z`;
+        
+        areaPath.setAttribute('d', pathData);
+        areaPath.setAttribute('fill', 'url(#gcGradient)');
+        areaPath.setAttribute('stroke', 'none');
+        svg.appendChild(areaPath);
+        
+        // Create path for line
+        const linePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let lineData = '';
         
         for (let i = 0; i < gcData.length; i++) {
             const x = padding + (positions[i] / sequenceLength) * plotWidth;
-            const normalizedGC = (gcData[i] - gcMin) / (gcMax - gcMin);
+            const normalizedGC = gcRange > 0 ? (gcData[i] - gcMin) / gcRange : 0.5;
             const y = maxHeight - normalizedGC * (maxHeight - padding);
             
             if (i === 0) {
-                ctx.lineTo(x, y);
+                lineData = `M ${x} ${y}`;
             } else {
-                ctx.lineTo(x, y);
+                lineData += ` L ${x} ${y}`;
             }
         }
         
-        ctx.lineTo(padding + plotWidth, maxHeight);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw line
-        ctx.strokeStyle = '#28a745';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        
-        for (let i = 0; i < gcData.length; i++) {
-            const x = padding + (positions[i] / sequenceLength) * plotWidth;
-            const normalizedGC = (gcData[i] - gcMin) / (gcMax - gcMin);
-            const y = maxHeight - normalizedGC * (maxHeight - padding);
-            
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        }
-        ctx.stroke();
+        linePath.setAttribute('d', lineData);
+        linePath.setAttribute('fill', 'none');
+        linePath.setAttribute('stroke', '#28a745');
+        linePath.setAttribute('stroke-width', '2');
+        linePath.setAttribute('stroke-linecap', 'round');
+        linePath.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(linePath);
     }
     
-    drawGCSkew(ctx, skewData, positions, sequenceLength, padding, plotWidth, minY, maxY, skewMin, skewMax) {
+    drawSVGGCSkew(svg, skewData, positions, sequenceLength, padding, plotWidth, centerY, plotHeight, skewMin, skewMax) {
         if (skewData.length < 2) return;
         
-        // Calculate zero line position
         const skewRange = skewMax - skewMin;
-        const zeroRatio = skewRange !== 0 ? Math.abs(skewMin) / skewRange : 0.5;
-        const zeroY = maxY - zeroRatio * (maxY - minY);
+        const maxY = centerY + plotHeight;
         
-        // Draw positive skew (above zero)
-        const positiveGradient = ctx.createLinearGradient(0, minY, 0, zeroY);
-        positiveGradient.addColorStop(0, 'rgba(255, 193, 7, 0.8)');   // Strong amber
-        positiveGradient.addColorStop(1, 'rgba(255, 193, 7, 0.2)');   // Light amber
+        // Calculate zero line position
+        const zeroRatio = skewRange > 0 ? Math.abs(skewMin) / skewRange : 0.5;
+        const zeroY = maxY - zeroRatio * plotHeight;
         
-        // Draw negative skew (below zero)
-        const negativeGradient = ctx.createLinearGradient(0, zeroY, 0, maxY);
-        negativeGradient.addColorStop(0, 'rgba(220, 53, 69, 0.2)');   // Light red
-        negativeGradient.addColorStop(1, 'rgba(220, 53, 69, 0.8)');   // Strong red
+        // Create paths for positive and negative areas
+        let posAreaData = '';
+        let negAreaData = '';
+        let hasPositive = false;
+        let hasNegative = false;
         
-        // Draw positive area
-        ctx.fillStyle = positiveGradient;
-        ctx.beginPath();
-        ctx.moveTo(padding, zeroY);
-        
+        // Build path data for areas
         for (let i = 0; i < skewData.length; i++) {
             const x = padding + (positions[i] / sequenceLength) * plotWidth;
-            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-            const y = maxY - normalizedSkew * (maxY - minY);
+            const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
+            const y = maxY - normalizedSkew * plotHeight;
             
             if (skewData[i] >= 0) {
-                ctx.lineTo(x, Math.min(y, zeroY));
-            } else {
-                ctx.lineTo(x, zeroY);
+                if (!hasPositive) {
+                    posAreaData = `M ${x} ${zeroY} L ${x} ${Math.min(y, zeroY)}`;
+                    hasPositive = true;
+                } else {
+                    posAreaData += ` L ${x} ${Math.min(y, zeroY)}`;
+                }
+            }
+            
+            if (skewData[i] <= 0) {
+                if (!hasNegative) {
+                    negAreaData = `M ${x} ${zeroY} L ${x} ${Math.max(y, zeroY)}`;
+                    hasNegative = true;
+                } else {
+                    negAreaData += ` L ${x} ${Math.max(y, zeroY)}`;
+                }
             }
         }
         
-        ctx.lineTo(padding + plotWidth, zeroY);
-        ctx.closePath();
-        ctx.fill();
+        // Draw positive area
+        if (hasPositive && posAreaData) {
+            const posPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            posAreaData += ` L ${padding + plotWidth} ${zeroY} Z`;
+            posPath.setAttribute('d', posAreaData);
+            posPath.setAttribute('fill', 'url(#skewPosGradient)');
+            posPath.setAttribute('stroke', 'none');
+            svg.appendChild(posPath);
+        }
         
         // Draw negative area
-        ctx.fillStyle = negativeGradient;
-        ctx.beginPath();
-        ctx.moveTo(padding, zeroY);
-        
-        for (let i = 0; i < skewData.length; i++) {
-            const x = padding + (positions[i] / sequenceLength) * plotWidth;
-            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-            const y = maxY - normalizedSkew * (maxY - minY);
-            
-            if (skewData[i] < 0) {
-                ctx.lineTo(x, Math.max(y, zeroY));
-            } else {
-                ctx.lineTo(x, zeroY);
-            }
+        if (hasNegative && negAreaData) {
+            const negPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            negAreaData += ` L ${padding + plotWidth} ${zeroY} Z`;
+            negPath.setAttribute('d', negAreaData);
+            negPath.setAttribute('fill', 'url(#skewNegGradient)');
+            negPath.setAttribute('stroke', 'none');
+            svg.appendChild(negPath);
         }
         
-        ctx.lineTo(padding + plotWidth, zeroY);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw skew line
-        ctx.strokeStyle = '#495057';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
+        // Create path for skew line
+        const linePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let lineData = '';
         
         for (let i = 0; i < skewData.length; i++) {
             const x = padding + (positions[i] / sequenceLength) * plotWidth;
-            const normalizedSkew = skewRange !== 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-            const y = maxY - normalizedSkew * (maxY - minY);
+            const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
+            const y = maxY - normalizedSkew * plotHeight;
             
             if (i === 0) {
-                ctx.moveTo(x, y);
+                lineData = `M ${x} ${y}`;
             } else {
-                ctx.lineTo(x, y);
+                lineData += ` L ${x} ${y}`;
             }
         }
-        ctx.stroke();
+        
+        linePath.setAttribute('d', lineData);
+        linePath.setAttribute('fill', 'none');
+        linePath.setAttribute('stroke', '#495057');
+        linePath.setAttribute('stroke-width', '1.5');
+        linePath.setAttribute('stroke-linecap', 'round');
+        linePath.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(linePath);
     }
     
-    drawGCAxisLabels(ctx, width, height, gcMin, gcMax, skewMin, skewMax) {
-        ctx.fillStyle = '#495057';
-        ctx.font = '10px Inter, sans-serif';
+    drawSVGAxisLabels(svg, viewWidth, viewHeight, gcMin, gcMax, skewMin, skewMax) {
+        const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        labelGroup.setAttribute('class', 'axis-labels');
+        
+        const labelStyle = 'font-family: Inter, sans-serif; font-size: 10px; fill: #495057;';
         
         // GC Content labels (left side)
-        ctx.textAlign = 'right';
-        ctx.fillText(`${gcMax.toFixed(1)}%`, 8, 15);
-        ctx.fillText(`${((gcMin + gcMax) / 2).toFixed(1)}%`, 8, height / 4);
-        ctx.fillText(`${gcMin.toFixed(1)}%`, 8, height / 2 - 5);
+        const gcMaxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        gcMaxLabel.setAttribute('x', '15');
+        gcMaxLabel.setAttribute('y', '15');
+        gcMaxLabel.setAttribute('text-anchor', 'end');
+        gcMaxLabel.setAttribute('style', labelStyle);
+        gcMaxLabel.textContent = `${gcMax.toFixed(1)}%`;
+        
+        const gcMidLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        gcMidLabel.setAttribute('x', '15');
+        gcMidLabel.setAttribute('y', viewHeight / 4);
+        gcMidLabel.setAttribute('text-anchor', 'end');
+        gcMidLabel.setAttribute('style', labelStyle);
+        gcMidLabel.textContent = `${((gcMin + gcMax) / 2).toFixed(1)}%`;
+        
+        const gcMinLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        gcMinLabel.setAttribute('x', '15');
+        gcMinLabel.setAttribute('y', viewHeight / 2 - 5);
+        gcMinLabel.setAttribute('text-anchor', 'end');
+        gcMinLabel.setAttribute('style', labelStyle);
+        gcMinLabel.textContent = `${gcMin.toFixed(1)}%`;
         
         // GC Skew labels (left side)
-        ctx.fillText(`${skewMax.toFixed(3)}`, 8, height / 2 + 15);
-        ctx.fillText('0.000', 8, height / 2 + 2);
-        ctx.fillText(`${skewMin.toFixed(3)}`, 8, height - 5);
+        const skewMaxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        skewMaxLabel.setAttribute('x', '15');
+        skewMaxLabel.setAttribute('y', viewHeight / 2 + 15);
+        skewMaxLabel.setAttribute('text-anchor', 'end');
+        skewMaxLabel.setAttribute('style', labelStyle);
+        skewMaxLabel.textContent = `${skewMax.toFixed(3)}`;
+        
+        const skewZeroLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        skewZeroLabel.setAttribute('x', '15');
+        skewZeroLabel.setAttribute('y', viewHeight / 2 + 2);
+        skewZeroLabel.setAttribute('text-anchor', 'end');
+        skewZeroLabel.setAttribute('style', labelStyle);
+        skewZeroLabel.textContent = '0.000';
+        
+        const skewMinLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        skewMinLabel.setAttribute('x', '15');
+        skewMinLabel.setAttribute('y', viewHeight - 5);
+        skewMinLabel.setAttribute('text-anchor', 'end');
+        skewMinLabel.setAttribute('style', labelStyle);
+        skewMinLabel.textContent = `${skewMin.toFixed(3)}`;
         
         // Track labels (right side)
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#28a745';
-        ctx.fillText('GC%', width - 40, 15);
-        ctx.fillStyle = '#495057';
-        ctx.fillText('Skew', width - 40, height - 5);
+        const gcLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        gcLabel.setAttribute('x', viewWidth - 5);
+        gcLabel.setAttribute('y', '15');
+        gcLabel.setAttribute('text-anchor', 'start');
+        gcLabel.setAttribute('style', labelStyle + ' fill: #28a745; font-weight: 600;');
+        gcLabel.textContent = 'GC%';
+        
+        const skewLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        skewLabel.setAttribute('x', viewWidth - 5);
+        skewLabel.setAttribute('y', viewHeight - 5);
+        skewLabel.setAttribute('text-anchor', 'start');
+        skewLabel.setAttribute('style', labelStyle + ' font-weight: 600;');
+        skewLabel.textContent = 'Skew';
+        
+        labelGroup.appendChild(gcMaxLabel);
+        labelGroup.appendChild(gcMidLabel);
+        labelGroup.appendChild(gcMinLabel);
+        labelGroup.appendChild(skewMaxLabel);
+        labelGroup.appendChild(skewZeroLabel);
+        labelGroup.appendChild(skewMinLabel);
+        labelGroup.appendChild(gcLabel);
+        labelGroup.appendChild(skewLabel);
+        
+        svg.appendChild(labelGroup);
     }
     
-    createGCLegend() {
-        const legend = document.createElement('div');
-        legend.className = 'gc-legend';
-        legend.style.cssText = `
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 6px 8px;
-            font-size: 10px;
-            line-height: 1.2;
-            color: #495057;
-            pointer-events: none;
-        `;
-        
-        legend.innerHTML = `
-            <div style="display: flex; align-items: center; margin-bottom: 2px;">
-                <div style="width: 12px; height: 3px; background: #28a745; margin-right: 4px;"></div>
-                <span>GC Content</span>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <div style="width: 12px; height: 3px; background: linear-gradient(to right, #dc3545, #495057, #ffc107); margin-right: 4px;"></div>
-                <span>GC Skew</span>
-            </div>
-        `;
-        
-        return legend;
-    }
-    
-    addGCTooltipInteraction(canvas, container, data) {
+    addSVGGCTooltip(container, svg, data, viewStart, windowSize) {
         const tooltip = document.createElement('div');
         tooltip.className = 'gc-tooltip';
         tooltip.style.cssText = `
             position: absolute;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 6px 8px;
-            border-radius: 4px;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-size: 11px;
+            line-height: 1.4;
             pointer-events: none;
             z-index: 1000;
             display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            max-width: 200px;
             white-space: nowrap;
         `;
-        
         container.appendChild(tooltip);
         
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const canvasX = (x / rect.width) * canvas.width;
+        svg.addEventListener('mousemove', (e) => {
+            const rect = svg.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
             
             // Find closest data point
-            const padding = 10;
-            const plotWidth = canvas.width - 2 * padding;
-            const relativeX = (canvasX - padding) / plotWidth;
-            const sequencePos = Math.round(relativeX * data.sequenceLength);
-            
-            // Find closest index
+            const sequencePos = x * data.sequenceLength;
             let closestIndex = 0;
-            let closestDistance = Math.abs(data.positions[0] - sequencePos);
+            let minDistance = Math.abs(data.positions[0] - sequencePos);
             
             for (let i = 1; i < data.positions.length; i++) {
                 const distance = Math.abs(data.positions[i] - sequencePos);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
+                if (distance < minDistance) {
+                    minDistance = distance;
                     closestIndex = i;
                 }
             }
             
-            if (closestIndex < data.gcData.length) {
-                const gcValue = data.gcData[closestIndex];
-                const skewValue = data.skewData[closestIndex];
-                const position = data.viewStart + data.positions[closestIndex];
+            if (closestIndex < data.detailedData.length) {
+                const detail = data.detailedData[closestIndex];
+                const absolutePos = viewStart + detail.position;
+                const windowStart = viewStart + detail.windowStart;
+                const windowEnd = viewStart + detail.windowEnd;
                 
                 tooltip.innerHTML = `
-                    Position: ${position.toLocaleString()}<br>
-                    GC Content: ${gcValue.toFixed(2)}%<br>
-                    GC Skew: ${skewValue.toFixed(4)}
+                    <div style="font-weight: 600; margin-bottom: 4px; color: #ffc107;">Position: ${Math.round(absolutePos).toLocaleString()}</div>
+                    <div style="color: #28a745;">GC Content: ${detail.gcPercent.toFixed(2)}%</div>
+                    <div style="color: #495057;">GC Skew: ${detail.gcSkew.toFixed(4)}</div>
+                    <div style="color: #17a2b8;">AT Skew: ${detail.atSkew.toFixed(4)}</div>
+                    <div style="margin-top: 4px; color: #6c757d; font-size: 10px;">
+                        Window: ${windowStart.toLocaleString()}-${windowEnd.toLocaleString()}<br>
+                        G:${detail.gCount} C:${detail.cCount} A:${detail.aCount} T:${detail.tCount}
+                    </div>
                 `;
                 
                 tooltip.style.display = 'block';
-                tooltip.style.left = `${e.clientX - rect.left + 10}px`;
-                tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+                
+                // Position tooltip near cursor but keep it within container bounds
+                const containerRect = container.getBoundingClientRect();
+                const tooltipX = Math.min(e.clientX - containerRect.left + 10, containerRect.width - 220);
+                const tooltipY = Math.max(e.clientY - containerRect.top - 60, 10);
+                
+                tooltip.style.left = `${tooltipX}px`;
+                tooltip.style.top = `${tooltipY}px`;
             }
         });
         
-        canvas.addEventListener('mouseleave', () => {
+        svg.addEventListener('mouseleave', () => {
             tooltip.style.display = 'none';
         });
     }
@@ -1492,6 +1681,38 @@ class TrackRenderer {
         } else {
             return position.toString();
         }
+    }
+
+    createGCLegend() {
+        const legend = document.createElement('div');
+        legend.className = 'gc-legend';
+        legend.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 10px;
+            line-height: 1.2;
+            color: #495057;
+            pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        `;
+        
+        legend.innerHTML = `
+            <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                <div style="width: 12px; height: 3px; background: #28a745; margin-right: 4px; border-radius: 1px;"></div>
+                <span>GC Content</span>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div style="width: 12px; height: 3px; background: linear-gradient(to right, #dc3545, #495057, #ffc107); margin-right: 4px; border-radius: 1px;"></div>
+                <span>GC Skew</span>
+            </div>
+        `;
+        
+        return legend;
     }
 }
 
