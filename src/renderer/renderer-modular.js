@@ -1497,11 +1497,13 @@ class GenomeBrowser {
             `;
             
             Object.entries(gene.qualifiers).forEach(([key, value]) => {
-                if (value && value !== 'Unknown' && value.trim() !== '') {
+                // Convert value to string and check if it's meaningful
+                const stringValue = value != null ? String(value) : '';
+                if (stringValue && stringValue !== 'Unknown' && stringValue.trim() !== '') {
                     html += `
                         <div class="gene-attribute">
                             <div class="gene-attribute-label">${key.replace(/_/g, ' ')}</div>
-                            <div class="gene-attribute-value">${value}</div>
+                            <div class="gene-attribute-value">${stringValue}</div>
                         </div>
                     `;
                 }

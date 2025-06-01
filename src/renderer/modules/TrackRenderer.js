@@ -721,8 +721,10 @@ class TrackRenderer {
         
         if (protein.qualifiers) {
             Object.entries(protein.qualifiers).forEach(([key, value]) => {
-                if (value && value !== 'Unknown') {
-                    details.push(`${key}: ${value}`);
+                // Convert value to string and check if it's meaningful
+                const stringValue = value != null ? String(value) : '';
+                if (stringValue && stringValue !== 'Unknown') {
+                    details.push(`${key}: ${stringValue}`);
                 }
             });
         }
