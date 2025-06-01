@@ -19,11 +19,15 @@ class ChatManager {
         // Set global reference for copy button functionality
         window.chatManager = this;
         
-        // Load chat history from config
-        this.loadChatHistory();
+        // DON'T load chat history here - wait for UI to be created
         
         this.setupMCPConnection();
         this.initializeUI();
+        
+        // Load chat history AFTER UI is initialized
+        setTimeout(() => {
+            this.loadChatHistory();
+        }, 100);
     }
 
     async setupMCPConnection() {
@@ -560,10 +564,14 @@ class ChatManager {
     }
 
     createChatInterface() {
+        // Load saved position and size
+        const savedPosition = this.configManager.get('chat.position', { x: 20, y: 20 });
+        const savedSize = this.configManager.get('chat.size', { width: 400, height: 600 });
+        
         // Create chat panel HTML
         const chatHTML = `
-            <div id="llmChatPanel" class="chat-panel">
-                <div class="chat-header">
+            <div id="llmChatPanel" class="chat-panel resizable-movable" style="left: ${savedPosition.x}px; top: ${savedPosition.y}px; width: ${savedSize.width}px; height: ${savedSize.height}px;">
+                <div class="chat-header" id="chatHeader">
                     <div class="chat-title">
                         <i class="fas fa-robot"></i>
                         <span>AI Assistant</span>
@@ -573,6 +581,9 @@ class ChatManager {
                             <i class="fas fa-circle"></i>
                             <span>Connecting...</span>
                         </div>
+                        <button id="resetChatPositionBtn" class="btn btn-sm chat-btn" title="Reset position and size">
+                            <i class="fas fa-home"></i>
+                        </button>
                         <button id="minimizeChatBtn" class="btn btn-sm chat-btn">
                             <i class="fas fa-minus"></i>
                         </button>
@@ -587,16 +598,49 @@ class ChatManager {
                             <div class="message-content">
                                 <i class="fas fa-robot message-icon"></i>
                                 <div class="message-text">
-                                    <p>Hello! I'm your AI assistant for the Genome Browser. I can help you:</p>
-                                    <ul>
-                                        <li>Navigate to specific genomic positions</li>
-                                        <li>Search for genes and features</li>
-                                        <li>Analyze genomic regions</li>
-                                        <li>Create custom annotations</li>
-                                        <li>Export sequence data</li>
-                                        <li>Answer questions about your genome data</li>
-                                    </ul>
-                                    <p>Try asking me something like "Show me gene ABC123" or "What's the GC content of chr1:1000-2000?"</p>
+                                    <p>🧬 <strong>Welcome to your AI Genomics Assistant!</strong> I can help you with comprehensive genome analysis:</p>
+                                    
+                                    <div class="capability-section">
+                                        <p><strong>🔍 Navigation & Search:</strong></p>
+                                        <ul>
+                                            <li>"Navigate to E. coli origin of replication"</li>
+                                            <li>"Search for DNA polymerase genes"</li>
+                                            <li>"Find genes near position 123456"</li>
+                                            <li>"Show me the bidA gene details"</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="capability-section">
+                                        <p><strong>🧪 Molecular Biology Tools:</strong></p>
+                                        <ul>
+                                            <li>"Find EcoRI restriction sites in this region"</li>
+                                            <li>"Virtual digest with EcoRI and BamHI"</li>
+                                            <li>"Search for TATAAA promoter motifs"</li>
+                                            <li>"Translate this gene to protein"</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="capability-section">
+                                        <p><strong>📊 Sequence Analysis:</strong></p>
+                                        <ul>
+                                            <li>"What's the GC content and AT skew here?"</li>
+                                            <li>"Analyze codon usage in the lacZ gene"</li>
+                                            <li>"Find all ORFs longer than 300bp"</li>
+                                            <li>"Compare these two genomic regions"</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="capability-section">
+                                        <p><strong>🔖 Organization & Export:</strong></p>
+                                        <ul>
+                                            <li>"Bookmark this interesting region"</li>
+                                            <li>"Export features from current view"</li>
+                                            <li>"Save this view configuration"</li>
+                                            <li>"Show file information summary"</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <p><em>💡 Tip: You can ask questions in natural language! Try "What restriction enzymes cut here?" or "Find intergenic regions longer than 500bp"</em></p>
                                 </div>
                             </div>
                         </div>
@@ -612,9 +656,25 @@ class ChatManager {
                         </button>
                     </div>
                     <div class="chat-actions">
+                        <button id="newChatBtn" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i>
+                            New Chat
+                        </button>
+                        <button id="copySelectedBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-copy"></i>
+                            Copy Selected
+                        </button>
+                        <button id="pasteBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-paste"></i>
+                            Paste
+                        </button>
+                        <button id="chatHistoryBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-history"></i>
+                            History
+                        </button>
                         <button id="clearChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-trash"></i>
-                            Clear Chat
+                            Clear
                         </button>
                         <button id="exportChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-download"></i>
@@ -626,10 +686,19 @@ class ChatManager {
                         </button>
                         <button id="suggestionsBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-lightbulb"></i>
-                            Suggestions
+                            Examples
                         </button>
                     </div>
                 </div>
+                <!-- Resize handles -->
+                <div class="resize-handle resize-handle-n" data-direction="n"></div>
+                <div class="resize-handle resize-handle-s" data-direction="s"></div>
+                <div class="resize-handle resize-handle-e" data-direction="e"></div>
+                <div class="resize-handle resize-handle-w" data-direction="w"></div>
+                <div class="resize-handle resize-handle-ne" data-direction="ne"></div>
+                <div class="resize-handle resize-handle-nw" data-direction="nw"></div>
+                <div class="resize-handle resize-handle-se" data-direction="se"></div>
+                <div class="resize-handle resize-handle-sw" data-direction="sw"></div>
             </div>
         `;
 
@@ -639,6 +708,10 @@ class ChatManager {
 
         // Initially minimized
         document.getElementById('llmChatPanel').classList.add('minimized');
+        
+        // Setup dragging and resizing
+        this.setupChatDragging();
+        this.setupChatResizing();
     }
 
     setupEventListeners() {
@@ -691,6 +764,28 @@ class ChatManager {
         document.getElementById('suggestionsBtn')?.addEventListener('click', () => {
             this.showSuggestions();
         });
+
+        // New button event listeners
+        document.getElementById('newChatBtn')?.addEventListener('click', () => {
+            this.startNewChat();
+        });
+
+        document.getElementById('copySelectedBtn')?.addEventListener('click', () => {
+            this.copySelectedText();
+        });
+
+        document.getElementById('pasteBtn')?.addEventListener('click', () => {
+            this.pasteFromClipboard();
+        });
+
+        document.getElementById('chatHistoryBtn')?.addEventListener('click', () => {
+            this.showChatHistoryModal();
+        });
+
+        // Reset position button
+        document.getElementById('resetChatPositionBtn')?.addEventListener('click', () => {
+            this.resetChatPosition();
+        });
     }
 
     addChatToggleButton() {
@@ -724,6 +819,8 @@ class ChatManager {
         const chatPanel = document.getElementById('llmChatPanel');
         if (chatPanel) {
             chatPanel.classList.toggle('minimized');
+            // When minimizing/expanding, don't save position to avoid conflicts
+            // Only save the minimized state preference if needed
         }
     }
 
@@ -1654,24 +1751,82 @@ If the user is asking a general question or doesn't need a tool, respond normall
 
     showSuggestions() {
         const suggestions = [
-            "Show me gene details for [gene name]",
-            "Navigate to position chr1:1000-2000",
-            "What's the GC content of this region?",
-            "Find genes in the current view",
-            "Export sequence data as FASTA",
-            "Create a new gene annotation",
-            "Show all variants in this region",
-            "Toggle the GC content track"
+            // Navigation & Basic Info
+            "Show me details for the bidA gene",
+            "Navigate to E. coli origin of replication",
+            "List all available chromosomes",
+            "What's the current genome browser state?",
+            
+            // Molecular Biology Tools
+            "Find EcoRI restriction sites in this region",
+            "Virtual digest with EcoRI and BamHI enzymes", 
+            "Search for TATAAA promoter motifs allowing 1 mismatch",
+            "Search for ribosome binding sites using pattern AGGAGG",
+            
+            // Sequence Analysis
+            "What's the GC content and composition of this region?",
+            "Analyze codon usage in the lacZ gene",
+            "Find all ORFs longer than 300 base pairs",
+            "Calculate AT/GC skew in windows",
+            
+            // Feature Discovery
+            "Find genes within 5000bp of position 123456",
+            "Show intergenic regions longer than 500bp",
+            "What operons are in this chromosome?",
+            "Translate this gene sequence to protein",
+            
+            // Comparative Analysis
+            "Compare regions U00096:1000-2000 vs U00096:5000-6000",
+            "Find sequences similar to ATGCGATCGATCG",
+            "Show nearby features of different types",
+            
+            // Data Management
+            "Bookmark this interesting region as 'Origin'",
+            "Show all my saved bookmarks",
+            "Export features from current view as JSON",
+            "Save current view configuration",
+            
+            // Track Management
+            "Toggle the genes track visibility",
+            "Show status of all tracks",
+            "Get file information summary"
         ];
 
-        const suggestionsHTML = suggestions.map(s => 
-            `<button class="suggestion-btn" onclick="document.getElementById('chatInput').value = '${s}'">${s}</button>`
-        ).join('');
+        // Group suggestions by category for better presentation
+        const categories = {
+            "🧭 Navigation & Info": suggestions.slice(0, 4),
+            "🧬 Molecular Biology": suggestions.slice(4, 8),
+            "📊 Sequence Analysis": suggestions.slice(8, 12),
+            "🔍 Feature Discovery": suggestions.slice(12, 16),
+            "⚖️ Comparative Analysis": suggestions.slice(16, 19),
+            "💾 Data Management": suggestions.slice(19, 23),
+            "👁️ Track & View Control": suggestions.slice(23)
+        };
+
+        let suggestionsHTML = '<div class="suggestions-grid">';
+        
+        Object.entries(categories).forEach(([category, items]) => {
+            suggestionsHTML += `
+                <div class="suggestion-category">
+                    <h4>${category}</h4>
+                    <div class="suggestion-buttons">
+                        ${items.map(s => 
+                            `<button class="suggestion-btn" onclick="document.getElementById('chatInput').value = '${s}'">${s}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        suggestionsHTML += '</div>';
 
         this.addMessageToChat(
             `<div class="suggestions-container">
-                <p>Here are some things you can try:</p>
+                <p><strong>🚀 Try these powerful genomics commands:</strong></p>
                 ${suggestionsHTML}
+                <div class="suggestion-tip">
+                    <p><em>💡 Pro tip: You can ask questions in natural language! For example: "What restriction enzymes cut in the current region?" or "Find genes involved in DNA replication"</em></p>
+                </div>
             </div>`,
             'assistant'
         );
@@ -1682,11 +1837,19 @@ If the user is asking a general question or doesn't need a tool, respond normall
      */
     loadChatHistory() {
         try {
+            console.log('Loading chat history...');
             const history = this.configManager.getChatHistory();
-            this.displayChatHistory(history);
-            console.log(`Loaded ${history.length} chat messages from configuration`);
+            console.log(`Found ${history.length} chat messages in history`);
+            
+            if (history.length > 0) {
+                this.displayChatHistory(history);
+                console.log(`Successfully loaded and displayed ${history.length} chat messages`);
+            } else {
+                console.log('No chat history found');
+            }
         } catch (error) {
             console.error('Error loading chat history:', error);
+            this.showNotification('⚠️ Could not load chat history', 'warning');
         }
     }
 
@@ -1695,22 +1858,30 @@ If the user is asking a general question or doesn't need a tool, respond normall
      */
     displayChatHistory(history) {
         const messagesContainer = document.getElementById('chatMessages');
-        if (!messagesContainer) return;
-
-        // Clear existing messages except welcome message
-        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
-        messagesContainer.innerHTML = '';
-        if (welcomeMessage) {
-            messagesContainer.appendChild(welcomeMessage);
+        if (!messagesContainer) {
+            console.warn('Chat messages container not found, cannot display history');
+            return;
         }
 
+        console.log('Displaying chat history with', history.length, 'messages');
+
+        // Preserve welcome message but clear other messages
+        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+        
+        // Clear all messages except welcome
+        const existingMessages = messagesContainer.querySelectorAll('.message:not(.welcome-message .message)');
+        existingMessages.forEach(msg => msg.remove());
+
         // Display historical messages
-        history.forEach(msg => {
+        history.forEach((msg, index) => {
+            console.log(`Displaying message ${index + 1}:`, msg.message.substring(0, 50) + '...');
             this.displayChatMessage(msg.message, msg.sender, msg.timestamp, msg.id);
         });
 
-        // Scroll to bottom
+        // Scroll to bottom to show most recent messages
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        console.log('Chat history display completed');
     }
 
     /**
@@ -3038,5 +3209,986 @@ If the user is asking a general question or doesn't need a tool, respond normall
         }
         
         return visibleTracks;
+    }
+
+    // ========================================
+    // NEW CHAT FUNCTIONALITY
+    // ========================================
+
+    /**
+     * Start a new chat conversation
+     */
+    startNewChat() {
+        // Confirm if there are existing messages
+        const existingMessages = this.configManager.getChatHistory();
+        if (existingMessages.length > 0) {
+            const confirmed = confirm('Are you sure you want to start a new chat? This will clear the current conversation history.');
+            if (!confirmed) return;
+        }
+
+        // Clear the chat
+        this.clearChat();
+        
+        // Add a new conversation indicator
+        this.addMessageToChat('🆕 **New conversation started**', 'assistant');
+        
+        console.log('Started new chat conversation');
+    }
+
+    /**
+     * Copy selected text from the page
+     */
+    copySelectedText() {
+        try {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            
+            if (!selectedText) {
+                // If no text is selected, try to get text from the currently focused element
+                const activeElement = document.activeElement;
+                if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+                    const start = activeElement.selectionStart;
+                    const end = activeElement.selectionEnd;
+                    if (start !== end) {
+                        const selectedText = activeElement.value.substring(start, end);
+                        if (selectedText) {
+                            navigator.clipboard.writeText(selectedText).then(() => {
+                                this.showNotification('✅ Selected text copied to clipboard', 'success');
+                            });
+                            return;
+                        }
+                    }
+                }
+                
+                this.showNotification('⚠️ No text selected to copy', 'warning');
+                return;
+            }
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(selectedText).then(() => {
+                this.showNotification(`✅ Copied ${selectedText.length} characters to clipboard`, 'success');
+                
+                // Clear the selection for better UX
+                selection.removeAllRanges();
+            }).catch(err => {
+                console.error('Failed to copy text:', err);
+                this.showNotification('❌ Failed to copy text to clipboard', 'error');
+            });
+            
+        } catch (error) {
+            console.error('Error copying selected text:', error);
+            this.showNotification('❌ Error copying selected text', 'error');
+        }
+    }
+
+    /**
+     * Paste text from clipboard into the chat input
+     */
+    async pasteFromClipboard() {
+        try {
+            const chatInput = document.getElementById('chatInput');
+            if (!chatInput) {
+                this.showNotification('❌ Chat input not found', 'error');
+                return;
+            }
+
+            // Read from clipboard
+            const clipboardText = await navigator.clipboard.readText();
+            
+            if (!clipboardText.trim()) {
+                this.showNotification('⚠️ Clipboard is empty', 'warning');
+                return;
+            }
+
+            // Get current cursor position
+            const start = chatInput.selectionStart;
+            const end = chatInput.selectionEnd;
+            const currentValue = chatInput.value;
+
+            // Insert the clipboard text at cursor position
+            const newValue = currentValue.substring(0, start) + clipboardText + currentValue.substring(end);
+            chatInput.value = newValue;
+
+            // Set cursor position after the pasted text
+            const newCursorPosition = start + clipboardText.length;
+            chatInput.setSelectionRange(newCursorPosition, newCursorPosition);
+
+            // Focus the input and trigger input event for auto-resize
+            chatInput.focus();
+            chatInput.dispatchEvent(new Event('input'));
+
+            this.showNotification(`✅ Pasted ${clipboardText.length} characters`, 'success');
+
+        } catch (error) {
+            console.error('Error pasting from clipboard:', error);
+            
+            // Fallback: prompt user for manual paste
+            const manualText = prompt('Unable to access clipboard automatically. Please paste your text here:');
+            if (manualText) {
+                const chatInput = document.getElementById('chatInput');
+                if (chatInput) {
+                    const start = chatInput.selectionStart;
+                    const end = chatInput.selectionEnd;
+                    const currentValue = chatInput.value;
+                    const newValue = currentValue.substring(0, start) + manualText + currentValue.substring(end);
+                    chatInput.value = newValue;
+                    chatInput.focus();
+                    chatInput.dispatchEvent(new Event('input'));
+                    this.showNotification(`✅ Pasted text manually`, 'success');
+                }
+            }
+        }
+    }
+
+    /**
+     * Show a temporary notification to the user
+     */
+    showNotification(message, type = 'info') {
+        // Remove any existing notification
+        const existingNotification = document.getElementById('chatNotification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.id = 'chatNotification';
+        notification.className = `chat-notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <span>${message}</span>
+                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Add to chat panel
+        const chatPanel = document.getElementById('llmChatPanel');
+        if (chatPanel) {
+            chatPanel.appendChild(notification);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+    }
+
+    /**
+     * Test function to verify chat functionality
+     */
+    testChatFunctionality() {
+        console.log('=== Testing Chat Functionality ===');
+        
+        // Test 1: Check if UI elements exist
+        const chatInput = document.getElementById('chatInput');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const copySelectedBtn = document.getElementById('copySelectedBtn');
+        const pasteBtn = document.getElementById('pasteBtn');
+        
+        console.log('UI Elements Check:');
+        console.log('- Chat Input:', chatInput ? '✅' : '❌');
+        console.log('- New Chat Button:', newChatBtn ? '✅' : '❌');
+        console.log('- Copy Selected Button:', copySelectedBtn ? '✅' : '❌');
+        console.log('- Paste Button:', pasteBtn ? '✅' : '❌');
+        
+        // Test 2: Check chat history loading
+        const history = this.configManager.getChatHistory();
+        console.log('Chat History:', history.length, 'messages');
+        
+        // Test 3: Show notification
+        this.showNotification('🧪 Chat functionality test completed', 'success');
+        
+        return {
+            uiElements: {
+                chatInput: !!chatInput,
+                newChatBtn: !!newChatBtn,
+                copySelectedBtn: !!copySelectedBtn,
+                pasteBtn: !!pasteBtn
+            },
+            historyCount: history.length,
+            testCompleted: true
+        };
+    }
+
+    /**
+     * Show chat history in a modal dialog
+     */
+    showChatHistoryModal() {
+        const history = this.configManager.getChatHistory();
+        
+        if (history.length === 0) {
+            this.showNotification('📭 No chat history found', 'info');
+            return;
+        }
+
+        // Remove existing modal if present
+        const existingModal = document.getElementById('chatHistoryModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create modal HTML
+        const modal = document.createElement('div');
+        modal.id = 'chatHistoryModal';
+        modal.className = 'modal chat-history-modal show';
+        
+        // Group messages into conversations
+        const conversations = this.groupMessagesIntoConversations(history);
+        
+        let historyHTML = '';
+        conversations.forEach((conversation, index) => {
+            const startTime = new Date(conversation.startTime);
+            const endTime = new Date(conversation.endTime);
+            const duration = this.formatDuration(endTime - startTime);
+            
+            // Get conversation preview (first user message or first 100 chars of first message)
+            const firstUserMessage = conversation.messages.find(m => m.sender === 'user');
+            const preview = firstUserMessage ? 
+                (firstUserMessage.message.length > 80 ? firstUserMessage.message.substring(0, 80) + '...' : firstUserMessage.message) :
+                conversation.messages[0].message.substring(0, 80) + '...';
+            
+            historyHTML += `
+                <div class="conversation-item" onclick="chatManager.showConversationDetails(${index})">
+                    <div class="conversation-header">
+                        <div class="conversation-info">
+                            <div class="conversation-title">
+                                <i class="fas fa-comments"></i>
+                                <span>Conversation ${conversations.length - index}</span>
+                            </div>
+                            <div class="conversation-stats">
+                                <span class="message-count">${conversation.messages.length} messages</span>
+                                <span class="conversation-duration">${duration}</span>
+                            </div>
+                        </div>
+                        <div class="conversation-time">
+                            <div class="start-time">${startTime.toLocaleDateString()} ${startTime.toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                    <div class="conversation-preview">${this.formatMessage(preview)}</div>
+                    <div class="conversation-actions">
+                        <button onclick="event.stopPropagation(); chatManager.copyConversation(${index})" title="Copy conversation">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); chatManager.exportConversation(${index})" title="Export conversation">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); chatManager.deleteConversation(${index})" title="Delete conversation">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div class="modal-content chat-history-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-history"></i>
+                        Chat History
+                        <span class="total-messages">${conversations.length} conversations</span>
+                    </h3>
+                    <button class="modal-close" onclick="chatManager.closeChatHistoryModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body chat-history-body">
+                    <div class="history-controls">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.exportChatHistory('txt')">
+                            <i class="fas fa-download"></i>
+                            Export All TXT
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.exportChatHistory('json')">
+                            <i class="fas fa-download"></i>
+                            Export All JSON
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.searchChatHistory()">
+                            <i class="fas fa-search"></i>
+                            Search
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="chatManager.confirmClearHistory()">
+                            <i class="fas fa-trash"></i>
+                            Clear All
+                        </button>
+                    </div>
+                    <div class="history-content">
+                        <div class="conversations-list">
+                            ${historyHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to page
+        document.body.appendChild(modal);
+
+        // Add escape key handler
+        document.addEventListener('keydown', this.handleHistoryModalKeydown.bind(this));
+        
+        // Store conversations for later use
+        this.cachedConversations = conversations;
+    }
+
+    /**
+     * Group messages into conversations based on time gaps
+     */
+    groupMessagesIntoConversations(history) {
+        if (history.length === 0) return [];
+        
+        const conversations = [];
+        let currentConversation = {
+            messages: [history[0]],
+            startTime: history[0].timestamp,
+            endTime: history[0].timestamp
+        };
+        
+        const CONVERSATION_GAP = 30 * 60 * 1000; // 30 minutes gap to separate conversations
+        
+        for (let i = 1; i < history.length; i++) {
+            const currentMsg = history[i];
+            const previousMsg = history[i - 1];
+            
+            const timeDiff = new Date(currentMsg.timestamp) - new Date(previousMsg.timestamp);
+            
+            if (timeDiff > CONVERSATION_GAP) {
+                // Start new conversation
+                conversations.push(currentConversation);
+                currentConversation = {
+                    messages: [currentMsg],
+                    startTime: currentMsg.timestamp,
+                    endTime: currentMsg.timestamp
+                };
+            } else {
+                // Continue current conversation
+                currentConversation.messages.push(currentMsg);
+                currentConversation.endTime = currentMsg.timestamp;
+            }
+        }
+        
+        // Add the last conversation
+        conversations.push(currentConversation);
+        
+        // Return in reverse order (newest first)
+        return conversations.reverse();
+    }
+
+    /**
+     * Format duration in human readable format
+     */
+    formatDuration(milliseconds) {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    }
+
+    /**
+     * Show detailed view of a specific conversation
+     */
+    showConversationDetails(conversationIndex) {
+        const conversation = this.cachedConversations[conversationIndex];
+        if (!conversation) {
+            this.showNotification('❌ Conversation not found', 'error');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal conversation-detail-modal show';
+        
+        let messagesHTML = '';
+        conversation.messages.forEach(msg => {
+            const time = new Date(msg.timestamp).toLocaleTimeString();
+            messagesHTML += `
+                <div class="conversation-message ${msg.sender}">
+                    <div class="message-header">
+                        <div class="message-sender">
+                            <i class="fas fa-${msg.sender === 'user' ? 'user' : 'robot'}"></i>
+                            <span>${msg.sender === 'user' ? 'You' : 'AI Assistant'}</span>
+                        </div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                    <div class="message-content">${this.formatMessage(msg.message)}</div>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-comments"></i>
+                        Conversation ${this.cachedConversations.length - conversationIndex}
+                        <span class="conversation-meta">${conversation.messages.length} messages</span>
+                    </h3>
+                    <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="conversation-info">
+                        <strong>Started:</strong> ${new Date(conversation.startTime).toLocaleString()}<br>
+                        <strong>Duration:</strong> ${this.formatDuration(new Date(conversation.endTime) - new Date(conversation.startTime))}
+                    </div>
+                    <div class="conversation-messages">
+                        ${messagesHTML}
+                    </div>
+                    <div class="conversation-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.copyConversation(${conversationIndex})">
+                            <i class="fas fa-copy"></i>
+                            Copy Conversation
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.exportConversation(${conversationIndex})">
+                            <i class="fas fa-download"></i>
+                            Export Conversation
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.showChatHistoryModal()">
+                            <i class="fas fa-arrow-left"></i>
+                            Back to History
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Copy a conversation to clipboard
+     */
+    copyConversation(conversationIndex) {
+        const conversation = this.cachedConversations[conversationIndex];
+        if (!conversation) {
+            this.showNotification('❌ Conversation not found', 'error');
+            return;
+        }
+
+        let conversationText = `Conversation ${this.cachedConversations.length - conversationIndex}\n`;
+        conversationText += `Started: ${new Date(conversation.startTime).toLocaleString()}\n`;
+        conversationText += `Duration: ${this.formatDuration(new Date(conversation.endTime) - new Date(conversation.startTime))}\n`;
+        conversationText += `Messages: ${conversation.messages.length}\n\n`;
+        conversationText += `${'='.repeat(50)}\n\n`;
+
+        conversation.messages.forEach(msg => {
+            const time = new Date(msg.timestamp).toLocaleTimeString();
+            const sender = msg.sender === 'user' ? 'You' : 'AI Assistant';
+            conversationText += `[${time}] ${sender}:\n${msg.message}\n\n`;
+        });
+
+        navigator.clipboard.writeText(conversationText).then(() => {
+            this.showNotification('✅ Conversation copied to clipboard', 'success');
+        }).catch(err => {
+            console.error('Failed to copy conversation:', err);
+            this.showNotification('❌ Failed to copy conversation', 'error');
+        });
+    }
+
+    /**
+     * Export a conversation
+     */
+    exportConversation(conversationIndex) {
+        const conversation = this.cachedConversations[conversationIndex];
+        if (!conversation) {
+            this.showNotification('❌ Conversation not found', 'error');
+            return;
+        }
+
+        const exportData = {
+            conversationNumber: this.cachedConversations.length - conversationIndex,
+            startTime: conversation.startTime,
+            endTime: conversation.endTime,
+            duration: new Date(conversation.endTime) - new Date(conversation.startTime),
+            messageCount: conversation.messages.length,
+            messages: conversation.messages,
+            exportedAt: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conversation-${exportData.conversationNumber}-${new Date(conversation.startTime).toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showNotification('✅ Conversation exported successfully', 'success');
+    }
+
+    /**
+     * Delete a conversation
+     */
+    deleteConversation(conversationIndex) {
+        const conversation = this.cachedConversations[conversationIndex];
+        if (!conversation) {
+            this.showNotification('❌ Conversation not found', 'error');
+            return;
+        }
+
+        const confirmed = confirm(`Are you sure you want to delete this conversation with ${conversation.messages.length} messages?`);
+        if (!confirmed) return;
+
+        try {
+            let history = this.configManager.getChatHistory();
+            
+            // Remove all messages from this conversation
+            const messageIds = conversation.messages.map(m => m.id);
+            history = history.filter(msg => !messageIds.includes(msg.id));
+            
+            // Save updated history
+            this.configManager.setChatHistory(history);
+            this.configManager.save();
+
+            this.showNotification('✅ Conversation deleted successfully', 'success');
+            
+            // Refresh the modal
+            this.closeChatHistoryModal();
+            setTimeout(() => this.showChatHistoryModal(), 100);
+            
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            this.showNotification('❌ Failed to delete conversation', 'error');
+        }
+    }
+
+    /**
+     * Close chat history modal
+     */
+    closeChatHistoryModal() {
+        const modal = document.getElementById('chatHistoryModal');
+        if (modal) {
+            modal.remove();
+        }
+        document.removeEventListener('keydown', this.handleHistoryModalKeydown);
+    }
+
+    /**
+     * Handle escape key for modal
+     */
+    handleHistoryModalKeydown(event) {
+        if (event.key === 'Escape') {
+            this.closeChatHistoryModal();
+        }
+    }
+
+    /**
+     * Show full message in a popup
+     */
+    showFullMessage(messageId) {
+        const history = this.configManager.getChatHistory();
+        const message = history.find(msg => msg.id === messageId);
+        
+        if (!message) {
+            this.showNotification('❌ Message not found', 'error');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal message-detail-modal show';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-${message.sender === 'user' ? 'user' : 'robot'}"></i>
+                        ${message.sender === 'user' ? 'Your Message' : 'AI Assistant Message'}
+                    </h3>
+                    <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="message-metadata">
+                        <strong>Time:</strong> ${new Date(message.timestamp).toLocaleString()}<br>
+                        <strong>ID:</strong> ${message.id}
+                    </div>
+                    <div class="full-message-content">
+                        ${this.formatMessage(message.message)}
+                    </div>
+                    <div class="message-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.copyHistoryMessage('${message.id}')">
+                            <i class="fas fa-copy"></i>
+                            Copy Message
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Copy a message from history
+     */
+    copyHistoryMessage(messageId) {
+        const history = this.configManager.getChatHistory();
+        const message = history.find(msg => msg.id === messageId);
+        
+        if (!message) {
+            this.showNotification('❌ Message not found', 'error');
+            return;
+        }
+
+        navigator.clipboard.writeText(message.message).then(() => {
+            this.showNotification('✅ Message copied to clipboard', 'success');
+        }).catch(err => {
+            console.error('Failed to copy message:', err);
+            this.showNotification('❌ Failed to copy message', 'error');
+        });
+    }
+
+    /**
+     * Delete a message from history
+     */
+    deleteHistoryMessage(messageId) {
+        const confirmed = confirm('Are you sure you want to delete this message from history?');
+        if (!confirmed) return;
+
+        try {
+            let history = this.configManager.getChatHistory();
+            const messageIndex = history.findIndex(msg => msg.id === messageId);
+            
+            if (messageIndex === -1) {
+                this.showNotification('❌ Message not found', 'error');
+                return;
+            }
+
+            // Remove the message
+            history.splice(messageIndex, 1);
+            
+            // Save updated history
+            this.configManager.setChatHistory(history);
+            this.configManager.save();
+
+            this.showNotification('✅ Message deleted from history', 'success');
+            
+            // Refresh the modal
+            this.closeChatHistoryModal();
+            setTimeout(() => this.showChatHistoryModal(), 100);
+            
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            this.showNotification('❌ Failed to delete message', 'error');
+        }
+    }
+
+    /**
+     * Confirm clearing all chat history
+     */
+    confirmClearHistory() {
+        const confirmed = confirm('Are you sure you want to delete ALL chat history? This action cannot be undone.');
+        if (!confirmed) return;
+
+        const doubleConfirmed = confirm('This will permanently delete all your chat conversations. Are you absolutely sure?');
+        if (!doubleConfirmed) return;
+
+        try {
+            this.configManager.clearChatHistory();
+            this.configManager.save();
+            
+            this.showNotification('✅ All chat history cleared', 'success');
+            this.closeChatHistoryModal();
+            
+            // Also clear the current chat display
+            this.clearChat();
+            
+        } catch (error) {
+            console.error('Error clearing history:', error);
+            this.showNotification('❌ Failed to clear history', 'error');
+        }
+    }
+
+    /**
+     * Search through chat history
+     */
+    searchChatHistory() {
+        const searchTerm = prompt('Enter search term to find in chat history:');
+        if (!searchTerm) return;
+
+        const history = this.configManager.getChatHistory();
+        const results = history.filter(msg => 
+            msg.message.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (results.length === 0) {
+            this.showNotification(`🔍 No messages found containing "${searchTerm}"`, 'info');
+            return;
+        }
+
+        // Show search results in the modal
+        this.showSearchResults(searchTerm, results);
+    }
+
+    /**
+     * Show search results
+     */
+    showSearchResults(searchTerm, results) {
+        this.closeChatHistoryModal();
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal chat-search-modal show';
+        
+        let resultsHTML = '';
+        results.forEach(msg => {
+            const time = new Date(msg.timestamp).toLocaleString();
+            const highlightedMessage = msg.message.replace(
+                new RegExp(`(${searchTerm})`, 'gi'),
+                '<mark>$1</mark>'
+            );
+            
+            resultsHTML += `
+                <div class="search-result-item" onclick="chatManager.showFullMessage('${msg.id}')">
+                    <div class="result-header">
+                        <span class="result-sender">
+                            <i class="fas fa-${msg.sender === 'user' ? 'user' : 'robot'}"></i>
+                            ${msg.sender === 'user' ? 'You' : 'AI Assistant'}
+                        </span>
+                        <span class="result-time">${time}</span>
+                    </div>
+                    <div class="result-content">${highlightedMessage}</div>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-search"></i>
+                        Search Results for "${searchTerm}"
+                        <span class="search-count">${results.length} matches</span>
+                    </h3>
+                    <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="search-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="chatManager.showChatHistoryModal()">
+                            <i class="fas fa-arrow-left"></i>
+                            Back to History
+                        </button>
+                    </div>
+                    <div class="search-results">
+                        ${resultsHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Setup chat panel dragging functionality
+     */
+    setupChatDragging() {
+        const chatPanel = document.getElementById('llmChatPanel');
+        const chatHeader = document.getElementById('chatHeader');
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        chatHeader.addEventListener('mousedown', (e) => {
+            // Don't drag if clicking on buttons
+            if (e.target.closest('button')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = parseInt(window.getComputedStyle(chatPanel).left, 10);
+            startTop = parseInt(window.getComputedStyle(chatPanel).top, 10);
+            
+            chatPanel.classList.add('dragging');
+            document.body.style.userSelect = 'none';
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const newLeft = startLeft + e.clientX - startX;
+            const newTop = startTop + e.clientY - startY;
+            
+            // Constrain to viewport
+            const maxLeft = window.innerWidth - chatPanel.offsetWidth;
+            const maxTop = window.innerHeight - chatPanel.offsetHeight;
+            
+            const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
+            
+            chatPanel.style.left = constrainedLeft + 'px';
+            chatPanel.style.top = constrainedTop + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            chatPanel.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            
+            // Save position
+            this.saveChatPosition();
+        });
+
+        // Make header cursor indicate draggable
+        chatHeader.style.cursor = 'move';
+    }
+
+    /**
+     * Setup chat panel resizing functionality
+     */
+    setupChatResizing() {
+        const chatPanel = document.getElementById('llmChatPanel');
+        const resizeHandles = chatPanel.querySelectorAll('.resize-handle');
+        let isResizing = false;
+        let resizeDirection = '';
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        resizeHandles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizeDirection = handle.dataset.direction;
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = parseInt(window.getComputedStyle(chatPanel).width, 10);
+                startHeight = parseInt(window.getComputedStyle(chatPanel).height, 10);
+                startLeft = parseInt(window.getComputedStyle(chatPanel).left, 10);
+                startTop = parseInt(window.getComputedStyle(chatPanel).top, 10);
+                
+                chatPanel.classList.add('resizing');
+                document.body.style.userSelect = 'none';
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newLeft = startLeft;
+            let newTop = startTop;
+            
+            // Apply resize based on direction
+            if (resizeDirection.includes('e')) {
+                newWidth = Math.max(300, startWidth + deltaX);
+            }
+            if (resizeDirection.includes('w')) {
+                newWidth = Math.max(300, startWidth - deltaX);
+                newLeft = startLeft + (startWidth - newWidth);
+            }
+            if (resizeDirection.includes('s')) {
+                newHeight = Math.max(400, startHeight + deltaY);
+            }
+            if (resizeDirection.includes('n')) {
+                newHeight = Math.max(400, startHeight - deltaY);
+                newTop = startTop + (startHeight - newHeight);
+            }
+            
+            // Constrain to viewport
+            const maxLeft = window.innerWidth - newWidth;
+            const maxTop = window.innerHeight - newHeight;
+            
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+            
+            chatPanel.style.width = newWidth + 'px';
+            chatPanel.style.height = newHeight + 'px';
+            chatPanel.style.left = newLeft + 'px';
+            chatPanel.style.top = newTop + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            resizeDirection = '';
+            chatPanel.classList.remove('resizing');
+            document.body.style.userSelect = '';
+            
+            // Save size and position
+            this.saveChatPosition();
+            this.saveChatSize();
+        });
+    }
+
+    /**
+     * Save chat panel position to config
+     */
+    async saveChatPosition() {
+        try {
+            const chatPanel = document.getElementById('llmChatPanel');
+            const position = {
+                x: parseInt(chatPanel.style.left, 10),
+                y: parseInt(chatPanel.style.top, 10)
+            };
+            await this.configManager.set('chat.position', position);
+            await this.configManager.saveConfig();
+        } catch (error) {
+            console.error('Error saving chat position:', error);
+        }
+    }
+
+    /**
+     * Save chat panel size to config
+     */
+    async saveChatSize() {
+        try {
+            const chatPanel = document.getElementById('llmChatPanel');
+            const size = {
+                width: parseInt(chatPanel.style.width, 10),
+                height: parseInt(chatPanel.style.height, 10)
+            };
+            await this.configManager.set('chat.size', size);
+            await this.configManager.saveConfig();
+        } catch (error) {
+            console.error('Error saving chat size:', error);
+        }
+    }
+
+    /**
+     * Reset chat panel to default position and size
+     */
+    async resetChatPosition() {
+        try {
+            const chatPanel = document.getElementById('llmChatPanel');
+            const defaultPosition = { x: 20, y: 20 };
+            const defaultSize = { width: 400, height: 600 };
+            
+            chatPanel.style.left = defaultPosition.x + 'px';
+            chatPanel.style.top = defaultPosition.y + 'px';
+            chatPanel.style.width = defaultSize.width + 'px';
+            chatPanel.style.height = defaultSize.height + 'px';
+            
+            // Save to config
+            await this.configManager.set('chat.position', defaultPosition);
+            await this.configManager.set('chat.size', defaultSize);
+            await this.configManager.saveConfig();
+            
+            this.showNotification('✅ Chat position and size reset', 'success');
+        } catch (error) {
+            console.error('Error resetting chat position:', error);
+            this.showNotification('❌ Failed to reset chat position', 'error');
+        }
     }
 } 

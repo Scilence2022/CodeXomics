@@ -631,7 +631,15 @@ class ConfigManager {
      */
     clearChatHistory() {
         this.config.chat.history = [];
-        this.saveConfig();
+        console.log('Chat history cleared');
+    }
+
+    /**
+     * Set chat history (replace existing history)
+     */
+    setChatHistory(history) {
+        this.config.chat.history = history;
+        console.log(`Chat history set: ${history.length} messages`);
     }
 
     /**
