@@ -743,7 +743,7 @@ class GenomeBrowser {
         // Show navigation controls
         document.getElementById('genomeNavigation').style.display = 'block';
         
-        // Create genome browser container
+        // Create Genome AI Studio container
         const browserContainer = document.createElement('div');
         browserContainer.className = 'genome-browser-container';
         
@@ -4222,7 +4222,7 @@ class GenomeBrowser {
     }
 }
 
-// Initialize the genome browser when the page loads
+// Initialize the Genome AI Studio when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.genomeBrowser = new GenomeBrowser();
 }); 

@@ -1047,7 +1047,7 @@ class ChatManager {
         console.log('User message:', message);
 
         try {
-            // Get current genome browser context
+            // Get current studio context
             const context = this.getCurrentContext();
             console.log('Context for LLM:', context);
             
@@ -1392,9 +1392,9 @@ class ChatManager {
     buildSystemMessage() {
         const context = this.getCurrentContext();
         
-        return `You are an AI assistant for a genome browser application. You have access to the following tools and current state:
+        return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
 
-Current Genome Browser State:
+Current Genome AI Studio State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
 - Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
@@ -2004,7 +2004,7 @@ Function Call Examples:
             "Show me details for the bidA gene",
             "Navigate to E. coli origin of replication",
             "List all available chromosomes",
-            "What's the current genome browser state?",
+            "What's the current studio state?",
             
             // Molecular Biology Tools
             "Find EcoRI restriction sites in this region",

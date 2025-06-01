@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Start MCP Server for Genome Browser
- * Run this before launching the Electron app to enable LLM chat functionality
+ * Start MCP Server for Genome AI Studio
+ * 
+ * This script starts the MCP (Model Context Protocol) server
+ * that enables LLM integration with the Genome AI Studio.
  */
 
 const MCPGenomeBrowserServer = require('./src/mcp-server.js');
 
-console.log('🧬 Starting Genome Browser MCP Server...');
+console.log('🧬 Starting Genome AI Studio MCP Server...');
 console.log('');
 
 const server = new MCPGenomeBrowserServer();
@@ -28,7 +30,7 @@ process.on('SIGTERM', () => {
 
 console.log('💡 Usage Instructions:');
 console.log('1. Keep this server running');
-console.log('2. Launch the Electron Genome Browser');
+console.log('2. Launch the Genome AI Studio');
 console.log('3. Click the AI Assistant button in the toolbar');
 console.log('4. Configure your LLM integration (see documentation)');
 console.log('');

@@ -1,8 +1,8 @@
-# Build Instructions for Electron Genome Browser
+# Build Instructions for Genome AI Studio
 
 ## Overview
 
-This document provides comprehensive instructions for building the Electron Genome Browser application with all recent enhancements including AI integration, enhanced visualization, and improved architecture.
+This document provides comprehensive instructions for building Genome AI Studio with all recent enhancements including AI integration, enhanced visualization, and improved architecture.
 
 ## 🆕 Recent Updates
 
@@ -134,11 +134,11 @@ The application uses a centralized configuration system with the following struc
 
 ```javascript
 // Default configuration locations
-~/.genome-browser/config.json          // Main configuration
-~/.genome-browser/llm-config.json      // AI/LLM settings
-~/.genome-browser/ui-preferences.json  // UI preferences
-~/.genome-browser/chat-history.json    // Chat history
-~/.genome-browser/app-settings.json    // Application settings
+~/.genome-ai-studio/config.json          // Main configuration
+~/.genome-ai-studio/llm-config.json      // AI/LLM settings
+~/.genome-ai-studio/ui-preferences.json  // UI preferences
+~/.genome-ai-studio/chat-history.json    // Chat history
+~/.genome-ai-studio/app-settings.json    // Application settings
 ```
 
 ### **Build Configuration**
@@ -147,8 +147,8 @@ Edit `package.json` to customize build settings:
 ```json
 {
   "build": {
-    "appId": "com.yourcompany.genome-browser",
-    "productName": "Electron Genome Browser",
+    "appId": "com.genomeai.studio",
+    "productName": "Genome AI Studio",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -197,7 +197,7 @@ export NODE_ENV=production
 
 ### **File Structure**
 ```
-electron-GenomeViewer/
+GenomeAIStudio/
 ├── src/
 │   ├── main/                    # Main process files
 │   │   ├── main.js             # Main Electron process
@@ -273,11 +273,11 @@ After successful build, find distribution files in:
 ```
 dist/
 ├── mac/
-│   └── Electron Genome Browser-1.0.0.dmg
+│   └── Genome-AI-Studio-1.0.0.dmg
 ├── win-unpacked/
-│   └── Electron Genome Browser Setup 1.0.0.exe
+│   └── Genome-AI-Studio-Setup-1.0.0.exe
 └── linux-unpacked/
-    └── Electron Genome Browser-1.0.0.AppImage
+    └── Genome-AI-Studio-1.0.0.AppImage
 ```
 
 ### **Code Signing (Production)**
@@ -365,7 +365,7 @@ sudo apt-get install build-essential libnss3-dev libgconf-2-4
 
 **Configuration Problems:**
 - Check configuration file permissions
-- Verify configuration directory exists: `~/.genome-browser/`
+- Verify configuration directory exists: `~/.genome-ai-studio/`
 - Reset configuration: Delete config directory and restart
 
 **AI Integration Issues:**
@@ -480,4 +480,4 @@ git push origin v1.0.0
 - [ ] Update download links
 - [ ] Announce release
 
-This comprehensive build guide ensures successful compilation and distribution of the enhanced Electron Genome Browser with all its advanced features and improvements. 
+This comprehensive build guide ensures successful compilation and distribution of Genome AI Studio with all its advanced features and improvements. 

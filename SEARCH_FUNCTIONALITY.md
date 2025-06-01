@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Electron Genome Browser features comprehensive search capabilities that can find both gene names and DNA sequences within loaded genomic data. The search system has been recently enhanced with **improved AI integration** and **corrected function calling** for more reliable and accurate results.
+Genome AI Studio features comprehensive search capabilities that can find both gene names and DNA sequences within loaded genomic data. The search system has been recently enhanced with **improved AI integration** and **corrected function calling** for more reliable and accurate results.
 
 ## 🆕 Recent Improvements
 

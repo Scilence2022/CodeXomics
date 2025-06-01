@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Electron Genome Browser features an advanced track splitter system that allows users to dynamically adjust the height of individual tracks through an intuitive drag-and-drop interface. This system has been enhanced with improved accessibility, better visual feedback, and seamless integration with the modular architecture.
+Genome AI Studio features an advanced track splitter system that allows users to dynamically adjust the height of individual tracks through an intuitive drag-and-drop interface. This system has been enhanced with improved accessibility, better visual feedback, and seamless integration with the modular architecture.
 
 ## ✨ Key Features
 
@@ -531,4 +531,4 @@ updateSplittersOnVisibilityChange() {
 - **Split Layouts**: Horizontal splitting for side-by-side comparisons
 - **Snap-to-Grid**: Discrete height steps for consistent layouts
 
-This track splitter system provides an intuitive and powerful way to customize the genome browser display, ensuring optimal use of screen space while maintaining excellent accessibility and user experience across all devices and interaction methods. 
+This track splitter system provides an intuitive and powerful way to customize the Genome AI Studio display, ensuring optimal use of screen space while maintaining excellent accessibility and user experience across all devices and interaction methods. 

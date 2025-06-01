@@ -173,7 +173,7 @@ function createMenu() {
               type: 'info',
               title: 'About Genome Viewer',
               message: 'Genome Viewer v1.0.0',
-              detail: 'A modern genome browser built with Electron'
+              detail: 'A modern AI-powered genome analysis studio built with Electron'
             });
           }
         }

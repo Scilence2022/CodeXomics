@@ -437,14 +437,14 @@ class GenomeNavigationBar {
 
     handleMouseUp(e) {
         if (this.isResizing || this.isDragging) {
-            // Apply the temporary range to the genome browser
+            // Apply the temporary range to the Genome AI Studio
             if (this.tempRange) {
                 this.genomeBrowser.currentPosition = {
                     start: Math.round(this.tempRange.start),
                     end: Math.round(this.tempRange.end)
                 };
                 
-                // Update the genome browser display
+                // Update the Genome AI Studio display
                 const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
                 this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
                 this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);

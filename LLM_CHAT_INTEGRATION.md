@@ -1,8 +1,8 @@
-# LLM Chat Integration for Genome Browser
+# LLM Chat Integration for Genome AI Studio
 
 ## Overview
 
-The Electron Genome Browser includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. The AI assistant has been recently enhanced with **corrected function calling** that properly distinguishes between text-based searches and position-based searches, providing more accurate and reliable responses.
+Genome AI Studio includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. The AI assistant has been recently enhanced with **corrected function calling** that properly distinguishes between text-based searches and position-based searches, providing more accurate and reliable responses.
 
 ## 🆕 Recent Improvements
 
@@ -64,8 +64,8 @@ Access via **Options → Configure LLMs** in the header menu:
 ### 💬 **Enhanced Chat Interface**
 - **Floating Panel**: Modern, resizable chat interface with drag-and-drop positioning
 - **Natural Language**: Conversational interaction with genomic data
-- **Corrected Tool Integration**: Reliable access to genome browser functionality
-- **Context Awareness**: LLM understands current browser state and loaded data
+- **Corrected Tool Integration**: Reliable access to studio functionality
+- **Context Awareness**: LLM understands current studio state and loaded data
 - **Message History**: Persistent conversation history with export capabilities
 - **Suggestions**: Built-in example queries and commands
 - **Typing Indicators**: Visual feedback during AI processing
@@ -114,7 +114,7 @@ The AI assistant now correctly distinguishes between two types of searches:
 - **`navigate_to_position`** - Jump to specific genomic coordinates
 - **`search_features`** - 🆕 **FIXED** Text-based search for genes/annotations
 - **`get_nearby_features`** - Position-based proximity search
-- **`get_current_state`** - Retrieve current browser state and context
+- **`get_current_state`** - Retrieve current studio state and context
 
 #### Data Retrieval & Analysis
 - **`get_sequence`** - Extract DNA sequences from regions
@@ -305,7 +305,7 @@ More explicit function call examples with clear distinctions:
 
 ### Available Tools
 
-The LLM has access to these genome browser tools:
+The LLM has access to these studio tools:
 
 #### 1. **navigate_to_position**
 Navigate to specific genomic coordinates
@@ -327,7 +327,7 @@ Search for genes or features by name or sequence
 ```
 
 #### 3. **get_current_state**
-Retrieve current browser state and context
+Retrieve current studio state and context
 ```javascript
 {
   // Returns current chromosome, position, tracks, files, etc.
@@ -439,7 +439,7 @@ Export sequence or annotation data
 3. **MCP Server** (`src/mcp-server.js`)
    - WebSocket server (port 3001) for real-time communication
    - HTTP API (port 3000) for LLM service integration
-   - Tool execution and genome browser state management
+   - Tool execution and studio state management
 
 ### Configuration Storage
 
@@ -526,10 +526,10 @@ llmConfigManager.getConfiguration()
 // Send message through chat interface
 chatManager.sendMessage()
 
-// Execute genome browser tool
+// Execute studio tool
 await chatManager.executeToolRequest(toolData)
 
-// Update browser state
+// Update studio state
 chatManager.sendStateUpdate(state)
 ```
 
@@ -543,7 +543,7 @@ chatManager.sendStateUpdate(state)
 
 ### For Developers
 1. **Error Handling**: Always wrap LLM calls in try-catch blocks
-2. **Context Building**: Provide relevant genome browser state to LLM
+2. **Context Building**: Provide relevant studio state to LLM
 3. **Tool Validation**: Validate tool parameters before execution
 4. **User Feedback**: Show loading states and error messages clearly
 
@@ -560,7 +560,7 @@ chatManager.sendStateUpdate(state)
 - **Voice Integration**: Voice-to-text input for hands-free interaction
 - **Custom Tools**: User-defined tools and workflows
 - **Collaboration**: Shared chat sessions and annotations
-- **Advanced Analytics**: ML-powered genome analysis suggestions
+- **Advanced Analytics**: ML-powered genomic analysis suggestions
 
 ### Integration Opportunities
 - **Cloud Storage**: Integration with cloud genomics platforms
@@ -576,11 +576,11 @@ For technical support or feature requests:
 - Ensure your LLM provider credentials are valid
 - Verify MCP server is running for advanced features
 
-The LLM chat integration transforms the Genome Browser into an intelligent, conversational tool that makes genomic analysis more accessible and intuitive for researchers at all levels.
+The LLM chat integration transforms the Genome Studio into an intelligent, conversational tool that makes genomic analysis more accessible and intuitive for researchers at all levels.
 
 ### 🛠️ **MCP Tool API**
 
-The MCP server exposes an HTTP API for LLM services to interact with the Genome Browser. This API is designed to be simple and robust, allowing LLMs to perform actions within the browser.
+The MCP server exposes an HTTP API for LLM services to interact with the Genome Studio. This API is designed to be simple and robust, allowing LLMs to perform actions within the studio.
 
 **Base URL:** `http://localhost:3000`
 
@@ -607,7 +607,7 @@ The MCP server exposes an HTTP API for LLM services to interact with the Genome 
     "tools": [
       {
         "name": "navigate_to_position",
-        "description": "Navigates the genome browser to a specific genomic position (e.g., chr1:1000-2000).",
+        "description": "Navigates the studio to a specific genomic position (e.g., chr1:1000-2000).",
         "parameters": [
           {"name": "chromosome", "type": "string", "description": "Chromosome name (e.g., chr1)", "required": true},
           {"name": "start", "type": "integer", "description": "Start position", "required": true},
@@ -688,13 +688,13 @@ The chat interface (`ChatManager.js`) handles:
 - WebSocket connection to MCP server.
 - Sending user messages to the configured LLM (via MCP server or directly if configured).
 - Receiving tool execution requests from the MCP server.
-- Calling appropriate `GenomeBrowser` methods to execute tools.
+- Calling appropriate `GenomeStudio` methods to execute tools.
 - Sending results back to the MCP server.
 - Displaying chat history, typing indicators, and connection status.
 
 ## Example LLM Interaction Flow (OpenAI via MCP HTTP API)
 
-1.  **User types a message** in the Genome Browser chat: "Navigate to chrM start 100 end 500"
+1.  **User types a message** in the Genome Studio chat: "Navigate to chrM start 100 end 500"
 2.  **`ChatManager`** sends this to `LLMConfigManager`.
 3.  **`LLMConfigManager`** (if OpenAI is configured) prepares a request for the OpenAI API, including the user message and potentially a system prompt with available tools (obtained from `http://localhost:3000/tools`).
 4.  **OpenAI API** responds. If it decides to use a tool, the response might look like:
@@ -729,7 +729,7 @@ The chat interface (`ChatManager.js`) handles:
     }
     ```
 7.  **MCP Server** receives this. It finds the WebSocket connection for `client_id`.
-8.  **MCP Server** sends an `execute_tool` message over WebSocket to the **Genome Browser**:
+8.  **MCP Server** sends an `execute_tool` message over WebSocket to the **Genome Studio**:
     ```json
     {
       "type": "execute_tool",
@@ -738,8 +738,8 @@ The chat interface (`ChatManager.js`) handles:
       "parameters": { "chromosome": "chrM", "start": 100, "end": 500 }
     }
     ```
-9.  **`ChatManager`** in the Genome Browser receives this WebSocket message.
-10. It calls the corresponding method in `GenomeBrowser` (e.g., `genomeBrowser.navigationManager.navigateTo(...)`).
+9.  **`ChatManager`** in the Genome Studio receives this WebSocket message.
+10. It calls the corresponding method in `GenomeStudio` (e.g., `genomeStudio.navigationManager.navigateTo(...)`).
 11. Once the action is complete, **`ChatManager`** sends a `tool_response` back to the **MCP Server** via WebSocket:
     ```json
     {
@@ -794,4 +794,4 @@ The chat interface (`ChatManager.js`) handles:
 16. **`LLMConfigManager`** returns this content to `ChatManager`.
 17. **`ChatManager`** displays the assistant's message in the UI.
 
-This flow allows the LLM to control the browser through a standardized set of tools, mediated by the MCP server. 
+This flow allows the LLM to control the studio through a standardized set of tools, mediated by the MCP server. 

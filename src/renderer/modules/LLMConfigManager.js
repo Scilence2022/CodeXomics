@@ -951,7 +951,7 @@ class LLMConfigManager {
     }
 
     buildSystemMessage(context) {
-        let systemMessage = `You are an AI assistant for a Genome Browser application. You help users analyze genomic data, navigate sequences, search for genes, and understand biological features.
+        let systemMessage = `You are an AI assistant for a Genome AI Studio application. You help users analyze genomic data, navigate sequences, search for genes, and understand biological features.
 
 You have access to tools that can:
 - Navigate to specific genomic positions (use tool: 'navigate_to_position', parameters: {chromosome: string, start: number, end: number})

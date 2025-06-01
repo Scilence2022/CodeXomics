@@ -1,9 +1,9 @@
 {
-  "name": "electron-genome-viewer",
+  "name": "genome-ai-studio",
   "version": "1.0.0",
-  "description": "A modern genome browser built with Electron",
+  "description": "An AI-powered genome analysis studio built with Electron",
   "main": "src/main.js",
-  "homepage": "https://github.com/Scilence2022/GenomeExplorer",
+  "homepage": "https://github.com/Scilence2022/GenomeAIStudio",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
@@ -23,12 +23,15 @@
   },
   "keywords": [
     "genome",
-    "browser",
+    "ai",
+    "studio",
     "bioinformatics",
     "electron",
     "genomics",
     "dna",
-    "sequence-analysis"
+    "sequence-analysis",
+    "artificial-intelligence",
+    "machine-learning"
   ],
   "author": {
     "name": "Lifu Song",
@@ -37,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Scilence2022/GenomeExplorer.git"
+    "url": "https://github.com/Scilence2022/GenomeAIStudio.git"
   },
   "devDependencies": {
     "electron": "^27.3.11",
@@ -56,8 +59,8 @@
     "marked": "^9.1.6"
   },
   "build": {
-    "appId": "com.genomeviewer.app",
-    "productName": "Genome Viewer",
+    "appId": "com.genomeai.studio",
+    "productName": "Genome AI Studio",
     "copyright": "Copyright © 2024 ${author}",
     "directories": {
       "output": "dist",
@@ -138,7 +141,7 @@
         }
       ],
       "icon": "build/icon.ico",
-      "publisherName": "Genome Viewer Team"
+      "publisherName": "Genome AI Studio Team"
     },
     "nsis": {
       "oneClick": false,
@@ -172,8 +175,8 @@
       ],
       "icon": "build/icons/",
       "category": "Science",
-      "synopsis": "Modern genome browser for sequence analysis",
-      "description": "A powerful and user-friendly genome browser built with Electron, supporting FASTA, GenBank, GFF, BED, VCF, and SAM/BAM files for comprehensive genomic analysis."
+      "synopsis": "AI-powered genome analysis studio",
+      "description": "An intelligent and user-friendly genome analysis studio built with Electron, featuring AI-powered search and analysis capabilities. Supports FASTA, GenBank, GFF, BED, VCF, and SAM/BAM files for comprehensive genomic research."
     },
     "snap": {
       "publish": {

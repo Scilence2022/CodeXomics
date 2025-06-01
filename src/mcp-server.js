@@ -1,6 +1,6 @@
 /**
- * MCP Server for Genome Browser Integration
- * Provides tools for LLM to interact with the genome browser
+ * MCP Server for Genome AI Studio Integration
+ * Provides tools for LLM to interact with the genome studio
  */
 
 const express = require('express');
@@ -13,7 +13,7 @@ class MCPGenomeBrowserServer {
         this.port = port;
         this.wsPort = wsPort;
         this.app = express();
-        this.clients = new Map(); // Store connected genome browser clients
+        this.clients = new Map(); // Store connected Genome AI Studio clients
         this.browserState = new Map(); // Store current state of each browser instance
         
         this.setupExpress();
@@ -151,7 +151,7 @@ class MCPGenomeBrowserServer {
 
             get_current_state: {
                 name: 'get_current_state',
-                description: 'Get current state of the genome browser',
+                description: 'Get current state of the Genome AI Studio',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -258,7 +258,7 @@ class MCPGenomeBrowserServer {
             // If no specific client, use the first available one
             const firstClient = this.clients.values().next().value;
             if (!firstClient) {
-                throw new Error('No genome browser clients connected');
+                throw new Error('No Genome AI Studio clients connected');
             }
             clientId = Array.from(this.clients.keys())[0];
         }

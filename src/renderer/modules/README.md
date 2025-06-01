@@ -1,6 +1,6 @@
-# Genome Browser Modular Architecture
+# Genome AI Studio Modular Architecture
 
-This document describes the enhanced modular architecture of the Electron Genome Browser application, including recent improvements and integrations.
+This document describes the enhanced modular architecture of Genome AI Studio, including recent improvements and integrations.
 
 ## Overview
 
@@ -121,7 +121,7 @@ Handles AI conversation, tool calling, and natural language interaction.
 **🆕 Recent Fixes:**
 - **Corrected search function calling** - Now properly uses `search_features` for text searches
 - **Enhanced system prompts** - Better function selection guidance
-- **Improved tool integration** - More reliable genome browser tool access
+- **Improved tool integration** - More reliable AI tool access
 - **Better error handling** - Graceful degradation and user feedback
 
 **Main Methods:**
@@ -285,4 +285,4 @@ Use the modular architecture (`renderer-modular.js`) for all new development:
 - Implement result caching where appropriate
 - Provide progressive result loading for large datasets
 
-This enhanced modular architecture provides a solid foundation for continued development of the Electron Genome Browser, with particular emphasis on AI reliability, visual quality, and overall user experience. 
+This enhanced modular architecture provides a solid foundation for continued development of Genome AI Studio, with particular emphasis on AI reliability, visual quality, and overall user experience. 

@@ -177,7 +177,7 @@ class GenomeBrowser {
             }
         }, 1000);
         
-        console.log('🎉 Genome Browser initialized successfully!');
+        console.log('🎉 Genome AI Studio initialized successfully!');
     }
 
     setupEventListeners() {
@@ -493,7 +493,7 @@ class GenomeBrowser {
 
     // Core genome display method
     async displayGenomeView(chromosome, sequence) {
-        // Create EcoCyc-like genome browser view
+        // Create EcoCyc-like studio view
         const container = document.getElementById('genomeViewer');
         
         // Show and update the navigation bar
@@ -544,7 +544,7 @@ class GenomeBrowser {
         // Show navigation controls
         document.getElementById('genomeNavigation').style.display = 'block';
         
-        // Create genome browser container
+        // Create Genome AI Studio container
         const browserContainer = document.createElement('div');
         browserContainer.className = 'genome-browser-container';
         
@@ -2179,7 +2179,7 @@ class GenomeBrowser {
     }
 }
 
-// Initialize the genome browser when the page loads
+// Initialize the Genome AI Studio when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.genomeBrowser = new GenomeBrowser();
 }); 

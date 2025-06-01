@@ -1,5 +1,5 @@
 /**
- * ConfigManager - Comprehensive configuration management for the Genome Browser
+ * ConfigManager - Comprehensive configuration management for the Genome AI Studio
  * Handles LLM settings, UI preferences, chat history, and app configurations
  */
 class ConfigManager {
