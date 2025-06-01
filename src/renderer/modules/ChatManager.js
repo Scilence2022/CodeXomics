@@ -719,6 +719,26 @@ class ChatManager {
         
         // Add window resize handler to ensure chat stays in bounds
         this.setupWindowResizeHandler();
+        
+        // Force recalculation of position after DOM insertion
+        setTimeout(() => {
+            const chatPanel = document.getElementById('llmChatPanel');
+            if (chatPanel) {
+                // If using default position, recalculate to ensure it's at bottom-right
+                const currentPos = this.configManager.get('chat.position');
+                const freshDefaultPos = this.getDefaultChatPosition();
+                
+                console.log('Current saved position:', currentPos);
+                console.log('Fresh calculated position:', freshDefaultPos);
+                
+                // If there's no saved position or if we want to force bottom positioning
+                if (!currentPos || currentPos.y < (window.innerHeight * 0.3)) {
+                    console.log('Applying bottom-right positioning');
+                    chatPanel.style.left = freshDefaultPos.x + 'px';
+                    chatPanel.style.top = freshDefaultPos.y + 'px';
+                }
+            }
+        }, 50);
     }
 
     /**
@@ -726,10 +746,18 @@ class ChatManager {
      */
     getDefaultChatPosition() {
         const defaultSize = { width: 400, height: 600 };
-        return { 
-            x: Math.max(20, window.innerWidth - defaultSize.width - 20), 
-            y: Math.max(20, window.innerHeight - defaultSize.height - 20)
-        };
+        
+        // Get the actual available viewport dimensions - use document.documentElement for better accuracy
+        const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+        const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+        
+        // Calculate bottom-right position
+        const x = Math.max(20, viewportWidth - defaultSize.width - 20);
+        const y = Math.max(20, viewportHeight - defaultSize.height - 20);
+        
+        console.log('Chat position calculation:', { viewportWidth, viewportHeight, x, y, defaultSize });
+        
+        return { x, y };
     }
 
     /**
@@ -739,14 +767,18 @@ class ChatManager {
         window.addEventListener('resize', () => {
             const chatPanel = document.getElementById('llmChatPanel');
             if (chatPanel) {
+                // Use same viewport calculation as getDefaultChatPosition
+                const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+                
                 // Ensure chat panel stays within viewport bounds
                 const currentLeft = parseInt(chatPanel.style.left, 10);
                 const currentTop = parseInt(chatPanel.style.top, 10);
                 const panelWidth = parseInt(chatPanel.style.width, 10);
                 const panelHeight = parseInt(chatPanel.style.height, 10);
                 
-                const maxLeft = window.innerWidth - panelWidth - 10;
-                const maxTop = window.innerHeight - panelHeight - 10;
+                const maxLeft = viewportWidth - panelWidth - 10;
+                const maxTop = viewportHeight - panelHeight - 10;
                 
                 let needsUpdate = false;
                 let newLeft = currentLeft;
@@ -765,6 +797,7 @@ class ChatManager {
                 if (needsUpdate) {
                     chatPanel.style.left = newLeft + 'px';
                     chatPanel.style.top = newTop + 'px';
+                    console.log('Chat position adjusted on resize:', { newLeft, newTop });
                 }
             }
         });
