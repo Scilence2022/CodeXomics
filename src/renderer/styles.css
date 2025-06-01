@@ -6751,3 +6751,134 @@ body {
         background: linear-gradient(to right, transparent, #495057, transparent);
     }
 }
+
+/* MCP Settings Modal Styles */
+.mcp-connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 15px 0;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.mcp-connection-status .status-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+#mcpStatusIcon {
+    font-size: 12px;
+}
+
+#mcpStatusIcon.connected {
+    color: #28a745;
+    animation: pulse 2s infinite;
+}
+
+#mcpStatusIcon.disconnected {
+    color: #dc3545;
+}
+
+#mcpStatusIcon.connecting {
+    color: #ffc107;
+    animation: spin 1s linear infinite;
+}
+
+.mcp-connection-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.mcp-connection-controls .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.mcp-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: #e7f3ff;
+    border: 1px solid #bee5eb;
+    border-radius: 6px;
+}
+
+.mcp-info h4 {
+    margin: 0 0 10px 0;
+    color: #0c5460;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mcp-info p {
+    margin: 8px 0;
+    font-size: 13px;
+    color: #0c5460;
+    line-height: 1.4;
+}
+
+.mcp-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.mcp-info li {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #0c5460;
+    line-height: 1.3;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .mcp-connection-status {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .mcp-connection-controls {
+        justify-content: center;
+    }
+    
+    .mcp-info {
+        padding: 12px;
+    }
+    
+    .mcp-info h4 {
+        font-size: 13px;
+    }
+    
+    .mcp-info p,
+    .mcp-info li {
+        font-size: 12px;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .mcp-connection-status {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .mcp-info {
+        background: #2a4a5c;
+        border-color: #4a6fa5;
+    }
+    
+    .mcp-info h4,
+    .mcp-info p,
+    .mcp-info li {
+        color: #e2e8f0;
+    }
+}

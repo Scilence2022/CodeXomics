@@ -43,6 +43,11 @@
                             Configure LLMs
                         </button>
                         <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="mcpSettingsBtn">
+                            <i class="fas fa-server"></i>
+                            MCP Server Settings
+                        </button>
+                        <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="settingsBtn">
                             <i class="fas fa-sliders-h"></i>
                             General Settings
@@ -834,6 +839,70 @@
             </div>
             <div class="modal-footer">
                 <button id="saveLLMConfigBtn" class="btn btn-primary">Save Configuration</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MCP Server Settings Modal -->
+    <div id="mcpSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>MCP Server Settings</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="mcpAutoConnect" checked> 
+                        Auto-connect to MCP server on startup
+                    </label>
+                    <small class="help-text">When enabled, the application will automatically try to connect to the MCP server when starting up.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mcpServerUrl">MCP Server URL:</label>
+                    <input type="text" id="mcpServerUrl" value="ws://localhost:3001" class="input-full" placeholder="ws://localhost:3001">
+                    <small class="help-text">WebSocket URL for the MCP server connection.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mcpReconnectDelay">Reconnection Delay (seconds):</label>
+                    <input type="number" id="mcpReconnectDelay" value="5" min="1" max="60" class="input-full">
+                    <small class="help-text">Delay between reconnection attempts when connection is lost.</small>
+                </div>
+                
+                <div class="mcp-connection-status">
+                    <div class="status-info">
+                        <i class="fas fa-circle" id="mcpStatusIcon"></i>
+                        <span id="mcpStatusText">Disconnected</span>
+                    </div>
+                    <div class="mcp-connection-controls">
+                        <button id="mcpConnectBtn" class="btn btn-primary">
+                            <i class="fas fa-plug"></i>
+                            Connect
+                        </button>
+                        <button id="mcpDisconnectBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-unlink"></i>
+                            Disconnect
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mcp-info">
+                    <h4><i class="fas fa-info-circle"></i> About MCP Server</h4>
+                    <p>The Model Context Protocol (MCP) server enables advanced AI integration with external tools and data sources. When connected, it allows LLMs to:</p>
+                    <ul>
+                        <li>Access real-time genome data and annotations</li>
+                        <li>Perform advanced analysis operations</li>
+                        <li>Interact with external bioinformatics tools</li>
+                        <li>Provide more contextual and accurate responses</li>
+                    </ul>
+                    <p><strong>Note:</strong> The MCP server is optional. The application works fully without it.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveMCPSettingsBtn" class="btn btn-primary">Save Settings</button>
                 <button class="btn modal-close">Cancel</button>
             </div>
         </div>

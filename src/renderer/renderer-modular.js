@@ -6,6 +6,9 @@ const { ipcRenderer } = require('electron');
  */
 class GenomeBrowser {
     constructor() {
+        // Initialize ConfigManager first
+        this.configManager = new ConfigManager();
+        
         this.fileManager = new FileManager(this);
         this.trackRenderer = new TrackRenderer(this);
         this.navigationManager = new NavigationManager(this);
@@ -115,7 +118,7 @@ class GenomeBrowser {
         // Step 4: Initialize LLM configuration
         console.log('🤖 About to initialize LLMConfigManager...');
         try {
-            this.llmConfigManager = new LLMConfigManager();
+            this.llmConfigManager = new LLMConfigManager(this.configManager);
             console.log('✅ LLMConfigManager initialized successfully');
         } catch (error) {
             console.error('❌ Error initializing LLMConfigManager:', error);
@@ -124,7 +127,7 @@ class GenomeBrowser {
         // Step 5: Initialize ChatManager
         console.log('💬 About to initialize ChatManager...');
         try {
-            this.chatManager = new ChatManager(this);
+            this.chatManager = new ChatManager(this, this.configManager);
             console.log('✅ ChatManager initialized successfully');
         } catch (error) {
             console.error('❌ Error initializing ChatManager:', error);
@@ -305,6 +308,123 @@ class GenomeBrowser {
         document.getElementById('splitterToggleBtn').addEventListener('click', () => {
             this.uiManager.toggleSidebarFromSplitter();
         });
+        
+        // MCP Settings modal
+        document.getElementById('mcpSettingsBtn')?.addEventListener('click', () => this.showMCPSettingsModal());
+    }
+
+    showMCPSettingsModal() {
+        const modal = document.getElementById('mcpSettingsModal');
+        if (modal) {
+            // Load current settings with proper fallback
+            const defaultSettings = {
+                autoConnect: false,
+                serverUrl: 'ws://localhost:3001',
+                reconnectDelay: 5
+            };
+            
+            const mcpSettings = this.configManager ? 
+                this.configManager.get('mcpSettings', defaultSettings) : 
+                defaultSettings;
+            
+            // Populate modal fields
+            document.getElementById('mcpAutoConnect').checked = mcpSettings.autoConnect;
+            document.getElementById('mcpServerUrl').value = mcpSettings.serverUrl;
+            document.getElementById('mcpReconnectDelay').value = mcpSettings.reconnectDelay;
+            
+            // Update connection status
+            if (this.chatManager) {
+                this.chatManager.updateMCPStatus(this.chatManager.isConnected ? 'connected' : 'disconnected');
+            }
+            
+            // Setup modal event listeners if not already done
+            this.setupMCPModalListeners();
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+    }
+
+    setupMCPModalListeners() {
+        const modal = document.getElementById('mcpSettingsModal');
+        if (!modal || modal.hasAttribute('data-listeners-setup')) return;
+        
+        modal.setAttribute('data-listeners-setup', 'true');
+        
+        // Save settings button
+        document.getElementById('saveMCPSettingsBtn')?.addEventListener('click', () => {
+            this.saveMCPSettings();
+        });
+        
+        // Connect button
+        document.getElementById('mcpConnectBtn')?.addEventListener('click', () => {
+            if (this.chatManager) {
+                this.chatManager.setupMCPConnection();
+            }
+        });
+        
+        // Disconnect button
+        document.getElementById('mcpDisconnectBtn')?.addEventListener('click', () => {
+            if (this.chatManager) {
+                this.chatManager.disconnectMCP();
+            }
+        });
+        
+        // Close modal handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.classList.remove('show');
+            });
+        });
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+    }
+
+    saveMCPSettings() {
+        const mcpSettings = {
+            autoConnect: document.getElementById('mcpAutoConnect').checked,
+            serverUrl: document.getElementById('mcpServerUrl').value.trim(),
+            reconnectDelay: parseInt(document.getElementById('mcpReconnectDelay').value) || 5
+        };
+        
+        // Validate settings
+        if (!mcpSettings.serverUrl) {
+            alert('Please enter a valid MCP server URL');
+            return;
+        }
+        
+        if (mcpSettings.reconnectDelay < 1 || mcpSettings.reconnectDelay > 60) {
+            alert('Reconnection delay must be between 1 and 60 seconds');
+            return;
+        }
+        
+        // Save settings if configManager is available
+        if (this.configManager) {
+            this.configManager.set('mcpSettings', mcpSettings);
+        } else {
+            console.warn('ConfigManager not available, settings not saved');
+        }
+        
+        // Close modal
+        document.getElementById('mcpSettingsModal').classList.remove('show');
+        
+        // Show confirmation
+        this.updateStatus('MCP settings saved successfully');
+        
+        // If auto-connect is now enabled and not currently connected, try to connect
+        if (mcpSettings.autoConnect && this.chatManager && !this.chatManager.isConnected) {
+            this.chatManager.setupMCPConnection();
+        }
+        
+        // If auto-connect is disabled and currently connected, disconnect
+        if (!mcpSettings.autoConnect && this.chatManager && this.chatManager.isConnected) {
+            this.chatManager.disconnectMCP();
+        }
     }
 
     setupFeatureFilterListeners() {

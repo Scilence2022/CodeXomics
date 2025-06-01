@@ -2,7 +2,7 @@
  * ChatManager - Handles LLM chat interface and MCP communication
  */
 class ChatManager {
-    constructor(app) {
+    constructor(app, configManager = null) {
         this.app = app;
         this.mcpSocket = null;
         this.clientId = null;
@@ -10,8 +10,8 @@ class ChatManager {
         this.activeRequests = new Map();
         this.pendingMessages = [];
         
-        // Initialize configuration manager
-        this.configManager = new ConfigManager();
+        // Use provided ConfigManager or create new one as fallback
+        this.configManager = configManager || new ConfigManager();
         
         // Initialize LLM configuration manager with config integration
         this.llmConfigManager = new LLMConfigManager(this.configManager);
@@ -21,7 +21,8 @@ class ChatManager {
         
         // DON'T load chat history here - wait for UI to be created
         
-        this.setupMCPConnection();
+        // Only setup MCP connection if auto-connect is enabled
+        this.checkAndSetupMCPConnection();
         this.initializeUI();
         
         // Load chat history AFTER UI is initialized
@@ -30,14 +31,44 @@ class ChatManager {
         }, 100);
     }
 
+    async checkAndSetupMCPConnection() {
+        const defaultSettings = {
+            autoConnect: false, // Default to false to avoid unwanted connections
+            serverUrl: 'ws://localhost:3001',
+            reconnectDelay: 5
+        };
+        
+        const mcpSettings = this.configManager ? 
+            this.configManager.get('mcpSettings', defaultSettings) : 
+            defaultSettings;
+        
+        if (mcpSettings.autoConnect) {
+            this.setupMCPConnection();
+        }
+    }
+
     async setupMCPConnection() {
+        const defaultSettings = {
+            autoConnect: false,
+            serverUrl: 'ws://localhost:3001',
+            reconnectDelay: 5
+        };
+        
+        const mcpSettings = this.configManager ? 
+            this.configManager.get('mcpSettings', defaultSettings) : 
+            defaultSettings;
+        
         try {
-            this.mcpSocket = new WebSocket('ws://localhost:3001');
+            // Update status to connecting
+            this.updateMCPStatus('connecting');
+            
+            this.mcpSocket = new WebSocket(mcpSettings.serverUrl);
             
             this.mcpSocket.onopen = () => {
                 console.log('Connected to MCP server');
                 this.isConnected = true;
                 this.updateConnectionStatus(true);
+                this.updateMCPStatus('connected');
                 
                 // Send any pending messages
                 this.pendingMessages.forEach(msg => this.sendToMCP(msg));
@@ -57,19 +88,73 @@ class ChatManager {
                 console.log('Disconnected from MCP server');
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
+                this.updateMCPStatus('disconnected');
                 
-                // Attempt to reconnect after 5 seconds
-                setTimeout(() => this.setupMCPConnection(), 5000);
+                // Only attempt to reconnect if auto-connect is still enabled
+                const currentSettings = this.configManager ? 
+                    this.configManager.get('mcpSettings', defaultSettings) : 
+                    defaultSettings;
+                    
+                if (currentSettings.autoConnect) {
+                    setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
+                }
             };
 
             this.mcpSocket.onerror = (error) => {
                 console.error('MCP connection error:', error);
                 this.updateConnectionStatus(false);
+                this.updateMCPStatus('disconnected');
             };
 
         } catch (error) {
             console.error('Failed to setup MCP connection:', error);
             this.updateConnectionStatus(false);
+            this.updateMCPStatus('disconnected');
+        }
+    }
+
+    disconnectMCP() {
+        if (this.mcpSocket) {
+            console.log('Manually disconnecting from MCP server');
+            this.mcpSocket.close();
+            this.mcpSocket = null;
+        }
+        this.isConnected = false;
+        this.updateConnectionStatus(false);
+        this.updateMCPStatus('disconnected');
+    }
+
+    // Update MCP status in the settings modal if it's open
+    updateMCPStatus(status) {
+        const statusIcon = document.getElementById('mcpStatusIcon');
+        const statusText = document.getElementById('mcpStatusText');
+        const connectBtn = document.getElementById('mcpConnectBtn');
+        const disconnectBtn = document.getElementById('mcpDisconnectBtn');
+        
+        if (statusIcon && statusText) {
+            statusIcon.className = 'fas fa-circle';
+            
+            switch (status) {
+                case 'connected':
+                    statusIcon.classList.add('connected');
+                    statusText.textContent = 'Connected';
+                    if (connectBtn) connectBtn.disabled = true;
+                    if (disconnectBtn) disconnectBtn.disabled = false;
+                    break;
+                case 'connecting':
+                    statusIcon.classList.add('connecting');
+                    statusText.textContent = 'Connecting...';
+                    if (connectBtn) connectBtn.disabled = true;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
+                    break;
+                case 'disconnected':
+                default:
+                    statusIcon.classList.add('disconnected');
+                    statusText.textContent = 'Disconnected';
+                    if (connectBtn) connectBtn.disabled = false;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
+                    break;
+            }
         }
     }
 
