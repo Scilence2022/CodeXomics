@@ -564,9 +564,13 @@ class ChatManager {
     }
 
     createChatInterface() {
+        // Calculate right-bottom position
+        const defaultSize = { width: 400, height: 600 };
+        const defaultPosition = this.getDefaultChatPosition();
+        
         // Load saved position and size
-        const savedPosition = this.configManager.get('chat.position', { x: 20, y: 20 });
-        const savedSize = this.configManager.get('chat.size', { width: 400, height: 600 });
+        const savedPosition = this.configManager.get('chat.position', defaultPosition);
+        const savedSize = this.configManager.get('chat.size', defaultSize);
         
         // Create chat panel HTML
         const chatHTML = `
@@ -712,6 +716,58 @@ class ChatManager {
         // Setup dragging and resizing
         this.setupChatDragging();
         this.setupChatResizing();
+        
+        // Add window resize handler to ensure chat stays in bounds
+        this.setupWindowResizeHandler();
+    }
+
+    /**
+     * Calculate default right-bottom position
+     */
+    getDefaultChatPosition() {
+        const defaultSize = { width: 400, height: 600 };
+        return { 
+            x: Math.max(20, window.innerWidth - defaultSize.width - 20), 
+            y: Math.max(20, window.innerHeight - defaultSize.height - 20)
+        };
+    }
+
+    /**
+     * Setup window resize handler to keep chat panel in bounds
+     */
+    setupWindowResizeHandler() {
+        window.addEventListener('resize', () => {
+            const chatPanel = document.getElementById('llmChatPanel');
+            if (chatPanel) {
+                // Ensure chat panel stays within viewport bounds
+                const currentLeft = parseInt(chatPanel.style.left, 10);
+                const currentTop = parseInt(chatPanel.style.top, 10);
+                const panelWidth = parseInt(chatPanel.style.width, 10);
+                const panelHeight = parseInt(chatPanel.style.height, 10);
+                
+                const maxLeft = window.innerWidth - panelWidth - 10;
+                const maxTop = window.innerHeight - panelHeight - 10;
+                
+                let needsUpdate = false;
+                let newLeft = currentLeft;
+                let newTop = currentTop;
+                
+                if (currentLeft > maxLeft) {
+                    newLeft = Math.max(10, maxLeft);
+                    needsUpdate = true;
+                }
+                
+                if (currentTop > maxTop) {
+                    newTop = Math.max(10, maxTop);
+                    needsUpdate = true;
+                }
+                
+                if (needsUpdate) {
+                    chatPanel.style.left = newLeft + 'px';
+                    chatPanel.style.top = newTop + 'px';
+                }
+            }
+        });
     }
 
     setupEventListeners() {
@@ -4172,8 +4228,8 @@ If the user is asking a general question or doesn't need a tool, respond normall
     async resetChatPosition() {
         try {
             const chatPanel = document.getElementById('llmChatPanel');
-            const defaultPosition = { x: 20, y: 20 };
             const defaultSize = { width: 400, height: 600 };
+            const defaultPosition = this.getDefaultChatPosition();
             
             chatPanel.style.left = defaultPosition.x + 'px';
             chatPanel.style.top = defaultPosition.y + 'px';
@@ -4185,9 +4241,10 @@ If the user is asking a general question or doesn't need a tool, respond normall
             await this.configManager.set('chat.size', defaultSize);
             await this.configManager.saveConfig();
             
-            this.showNotification('✅ Chat position and size reset', 'success');
+            // Removed notification message as requested
         } catch (error) {
             console.error('Error resetting chat position:', error);
+            // Only show error notifications, not success ones
             this.showNotification('❌ Failed to reset chat position', 'error');
         }
     }
