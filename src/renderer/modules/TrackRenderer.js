@@ -271,7 +271,7 @@ class TrackRenderer {
         
         const trackContent = document.createElement('div');
         trackContent.className = 'track-content';
-        trackContent.style.height = '120px'; // Increased height for dual display
+        trackContent.style.height = '140px'; // Increased height by 20% (120px * 1.2 = 144px)
         
         // Add draggable functionality
         this.genomeBrowser.makeDraggable(trackContent, chromosome);
@@ -1086,57 +1086,55 @@ class TrackRenderer {
         if (skewData.length < 2) return;
         
         const skewRange = skewMax - skewMin;
-        const maxY = centerY + plotHeight;
         
-        // Calculate zero line position
+        // Calculate zero line position in the lower half
+        const skewHalfHeight = (plotHeight - centerY);
         const zeroRatio = skewRange > 0 ? Math.abs(skewMin) / skewRange : 0.5;
-        const zeroY = maxY - zeroRatio * plotHeight;
+        const zeroY = centerY + zeroRatio * skewHalfHeight;
         
-        // Create paths for positive and negative areas
+        // Create continuous area paths for positive and negative regions
         let posAreaData = '';
         let negAreaData = '';
         let hasPositive = false;
         let hasNegative = false;
         
-        // Build path data for areas
+        // Build continuous area paths
         for (let i = 0; i < skewData.length; i++) {
             const x = padding + (positions[i] / sequenceLength) * plotWidth;
             const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-            const y = maxY - normalizedSkew * plotHeight;
+            const y = centerY + (1 - normalizedSkew) * skewHalfHeight;
             
             if (skewData[i] >= 0) {
                 if (!hasPositive) {
-                    posAreaData = `M ${x} ${zeroY} L ${x} ${Math.min(y, zeroY)}`;
+                    posAreaData = `M ${x} ${zeroY}`;
                     hasPositive = true;
-                } else {
-                    posAreaData += ` L ${x} ${Math.min(y, zeroY)}`;
                 }
+                posAreaData += ` L ${x} ${Math.min(y, zeroY)}`;
             }
             
             if (skewData[i] <= 0) {
                 if (!hasNegative) {
-                    negAreaData = `M ${x} ${zeroY} L ${x} ${Math.max(y, zeroY)}`;
+                    negAreaData = `M ${x} ${zeroY}`;
                     hasNegative = true;
-                } else {
-                    negAreaData += ` L ${x} ${Math.max(y, zeroY)}`;
                 }
+                negAreaData += ` L ${x} ${Math.max(y, zeroY)}`;
             }
         }
         
-        // Draw positive area
+        // Close positive area path
         if (hasPositive && posAreaData) {
+            posAreaData += ` L ${padding + plotWidth} ${zeroY} L ${padding} ${zeroY} Z`;
             const posPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            posAreaData += ` L ${padding + plotWidth} ${zeroY} Z`;
             posPath.setAttribute('d', posAreaData);
             posPath.setAttribute('fill', 'url(#skewPosGradient)');
             posPath.setAttribute('stroke', 'none');
             svg.appendChild(posPath);
         }
         
-        // Draw negative area
+        // Close negative area path
         if (hasNegative && negAreaData) {
+            negAreaData += ` L ${padding + plotWidth} ${zeroY} L ${padding} ${zeroY} Z`;
             const negPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            negAreaData += ` L ${padding + plotWidth} ${zeroY} Z`;
             negPath.setAttribute('d', negAreaData);
             negPath.setAttribute('fill', 'url(#skewNegGradient)');
             negPath.setAttribute('stroke', 'none');
@@ -1150,7 +1148,7 @@ class TrackRenderer {
         for (let i = 0; i < skewData.length; i++) {
             const x = padding + (positions[i] / sequenceLength) * plotWidth;
             const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-            const y = maxY - normalizedSkew * plotHeight;
+            const y = centerY + (1 - normalizedSkew) * skewHalfHeight;
             
             if (i === 0) {
                 lineData = `M ${x} ${y}`;
