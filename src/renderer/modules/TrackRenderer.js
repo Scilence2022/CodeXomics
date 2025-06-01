@@ -392,7 +392,7 @@ class TrackRenderer {
         return track;
     }
 
-    createReadsTrack(chromosome) {
+    async createReadsTrack(chromosome) {
         const track = document.createElement('div');
         track.className = 'reads-track';
         
@@ -407,13 +407,12 @@ class TrackRenderer {
         // Add draggable functionality
         this.genomeBrowser.makeDraggable(trackContent, chromosome);
         
-        const reads = this.genomeBrowser.currentReads[chromosome] || [];
         const start = this.genomeBrowser.currentPosition.start;
         const end = this.genomeBrowser.currentPosition.end;
         const range = end - start;
         
-        // Check if we have any reads data at all
-        if (!this.genomeBrowser.currentReads || Object.keys(this.genomeBrowser.currentReads).length === 0) {
+        // Check if ReadsManager has data loaded
+        if (!this.genomeBrowser.readsManager.rawReadsData) {
             const noDataMsg = document.createElement('div');
             noDataMsg.className = 'no-reads-message';
             noDataMsg.textContent = 'No SAM/BAM file loaded. Load a SAM/BAM file to see aligned reads.';
@@ -432,102 +431,144 @@ class TrackRenderer {
             return track;
         }
         
-        // Filter reads that overlap with current region
-        const visibleReads = reads.filter(read => 
-            read.start && read.end && 
-            read.start <= end && read.end >= start
-        );
+        // Show loading indicator while fetching reads
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = 'reads-loading';
+        loadingMsg.textContent = 'Loading reads...';
+        loadingMsg.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-style: italic;
+            font-size: 12px;
+        `;
+        trackContent.appendChild(loadingMsg);
         
-        console.log(`Displaying ${visibleReads.length} reads in region ${start}-${end}`);
-        
-        if (visibleReads.length === 0) {
-            const noReadsMsg = document.createElement('div');
-            noReadsMsg.className = 'no-reads-message';
-            noReadsMsg.textContent = 'No reads in this region';
-            noReadsMsg.style.cssText = `
+        try {
+            // Get reads for current region using ReadsManager
+            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, start, end);
+            
+            // Remove loading message
+            trackContent.removeChild(loadingMsg);
+            
+            console.log(`Displaying ${visibleReads.length} reads in region ${start}-${end}`);
+            
+            if (visibleReads.length === 0) {
+                const noReadsMsg = document.createElement('div');
+                noReadsMsg.className = 'no-reads-message';
+                noReadsMsg.textContent = 'No reads in this region';
+                noReadsMsg.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: #666;
+                    font-style: italic;
+                    font-size: 12px;
+                `;
+                trackContent.appendChild(noReadsMsg);
+                trackContent.style.height = '80px'; // Default height for empty track
+                track.appendChild(trackContent);
+                return track;
+            }
+            
+            // Arrange reads into non-overlapping rows
+            const readRows = this.arrangeReadsInRows(visibleReads, start, end);
+            const readHeight = 14; // Height of each read
+            const rowSpacing = 4; // Space between rows
+            const topPadding = 10; // Top padding
+            const bottomPadding = 10; // Bottom padding
+            
+            // Calculate adaptive track height
+            const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+            trackContent.style.height = `${Math.max(trackHeight, 60)}px`; // Minimum 60px height
+            
+            // Create read elements
+            readRows.forEach((rowReads, rowIndex) => {
+                rowReads.forEach((read) => {
+                    const readElement = document.createElement('div');
+                    readElement.className = 'read-element';
+                    
+                    const readStart = Math.max(read.start, start);
+                    const readEnd = Math.min(read.end, end);
+                    const left = ((readStart - start) / range) * 100;
+                    const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
+                    
+                    readElement.style.left = `${left}%`;
+                    readElement.style.width = `${width}%`;
+                    readElement.style.height = `${readHeight}px`;
+                    readElement.style.top = `${topPadding + rowIndex * (readHeight + rowSpacing)}px`;
+                    readElement.style.position = 'absolute';
+                    readElement.style.background = read.strand === '+' ? '#00b894' : '#f39c12';
+                    readElement.style.borderRadius = '2px';
+                    readElement.style.cursor = 'pointer';
+                    readElement.style.border = '1px solid rgba(0,0,0,0.2)';
+                    
+                    // Create read tooltip
+                    const readInfo = `Read: ${read.id || 'Unknown'}\n` +
+                                      `Position: ${read.start}-${read.end}\n` +
+                                      `Strand: ${read.strand || 'N/A'}\n` +
+                                      `Mapping Quality: ${read.mappingQuality || 'N/A'}\n` +
+                                      `Row: ${rowIndex + 1}`;
+                    
+                    readElement.title = readInfo;
+                    
+                    // Add click handler for detailed info
+                    readElement.addEventListener('click', () => {
+                        alert(readInfo);
+                    });
+                    
+                    trackContent.appendChild(readElement);
+                });
+            });
+            
+            // Add reads statistics with cache info
+            const stats = this.genomeBrowser.readsManager.getCacheStats();
+            const statsElement = document.createElement('div');
+            statsElement.className = 'reads-stats';
+            statsElement.style.cssText = `
+                position: absolute;
+                top: 5px;
+                right: 10px;
+                background: rgba(255,255,255,0.9);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                color: #666;
+                border: 1px solid #ddd;
+            `;
+            statsElement.textContent = `${visibleReads.length} reads | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
+            trackContent.appendChild(statsElement);
+            
+            track.appendChild(trackContent);
+            return track;
+            
+        } catch (error) {
+            // Remove loading message
+            if (trackContent.contains(loadingMsg)) {
+                trackContent.removeChild(loadingMsg);
+            }
+            
+            // Show error message
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'reads-error';
+            errorMsg.textContent = `Error loading reads: ${error.message}`;
+            errorMsg.style.cssText = `
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                color: #666;
+                color: #d32f2f;
                 font-style: italic;
                 font-size: 12px;
             `;
-            trackContent.appendChild(noReadsMsg);
-            trackContent.style.height = '80px'; // Default height for empty track
+            trackContent.appendChild(errorMsg);
+            trackContent.style.height = '80px'; // Default height for error track
             track.appendChild(trackContent);
             return track;
         }
-        
-        // Arrange reads into non-overlapping rows
-        const readRows = this.arrangeReadsInRows(visibleReads, start, end);
-        const readHeight = 14; // Height of each read
-        const rowSpacing = 4; // Space between rows
-        const topPadding = 10; // Top padding
-        const bottomPadding = 10; // Bottom padding
-        
-        // Calculate adaptive track height
-        const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
-        trackContent.style.height = `${Math.max(trackHeight, 60)}px`; // Minimum 60px height
-        
-        // Create read elements
-        readRows.forEach((rowReads, rowIndex) => {
-            rowReads.forEach((read) => {
-                const readElement = document.createElement('div');
-                readElement.className = 'read-element';
-                
-                const readStart = Math.max(read.start, start);
-                const readEnd = Math.min(read.end, end);
-                const left = ((readStart - start) / range) * 100;
-                const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
-                
-                readElement.style.left = `${left}%`;
-                readElement.style.width = `${width}%`;
-                readElement.style.height = `${readHeight}px`;
-                readElement.style.top = `${topPadding + rowIndex * (readHeight + rowSpacing)}px`;
-                readElement.style.position = 'absolute';
-                readElement.style.background = read.strand === '+' ? '#00b894' : '#f39c12';
-                readElement.style.borderRadius = '2px';
-                readElement.style.cursor = 'pointer';
-                readElement.style.border = '1px solid rgba(0,0,0,0.2)';
-                
-                // Create read tooltip
-                const readInfo = `Read: ${read.id || 'Unknown'}\n` +
-                                  `Position: ${read.start}-${read.end}\n` +
-                                  `Strand: ${read.strand || 'N/A'}\n` +
-                                  `Mapping Quality: ${read.mappingQuality || 'N/A'}\n` +
-                                  `Row: ${rowIndex + 1}`;
-                
-                readElement.title = readInfo;
-                
-                // Add click handler for detailed info
-                readElement.addEventListener('click', () => {
-                    alert(readInfo);
-                });
-                
-                trackContent.appendChild(readElement);
-            });
-        });
-        
-        // Add reads statistics
-        const statsElement = document.createElement('div');
-        statsElement.className = 'reads-stats';
-        statsElement.style.cssText = `
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            background: rgba(255,255,255,0.9);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            color: #666;
-            border: 1px solid #ddd;
-        `;
-        statsElement.textContent = `${visibleReads.length} reads in ${readRows.length} rows`;
-        trackContent.appendChild(statsElement);
-        
-        track.appendChild(trackContent);
-        return track;
     }
 
     // New method to arrange reads into non-overlapping rows

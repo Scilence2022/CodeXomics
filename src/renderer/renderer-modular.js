@@ -13,12 +13,15 @@ class GenomeBrowser {
         this.uiManager = new UIManager(this);
         this.sequenceUtils = new SequenceUtils(this);
         this.exportManager = new ExportManager(this);
+        this.readsManager = new ReadsManager(this); // Initialize reads manager
         
         // State
         this.currentChromosome = null;
-        this.currentSequence = '';
-        this.currentAnnotations = [];
-        this.currentPosition = { start: 0, end: 0 };
+        this.currentSequence = {};
+        this.currentAnnotations = {};
+        this.currentVariants = {};
+        this.currentReads = {}; // Keep for backward compatibility, but will be managed by ReadsManager
+        this.currentPosition = { start: 0, end: 1000 };
         this.loadedFiles = [];
         this.sequenceLength = 0;
         this.operons = [];
@@ -51,8 +54,6 @@ class GenomeBrowser {
         };
 
         this.currentFile = null;
-        this.currentVariants = {};
-        this.currentReads = {};
         this.searchResults = [];
         this.currentSearchIndex = 0;
         
@@ -77,7 +78,7 @@ class GenomeBrowser {
         this.currentSequenceSelection = null; // Track current sequence selection
         
         // Initialize track visibility
-        this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks including sequence
+        this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks
         
         // Initialize gene filters (corresponds to featureVisibility)
         this.geneFilters = {
@@ -371,7 +372,7 @@ class GenomeBrowser {
     }
 
     // Core genome display method
-    displayGenomeView(chromosome, sequence) {
+    async displayGenomeView(chromosome, sequence) {
         // Create EcoCyc-like genome browser view
         const container = document.getElementById('genomeViewer');
         
@@ -448,9 +449,9 @@ class GenomeBrowser {
             tracksToShow.push({ element: variantTrack, type: 'variants' });
         }
         
-        // 4. Aligned reads track (show if selected, even without data)
+        // 4. Aligned reads track (show if selected, even without data) - Now async
         if (this.visibleTracks.has('reads')) {
-            const readsTrack = this.trackRenderer.createReadsTrack(chromosome);
+            const readsTrack = await this.trackRenderer.createReadsTrack(chromosome);
             tracksToShow.push({ element: readsTrack, type: 'reads' });
         }
         
@@ -485,6 +486,11 @@ class GenomeBrowser {
         
         // Handle bottom sequence panel separately (always docked to bottom)
         this.handleBottomSequencePanel(chromosome, sequence);
+        
+        // Notify reads manager of navigation change for cache management
+        if (this.readsManager) {
+            this.readsManager.onNavigationChange(chromosome, this.currentPosition.start, this.currentPosition.end);
+        }
         
         // Re-highlight selected gene if there is one
         if (this.selectedGene && this.selectedGene.gene) {
