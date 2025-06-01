@@ -2,53 +2,304 @@
 
 ## Overview
 
-The Genome Browser includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. Users can configure multiple LLM providers and communicate with the genome browser through conversational AI.
+The Electron Genome Browser includes a comprehensive LLM (Large Language Model) chat interface that enables natural language interaction with genomic data. The AI assistant has been recently enhanced with **corrected function calling** that properly distinguishes between text-based searches and position-based searches, providing more accurate and reliable responses.
+
+## 🆕 Recent Improvements
+
+### **Fixed Search Function Calling**
+- **Corrected LLM behavior**: AI now properly uses `search_features` for text-based searches like "find DNA polymerase"
+- **Clear function distinction**: Separated text search (`search_features`) from position-based search (`get_nearby_features`)
+- **Enhanced system prompts**: Better guidance with explicit examples and rules
+- **Improved reliability**: More consistent and accurate function selection
+
+### **Enhanced AI Capabilities**
+- **Smarter function selection**: AI correctly interprets search intentions
+- **Better examples**: More explicit function call examples in system prompts
+- **Improved accuracy**: Reduced confusion between different search types
+- **Real-time learning**: AI adapts to user patterns and preferences
 
 ## Features
 
 ### 🤖 **Multi-Provider LLM Support**
 - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4, GPT-3.5 Turbo
 - **Anthropic**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
-- **Google**: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini Pro
+- **Google**: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 1.0 Pro
 - **Local LLMs**: Ollama, LMStudio, or any OpenAI-compatible API
 
 ### ⚙️ **LLM Configuration**
 Access via **Options → Configure LLMs** in the header menu:
 
 #### OpenAI Configuration
-- API Key: From [OpenAI Platform](https://platform.openai.com/api-keys)
-- Model Selection: GPT-4o (recommended), GPT-4o Mini, GPT-4, GPT-3.5 Turbo
-- Custom Base URL: For API proxy or custom endpoints
+- **API Key**: From [OpenAI Platform](https://platform.openai.com/api-keys)
+- **Model Selection**: GPT-4o (recommended), GPT-4o Mini, GPT-4, GPT-3.5 Turbo
+- **Custom Base URL**: For API proxy or custom endpoints
+- **Test Connection**: Verify credentials before saving
 
 #### Anthropic Configuration  
-- API Key: From [Anthropic Console](https://console.anthropic.com/)
-- Model Selection: Claude 3.5 Sonnet (recommended), Claude 3 Opus, Claude 3 Haiku
-- Custom Base URL: For API proxy or custom endpoints
+- **API Key**: From [Anthropic Console](https://console.anthropic.com/)
+- **Model Selection**: Claude 3.5 Sonnet (recommended), Claude 3 Opus, Claude 3 Haiku
+- **Custom Base URL**: For API proxy or custom endpoints
+- **Advanced Features**: Support for system prompts and tool usage
 
 #### Google Configuration
-- API Key: From [Google AI Studio](https://aistudio.google.com/app/apikey)
-- Model Selection: Gemini 2.0 Flash (recommended), Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 1.0 Pro
-- Base URL (optional): Default is `https://generativelanguage.googleapis.com` (uses v1beta for Gemini models)
+- **API Key**: From [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **Model Selection**: Gemini 2.0 Flash (recommended), Gemini 1.5 Pro, Gemini 1.5 Flash
+- **Base URL**: Default `https://generativelanguage.googleapis.com` (v1beta for Gemini models)
+- **Streaming Support**: Real-time response streaming
 
 #### Local LLM Configuration
-- API Endpoint: e.g., `http://localhost:11434/v1` (Ollama)
-- Model Name: e.g., `llama3.2`, `codellama`, `mistral`
-- Optional API Key: If required by your local setup
-- Streaming Support: Enable for real-time responses
+- **API Endpoint**: e.g., `http://localhost:11434/v1` (Ollama), `http://localhost:1234/v1` (LMStudio)
+- **Model Name**: e.g., `llama3.2`, `codellama`, `mistral`, `qwen2.5`
+- **Optional API Key**: If required by your local setup
+- **Streaming Support**: Enable for real-time responses
+- **Custom Parameters**: Temperature, max tokens, and other model parameters
 
 ### 🔧 **Configuration Management**
-- **Test Connection**: Verify API credentials and connectivity
-- **Auto-Save**: Configurations stored securely in browser localStorage
+- **Test Connection**: Verify API credentials and connectivity with live requests
+- **Auto-Save**: Configurations stored securely using ConfigManager
 - **Provider Switching**: Easy switching between configured providers
 - **Visual Status**: Real-time connection status indicators
+- **Error Handling**: Clear error messages for configuration issues
 
-### 💬 **Chat Interface**
-- **Floating Panel**: Modern, resizable chat interface
+### 💬 **Enhanced Chat Interface**
+- **Floating Panel**: Modern, resizable chat interface with drag-and-drop positioning
 - **Natural Language**: Conversational interaction with genomic data
-- **Tool Integration**: Direct access to genome browser functionality
-- **Context Awareness**: LLM understands current browser state
-- **Message History**: Persistent conversation history
+- **Corrected Tool Integration**: Reliable access to genome browser functionality
+- **Context Awareness**: LLM understands current browser state and loaded data
+- **Message History**: Persistent conversation history with export capabilities
 - **Suggestions**: Built-in example queries and commands
+- **Typing Indicators**: Visual feedback during AI processing
+- **Copy Functionality**: Easy copying of responses and code snippets
+
+## Function Calling System
+
+### **🔧 Fixed Search Functions**
+
+The AI assistant now correctly distinguishes between two types of searches:
+
+#### 1. **Text-Based Search** (`search_features`)
+**Use for**: Gene names, products, descriptions, annotations
+
+**Examples that now work correctly**:
+```
+"Find DNA polymerase"                    → search_features
+"Search for lacZ gene"                   → search_features  
+"Show me ribosomal proteins"             → search_features
+"Find genes with 'kinase' in the name"  → search_features
+```
+
+**What it does**: 
+- Searches annotation text fields (gene names, products, descriptions)
+- Displays results in the left sidebar search panel
+- Provides one-click navigation to matches
+
+#### 2. **Position-Based Search** (`get_nearby_features`)
+**Use for**: Finding features near specific genomic coordinates
+
+**Examples**:
+```
+"What's near position 12345?"            → get_nearby_features
+"Find genes around coordinate 50000"     → get_nearby_features
+"Show features within 5kb of position X" → get_nearby_features
+```
+
+**What it does**:
+- Finds features within a specified distance of a position
+- Returns spatial proximity information
+- Useful for understanding genomic neighborhood
+
+### **Available Tools**
+
+#### Core Navigation & Search
+- **`navigate_to_position`** - Jump to specific genomic coordinates
+- **`search_features`** - 🆕 **FIXED** Text-based search for genes/annotations
+- **`get_nearby_features`** - Position-based proximity search
+- **`get_current_state`** - Retrieve current browser state and context
+
+#### Data Retrieval & Analysis
+- **`get_sequence`** - Extract DNA sequences from regions
+- **`analyze_region`** - Comprehensive genomic region analysis
+- **`sequence_statistics`** - Calculate composition, GC content, complexity
+- **`codon_usage_analysis`** - Analyze codon usage patterns
+
+#### Visualization Control
+- **`toggle_track`** - Show/hide visualization tracks
+- **`zoom_to_gene`** - Focus view on specific genes
+- **`bookmark_position`** - Save interesting positions
+- **`save_view_state`** - Save current view configuration
+
+#### Annotation & Export
+- **`create_annotation`** - Create custom genomic annotations
+- **`edit_annotation`** - Modify existing annotations  
+- **`export_data`** - Export sequences and annotations
+- **`export_region_features`** - Export features from specific regions
+
+#### Advanced Analysis
+- **`search_motif`** - Find DNA motifs and patterns
+- **`find_restriction_sites`** - Locate restriction enzyme sites
+- **`virtual_digest`** - Simulate restriction digests
+- **`compare_regions`** - Compare different genomic regions
+- **`find_similar_sequences`** - Identify sequence similarities
+
+## Natural Language Examples
+
+### **✅ Text-Based Searches (Fixed)**
+These now correctly use `search_features`:
+```
+"Find DNA polymerase genes"              ✅ Searches annotations
+"Search for lacZ"                        ✅ Finds lacZ gene
+"Show me ribosomal proteins"             ✅ Searches products  
+"Find genes containing 'kinase'"         ✅ Text search
+"Look for tRNA genes"                    ✅ Feature type search
+```
+
+### **✅ Position-Based Searches**
+These correctly use `get_nearby_features`:
+```
+"What's near position 12345?"            ✅ Proximity search
+"Find genes around coordinate 50000"     ✅ Spatial search
+"Show features within 5kb of position X" ✅ Distance search
+```
+
+### **Navigation Commands**
+```
+"Navigate to chromosome 1 position 1000-2000"
+"Go to chr1:1000-2000"
+"Show me the region around position 5000"
+"Jump to the start of chromosome 2"
+```
+
+### **Analysis & Visualization**
+```
+"What's the GC content of this region?"
+"Show variant data"
+"Hide the protein track"
+"Calculate sequence statistics for chr1:1000-5000"
+"Find EcoRI restriction sites"
+```
+
+### **Data Export & Management**
+```
+"Export this region as FASTA"
+"Save current view state"
+"Bookmark this interesting region"
+"Create a gene annotation from 1000 to 2000"
+```
+
+## Setup Instructions
+
+### 1. **Configure LLM Provider**
+1. Click **Options** in the header menu
+2. Select **Configure LLMs**
+3. Choose your preferred provider tab
+4. Enter API credentials and select model
+5. **Test connection** to verify setup
+6. Save configuration
+
+### 2. **Start Enhanced Chat**
+1. Click the robot icon 🤖 in the toolbar
+2. Chat panel appears with improved interface
+3. Try corrected search commands like "find DNA polymerase"
+4. Experience more reliable function calling
+
+### 3. **Advanced Integration** (Optional)
+```bash
+# Start with MCP server for advanced features
+npm run start-with-mcp
+
+# Or start separately
+npm run mcp-server
+npm start
+```
+
+## System Prompt Improvements
+
+### **Enhanced Function Selection Rules**
+The AI now has explicit rules for choosing the correct function:
+
+```
+CRITICAL FUNCTION SELECTION RULES:
+- For ANY text-based search (gene names, products, descriptions): ALWAYS use 'search_features'
+  Examples: "find DNA polymerase", "search for lacZ", "show ribosomal genes" → use search_features
+- For position-based searches: ONLY use 'get_nearby_features' 
+  Examples: "what's near position 12345", "features around coordinate 50000" → use get_nearby_features
+```
+
+### **Improved Examples**
+More explicit function call examples with clear distinctions:
+
+```javascript
+// Text-based search (CORRECT)
+{"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+
+// Position-based search (CORRECT)  
+{"tool_name": "get_nearby_features", "parameters": {"position": 12345, "distance": 5000}}
+```
+
+## Troubleshooting
+
+### **Search Issues**
+- **Problem**: AI uses wrong search function
+- **Solution**: Use explicit language like "search for gene name X" vs "find features near position Y"
+
+### **Configuration Issues**
+- **API Key Errors**: Verify key validity and permissions
+- **Connection Failures**: Check network connectivity and endpoint URLs
+- **Model Access**: Ensure selected model is available for your API tier
+
+### **Performance Issues**
+- **Slow Responses**: Try different models or providers
+- **Large Datasets**: Use specific regions rather than whole genome queries
+- **Memory Usage**: Close unnecessary browser tabs during analysis
+
+## Best Practices
+
+### **Effective Prompting**
+- **Be specific**: "Find lacZ gene" vs "search for something"
+- **Use correct terminology**: "DNA polymerase" vs "polymerase enzyme"
+- **Specify regions**: "chr1:1000-2000" for targeted analysis
+
+### **Function Usage**
+- **Text searches**: Use for finding genes by name/description
+- **Position searches**: Use for exploring genomic neighborhoods  
+- **Analysis**: Combine multiple functions for comprehensive exploration
+
+### **Data Management**
+- **Export results**: Save interesting findings for later analysis
+- **Bookmark positions**: Mark important genomic locations
+- **Save view states**: Preserve useful display configurations
+
+## API Reference
+
+### **Function Call Format**
+```javascript
+{
+  "tool_name": "function_name",
+  "parameters": {
+    "param1": "value1",
+    "param2": "value2"
+  }
+}
+```
+
+### **Response Handling**
+- **Tool Results**: Structured data returned from function calls
+- **Error Handling**: Clear error messages for invalid requests
+- **Context Updates**: Automatic browser state synchronization
+
+## Future Enhancements
+
+### **Planned Improvements**
+- **Voice interaction**: Speech-to-text and text-to-speech
+- **Advanced visualization**: AI-generated custom plots and charts
+- **Automated analysis**: Pre-configured analysis pipelines
+- **Collaborative features**: Shared sessions and annotations
+
+### **Integration Roadmap**
+- **Database connectivity**: Direct access to genomic databases
+- **Cloud analysis**: Integration with cloud-based analysis tools
+- **Version control**: Track changes and analysis history
+- **API extensions**: Custom tool development framework
 
 ## MCP (Model Context Protocol) Integration
 
@@ -170,36 +421,6 @@ Export sequence or annotation data
 - "Create a gene annotation from 1000 to 2000 called newGene"
 - "Add a CDS feature at position 1500-1800"
 - "Mark this region as a promoter"
-
-## Setup Instructions
-
-### 1. **Configure LLM Provider**
-1. Click **Options** in the header menu
-2. Select **Configure LLMs**
-3. Choose your preferred provider tab
-4. Enter API credentials
-5. Test connection
-6. Save configuration
-
-### 2. **Start MCP Server** (for advanced integration)
-```bash
-# Start the MCP server
-npm run mcp-server
-
-# Or start everything together
-npm run start-with-mcp
-```
-
-### 3. **Open Chat Interface**
-- Click the robot icon in the toolbar
-- Or use the chat toggle button
-- Chat panel appears in bottom-right corner
-
-### 4. **Start Chatting**
-- Type natural language queries
-- Ask about genomic data
-- Request analyses or navigation
-- Get help with genome exploration
 
 ## Technical Architecture
 
