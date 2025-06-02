@@ -58,25 +58,17 @@ class ProteinStructureViewer {
         dialog.innerHTML = `
             <div class="dialog-content">
                 <div class="dialog-header">
-                    <h3>Search Protein Structures</h3>
+                    <h3>Load Protein Structure</h3>
                     <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
                 </div>
                 <div class="dialog-body">
                     <div class="input-group">
-                        <label for="gene-name-input">Gene Name:</label>
-                        <input type="text" id="gene-name-input" placeholder="Enter gene name (e.g., TP53, BRCA1)">
-                    </div>
-                    <div class="input-group">
-                        <label for="pdb-id-input">PDB ID (Optional):</label>
-                        <input type="text" id="pdb-id-input" placeholder="Enter PDB ID (e.g., 1TUP)">
-                    </div>
-                    <div class="input-group">
-                        <label for="organism-input">Organism (Optional):</label>
-                        <input type="text" id="organism-input" placeholder="Homo sapiens" value="Homo sapiens">
+                        <label for="pdb-id-input">PDB ID:</label>
+                        <input type="text" id="pdb-id-input" placeholder="Enter PDB ID (e.g., 1TUP, 2HG4, 3K2F)">
                     </div>
                     <div class="button-group">
                         <button class="btn btn-primary" onclick="proteinStructureViewer.searchProteinStructures()">
-                            Search Structures
+                            Load Structure
                         </button>
                         <button class="btn btn-secondary" onclick="this.closest('dialog').close()">
                             Cancel
@@ -236,103 +228,28 @@ class ProteinStructureViewer {
      * Search for protein structures
      */
     async searchProteinStructures() {
-        const geneName = document.getElementById('gene-name-input').value.trim();
         const pdbId = document.getElementById('pdb-id-input').value.trim();
-        const organism = document.getElementById('organism-input').value.trim();
         const resultsDiv = document.getElementById('search-results');
 
-        if (!geneName && !pdbId) {
-            alert('Please enter a gene name or PDB ID');
+        if (!pdbId) {
+            alert('Please enter a PDB ID');
             return;
         }
 
-        resultsDiv.innerHTML = '<div class="loading">Searching for protein structures...</div>';
+        resultsDiv.innerHTML = '<div class="loading">Searching for protein structure...</div>';
 
         try {
-            let results;
-            
-            if (pdbId) {
-                // Direct PDB ID fetch
-                const structureData = await this.requestMCPTool('fetch_protein_structure', {
-                    pdbId: pdbId,
-                    geneName: geneName || pdbId
-                });
-                
-                if (structureData.success) {
-                    this.openStructureViewer(structureData.pdbData, structureData.geneName, structureData.pdbId);
-                    document.querySelector('.protein-search-dialog').close();
-                    return;
-                }
-            } else {
-                // Search by gene name
-                results = await this.requestMCPTool('search_protein_by_gene', {
-                    geneName: geneName,
-                    organism: organism || 'Homo sapiens',
-                    maxResults: 10
-                });
-            }
-
-            this.displaySearchResults(results, resultsDiv);
-
-        } catch (error) {
-            resultsDiv.innerHTML = `<div class="error">Error searching structures: ${error.message}</div>`;
-        }
-    }
-
-    /**
-     * Display search results
-     */
-    displaySearchResults(results, container) {
-        if (!results || results.length === 0) {
-            container.innerHTML = '<div class="no-results">No protein structures found.</div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        
-        results.forEach(result => {
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'structure-result';
-            resultDiv.innerHTML = `
-                <div class="title">${result.pdbId} - ${result.title}</div>
-                <div class="details">
-                    ${result.method ? `Method: ${result.method}` : ''}
-                    ${result.resolution ? ` | Resolution: ${result.resolution}Å` : ''}
-                    ${result.organism ? ` | Organism: ${result.organism}` : ''}
-                </div>
-            `;
-            
-            resultDiv.onclick = () => this.loadProteinStructure(result);
-            container.appendChild(resultDiv);
-        });
-    }
-
-    /**
-     * Load and display protein structure
-     */
-    async loadProteinStructure(structureInfo) {
-        try {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'loading';
-            loadingDiv.textContent = `Loading structure ${structureInfo.pdbId}...`;
-            document.getElementById('search-results').appendChild(loadingDiv);
-
             const structureData = await this.requestMCPTool('fetch_protein_structure', {
-                pdbId: structureInfo.pdbId,
-                geneName: structureInfo.geneName
+                pdbId: pdbId
             });
 
             if (structureData.success) {
-                this.openStructureViewer(
-                    structureData.pdbData, 
-                    structureInfo.title || structureData.geneName, 
-                    structureData.pdbId
-                );
+                this.openStructureViewer(structureData.pdbData, structureData.geneName, pdbId);
                 document.querySelector('.protein-search-dialog').close();
             }
 
         } catch (error) {
-            alert(`Error loading structure: ${error.message}`);
+            resultsDiv.innerHTML = `<div class="error">Error searching structure: ${error.message}</div>`;
         }
     }
 
