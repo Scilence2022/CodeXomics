@@ -1047,80 +1047,121 @@ class ChatManager {
         console.log('User message:', message);
 
         try {
+            // Get maximum function call rounds from configuration
+            const maxRounds = this.configManager.get('llm.functionCallRounds', 3);
+            console.log('Maximum function call rounds:', maxRounds);
+
             // Get current studio context
             const context = this.getCurrentContext();
             console.log('Context for LLM:', context);
             
-            // Build conversation history including the new message
-            const conversationHistory = this.buildConversationHistory(message);
-            console.log('Conversation history length:', conversationHistory.length);
-            console.log('System message preview:', conversationHistory[0].content.substring(0, 200) + '...');
+            // Build initial conversation history including the new message
+            let conversationHistory = this.buildConversationHistory(message);
+            console.log('Initial conversation history length:', conversationHistory.length);
             
-            // Send conversation history to configured LLM
-            console.log('Sending to LLM...');
-            const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+            let currentRound = 0;
+            let finalResponse = null;
             
-            console.log('=== LLM Raw Response ===');
-            console.log('Response type:', typeof response);
-            console.log('Response length:', response ? response.length : 'null');
-            console.log('Full response:', response);
-            console.log('========================');
-            
-            // Check if the response is a tool call (JSON format)
-            console.log('Attempting to parse tool call...');
-            const toolCall = this.parseToolCall(response);
-            console.log('Parsed tool call result:', toolCall);
-            
-            if (toolCall) {
-                console.log('=== TOOL CALL DETECTED ===');
-                console.log('Tool name:', toolCall.tool_name);
-                console.log('Parameters:', toolCall.parameters);
-                console.log('==========================');
+            // Iterative function calling loop
+            while (currentRound < maxRounds) {
+                currentRound++;
+                console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
                 
-                try {
-                    console.log('Executing tool...');
-                    // Execute the tool directly
-                    const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
-                    console.log('Tool execution completed. Result:', toolResult);
+                // Send conversation history to configured LLM
+                console.log('Sending to LLM...');
+                const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+                
+                console.log('=== LLM Raw Response ===');
+                console.log('Response type:', typeof response);
+                console.log('Response length:', response ? response.length : 'null');
+                console.log('Full response:', response);
+                console.log('========================');
+                
+                // Check if the response is a tool call (JSON format)
+                console.log('Attempting to parse tool call...');
+                const toolCall = this.parseToolCall(response);
+                console.log('Parsed tool call result:', toolCall);
+                
+                if (toolCall) {
+                    console.log('=== TOOL CALL DETECTED ===');
+                    console.log('Tool name:', toolCall.tool_name);
+                    console.log('Parameters:', toolCall.parameters);
+                    console.log('==========================');
                     
-                    // If tool execution was successful, provide a user-friendly summary
-                    if (toolResult && !toolResult.error) {
-                        const formattedResult = this.formatToolResult(toolCall.tool_name, toolCall.parameters, toolResult);
-                        console.log('Formatted result:', formattedResult);
-                        console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
-                        return formattedResult;
-                    } else {
-                        const errorMessage = `I tried to execute ${toolCall.tool_name} but encountered an error: ${toolResult.error || 'Unknown error'}`;
-                        console.log('Tool execution failed:', errorMessage);
-                        console.log('=== ChatManager.sendToLLM DEBUG END (TOOL ERROR) ===');
-                        return errorMessage;
+                    try {
+                        console.log('Executing tool...');
+                        // Execute the tool
+                        const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
+                        console.log('Tool execution completed. Result:', toolResult);
+                        
+                        // Add the tool call and result to conversation history for next round
+                        conversationHistory.push({
+                            role: 'assistant',
+                            content: JSON.stringify({
+                                tool_name: toolCall.tool_name,
+                                parameters: toolCall.parameters
+                            })
+                        });
+                        
+                        if (toolResult && !toolResult.error) {
+                            // Add successful tool result to conversation
+                            const toolResultMessage = `Tool execution successful. Result: ${JSON.stringify(toolResult)}`;
+                            conversationHistory.push({
+                                role: 'user',
+                                content: `Tool result: ${toolResultMessage}`
+                            });
+                            
+                            // Continue to next round to see if LLM wants to make more tool calls
+                            console.log(`Tool executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
+                        } else {
+                            // Tool execution failed - add error and let LLM handle it
+                            const errorMessage = `Tool execution failed: ${toolResult.error || 'Unknown error'}`;
+                            conversationHistory.push({
+                                role: 'user',
+                                content: `Tool error: ${errorMessage}`
+                            });
+                            console.log('Tool execution failed:', errorMessage);
+                        }
+                    } catch (error) {
+                        console.error('=== TOOL EXECUTION EXCEPTION ===');
+                        console.error('Error:', error);
+                        console.error('Stack:', error.stack);
+                        console.error('================================');
+                        
+                        // Add error to conversation and continue
+                        conversationHistory.push({
+                            role: 'user',
+                            content: `Tool execution error: ${error.message}`
+                        });
                     }
-                } catch (error) {
-                    console.error('=== TOOL EXECUTION EXCEPTION ===');
-                    console.error('Error:', error);
-                    console.error('Stack:', error.stack);
-                    console.error('================================');
-                    const errorMessage = `Sorry, I encountered an error while executing the ${toolCall.tool_name} tool: ${error.message}`;
-                    console.log('=== ChatManager.sendToLLM DEBUG END (EXCEPTION) ===');
-                    return errorMessage;
-                }
-            } else {
-                console.log('=== NO TOOL CALL DETECTED ===');
-                console.log('Returning conversational response');
-                console.log('===============================');
-                
-                // Check if this looks like it should have been a tool call
-                if (response.includes('Navigated to') || response.includes('✅')) {
-                    console.log('Response appears to be a confirmation message - LLM may have misunderstood tool call format');
-                    const fallbackMessage = response + '\n\n⚠️ Note: If you intended to perform an action but got this message instead, please try rephrasing your request more specifically (e.g., "Navigate to position chr1:1000-2000" or "Search for gene recA").';
-                    console.log('=== ChatManager.sendToLLM DEBUG END (FALLBACK MESSAGE) ===');
-                    return fallbackMessage;
+                } else {
+                    console.log('=== NO TOOL CALL DETECTED ===');
+                    console.log('Received conversational response, ending function call loop');
+                    console.log('===============================');
+                    
+                    // No tool call detected - this is our final response
+                    finalResponse = response;
+                    break;
                 }
             }
             
-            // If not a tool call, return the conversational response
-            console.log('=== ChatManager.sendToLLM DEBUG END (CONVERSATION) ===');
-            return response;
+            // If we've exhausted all rounds and still haven't got a final response
+            if (!finalResponse) {
+                console.log('=== MAX ROUNDS REACHED ===');
+                console.log('Requesting final summary from LLM...');
+                
+                // Ask LLM for a final summary
+                conversationHistory.push({
+                    role: 'user',
+                    content: 'Please provide a final summary of the actions taken and results achieved.'
+                });
+                
+                finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+                console.log('Final summary response:', finalResponse);
+            }
+            
+            console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
+            return finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
             
         } catch (error) {
             console.error('=== LLM COMMUNICATION ERROR ===');

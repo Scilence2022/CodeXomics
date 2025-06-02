@@ -215,7 +215,8 @@ class ConfigManager {
                 currentProvider: null,
                 systemPrompt: '',
                 conversationMemory: 10, // Number of messages to remember
-                autoSave: true
+                autoSave: true,
+                functionCallRounds: 3  // Maximum number of function call rounds
             },
             ui: {
                 theme: 'default',

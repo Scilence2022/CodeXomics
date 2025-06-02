@@ -7275,3 +7275,42 @@ body {
     transform: translateY(0);
     background: rgba(59, 130, 246, 0.3);
 }
+
+/* Function Call Settings */
+.function-call-settings {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+}
+
+.function-call-settings h4 {
+    margin: 0 0 12px 0;
+    color: #1e40af;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.function-call-settings .form-group {
+    margin-bottom: 8px;
+}
+
+.function-call-settings input[type="number"] {
+    width: 80px;
+    text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+    .function-call-settings {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    .function-call-settings h4 {
+        color: #60a5fa;
+    }
+}

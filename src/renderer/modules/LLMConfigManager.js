@@ -330,10 +330,15 @@ class LLMConfigManager {
                 this.currentProvider = currentTab;
             }
 
+            // Get function call rounds setting
+            const functionCallRoundsField = document.getElementById('functionCallRounds');
+            const functionCallRounds = functionCallRoundsField ? parseInt(functionCallRoundsField.value) : 3;
+
             if (this.configManager) {
                 // Use ConfigManager if available (now with async support)
                 await this.configManager.set('llm.providers', this.providers);
                 await this.configManager.set('llm.currentProvider', this.currentProvider);
+                await this.configManager.set('llm.functionCallRounds', functionCallRounds);
                 await this.configManager.saveConfig();
                 console.log('Configuration saved via ConfigManager');
             } else {
@@ -418,6 +423,15 @@ class LLMConfigManager {
                 if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
             }
         });
+
+        // Load function call rounds setting
+        if (this.configManager) {
+            const functionCallRounds = this.configManager.get('llm.functionCallRounds', 3);
+            const functionCallRoundsField = document.getElementById('functionCallRounds');
+            if (functionCallRoundsField) {
+                functionCallRoundsField.value = functionCallRounds;
+            }
+        }
     }
 
     updateUI() {
