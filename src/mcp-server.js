@@ -90,6 +90,12 @@ class MCPGenomeBrowserServer {
                 clientId: clientId,
                 message: 'Connected to MCP server'
             }));
+            
+            // Send available tools list
+            ws.send(JSON.stringify({
+                type: 'tools',
+                tools: this.getAvailableTools()
+            }));
         });
     }
 
@@ -116,6 +122,16 @@ class MCPGenomeBrowserServer {
                 break;
             case 'track-visibility':
                 state.visibleTracks = data.tracks;
+                break;
+            case 'request-tools':
+                // Send available tools to the client
+                const client = this.clients.get(clientId);
+                if (client) {
+                    client.send(JSON.stringify({
+                        type: 'tools',
+                        tools: this.getAvailableTools()
+                    }));
+                }
                 break;
         }
     }
