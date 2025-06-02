@@ -336,10 +336,12 @@ class GenomeBrowser {
             document.getElementById('mcpServerUrl').value = mcpSettings.serverUrl;
             document.getElementById('mcpReconnectDelay').value = mcpSettings.reconnectDelay;
             
+            // Populate new server management interface
+            this.populateMCPServersList();
+            this.populateMCPToolsList();
+            
             // Update connection status
-            if (this.chatManager) {
-                this.chatManager.updateMCPStatus(this.chatManager.isConnected ? 'connected' : 'disconnected');
-            }
+            this.updateMCPConnectionStatus();
             
             // Setup modal event listeners if not already done
             this.setupMCPModalListeners();
@@ -360,21 +362,70 @@ class GenomeBrowser {
             this.saveMCPSettings();
         });
         
-        // Connect button
+        // Add Server button - NEW
+        document.getElementById('addMcpServerBtn')?.addEventListener('click', () => {
+            this.showAddServerModal();
+        });
+        
+        // Legacy connect/disconnect buttons
         document.getElementById('mcpConnectBtn')?.addEventListener('click', () => {
             if (this.chatManager) {
                 this.chatManager.setupMCPConnection();
             }
         });
         
-        // Disconnect button
         document.getElementById('mcpDisconnectBtn')?.addEventListener('click', () => {
             if (this.chatManager) {
                 this.chatManager.disconnectMCP();
             }
         });
+
+        // New server management buttons
+        document.getElementById('mcpConnectAllBtn')?.addEventListener('click', () => {
+            this.connectAllMCPServers();
+        });
         
-        // Close modal handlers
+        document.getElementById('mcpDisconnectAllBtn')?.addEventListener('click', () => {
+            this.disconnectAllMCPServers();
+        });
+
+        document.getElementById('mcpRefreshServersBtn')?.addEventListener('click', () => {
+            this.populateMCPServersList();
+            this.updateMCPConnectionStatus();
+            this.populateMCPToolsList();
+        });
+
+        // Add Server modal event listeners
+        const addServerModal = document.getElementById('mcpServerEditModal');
+        if (addServerModal) {
+            // Save server button - add event listener
+            document.getElementById('saveServerBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                const editingServerId = document.getElementById('editingServerId').value;
+                this.saveServer(editingServerId || null);
+            });
+
+            // Test connection button
+            document.getElementById('testServerConnectionBtn')?.addEventListener('click', () => {
+                this.testMCPServerConnectionFromForm();
+            });
+            
+            // Close modal handlers for add server modal
+            addServerModal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    addServerModal.classList.remove('show');
+                });
+            });
+            
+            // Close modal when clicking outside
+            addServerModal.addEventListener('click', (e) => {
+                if (e.target === addServerModal) {
+                    addServerModal.classList.remove('show');
+                }
+            });
+        }
+        
+        // Close modal handlers for main MCP settings modal
         modal.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.classList.remove('show');
@@ -387,6 +438,36 @@ class GenomeBrowser {
                 modal.classList.remove('show');
             }
         });
+
+        // Listen for server status changes to update UI
+        if (this.chatManager?.mcpServerManager) {
+            this.chatManager.mcpServerManager.on('serverConnected', () => {
+                this.populateMCPServersList();
+                this.updateMCPConnectionStatus();
+                this.populateMCPToolsList();
+            });
+
+            this.chatManager.mcpServerManager.on('serverDisconnected', () => {
+                this.populateMCPServersList();
+                this.updateMCPConnectionStatus();
+                this.populateMCPToolsList();
+            });
+
+            this.chatManager.mcpServerManager.on('serverAdded', () => {
+                this.populateMCPServersList();
+                this.updateMCPConnectionStatus();
+            });
+
+            this.chatManager.mcpServerManager.on('serverRemoved', () => {
+                this.populateMCPServersList();
+                this.updateMCPConnectionStatus();
+                this.populateMCPToolsList();
+            });
+
+            this.chatManager.mcpServerManager.on('toolsDiscovered', () => {
+                this.populateMCPToolsList();
+            });
+        }
     }
 
     saveMCPSettings() {
@@ -429,6 +510,387 @@ class GenomeBrowser {
         if (!mcpSettings.autoConnect && this.chatManager && this.chatManager.isConnected) {
             this.chatManager.disconnectMCP();
         }
+    }
+
+    // MCP Server Management Methods
+    populateMCPServersList() {
+        const serversList = document.getElementById('mcpServersList');
+        if (!serversList) return;
+
+        // Get servers from MCPServerManager
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            serversList.innerHTML = '<div class="empty-state">MCPServerManager not available</div>';
+            return;
+        }
+
+        const servers = mcpManager.getServerStatus(); // Use getServerStatus instead of getServers
+        
+        if (servers.length === 0) {
+            serversList.innerHTML = '<div class="empty-state">No MCP servers configured</div>';
+            return;
+        }
+
+        serversList.innerHTML = '';
+        
+        servers.forEach(server => {
+            const serverItem = document.createElement('div');
+            serverItem.className = 'server-item';
+            serverItem.innerHTML = `
+                <div class="server-info">
+                    <div class="server-header">
+                        <span class="server-name">${this.escapeHtml(server.name)}</span>
+                        <div class="server-status ${server.connected ? 'connected' : 'disconnected'}">
+                            ${server.connected ? '●' : '○'}
+                        </div>
+                    </div>
+                    <div class="server-details">
+                        <span class="server-url">${this.escapeHtml(server.url)}</span>
+                        <span class="server-category">${this.escapeHtml(server.category || 'general')}</span>
+                        ${server.connected ? `<span class="tool-count">${server.toolCount} tools</span>` : ''}
+                    </div>
+                </div>
+                <div class="server-actions">
+                    <button class="btn-small ${server.enabled ? 'btn-secondary' : 'btn-primary'}" 
+                            onclick="genomeBrowser.toggleMCPServer('${server.id}')">
+                        ${server.enabled ? 'Disable' : 'Enable'}
+                    </button>
+                    <button class="btn-small btn-secondary" 
+                            onclick="genomeBrowser.editMCPServer('${server.id}')">
+                        Edit
+                    </button>
+                    ${!server.isBuiltin ? `<button class="btn-small btn-danger" 
+                            onclick="genomeBrowser.removeMCPServer('${server.id}')">
+                        Remove
+                    </button>` : ''}
+                </div>
+            `;
+            serversList.appendChild(serverItem);
+        });
+
+        // Add "Add Server" button
+        const addButton = document.createElement('button');
+        addButton.className = 'btn btn-primary add-server-btn';
+        addButton.textContent = '+ Add Server';
+        addButton.onclick = () => this.showAddServerModal();
+        serversList.appendChild(addButton);
+    }
+
+    populateMCPToolsList() {
+        const toolsList = document.getElementById('mcpToolsList');
+        if (!toolsList) return;
+
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            toolsList.innerHTML = '<div class="empty-state">MCPServerManager not available</div>';
+            return;
+        }
+
+        const allTools = mcpManager.getAllAvailableTools(); // Use getAllAvailableTools instead of getAllTools
+        
+        if (allTools.length === 0) {
+            toolsList.innerHTML = '<div class="empty-state">No tools available from connected servers</div>';
+            return;
+        }
+
+        // Group tools by category
+        const toolsByCategory = {};
+        allTools.forEach(tool => {
+            const category = tool.category || 'general';
+            if (!toolsByCategory[category]) {
+                toolsByCategory[category] = [];
+            }
+            toolsByCategory[category].push(tool);
+        });
+
+        toolsList.innerHTML = '';
+
+        Object.entries(toolsByCategory).forEach(([category, tools]) => {
+            const categorySection = document.createElement('div');
+            categorySection.className = 'tools-category';
+            categorySection.innerHTML = `
+                <h4 class="category-title">${this.escapeHtml(category)}</h4>
+                <div class="tools-list">
+                    ${tools.map(tool => `
+                        <div class="tool-item">
+                            <div class="tool-info">
+                                <span class="tool-name">${this.escapeHtml(tool.name)}</span>
+                                <span class="tool-server">(${this.escapeHtml(tool.serverName)})</span>
+                            </div>
+                            <div class="tool-description">${this.escapeHtml(tool.description || 'No description')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            toolsList.appendChild(categorySection);
+        });
+    }
+
+    updateMCPConnectionStatus() {
+        const statusTextElement = document.getElementById('mcpStatusText');
+        const statusIconElement = document.getElementById('mcpStatusIcon');
+        
+        if (!statusTextElement || !statusIconElement) return;
+
+        let statusText, statusClass;
+
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            statusText = 'MCPServerManager not available';
+            statusClass = 'fas fa-circle status-none';
+        } else {
+            const servers = mcpManager.getServerStatus(); // Use getServerStatus instead of getServers
+            const connectedCount = servers.filter(s => s.connected).length;
+            const totalCount = servers.length;
+
+            if (totalCount === 0) {
+                statusText = 'No servers configured';
+                statusClass = 'fas fa-circle status-none';
+            } else if (connectedCount === 0) {
+                statusText = `0/${totalCount} servers connected`;
+                statusClass = 'fas fa-circle status-disconnected';
+            } else if (connectedCount === totalCount) {
+                statusText = `All ${totalCount} servers connected`;
+                statusClass = 'fas fa-circle status-connected';
+            } else {
+                statusText = `${connectedCount}/${totalCount} servers connected`;
+                statusClass = 'fas fa-circle status-partial';
+            }
+        }
+
+        statusTextElement.textContent = statusText;
+        statusIconElement.className = statusClass;
+    }
+
+    showAddServerModal() {
+        const modal = document.getElementById('mcpServerEditModal');
+        if (!modal) return;
+
+        // Clear form
+        document.getElementById('serverName').value = '';
+        document.getElementById('serverDescription').value = '';
+        document.getElementById('serverUrl').value = '';
+        document.getElementById('serverCategory').value = 'general';
+        document.getElementById('serverEnabled').checked = true;
+        document.getElementById('serverAutoConnect').checked = false;
+        document.getElementById('serverApiKey').value = '';
+        document.getElementById('serverReconnectDelay').value = '5';
+        document.getElementById('serverCapabilities').value = '';
+        document.getElementById('editingServerId').value = '';
+
+        // Set modal title
+        document.getElementById('mcpServerEditTitle').textContent = 'Add MCP Server';
+
+        modal.classList.add('show');
+    }
+
+    editMCPServer(serverId) {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        const server = mcpManager.getServer(serverId);
+        if (!server) return;
+
+        const modal = document.getElementById('mcpServerEditModal');
+        if (!modal) return;
+
+        // Populate form with server data
+        document.getElementById('serverName').value = server.name;
+        document.getElementById('serverDescription').value = server.description || '';
+        document.getElementById('serverUrl').value = server.url;
+        document.getElementById('serverCategory').value = server.category || 'general';
+        document.getElementById('serverEnabled').checked = server.enabled;
+        document.getElementById('serverAutoConnect').checked = server.autoConnect;
+        document.getElementById('serverApiKey').value = server.apiKey || '';
+        document.getElementById('serverReconnectDelay').value = server.reconnectDelay || 5;
+        document.getElementById('serverCapabilities').value = server.capabilities ? server.capabilities.join(', ') : '';
+        document.getElementById('editingServerId').value = serverId;
+
+        // Set modal title
+        document.getElementById('mcpServerEditTitle').textContent = 'Edit MCP Server';
+
+        modal.classList.add('show');
+    }
+
+    saveServer(serverId = null) {
+        const serverData = {
+            name: document.getElementById('serverName').value.trim(),
+            description: document.getElementById('serverDescription').value.trim(),
+            url: document.getElementById('serverUrl').value.trim(),
+            category: document.getElementById('serverCategory').value,
+            enabled: document.getElementById('serverEnabled').checked,
+            autoConnect: document.getElementById('serverAutoConnect').checked,
+            apiKey: document.getElementById('serverApiKey').value.trim() || null,
+            reconnectDelay: parseInt(document.getElementById('serverReconnectDelay').value) || 5,
+            capabilities: document.getElementById('serverCapabilities').value.trim().split(',').map(c => c.trim()).filter(c => c)
+        };
+
+        // Validate
+        if (!serverData.name) {
+            alert('Please enter a server name');
+            return;
+        }
+        if (!serverData.url) {
+            alert('Please enter a server URL');
+            return;
+        }
+
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            alert('MCPServerManager not available');
+            return;
+        }
+
+        try {
+            if (serverId) {
+                // Update existing server
+                mcpManager.updateServer(serverId, serverData);
+            } else {
+                // Add new server
+                mcpManager.addServer(serverData);
+            }
+
+            // Close modal
+            document.getElementById('mcpServerEditModal').classList.remove('show');
+
+            // Refresh server list
+            this.populateMCPServersList();
+            this.updateMCPConnectionStatus();
+
+            this.updateStatus(serverId ? 'Server updated successfully' : 'Server added successfully');
+        } catch (error) {
+            alert(`Error saving server: ${error.message}`);
+        }
+    }
+
+    toggleMCPServer(serverId) {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        const server = mcpManager.getServer(serverId);
+        if (!server) return;
+
+        try {
+            mcpManager.updateServer(serverId, { enabled: !server.enabled });
+            this.populateMCPServersList();
+            this.updateMCPConnectionStatus();
+            this.updateStatus(`Server ${server.enabled ? 'disabled' : 'enabled'}`);
+        } catch (error) {
+            alert(`Error toggling server: ${error.message}`);
+        }
+    }
+
+    removeMCPServer(serverId) {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        const server = mcpManager.getServer(serverId);
+        if (!server) return;
+
+        if (confirm(`Are you sure you want to remove server "${server.name}"?`)) {
+            try {
+                mcpManager.removeServer(serverId);
+                this.populateMCPServersList();
+                this.updateMCPConnectionStatus();
+                this.updateStatus('Server removed successfully');
+            } catch (error) {
+                alert(`Error removing server: ${error.message}`);
+            }
+        }
+    }
+
+    connectAllMCPServers() {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        mcpManager.connectAll();
+        this.updateStatus('Connecting to all servers...');
+        
+        // Update UI after a short delay
+        setTimeout(() => {
+            this.populateMCPServersList();
+            this.updateMCPConnectionStatus();
+        }, 1000);
+    }
+
+    disconnectAllMCPServers() {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        mcpManager.disconnectAll();
+        this.updateStatus('Disconnecting from all servers...');
+        
+        // Update UI immediately
+        this.populateMCPServersList();
+        this.updateMCPConnectionStatus();
+    }
+
+    testMCPServerConnection(serverId) {
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) return;
+
+        this.updateStatus('Testing connection...');
+        mcpManager.testConnection(serverId)
+            .then(result => {
+                this.updateStatus(result.success ? 'Connection test successful' : `Connection test failed: ${result.error}`);
+            })
+            .catch(error => {
+                this.updateStatus(`Connection test error: ${error.message}`);
+            });
+    }
+
+    testMCPServerConnectionFromForm() {
+        const testStatus = document.getElementById('testConnectionStatus');
+        
+        // Get form data
+        const serverConfig = {
+            name: document.getElementById('serverName').value.trim(),
+            url: document.getElementById('serverUrl').value.trim(),
+            apiKey: document.getElementById('serverApiKey').value.trim()
+        };
+
+        if (!serverConfig.url) {
+            if (testStatus) testStatus.textContent = 'Please enter a server URL';
+            return;
+        }
+
+        if (testStatus) {
+            testStatus.textContent = 'Testing connection...';
+            testStatus.className = 'test-status testing';
+        }
+
+        const mcpManager = this.chatManager?.mcpServerManager;
+        if (!mcpManager) {
+            if (testStatus) {
+                testStatus.textContent = 'MCPServerManager not available';
+                testStatus.className = 'test-status error';
+            }
+            return;
+        }
+
+        mcpManager.testServerConnection(serverConfig)
+            .then(result => {
+                if (testStatus) {
+                    testStatus.textContent = 'Connection successful!';
+                    testStatus.className = 'test-status success';
+                }
+                this.updateStatus('Connection test successful');
+            })
+            .catch(error => {
+                if (testStatus) {
+                    testStatus.textContent = `Connection failed: ${error.message}`;
+                    testStatus.className = 'test-status error';
+                }
+                this.updateStatus(`Connection test failed: ${error.message}`);
+            });
+    }
+
+    // Helper method to escape HTML
+    escapeHtml(text) {
+        if (typeof text !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     setupFeatureFilterListeners() {
@@ -1333,6 +1795,7 @@ class GenomeBrowser {
             'promoter': 'promoter',
             'terminator': 'terminator',
             'regulatory': 'regulatory',
+            'other': 'other',
             'misc_feature': 'other',
             'repeat_region': 'other'
         };

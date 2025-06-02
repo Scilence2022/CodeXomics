@@ -16,12 +16,16 @@ class ChatManager {
         // Initialize LLM configuration manager with config integration
         this.llmConfigManager = new LLMConfigManager(this.configManager);
         
+        // Initialize MCP Server Manager
+        this.mcpServerManager = new MCPServerManager(this.configManager);
+        this.setupMCPServerEventHandlers();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
         // DON'T load chat history here - wait for UI to be created
         
-        // Only setup MCP connection if auto-connect is enabled
+        // Legacy MCP connection check (kept for backward compatibility)
         this.checkAndSetupMCPConnection();
         this.initializeUI();
         
@@ -29,6 +33,31 @@ class ChatManager {
         setTimeout(() => {
             this.loadChatHistory();
         }, 100);
+    }
+
+    setupMCPServerEventHandlers() {
+        this.mcpServerManager.on('serverConnected', (data) => {
+            console.log(`MCP Server connected: ${data.server.name}`);
+            this.updateConnectionStatus(true);
+            this.updateMCPStatus('connected');
+        });
+
+        this.mcpServerManager.on('serverDisconnected', (data) => {
+            console.log(`MCP Server disconnected: ${data.server.name}`);
+            // Only update status to disconnected if no servers are connected
+            if (this.mcpServerManager.getConnectedServersCount() === 0) {
+                this.updateConnectionStatus(false);
+                this.updateMCPStatus('disconnected');
+            }
+        });
+
+        this.mcpServerManager.on('serverError', (data) => {
+            console.error(`MCP Server error (${data.server.name}):`, data.error);
+        });
+
+        this.mcpServerManager.on('toolsUpdated', (data) => {
+            console.log(`Tools updated for server ${data.serverId}:`, data.tools.map(t => t.name));
+        });
     }
 
     async checkAndSetupMCPConnection() {
@@ -47,6 +76,7 @@ class ChatManager {
         }
     }
 
+    // Legacy single MCP connection (kept for backward compatibility)
     async setupMCPConnection() {
         const defaultSettings = {
             autoConnect: false,
@@ -65,7 +95,7 @@ class ChatManager {
             this.mcpSocket = new WebSocket(mcpSettings.serverUrl);
             
             this.mcpSocket.onopen = () => {
-                console.log('Connected to MCP server');
+                console.log('Connected to legacy MCP server');
                 this.isConnected = true;
                 this.updateConnectionStatus(true);
                 this.updateMCPStatus('connected');
@@ -85,7 +115,7 @@ class ChatManager {
             };
 
             this.mcpSocket.onclose = () => {
-                console.log('Disconnected from MCP server');
+                console.log('Disconnected from legacy MCP server');
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
@@ -101,13 +131,13 @@ class ChatManager {
             };
 
             this.mcpSocket.onerror = (error) => {
-                console.error('MCP connection error:', error);
+                console.error('Legacy MCP connection error:', error);
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
             };
 
         } catch (error) {
-            console.error('Failed to setup MCP connection:', error);
+            console.error('Failed to setup legacy MCP connection:', error);
             this.updateConnectionStatus(false);
             this.updateMCPStatus('disconnected');
         }
@@ -115,7 +145,7 @@ class ChatManager {
 
     disconnectMCP() {
         if (this.mcpSocket) {
-            console.log('Manually disconnecting from MCP server');
+            console.log('Manually disconnecting from legacy MCP server');
             this.mcpSocket.close();
             this.mcpSocket = null;
         }
@@ -137,7 +167,9 @@ class ChatManager {
             switch (status) {
                 case 'connected':
                     statusIcon.classList.add('connected');
-                    statusText.textContent = 'Connected';
+                    const connectedCount = this.mcpServerManager.getConnectedServersCount();
+                    statusText.textContent = connectedCount > 0 ? 
+                        `Connected (${connectedCount} servers)` : 'Connected';
                     if (connectBtn) connectBtn.disabled = true;
                     if (disconnectBtn) disconnectBtn.disabled = false;
                     break;
@@ -1450,6 +1482,34 @@ class ChatManager {
     buildSystemMessage() {
         const context = this.getCurrentContext();
         
+        // Get MCP server information
+        const mcpServers = this.mcpServerManager.getServerStatus();
+        const connectedServers = mcpServers.filter(s => s.connected);
+        const allMcpTools = this.mcpServerManager.getAllAvailableTools();
+        const toolsByCategory = this.mcpServerManager.getToolsByCategory();
+        
+        let mcpServersInfo = '';
+        if (connectedServers.length > 0) {
+            mcpServersInfo = `
+Connected MCP Servers: ${connectedServers.length}
+${connectedServers.map(server => 
+    `- ${server.name} (${server.category}): ${server.toolCount} tools`
+).join('\n')}
+
+MCP Tools by Category:
+${Object.entries(toolsByCategory).map(([category, tools]) => 
+    `${category.toUpperCase()}:\n${tools.map(tool => 
+        `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
+    ).join('\n')}`
+).join('\n\n')}
+`;
+        } else {
+            mcpServersInfo = `
+Connected MCP Servers: None
+Note: Additional tools may be available when MCP servers are connected.
+`;
+        }
+
         return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
 
 Current Genome AI Studio State:
@@ -1461,7 +1521,9 @@ Current Genome AI Studio State:
 - Annotations count: ${context.genomeBrowser.currentState.annotationsCount}
 - User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
-Available Tools:
+${mcpServersInfo}
+
+Built-in Local Tools:
 ${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
 
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
@@ -1469,6 +1531,11 @@ When a user asks you to perform ANY action that requires using one of these tool
 
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
+
+Tool Selection Priority:
+1. First try MCP server tools (if available and connected)
+2. Fall back to built-in local tools
+3. Use the most appropriate tool for the task regardless of source
 
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -1647,6 +1714,27 @@ Common Analysis Tools:
         console.log(`Executing tool: ${toolName} with parameters:`, parameters);
         
         try {
+            // First, try to execute on MCP servers
+            const allTools = this.mcpServerManager.getAllAvailableTools();
+            const mcpTool = allTools.find(t => t.name === toolName);
+            
+            if (mcpTool) {
+                console.log(`Executing tool ${toolName} on MCP server: ${mcpTool.serverName}`);
+                try {
+                    const result = await this.mcpServerManager.executeToolOnServer(
+                        mcpTool.serverId, 
+                        toolName, 
+                        parameters
+                    );
+                    console.log(`MCP tool ${toolName} execution result:`, result);
+                    return result;
+                } catch (error) {
+                    console.warn(`MCP tool execution failed, falling back to local: ${error.message}`);
+                    // Fall through to local execution
+                }
+            }
+            
+            // Fallback to local tool execution
             let result;
             switch (toolName) {
                 case 'navigate_to_position':
@@ -1789,7 +1877,7 @@ Common Analysis Tools:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
             
-            console.log(`Tool ${toolName} execution result:`, result);
+            console.log(`Local tool ${toolName} execution result:`, result);
             return result;
             
         } catch (error) {

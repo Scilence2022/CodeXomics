@@ -898,63 +898,210 @@
 
     <!-- MCP Server Settings Modal -->
     <div id="mcpSettingsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>MCP Server Settings</h3>
+                <h3>MCP Server Management</h3>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="mcpAutoConnect" checked> 
-                        Auto-connect to MCP server on startup
-                    </label>
-                    <small class="help-text">When enabled, the application will automatically try to connect to the MCP server when starting up.</small>
+                <!-- Server List Section -->
+                <div class="mcp-servers-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-server"></i> MCP Servers</h4>
+                        <button id="addMcpServerBtn" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add Server
+                        </button>
+                    </div>
+                    
+                    <div class="servers-list" id="mcpServersList">
+                        <!-- Server items will be populated dynamically -->
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="mcpServerUrl">MCP Server URL:</label>
-                    <input type="text" id="mcpServerUrl" value="ws://localhost:3001" class="input-full" placeholder="ws://localhost:3001">
-                    <small class="help-text">WebSocket URL for the MCP server connection.</small>
+
+                <!-- Global Settings Section -->
+                <div class="mcp-global-settings">
+                    <h4><i class="fas fa-cogs"></i> Global Settings</h4>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mcpAutoConnect" checked> 
+                            Auto-connect to enabled servers on startup
+                        </label>
+                        <small class="help-text">When enabled, all servers marked as "auto-connect" will connect automatically when the application starts.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mcpGlobalReconnectDelay">Global Reconnection Delay (seconds):</label>
+                        <input type="number" id="mcpGlobalReconnectDelay" value="5" min="1" max="60" class="input-full">
+                        <small class="help-text">Default delay between reconnection attempts for all servers.</small>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="mcpReconnectDelay">Reconnection Delay (seconds):</label>
-                    <input type="number" id="mcpReconnectDelay" value="5" min="1" max="60" class="input-full">
-                    <small class="help-text">Delay between reconnection attempts when connection is lost.</small>
-                </div>
-                
+
+                <!-- Connection Status Section -->
                 <div class="mcp-connection-status">
+                    <h4><i class="fas fa-wifi"></i> Connection Status</h4>
                     <div class="status-info">
                         <i class="fas fa-circle" id="mcpStatusIcon"></i>
                         <span id="mcpStatusText">Disconnected</span>
                     </div>
                     <div class="mcp-connection-controls">
+                        <button id="mcpConnectAllBtn" class="btn btn-primary">
+                            <i class="fas fa-plug"></i>
+                            Connect All
+                        </button>
+                        <button id="mcpDisconnectAllBtn" class="btn btn-secondary">
+                            <i class="fas fa-unlink"></i>
+                            Disconnect All
+                        </button>
+                        <button id="mcpRefreshServersBtn" class="btn btn-secondary">
+                            <i class="fas fa-sync"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Available Tools Section -->
+                <div class="mcp-tools-section">
+                    <h4><i class="fas fa-tools"></i> Available Tools</h4>
+                    <div id="mcpToolsList" class="tools-list">
+                        <!-- Tools will be populated dynamically -->
+                    </div>
+                </div>
+                
+                <!-- Legacy Single Server Settings (for backward compatibility) -->
+                <div class="mcp-legacy-settings" style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 20px;">
+                    <h4><i class="fas fa-history"></i> Legacy Single Server Settings</h4>
+                    <small class="help-text">These settings are for backward compatibility with the old single-server configuration.</small>
+                    
+                    <div class="form-group">
+                        <label for="mcpServerUrl">Legacy Server URL:</label>
+                        <input type="text" id="mcpServerUrl" value="ws://localhost:3001" class="input-full" placeholder="ws://localhost:3001">
+                        <small class="help-text">WebSocket URL for the legacy MCP server connection.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mcpReconnectDelay">Legacy Reconnection Delay (seconds):</label>
+                        <input type="number" id="mcpReconnectDelay" value="5" min="1" max="60" class="input-full">
+                        <small class="help-text">Delay between reconnection attempts for legacy server.</small>
+                    </div>
+                    
+                    <div class="mcp-connection-controls">
                         <button id="mcpConnectBtn" class="btn btn-primary">
                             <i class="fas fa-plug"></i>
-                            Connect
+                            Connect Legacy
                         </button>
                         <button id="mcpDisconnectBtn" class="btn btn-secondary" disabled>
                             <i class="fas fa-unlink"></i>
-                            Disconnect
+                            Disconnect Legacy
                         </button>
                     </div>
                 </div>
                 
                 <div class="mcp-info">
-                    <h4><i class="fas fa-info-circle"></i> About MCP Server</h4>
-                    <p>The Model Context Protocol (MCP) server enables advanced AI integration with external tools and data sources. When connected, it allows LLMs to:</p>
+                    <h4><i class="fas fa-info-circle"></i> About MCP Servers</h4>
+                    <p>The Model Context Protocol (MCP) enables advanced AI integration with external tools and data sources. When connected, MCP servers allow LLMs to:</p>
                     <ul>
                         <li>Access real-time genome data and annotations</li>
                         <li>Perform advanced analysis operations</li>
                         <li>Interact with external bioinformatics tools</li>
                         <li>Provide more contextual and accurate responses</li>
+                        <li>Access specialized databases and APIs</li>
                     </ul>
-                    <p><strong>Note:</strong> The MCP server is optional. The application works fully without it.</p>
+                    <p><strong>Note:</strong> MCP servers are optional. The application works fully without them.</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button id="saveMCPSettingsBtn" class="btn btn-primary">Save Settings</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit MCP Server Modal -->
+    <div id="mcpServerEditModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="mcpServerEditTitle">Add MCP Server</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="mcpServerForm">
+                    <input type="hidden" id="editingServerId" value="">
+                    
+                    <div class="form-group">
+                        <label for="serverName">Server Name:</label>
+                        <input type="text" id="serverName" class="input-full" placeholder="My MCP Server" required>
+                        <small class="help-text">A friendly name to identify this server.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverDescription">Description:</label>
+                        <textarea id="serverDescription" class="input-full" rows="3" placeholder="Description of server capabilities..."></textarea>
+                        <small class="help-text">Optional description of what this server provides.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverUrl">WebSocket URL:</label>
+                        <input type="text" id="serverUrl" class="input-full" placeholder="ws://localhost:3001" required>
+                        <small class="help-text">WebSocket endpoint for the MCP server.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverCategory">Category:</label>
+                        <select id="serverCategory" class="select input-full">
+                            <option value="genomics">Genomics</option>
+                            <option value="bioinformatics">Bioinformatics</option>
+                            <option value="database">Database</option>
+                            <option value="analysis">Analysis</option>
+                            <option value="general">General</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <small class="help-text">Category helps organize and filter tools.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverApiKey">API Key (if required):</label>
+                        <input type="password" id="serverApiKey" class="input-full" placeholder="Optional API key">
+                        <small class="help-text">Some servers may require authentication.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverReconnectDelay">Reconnection Delay (seconds):</label>
+                        <input type="number" id="serverReconnectDelay" value="5" min="1" max="60" class="input-full">
+                        <small class="help-text">Delay between reconnection attempts.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="serverEnabled" checked> 
+                            Enable this server
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="serverAutoConnect" checked> 
+                            Auto-connect on startup
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverCapabilities">Capabilities (comma-separated):</label>
+                        <input type="text" id="serverCapabilities" class="input-full" placeholder="genome-analysis, sequence-search, annotation">
+                        <small class="help-text">List of capabilities this server provides.</small>
+                    </div>
+                </form>
+                
+                <div class="server-test-section">
+                    <button id="testServerConnectionBtn" class="btn btn-secondary">
+                        <i class="fas fa-plug"></i>
+                        Test Connection
+                    </button>
+                    <span id="testConnectionStatus" class="test-status"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveServerBtn" class="btn btn-primary">Save Server</button>
                 <button class="btn modal-close">Cancel</button>
             </div>
         </div>
@@ -982,6 +1129,7 @@
     <script src="modules/SequenceUtils.js"></script>
     <script src="modules/ExportManager.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
+    <script src="modules/MCPServerManager.js"></script>
     <script src="modules/ChatManager.js"></script>
     <script src="modules/ReadsManager.js"></script>
     
