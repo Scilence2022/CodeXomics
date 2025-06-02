@@ -7,6 +7,9 @@ const express = require('express');
 const WebSocket = require('ws');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 class MCPGenomeBrowserServer {
     constructor(port = 3000, wsPort = 3001) {
@@ -239,6 +242,50 @@ class MCPGenomeBrowserServer {
                     },
                     required: ['format']
                 }
+            },
+
+            fetch_protein_structure: {
+                name: 'fetch_protein_structure',
+                description: 'Fetch protein 3D structure from PDB database by gene name or PDB ID',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        geneName: { type: 'string', description: 'Gene name to search for protein structure' },
+                        pdbId: { type: 'string', description: 'Direct PDB ID (alternative to gene name)' },
+                        organism: { type: 'string', description: 'Organism name for more specific search' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    }
+                }
+            },
+
+            open_protein_viewer: {
+                name: 'open_protein_viewer',
+                description: 'Open 3D protein structure viewer in a separate window',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        pdbData: { type: 'string', description: 'PDB structure data' },
+                        proteinName: { type: 'string', description: 'Protein name for display' },
+                        pdbId: { type: 'string', description: 'PDB ID' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['pdbData', 'proteinName']
+                }
+            },
+
+            search_protein_by_gene: {
+                name: 'search_protein_by_gene',
+                description: 'Search for protein structures associated with a gene',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        geneName: { type: 'string', description: 'Gene name to search' },
+                        organism: { type: 'string', description: 'Organism name (optional)' },
+                        maxResults: { type: 'number', description: 'Maximum number of results to return' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['geneName']
+                }
             }
         };
     }
@@ -253,6 +300,16 @@ class MCPGenomeBrowserServer {
             throw new Error(`Unknown tool: ${toolName}`);
         }
 
+        // Handle protein structure tools directly on server
+        if (toolName === 'fetch_protein_structure') {
+            return await this.fetchProteinStructure(parameters);
+        }
+        
+        if (toolName === 'search_protein_by_gene') {
+            return await this.searchProteinByGene(parameters);
+        }
+
+        // For client-side tools, find client
         const client = this.clients.get(clientId);
         if (!client) {
             // If no specific client, use the first available one
@@ -303,6 +360,202 @@ class MCPGenomeBrowserServer {
                 toolName: toolName,
                 parameters: parameters
             }));
+        });
+    }
+
+    /**
+     * Fetch protein structure from PDB database
+     */
+    async fetchProteinStructure(parameters) {
+        const { geneName, pdbId, organism } = parameters;
+        
+        try {
+            let targetPdbId = pdbId;
+            
+            // If no PDB ID provided, search by gene name
+            if (!targetPdbId && geneName) {
+                const searchResults = await this.searchProteinByGene({ geneName, organism, maxResults: 1 });
+                if (searchResults.length === 0) {
+                    throw new Error(`No protein structures found for gene: ${geneName}`);
+                }
+                targetPdbId = searchResults[0].pdbId;
+            }
+            
+            if (!targetPdbId) {
+                throw new Error('No PDB ID specified or found');
+            }
+            
+            // Download PDB file
+            const pdbData = await this.downloadPDBFile(targetPdbId);
+            
+            return {
+                success: true,
+                pdbId: targetPdbId,
+                pdbData: pdbData,
+                geneName: geneName || targetPdbId,
+                downloadedAt: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            throw new Error(`Failed to fetch protein structure: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search for protein structures by gene name using RCSB PDB API
+     */
+    async searchProteinByGene(parameters) {
+        const { geneName, organism, maxResults = 10 } = parameters;
+        
+        try {
+            // Create search query for RCSB PDB
+            const searchQuery = {
+                query: {
+                    type: "group",
+                    logical_operator: "and",
+                    nodes: [
+                        {
+                            type: "terminal",
+                            service: "text",
+                            parameters: {
+                                attribute: "rcsb_entity_source_organism.taxonomy_lineage.name",
+                                operator: "contains_words",
+                                value: organism || "Homo sapiens"
+                            }
+                        },
+                        {
+                            type: "terminal", 
+                            service: "text",
+                            parameters: {
+                                attribute: "rcsb_polymer_entity.rcsb_gene_name.value",
+                                operator: "exact_match",
+                                value: geneName.toUpperCase()
+                            }
+                        }
+                    ]
+                },
+                request_options: {
+                    pager: {
+                        start: 0,
+                        rows: maxResults
+                    }
+                },
+                return_type: "entry"
+            };
+
+            const searchResults = await this.makeHTTPSRequest({
+                hostname: 'search.rcsb.org',
+                path: '/rcsbsearch/v2/query',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }, JSON.stringify(searchQuery));
+
+            const results = JSON.parse(searchResults);
+            
+            if (!results.result_set || results.result_set.length === 0) {
+                return [];
+            }
+
+            // Get detailed information for each structure
+            const detailedResults = [];
+            for (const result of results.result_set.slice(0, maxResults)) {
+                try {
+                    const details = await this.getPDBDetails(result.identifier);
+                    detailedResults.push({
+                        pdbId: result.identifier,
+                        title: details.title || `Structure ${result.identifier}`,
+                        resolution: details.resolution,
+                        method: details.method,
+                        organism: details.organism,
+                        geneName: geneName,
+                        releaseDate: details.releaseDate
+                    });
+                } catch (error) {
+                    console.warn(`Failed to get details for PDB ${result.identifier}:`, error.message);
+                }
+            }
+
+            return detailedResults;
+            
+        } catch (error) {
+            throw new Error(`Failed to search protein structures: ${error.message}`);
+        }
+    }
+
+    /**
+     * Get detailed information about a PDB structure
+     */
+    async getPDBDetails(pdbId) {
+        try {
+            const response = await this.makeHTTPSRequest({
+                hostname: 'data.rcsb.org',
+                path: `/rest/v1/core/entry/${pdbId}`,
+                method: 'GET'
+            });
+
+            const data = JSON.parse(response);
+            
+            return {
+                title: data.struct?.title,
+                resolution: data.rcsb_entry_info?.resolution_combined?.[0],
+                method: data.exptl?.[0]?.method,
+                organism: data.rcsb_entry_container_identifiers?.organism_names?.[0],
+                releaseDate: data.rcsb_accession_info?.initial_release_date
+            };
+        } catch (error) {
+            return {}; // Return empty object if details can't be fetched
+        }
+    }
+
+    /**
+     * Download PDB file content
+     */
+    async downloadPDBFile(pdbId) {
+        try {
+            const pdbData = await this.makeHTTPSRequest({
+                hostname: 'files.rcsb.org',
+                path: `/download/${pdbId}.pdb`,
+                method: 'GET'
+            });
+            
+            return pdbData;
+        } catch (error) {
+            throw new Error(`Failed to download PDB file for ${pdbId}: ${error.message}`);
+        }
+    }
+
+    /**
+     * Helper method to make HTTPS requests
+     */
+    makeHTTPSRequest(options, postData = null) {
+        return new Promise((resolve, reject) => {
+            const req = https.request(options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                res.on('end', () => {
+                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                        resolve(data);
+                    } else {
+                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                    }
+                });
+            });
+            
+            req.on('error', (error) => {
+                reject(error);
+            });
+            
+            if (postData) {
+                req.write(postData);
+            }
+            
+            req.end();
         });
     }
 

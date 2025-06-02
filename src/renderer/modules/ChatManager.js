@@ -355,6 +355,10 @@ class ChatManager {
                     result = await this.exportRegionFeatures(parameters);
                     break;
                     
+                case 'open_protein_viewer':
+                    result = await this.openProteinViewer(parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -1430,6 +1434,9 @@ class ChatManager {
                     `• Format: ${result.format}\n` +
                     `• Data ready for download`;
 
+            case 'open_protein_viewer':
+                return `✓ Opened protein viewer for ${result.geneName}`;
+
             default:
                 return `✅ Tool ${toolName} executed successfully`;
         }
@@ -1873,6 +1880,10 @@ Common Analysis Tools:
                     result = await this.exportRegionFeatures(parameters);
                     break;
                     
+                case 'open_protein_viewer':
+                    result = await this.openProteinViewer(parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -1930,7 +1941,8 @@ Common Analysis Tools:
                     'delete_annotation',
                     'batch_create_annotations',
                     'get_file_info',
-                    'export_region_features'
+                    'export_region_features',
+                    'open_protein_viewer'
                 ]
             }
         };
@@ -4515,6 +4527,32 @@ Common Analysis Tools:
             console.error('Error resetting chat position:', error);
             // Only show error notifications, not success ones
             this.showNotification('❌ Failed to reset chat position', 'error');
+        }
+    }
+
+    /**
+     * Open protein structure viewer
+     */
+    async openProteinViewer(params) {
+        const { pdbData, proteinName, pdbId } = params;
+        
+        try {
+            // Check if protein structure viewer is available
+            if (window.proteinStructureViewer && window.proteinStructureViewer.openStructureViewer) {
+                // Open the 3D viewer
+                window.proteinStructureViewer.openStructureViewer(pdbData, proteinName, pdbId);
+                
+                return {
+                    success: true,
+                    proteinName: proteinName,
+                    pdbId: pdbId,
+                    message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId})`
+                };
+            } else {
+                throw new Error('Protein structure viewer not available');
+            }
+        } catch (error) {
+            throw new Error(`Failed to open protein viewer: ${error.message}`);
         }
     }
 } 

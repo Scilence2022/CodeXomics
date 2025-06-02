@@ -43,20 +43,21 @@
     "url": "https://github.com/Scilence2022/GenomeAIStudio.git"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "electron": "^27.3.11",
-    "electron-builder": "^24.6.4",
-    "concurrently": "^8.2.2"
+    "electron-builder": "^24.6.4"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "d3": "^7.8.5",
+    "express": "^4.18.2",
     "file-saver": "^2.0.5",
     "igv": "^2.15.8",
+    "marked": "^9.1.6",
+    "ngl": "^2.3.1",
     "papaparse": "^5.4.1",
-    "ws": "^8.14.2",
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
     "uuid": "^9.0.1",
-    "marked": "^9.1.6"
+    "ws": "^8.14.2"
   },
   "build": {
     "appId": "com.genomeai.studio",
@@ -87,7 +88,9 @@
       {
         "from": "sample_data",
         "to": "sample_data",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
@@ -96,11 +99,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "hardenedRuntime": true,
@@ -133,11 +142,17 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         }
       ],
       "publisherName": "Genome AI Studio Team"
@@ -154,19 +169,27 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "snap",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icons/",
@@ -177,7 +200,9 @@
     "snap": {
       "publish": {
         "provider": "snapStore",
-        "channels": ["edge"]
+        "channels": [
+          "edge"
+        ]
       }
     }
   }
