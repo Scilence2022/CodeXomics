@@ -816,6 +816,10 @@ class GenomeBrowser {
                         case 'proteins':
                             optimalHeight = 90;
                             break;
+                        case 'wigTracks':
+                            // For WIG tracks, use a default optimal height
+                            optimalHeight = 120;
+                            break;
                         default:
                             optimalHeight = 80;
                     }
@@ -1050,10 +1054,10 @@ class GenomeBrowser {
             if (trackContent) {
                 const newHeight = Math.max(50, startHeight + deltaY);
                 trackContent.style.height = `${newHeight}px`;
+                
+                // Save the new size to track state manager
+                this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);
             }
-            
-            // Save the new size to track state manager
-            this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);
             
             e.preventDefault();
         };
@@ -1116,6 +1120,10 @@ class GenomeBrowser {
                         break;
                     case 'proteins':
                         optimalHeight = 90;
+                        break;
+                    case 'wigTracks':
+                        // For WIG tracks, use a default optimal height
+                        optimalHeight = 120;
                         break;
                     default:
                         optimalHeight = 80;
@@ -2230,6 +2238,7 @@ class TrackStateManager {
 
     // Save track size
     saveTrackSize(trackType, height) {
+        console.log(`[TrackStateManager] Saving track size: ${trackType} = ${height}`);
         this.trackSizes.set(trackType, height);
         this.saveState();
         console.log(`Saved track size: ${trackType} = ${height}`);
@@ -2271,6 +2280,8 @@ class TrackStateManager {
                 const trackType = trackClass.replace('-track', '');
                 const mappedType = trackTypeMapping[trackType] || trackType;
                 const savedSize = this.getTrackSize(mappedType);
+                
+                console.log(`[TrackStateManager] Processing track: class="${trackClass}", type="${trackType}", mapped="${mappedType}", savedSize="${savedSize}"`);
                 
                 if (savedSize) {
                     const trackContent = element.querySelector('.track-content');
