@@ -1566,7 +1566,14 @@ Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
 - Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
 - Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
-- Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}`;
+- Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
+
+Protein Structure Tools:
+- Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
+- Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
+- Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+
+IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.`;
     }
 
     parseToolCall(response) {
@@ -4534,24 +4541,54 @@ Common Analysis Tools:
      * Open protein structure viewer
      */
     async openProteinViewer(params) {
-        const { pdbData, proteinName, pdbId } = params;
+        let { pdbData, proteinName, pdbId } = params;
         
         try {
             // Check if protein structure viewer is available
-            if (window.proteinStructureViewer && window.proteinStructureViewer.openStructureViewer) {
-                // Open the 3D viewer
-                window.proteinStructureViewer.openStructureViewer(pdbData, proteinName, pdbId);
-                
-                return {
-                    success: true,
-                    proteinName: proteinName,
-                    pdbId: pdbId,
-                    message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId})`
-                };
-            } else {
+            if (!window.proteinStructureViewer || !window.proteinStructureViewer.openStructureViewer) {
                 throw new Error('Protein structure viewer not available');
             }
+            
+            // If no pdbData provided but pdbId is available, fetch the protein structure first
+            if (!pdbData && pdbId) {
+                console.log('No PDB data provided, fetching structure for PDB ID:', pdbId);
+                
+                try {
+                    // Use the fetch_protein_structure tool to get the data
+                    const fetchResult = await this.executeToolByName('fetch_protein_structure', { pdbId });
+                    
+                    if (fetchResult.success) {
+                        pdbData = fetchResult.pdbData;
+                        proteinName = fetchResult.geneName || pdbId;
+                        console.log('Successfully fetched protein structure data');
+                    } else {
+                        throw new Error('Failed to fetch protein structure data');
+                    }
+                } catch (fetchError) {
+                    throw new Error(`Failed to fetch protein structure for ${pdbId}: ${fetchError.message}`);
+                }
+            }
+            
+            // Validate that we now have the required data
+            if (!pdbData) {
+                throw new Error('No protein structure data available');
+            }
+            
+            if (!proteinName) {
+                proteinName = pdbId || 'Unknown Protein';
+            }
+            
+            // Open the 3D viewer
+            window.proteinStructureViewer.openStructureViewer(pdbData, proteinName, pdbId);
+            
+            return {
+                success: true,
+                pdbId: pdbId,
+                message: `Opened 3D protein structure viewer for ${proteinName} (${pdbId})`
+            };
+            
         } catch (error) {
+            console.error('Error in openProteinViewer:', error);
             throw new Error(`Failed to open protein viewer: ${error.message}`);
         }
     }
