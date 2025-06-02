@@ -133,6 +133,37 @@ class MCPGenomeBrowserServer {
                     }));
                 }
                 break;
+            case 'execute-tool':
+                // Handle tool execution requests from WebSocket clients
+                this.handleToolExecution(clientId, data);
+                break;
+        }
+    }
+
+    async handleToolExecution(clientId, data) {
+        const client = this.clients.get(clientId);
+        if (!client) return;
+
+        try {
+            const result = await this.executeTool(data.toolName, data.parameters, clientId);
+            
+            // Send successful response back to client
+            client.send(JSON.stringify({
+                type: 'tool-response',
+                requestId: data.requestId,
+                result: result,
+                success: true
+            }));
+        } catch (error) {
+            console.error(`Tool execution error for ${data.toolName}:`, error);
+            
+            // Send error response back to client
+            client.send(JSON.stringify({
+                type: 'tool-response',
+                requestId: data.requestId,
+                error: error.message,
+                success: false
+            }));
         }
     }
 

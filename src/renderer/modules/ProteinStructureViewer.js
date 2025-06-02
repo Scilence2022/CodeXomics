@@ -476,11 +476,55 @@ class ProteinStructureViewer {
      * Request MCP tool execution
      */
     async requestMCPTool(toolName, parameters) {
-        if (window.mcpServerManager && window.mcpServerManager.executeTool) {
-            return await window.mcpServerManager.executeTool(toolName, parameters);
-        } else {
-            throw new Error('MCP Server not connected');
+        // Try multiple ways to access the MCP server manager
+        let mcpManager = null;
+        let chatManager = null;
+        
+        if (window.chatManager) {
+            chatManager = window.chatManager;
+            if (chatManager.mcpServerManager) {
+                mcpManager = chatManager.mcpServerManager;
+            }
+        } else if (window.genomeBrowser && window.genomeBrowser.chatManager) {
+            chatManager = window.genomeBrowser.chatManager;
+            if (chatManager.mcpServerManager) {
+                mcpManager = chatManager.mcpServerManager;
+            }
+        } else if (window.mcpServerManager) {
+            mcpManager = window.mcpServerManager;
         }
+        
+        // If we have an MCP manager but no connections, try to connect to the built-in server
+        if (mcpManager && mcpManager.getConnectedServersCount() === 0) {
+            console.log('No MCP servers connected, attempting to connect to built-in server...');
+            try {
+                await mcpManager.connectToServer('genome-studio');
+                // Wait a moment for the connection to establish
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.warn('Failed to connect to built-in MCP server:', error.message);
+            }
+        }
+        
+        // Try MCPServerManager.executeTool first
+        if (mcpManager && mcpManager.executeTool) {
+            try {
+                return await mcpManager.executeTool(toolName, parameters);
+            } catch (error) {
+                console.warn('MCP server manager failed, trying ChatManager fallback:', error.message);
+            }
+        }
+        
+        // Try ChatManager.executeToolByName as fallback
+        if (chatManager && chatManager.executeToolByName) {
+            try {
+                return await chatManager.executeToolByName(toolName, parameters);
+            } catch (error) {
+                console.warn('ChatManager executeToolByName failed:', error.message);
+            }
+        }
+        
+        throw new Error('MCP Server not connected or not available. Please ensure the MCP server is running and connected.');
     }
 }
 

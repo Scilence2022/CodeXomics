@@ -37,7 +37,7 @@ class MCPServerManager {
                 description: 'Built-in genome analysis tools',
                 url: 'ws://localhost:3001',
                 enabled: true,
-                autoConnect: false,
+                autoConnect: true,
                 reconnectDelay: 5,
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
