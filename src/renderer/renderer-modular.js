@@ -17,6 +17,7 @@ class GenomeBrowser {
         this.sequenceUtils = new SequenceUtils(this);
         this.exportManager = new ExportManager(this);
         this.readsManager = new ReadsManager(this); // Initialize reads manager
+        this.trackStateManager = new TrackStateManager(this);  // Add track state manager
         
         // State
         this.currentChromosome = null;
@@ -509,7 +510,8 @@ class GenomeBrowser {
             'gc': 'gc',
             'variant': 'variants',
             'reads': 'reads',
-            'proteins': 'proteins'
+            'proteins': 'proteins',
+            'wig': 'wigTracks'  // Add WIG tracks to preservation mapping
             // Remove 'sequence' since it's now handled as bottom panel, not a regular track
         };
 
@@ -595,7 +597,7 @@ class GenomeBrowser {
             // Add the track
             browserContainer.appendChild(track.element);
             
-            // RESTORE PRESERVED HEIGHT if it exists
+            // RESTORE PRESERVED HEIGHT if it exists (current session)
             const trackContent = track.element.querySelector('.track-content');
             const typeToRestore = track.type;
             if (trackContent && preservedHeights.has(typeToRestore)) {
@@ -612,6 +614,10 @@ class GenomeBrowser {
         });
         
         container.appendChild(browserContainer);
+        
+        // Apply saved track state (sizes and order) from previous sessions
+        this.trackStateManager.applyTrackSizes(browserContainer);
+        this.trackStateManager.applyTrackOrder(browserContainer);
         
         // Handle bottom sequence panel separately (always docked to bottom)
         this.handleBottomSequencePanel(chromosome, sequence);
@@ -1042,9 +1048,12 @@ class GenomeBrowser {
             
             const trackContent = trackElement.querySelector('.track-content');
             if (trackContent) {
-                const newHeight = Math.max(40, startHeight + deltaY);
+                const newHeight = Math.max(50, startHeight + deltaY);
                 trackContent.style.height = `${newHeight}px`;
             }
+            
+            // Save the new size to track state manager
+            this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);
             
             e.preventDefault();
         };
@@ -1113,6 +1122,9 @@ class GenomeBrowser {
                 }
                 
                 trackContent.style.height = `${optimalHeight}px`;
+                
+                // Save the new size to track state manager
+                this.trackStateManager.saveTrackSize(trackType, `${optimalHeight}px`);
                 
                 // Visual feedback
                 resizeHandle.style.background = 'linear-gradient(to bottom, #28a745, #20c997, #28a745)';
@@ -1191,7 +1203,8 @@ class GenomeBrowser {
                     'gc': 'gc',
                     'variant': 'variants',
                     'reads': 'reads',
-                    'proteins': 'proteins'
+                    'proteins': 'proteins',
+                    'wig': 'wigTracks'  // Add WIG tracks to order mapping
                     // Remove 'sequence' since it's now handled as bottom panel, not a regular track
                 };
                 const mappedType = typeMapping[trackType] || trackType;
@@ -1200,6 +1213,9 @@ class GenomeBrowser {
         });
         
         console.log('New track order:', newOrder);
+        
+        // Save the new order to track state manager
+        this.trackStateManager.saveTrackOrder(newOrder);
         
         // Store the order preference if needed
         if (this.configManager) {
@@ -2200,3 +2216,144 @@ class GenomeBrowser {
 document.addEventListener('DOMContentLoaded', () => {
     window.genomeBrowser = new GenomeBrowser();
 }); 
+
+/**
+ * TrackStateManager - Manages track sizes and order persistence
+ */
+class TrackStateManager {
+    constructor(genomeBrowser) {
+        this.genomeBrowser = genomeBrowser;
+        this.trackSizes = new Map();
+        this.trackOrder = [];
+        this.loadState();
+    }
+
+    // Save track size
+    saveTrackSize(trackType, height) {
+        this.trackSizes.set(trackType, height);
+        this.saveState();
+        console.log(`Saved track size: ${trackType} = ${height}`);
+    }
+
+    // Get saved track size
+    getTrackSize(trackType) {
+        return this.trackSizes.get(trackType) || null;
+    }
+
+    // Save track order
+    saveTrackOrder(order) {
+        this.trackOrder = [...order];
+        this.saveState();
+        console.log('Saved track order:', this.trackOrder);
+    }
+
+    // Get saved track order
+    getTrackOrder() {
+        return [...this.trackOrder];
+    }
+
+    // Apply saved track sizes to newly created tracks
+    applyTrackSizes(container) {
+        const trackElements = container.querySelectorAll('[class*="-track"]');
+        const trackTypeMapping = {
+            'gene': 'genes',
+            'gc': 'gc',
+            'variant': 'variants',
+            'reads': 'reads',
+            'proteins': 'proteins',
+            'wig': 'wigTracks'
+        };
+
+        trackElements.forEach(element => {
+            const classList = Array.from(element.classList);
+            const trackClass = classList.find(cls => cls.endsWith('-track'));
+            if (trackClass) {
+                const trackType = trackClass.replace('-track', '');
+                const mappedType = trackTypeMapping[trackType] || trackType;
+                const savedSize = this.getTrackSize(mappedType);
+                
+                if (savedSize) {
+                    const trackContent = element.querySelector('.track-content');
+                    if (trackContent) {
+                        trackContent.style.height = savedSize;
+                        console.log(`Applied saved size to ${mappedType}: ${savedSize}`);
+                    }
+                }
+            }
+        });
+    }
+
+    // Apply saved track order
+    applyTrackOrder(container) {
+        if (this.trackOrder.length === 0) return;
+
+        const trackElements = Array.from(container.querySelectorAll('[class*="-track"]'));
+        const trackTypeMapping = {
+            'gene': 'genes',
+            'gc': 'gc',
+            'variant': 'variants',
+            'reads': 'reads',
+            'proteins': 'proteins',
+            'wig': 'wigTracks'
+        };
+
+        // Create a map of current tracks by type
+        const tracksByType = new Map();
+        trackElements.forEach(element => {
+            const classList = Array.from(element.classList);
+            const trackClass = classList.find(cls => cls.endsWith('-track'));
+            if (trackClass) {
+                const trackType = trackClass.replace('-track', '');
+                const mappedType = trackTypeMapping[trackType] || trackType;
+                tracksByType.set(mappedType, element);
+            }
+        });
+
+        // Reorder tracks according to saved order
+        this.trackOrder.forEach((trackType, index) => {
+            const trackElement = tracksByType.get(trackType);
+            if (trackElement) {
+                container.appendChild(trackElement); // This moves it to the end
+                console.log(`Reordered track ${trackType} to position ${index}`);
+            }
+        });
+    }
+
+    // Save state to localStorage
+    saveState() {
+        try {
+            const state = {
+                trackSizes: Object.fromEntries(this.trackSizes),
+                trackOrder: this.trackOrder
+            };
+            localStorage.setItem('genomeViewer_trackState', JSON.stringify(state));
+        } catch (error) {
+            console.error('Error saving track state:', error);
+        }
+    }
+
+    // Load state from localStorage
+    loadState() {
+        try {
+            const saved = localStorage.getItem('genomeViewer_trackState');
+            if (saved) {
+                const state = JSON.parse(saved);
+                this.trackSizes = new Map(Object.entries(state.trackSizes || {}));
+                this.trackOrder = state.trackOrder || [];
+                console.log('Loaded track state:', { sizes: state.trackSizes, order: state.trackOrder });
+            }
+        } catch (error) {
+            console.error('Error loading track state:', error);
+            this.trackSizes = new Map();
+            this.trackOrder = [];
+        }
+    }
+
+    // Clear all saved state
+    clearState() {
+        this.trackSizes.clear();
+        this.trackOrder = [];
+        localStorage.removeItem('genomeViewer_trackState');
+        console.log('Cleared track state');
+    }
+} 

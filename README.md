@@ -10,6 +10,7 @@ A modern, cross-platform genome analysis studio built with Electron, featuring a
 - **Multi-format Support** - FASTA, GenBank, GFF/GTF, BED, VCF, BAM/SAM files
 - **Real-time Navigation** - Smooth zooming, panning, and position jumping
 - **User-defined Features** - Create custom annotations with sequence selection
+- **Track State Persistence**: Automatically saves and restores track sizes and order across navigation and sessions
 
 ### 🤖 **AI-Powered Assistant**
 - **Natural Language Queries** - Ask questions about genes, functions, and genomic regions
@@ -86,6 +87,7 @@ npm run build
 | **BED** | Regions | ✅ | ✅ | Genomic intervals and features |
 | **VCF** | Variants | ✅ | ❌ | SNPs and structural variants |
 | **SAM/BAM** | Alignments | ✅ | ❌ | Read mapping data |
+| **WIG** | Track Data | ✅ | ✅ | Multi-track support and merging |
 
 ### **AI Integration**
 ```

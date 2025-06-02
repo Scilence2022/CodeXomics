@@ -706,7 +706,8 @@ class GenomeBrowser {
             'gc': 'gc',
             'variant': 'variants',
             'reads': 'reads',
-            'protein': 'proteins'
+            'protein': 'proteins',
+            'wig': 'wigTracks'  // Add WIG tracks to preservation mapping
         };
 
         const existingTracks = container.querySelectorAll('[class*="-track"]');

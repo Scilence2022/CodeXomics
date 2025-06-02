@@ -41,6 +41,48 @@ This document describes the implementation of WIG (Wiggle) format support in Gen
 - **Track Information Display**: Shows track names, colors, and data ranges
 - **Real-time Updates**: Changes apply immediately to the visualization
 
+### 6. Track State Persistence (NEW)
+
+The application now automatically saves and restores track configurations across navigation and application sessions:
+
+#### Persistent Track Sizes
+- **Automatic Saving**: Any manual track resize is immediately saved
+- **Session Persistence**: Sizes are maintained when navigating to different chromosomes or positions
+- **Application Persistence**: Sizes are restored when reopening the application
+- **Per-Track Basis**: Each track type (genes, GC, variants, reads, WIG, proteins) has independent size storage
+
+#### Persistent Track Order
+- **Drag & Drop**: Reorder tracks by dragging and dropping
+- **Automatic Saving**: New order is immediately saved when tracks are reordered
+- **Session Persistence**: Order is maintained across navigation
+- **Application Persistence**: Order is restored when reopening the application
+
+#### Track Resize Methods
+1. **Manual Resize**: Drag the resize handle at the bottom of any track
+2. **Auto-adjust**: Double-click any resize handle to automatically optimize track height
+3. **Minimum Height**: All tracks have a minimum height of 50px to ensure usability
+
+#### Storage Details
+- **Technology**: Uses browser localStorage for persistence
+- **Data Format**: JSON storage of track sizes and order arrays
+- **Storage Key**: `genomeViewer_trackState`
+- **Conflict Resolution**: Graceful handling of storage errors or corrupted data
+- **Clear Option**: State can be programmatically cleared if needed
+
+#### Example Usage
+```javascript
+// Track state is automatically managed, but can be accessed via:
+genomeBrowser.trackStateManager.saveTrackSize('wigTracks', '200px');
+genomeBrowser.trackStateManager.saveTrackOrder(['genes', 'wigTracks', 'gc', 'variants']);
+genomeBrowser.trackStateManager.clearState(); // Reset all saved state
+```
+
+#### Benefits
+- **Improved User Experience**: No need to manually resize tracks after each navigation
+- **Consistent Layouts**: Maintain preferred track arrangements across sessions
+- **Efficient Workflow**: Focus on analysis rather than UI adjustments
+- **Multi-Project Support**: Each browser profile maintains separate state
+
 ## File Structure
 
 ### Core Implementation Files
