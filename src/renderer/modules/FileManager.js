@@ -10,7 +10,7 @@ class FileManager {
     async openFile() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank';
+        input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig';
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
                 this.loadFile(e.target.files[0].path);
@@ -40,9 +40,12 @@ class FileManager {
             case 'reads':
                 input.accept = '.sam,.bam';
                 break;
+            case 'tracks':
+                input.accept = '.wig';
+                break;
             case 'any':
             default:
-                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank';
+                input.accept = '.fasta,.fa,.gff,.gtf,.bed,.vcf,.sam,.bam,.gb,.gbk,.gbff,.genbank,.wig';
                 break;
         }
         
@@ -229,8 +232,11 @@ class FileManager {
             case '.bam':
                 await this.parseBAM();
                 break;
+            case '.wig':
+                await this.parseWIG();
+                break;
             default:
-                throw new Error(`Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam). Note: BAM files require conversion to SAM format first.`);
+                throw new Error(`Unsupported file format: ${extension}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig). Note: BAM files require conversion to SAM format first.`);
         }
     }
 
@@ -728,6 +734,216 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
         }
     }
 
+    async parseWIG() {
+        console.log('Starting WIG parsing...');
+        const lines = this.currentFile.data.split('\n');
+        console.log(`Total lines to parse: ${lines.length}`);
+        
+        const wigTracks = {};
+        let currentTrack = null;
+        let currentChromosome = null;
+        let currentStep = null;
+        let currentStart = null;
+        let currentSpan = 1;
+        let isFixedStep = false;
+        let isVariableStep = false;
+        
+        // Progress tracking for large files
+        const totalLines = lines.length;
+        let processedLines = 0;
+        const updateInterval = Math.max(1000, Math.floor(totalLines / 100));
+        
+        this.genomeBrowser.updateStatus('Parsing WIG file...');
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Update progress for large files
+            processedLines++;
+            if (processedLines % updateInterval === 0) {
+                const progress = Math.round((processedLines / totalLines) * 100);
+                this.genomeBrowser.updateStatus(`Parsing WIG file... ${progress}%`);
+                
+                // Allow UI to update for large files
+                if (totalLines > 10000) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
+            
+            // Skip empty lines and comments
+            if (!line || line.startsWith('#')) continue;
+            
+            // Parse track definition line
+            if (line.startsWith('track')) {
+                const trackParams = this.parseWIGTrackLine(line);
+                currentTrack = {
+                    name: trackParams.name || `Track_${Object.keys(wigTracks).length + 1}`,
+                    description: trackParams.description || '',
+                    type: trackParams.type || 'wiggle_0',
+                    color: trackParams.color || '0,0,0',
+                    visibility: trackParams.visibility || 'full',
+                    autoScale: trackParams.autoScale !== 'off',
+                    viewLimits: trackParams.viewLimits || null,
+                    maxHeightPixels: trackParams.maxHeightPixels || null,
+                    data: {}
+                };
+                wigTracks[currentTrack.name] = currentTrack;
+                console.log(`Created WIG track: ${currentTrack.name}`);
+                continue;
+            }
+            
+            // Parse declaration lines
+            if (line.startsWith('fixedStep')) {
+                const params = this.parseWIGDeclarationLine(line);
+                currentChromosome = params.chrom;
+                currentStart = params.start - 1; // Convert to 0-based
+                currentStep = params.step || 1;
+                currentSpan = params.span || 1;
+                isFixedStep = true;
+                isVariableStep = false;
+                
+                // Ensure track exists
+                if (!currentTrack) {
+                    currentTrack = {
+                        name: 'Default_Track',
+                        description: 'Default WIG track',
+                        type: 'wiggle_0',
+                        color: '0,0,0',
+                        visibility: 'full',
+                        autoScale: true,
+                        viewLimits: null,
+                        maxHeightPixels: null,
+                        data: {}
+                    };
+                    wigTracks[currentTrack.name] = currentTrack;
+                }
+                
+                // Initialize chromosome data
+                if (!currentTrack.data[currentChromosome]) {
+                    currentTrack.data[currentChromosome] = [];
+                }
+                continue;
+            }
+            
+            if (line.startsWith('variableStep')) {
+                const params = this.parseWIGDeclarationLine(line);
+                currentChromosome = params.chrom;
+                currentSpan = params.span || 1;
+                isFixedStep = false;
+                isVariableStep = true;
+                
+                // Ensure track exists
+                if (!currentTrack) {
+                    currentTrack = {
+                        name: 'Default_Track',
+                        description: 'Default WIG track',
+                        type: 'wiggle_0',
+                        color: '0,0,0',
+                        visibility: 'full',
+                        autoScale: true,
+                        viewLimits: null,
+                        maxHeightPixels: null,
+                        data: {}
+                    };
+                    wigTracks[currentTrack.name] = currentTrack;
+                }
+                
+                // Initialize chromosome data
+                if (!currentTrack.data[currentChromosome]) {
+                    currentTrack.data[currentChromosome] = [];
+                }
+                continue;
+            }
+            
+            // Parse data lines
+            if (currentTrack && currentChromosome) {
+                if (isFixedStep) {
+                    // Fixed step format: just the value
+                    const value = parseFloat(line);
+                    if (!isNaN(value)) {
+                        currentTrack.data[currentChromosome].push({
+                            start: currentStart,
+                            end: currentStart + currentSpan,
+                            value: value
+                        });
+                        currentStart += currentStep;
+                    }
+                } else if (isVariableStep) {
+                    // Variable step format: position value
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 2) {
+                        const position = parseInt(parts[0]) - 1; // Convert to 0-based
+                        const value = parseFloat(parts[1]);
+                        if (!isNaN(position) && !isNaN(value)) {
+                            currentTrack.data[currentChromosome].push({
+                                start: position,
+                                end: position + currentSpan,
+                                value: value
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Store WIG tracks data
+        this.genomeBrowser.currentWIGTracks = wigTracks;
+        console.log(`Parsed ${Object.keys(wigTracks).length} WIG tracks with data for multiple chromosomes`);
+        
+        // Log track statistics
+        Object.entries(wigTracks).forEach(([trackName, track]) => {
+            const totalDataPoints = Object.values(track.data).reduce((sum, chrData) => sum + chrData.length, 0);
+            console.log(`WIG Track "${trackName}": ${totalDataPoints} data points across ${Object.keys(track.data).length} chromosomes`);
+        });
+        
+        this.genomeBrowser.updateStatus(`Loaded ${Object.keys(wigTracks).length} WIG track(s) successfully`);
+        
+        // Auto-enable WIG tracks
+        this.autoEnableTracksForFileType('.wig');
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        }
+    }
+    
+    parseWIGTrackLine(line) {
+        const params = {};
+        
+        // Extract parameters from track line
+        // Format: track type=wiggle_0 name="Track Name" description="Description" visibility=full
+        const matches = line.match(/(\w+)=(?:"([^"]*)"|(\S+))/g);
+        if (matches) {
+            matches.forEach(match => {
+                const [, key, quotedValue, unquotedValue] = match.match(/(\w+)=(?:"([^"]*)"|(\S+))/);
+                params[key] = quotedValue || unquotedValue;
+            });
+        }
+        
+        return params;
+    }
+    
+    parseWIGDeclarationLine(line) {
+        const params = {};
+        
+        // Extract parameters from declaration line
+        // Format: fixedStep chrom=chr1 start=1 step=1 span=1
+        const matches = line.match(/(\w+)=(\S+)/g);
+        if (matches) {
+            matches.forEach(match => {
+                const [, key, value] = match.match(/(\w+)=(\S+)/);
+                if (key === 'start' || key === 'step' || key === 'span') {
+                    params[key] = parseInt(value);
+                } else {
+                    params[key] = value;
+                }
+            });
+        }
+        
+        return params;
+    }
+
     updateFileInfo() {
         const fileInfo = document.getElementById('fileInfo');
         if (this.currentFile) {
@@ -756,11 +972,13 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
         const trackCheckboxes = {
             toolbar: {
                 variants: document.getElementById('trackVariants'),
-                reads: document.getElementById('trackReads')
+                reads: document.getElementById('trackReads'),
+                wigTracks: document.getElementById('trackWIG')
             },
             sidebar: {
                 variants: document.getElementById('sidebarTrackVariants'),
-                reads: document.getElementById('sidebarTrackReads')
+                reads: document.getElementById('sidebarTrackReads'),
+                wigTracks: document.getElementById('sidebarTrackWIG')
             }
         };
 
@@ -776,6 +994,10 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
             case '.bam':
                 tracksToEnable = ['reads'];
                 statusMessage = 'Aligned Reads track automatically enabled';
+                break;
+            case '.wig':
+                tracksToEnable = ['wigTracks'];
+                statusMessage = 'WIG track automatically enabled';
                 break;
         }
 

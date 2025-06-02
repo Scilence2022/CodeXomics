@@ -49,6 +49,13 @@ class TrackRenderer {
                 className: 'protein-track',
                 requiresData: true,
                 dataSource: 'currentAnnotations'
+            },
+            wigTracks: {
+                defaultHeight: '120px',
+                header: 'WIG Tracks',
+                className: 'wig-track',
+                requiresData: false,
+                dataSource: 'currentWIGTracks'
             }
         };
         
@@ -1854,6 +1861,321 @@ class TrackRenderer {
         `;
         
         return legend;
+    }
+
+    createWIGTrack(chromosome) {
+        const { track, trackContent } = this.createTrackBase('wigTracks', chromosome);
+        const viewport = this.getCurrentViewport();
+        
+        // Get WIG tracks data
+        const wigTracks = this.genomeBrowser.currentWIGTracks || {};
+        
+        // Check if we have any WIG data at all
+        if (!wigTracks || Object.keys(wigTracks).length === 0) {
+            const noDataMsg = this.createNoDataMessage(
+                'No WIG file loaded. Load a WIG file to see track data.',
+                'no-wig-message'
+            );
+            trackContent.appendChild(noDataMsg);
+            return track;
+        }
+        
+        // Create container for all WIG tracks
+        const wigContainer = document.createElement('div');
+        wigContainer.className = 'wig-tracks-container';
+        wigContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+        `;
+        
+        let trackOffset = 0;
+        const trackHeight = 30;
+        const trackSpacing = 5;
+        
+        // Render each WIG track
+        Object.entries(wigTracks).forEach(([trackName, wigTrack], index) => {
+            const trackData = wigTrack.data[chromosome] || [];
+            
+            // Filter data points in current viewport
+            const visibleData = trackData.filter(point => 
+                point.start <= viewport.end && point.end >= viewport.start
+            );
+            
+            if (visibleData.length === 0) {
+                // Create empty track placeholder
+                const emptyTrack = document.createElement('div');
+                emptyTrack.className = 'wig-track-empty';
+                emptyTrack.style.cssText = `
+                    position: absolute;
+                    top: ${trackOffset}px;
+                    left: 0;
+                    right: 0;
+                    height: ${trackHeight}px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 3px;
+                    background: #f9f9f9;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 11px;
+                    color: #999;
+                `;
+                emptyTrack.textContent = `${trackName}: No data in this region`;
+                wigContainer.appendChild(emptyTrack);
+                trackOffset += trackHeight + trackSpacing;
+                return;
+            }
+            
+            // Calculate value range for scaling
+            const values = visibleData.map(point => point.value);
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            const valueRange = maxValue - minValue;
+            
+            // Create track element
+            const trackElement = document.createElement('div');
+            trackElement.className = 'wig-track-data';
+            trackElement.style.cssText = `
+                position: absolute;
+                top: ${trackOffset}px;
+                left: 0;
+                right: 0;
+                height: ${trackHeight}px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background: white;
+                overflow: hidden;
+            `;
+            
+            // Create SVG for data visualization
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.cssText = `
+                width: 100%;
+                height: 100%;
+                display: block;
+            `;
+            
+            // Parse track color
+            const trackColor = this.parseWIGColor(wigTrack.color);
+            
+            // Create data visualization
+            if (visibleData.length > 0) {
+                // Create area chart or bar chart based on data density
+                const dataPointsPerPixel = visibleData.length / (trackElement.offsetWidth || 800);
+                
+                if (dataPointsPerPixel > 2) {
+                    // High density - use area chart
+                    this.createWIGAreaChart(svg, visibleData, viewport, minValue, maxValue, trackColor);
+                } else {
+                    // Low density - use bar chart
+                    this.createWIGBarChart(svg, visibleData, viewport, minValue, maxValue, trackColor);
+                }
+            }
+            
+            // Add track label
+            const label = document.createElement('div');
+            label.className = 'wig-track-label';
+            label.style.cssText = `
+                position: absolute;
+                top: 1px;
+                left: 3px;
+                font-size: 10px;
+                font-weight: bold;
+                color: #333;
+                background: rgba(255,255,255,0.8);
+                padding: 1px 3px;
+                border-radius: 2px;
+                pointer-events: none;
+                z-index: 10;
+            `;
+            label.textContent = trackName;
+            
+            // Add value range indicator
+            const rangeIndicator = document.createElement('div');
+            rangeIndicator.className = 'wig-value-range';
+            rangeIndicator.style.cssText = `
+                position: absolute;
+                top: 1px;
+                right: 3px;
+                font-size: 9px;
+                color: #666;
+                background: rgba(255,255,255,0.8);
+                padding: 1px 3px;
+                border-radius: 2px;
+                pointer-events: none;
+                z-index: 10;
+            `;
+            rangeIndicator.textContent = `${minValue.toFixed(2)} - ${maxValue.toFixed(2)}`;
+            
+            trackElement.appendChild(svg);
+            trackElement.appendChild(label);
+            trackElement.appendChild(rangeIndicator);
+            
+            // Add interaction
+            this.addWIGTrackInteraction(trackElement, wigTrack, visibleData, trackName);
+            
+            wigContainer.appendChild(trackElement);
+            trackOffset += trackHeight + trackSpacing;
+        });
+        
+        // Update track content height based on number of tracks
+        const totalHeight = Math.max(100, trackOffset);
+        trackContent.style.height = `${totalHeight}px`;
+        
+        trackContent.appendChild(wigContainer);
+        
+        // Add summary statistics
+        const totalTracks = Object.keys(wigTracks).length;
+        const tracksWithData = Object.values(wigTracks).filter(track => 
+            track.data[chromosome] && track.data[chromosome].length > 0
+        ).length;
+        
+        const statsText = `${tracksWithData}/${totalTracks} tracks with data`;
+        const statsElement = this.createStatsElement(statsText, 'wig-track-stats');
+        trackContent.appendChild(statsElement);
+        
+        return track;
+    }
+    
+    createWIGAreaChart(svg, data, viewport, minValue, maxValue, color) {
+        const svgWidth = 800; // Default width, will be scaled by CSS
+        const svgHeight = 30;
+        const padding = 2;
+        
+        svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        
+        // Create area path
+        let pathData = `M 0,${svgHeight - padding}`;
+        
+        data.forEach((point, index) => {
+            const x = ((point.start - viewport.start) / viewport.range) * svgWidth;
+            const normalizedValue = (point.value - minValue) / (maxValue - minValue);
+            const y = svgHeight - padding - (normalizedValue * (svgHeight - 2 * padding));
+            
+            if (index === 0) {
+                pathData += ` L ${x},${y}`;
+            } else {
+                pathData += ` L ${x},${y}`;
+            }
+        });
+        
+        pathData += ` L ${svgWidth},${svgHeight - padding} Z`;
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', color);
+        path.setAttribute('fill-opacity', '0.6');
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '0.5');
+        
+        svg.appendChild(path);
+    }
+    
+    createWIGBarChart(svg, data, viewport, minValue, maxValue, color) {
+        const svgWidth = 800;
+        const svgHeight = 30;
+        const padding = 2;
+        
+        svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        
+        data.forEach(point => {
+            const x = ((point.start - viewport.start) / viewport.range) * svgWidth;
+            const width = Math.max(1, ((point.end - point.start) / viewport.range) * svgWidth);
+            const normalizedValue = (point.value - minValue) / (maxValue - minValue);
+            const height = normalizedValue * (svgHeight - 2 * padding);
+            const y = svgHeight - padding - height;
+            
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', color);
+            rect.setAttribute('stroke', 'none');
+            
+            svg.appendChild(rect);
+        });
+    }
+    
+    parseWIGColor(colorString) {
+        // Parse WIG color format (R,G,B) to CSS color
+        if (!colorString || colorString === '0,0,0') {
+            return '#2196F3'; // Default blue
+        }
+        
+        const parts = colorString.split(',');
+        if (parts.length === 3) {
+            const r = parseInt(parts[0]) || 0;
+            const g = parseInt(parts[1]) || 0;
+            const b = parseInt(parts[2]) || 0;
+            return `rgb(${r},${g},${b})`;
+        }
+        
+        return '#2196F3'; // Fallback to blue
+    }
+    
+    addWIGTrackInteraction(trackElement, wigTrack, visibleData, trackName) {
+        // Add tooltip on hover
+        trackElement.addEventListener('mouseover', (e) => {
+            const rect = trackElement.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const relativeX = x / rect.width;
+            
+            const viewport = this.getCurrentViewport();
+            const genomicPosition = viewport.start + (relativeX * viewport.range);
+            
+            // Find closest data point
+            const closestPoint = visibleData.reduce((closest, point) => {
+                const pointCenter = (point.start + point.end) / 2;
+                const currentDistance = Math.abs(genomicPosition - pointCenter);
+                const closestDistance = Math.abs(genomicPosition - ((closest.start + closest.end) / 2));
+                return currentDistance < closestDistance ? point : closest;
+            });
+            
+            if (closestPoint) {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'wig-tooltip';
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 5px 8px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    pointer-events: none;
+                    z-index: 1000;
+                    white-space: nowrap;
+                `;
+                tooltip.innerHTML = `
+                    <div><strong>${trackName}</strong></div>
+                    <div>Position: ${closestPoint.start.toLocaleString()}-${closestPoint.end.toLocaleString()}</div>
+                    <div>Value: ${closestPoint.value.toFixed(3)}</div>
+                `;
+                tooltip.style.left = `${e.clientX + 10}px`;
+                tooltip.style.top = `${e.clientY - 10}px`;
+                
+                document.body.appendChild(tooltip);
+                
+                trackElement._tooltip = tooltip;
+            }
+        });
+        
+        trackElement.addEventListener('mousemove', (e) => {
+            if (trackElement._tooltip) {
+                trackElement._tooltip.style.left = `${e.clientX + 10}px`;
+                trackElement._tooltip.style.top = `${e.clientY - 10}px`;
+            }
+        });
+        
+        trackElement.addEventListener('mouseleave', () => {
+            if (trackElement._tooltip) {
+                document.body.removeChild(trackElement._tooltip);
+                trackElement._tooltip = null;
+            }
+        });
     }
 }
 

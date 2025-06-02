@@ -187,6 +187,7 @@ class GenomeBrowser {
         document.getElementById('openAnnotationBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('annotation'));
         document.getElementById('openVariantBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('variant'));
         document.getElementById('openReadsBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
+        document.getElementById('openWIGBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('tracks'));
         document.getElementById('openAnyBtn').addEventListener('click', () => this.fileManager.openSpecificFileType('any'));
 
         // Export operations - dropdown menu
@@ -267,6 +268,7 @@ class GenomeBrowser {
         document.getElementById('trackGC').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackVariants').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackReads').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackWIG').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
 
@@ -275,6 +277,7 @@ class GenomeBrowser {
         document.getElementById('sidebarTrackGC').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackVariants').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackReads').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackWIG').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
 
@@ -575,7 +578,13 @@ class GenomeBrowser {
             tracksToShow.push({ element: readsTrack, type: 'reads' });
         }
         
-        // 5. Protein track (only if proteins track is selected and we have CDS annotations)
+        // 5. WIG tracks (show if selected, even without data)
+        if (this.visibleTracks.has('wigTracks')) {
+            const wigTrack = this.trackRenderer.createWIGTrack(chromosome);
+            tracksToShow.push({ element: wigTrack, type: 'wigTracks' });
+        }
+
+        // 6. Protein track (only if proteins track is selected and we have CDS annotations)
         if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
             const proteinTrack = this.trackRenderer.createProteinTrack(chromosome);
             tracksToShow.push({ element: proteinTrack, type: 'proteins' });
@@ -1206,6 +1215,7 @@ class GenomeBrowser {
         const trackGC = document.getElementById('trackGC');
         const trackVariants = document.getElementById('trackVariants');
         const trackReads = document.getElementById('trackReads');
+        const trackWIG = document.getElementById('trackWIG');
         const trackProteins = document.getElementById('trackProteins');
         const trackSequence = document.getElementById('trackSequence');
         
@@ -1213,6 +1223,7 @@ class GenomeBrowser {
         if (trackGC && trackGC.checked) tracks.add('gc');
         if (trackVariants && trackVariants.checked) tracks.add('variants');
         if (trackReads && trackReads.checked) tracks.add('reads');
+        if (trackWIG && trackWIG.checked) tracks.add('wigTracks');
         if (trackProteins && trackProteins.checked) tracks.add('proteins');
         if (trackSequence && trackSequence.checked) tracks.add('sequence');
         
@@ -1223,6 +1234,7 @@ class GenomeBrowser {
         const sidebarTrackGC = document.getElementById('sidebarTrackGC');
         const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
         const sidebarTrackReads = document.getElementById('sidebarTrackReads');
+        const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
         const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
         
@@ -1230,6 +1242,7 @@ class GenomeBrowser {
         if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
         if (sidebarTrackVariants) sidebarTrackVariants.checked = tracks.has('variants');
         if (sidebarTrackReads) sidebarTrackReads.checked = tracks.has('reads');
+        if (sidebarTrackWIG) sidebarTrackWIG.checked = tracks.has('wigTracks');
         if (sidebarTrackProteins) sidebarTrackProteins.checked = tracks.has('proteins');
         if (sidebarTrackSequence) sidebarTrackSequence.checked = tracks.has('sequence');
         
@@ -1247,6 +1260,7 @@ class GenomeBrowser {
         const sidebarTrackGC = document.getElementById('sidebarTrackGC');
         const sidebarTrackVariants = document.getElementById('sidebarTrackVariants');
         const sidebarTrackReads = document.getElementById('sidebarTrackReads');
+        const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
         const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
         
@@ -1254,6 +1268,7 @@ class GenomeBrowser {
         if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
         if (sidebarTrackVariants && sidebarTrackVariants.checked) tracks.add('variants');
         if (sidebarTrackReads && sidebarTrackReads.checked) tracks.add('reads');
+        if (sidebarTrackWIG && sidebarTrackWIG.checked) tracks.add('wigTracks');
         if (sidebarTrackProteins && sidebarTrackProteins.checked) tracks.add('proteins');
         if (sidebarTrackSequence && sidebarTrackSequence.checked) tracks.add('sequence');
         
@@ -1264,6 +1279,7 @@ class GenomeBrowser {
         const trackGC = document.getElementById('trackGC');
         const trackVariants = document.getElementById('trackVariants');
         const trackReads = document.getElementById('trackReads');
+        const trackWIG = document.getElementById('trackWIG');
         const trackProteins = document.getElementById('trackProteins');
         const trackSequence = document.getElementById('trackSequence');
         
@@ -1271,6 +1287,7 @@ class GenomeBrowser {
         if (trackGC) trackGC.checked = tracks.has('gc');
         if (trackVariants) trackVariants.checked = tracks.has('variants');
         if (trackReads) trackReads.checked = tracks.has('reads');
+        if (trackWIG) trackWIG.checked = tracks.has('wigTracks');
         if (trackProteins) trackProteins.checked = tracks.has('proteins');
         if (trackSequence) trackSequence.checked = tracks.has('sequence');
         

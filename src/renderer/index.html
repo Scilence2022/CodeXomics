@@ -78,6 +78,10 @@
                             <i class="fas fa-align-left"></i>
                             Reads File (SAM/BAM)
                         </button>
+                        <button class="dropdown-item" id="openWIGBtn">
+                            <i class="fas fa-chart-line"></i>
+                            WIG Tracks (WIG)
+                        </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="openAnyBtn">
                             <i class="fas fa-file"></i>
@@ -170,6 +174,9 @@
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackReads" value="reads"> Aligned Reads
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackWIG" value="wigTracks"> WIG Tracks
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackProteins" value="proteins"> Proteins
@@ -371,6 +378,10 @@
                             <span>Aligned Reads Track</span>
                         </label>
                         <label class="track-control-item">
+                            <input type="checkbox" id="sidebarTrackWIG" value="wigTracks">
+                            <span>WIG Tracks</span>
+                        </label>
+                        <label class="track-control-item">
                             <input type="checkbox" id="sidebarTrackProteins" value="proteins">
                             <span>Protein Track</span>
                         </label>
@@ -531,9 +542,13 @@
                             <i class="fas fa-align-left"></i>
                             Reads File
                         </button>
+                        <button id="welcomeOpenWIGBtn" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-chart-line"></i>
+                            WIG Tracks
+                        </button>
                     </div>
                     <p class="welcome-note">
-                        <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM</small>
+                        <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM, WIG</small>
                     </p>
                 </div>
             </div>
