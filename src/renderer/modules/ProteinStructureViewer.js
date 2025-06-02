@@ -259,6 +259,9 @@ class ProteinStructureViewer {
     openStructureViewer(pdbData, proteinName, pdbId) {
         const windowId = `protein-${pdbId}-${Date.now()}`;
         
+        console.log('Opening protein structure viewer for:', pdbId);
+        console.log('PDB data length:', pdbData ? pdbData.length : 'No data');
+        
         // Create new window
         const viewerWindow = window.open('', windowId, 
             'width=800,height=600,scrollbars=yes,resizable=yes,status=yes,menubar=no,toolbar=no'
@@ -273,12 +276,32 @@ class ProteinStructureViewer {
         viewerWindow.document.write(this.getViewerHTML(proteinName, pdbId));
         viewerWindow.document.close();
 
-        // Initialize NGL viewer after window loads
+        // Wait for window to load, then wait for NGL to load, then initialize
         viewerWindow.onload = () => {
-            this.initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId);
+            console.log('Viewer window loaded, waiting for NGL...');
+            
+            // Check periodically if NGL is ready
+            const checkNGL = () => {
+                if (viewerWindow.nglReady && viewerWindow.NGL) {
+                    console.log('NGL is ready, initializing viewer...');
+                    viewerWindow.document.getElementById('loading').textContent = 'Loading protein structure...';
+                    this.initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId);
+                } else if (viewerWindow.closed) {
+                    console.log('Viewer window was closed before NGL loaded');
+                    return;
+                } else {
+                    // Check again in 100ms
+                    setTimeout(checkNGL, 100);
+                }
+            };
+            
+            // Start checking after a short delay to allow the load event to fire
+            setTimeout(checkNGL, 100);
         };
 
         this.structureWindows.set(windowId, viewerWindow);
+        
+        console.log('Protein viewer window created with ID:', windowId);
     }
 
     /**
@@ -290,7 +313,51 @@ class ProteinStructureViewer {
             <html>
             <head>
                 <title>Protein Structure: ${proteinName} (${pdbId})</title>
-                <script src="https://unpkg.com/ngl@2.3.1/dist/ngl.js"></script>
+                <script>
+                    // Try multiple CDN sources for NGL viewer
+                    function loadNGL() {
+                        return new Promise((resolve, reject) => {
+                            const scripts = [
+                                'https://unpkg.com/ngl@2.3.1/dist/ngl.js',
+                                'https://cdn.jsdelivr.net/npm/ngl@2.3.1/dist/ngl.js',
+                                'https://unpkg.com/ngl@latest/dist/ngl.js'
+                            ];
+                            
+                            function tryScript(index) {
+                                if (index >= scripts.length) {
+                                    reject(new Error('Failed to load NGL from all CDN sources'));
+                                    return;
+                                }
+                                
+                                const script = document.createElement('script');
+                                script.src = scripts[index];
+                                script.onload = () => {
+                                    console.log('NGL loaded from:', scripts[index]);
+                                    resolve();
+                                };
+                                script.onerror = () => {
+                                    console.warn('Failed to load NGL from:', scripts[index]);
+                                    tryScript(index + 1);
+                                };
+                                document.head.appendChild(script);
+                            }
+                            
+                            tryScript(0);
+                        });
+                    }
+                    
+                    // Load NGL when page loads
+                    window.addEventListener('load', () => {
+                        loadNGL().then(() => {
+                            console.log('NGL library loaded successfully');
+                            window.nglReady = true;
+                        }).catch((error) => {
+                            console.error('Failed to load NGL:', error);
+                            document.getElementById('loading').textContent = 
+                                'Failed to load 3D viewer library. Please check your internet connection.';
+                        });
+                    });
+                </script>
                 <style>
                     body {
                         margin: 0;
@@ -364,7 +431,7 @@ class ProteinStructureViewer {
                         <button onclick="toggleSpin()">Auto Rotate</button>
                         <button onclick="showInfo()">Info</button>
                     </div>
-                    <div class="loading" id="loading">Loading protein structure...</div>
+                    <div class="loading" id="loading">Loading 3D viewer library...</div>
                     <div id="viewport"></div>
                 </div>
             </body>
@@ -377,53 +444,117 @@ class ProteinStructureViewer {
      */
     initializeNGLViewer(viewerWindow, pdbData, proteinName, pdbId) {
         try {
+            console.log('Initializing NGL viewer for:', pdbId);
+            console.log('PDB data length:', pdbData ? pdbData.length : 'No data');
+            
+            // Check if NGL is available
+            if (!viewerWindow.NGL) {
+                console.error('NGL library not loaded');
+                viewerWindow.document.getElementById('loading').textContent = 
+                    'Error: NGL library failed to load. Please check your internet connection.';
+                return;
+            }
+
             const NGL = viewerWindow.NGL;
-            const stage = new NGL.Stage("viewport", {
+            console.log('NGL library loaded successfully');
+            
+            // Check if viewport element exists
+            const viewportElement = viewerWindow.document.getElementById('viewport');
+            if (!viewportElement) {
+                console.error('Viewport element not found');
+                viewerWindow.document.getElementById('loading').textContent = 
+                    'Error: Viewport element not found';
+                return;
+            }
+
+            const stage = new NGL.Stage(viewportElement, {
                 backgroundColor: "white"
             });
+
+            console.log('NGL stage created');
 
             // Add representation controls
             let currentRepresentation = 'cartoon';
             let spinning = false;
             let component = null;
 
-            // Load structure from PDB data
-            const blob = new Blob([pdbData], { type: 'text/plain' });
-            const file = new File([blob], `${pdbId}.pdb`);
-
-            stage.loadFile(file).then(function(comp) {
-                component = comp;
-                
-                // Add default representation
-                comp.addRepresentation(currentRepresentation, {
-                    colorScheme: "chainid"
-                });
-                
-                // Auto view
-                comp.autoView();
-                
-                // Hide loading
-                viewerWindow.document.getElementById('loading').style.display = 'none';
-            }).catch(function(error) {
-                console.error('Error loading structure:', error);
+            // Validate PDB data
+            if (!pdbData || pdbData.length === 0) {
+                console.error('No PDB data provided');
                 viewerWindow.document.getElementById('loading').textContent = 
-                    'Error loading structure: ' + error.message;
-            });
+                    'Error: No protein structure data received';
+                return;
+            }
+
+            console.log('Loading PDB data...');
+            
+            // Load structure from PDB string data directly
+            // Use NGL's built-in string loading method
+            const stringBlob = new Blob([pdbData], { type: 'text/plain' });
+            const dataUrl = URL.createObjectURL(stringBlob);
+            
+            stage.loadFile(dataUrl, { ext: 'pdb' })
+                .then(function(comp) {
+                    console.log('PDB structure loaded successfully');
+                    component = comp;
+                    
+                    // Clean up the object URL
+                    URL.revokeObjectURL(dataUrl);
+                    
+                    // Add default representation
+                    comp.addRepresentation(currentRepresentation, {
+                        colorScheme: "chainid"
+                    });
+                    
+                    console.log('Representation added');
+                    
+                    // Auto view
+                    comp.autoView();
+                    
+                    console.log('Auto view applied');
+                    
+                    // Hide loading
+                    const loadingElement = viewerWindow.document.getElementById('loading');
+                    if (loadingElement) {
+                        loadingElement.style.display = 'none';
+                    }
+                    
+                    console.log('NGL viewer initialization completed successfully');
+                    
+                }).catch(function(error) {
+                    console.error('Error loading PDB structure:', error);
+                    
+                    // Clean up the object URL in case of error
+                    URL.revokeObjectURL(dataUrl);
+                    
+                    const loadingElement = viewerWindow.document.getElementById('loading');
+                    if (loadingElement) {
+                        loadingElement.textContent = 
+                            'Error loading structure: ' + error.message + 
+                            ' (Check console for details)';
+                    }
+                });
 
             // Add control functions to window
             viewerWindow.resetView = () => {
-                if (component) component.autoView();
+                if (component) {
+                    console.log('Resetting view');
+                    component.autoView();
+                }
             };
 
             viewerWindow.toggleRepresentation = () => {
                 if (!component) return;
                 
+                console.log('Toggling representation from:', currentRepresentation);
                 component.removeAllRepresentations();
                 
                 const representations = ['cartoon', 'ball+stick', 'spacefill', 'surface', 'backbone'];
                 const currentIndex = representations.indexOf(currentRepresentation);
                 const nextIndex = (currentIndex + 1) % representations.length;
                 currentRepresentation = representations[nextIndex];
+                
+                console.log('New representation:', currentRepresentation);
                 
                 component.addRepresentation(currentRepresentation, {
                     colorScheme: "chainid"
@@ -432,22 +563,28 @@ class ProteinStructureViewer {
 
             viewerWindow.toggleSpin = () => {
                 spinning = !spinning;
+                console.log('Toggle spin:', spinning);
                 stage.setSpin(spinning);
             };
 
             viewerWindow.showInfo = () => {
-                alert(`Protein: ${proteinName}\nPDB ID: ${pdbId}\nRepresentation: ${currentRepresentation}`);
+                alert(`Protein: ${proteinName}\nPDB ID: ${pdbId}\nRepresentation: ${currentRepresentation}\nPDB Data Size: ${pdbData ? pdbData.length : 0} characters`);
             };
 
             // Handle window resize
             viewerWindow.addEventListener('resize', () => {
+                console.log('Window resized, handling stage resize');
                 stage.handleResize();
             });
 
         } catch (error) {
             console.error('Error initializing NGL viewer:', error);
-            viewerWindow.document.getElementById('loading').textContent = 
-                'Error initializing 3D viewer: ' + error.message;
+            const loadingElement = viewerWindow.document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.textContent = 
+                    'Error initializing 3D viewer: ' + error.message + 
+                    ' (Check console for details)';
+            }
         }
     }
 
