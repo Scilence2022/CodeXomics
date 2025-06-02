@@ -715,6 +715,7 @@
                     <button class="tab-button active" data-provider="openai">OpenAI</button>
                     <button class="tab-button" data-provider="anthropic">Anthropic</button>
                     <button class="tab-button" data-provider="google">Google</button>
+                    <button class="tab-button" data-provider="deepseek">DeepSeek</button>
                     <button class="tab-button" data-provider="local">Local LLM</button>
                 </div>
                 
@@ -796,6 +797,32 @@
                         <div class="form-group">
                             <label for="googleBaseUrl">Base URL (optional):</label>
                             <input type="text" id="googleBaseUrl" placeholder="https://generativelanguage.googleapis.com" class="input-full">
+                        </div>
+                    </div>
+                    
+                    <!-- DeepSeek Configuration -->
+                    <div id="deepseek-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="deepseekApiKey">API Key:</label>
+                            <div class="input-with-button">
+                                <input type="password" id="deepseekApiKey" placeholder="sk-..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteDeepseekApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="help-text">Get your API key from <a href="https://platform.deepseek.com/" target="_blank">DeepSeek Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="deepseekModel">Model:</label>
+                            <select id="deepseekModel" class="select">
+                                <option value="deepseek-chat">DeepSeek Chat</option>
+                                <option value="deepseek-coder">DeepSeek Coder</option>
+                                <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deepseekBaseUrl">Base URL (optional):</label>
+                            <input type="text" id="deepseekBaseUrl" placeholder="https://api.deepseek.com/v1" class="input-full">
                         </div>
                     </div>
                     

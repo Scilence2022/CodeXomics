@@ -140,16 +140,12 @@
           "arch": ["x64", "ia32"]
         }
       ],
-      "icon": "build/icon.ico",
       "publisherName": "Genome AI Studio Team"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "${productName}"

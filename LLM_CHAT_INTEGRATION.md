@@ -47,6 +47,12 @@ Access via **Options → Configure LLMs** in the header menu:
 - **Base URL**: Default `https://generativelanguage.googleapis.com` (v1beta for Gemini models)
 - **Streaming Support**: Real-time response streaming
 
+#### DeepSeek Configuration
+- **API Key**: From [DeepSeek Platform](https://platform.deepseek.com/)
+- **Model Selection**: DeepSeek Chat (recommended), DeepSeek Coder, DeepSeek Reasoner
+- **Base URL**: Default `https://api.deepseek.com/v1`
+- **Advanced Features**: Support for reasoning capabilities and specialized coding assistance
+
 #### Local LLM Configuration
 - **API Endpoint**: e.g., `http://localhost:11434/v1` (Ollama), `http://localhost:1234/v1` (LMStudio)
 - **Model Name**: e.g., `llama3.2`, `codellama`, `mistral`, `qwen2.5`

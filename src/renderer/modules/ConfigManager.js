@@ -192,6 +192,15 @@ class ConfigManager {
                         maxTokens: 4096,
                         temperature: 0.7
                     },
+                    deepseek: {
+                        name: 'DeepSeek',
+                        apiKey: '',
+                        model: 'deepseek-chat',
+                        baseUrl: 'https://api.deepseek.com/v1',
+                        enabled: false,
+                        maxTokens: 4096,
+                        temperature: 0.7
+                    },
                     local: {
                         name: 'Local LLM',
                         apiKey: '',
