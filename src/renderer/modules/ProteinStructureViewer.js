@@ -44,9 +44,25 @@ class ProteinStructureViewer {
      * Show dialog to search for protein structures
      */
     showProteinSearchDialog() {
+        // Remove any existing dialog first
+        const existingDialog = document.querySelector('.protein-search-dialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
         const dialog = this.createProteinSearchDialog();
         document.body.appendChild(dialog);
         dialog.showModal();
+        
+        // Focus and clear the input field
+        setTimeout(() => {
+            const inputField = document.getElementById('pdb-id-input');
+            if (inputField) {
+                inputField.value = '';
+                inputField.focus();
+                console.log('Input field reset and focused');
+            }
+        }, 100);
     }
 
     /**
@@ -228,8 +244,15 @@ class ProteinStructureViewer {
      * Search for protein structures
      */
     async searchProteinStructures() {
-        const pdbId = document.getElementById('pdb-id-input').value.trim();
+        const inputElement = document.getElementById('pdb-id-input');
+        const pdbId = inputElement.value.trim();
         const resultsDiv = document.getElementById('search-results');
+
+        console.log('=== PROTEIN SEARCH START ===');
+        console.log('Input element found:', !!inputElement);
+        console.log('Input element display value:', inputElement.value);
+        console.log('Input element trimmed value:', pdbId);
+        console.log('Requested PDB ID:', pdbId);
 
         if (!pdbId) {
             alert('Please enter a PDB ID');
@@ -239,18 +262,38 @@ class ProteinStructureViewer {
         resultsDiv.innerHTML = '<div class="loading">Searching for protein structure...</div>';
 
         try {
+            console.log('Requesting MCP tool with parameters:', { pdbId: pdbId });
             const structureData = await this.requestMCPTool('fetch_protein_structure', {
                 pdbId: pdbId
             });
 
+            console.log('MCP response received:', {
+                success: structureData.success,
+                returnedPdbId: structureData.pdbId,
+                dataLength: structureData.pdbData ? structureData.pdbData.length : 'No data',
+                geneName: structureData.geneName
+            });
+
             if (structureData.success) {
+                // Verify we got the correct protein
+                if (structureData.pdbId && structureData.pdbId.toUpperCase() !== pdbId.toUpperCase()) {
+                    console.warn('PDB ID mismatch! Requested:', pdbId, 'Received:', structureData.pdbId);
+                }
+                
                 this.openStructureViewer(structureData.pdbData, structureData.geneName, pdbId);
                 document.querySelector('.protein-search-dialog').close();
+                
+                // Clear the input field after successful load
+                inputElement.value = '';
+                console.log('Input field cleared after successful load');
             }
 
         } catch (error) {
+            console.error('Error in protein search:', error);
             resultsDiv.innerHTML = `<div class="error">Error searching structure: ${error.message}</div>`;
         }
+        
+        console.log('=== PROTEIN SEARCH END ===');
     }
 
     /**

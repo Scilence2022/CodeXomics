@@ -416,26 +416,35 @@ class MCPGenomeBrowserServer {
     async fetchProteinStructure(parameters) {
         const { geneName, pdbId, organism } = parameters;
         
+        console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE ===');
+        console.log('Received parameters:', { geneName, pdbId, organism });
+        
         try {
             let targetPdbId = pdbId;
             
             // If no PDB ID provided, search by gene name
             if (!targetPdbId && geneName) {
+                console.log('No PDB ID provided, searching by gene name:', geneName);
                 const searchResults = await this.searchProteinByGene({ geneName, organism, maxResults: 1 });
                 if (searchResults.length === 0) {
                     throw new Error(`No protein structures found for gene: ${geneName}`);
                 }
                 targetPdbId = searchResults[0].pdbId;
+                console.log('Found PDB ID from gene search:', targetPdbId);
             }
             
             if (!targetPdbId) {
                 throw new Error('No PDB ID specified or found');
             }
             
+            console.log('Downloading PDB file for ID:', targetPdbId);
+            
             // Download PDB file
             const pdbData = await this.downloadPDBFile(targetPdbId);
             
-            return {
+            console.log('PDB file downloaded successfully, size:', pdbData.length, 'characters');
+            
+            const result = {
                 success: true,
                 pdbId: targetPdbId,
                 pdbData: pdbData,
@@ -443,7 +452,13 @@ class MCPGenomeBrowserServer {
                 downloadedAt: new Date().toISOString()
             };
             
+            console.log('Returning result with PDB ID:', result.pdbId);
+            console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE END ===');
+            
+            return result;
+            
         } catch (error) {
+            console.error('Error in fetchProteinStructure:', error.message);
             throw new Error(`Failed to fetch protein structure: ${error.message}`);
         }
     }
