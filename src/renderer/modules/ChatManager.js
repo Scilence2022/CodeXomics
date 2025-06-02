@@ -1372,15 +1372,32 @@ class ChatManager {
         // Get conversation memory setting
         const conversationMemory = this.configManager.get('llm.conversationMemory', 10);
         
-        // Add previous conversation history from config
-        const chatHistory = this.configManager.getChatHistory(conversationMemory * 2); // Get more to account for user+assistant pairs
+        // Get chat history and find the current conversation (after last separator)
+        const chatHistory = this.configManager.getChatHistory();
+        let currentConversationMessages = [];
         
-        for (const msg of chatHistory) {
+        // Find messages after the last conversation separator
+        for (let i = chatHistory.length - 1; i >= 0; i--) {
+            const msg = chatHistory[i];
+            if (msg.sender === 'system' && msg.message === '--- CONVERSATION_SEPARATOR ---') {
+                break; // Stop at the last separator
+            }
+            currentConversationMessages.unshift(msg); // Add to beginning to maintain order
+        }
+        
+        // If no separator found, use the full recent history
+        if (currentConversationMessages.length === 0) {
+            currentConversationMessages = chatHistory.slice(-conversationMemory * 2);
+        }
+        
+        // Add conversation messages to history (exclude system messages and separators)
+        for (const msg of currentConversationMessages.slice(-conversationMemory * 2)) {
             if (msg.sender === 'user') {
                 history.push({ role: 'user', content: msg.message });
             } else if (msg.sender === 'assistant') {
                 history.push({ role: 'assistant', content: msg.message });
             }
+            // Skip system messages and separators
         }
         
         // Add the new user message
@@ -1412,80 +1429,29 @@ When a user asks you to perform ANY action that requires using one of these tool
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
 
-INCORRECT formats:
-- Adding explanatory text around JSON
-- Using markdown code blocks with JSON
-- Sending confirmation messages instead of tool calls
-
-Examples of user requests that REQUIRE tool calls:
-- "Navigate to position X" → use navigate_to_position
-- "Go to chr1:1000-2000" → use navigate_to_position  
-- "Find gene X" → use search_features or get_gene_details
-- "Zoom to gene Y" → use zoom_to_gene
-- "Show me the current state" → use get_current_state
-- "Get sequence from X to Y" → use get_sequence
-- "Toggle track Z" → use toggle_track
-
-Tool Examples:
-- To navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
-- To search by name/text: {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
-- To get current state: {"tool_name": "get_current_state", "parameters": {}}
-- To get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- To toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
-- To create annotation: {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000, "strand": 1, "description": "Test gene"}}
-- To analyze region: {"tool_name": "analyze_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "includeFeatures": true, "includeGC": true}}
-- To export data: {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
-- To get gene details: {"tool_name": "get_gene_details", "parameters": {"geneName": "bidA", "chromosome": "U00096"}}
-- To translate sequence: {"tool_name": "translate_sequence", "parameters": {"chromosome": "U00096", "start": 1000, "end": 1500, "strand": 1}}
-- To calculate GC content: {"tool_name": "calculate_gc_content", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000, "windowSize": 100}}
-- To find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "U00096", "start": 1000, "end": 5000, "minLength": 300}}
-- To get operons: {"tool_name": "get_operons", "parameters": {"chromosome": "U00096"}}
-- To zoom to gene: {"tool_name": "zoom_to_gene", "parameters": {"geneName": "bidA", "padding": 1000}}
-- To list chromosomes: {"tool_name": "get_chromosome_list", "parameters": {}}
-- To check tracks: {"tool_name": "get_track_status", "parameters": {}}
+Basic Tool Examples:
+- Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+- Get current state: {"tool_name": "get_current_state", "parameters": {}}
+- Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+- Create annotation: {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000, "strand": 1}}
+- Analyze region: {"tool_name": "analyze_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Export data: {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
 
 CRITICAL DISTINCTION - Search Functions:
-1. FOR TEXT-BASED SEARCHES (gene names, products, descriptions): ALWAYS use 'search_features'
-   Examples:
-   - "find DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
-   - "search for lacZ" → {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
-   - "show ribosomal genes" → {"tool_name": "search_features", "parameters": {"query": "ribosomal", "caseSensitive": false}}
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features'
+   - "find lacZ" → {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+   - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 
-2. FOR POSITION-BASED SEARCHES (features near coordinates): ONLY use 'get_nearby_features'
-   Examples:
-   - "find genes near position 123456" → {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000}}
-   - "what's around coordinate 50000" → {"tool_name": "get_nearby_features", "parameters": {"position": 50000, "distance": 10000}}
+2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features'
+   - "find genes near 123456" → {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000}}
 
-Advanced Genomics Tools:
-- Search DNA motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "chromosome": "U00096", "allowMismatches": 0}}
-- Pattern search: {"tool_name": "search_pattern", "parameters": {"regex": "ATG.{30,100}(TAG|TAA|TGA)", "description": "ORF pattern"}}
-- Find intergenic regions: {"tool_name": "find_intergenic_regions", "parameters": {"minLength": 500}}
-- Restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
-- Virtual digest: {"tool_name": "virtual_digest", "parameters": {"enzymes": ["EcoRI", "BamHI"]}}
-- Sequence statistics: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition", "skew", "complexity"]}}
-- Codon usage: {"tool_name": "codon_usage_analysis", "parameters": {"geneName": "lacZ"}}
-- Bookmark position: {"tool_name": "bookmark_position", "parameters": {"name": "Origin region", "notes": "oriC location"}}
-- Get bookmarks: {"tool_name": "get_bookmarks", "parameters": {"chromosome": "U00096"}}
-- Save view state: {"tool_name": "save_view_state", "parameters": {"name": "Gene cluster view"}}
-- Compare regions: {"tool_name": "compare_regions", "parameters": {"region1": "U00096:1000-2000", "region2": "U00096:5000-6000"}}
-- Find similar sequences: {"tool_name": "find_similar_sequences", "parameters": {"querySequence": "ATGCGATCG", "minSimilarity": 0.8}}
-- Edit annotation: {"tool_name": "edit_annotation", "parameters": {"annotationId": "lacZ", "updates": {"qualifiers": {"product": "new description"}}}}
-- Delete annotation: {"tool_name": "delete_annotation", "parameters": {"annotationId": "b0344"}}
-- Batch create annotations: {"tool_name": "batch_create_annotations", "parameters": {"annotations": [{"type": "CDS", "start": 1000, "end": 2000}]}}
-- Get file info: {"tool_name": "get_file_info", "parameters": {"fileType": "genome"}}
-- Export region features: {"tool_name": "export_region_features", "parameters": {"start": 1000, "end": 5000, "format": "json"}}
-
-Function Call Examples:
-- "search for EcoRI sites" → find_restriction_sites
-- "search for DNA polymerase" → search_features (NOT get_nearby_features!)
-- "find lacZ gene" → search_features (NOT get_nearby_features!)
-- "find genes near position 123456" → get_nearby_features  
-- "what's the GC content of this region" → sequence_statistics
-- "bookmark this interesting region" → bookmark_position
-- "search for TATAAA motifs allowing 1 mismatch" → search_motif
-- "compare these two regions" → compare_regions
-- "analyze codon usage in lacZ gene" → codon_usage_analysis
-- "virtual digest with multiple enzymes" → virtual_digest`;
+Common Analysis Tools:
+- Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
+- Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
+- Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}`;
     }
 
     parseToolCall(response) {
@@ -2000,82 +1966,28 @@ Function Call Examples:
 
     showSuggestions() {
         const suggestions = [
-            // Navigation & Basic Info
-            "Show me details for the bidA gene",
-            "Navigate to E. coli origin of replication",
-            "List all available chromosomes",
-            "What's the current studio state?",
-            
-            // Molecular Biology Tools
-            "Find EcoRI restriction sites in this region",
-            "Virtual digest with EcoRI and BamHI enzymes", 
-            "Search for TATAAA promoter motifs allowing 1 mismatch",
-            "Search for ribosome binding sites using pattern AGGAGG",
-            
-            // Sequence Analysis
-            "What's the GC content and composition of this region?",
-            "Analyze codon usage in the lacZ gene",
-            "Find all ORFs longer than 300 base pairs",
-            "Calculate AT/GC skew in windows",
-            
-            // Feature Discovery
-            "Find genes within 5000bp of position 123456",
-            "Show intergenic regions longer than 500bp",
-            "What operons are in this chromosome?",
-            "Translate this gene sequence to protein",
-            
-            // Comparative Analysis
-            "Compare regions U00096:1000-2000 vs U00096:5000-6000",
-            "Find sequences similar to ATGCGATCGATCG",
-            "Show nearby features of different types",
-            
-            // Data Management
-            "Bookmark this interesting region as 'Origin'",
-            "Show all my saved bookmarks",
-            "Export features from current view as JSON",
-            "Save current view configuration",
-            
-            // Track Management
-            "Toggle the genes track visibility",
-            "Show status of all tracks",
-            "Get file information summary"
+            "Go to chr1:1000-2000",
+            "Find lacZ gene", 
+            "Show current state",
+            "Get sequence from 1000 to 2000",
+            "Find EcoRI sites",
+            "Calculate GC content",
+            "Toggle genes track",
+            "Search DNA polymerase",
+            "Export current region as FASTA"
         ];
 
-        // Group suggestions by category for better presentation
-        const categories = {
-            "🧭 Navigation & Info": suggestions.slice(0, 4),
-            "🧬 Molecular Biology": suggestions.slice(4, 8),
-            "📊 Sequence Analysis": suggestions.slice(8, 12),
-            "🔍 Feature Discovery": suggestions.slice(12, 16),
-            "⚖️ Comparative Analysis": suggestions.slice(16, 19),
-            "💾 Data Management": suggestions.slice(19, 23),
-            "👁️ Track & View Control": suggestions.slice(23)
-        };
-
-        let suggestionsHTML = '<div class="suggestions-grid">';
-        
-        Object.entries(categories).forEach(([category, items]) => {
-            suggestionsHTML += `
-                <div class="suggestion-category">
-                    <h4>${category}</h4>
-                    <div class="suggestion-buttons">
-                        ${items.map(s => 
-                            `<button class="suggestion-btn" onclick="document.getElementById('chatInput').value = '${s}'">${s}</button>`
-                        ).join('')}
-                    </div>
-                </div>
-            `;
-        });
-        
-        suggestionsHTML += '</div>';
+        const suggestionsHTML = suggestions.map(s => 
+            `<span class="suggestion-chip" onclick="document.getElementById('chatInput').value = '${s}'">${s}</span>`
+        ).join('');
 
         this.addMessageToChat(
             `<div class="suggestions-container">
-                <p><strong>🚀 Try these powerful genomics commands:</strong></p>
-                ${suggestionsHTML}
-                <div class="suggestion-tip">
-                    <p><em>💡 Pro tip: You can ask questions in natural language! For example: "What restriction enzymes cut in the current region?" or "Find genes involved in DNA replication"</em></p>
+                <p><strong>🚀 Try these:</strong></p>
+                <div class="suggestion-chips">
+                    ${suggestionsHTML}
                 </div>
+                <p><em>💡 Ask questions in simple language</em></p>
             </div>`,
             'assistant'
         );
@@ -3468,18 +3380,21 @@ Function Call Examples:
      * Start a new chat conversation
      */
     startNewChat() {
-        // Confirm if there are existing messages
-        const existingMessages = this.configManager.getChatHistory();
-        if (existingMessages.length > 0) {
-            const confirmed = confirm('Are you sure you want to start a new chat? This will clear the current conversation history.');
-            if (!confirmed) return;
+        // Add conversation separator to mark the end of current conversation
+        if (this.configManager.getChatHistory().length > 0) {
+            this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system', new Date().toISOString());
         }
-
-        // Clear the chat
-        this.clearChat();
         
-        // Add a new conversation indicator
-        this.addMessageToChat('🆕 **New conversation started**', 'assistant');
+        // Clear the UI display only, keep history
+        const messagesContainer = document.getElementById('chatMessages');
+        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+        messagesContainer.innerHTML = '';
+        if (welcomeMessage) {
+            messagesContainer.appendChild(welcomeMessage);
+        }
+        
+        // Add a new conversation indicator in UI only
+        this.displayChatMessage('🆕 **New conversation started**', 'assistant', new Date().toISOString(), 'new-conversation-' + Date.now());
         
         console.log('Started new chat conversation');
     }
@@ -3784,46 +3699,78 @@ Function Call Examples:
     }
 
     /**
-     * Group messages into conversations based on time gaps
+     * Group messages into conversations based on time gaps and conversation separators
      */
     groupMessagesIntoConversations(history) {
         if (history.length === 0) return [];
         
         const conversations = [];
         let currentConversation = {
-            messages: [history[0]],
-            startTime: history[0].timestamp,
-            endTime: history[0].timestamp
+            messages: [],
+            startTime: null,
+            endTime: null
         };
         
-        const CONVERSATION_GAP = 30 * 60 * 1000; // 30 minutes gap to separate conversations
-        
-        for (let i = 1; i < history.length; i++) {
+        for (let i = 0; i < history.length; i++) {
             const currentMsg = history[i];
-            const previousMsg = history[i - 1];
             
-            const timeDiff = new Date(currentMsg.timestamp) - new Date(previousMsg.timestamp);
+            // Check for conversation separator
+            if (currentMsg.sender === 'system' && currentMsg.message === '--- CONVERSATION_SEPARATOR ---') {
+                // End current conversation if it has messages
+                if (currentConversation.messages.length > 0) {
+                    conversations.push(currentConversation);
+                    currentConversation = {
+                        messages: [],
+                        startTime: null,
+                        endTime: null
+                    };
+                }
+                continue; // Skip the separator message itself
+            }
             
-            if (timeDiff > CONVERSATION_GAP) {
-                // Start new conversation
-                conversations.push(currentConversation);
-                currentConversation = {
-                    messages: [currentMsg],
-                    startTime: currentMsg.timestamp,
-                    endTime: currentMsg.timestamp
-                };
-            } else {
-                // Continue current conversation
-                currentConversation.messages.push(currentMsg);
+            // Initialize conversation times if this is the first message
+            if (currentConversation.messages.length === 0) {
+                currentConversation.startTime = currentMsg.timestamp;
                 currentConversation.endTime = currentMsg.timestamp;
+            }
+            
+            // Add message to current conversation
+            currentConversation.messages.push(currentMsg);
+            currentConversation.endTime = currentMsg.timestamp;
+            
+            // Check for time-based conversation break (30 minutes gap)
+            if (i > 0) {
+                const previousMsg = history[i - 1];
+                const timeDiff = new Date(currentMsg.timestamp) - new Date(previousMsg.timestamp);
+                const CONVERSATION_GAP = 30 * 60 * 1000; // 30 minutes
+                
+                if (timeDiff > CONVERSATION_GAP && currentConversation.messages.length > 1) {
+                    // Remove the current message from this conversation
+                    currentConversation.messages.pop();
+                    currentConversation.endTime = previousMsg.timestamp;
+                    
+                    // End current conversation
+                    conversations.push(currentConversation);
+                    
+                    // Start new conversation with current message
+                    currentConversation = {
+                        messages: [currentMsg],
+                        startTime: currentMsg.timestamp,
+                        endTime: currentMsg.timestamp
+                    };
+                }
             }
         }
         
-        // Add the last conversation
-        conversations.push(currentConversation);
+        // Add the last conversation if it has messages
+        if (currentConversation.messages.length > 0) {
+            conversations.push(currentConversation);
+        }
         
-        // Return in reverse order (newest first)
-        return conversations.reverse();
+        // Sort conversations by start time (newest first)
+        conversations.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+        
+        return conversations;
     }
 
     /**
