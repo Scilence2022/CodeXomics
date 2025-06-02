@@ -42,6 +42,7 @@ class FileManager {
                 break;
             case 'tracks':
                 input.accept = '.wig';
+                input.multiple = true; // Allow multiple WIG file selection
                 break;
             case 'any':
             default:
@@ -51,7 +52,13 @@ class FileManager {
         
         input.onchange = (e) => {
             if (e.target.files.length > 0) {
-                this.loadFile(e.target.files[0].path);
+                if (fileType === 'tracks' && e.target.files.length > 1) {
+                    // Handle multiple WIG files
+                    this.loadMultipleWIGFiles(Array.from(e.target.files).map(file => file.path));
+                } else {
+                    // Handle single file
+                    this.loadFile(e.target.files[0].path);
+                }
             }
         };
         input.click();
@@ -1049,6 +1056,218 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
             // Show status message
             this.genomeBrowser.updateStatus(statusMessage);
         }
+    }
+
+    async loadMultipleWIGFiles(filePaths) {
+        this.genomeBrowser.showLoading(true);
+        this.genomeBrowser.updateStatus(`Loading ${filePaths.length} WIG files...`);
+
+        try {
+            const results = [];
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Process each file
+            for (let i = 0; i < filePaths.length; i++) {
+                const filePath = filePaths[i];
+                const fileName = filePath.split('/').pop();
+                
+                try {
+                    this.genomeBrowser.updateStatus(`Processing WIG file ${i + 1}/${filePaths.length}: ${fileName}`);
+                    
+                    // Get file info
+                    const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
+                    if (!fileInfo.success) {
+                        throw new Error(fileInfo.error);
+                    }
+
+                    // Read file content
+                    const fileData = await ipcRenderer.invoke('read-file', filePath);
+                    if (!fileData.success) {
+                        throw new Error(fileData.error);
+                    }
+
+                    // Create temporary file object for parsing
+                    this.currentFile = {
+                        path: filePath,
+                        info: fileInfo.info,
+                        data: fileData.data
+                    };
+
+                    // Parse WIG file
+                    const tracksBefore = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
+                    await this.parseWIG();
+                    const tracksAfter = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
+                    const newTracksFromThisFile = tracksAfter - tracksBefore;
+                    
+                    results.push({
+                        file: fileName,
+                        status: 'success',
+                        tracks: newTracksFromThisFile
+                    });
+                    successCount++;
+                    
+                } catch (error) {
+                    console.error(`Error loading WIG file ${fileName}:`, error);
+                    results.push({
+                        file: fileName,
+                        status: 'error',
+                        error: error.message
+                    });
+                    errorCount++;
+                }
+            }
+
+            // Update UI
+            this.genomeBrowser.updateFileInfo();
+            this.genomeBrowser.hideWelcomeScreen();
+            
+            // Auto-enable WIG tracks
+            this.autoEnableTracksForFileType('.wig');
+
+            // Refresh view if sequence is loaded
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+
+            // Show summary
+            const summary = this.createMultipleWIGLoadSummary(results, successCount, errorCount);
+            this.genomeBrowser.updateStatus(summary.statusText);
+            
+            // Show detailed results if there were any errors
+            if (errorCount > 0) {
+                this.showMultipleWIGLoadResults(results);
+            }
+
+        } catch (error) {
+            console.error('Error loading multiple WIG files:', error);
+            this.genomeBrowser.updateStatus(`Error: ${error.message}`);
+            alert(`Failed to load WIG files: ${error.message}`);
+        } finally {
+            this.genomeBrowser.showLoading(false);
+        }
+    }
+
+    createMultipleWIGLoadSummary(results, successCount, errorCount) {
+        const totalTracks = results
+            .filter(r => r.status === 'success')
+            .reduce((total, r) => total + (r.tracks || 0), 0);
+
+        let statusText;
+        if (errorCount === 0) {
+            statusText = `Successfully loaded ${successCount} WIG files with ${totalTracks} tracks`;
+        } else if (successCount === 0) {
+            statusText = `Failed to load all ${errorCount} WIG files`;
+        } else {
+            statusText = `Loaded ${successCount}/${successCount + errorCount} WIG files (${totalTracks} tracks, ${errorCount} errors)`;
+        }
+
+        return {
+            statusText,
+            totalTracks,
+            successCount,
+            errorCount
+        };
+    }
+
+    showMultipleWIGLoadResults(results) {
+        // Create a simple results dialog
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+
+        const content = document.createElement('div');
+        content.className = 'modal-content';
+        content.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+
+        const title = document.createElement('h3');
+        title.textContent = 'WIG Files Loading Results';
+        title.style.marginTop = '0';
+
+        const resultsList = document.createElement('div');
+        resultsList.style.cssText = `
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        `;
+
+        results.forEach(result => {
+            const item = document.createElement('div');
+            item.style.cssText = `
+                padding: 8px;
+                margin: 5px 0;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                ${result.status === 'success' ? 'background: #d4edda; border: 1px solid #c3e6cb;' : 'background: #f8d7da; border: 1px solid #f5c6cb;'}
+            `;
+
+            const icon = document.createElement('span');
+            icon.innerHTML = result.status === 'success' ? '✅' : '❌';
+
+            const text = document.createElement('span');
+            if (result.status === 'success') {
+                text.textContent = `${result.file} - ${result.tracks} tracks loaded`;
+            } else {
+                text.textContent = `${result.file} - Error: ${result.error}`;
+            }
+            text.style.flex = '1';
+
+            item.appendChild(icon);
+            item.appendChild(text);
+            resultsList.appendChild(item);
+        });
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.className = 'btn btn-secondary';
+        closeButton.style.cssText = `
+            background: #6c757d;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        `;
+
+        closeButton.onclick = () => {
+            document.body.removeChild(modal);
+        };
+
+        // Close on outside click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        };
+
+        content.appendChild(title);
+        content.appendChild(resultsList);
+        content.appendChild(closeButton);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
     }
 }
 

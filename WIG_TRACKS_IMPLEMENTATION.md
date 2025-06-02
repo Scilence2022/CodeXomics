@@ -13,12 +13,27 @@ This document describes the implementation of WIG (Wiggle) format support in Gen
 - **Multiple Chromosomes**: Support for multi-chromosome WIG files
 
 ### 2. File Management Integration
+
+#### Single File Support
 - Added `.wig` extension to supported file types
 - Integrated WIG parser in `FileManager.js`
-- File menu options for opening WIG files
-- Welcome screen integration
-- **Track Merging**: New WIG files are added to existing tracks instead of replacing them
-- **Conflict Resolution**: Automatic renaming of duplicate track names
+- File menu option: "WIG Tracks (Multiple Files Supported)"
+
+#### Multiple File Loading (NEW)
+- **Multiple Selection**: File dialog now supports selecting multiple WIG files at once
+- **Parallel Processing**: Files are processed sequentially with progress updates
+- **Error Handling**: Individual file errors don't stop the entire process
+- **Conflict Resolution**: Duplicate track names are automatically renamed (e.g., "Track_1", "Track_2")
+- **Results Summary**: Shows detailed results with success/error counts
+- **Interactive Results Dialog**: Displays individual file results with error details
+
+#### Loading Process
+1. Select multiple WIG files from the file dialog
+2. Files are processed one by one with progress indicators
+3. Track names are checked for conflicts and renamed if needed
+4. Successfully loaded tracks are merged with existing tracks
+5. Summary is displayed showing total tracks loaded
+6. Any errors are shown in a detailed results dialog
 
 ### 3. Track Visualization
 - Interactive bar chart visualization
@@ -230,14 +245,53 @@ The visualization creates interactive bar charts with:
 
 ## Usage Examples
 
-### 1. Loading WIG Files
+### Loading Single WIG File
 
-Users can load WIG files through:
-- **File Menu**: File → WIG Tracks (WIG)
-- **Welcome Screen**: "WIG Tracks" button
-- **Drag & Drop**: Direct file dropping (if implemented)
+1. Click "Open File" → "WIG Tracks (Multiple Files Supported)"
+2. Select a single WIG file
+3. File will be parsed and tracks added to the visualization
 
-### 2. Sample WIG Formats
+### Loading Multiple WIG Files
+
+1. Click "Open File" → "WIG Tracks (Multiple Files Supported)"
+2. Select multiple WIG files (hold Ctrl/Cmd for multiple selection)
+3. Files will be processed sequentially with progress updates
+4. Summary dialog shows results for each file
+5. All tracks are merged and available for visualization
+
+### Sample WIG Files
+
+The following test files are included in the `test_data` directory:
+
+- `sample_data.wig` - Fixed step format example
+- `another_sample.wig` - RNA-seq expression data
+- `duplicate_name.wig` - Tests name conflict resolution
+- `chipseq_test.wig` - ChIP-seq histone modification data
+- `methylation_test.wig` - DNA methylation levels (variable step format)
+
+### Track Management Features
+
+#### WIG Track Management Panel
+The management panel appears at the top of the WIG track section when tracks are loaded:
+
+- **Track List**: Displays all loaded WIG tracks with color indicators
+- **Visibility Toggle**: Eye icon to show/hide individual tracks
+- **Track Removal**: X button to remove individual tracks (with confirmation)
+- **Clear All**: Button to remove all WIG tracks at once
+- **Track Information**: Shows track names and value ranges
+
+#### Track Loading Behavior
+- **Additive Loading**: New WIG files are added to existing tracks
+- **Name Conflict Resolution**: Duplicate track names are automatically renamed (e.g., "Track_1", "Track_2")
+- **Preserved Settings**: Track visibility states are maintained across file loads
+
+#### Track Interaction
+- **Hover**: Shows tooltips with position and value
+- **Toggle**: Use checkboxes to show/hide tracks
+- **Resize**: Tracks support resizing through splitters
+- **Reorder**: Drag and drop tracks to reorder them
+
+### Sample WIG Formats
 
 #### Fixed Step Format
 ```
@@ -258,34 +312,6 @@ variableStep chrom=chr1 span=50
 1250 3.1
 1400 2.8
 ```
-
-### 3. Track Interaction
-
-- **Hover**: Shows tooltips with position and value
-- **Toggle**: Use checkboxes to show/hide tracks
-- **Resize**: Tracks support resizing through splitters
-
-### 4. WIG Track Management
-
-The WIG track management panel appears at the top of the WIG track section when tracks are loaded:
-
-#### Features:
-- **Track List**: Displays all loaded WIG tracks with color indicators
-- **Visibility Toggle**: Eye icon to show/hide individual tracks
-- **Track Removal**: X button to remove individual tracks (with confirmation)
-- **Clear All**: Button to remove all WIG tracks at once
-- **Track Information**: Shows track names and value ranges
-
-#### Track Loading Behavior:
-- **Additive Loading**: New WIG files are added to existing tracks
-- **Name Conflict Resolution**: Duplicate track names are automatically renamed (e.g., "Track_1", "Track_2")
-- **Preserved Settings**: Track visibility states are maintained across file loads
-
-#### Example Workflow:
-1. Load first WIG file → Creates "Sample ChIP-seq" track
-2. Load another file with same name → Creates "Sample ChIP-seq_1" track
-3. Use management panel to hide/show specific tracks
-4. Remove unwanted tracks individually or clear all at once
 
 ## Styling and Theming
 
