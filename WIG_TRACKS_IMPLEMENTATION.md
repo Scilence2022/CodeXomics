@@ -17,18 +17,29 @@ This document describes the implementation of WIG (Wiggle) format support in Gen
 - Integrated WIG parser in `FileManager.js`
 - File menu options for opening WIG files
 - Welcome screen integration
+- **Track Merging**: New WIG files are added to existing tracks instead of replacing them
+- **Conflict Resolution**: Automatic renaming of duplicate track names
 
 ### 3. Track Visualization
 - Interactive bar chart visualization
 - Hover tooltips showing position and value
 - Responsive design for different screen sizes
 - Color-coded data representation
+- **Multiple Track Display**: All loaded WIG tracks displayed simultaneously
 
 ### 4. User Interface
 - Track checkboxes in toolbar and sidebar
 - File menu integration
 - Welcome screen buttons
 - Consistent styling with existing tracks
+- **WIG Track Management Panel**: Interactive controls for individual track management
+
+### 5. Track Management Features
+- **Individual Track Visibility**: Show/hide individual WIG tracks
+- **Selective Track Removal**: Remove specific WIG tracks with confirmation
+- **Bulk Operations**: Clear all WIG tracks at once
+- **Track Information Display**: Shows track names, colors, and data ranges
+- **Real-time Updates**: Changes apply immediately to the visualization
 
 ## File Structure
 
@@ -211,6 +222,28 @@ variableStep chrom=chr1 span=50
 - **Hover**: Shows tooltips with position and value
 - **Toggle**: Use checkboxes to show/hide tracks
 - **Resize**: Tracks support resizing through splitters
+
+### 4. WIG Track Management
+
+The WIG track management panel appears at the top of the WIG track section when tracks are loaded:
+
+#### Features:
+- **Track List**: Displays all loaded WIG tracks with color indicators
+- **Visibility Toggle**: Eye icon to show/hide individual tracks
+- **Track Removal**: X button to remove individual tracks (with confirmation)
+- **Clear All**: Button to remove all WIG tracks at once
+- **Track Information**: Shows track names and value ranges
+
+#### Track Loading Behavior:
+- **Additive Loading**: New WIG files are added to existing tracks
+- **Name Conflict Resolution**: Duplicate track names are automatically renamed (e.g., "Track_1", "Track_2")
+- **Preserved Settings**: Track visibility states are maintained across file loads
+
+#### Example Workflow:
+1. Load first WIG file → Creates "Sample ChIP-seq" track
+2. Load another file with same name → Creates "Sample ChIP-seq_1" track
+3. Use management panel to hide/show specific tracks
+4. Remove unwanted tracks individually or clear all at once
 
 ## Styling and Theming
 

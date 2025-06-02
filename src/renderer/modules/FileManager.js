@@ -886,9 +886,36 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
             }
         }
         
-        // Store WIG tracks data
-        this.genomeBrowser.currentWIGTracks = wigTracks;
-        console.log(`Parsed ${Object.keys(wigTracks).length} WIG tracks with data for multiple chromosomes`);
+        // Store WIG tracks data - merge with existing tracks instead of replacing
+        const existingWIGTracks = this.genomeBrowser.currentWIGTracks || {};
+        
+        // Handle track name conflicts by renaming duplicates
+        Object.keys(wigTracks).forEach(trackName => {
+            let finalTrackName = trackName;
+            let counter = 1;
+            
+            // If track name already exists, add a number suffix
+            while (existingWIGTracks[finalTrackName]) {
+                finalTrackName = `${trackName}_${counter}`;
+                counter++;
+            }
+            
+            // If we had to rename, update the track name
+            if (finalTrackName !== trackName) {
+                wigTracks[finalTrackName] = wigTracks[trackName];
+                wigTracks[finalTrackName].name = finalTrackName;
+                delete wigTracks[trackName];
+                console.log(`Renamed duplicate track "${trackName}" to "${finalTrackName}"`);
+            }
+        });
+        
+        // Merge new tracks with existing tracks
+        this.genomeBrowser.currentWIGTracks = { ...existingWIGTracks, ...wigTracks };
+        
+        const totalTracksAfterMerge = Object.keys(this.genomeBrowser.currentWIGTracks).length;
+        const newTracksCount = Object.keys(wigTracks).length;
+        
+        console.log(`Merged ${newTracksCount} new WIG tracks. Total tracks: ${totalTracksAfterMerge}`);
         
         // Log track statistics
         Object.entries(wigTracks).forEach(([trackName, track]) => {
@@ -896,7 +923,7 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
             console.log(`WIG Track "${trackName}": ${totalDataPoints} data points across ${Object.keys(track.data).length} chromosomes`);
         });
         
-        this.genomeBrowser.updateStatus(`Loaded ${Object.keys(wigTracks).length} WIG track(s) successfully`);
+        this.genomeBrowser.updateStatus(`Added ${newTracksCount} WIG track(s). Total: ${totalTracksAfterMerge} tracks`);
         
         // Auto-enable WIG tracks
         this.autoEnableTracksForFileType('.wig');

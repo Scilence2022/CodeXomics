@@ -1880,6 +1880,10 @@ class TrackRenderer {
             return track;
         }
         
+        // Create WIG track management header
+        const managementHeader = this.createWIGManagementHeader(wigTracks);
+        trackContent.appendChild(managementHeader);
+        
         // Create container for all WIG tracks
         const wigContainer = document.createElement('div');
         wigContainer.className = 'wig-tracks-container';
@@ -1895,6 +1899,9 @@ class TrackRenderer {
         
         // Render each WIG track
         Object.entries(wigTracks).forEach(([trackName, wigTrack], index) => {
+            // Skip hidden tracks
+            if (wigTrack.hidden) return;
+            
             const trackData = wigTrack.data[chromosome] || [];
             
             // Filter data points in current viewport
@@ -1936,6 +1943,7 @@ class TrackRenderer {
             // Create track element
             const trackElement = document.createElement('div');
             trackElement.className = 'wig-track-data';
+            trackElement.setAttribute('data-track-name', trackName);
             trackElement.style.cssText = `
                 position: absolute;
                 top: ${trackOffset}px;
@@ -2019,19 +2027,21 @@ class TrackRenderer {
             trackOffset += trackHeight + trackSpacing;
         });
         
-        // Update track content height based on number of tracks
+        // Update track content height based on number of visible tracks
+        const visibleTracks = Object.values(wigTracks).filter(track => !track.hidden);
         const totalHeight = Math.max(100, trackOffset);
-        trackContent.style.height = `${totalHeight}px`;
+        trackContent.style.height = `${totalHeight + 40}px`; // Add space for management header
         
         trackContent.appendChild(wigContainer);
         
         // Add summary statistics
         const totalTracks = Object.keys(wigTracks).length;
-        const tracksWithData = Object.values(wigTracks).filter(track => 
+        const visibleTracksCount = visibleTracks.length;
+        const tracksWithData = visibleTracks.filter(track => 
             track.data[chromosome] && track.data[chromosome].length > 0
         ).length;
         
-        const statsText = `${tracksWithData}/${totalTracks} tracks with data`;
+        const statsText = `${tracksWithData}/${visibleTracksCount} visible tracks with data (${totalTracks} total)`;
         const statsElement = this.createStatsElement(statsText, 'wig-track-stats');
         trackContent.appendChild(statsElement);
         
@@ -2176,6 +2186,170 @@ class TrackRenderer {
                 trackElement._tooltip = null;
             }
         });
+    }
+
+    createWIGManagementHeader(wigTracks) {
+        const header = document.createElement('div');
+        header.className = 'wig-management-header';
+        header.style.cssText = `
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        `;
+        
+        const title = document.createElement('div');
+        title.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        title.innerHTML = `
+            <span><i class="fas fa-chart-line"></i> WIG Track Management</span>
+            <button class="clear-all-wig-btn" style="
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                cursor: pointer;
+            " title="Remove all WIG tracks">
+                <i class="fas fa-trash"></i> Clear All
+            </button>
+        `;
+        
+        const tracksList = document.createElement('div');
+        tracksList.className = 'wig-tracks-list';
+        tracksList.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        `;
+        
+        Object.entries(wigTracks).forEach(([trackName, wigTrack]) => {
+            const trackItem = document.createElement('div');
+            trackItem.className = 'wig-track-item';
+            trackItem.style.cssText = `
+                display: flex;
+                align-items: center;
+                background: white;
+                border: 1px solid #ced4da;
+                border-radius: 3px;
+                padding: 3px 6px;
+                font-size: 11px;
+                ${wigTrack.hidden ? 'opacity: 0.5;' : ''}
+            `;
+            
+            const colorDot = document.createElement('div');
+            colorDot.style.cssText = `
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: ${this.parseWIGColor(wigTrack.color)};
+                margin-right: 4px;
+                flex-shrink: 0;
+            `;
+            
+            const trackNameSpan = document.createElement('span');
+            trackNameSpan.textContent = trackName;
+            trackNameSpan.style.cssText = `
+                margin-right: 6px;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            `;
+            trackNameSpan.title = trackName; // Full name on hover
+            
+            const toggleBtn = document.createElement('button');
+            toggleBtn.innerHTML = wigTrack.hidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            toggleBtn.style.cssText = `
+                background: none;
+                border: none;
+                color: #6c757d;
+                cursor: pointer;
+                padding: 1px 3px;
+                margin-right: 3px;
+                font-size: 10px;
+            `;
+            toggleBtn.title = wigTrack.hidden ? 'Show track' : 'Hide track';
+            toggleBtn.addEventListener('click', () => this.toggleWIGTrack(trackName));
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.style.cssText = `
+                background: none;
+                border: none;
+                color: #dc3545;
+                cursor: pointer;
+                padding: 1px 3px;
+                font-size: 10px;
+            `;
+            removeBtn.title = 'Remove track';
+            removeBtn.addEventListener('click', () => this.removeWIGTrack(trackName));
+            
+            trackItem.appendChild(colorDot);
+            trackItem.appendChild(trackNameSpan);
+            trackItem.appendChild(toggleBtn);
+            trackItem.appendChild(removeBtn);
+            tracksList.appendChild(trackItem);
+        });
+        
+        // Add clear all functionality
+        const clearAllBtn = title.querySelector('.clear-all-wig-btn');
+        clearAllBtn.addEventListener('click', () => this.clearAllWIGTracks());
+        
+        header.appendChild(title);
+        header.appendChild(tracksList);
+        
+        return header;
+    }
+    
+    toggleWIGTrack(trackName) {
+        const wigTracks = this.genomeBrowser.currentWIGTracks;
+        if (wigTracks && wigTracks[trackName]) {
+            wigTracks[trackName].hidden = !wigTracks[trackName].hidden;
+            this.genomeBrowser.updateStatus(`${wigTracks[trackName].hidden ? 'Hidden' : 'Shown'} WIG track: ${trackName}`);
+            this.refreshCurrentView();
+        }
+    }
+    
+    removeWIGTrack(trackName) {
+        const wigTracks = this.genomeBrowser.currentWIGTracks;
+        if (wigTracks && wigTracks[trackName]) {
+            // Confirm removal
+            if (confirm(`Remove WIG track "${trackName}"? This action cannot be undone.`)) {
+                delete wigTracks[trackName];
+                this.genomeBrowser.updateStatus(`Removed WIG track: ${trackName}`);
+                this.refreshCurrentView();
+            }
+        }
+    }
+    
+    clearAllWIGTracks() {
+        const wigTracks = this.genomeBrowser.currentWIGTracks;
+        if (wigTracks && Object.keys(wigTracks).length > 0) {
+            const count = Object.keys(wigTracks).length;
+            if (confirm(`Remove all ${count} WIG tracks? This action cannot be undone.`)) {
+                this.genomeBrowser.currentWIGTracks = {};
+                this.genomeBrowser.updateStatus(`Removed all ${count} WIG tracks`);
+                this.refreshCurrentView();
+            }
+        }
+    }
+    
+    refreshCurrentView() {
+        // Refresh the current genome view to reflect changes
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        }
     }
 }
 

@@ -1,0 +1,16 @@
+track type=wiggle_0 name="Sample ChIP-seq" description="Another ChIP-seq dataset with same name" color=0,255,0
+variableStep chrom=U00096 span=50
+2000 2.1
+2100 2.8
+2250 3.5
+2400 4.2
+2600 3.7
+2750 2.9
+2900 1.8
+3050 1.1
+3200 2.4
+3350 3.6
+3500 4.5
+3650 3.9
+3800 2.7
+3950 1.5 
