@@ -505,6 +505,32 @@ class ChatManager {
                     result = this.executeMicrobeFunction('addVariant', parameters);
                     break;
                     
+                // BLAST Search Tools
+                case 'blast_search':
+                    result = await this.blastSearch(parameters);
+                    break;
+                    
+                case 'blast_sequence_from_region':
+                    result = await this.blastSequenceFromRegion(parameters);
+                    break;
+                    
+                case 'get_blast_databases':
+                    result = this.getBlastDatabases(parameters);
+                    break;
+                    
+                // Enhanced BLAST Tools
+                case 'batch_blast_search':
+                    result = await this.batchBlastSearch(parameters);
+                    break;
+                    
+                case 'advanced_blast_search':
+                    result = await this.advancedBlastSearch(parameters);
+                    break;
+                    
+                case 'local_blast_database_info':
+                    result = await this.localBlastDatabaseInfo(parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -1855,6 +1881,25 @@ Protein Structure Tools:
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
 
+BLAST Search Tools:
+- Search sequence similarity: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "evalue": "0.01", "maxTargets": 50}}
+- BLAST current region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "blastType": "blastn", "database": "nt"}}
+- Get BLAST databases: {"tool_name": "get_blast_databases", "parameters": {}}
+
+BLAST Examples:
+1. DNA sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCG", "blastType": "blastn", "database": "nt"}}
+2. Protein sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "MKELLKAGWKELQPIKEYGIEAVALAYTYQKEQDAIDKELKENITPNVEKKLVWEALKLK", "blastType": "blastp", "database": "nr"}}
+3. Translate and search DNA: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastx", "database": "nr"}}
+4. Search genomic region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "NC_000913.3", "start": 3423681, "end": 3424651, "blastType": "blastn", "database": "refseq_genomic"}}
+
+Enhanced BLAST Tools (Available with MCP BLAST Server):
+- Batch BLAST search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGCGCTATCG"}, {"id": "seq2", "sequence": "ATGAAAGAATT"}], "blastType": "blastn", "database": "nt", "maxTargets": 10}}
+- Advanced BLAST with filtering: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 95, "minCoverage": 80}, "algorithms": {"wordSize": "11", "matrix": "BLOSUM62"}}}
+- Local database info: {"tool_name": "local_blast_database_info", "parameters": {"databasePath": "/path/to/local/db"}}
+
+Enhanced BLAST Examples:
+1. Batch protein search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "protein1", "sequence": "MKELLKAGWKELQP"}, {"id": "protein2", "sequence": "MKLSAGATRVST"}], "blastType": "blastp", "database": "nr"}}
+2. High-specificity DNA search: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 98, "maxEvalue": 1e-10}}}
 MICROBE GENOMICS POWER USER EXAMPLES:
 1. Complete Gene Analysis:
    - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
@@ -2313,7 +2358,9 @@ Remember: These functions provide atomic operations that can be chained together
                 case 'add_variant':
                     result = this.executeMicrobeFunction('addVariant', parameters);
                     break;
-                    
+                case 'fetch_protein_structure':
+                    result = this.fetchProteinStructure( parameters);
+                    break;
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -2372,7 +2419,13 @@ Remember: These functions provide atomic operations that can be chained together
                     'batch_create_annotations',
                     'get_file_info',
                     'export_region_features',
-                    'open_protein_viewer'
+                    'open_protein_viewer',
+                    'blast_search',
+                    'blast_sequence_from_region',
+                    'get_blast_databases',
+                    'batch_blast_search',
+                    'advanced_blast_search',
+                    'local_blast_database_info'
                 ]
             }
         };
@@ -5043,6 +5096,60 @@ Remember: These functions provide atomic operations that can be chained together
         }
     }
 
+
+    /**
+     * Fetch protein structure from PDB database
+     */
+    async fetchProteinStructure(parameters) {
+        const { geneName, pdbId, organism } = parameters;
+        
+        console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE ===');
+        console.log('Received parameters:', { geneName, pdbId, organism });
+        
+        try {
+            let targetPdbId = pdbId;
+            
+            // If no PDB ID provided, search by gene name
+            if (!targetPdbId && geneName) {
+                console.log('No PDB ID provided, searching by gene name:', geneName);
+                const searchResults = await this.searchProteinByGene({ geneName, organism, maxResults: 1 });
+                if (searchResults.length === 0) {
+                    throw new Error(`No protein structures found for gene: ${geneName}`);
+                }
+                targetPdbId = searchResults[0].pdbId;
+                console.log('Found PDB ID from gene search:', targetPdbId);
+            }
+            
+            if (!targetPdbId) {
+                throw new Error('No PDB ID specified or found');
+            }
+            
+            console.log('Downloading PDB file for ID:', targetPdbId);
+            
+            // Download PDB file
+            const pdbData = await this.downloadPDBFile(targetPdbId);
+            
+            console.log('PDB file downloaded successfully, size:', pdbData.length, 'characters');
+            
+            const result = {
+                success: true,
+                pdbId: targetPdbId,
+                pdbData: pdbData,
+                geneName: geneName || targetPdbId,
+                downloadedAt: new Date().toISOString()
+            };
+            
+            console.log('Returning result with PDB ID:', result.pdbId);
+            console.log('=== MCP SERVER: FETCH PROTEIN STRUCTURE END ===');
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Error in fetchProteinStructure:', error.message);
+            throw new Error(`Failed to fetch protein structure: ${error.message}`);
+        }
+    }
+
     /**
      * Test MicrobeGenomicsFunctions integration
      */
@@ -5134,39 +5241,392 @@ Remember: These functions provide atomic operations that can be chained together
      * Test tool execution through ChatManager
      */
     async testToolExecution() {
-        console.log('=== Testing Tool Execution ===');
-        
         try {
-            // Test basic MicrobeGenomics function
-            console.log('Testing compute_gc...');
-            const gcResult = await this.executeToolByName('compute_gc', { sequence: 'ATGCGCTATCG' });
-            console.log('GC result:', gcResult);
+            const testResult = await this.openProteinViewer({
+                pdbId: '1TUP',
+                title: 'Test Protein Structure'
+            });
             
-            // Test reverse complement
-            console.log('Testing reverse_complement...');
-            const rcResult = await this.executeToolByName('reverse_complement', { dna: 'ATGC' });
-            console.log('Reverse complement result:', rcResult);
-            
-            // Test navigation function
-            console.log('Testing get_current_region...');
-            const regionResult = await this.executeToolByName('get_current_region', {});
-            console.log('Current region result:', regionResult);
-            
-            return {
-                success: true,
-                tests: {
-                    gc: gcResult,
-                    reverseComplement: rcResult,
-                    currentRegion: regionResult
-                }
-            };
-            
+            console.log('Tool execution test result:', testResult);
+            this.addMessageToChat('Tool execution test completed. Check console for details.', 'assistant');
         } catch (error) {
-            console.error('❌ Tool execution test failed:', error);
+            console.error('Tool execution test failed:', error);
+            this.addMessageToChat(`Tool execution test failed: ${error.message}`, 'assistant', true);
+        }
+    }
+
+    // ====================================
+    // BLAST SEARCH FUNCTIONALITY
+    // ====================================
+
+    async blastSearch(params) {
+        /**
+         * Perform BLAST search with given parameters
+         * @param {Object} params - BLAST search parameters
+         * @param {string} params.sequence - Query sequence
+         * @param {string} params.blastType - Type of BLAST (blastn, blastp, blastx, tblastn)
+         * @param {string} params.database - Target database
+         * @param {string} params.evalue - E-value threshold
+         * @param {number} params.maxTargets - Maximum number of target sequences
+         */
+        try {
+            console.log('BLAST search requested:', params);
+
+            // Check if BlastManager is available
+            if (!this.app?.blastManager) {
+                return {
+                    success: false,
+                    error: 'BLAST functionality is not available. BlastManager not initialized.'
+                };
+            }
+
+            // Validate required parameters
+            if (!params.sequence) {
+                return {
+                    success: false,
+                    error: 'Query sequence is required for BLAST search'
+                };
+            }
+
+            // Delegate to BlastManager
+            const result = await this.app.blastManager.blastSearch(params);
+
+            if (result.success) {
+                return {
+                    success: true,
+                    message: result.summary,
+                    hits: result.results.hits.length,
+                    topHits: result.results.hits.slice(0, 3).map(hit => ({
+                        accession: hit.accession,
+                        description: hit.description,
+                        evalue: hit.evalue,
+                        identity: hit.identity,
+                        coverage: hit.coverage
+                    })),
+                    searchId: result.results.searchId,
+                    queryLength: result.results.queryInfo.length,
+                    database: result.results.parameters.database
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.error
+                };
+            }
+
+        } catch (error) {
+            console.error('BLAST search error:', error);
             return {
                 success: false,
-                error: error.message
+                error: `BLAST search failed: ${error.message}`
             };
         }
+    }
+
+    async blastSequenceFromRegion(params) {
+        /**
+         * Perform BLAST search using sequence from a genomic region
+         * @param {Object} params - Region and search parameters
+         * @param {string} params.chromosome - Chromosome identifier
+         * @param {number} params.start - Start position
+         * @param {number} params.end - End position
+         * @param {string} params.blastType - Type of BLAST search
+         * @param {string} params.database - Target database
+         */
+        try {
+            console.log('BLAST search from region requested:', params);
+
+            // Check if BlastManager is available
+            if (!this.app?.blastManager) {
+                return {
+                    success: false,
+                    error: 'BLAST functionality is not available. BlastManager not initialized.'
+                };
+            }
+
+            // Validate required parameters
+            if (!params.chromosome || !params.start || !params.end) {
+                return {
+                    success: false,
+                    error: 'Chromosome, start, and end positions are required for region-based BLAST search'
+                };
+            }
+
+            // Delegate to BlastManager
+            const result = await this.app.blastManager.blastSequenceFromRegion(params);
+
+            if (result.success) {
+                return {
+                    success: true,
+                    message: result.summary,
+                    region: `${params.chromosome}:${params.start}-${params.end}`,
+                    hits: result.results.hits.length,
+                    topHits: result.results.hits.slice(0, 3).map(hit => ({
+                        accession: hit.accession,
+                        description: hit.description,
+                        evalue: hit.evalue,
+                        identity: hit.identity,
+                        coverage: hit.coverage
+                    })),
+                    searchId: result.results.searchId,
+                    queryLength: result.results.queryInfo.length,
+                    database: result.results.parameters.database
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.error
+                };
+            }
+
+        } catch (error) {
+            console.error('BLAST search from region error:', error);
+            return {
+                success: false,
+                error: `BLAST search from region failed: ${error.message}`
+            };
+        }
+    }
+
+    getBlastDatabases(params) {
+        /**
+         * Get available BLAST databases
+         * @param {Object} params - Optional parameters (currently unused)
+         */
+        try {
+            // Check if BlastManager is available
+            if (!this.app?.blastManager) {
+                return {
+                    success: false,
+                    error: 'BLAST functionality is not available. BlastManager not initialized.'
+                };
+            }
+
+            const databases = this.app.blastManager.getBlastDatabases();
+
+            return {
+                success: true,
+                databases: databases,
+                nucleotideCount: databases.nucleotide.length,
+                proteinCount: databases.protein.length,
+                totalDatabases: databases.nucleotide.length + databases.protein.length
+            };
+
+        } catch (error) {
+            console.error('Get BLAST databases error:', error);
+            return {
+                success: false,
+                error: `Failed to get BLAST databases: ${error.message}`
+            };
+        }
+    }
+
+    // ====================================
+    // ENHANCED BLAST FUNCTIONALITY WITH MCP INTEGRATION
+    // ====================================
+
+    async batchBlastSearch(params) {
+        /**
+         * Perform batch BLAST search with multiple sequences
+         * @param {Object} params - Batch BLAST parameters
+         * @param {Array} params.sequences - Array of sequences to search
+         * @param {string} params.blastType - Type of BLAST search
+         * @param {string} params.database - Target database
+         * @param {number} params.maxTargets - Maximum targets per sequence
+         */
+        try {
+            console.log('Batch BLAST search requested:', params);
+
+            // Check if we have an MCP BLAST server available
+            const mcpBlastServer = this.app.mcpServerManager?.getServer('blast-server');
+            if (mcpBlastServer && this.app.mcpServerManager.activeServers.has('blast-server')) {
+                // Use MCP BLAST server for batch operations
+                return await this.executeMCPBlastTool('batch_blast_search', params);
+            }
+
+            // Fallback to local BlastManager with sequential searches
+            if (!this.app?.blastManager) {
+                return {
+                    success: false,
+                    error: 'BLAST functionality is not available. Neither MCP BLAST server nor BlastManager is available.'
+                };
+            }
+
+            const results = [];
+            for (let i = 0; i < params.sequences.length; i++) {
+                const sequence = params.sequences[i];
+                const searchParams = {
+                    sequence: sequence.sequence || sequence,
+                    blastType: params.blastType,
+                    database: params.database,
+                    maxTargets: params.maxTargets || 10
+                };
+
+                const result = await this.app.blastManager.blastSearch(searchParams);
+                results.push({
+                    sequenceIndex: i,
+                    sequenceId: sequence.id || `seq_${i + 1}`,
+                    ...result
+                });
+            }
+
+            return {
+                success: true,
+                message: `Batch BLAST completed for ${params.sequences.length} sequences`,
+                results: results,
+                totalHits: results.reduce((sum, r) => sum + (r.results?.hits?.length || 0), 0)
+            };
+
+        } catch (error) {
+            console.error('Batch BLAST search error:', error);
+            return {
+                success: false,
+                error: `Batch BLAST search failed: ${error.message}`
+            };
+        }
+    }
+
+    async localBlastDatabaseInfo(params) {
+        /**
+         * Get information about local BLAST databases
+         * @param {Object} params - Parameters
+         * @param {string} params.databasePath - Path to local database (optional)
+         */
+        try {
+            // Check if we have an MCP BLAST server with local database capabilities
+            const mcpBlastServer = this.app.mcpServerManager?.getServer('blast-server');
+            if (mcpBlastServer && this.app.mcpServerManager.activeServers.has('blast-server')) {
+                return await this.executeMCPBlastTool('local_blast_database_info', params);
+            }
+
+            // Fallback response indicating only remote databases are available
+            return {
+                success: true,
+                message: 'Only remote NCBI databases are available through the built-in BLAST functionality',
+                databases: this.app.blastManager?.getBlastDatabases() || {},
+                localDatabases: [],
+                note: 'To use local databases, configure a local BLAST server as an MCP server'
+            };
+
+        } catch (error) {
+            console.error('Local BLAST database info error:', error);
+            return {
+                success: false,
+                error: `Failed to get local BLAST database info: ${error.message}`
+            };
+        }
+    }
+
+    async executeMCPBlastTool(toolName, params) {
+        /**
+         * Execute a BLAST tool on the MCP BLAST server
+         * @param {string} toolName - Name of the BLAST tool
+         * @param {Object} params - Tool parameters
+         */
+        try {
+            if (!this.app.mcpServerManager) {
+                throw new Error('MCP Server Manager not available');
+            }
+
+            const result = await this.app.mcpServerManager.executeToolOnServer('blast-server', toolName, params);
+            return {
+                success: true,
+                ...result
+            };
+
+        } catch (error) {
+            console.error(`MCP BLAST tool ${toolName} error:`, error);
+            return {
+                success: false,
+                error: `MCP BLAST tool failed: ${error.message}`
+            };
+        }
+    }
+
+    async advancedBlastSearch(params) {
+        /**
+         * Advanced BLAST search with additional parameters and filtering
+         * @param {Object} params - Advanced BLAST parameters
+         * @param {string} params.sequence - Query sequence
+         * @param {string} params.blastType - Type of BLAST search
+         * @param {string} params.database - Target database
+         * @param {Object} params.filters - Additional filtering options
+         * @param {Object} params.algorithms - Algorithm-specific parameters
+         */
+        try {
+            console.log('Advanced BLAST search requested:', params);
+
+            // Try MCP BLAST server first for advanced features
+            const mcpBlastServer = this.app.mcpServerManager?.getServer('blast-server');
+            if (mcpBlastServer && this.app.mcpServerManager.activeServers.has('blast-server')) {
+                return await this.executeMCPBlastTool('advanced_blast_search', params);
+            }
+
+            // Fallback to regular BLAST search with available parameters
+            const basicParams = {
+                sequence: params.sequence,
+                blastType: params.blastType,
+                database: params.database,
+                evalue: params.evalue || '0.01',
+                maxTargets: params.maxTargets || 50,
+                wordSize: params.algorithms?.wordSize,
+                matrix: params.algorithms?.matrix,
+                gapOpen: params.algorithms?.gapOpen,
+                gapExtend: params.algorithms?.gapExtend
+            };
+
+            const result = await this.blastSearch(basicParams);
+            
+            if (result.success && params.filters) {
+                // Apply local filtering
+                result.filteredHits = this.applyBlastFilters(result.topHits, params.filters);
+            }
+
+            return result;
+
+        } catch (error) {
+            console.error('Advanced BLAST search error:', error);
+            return {
+                success: false,
+                error: `Advanced BLAST search failed: ${error.message}`
+            };
+        }
+    }
+
+    applyBlastFilters(hits, filters) {
+        /**
+         * Apply filtering to BLAST hits
+         * @param {Array} hits - BLAST hits to filter
+         * @param {Object} filters - Filtering criteria
+         */
+        let filteredHits = [...hits];
+
+        if (filters.minIdentity) {
+            filteredHits = filteredHits.filter(hit => 
+                parseFloat(hit.identity.replace('%', '')) >= filters.minIdentity
+            );
+        }
+
+        if (filters.minCoverage) {
+            filteredHits = filteredHits.filter(hit => 
+                parseFloat(hit.coverage.replace('%', '')) >= filters.minCoverage
+            );
+        }
+
+        if (filters.maxEvalue) {
+            filteredHits = filteredHits.filter(hit => 
+                parseFloat(hit.evalue) <= filters.maxEvalue
+            );
+        }
+
+        if (filters.excludePatterns) {
+            filteredHits = filteredHits.filter(hit => 
+                !filters.excludePatterns.some(pattern => 
+                    hit.description.toLowerCase().includes(pattern.toLowerCase())
+                )
+            );
+        }
+
+        return filteredHits;
     }
 } 

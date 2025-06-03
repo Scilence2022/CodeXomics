@@ -20,6 +20,10 @@
                 </h1>
             </div>
             <div class="header-center">
+                <button id="blastBtn" class="btn btn-primary" title="Open BLAST Search">
+                    <i class="fas fa-search"></i>
+                    BLAST
+                </button>
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search gene names or sequences..." class="search-input">
                     <button id="searchBtn" class="search-btn">
@@ -1116,6 +1120,290 @@
         </div>
     </div>
 
+    <!-- BLAST Search Modal -->
+    <div id="blastSearchModal" class="modal">
+        <div class="modal-content blast-modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-search"></i> BLAST Search</h3>
+                <button class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="tab-button active" data-tab="blast-search">BLAST Search</button>
+                <button class="tab-button" data-tab="db-management">Database Management</button>
+            </div>
+            <div class="modal-body blast-modal-body">
+                <!-- BLAST Search Tab Content -->
+                <div id="blast-search-tab" class="tab-content active">
+                    <div class="blast-search-container">
+                        <!-- BLAST Type Selection -->
+                        <div class="blast-type-section">
+                            <h4><i class="fas fa-dna"></i> Search Type</h4>
+                            <div class="blast-type-tabs">
+                                <button class="tab-button active" data-blast-type="blastn">
+                                    <i class="fas fa-dna"></i>
+                                    BLASTN
+                                    <span class="tab-description">Nucleotide-Nucleotide</span>
+                                </button>
+                                <button class="tab-button" data-blast-type="blastp">
+                                    <i class="fas fa-circle"></i>
+                                    BLASTP
+                                    <span class="tab-description">Protein-Protein</span>
+                                </button>
+                                <button class="tab-button" data-blast-type="blastx">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    BLASTX
+                                    <span class="tab-description">Nucleotide-Protein</span>
+                                </button>
+                                <button class="tab-button" data-blast-type="tblastn">
+                                    <i class="fas fa-code"></i>
+                                    TBLASTN
+                                    <span class="tab-description">Protein-Nucleotide</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Query Sequence Input -->
+                        <div class="blast-query-section">
+                            <h4><i class="fas fa-file-text"></i> Query Sequence</h4>
+                            <div class="query-input-container">
+                                <div class="input-source-tabs">
+                                    <button class="source-tab active" data-source="manual">Manual Input</button>
+                                    <button class="source-tab" data-source="current">Current Region</button>
+                                    <button class="source-tab" data-source="file">Upload File</button>
+                                </div>
+                                
+                                <div class="query-input-content">
+                                    <!-- Manual Input -->
+                                    <div class="input-source-panel active" data-source="manual">
+                                        <div class="query-input-wrapper">
+                                            <textarea id="blastQuerySequence" 
+                                                      placeholder="Enter your DNA, RNA, or protein sequence here (FASTA format optional)..." 
+                                                      rows="8"></textarea>
+                                            <button id="pasteSequenceBtn" class="btn btn-secondary" title="Paste from clipboard">
+                                                <i class="fas fa-paste"></i>
+                                            </button>
+                                        </div>
+                                        <div class="sequence-info">
+                                            <span id="sequenceLength">Length: 0 bp</span>
+                                            <span id="sequenceType">Type: Not detected</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Current Region -->
+                                    <div class="input-source-panel" data-source="current">
+                                        <div class="current-region-info">
+                                            <p><i class="fas fa-info-circle"></i> Use sequence from current genome viewer region</p>
+                                            <div class="region-details">
+                                                <span>Chromosome: <span id="currentChromDisplay">-</span></span>
+                                                <span>Start: <span id="currentStartDisplay">-</span></span>
+                                                <span>End: <span id="currentEndDisplay">-</span></span>
+                                                <span>Length: <span id="currentLengthDisplay">-</span> bp</span>
+                                            </div>
+                                            <button id="loadCurrentRegionBtn" class="btn btn-primary">
+                                                <i class="fas fa-download"></i>
+                                                Load Current Region
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- File Upload -->
+                                    <div class="input-source-panel" data-source="file">
+                                        <div class="file-upload-area">
+                                            <input type="file" id="blastFileInput" accept=".fasta,.fa,.fas,.txt" style="display: none;">
+                                            <div class="upload-zone" id="blastUploadZone">
+                                                <i class="fas fa-cloud-upload-alt"></i>
+                                                <p>Click to upload or drag and drop</p>
+                                                <p class="upload-formats">Supported: FASTA (.fasta, .fa, .fas, .txt)</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BLAST Parameters -->
+                        <div class="blast-parameters-section">
+                            <h4><i class="fas fa-cog"></i> Search Parameters</h4>
+                            <div class="parameters-grid">
+                                <div class="parameter-group">
+                                    <label for="blastDatabase">Database:</label>
+                                    <select id="blastDatabase">
+                                        <option value="nt">Nucleotide collection (nt)</option>
+                                        <option value="nr">Non-redundant protein sequences (nr)</option>
+                                        <option value="refseq_rna">RefSeq RNA sequences</option>
+                                        <option value="refseq_genomic">RefSeq Genome sequences</option>
+                                        <option value="swissprot">UniProtKB/Swiss-Prot</option>
+                                        <option value="pdb">Protein Data Bank proteins</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="parameter-group">
+                                    <label for="blastEvalue">E-value threshold:</label>
+                                    <select id="blastEvalue">
+                                        <option value="10">10</option>
+                                        <option value="1">1</option>
+                                        <option value="0.1">0.1</option>
+                                        <option value="0.01" selected>0.01</option>
+                                        <option value="0.001">0.001</option>
+                                        <option value="1e-10">1e-10</option>
+                                        <option value="1e-50">1e-50</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="parameter-group">
+                                    <label for="blastMaxTargets">Max target sequences:</label>
+                                    <select id="blastMaxTargets">
+                                        <option value="10">10</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                        <option value="250">250</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="parameter-group">
+                                    <label for="blastWordSize">Word size:</label>
+                                    <select id="blastWordSize">
+                                        <option value="7">7</option>
+                                        <option value="11" selected>11 (default)</option>
+                                        <option value="15">15</option>
+                                        <option value="20">20</option>
+                                        <option value="28">28</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="advanced-parameters">
+                                <details>
+                                    <summary><i class="fas fa-chevron-right"></i> Advanced Parameters</summary>
+                                    <div class="advanced-grid">
+                                        <div class="parameter-group">
+                                            <label for="blastMatrix">Scoring matrix:</label>
+                                            <select id="blastMatrix">
+                                                <option value="BLOSUM62" selected>BLOSUM62</option>
+                                                <option value="BLOSUM45">BLOSUM45</option>
+                                                <option value="BLOSUM80">BLOSUM80</option>
+                                                <option value="PAM30">PAM30</option>
+                                                <option value="PAM70">PAM70</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="parameter-group">
+                                            <label for="blastGapOpen">Gap open penalty:</label>
+                                            <input type="number" id="blastGapOpen" value="11" min="1" max="50">
+                                        </div>
+                                        
+                                        <div class="parameter-group">
+                                            <label for="blastGapExtend">Gap extend penalty:</label>
+                                            <input type="number" id="blastGapExtend" value="1" min="1" max="10">
+                                        </div>
+                                        
+                                        <div class="parameter-group">
+                                            <label>
+                                                <input type="checkbox" id="blastLowComplexity" checked>
+                                                Filter low complexity regions
+                                            </label>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+
+                        <!-- Search Service Selection -->
+                        <div class="blast-service-section">
+                            <h4><i class="fas fa-server"></i> Search Service</h4>
+                            <div class="service-tabs">
+                                <button class="service-tab active" data-service="ncbi">
+                                    <i class="fas fa-cloud"></i>
+                                    NCBI BLAST
+                                    <span class="service-description">Remote search using NCBI servers</span>
+                                </button>
+                                <button class="service-tab" data-service="local" disabled>
+                                    <i class="fas fa-desktop"></i>
+                                    Local BLAST
+                                    <span class="service-description">Local database search (coming soon)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Management Tab Content -->
+                <div id="db-management-tab" class="tab-content">
+                    <!-- Local Database Management -->
+                    <div class="blast-db-management-section">
+                        <h4><i class="fas fa-database"></i> Local Database Management</h4>
+                        <p class="help-text">Create searchable local BLAST databases from currently loaded genome sequences.</p>
+                        <div class="form-group">
+                            <label for="loadedGenomeSelect">Select Loaded Genome:</label>
+                            <select id="loadedGenomeSelect">
+                                <option value="">-- Select a loaded genome --</option>
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newDbName">New Database Name:</label>
+                            <input type="text" id="newDbName" placeholder="Enter database name...">
+                        </div>
+                         <div class="form-group">
+                            <label for="newDbType">Database Type:</label>
+                            <select id="newDbType">
+                                <option value="nucl">Nucleotide</option>
+                                <option value="prot">Protein</option>
+                            </select>
+                        </div>
+                        <button id="createLocalDbBtn" class="btn btn-secondary">
+                            <i class="fas fa-database"></i>
+                            Create Database
+                        </button>
+                    </div>
+                    
+                    <!-- Existing Local Databases (Optional: display list here later) -->
+                    <div class="existing-local-dbs-section">
+                        <h4><i class="fas fa-list"></i> Existing Local Databases</h4>
+                        <ul id="existingLocalDbList">
+                            <!-- Existing databases will be listed here by JS -->
+                            <li>No local databases found.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">Cancel</button>
+                <button id="runBlastBtn" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Run BLAST Search
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLAST Results Modal -->
+    <div id="blastResultsModal" class="modal">
+        <div class="modal-content blast-results-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-chart-line"></i> BLAST Results</h3>
+                <div class="results-controls">
+                    <button id="exportBlastBtn" class="btn btn-secondary">
+                        <i class="fas fa-download"></i>
+                        Export
+                    </button>
+                    <button class="modal-close" type="button">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body blast-results-body">
+                <div id="blastResultsContainer">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Settings Modal -->
+    <div id="generalSettingsModal" class="modal">
+        // ... existing code ...
+    </div>
+
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!--script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script -->
@@ -1134,6 +1422,8 @@
     <script src="modules/ChatManager.js"></script>
     <script src="modules/ReadsManager.js"></script>
     <script src="modules/ProteinStructureViewer.js"></script>
+    <script src="modules/BlastManager.js"></script>
+    <script src="modules/MicrobeGenomicsFunctions.js"></script>
     
     <!-- Main application -->
     <script src="renderer-modular.js"></script>

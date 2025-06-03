@@ -18,6 +18,7 @@ class GenomeBrowser {
         this.exportManager = new ExportManager(this);
         this.readsManager = new ReadsManager(this); // Initialize reads manager
         this.trackStateManager = new TrackStateManager(this);  // Add track state manager
+        this.blastManager = new BlastManager(this); // Initialize BLAST manager
         
         // State
         this.currentChromosome = null;

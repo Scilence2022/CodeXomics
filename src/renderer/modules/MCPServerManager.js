@@ -42,6 +42,38 @@ class MCPServerManager {
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
                 isBuiltin: true
+            }],
+            // Example local development server
+            ['dev-local', {
+                id: 'dev-local',
+                name: 'Local Development Tools',
+                url: 'ws://localhost:3001',
+                category: 'development',
+                description: 'Local development and testing tools',
+                enabled: false,
+                isBuiltin: true
+            }],
+            
+            // Example BLAST server
+            ['blast-server', {
+                id: 'blast-server',
+                name: 'BLAST Search Server',
+                url: 'ws://localhost:3002',
+                category: 'bioinformatics',
+                description: 'Advanced BLAST search capabilities with local databases',
+                enabled: true,
+                autoConnect: false,
+                reconnectDelay: 5,
+                capabilities: ['blast-search', 'sequence-alignment', 'database-search', 'batch-blast'],
+                tools: [
+                    'blast_nucleotide_search',
+                    'blast_protein_search', 
+                    'blast_translated_search',
+                    'get_blast_databases',
+                    'batch_blast_search',
+                    'local_blast_database_info'
+                ],
+                isBuiltin: true
             }]
         ]);
 
