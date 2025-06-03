@@ -932,13 +932,18 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
         
         this.genomeBrowser.updateStatus(`Added ${newTracksCount} WIG track(s). Total: ${totalTracksAfterMerge} tracks`);
         
-        // Auto-enable WIG tracks
-        this.autoEnableTracksForFileType('.wig');
+        // Only auto-enable WIG tracks if this is not part of a multiple file loading operation
+        // (to avoid multiple calls that cause duplication)
+        if (!this._isLoadingMultipleWIGFiles) {
+            this.autoEnableTracksForFileType('.wig');
+        }
         
-        // If we already have sequence data, refresh the view
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        // If we already have sequence data, refresh the view (only for single file loading)
+        if (!this._isLoadingMultipleWIGFiles) {
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
         }
     }
     
@@ -1035,32 +1040,54 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
                 break;
         }
 
-        // Enable the tracks
-        if (tracksToEnable.length > 0) {
-            tracksToEnable.forEach(trackType => {
+        // Check if tracks need to be enabled (avoid duplicate enabling)
+        let tracksAlreadyEnabled = true;
+        let enabledAnyTrack = false;
+        
+        tracksToEnable.forEach(trackType => {
+            // Check if track is already enabled
+            const toolbarChecked = trackCheckboxes.toolbar[trackType] && trackCheckboxes.toolbar[trackType].checked;
+            const sidebarChecked = trackCheckboxes.sidebar[trackType] && trackCheckboxes.sidebar[trackType].checked;
+            const inVisibleTracks = this.genomeBrowser.visibleTracks.has(trackType);
+            
+            if (!toolbarChecked || !sidebarChecked || !inVisibleTracks) {
+                tracksAlreadyEnabled = false;
+                
                 // Enable in toolbar
-                if (trackCheckboxes.toolbar[trackType]) {
+                if (trackCheckboxes.toolbar[trackType] && !trackCheckboxes.toolbar[trackType].checked) {
                     trackCheckboxes.toolbar[trackType].checked = true;
                 }
                 // Enable in sidebar
-                if (trackCheckboxes.sidebar[trackType]) {
+                if (trackCheckboxes.sidebar[trackType] && !trackCheckboxes.sidebar[trackType].checked) {
                     trackCheckboxes.sidebar[trackType].checked = true;
                 }
                 // Add to visible tracks
-                this.genomeBrowser.visibleTracks.add(trackType);
-            });
+                if (!this.genomeBrowser.visibleTracks.has(trackType)) {
+                    this.genomeBrowser.visibleTracks.add(trackType);
+                    enabledAnyTrack = true;
+                }
+            }
+        });
 
+        // Only update the genome view if we actually enabled new tracks
+        if (enabledAnyTrack && !tracksAlreadyEnabled) {
             // Update the genome view to show the new tracks
             this.genomeBrowser.updateVisibleTracks();
             
             // Show status message
             this.genomeBrowser.updateStatus(statusMessage);
+        } else if (tracksToEnable.length > 0 && tracksAlreadyEnabled) {
+            // Show message that tracks were already enabled
+            this.genomeBrowser.updateStatus(`${statusMessage.replace('automatically enabled', 'already enabled')}`);
         }
     }
 
     async loadMultipleWIGFiles(filePaths) {
         this.genomeBrowser.showLoading(true);
         this.genomeBrowser.updateStatus(`Loading ${filePaths.length} WIG files...`);
+
+        // Set flag to prevent individual parseWIG calls from auto-enabling tracks
+        this._isLoadingMultipleWIGFiles = true;
 
         try {
             const results = [];
@@ -1094,7 +1121,7 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
                         data: fileData.data
                     };
 
-                    // Parse WIG file
+                    // Parse WIG file (will not auto-enable tracks due to flag)
                     const tracksBefore = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
                     await this.parseWIG();
                     const tracksAfter = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
@@ -1118,14 +1145,19 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
                 }
             }
 
+            // Clear the flag
+            this._isLoadingMultipleWIGFiles = false;
+
             // Update UI
             this.genomeBrowser.updateFileInfo();
             this.genomeBrowser.hideWelcomeScreen();
             
-            // Auto-enable WIG tracks
-            this.autoEnableTracksForFileType('.wig');
+            // Auto-enable WIG tracks only once for all loaded files
+            if (successCount > 0) {
+                this.autoEnableTracksForFileType('.wig');
+            }
 
-            // Refresh view if sequence is loaded
+            // Refresh view if sequence is loaded (only once after all files are processed)
             const currentChr = document.getElementById('chromosomeSelect').value;
             if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
@@ -1145,6 +1177,8 @@ Then load the SAM file instead. SAM files contain the same alignment data in tex
             this.genomeBrowser.updateStatus(`Error: ${error.message}`);
             alert(`Failed to load WIG files: ${error.message}`);
         } finally {
+            // Ensure flag is cleared even if an error occurs
+            this._isLoadingMultipleWIGFiles = false;
             this.genomeBrowser.showLoading(false);
         }
     }

@@ -171,8 +171,8 @@ function createMenu() {
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'About Genome Viewer',
-              message: 'Genome Viewer v1.0.0',
+              title: 'About Genome AI Studio',
+              message: 'Genome AI Studio v1.0 beta',
               detail: 'A modern AI-powered genome analysis studio built with Electron'
             });
           }

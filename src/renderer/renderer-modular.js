@@ -959,146 +959,148 @@ class GenomeBrowser {
 
     // Core genome display method
     async displayGenomeView(chromosome, sequence) {
-        // Create EcoCyc-like studio view
-        const container = document.getElementById('genomeViewer');
+        // Prevent multiple simultaneous rendering operations that could cause track duplication
+        if (this._isRenderingView) {
+            console.log('[displayGenomeView] Already rendering, skipping duplicate call');
+            return;
+        }
         
-        // Show and update the navigation bar
-        this.genomeNavigationBar.show(chromosome, sequence.length);
-        
-        // PRESERVE TRACK HEIGHTS before clearing container
-        const preservedHeights = new Map();
-        const trackTypeMapping = {
-            'gene': 'genes',
-            'gc': 'gc',
-            'variant': 'variants',
-            'reads': 'reads',
-            'proteins': 'proteins',
-            'wig': 'wigTracks'  // Add WIG tracks to preservation mapping
-            // Remove 'sequence' since it's now handled as bottom panel, not a regular track
-        };
+        this._isRenderingView = true;
 
-        const existingTracks = container.querySelectorAll('[class*="-track"]');
-        console.log('[displayGenomeView] Existing tracks found for height preservation:', existingTracks.length);
-        existingTracks.forEach(track => {
-            const trackContent = track.querySelector('.track-content');
-            if (trackContent && trackContent.style.height && trackContent.style.height !== '') {
-                let baseType = null;
-                for (const cls of track.classList) {
-                    if (cls.endsWith('-track') && !cls.startsWith('track-splitter')) { // Ensure it's a main track div
-                        baseType = cls.replace('-track', '');
-                        break;
+        try {
+            // Create EcoCyc-like studio view
+            const container = document.getElementById('genomeViewer');
+            
+            // Show and update the navigation bar
+            this.genomeNavigationBar.show(chromosome, sequence.length);
+            
+            // PRESERVE TRACK HEIGHTS before clearing container
+            const preservedHeights = new Map();
+            const trackTypeMapping = {
+                'gene': 'genes',
+                'gc': 'gc',
+                'variant': 'variants',
+                'reads': 'reads',
+                'proteins': 'proteins',
+                'wig': 'wigTracks'  // Add WIG tracks to preservation mapping
+                // Remove 'sequence' since it's now handled as bottom panel, not a regular track
+            };
+
+            const existingTracks = container.querySelectorAll('[class*="-track"]');
+            console.log('[displayGenomeView] Existing tracks found for height preservation:', existingTracks.length);
+            existingTracks.forEach(track => {
+                const trackContent = track.querySelector('.track-content');
+                if (trackContent && trackContent.style.height && trackContent.style.height !== '') {
+                    let baseType = null;
+                    for (const cls of track.classList) {
+                        if (cls.endsWith('-track') && !cls.startsWith('track-splitter')) { // Ensure it's a main track div
+                            baseType = cls.replace('-track', '');
+                            break;
+                        }
                     }
-                }
-                if (baseType) {
-                    const mappedType = trackTypeMapping[baseType];
-                    if (mappedType) {
-                        preservedHeights.set(mappedType, trackContent.style.height);
-                        console.log(`[displayGenomeView] Preserving height for ${mappedType} (from class ${baseType}-track): ${trackContent.style.height}`);
+                    if (baseType) {
+                        const mappedType = trackTypeMapping[baseType];
+                        if (mappedType) {
+                            preservedHeights.set(mappedType, trackContent.style.height);
+                            console.log(`[displayGenomeView] Preserving height for ${mappedType} (from class ${baseType}-track): ${trackContent.style.height}`);
+                        } else {
+                            console.warn(`[displayGenomeView] No mapping found for base track type: ${baseType} from classList:`, track.classList);
+                        }
                     } else {
-                        console.warn(`[displayGenomeView] No mapping found for base track type: ${baseType} from classList:`, track.classList);
+                        // console.log('[displayGenomeView] Could not determine baseType for track:', track.className);
                     }
-                } else {
-                    // console.log('[displayGenomeView] Could not determine baseType for track:', track.className);
+                } else if (trackContent) {
+                    // console.log('[displayGenomeView] No style.height to preserve for track (or height is empty string):', track.className, 'Height:', trackContent.style.height);
                 }
-            } else if (trackContent) {
-                // console.log('[displayGenomeView] No style.height to preserve for track (or height is empty string):', track.className, 'Height:', trackContent.style.height);
+            });
+            console.log('[displayGenomeView] Preserved heights map:', preservedHeights);
+            
+            container.innerHTML = '';
+            
+            // Show navigation controls
+            document.getElementById('genomeNavigation').style.display = 'block';
+            
+            // Create Genome AI Studio container
+            const browserContainer = document.createElement('div');
+            browserContainer.className = 'genome-browser-container';
+            
+            // Collect all tracks to be displayed
+            const tracksToShow = [];
+            
+            // 1. Gene track (only if genes track is selected and annotations exist)
+            if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
+                const geneTrack = this.trackRenderer.createGeneTrack(chromosome);
+                tracksToShow.push({ element: geneTrack, type: 'genes' });
             }
-        });
-        console.log('[displayGenomeView] Preserved heights map:', preservedHeights);
-        
-        container.innerHTML = '';
-        
-        // Show navigation controls
-        document.getElementById('genomeNavigation').style.display = 'block';
-        
-        // Create Genome AI Studio container
-        const browserContainer = document.createElement('div');
-        browserContainer.className = 'genome-browser-container';
-        
-        // Collect all tracks to be displayed
-        const tracksToShow = [];
-        
-        // 1. Gene track (only if genes track is selected and annotations exist)
-        if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
-            const geneTrack = this.trackRenderer.createGeneTrack(chromosome);
-            tracksToShow.push({ element: geneTrack, type: 'genes' });
-        }
-        
-        // 2. GC Content track (only if GC track is selected)
-        if (this.visibleTracks.has('gc')) {
-            const gcTrack = this.trackRenderer.createGCTrack(chromosome, sequence);
-            tracksToShow.push({ element: gcTrack, type: 'gc' });
-        }
-        
-        // 3. Variants track (show if selected, even without data)
-        if (this.visibleTracks.has('variants')) {
-            const variantTrack = this.trackRenderer.createVariantTrack(chromosome);
-            tracksToShow.push({ element: variantTrack, type: 'variants' });
-        }
-        
-        // 4. Aligned reads track (show if selected, even without data) - Now async
-        if (this.visibleTracks.has('reads')) {
-            const readsTrack = await this.trackRenderer.createReadsTrack(chromosome);
-            tracksToShow.push({ element: readsTrack, type: 'reads' });
-        }
-        
-        // 5. WIG tracks (show if selected, even without data)
-        if (this.visibleTracks.has('wigTracks')) {
-            const wigTrack = this.trackRenderer.createWIGTrack(chromosome);
-            tracksToShow.push({ element: wigTrack, type: 'wigTracks' });
-        }
+            
+            // 2. GC Content track (only if GC track is selected)
+            if (this.visibleTracks.has('gc')) {
+                const gcTrack = this.trackRenderer.createGCTrack(chromosome, sequence);
+                tracksToShow.push({ element: gcTrack, type: 'gc' });
+            }
+            
+            // 3. Variants track (show if selected, even without data)
+            if (this.visibleTracks.has('variants')) {
+                const variantTrack = this.trackRenderer.createVariantTrack(chromosome);
+                tracksToShow.push({ element: variantTrack, type: 'variants' });
+            }
+            
+            // 4. Aligned reads track (show if selected, even without data) - Now async
+            if (this.visibleTracks.has('reads')) {
+                const readsTrack = await this.trackRenderer.createReadsTrack(chromosome);
+                tracksToShow.push({ element: readsTrack, type: 'reads' });
+            }
+            
+            // 5. WIG tracks (show if selected, even without data)
+            if (this.visibleTracks.has('wigTracks')) {
+                const wigTrack = this.trackRenderer.createWIGTrack(chromosome);
+                tracksToShow.push({ element: wigTrack, type: 'wigTracks' });
+            }
 
-        // 6. Protein track (only if proteins track is selected and we have CDS annotations)
-        if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
-            const proteinTrack = this.trackRenderer.createProteinTrack(chromosome);
-            tracksToShow.push({ element: proteinTrack, type: 'proteins' });
-        }
-        
-        // Add tracks without splitters, but make them draggable and resizable
-        tracksToShow.forEach((track, index) => {
-            // Add the track
-            browserContainer.appendChild(track.element);
-            
-            // RESTORE PRESERVED HEIGHT if it exists (current session)
-            const trackContent = track.element.querySelector('.track-content');
-            const typeToRestore = track.type;
-            if (trackContent && preservedHeights.has(typeToRestore)) {
-                const heightToRestore = preservedHeights.get(typeToRestore);
-                trackContent.style.height = heightToRestore;
-                console.log(`[displayGenomeView] Restored height for ${typeToRestore}: ${heightToRestore}`);
-            } else if (trackContent) {
-                 console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
+            // 6. Protein track (only if proteins track is selected and we have CDS annotations)
+            if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
+                const proteinTrack = this.trackRenderer.createProteinTrack(chromosome);
+                tracksToShow.push({ element: proteinTrack, type: 'proteins' });
             }
             
-            // Make tracks draggable for reordering and add resize handle
-            this.makeTrackDraggable(track.element, track.type);
-            this.addTrackResizeHandle(track.element, track.type);
-        });
-        
-        container.appendChild(browserContainer);
-        
-        // Apply saved track state (sizes and order) from previous sessions
-        this.trackStateManager.applyTrackSizes(browserContainer);
-        this.trackStateManager.applyTrackOrder(browserContainer);
-        
-        // Handle bottom sequence panel separately (always docked to bottom)
-        this.handleBottomSequencePanel(chromosome, sequence);
-        
-        // Notify reads manager of navigation change for cache management
-        if (this.readsManager) {
-            this.readsManager.onNavigationChange(chromosome, this.currentPosition.start, this.currentPosition.end);
+            // Add tracks without splitters, but make them draggable and resizable
+            tracksToShow.forEach((track, index) => {
+                // Add the track
+                browserContainer.appendChild(track.element);
+                
+                // RESTORE PRESERVED HEIGHT if it exists (current session)
+                const trackContent = track.element.querySelector('.track-content');
+                const typeToRestore = track.type;
+                if (trackContent && preservedHeights.has(typeToRestore)) {
+                    const heightToRestore = preservedHeights.get(typeToRestore);
+                    trackContent.style.height = heightToRestore;
+                    console.log(`[displayGenomeView] Restored height for ${typeToRestore}: ${heightToRestore}`);
+                } else if (trackContent) {
+                     console.log(`[displayGenomeView] No preserved height found for ${typeToRestore}. Current height: ${trackContent.style.height}`);
+                }
+                
+                // Make tracks draggable for reordering and add resize handle
+                this.makeTrackDraggable(track.element, track.type);
+                this.addTrackResizeHandle(track.element, track.type);
+            });
+            
+            container.appendChild(browserContainer);
+            
+            // Apply saved track state (sizes and order) from previous sessions
+            this.trackStateManager.applyTrackSizes(browserContainer);
+            this.trackStateManager.applyTrackOrder(browserContainer);
+            
+            // Handle bottom sequence panel separately (always docked to bottom)
+            this.handleBottomSequencePanel(chromosome, sequence);
+            
+            // Notify reads manager of navigation change for cache management
+            if (this.readsManager) {
+                this.readsManager.onNavigationChange(chromosome, this.currentPosition.start, this.currentPosition.end);
+            }
+        } finally {
+            // Always clear the rendering flag
+            this._isRenderingView = false;
         }
-        
-        // Re-highlight selected gene if there is one
-        if (this.selectedGene && this.selectedGene.gene) {
-            // Use setTimeout to ensure the DOM is updated before highlighting
-            setTimeout(() => {
-                this.highlightGeneSequence(this.selectedGene.gene);
-            }, 100);
-        }
-        
-        // Update bottom sequence panel toggle button event listener
-        this.setupToggleButtonListener();
     }
     
     // Setup the existing toggle button to work with new bottom sequence panel
@@ -1695,6 +1697,17 @@ class GenomeBrowser {
 
     // Track management methods
     updateVisibleTracks() {
+        // Clear any existing timeout to debounce rapid calls
+        if (this._updateTracksTimeout) {
+            clearTimeout(this._updateTracksTimeout);
+        }
+        
+        this._updateTracksTimeout = setTimeout(() => {
+            this._doUpdateVisibleTracks();
+        }, 50); // 50ms debounce
+    }
+    
+    _doUpdateVisibleTracks() {
         // Get selected tracks from toolbar checkboxes
         const tracks = new Set();
         const trackGenes = document.getElementById('trackGenes');
@@ -1740,6 +1753,17 @@ class GenomeBrowser {
     }
 
     updateVisibleTracksFromSidebar() {
+        // Clear any existing timeout to debounce rapid calls
+        if (this._updateTracksFromSidebarTimeout) {
+            clearTimeout(this._updateTracksFromSidebarTimeout);
+        }
+        
+        this._updateTracksFromSidebarTimeout = setTimeout(() => {
+            this._doUpdateVisibleTracksFromSidebar();
+        }, 50); // 50ms debounce
+    }
+    
+    _doUpdateVisibleTracksFromSidebar() {
         // Get selected tracks from sidebar checkboxes
         const tracks = new Set();
         const sidebarTrackGenes = document.getElementById('sidebarTrackGenes');

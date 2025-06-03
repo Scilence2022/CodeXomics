@@ -1,4 +1,4 @@
-# Genome AI Studio V1.0
+# Genome AI Studio V1.0 beta
 
 A modern, cross-platform genome analysis studio built with Electron, featuring an user-friendly interface for exploring genomic data with AI-powered natural language interaction.
 
@@ -38,9 +38,9 @@ A modern, cross-platform genome analysis studio built with Electron, featuring a
 ### **Download Pre-built Releases**
 Download the latest version for your platform from [GitHub Releases](https://github.com/Scilence2022/GenomeAIStudio/releases):
 
-- **macOS**: `Genome-AI-Studio-1.0.0.dmg`
-- **Windows**: `Genome-AI-Studio-Setup-1.0.0.exe`
-- **Linux**: `Genome-AI-Studio-1.0.0.AppImage`
+- **macOS**: `Genome-AI-Studio-1.0.0-beta.dmg`
+- **Windows**: `Genome-AI-Studio-Setup-1.0.0-beta.exe`
+- **Linux**: `Genome-AI-Studio-1.0.0-beta.AppImage`
 
 ### **Build from Source**
 ```bash

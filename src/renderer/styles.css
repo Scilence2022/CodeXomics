@@ -60,7 +60,9 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /*background: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 100%);*/
+
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 80%);
     color: white;
     padding: 1rem 2rem;
     display: flex;
@@ -78,14 +80,27 @@ body {
 .app-title {
     font-size: 20px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: white;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .app-title i {
-    color: var(--primary-color);
+    color: #ecf0f1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.version-tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: #74b9ff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-center {
@@ -304,7 +319,7 @@ body {
 }
 
 .welcome-content p {
-    color: var(--text-secondary);
+    color: white;
     margin-bottom: 24px;
 }
 
