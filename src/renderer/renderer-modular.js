@@ -2855,3 +2855,25 @@ class TrackStateManager {
         console.log('Cleared track state');
     }
 } 
+
+// Load MicrobeGenomicsFunctions for chat integration
+document.addEventListener('DOMContentLoaded', function() {
+    // Dynamically load MicrobeGenomicsFunctions if not already loaded
+    if (!window.MicrobeFns) {
+        const script = document.createElement('script');
+        script.src = './modules/MicrobeGenomicsFunctions.js';
+        script.onload = function() {
+            console.log('MicrobeGenomicsFunctions loaded successfully');
+            // Trigger re-initialization of ChatManager if it exists
+            if (window.chatManager && window.chatManager.initializeMicrobeGenomicsFunctions) {
+                window.chatManager.initializeMicrobeGenomicsFunctions();
+            }
+        };
+        script.onerror = function() {
+            console.error('Failed to load MicrobeGenomicsFunctions');
+        };
+        document.head.appendChild(script);
+    } else {
+        console.log('MicrobeGenomicsFunctions already available');
+    }
+}); 

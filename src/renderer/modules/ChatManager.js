@@ -20,6 +20,9 @@ class ChatManager {
         this.mcpServerManager = new MCPServerManager(this.configManager);
         this.setupMCPServerEventHandlers();
         
+        // Initialize MicrobeGenomicsFunctions
+        this.initializeMicrobeGenomicsFunctions();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -33,6 +36,19 @@ class ChatManager {
         setTimeout(() => {
             this.loadChatHistory();
         }, 100);
+    }
+
+    /**
+     * Initialize MicrobeGenomicsFunctions integration
+     */
+    initializeMicrobeGenomicsFunctions() {
+        // Check if MicrobeGenomicsFunctions is available globally
+        if (typeof window !== 'undefined' && window.MicrobeFns) {
+            this.MicrobeFns = window.MicrobeFns;
+            console.log('MicrobeGenomicsFunctions integrated successfully');
+        } else {
+            console.warn('MicrobeGenomicsFunctions not available globally');
+        }
     }
 
     setupMCPServerEventHandlers() {
@@ -359,6 +375,131 @@ class ChatManager {
                     result = await this.openProteinViewer(parameters);
                     break;
                     
+                // MicrobeGenomicsFunctions Integration
+                case 'navigate_to':
+                    result = this.executeMicrobeFunction('navigateTo', parameters);
+                    break;
+                    
+                case 'jump_to_gene':
+                    result = this.executeMicrobeFunction('jumpToGene', parameters);
+                    break;
+                    
+                case 'get_current_region':
+                    result = this.executeMicrobeFunction('getCurrentRegion', parameters);
+                    break;
+                    
+                case 'scroll_left':
+                    result = this.executeMicrobeFunction('scrollLeft', parameters);
+                    break;
+                    
+                case 'scroll_right':
+                    result = this.executeMicrobeFunction('scrollRight', parameters);
+                    break;
+                    
+                case 'zoom_in':
+                    result = this.executeMicrobeFunction('zoomIn', parameters);
+                    break;
+                    
+                case 'zoom_out':
+                    result = this.executeMicrobeFunction('zoomOut', parameters);
+                    break;
+                    
+                case 'compute_gc':
+                    result = this.executeMicrobeFunction('computeGC', parameters);
+                    break;
+                    
+                case 'reverse_complement':
+                    result = this.executeMicrobeFunction('reverseComplement', parameters);
+                    break;
+                    
+                case 'translate_dna':
+                    result = this.executeMicrobeFunction('translateDNA', parameters);
+                    break;
+                    
+                case 'find_orfs':
+                    result = this.executeMicrobeFunction('findORFs', parameters);
+                    break;
+                    
+                case 'calculate_entropy':
+                    result = this.executeMicrobeFunction('calculateEntropy', parameters);
+                    break;
+                    
+                case 'calc_region_gc':
+                    result = this.executeMicrobeFunction('calcRegionGC', parameters);
+                    break;
+                    
+                case 'calculate_melting_temp':
+                    result = this.executeMicrobeFunction('calculateMeltingTemp', parameters);
+                    break;
+                    
+                case 'calculate_molecular_weight':
+                    result = this.executeMicrobeFunction('calculateMolecularWeight', parameters);
+                    break;
+                    
+                case 'analyze_codon_usage':
+                    result = this.executeMicrobeFunction('analyzeCodonUsage', parameters);
+                    break;
+                    
+                case 'predict_promoter':
+                    result = this.executeMicrobeFunction('predictPromoter', parameters);
+                    break;
+                    
+                case 'predict_rbs':
+                    result = this.executeMicrobeFunction('predictRBS', parameters);
+                    break;
+                    
+                case 'predict_terminator':
+                    result = this.executeMicrobeFunction('predictTerminator', parameters);
+                    break;
+                    
+                case 'search_gene_by_name':
+                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
+                    break;
+                    
+                case 'search_sequence_motif':
+                    result = this.executeMicrobeFunction('searchSequenceMotif', parameters);
+                    break;
+                    
+                case 'search_by_position':
+                    result = this.executeMicrobeFunction('searchByPosition', parameters);
+                    break;
+                    
+                case 'search_intergenic_regions':
+                    result = this.executeMicrobeFunction('searchIntergenicRegions', parameters);
+                    break;
+                    
+                case 'edit_annotation':
+                    result = this.executeMicrobeFunction('editAnnotation', parameters);
+                    break;
+                    
+                case 'delete_annotation':
+                    result = this.executeMicrobeFunction('deleteAnnotation', parameters);
+                    break;
+                    
+                case 'merge_annotations':
+                    result = this.executeMicrobeFunction('mergeAnnotations', parameters);
+                    break;
+                    
+                case 'add_annotation':
+                    result = this.executeMicrobeFunction('addAnnotation', parameters);
+                    break;
+                    
+                case 'get_upstream_region':
+                    result = this.executeMicrobeFunction('getUpstreamRegion', parameters);
+                    break;
+                    
+                case 'get_downstream_region':
+                    result = this.executeMicrobeFunction('getDownstreamRegion', parameters);
+                    break;
+                    
+                case 'add_track':
+                    result = this.executeMicrobeFunction('addTrack', parameters);
+                    break;
+                    
+                case 'add_variant':
+                    result = this.executeMicrobeFunction('addVariant', parameters);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -377,6 +518,72 @@ class ChatManager {
                 success: false,
                 error: error.message
             });
+        }
+    }
+
+    /**
+     * Execute a MicrobeGenomicsFunctions method with error handling
+     */
+    executeMicrobeFunction(methodName, parameters) {
+        if (!this.MicrobeFns) {
+            throw new Error('MicrobeGenomicsFunctions not available');
+        }
+        
+        try {
+            console.log(`Executing MicrobeFns.${methodName} with parameters:`, parameters);
+            
+            if (typeof this.MicrobeFns[methodName] !== 'function') {
+                throw new Error(`Method ${methodName} not found in MicrobeGenomicsFunctions`);
+            }
+            
+            // Handle different parameter patterns
+            let result;
+            if (!parameters || Object.keys(parameters).length === 0) {
+                // No parameters
+                result = this.MicrobeFns[methodName]();
+            } else if (parameters.sequence || parameters.dna) {
+                // Single sequence parameter
+                result = this.MicrobeFns[methodName](parameters.sequence || parameters.dna);
+            } else if (parameters.chromosome && parameters.start && parameters.end) {
+                // Position-based parameters
+                result = this.MicrobeFns[methodName](parameters.chromosome, parameters.start, parameters.end);
+            } else if (parameters.geneName || parameters.name) {
+                // Gene name parameter
+                result = this.MicrobeFns[methodName](parameters.geneName || parameters.name);
+            } else {
+                // Pass all parameters as individual arguments or as object
+                const paramKeys = Object.keys(parameters);
+                if (paramKeys.length === 1) {
+                    result = this.MicrobeFns[methodName](parameters[paramKeys[0]]);
+                } else {
+                    // Try passing parameters as individual arguments in common patterns
+                    const values = Object.values(parameters);
+                    result = this.MicrobeFns[methodName](...values);
+                }
+            }
+            
+            console.log(`MicrobeFns.${methodName} result:`, result);
+            
+            // Wrap result in success format if it's not already an object
+            if (typeof result !== 'object' || result === null) {
+                return {
+                    success: true,
+                    value: result,
+                    method: methodName,
+                    parameters: parameters
+                };
+            }
+            
+            return {
+                success: true,
+                ...result,
+                method: methodName,
+                parameters: parameters
+            };
+            
+        } catch (error) {
+            console.error(`Error executing MicrobeFns.${methodName}:`, error);
+            throw new Error(`MicrobeGenomics function ${methodName} failed: ${error.message}`);
         }
     }
 
@@ -1517,6 +1724,31 @@ Note: Additional tools may be available when MCP servers are connected.
 `;
         }
 
+        // Get MicrobeGenomicsFunctions categories and examples
+        let microbeGenomicsInfo = '';
+        if (this.MicrobeFns) {
+            try {
+                const categories = this.MicrobeFns.getFunctionCategories();
+                const examples = this.MicrobeFns.getUsageExamples();
+                
+                microbeGenomicsInfo = `
+MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
+${Object.entries(categories).map(([category, info]) => 
+    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
+        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+    ).join('\n')}`
+).join('\n\n')}
+
+MICROBE GENOMICS USAGE EXAMPLES:
+${examples.map(example => 
+    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
+).join('\n\n')}
+`;
+            } catch (error) {
+                microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
+            }
+        }
+
         return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
 
 Current Genome AI Studio State:
@@ -1533,6 +1765,8 @@ ${mcpServersInfo}
 Built-in Local Tools:
 ${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
 
+${microbeGenomicsInfo}
+
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
 When a user asks you to perform ANY action that requires using one of these tools, you MUST respond with ONLY a JSON object. Do NOT add any explanatory text, markdown formatting, or conversational responses around the JSON.
 
@@ -1541,8 +1775,9 @@ CORRECT format:
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
-2. Fall back to built-in local tools
-3. Use the most appropriate tool for the task regardless of source
+2. Use MicrobeGenomicsFunctions for specialized genomic analysis
+3. Fall back to built-in local tools
+4. Use the most appropriate tool for the task regardless of source
 
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -1550,17 +1785,34 @@ Basic Tool Examples:
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
-- Create annotation: {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000, "strand": 1}}
-- Analyze region: {"tool_name": "analyze_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
-- Export data: {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}
+
+MicrobeGenomicsFunctions Examples:
+- Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+- Calculate GC content: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Get upstream region: {"tool_name": "get_upstream_region", "parameters": {"geneObj": {"chromosome": "chr1", "feature": {"start": 1000, "end": 2000}}, "length": 200}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"dna": "ATGAAATAG", "minLength": 30}}
+- Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
+- Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC", "chromosome": "chr1"}}
+- Reverse complement: {"tool_name": "reverse_complement", "parameters": {"dna": "ATGC"}}
+- Translate DNA: {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
+- Calculate entropy: {"tool_name": "calculate_entropy", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Melting temperature: {"tool_name": "calculate_melting_temp", "parameters": {"dna": "ATGCGCTATCG"}}
+- Molecular weight: {"tool_name": "calculate_molecular_weight", "parameters": {"dna": "ATGCGCTATCG"}}
+- Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
+- Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
+- Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
+- Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
 
 CRITICAL DISTINCTION - Search Functions:
-1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features'
-   - "find lacZ" → {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'
+   - "find lacZ" → {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
    - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
 
-2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features'
-   - "find genes near 123456" → {"tool_name": "get_nearby_features", "parameters": {"position": 123456, "distance": 5000}}
+2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features' or 'search_by_position'
+   - "find genes near 123456" → {"tool_name": "search_by_position", "parameters": {"chromosome": "chr1", "position": 123456}}
+
+3. FOR SEQUENCE MOTIF SEARCHES: use 'search_sequence_motif'
+   - "find GAATTC sites" → {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC"}}
 
 Common Analysis Tools:
 - Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
@@ -1573,7 +1825,25 @@ Protein Structure Tools:
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
 - Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
 
-IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.`;
+IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
+
+MICROBE GENOMICS POWER USER EXAMPLES:
+1. Complete Gene Analysis:
+   - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
+   - Get upstream: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result_from_above", "length": 200}}
+   - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
+   - Calculate GC: {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}
+
+2. Sequence Motif Analysis:
+   - Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "TATAAT"}}
+   - Find nearby features: {"tool_name": "search_by_position", "parameters": {"position": "motif_position"}}
+
+3. Comparative Analysis:
+   - Get region 1: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene1", "length": 500}}
+   - Get region 2: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene2", "length": 500}}
+   - Compare GC: {"tool_name": "compute_gc", "parameters": {"sequence": "region1"}} then {"tool_name": "compute_gc", "parameters": {"sequence": "region2"}}
+
+Remember: These functions provide atomic operations that can be chained together to perform complex genomic analyses!`;
     }
 
     parseToolCall(response) {
@@ -1889,6 +2159,131 @@ IMPORTANT: For protein structure display requests, use "open_protein_viewer" wit
                     
                 case 'open_protein_viewer':
                     result = await this.openProteinViewer(parameters);
+                    break;
+                    
+                // MicrobeGenomicsFunctions Integration
+                case 'navigate_to':
+                    result = this.executeMicrobeFunction('navigateTo', parameters);
+                    break;
+                    
+                case 'jump_to_gene':
+                    result = this.executeMicrobeFunction('jumpToGene', parameters);
+                    break;
+                    
+                case 'get_current_region':
+                    result = this.executeMicrobeFunction('getCurrentRegion', parameters);
+                    break;
+                    
+                case 'scroll_left':
+                    result = this.executeMicrobeFunction('scrollLeft', parameters);
+                    break;
+                    
+                case 'scroll_right':
+                    result = this.executeMicrobeFunction('scrollRight', parameters);
+                    break;
+                    
+                case 'zoom_in':
+                    result = this.executeMicrobeFunction('zoomIn', parameters);
+                    break;
+                    
+                case 'zoom_out':
+                    result = this.executeMicrobeFunction('zoomOut', parameters);
+                    break;
+                    
+                case 'compute_gc':
+                    result = this.executeMicrobeFunction('computeGC', parameters);
+                    break;
+                    
+                case 'reverse_complement':
+                    result = this.executeMicrobeFunction('reverseComplement', parameters);
+                    break;
+                    
+                case 'translate_dna':
+                    result = this.executeMicrobeFunction('translateDNA', parameters);
+                    break;
+                    
+                case 'find_orfs':
+                    result = this.executeMicrobeFunction('findORFs', parameters);
+                    break;
+                    
+                case 'calculate_entropy':
+                    result = this.executeMicrobeFunction('calculateEntropy', parameters);
+                    break;
+                    
+                case 'calc_region_gc':
+                    result = this.executeMicrobeFunction('calcRegionGC', parameters);
+                    break;
+                    
+                case 'calculate_melting_temp':
+                    result = this.executeMicrobeFunction('calculateMeltingTemp', parameters);
+                    break;
+                    
+                case 'calculate_molecular_weight':
+                    result = this.executeMicrobeFunction('calculateMolecularWeight', parameters);
+                    break;
+                    
+                case 'analyze_codon_usage':
+                    result = this.executeMicrobeFunction('analyzeCodonUsage', parameters);
+                    break;
+                    
+                case 'predict_promoter':
+                    result = this.executeMicrobeFunction('predictPromoter', parameters);
+                    break;
+                    
+                case 'predict_rbs':
+                    result = this.executeMicrobeFunction('predictRBS', parameters);
+                    break;
+                    
+                case 'predict_terminator':
+                    result = this.executeMicrobeFunction('predictTerminator', parameters);
+                    break;
+                    
+                case 'search_gene_by_name':
+                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
+                    break;
+                    
+                case 'search_sequence_motif':
+                    result = this.executeMicrobeFunction('searchSequenceMotif', parameters);
+                    break;
+                    
+                case 'search_by_position':
+                    result = this.executeMicrobeFunction('searchByPosition', parameters);
+                    break;
+                    
+                case 'search_intergenic_regions':
+                    result = this.executeMicrobeFunction('searchIntergenicRegions', parameters);
+                    break;
+                    
+                case 'edit_annotation':
+                    result = this.executeMicrobeFunction('editAnnotation', parameters);
+                    break;
+                    
+                case 'delete_annotation':
+                    result = this.executeMicrobeFunction('deleteAnnotation', parameters);
+                    break;
+                    
+                case 'merge_annotations':
+                    result = this.executeMicrobeFunction('mergeAnnotations', parameters);
+                    break;
+                    
+                case 'add_annotation':
+                    result = this.executeMicrobeFunction('addAnnotation', parameters);
+                    break;
+                    
+                case 'get_upstream_region':
+                    result = this.executeMicrobeFunction('getUpstreamRegion', parameters);
+                    break;
+                    
+                case 'get_downstream_region':
+                    result = this.executeMicrobeFunction('getDownstreamRegion', parameters);
+                    break;
+                    
+                case 'add_track':
+                    result = this.executeMicrobeFunction('addTrack', parameters);
+                    break;
+                    
+                case 'add_variant':
+                    result = this.executeMicrobeFunction('addVariant', parameters);
                     break;
                     
                 default:
@@ -2233,7 +2628,9 @@ IMPORTANT: For protein structure display requests, use "open_protein_viewer" wit
             'Clear all chat history',
             'Export all configurations',
             'Show config summary',
-            'Debug storage info'
+            'Debug storage info',
+            'Test MicrobeGenomics integration',
+            'Test tool execution'
         ];
 
         const optionsHTML = options.map((option, index) => 
@@ -2296,6 +2693,31 @@ IMPORTANT: For protein structure display requests, use "open_protein_viewer" wit
                         `• Is Initialized: ${storageInfo.isInitialized}\n` +
                         `• Config Path: ${storageInfo.configPath ? 'Available' : 'None'}\n` +
                         `• Storage Method: ${storageInfo.usingFiles ? 'File-based' : 'localStorage'}`,
+                        'assistant'
+                    );
+                    break;
+                case 7: // Test MicrobeGenomics integration
+                    const integrationResult = this.testMicrobeGenomicsIntegration();
+                    this.addMessageToChat(
+                        `🧬 **MicrobeGenomics Integration Test:**\n` +
+                        `• Integration: ${integrationResult.success ? '✅ Success' : '❌ Failed'}\n` +
+                        `• Functions Available: ${integrationResult.totalFunctions || 0}\n` +
+                        `• Categories Available: ${integrationResult.categoriesAvailable ? '✅' : '❌'}\n` +
+                        `• Examples Available: ${integrationResult.examplesAvailable ? '✅' : '❌'}\n` +
+                        `• Function Test: ${integrationResult.functionCallTest?.success ? '✅ Passed' : '❌ Failed'}\n` +
+                        (integrationResult.error ? `• Error: ${integrationResult.error}` : ''),
+                        'assistant'
+                    );
+                    break;
+                case 8: // Test tool execution
+                    const executionResult = await this.testToolExecution();
+                    this.addMessageToChat(
+                        `🔧 **Tool Execution Test:**\n` +
+                        `• Status: ${executionResult.success ? '✅ All tests passed' : '❌ Tests failed'}\n` +
+                        `• GC Calculation: ${executionResult.tests?.gc ? '✅ Working' : '❌ Failed'}\n` +
+                        `• Reverse Complement: ${executionResult.tests?.reverseComplement ? '✅ Working' : '❌ Failed'}\n` +
+                        `• Navigation: ${executionResult.tests?.currentRegion ? '✅ Working' : '❌ Failed'}\n` +
+                        (executionResult.error ? `• Error: ${executionResult.error}` : ''),
                         'assistant'
                     );
                     break;
@@ -4590,6 +5012,133 @@ IMPORTANT: For protein structure display requests, use "open_protein_viewer" wit
         } catch (error) {
             console.error('Error in openProteinViewer:', error);
             throw new Error(`Failed to open protein viewer: ${error.message}`);
+        }
+    }
+
+    /**
+     * Test MicrobeGenomicsFunctions integration
+     */
+    testMicrobeGenomicsIntegration() {
+        console.log('=== Testing MicrobeGenomicsFunctions Integration ===');
+        
+        if (!this.MicrobeFns) {
+            console.error('❌ MicrobeGenomicsFunctions not available');
+            return {
+                success: false,
+                error: 'MicrobeGenomicsFunctions not loaded'
+            };
+        }
+        
+        const testResults = {
+            functionsAvailable: {},
+            categoriesAvailable: false,
+            examplesAvailable: false,
+            totalFunctions: 0
+        };
+        
+        try {
+            // Test if categories method works
+            const categories = this.MicrobeFns.getFunctionCategories();
+            testResults.categoriesAvailable = !!categories;
+            console.log('✅ Categories available:', Object.keys(categories));
+            
+            // Test if examples method works
+            const examples = this.MicrobeFns.getUsageExamples();
+            testResults.examplesAvailable = !!examples;
+            console.log('✅ Examples available:', examples.length);
+            
+            // Test individual function availability
+            const testFunctions = [
+                'navigateTo', 'jumpToGene', 'getCurrentRegion', 'scrollLeft', 'scrollRight',
+                'zoomIn', 'zoomOut', 'computeGC', 'reverseComplement', 'translateDNA',
+                'findORFs', 'calculateEntropy', 'calcRegionGC', 'calculateMeltingTemp',
+                'calculateMolecularWeight', 'analyzeCodonUsage', 'predictPromoter',
+                'predictRBS', 'predictTerminator', 'searchGeneByName', 'searchSequenceMotif',
+                'searchByPosition', 'searchIntergenicRegions', 'editAnnotation',
+                'deleteAnnotation', 'mergeAnnotations', 'addAnnotation',
+                'getUpstreamRegion', 'getDownstreamRegion', 'addTrack', 'addVariant'
+            ];
+            
+            testFunctions.forEach(funcName => {
+                const isAvailable = typeof this.MicrobeFns[funcName] === 'function';
+                testResults.functionsAvailable[funcName] = isAvailable;
+                if (isAvailable) {
+                    testResults.totalFunctions++;
+                    console.log(`✅ ${funcName} available`);
+                } else {
+                    console.log(`❌ ${funcName} NOT available`);
+                }
+            });
+            
+            // Test a simple function call
+            try {
+                const testSequence = 'ATGCGCTATCG';
+                const gcResult = this.MicrobeFns.computeGC(testSequence);
+                console.log(`✅ Function call test: computeGC("${testSequence}") = ${gcResult}%`);
+                testResults.functionCallTest = { success: true, result: gcResult };
+            } catch (error) {
+                console.log(`❌ Function call test failed: ${error.message}`);
+                testResults.functionCallTest = { success: false, error: error.message };
+            }
+            
+            console.log('=== Integration Test Summary ===');
+            console.log(`Total functions available: ${testResults.totalFunctions}/${testFunctions.length}`);
+            console.log(`Categories available: ${testResults.categoriesAvailable}`);
+            console.log(`Examples available: ${testResults.examplesAvailable}`);
+            console.log('===================================');
+            
+            return {
+                success: true,
+                ...testResults
+            };
+            
+        } catch (error) {
+            console.error('❌ Integration test failed:', error);
+            return {
+                success: false,
+                error: error.message,
+                ...testResults
+            };
+        }
+    }
+    
+    /**
+     * Test tool execution through ChatManager
+     */
+    async testToolExecution() {
+        console.log('=== Testing Tool Execution ===');
+        
+        try {
+            // Test basic MicrobeGenomics function
+            console.log('Testing compute_gc...');
+            const gcResult = await this.executeToolByName('compute_gc', { sequence: 'ATGCGCTATCG' });
+            console.log('GC result:', gcResult);
+            
+            // Test reverse complement
+            console.log('Testing reverse_complement...');
+            const rcResult = await this.executeToolByName('reverse_complement', { dna: 'ATGC' });
+            console.log('Reverse complement result:', rcResult);
+            
+            // Test navigation function
+            console.log('Testing get_current_region...');
+            const regionResult = await this.executeToolByName('get_current_region', {});
+            console.log('Current region result:', regionResult);
+            
+            return {
+                success: true,
+                tests: {
+                    gc: gcResult,
+                    reverseComplement: rcResult,
+                    currentRegion: regionResult
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Tool execution test failed:', error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 } 
