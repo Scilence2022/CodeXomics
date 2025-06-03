@@ -4,14 +4,19 @@
 class ChatManager {
     constructor(app, configManager = null) {
         this.app = app;
+        this.configManager = configManager;
+        this.llmConfigManager = null;
+        this.mcpServerManager = null;
+        this.chatHistory = [];
+        
+        // Context mode toggle state - false means send full conversation, true means send only current message
+        this.contextModeEnabled = false;
+        
         this.mcpSocket = null;
         this.clientId = null;
         this.isConnected = false;
         this.activeRequests = new Map();
         this.pendingMessages = [];
-        
-        // Use provided ConfigManager or create new one as fallback
-        this.configManager = configManager || new ConfigManager();
         
         // Initialize LLM configuration manager with config integration
         this.llmConfigManager = new LLMConfigManager(this.configManager);
@@ -979,6 +984,15 @@ class ChatManager {
                     </div>
                 </div>
                 <div class="chat-input-container">
+                    <div class="chat-input-options">
+                        <div class="context-mode-toggle">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="contextModeToggle" />
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text">Current message only</span>
+                            </label>
+                        </div>
+                    </div>
                     <div class="chat-input-wrapper">
                         <textarea id="chatInput" 
                                 placeholder="Ask me anything about your genome data..." 
@@ -1199,6 +1213,12 @@ class ChatManager {
         // Reset position button
         document.getElementById('resetChatPositionBtn')?.addEventListener('click', () => {
             this.resetChatPosition();
+        });
+
+        // Context mode toggle
+        document.getElementById('contextModeToggle')?.addEventListener('change', (e) => {
+            this.contextModeEnabled = e.target.checked;
+            console.log('Context mode changed:', this.contextModeEnabled ? 'Current message only' : 'Full conversation');
         });
     }
 
@@ -1655,6 +1675,14 @@ class ChatManager {
         // Add system context message
         const systemMessage = this.buildSystemMessage();
         history.push({ role: 'system', content: systemMessage });
+        
+        // If context mode is enabled (current message only), skip conversation history
+        if (this.contextModeEnabled) {
+            console.log('Context mode enabled: sending only current message');
+            // Add only the new user message
+            history.push({ role: 'user', content: newMessage });
+            return history;
+        }
         
         // Get conversation memory setting
         const conversationMemory = this.configManager.get('llm.conversationMemory', 10);

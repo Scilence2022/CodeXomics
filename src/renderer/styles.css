@@ -7803,3 +7803,99 @@ body {
         gap: 4px;
     }
 }
+
+/* Context Mode Toggle */
+.chat-input-options {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.context-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #6b7280;
+    user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 32px;
+    height: 16px;
+    background: #e5e7eb;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    transform: translateX(2px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider {
+    background: #667eea;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(18px);
+}
+
+.toggle-text {
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.toggle-label:hover .toggle-text {
+    color: #374151;
+}
+
+.toggle-label input[type="checkbox"]:checked ~ .toggle-text {
+    color: #667eea;
+}
+
+/* Context Mode Toggle Dark Mode */
+.toggle-label {
+    color: #9ca3af;
+}
+
+.toggle-label:hover .toggle-text {
+    color: #e5e7eb;
+}
+
+.toggle-slider {
+    background: #4b5563;
+}
+
+.toggle-slider::before {
+    background: #f3f4f6;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider {
+    background: #667eea;
+}
+
+.toggle-label input[type="checkbox"]:checked ~ .toggle-text {
+    color: #93c5fd;
+}
