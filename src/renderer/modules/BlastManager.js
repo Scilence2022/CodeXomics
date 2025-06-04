@@ -719,6 +719,9 @@ class BlastManager {
         
         // Update database options when service changes
         this.updateDatabaseOptions();
+        
+        // Ensure run button is enabled when service changes
+        this.updateRunButton(false);
     }
 
     updateCurrentRegionDisplay() {
