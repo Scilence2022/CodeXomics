@@ -234,6 +234,7 @@ class TrackRenderer {
         
         // Get track settings
         const settings = this.getTrackSettings('genes');
+        console.log('Retrieved gene track settings:', settings);
         
         // Add detailed ruler for current viewing region
         const detailedRuler = this.createDetailedRuler(chromosome);
@@ -1690,6 +1691,8 @@ class TrackRenderer {
         const maxRows = settings?.maxRows || 6;
         const showOperonsSameRow = settings?.showOperonsSameRow || false;
         
+        console.log(`arrangeGenesInRows: maxRows=${maxRows}, showOperonsSameRow=${showOperonsSameRow}, totalGenes=${genes.length}`);
+        
         // Sort genes by start position
         const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
         const rows = [];
@@ -1846,6 +1849,7 @@ class TrackRenderer {
             });
         }
         
+        console.log(`arrangeGenesInRows result: created ${rows.length} rows`);
         return rows;
     }
 
@@ -2556,9 +2560,15 @@ class TrackRenderer {
     
     refreshCurrentView() {
         // Refresh the current genome view to reflect changes
+        console.log('refreshCurrentView called');
         const currentChr = document.getElementById('chromosomeSelect').value;
+        console.log('Current chromosome:', currentChr);
+        
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            console.log('Calling displayGenomeView to refresh tracks...');
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        } else {
+            console.warn('Cannot refresh view - missing chromosome or sequence data');
         }
     }
 
@@ -2868,30 +2878,39 @@ class TrackRenderer {
         let savedSettings = {};
         if (this.genomeBrowser.configManager) {
             savedSettings = this.genomeBrowser.configManager.get(`tracks.${trackType}.settings`) || {};
+            console.log(`ConfigManager retrieved settings for ${trackType}:`, savedSettings);
         } else {
             const stored = localStorage.getItem(`trackSettings_${trackType}`);
+            console.log(`LocalStorage raw data for trackSettings_${trackType}:`, stored);
             if (stored) {
                 try {
                     savedSettings = JSON.parse(stored);
+                    console.log(`LocalStorage parsed settings for ${trackType}:`, savedSettings);
                 } catch (e) {
                     console.warn('Failed to parse saved track settings:', e);
                 }
             }
         }
         
-        return { ...defaultSettings[trackType] || {}, ...savedSettings };
+        const finalSettings = { ...defaultSettings[trackType] || {}, ...savedSettings };
+        console.log(`Final merged settings for ${trackType}:`, finalSettings);
+        return finalSettings;
     }
     
     /**
      * Apply track settings
      */
     applyTrackSettings() {
+        console.log('applyTrackSettings called');
         const modal = document.getElementById('trackSettingsModal');
         const trackType = modal.dataset.trackType;
         
+        console.log('Track type:', trackType);
         if (!trackType) return;
         
         const settings = this.collectSettingsFromModal(trackType, modal);
+        console.log('Collected settings:', settings);
+        
         this.saveTrackSettings(trackType, settings);
         
         // Apply settings immediately
@@ -2901,6 +2920,7 @@ class TrackRenderer {
         modal.classList.remove('show');
         
         // Refresh the current view
+        console.log('About to call refreshCurrentView...');
         this.refreshCurrentView();
     }
     
@@ -2912,9 +2932,21 @@ class TrackRenderer {
         
         switch (trackType) {
             case 'genes':
-                settings.maxRows = parseInt(modal.querySelector('#genesMaxRows').value) || 6;
-                settings.showOperonsSameRow = modal.querySelector('#genesShowOperonsSameRow').checked;
-                settings.height = parseInt(modal.querySelector('#genesTrackHeight').value) || 120;
+                const maxRowsElement = modal.querySelector('#genesMaxRows');
+                const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
+                const heightElement = modal.querySelector('#genesTrackHeight');
+                
+                console.log('Form elements found:', {
+                    maxRowsElement: !!maxRowsElement,
+                    showOperonsElement: !!showOperonsElement,
+                    heightElement: !!heightElement
+                });
+                
+                settings.maxRows = parseInt(maxRowsElement?.value) || 6;
+                settings.showOperonsSameRow = showOperonsElement?.checked || false;
+                settings.height = parseInt(heightElement?.value) || 120;
+                
+                console.log('Collected gene settings from form:', settings);
                 break;
                 
             case 'gc':
@@ -2960,20 +2992,61 @@ class TrackRenderer {
      * Apply settings to track immediately
      */
     applySettingsToTrack(trackType, settings) {
-        // Find the track element and apply settings
-        const trackElement = document.querySelector(`.${trackType}-track`);
-        if (trackElement && settings.height) {
-            const trackContent = trackElement.querySelector('.track-content');
-            if (trackContent) {
-                trackContent.style.height = `${settings.height}px`;
-            }
-        }
+        console.log(`applySettingsToTrack called for ${trackType} with settings:`, settings);
         
         // Store settings for use during rendering
         if (!this.trackSettings) {
             this.trackSettings = {};
         }
         this.trackSettings[trackType] = settings;
+        
+        // Find the track element
+        const trackElement = document.querySelector(`.${trackType}-track`);
+        if (trackElement) {
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                // Adjust height immediately if applicable
+                if (settings.height) {
+                    trackContent.style.height = `${settings.height}px`;
+                }
+                
+                // For gene track, re-render elements to apply row and operon settings
+                if (trackType === 'genes') {
+                    console.log('Re-rendering gene elements due to settings change...');
+                    // Clear existing gene elements before re-rendering
+                    const geneElements = trackContent.querySelectorAll('.gene-element, .no-genes-message, .gene-stats, .detailed-ruler-container');
+                    geneElements.forEach(el => el.remove());
+                    
+                    // Re-add detailed ruler
+                    const currentChr = document.getElementById('chromosomeSelect').value;
+                    const detailedRuler = this.createDetailedRuler(currentChr);
+                    trackContent.appendChild(detailedRuler);
+                    
+                    // Re-fetch data and re-render
+                    const viewport = this.getCurrentViewport();
+                    const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
+                    const operons = this.genomeBrowser.detectOperons(annotations);
+                    const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
+                    
+                    if (visibleGenes.length > 0) {
+                        this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
+                        this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
+                    } else {
+                        const noGenesMsg = this.createNoDataMessage(
+                            'No genes/features in this region or all filtered out',
+                            'no-genes-message'
+                        );
+                        trackContent.appendChild(noGenesMsg);
+                    }
+                }
+            }
+        } else {
+            console.warn(`Track element not found for ${trackType}`);
+        }
+        
+        // Ensure the entire view is refreshed to reflect layout changes
+        console.log('Calling refreshCurrentView after applying settings to track...');
+        this.refreshCurrentView(); 
     }
 }
 
