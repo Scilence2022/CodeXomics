@@ -259,8 +259,10 @@ config/production.json
 sample_data
 
 # Local testing files
-test-data/
+test_data/
 sample-files/
 create-basic-icons.sh
 create-demo-icons.sh
 draft
+
+

@@ -1,3 +1,4 @@
+console.log('Executing src/renderer/renderer.js');
 const { ipcRenderer } = require('electron');
 
 class GenomeBrowser {
@@ -1079,6 +1080,10 @@ class GenomeBrowser {
         const length = (gene.end - gene.start + 1).toLocaleString();
         const strand = gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
         
+        // Get current chromosome and sequence for sequence extraction
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
+        
         // Create the gene details HTML
         let html = `
             <div class="gene-details-info">
@@ -1100,6 +1105,11 @@ class GenomeBrowser {
                     </div>
                 </div>
             `;
+        }
+        
+        // Add sequences section if we have sequence data
+        if (fullSequence) {
+            html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
         }
         
         // Add gene attributes if available
@@ -1132,14 +1142,313 @@ class GenomeBrowser {
                     <i class="fas fa-search-plus"></i> Zoom to Gene
                 </button>
                 <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneSequence()">
-                    <i class="fas fa-copy"></i> Copy Sequence
+                    <i class="fas fa-copy"></i> Copy DNA Sequence
                 </button>
+        `;
+        
+        // Add copy translation button if it's a CDS or has translation
+        if (geneType === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+            html += `
+                <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
+                    <i class="fas fa-copy"></i> Copy Translation
+                </button>
+            `;
+        }
+        
+        html += `</div></div>`;
+        
+        geneDetailsContent.innerHTML = html;
+        
+        // Add event listeners for expandable sections
+        this.setupExpandableSequences();
+    }
+    
+    /**
+     * Create sequences section with CDS and translation
+     */
+    createSequencesSection(gene, fullSequence, geneName, chromosome) {
+        let html = `<div class="gene-sequences">`;
+        
+        // Get DNA sequence
+        const dnaSequence = fullSequence.substring(gene.start - 1, gene.end);
+        const dnaLength = dnaSequence.length;
+        
+        // DNA Sequence section
+        html += `
+            <div class="sequence-section">
+                <h4><i class="fas fa-dna"></i> DNA Sequence (${dnaLength} bp)</h4>
+                <div class="sequence-content">
+                    <div class="sequence-display" data-sequence-type="dna">
+                        <div class="sequence-preview">${this.formatSequencePreview(dnaSequence, 60)}</div>
+                        <div class="sequence-full" style="display: none;">
+                            <div class="sequence-formatted">${this.formatSequenceWithLineNumbers(dnaSequence, gene.start)}</div>
+                        </div>
+                    </div>
+                    <div class="sequence-actions">
+                        <button class="btn btn-sm toggle-sequence-btn" data-target="dna">
+                            <i class="fas fa-expand"></i> Show Full Sequence
+                        </button>
+                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="dna" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
         
-        html += `</div>`;
+        // CDS and Translation sections if applicable
+        if (gene.type === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+            // For CDS features, the DNA sequence is the CDS
+            const cdsSequence = dnaSequence;
+            const translation = gene.qualifiers?.translation || this.translateDNA(cdsSequence, gene.strand);
+            
+            // CDS Sequence section
+            html += `
+                <div class="sequence-section">
+                    <h4><i class="fas fa-code"></i> CDS Sequence (${cdsSequence.length} bp)</h4>
+                    <div class="sequence-content">
+                        <div class="sequence-display" data-sequence-type="cds">
+                            <div class="sequence-preview">${this.formatSequencePreview(cdsSequence, 60)}</div>
+                            <div class="sequence-full" style="display: none;">
+                                <div class="sequence-formatted">${this.formatSequenceWithLineNumbers(cdsSequence, gene.start)}</div>
+                            </div>
+                        </div>
+                        <div class="sequence-actions">
+                            <button class="btn btn-sm toggle-sequence-btn" data-target="cds">
+                                <i class="fas fa-expand"></i> Show Full Sequence
+                            </button>
+                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="cds" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Translation section
+            const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
+            html += `
+                <div class="sequence-section">
+                    <h4><i class="fas fa-atom"></i> Protein Translation (${translationLength} aa)</h4>
+                    <div class="sequence-content">
+                        <div class="sequence-display" data-sequence-type="translation">
+                            <div class="sequence-preview">${this.formatProteinPreview(translation, 40)}</div>
+                            <div class="sequence-full" style="display: none;">
+                                <div class="sequence-formatted">${this.formatProteinWithLineNumbers(translation)}</div>
+                            </div>
+                        </div>
+                        <div class="sequence-actions">
+                            <button class="btn btn-sm toggle-sequence-btn" data-target="translation">
+                                <i class="fas fa-expand"></i> Show Full Sequence
+                            </button>
+                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         
-        geneDetailsContent.innerHTML = html;
+        html += `</div>`;
+        return html;
+    }
+    
+    /**
+     * Format sequence preview (first N characters with ellipsis)
+     */
+    formatSequencePreview(sequence, maxLength = 60) {
+        if (sequence.length <= maxLength) {
+            return `<span class="sequence-text">${sequence}</span>`;
+        }
+        return `<span class="sequence-text">${sequence.substring(0, maxLength)}<span class="sequence-ellipsis">...</span></span>`;
+    }
+    
+    /**
+     * Format protein preview with colored amino acids
+     */
+    formatProteinPreview(sequence, maxLength = 40) {
+        const preview = sequence.length <= maxLength ? sequence : sequence.substring(0, maxLength);
+        const colored = this.colorizeProteinSequence(preview);
+        if (sequence.length > maxLength) {
+            return `${colored}<span class="sequence-ellipsis">...</span>`;
+        }
+        return colored;
+    }
+    
+    /**
+     * Format sequence with line numbers
+     */
+    formatSequenceWithLineNumbers(sequence, startPosition = 1) {
+        const lineLength = 60;
+        let html = '';
+        
+        for (let i = 0; i < sequence.length; i += lineLength) {
+            const lineSeq = sequence.substring(i, i + lineLength);
+            const lineStart = startPosition + i;
+            html += `
+                <div class="sequence-line">
+                    <span class="sequence-position">${lineStart.toLocaleString()}</span>
+                    <span class="sequence-bases">${this.colorizeSequenceBases(lineSeq)}</span>
+                </div>
+            `;
+        }
+        return html;
+    }
+    
+    /**
+     * Format protein with line numbers
+     */
+    formatProteinWithLineNumbers(sequence) {
+        const lineLength = 60;
+        let html = '';
+        
+        for (let i = 0; i < sequence.length; i += lineLength) {
+            const lineSeq = sequence.substring(i, i + lineLength);
+            const lineStart = i + 1;
+            html += `
+                <div class="sequence-line">
+                    <span class="sequence-position">${lineStart}</span>
+                    <span class="sequence-bases">${this.colorizeProteinSequence(lineSeq)}</span>
+                </div>
+            `;
+        }
+        return html;
+    }
+    
+    /**
+     * Colorize DNA sequence bases
+     */
+    colorizeSequenceBases(sequence) {
+        return sequence.split('').map(base => {
+            const lowerBase = base.toLowerCase();
+            return `<span class="base-${lowerBase}">${base}</span>`;
+        }).join('');
+    }
+    
+    /**
+     * Setup expandable sequence functionality
+     */
+    setupExpandableSequences() {
+        // Toggle sequence display
+        document.querySelectorAll('.toggle-sequence-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target.closest('.toggle-sequence-btn').dataset.target;
+                const sequenceDisplay = document.querySelector(`[data-sequence-type="${target}"]`);
+                const preview = sequenceDisplay.querySelector('.sequence-preview');
+                const full = sequenceDisplay.querySelector('.sequence-full');
+                const icon = e.target.closest('.toggle-sequence-btn').querySelector('i');
+                const text = e.target.closest('.toggle-sequence-btn');
+                
+                if (full.style.display === 'none') {
+                    preview.style.display = 'none';
+                    full.style.display = 'block';
+                    icon.className = 'fas fa-compress';
+                    text.innerHTML = '<i class="fas fa-compress"></i> Show Preview';
+                } else {
+                    preview.style.display = 'block';
+                    full.style.display = 'none';
+                    icon.className = 'fas fa-expand';
+                    text.innerHTML = '<i class="fas fa-expand"></i> Show Full Sequence';
+                }
+            });
+        });
+        
+        // Copy individual sequences
+        document.querySelectorAll('.copy-sequence-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const button = e.target.closest('.copy-sequence-btn');
+                const type = button.dataset.sequenceType;
+                const geneName = button.dataset.geneName;
+                const chr = button.dataset.chr;
+                const start = button.dataset.start;
+                const end = button.dataset.end;
+                const strand = button.dataset.strand;
+                
+                this.copySpecificSequence(type, geneName, chr, start, end, strand);
+            });
+        });
+    }
+    
+    /**
+     * Copy specific sequence type
+     */
+    copySpecificSequence(type, geneName, chromosome, start, end, strand) {
+        if (!this.currentSequence || !this.currentSequence[chromosome]) {
+            alert('No sequence available to copy');
+            return;
+        }
+        
+        const fullSequence = this.currentSequence[chromosome];
+        let sequence, header, description;
+        
+        switch (type) {
+            case 'dna':
+            case 'cds':
+                sequence = fullSequence.substring(start - 1, end);
+                if (strand === '-1') {
+                    sequence = this.getReverseComplement(sequence);
+                }
+                header = `>${geneName}_${type.toUpperCase()} ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
+                description = `${type.toUpperCase()} sequence`;
+                break;
+                
+            case 'translation':
+                const dnaSeq = fullSequence.substring(start - 1, end);
+                sequence = this.translateDNA(dnaSeq, parseInt(strand));
+                header = `>${geneName}_TRANSLATION ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
+                description = 'protein translation';
+                break;
+                
+            default:
+                alert('Unknown sequence type');
+                return;
+        }
+        
+        const fastaContent = `${header}\n${sequence}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            alert(`Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
+    }
+    
+    /**
+     * Copy gene translation (main button functionality)
+     */
+    copyGeneTranslation() {
+        if (!this.selectedGene) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('No sequence available to copy');
+            return;
+        }
+        
+        const gene = this.selectedGene.gene;
+        let translation;
+        
+        // Use existing translation if available, otherwise translate the DNA
+        if (gene.qualifiers && gene.qualifiers.translation) {
+            translation = gene.qualifiers.translation;
+        } else {
+            const sequence = this.currentSequence[currentChr];
+            const geneSequence = sequence.substring(gene.start - 1, gene.end);
+            translation = this.translateDNA(geneSequence, gene.strand);
+        }
+        
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+        const fastaHeader = `>${geneName}_TRANSLATION ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+        const fastaContent = `${fastaHeader}\n${translation}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            alert(`Copied ${geneName} translation (${translation.replace(/\*/g, '').length} aa) to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
     }
 
     highlightGeneSequence(gene) {

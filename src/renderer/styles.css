@@ -3667,6 +3667,15 @@ body {
     background: #0ea5e9;
 }
 
+.gene-copy-translation-btn {
+    background: #8b5cf6;
+    color: white;
+}
+
+.gene-copy-translation-btn:hover {
+    background: #7c3aed;
+}
+
 /* Responsive Gene Details */
 @media (max-width: 768px) {
     .gene-actions {
@@ -3684,6 +3693,53 @@ body {
     
     .no-gene-selected {
         padding: 20px 15px;
+    }
+    
+    /* Gene sequences mobile styles */
+    .gene-sequences {
+        padding: 8px;
+    }
+    
+    .sequence-section h4 {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+    
+    .sequence-content {
+        padding: 8px;
+    }
+    
+    .sequence-preview,
+    .sequence-full {
+        font-size: 10px;
+        padding: 6px;
+        max-height: 150px;
+    }
+    
+    .sequence-formatted {
+        font-size: 10px;
+    }
+    
+    .sequence-formatted .sequence-position {
+        width: 60px;
+        font-size: 9px;
+        margin-right: 8px;
+    }
+    
+    .sequence-actions {
+        gap: 4px;
+    }
+    
+    .toggle-sequence-btn,
+    .copy-sequence-btn {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+    
+    .toggle-sequence-btn i,
+    .copy-sequence-btn i {
+        font-size: 9px;
+        margin-right: 2px;
     }
 }
 
@@ -8976,4 +9032,190 @@ body {
     .db-details {
         color: #6b7280;
     }
+}
+
+/* Gene Sequences Section */
+.gene-sequences {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.sequence-section {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.sequence-section:last-child {
+    margin-bottom: 0;
+}
+
+.sequence-section h4 {
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sequence-section h4 i {
+    color: var(--primary-color);
+    font-size: 12px;
+}
+
+.sequence-content {
+    padding: 12px;
+}
+
+.sequence-display {
+    margin-bottom: 8px;
+}
+
+.sequence-preview,
+.sequence-full {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.sequence-text {
+    color: var(--text-primary);
+}
+
+.sequence-ellipsis {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.sequence-formatted {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.sequence-formatted .sequence-line {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2px;
+    padding: 2px 0;
+}
+
+.sequence-formatted .sequence-line:hover {
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.sequence-formatted .sequence-position {
+    flex-shrink: 0;
+    width: 80px;
+    color: var(--text-secondary);
+    font-size: 10px;
+    text-align: right;
+    margin-right: 12px;
+    padding-top: 1px;
+}
+
+.sequence-formatted .sequence-bases {
+    flex: 1;
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+.sequence-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.toggle-sequence-btn {
+    background: var(--primary-color);
+    color: white;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.toggle-sequence-btn:hover {
+    background: var(--primary-hover);
+}
+
+.copy-sequence-btn {
+    background: var(--success-color);
+    color: white;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.copy-sequence-btn:hover {
+    background: #059669;
+}
+
+.toggle-sequence-btn i,
+.copy-sequence-btn i {
+    font-size: 10px;
+    margin-right: 3px;
+}
+
+/* Sequence scrollbar styling */
+.sequence-full::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sequence-full::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+.sequence-full::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.sequence-full::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Protein sequence specific styling */
+[data-sequence-type="translation"] .sequence-bases span {
+    padding: 1px 2px;
+    border-radius: 2px;
+    margin-right: 1px;
+}
+
+/* DNA sequence base colors in gene details */
+.gene-sequences .base-a { 
+    color: #e74c3c; 
+    font-weight: 600;
+}
+.gene-sequences .base-t { 
+    color: #3498db; 
+    font-weight: 600;
+}
+.gene-sequences .base-g { 
+    color: #2ecc71; 
+    font-weight: 600;
+}
+.gene-sequences .base-c { 
+    color: #f39c12; 
+    font-weight: 600;
+}
+.gene-sequences .base-n { 
+    color: #95a5a6; 
+    font-weight: 600;
 }

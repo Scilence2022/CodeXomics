@@ -1,3 +1,4 @@
+console.log('Executing src/renderer/renderer-modular.js');
 const { ipcRenderer } = require('electron');
 
 // Force reload - timestamp: 2025-05-31 15:01
@@ -2060,6 +2061,10 @@ class GenomeBrowser {
         const length = (gene.end - gene.start + 1).toLocaleString();
         const strand = gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
         
+        // Get current chromosome and sequence for sequence extraction
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
+        
         // Create the gene details HTML
         let html = `
             <div class="gene-details-info">
@@ -2081,6 +2086,11 @@ class GenomeBrowser {
                     </div>
                 </div>
             `;
+        }
+        
+        // Add sequences section if we have sequence data
+        if (fullSequence) {
+            html += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
         }
         
         // Add gene attributes if available
@@ -2113,14 +2123,313 @@ class GenomeBrowser {
                     <i class="fas fa-search-plus"></i> Zoom to Gene
                 </button>
                 <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneSequence()">
-                    <i class="fas fa-copy"></i> Copy Sequence
+                    <i class="fas fa-copy"></i> Copy DNA Sequence
                 </button>
-            </div>
         `;
         
-        html += `</div>`;
+        // Add copy translation button if it's a CDS or has translation
+        if (geneType === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+            html += `
+                <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
+                    <i class="fas fa-copy"></i> Copy Translation
+                </button>
+            `;
+        }
+        
+        html += `</div></div>`;
         
         geneDetailsContent.innerHTML = html;
+        
+        // Add event listeners for expandable sections
+        this.setupExpandableSequences();
+    }
+    
+    /**
+     * Create sequences section with CDS and translation
+     */
+    createSequencesSection(gene, fullSequence, geneName, chromosome) {
+       // let html = `<div class="gene-sequences">`;
+       let html = '';
+        
+        // Get DNA sequence
+      //  const dnaSequence = fullSequence.substring(gene.start - 1, gene.end);
+       // const dnaLength = dnaSequence.length;
+        
+        // DNA Sequence section
+      
+        /*
+        
+        // CDS and Translation sections if applicable
+        if (gene.type === 'CDS' || (gene.qualifiers && gene.qualifiers.translation)) {
+            // For CDS features, the DNA sequence is the CDS
+            const cdsSequence = dnaSequence;
+            const translation = gene.qualifiers?.translation || this.translateDNA(cdsSequence, gene.strand);
+            
+            // CDS Sequence section
+            html += `
+                <div class="sequence-section">
+                    <h4><i class="fas fa-code"></i> CDS Sequence (${cdsSequence.length} bp)</h4>
+                    <div class="sequence-content">
+                        <div class="sequence-display" data-sequence-type="cds">
+                            <div class="sequence-preview">${this.formatSequencePreview(cdsSequence, 60)}</div>
+                            <div class="sequence-full" style="display: none;">
+                                <div class="sequence-formatted">${this.formatSequenceWithLineNumbers(cdsSequence, gene.start)}</div>
+                            </div>
+                        </div>
+                        <div class="sequence-actions">
+                            <button class="btn btn-sm toggle-sequence-btn" data-target="cds">
+                                <i class="fas fa-expand"></i> Show Full Sequence
+                            </button>
+                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="cds" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            */
+           // Translation section
+           // const translationLength = translation.replace(/\*/g, '').length; // Remove stop codons for length count
+            /*
+            html += `
+                <div class="sequence-section">
+                    <h4><i class="fas fa-atom"></i> Protein Translation (${translationLength} aa)</h4>
+                    <div class="sequence-content">
+                        <div class="sequence-display" data-sequence-type="translation">
+                            <div class="sequence-preview">${this.formatProteinPreview(translation, 40)}</div>
+                            <div class="sequence-full" style="display: none;">
+                                <div class="sequence-formatted">${this.formatProteinWithLineNumbers(translation)}</div>
+                            </div>
+                        </div>
+                        <div class="sequence-actions">
+                            <button class="btn btn-sm toggle-sequence-btn" data-target="translation">
+                                <i class="fas fa-expand"></i> Show Full Sequence
+                            </button>
+                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        */
+        
+       // html += `</div>`;
+        
+        return html;
+    }
+    
+    /**
+     * Format sequence preview (first N characters with ellipsis)
+     */
+    formatSequencePreview(sequence, maxLength = 60) {
+        if (sequence.length <= maxLength) {
+            return `<span class="sequence-text">${sequence}</span>`;
+        }
+        return `<span class="sequence-text">${sequence.substring(0, maxLength)}<span class="sequence-ellipsis">...</span></span>`;
+    }
+    
+    /**
+     * Format protein preview with colored amino acids
+     */
+    formatProteinPreview(sequence, maxLength = 40) {
+        const preview = sequence.length <= maxLength ? sequence : sequence.substring(0, maxLength);
+        let formatted = '';
+        for (let i = 0; i < preview.length; i++) {
+            const aa = preview[i];
+            formatted += `<span class="amino-acid">${aa}</span>`;
+        }
+        if (sequence.length > maxLength) {
+            formatted += '<span class="sequence-ellipsis">...</span>';
+        }
+        return `<span class="sequence-text">${formatted}</span>`;
+    }
+    
+    /**
+     * Format sequence with line numbers for full display
+     */
+    formatSequenceWithLineNumbers(sequence, startPosition = 1) {
+        const lineLength = 60;
+        let formatted = '';
+        
+        for (let i = 0; i < sequence.length; i += lineLength) {
+            const lineNumber = startPosition + i;
+            const lineSequence = sequence.substring(i, i + lineLength);
+            formatted += `
+                <div class="sequence-line">
+                    <span class="sequence-position">${lineNumber.toLocaleString()}</span>
+                    <span class="sequence-bases">${this.colorizeSequenceBases(lineSequence)}</span>
+                </div>
+            `;
+        }
+        
+        return formatted;
+    }
+    
+    /**
+     * Format protein with line numbers
+     */
+    formatProteinWithLineNumbers(sequence) {
+        const lineLength = 50;
+        let formatted = '';
+        
+        for (let i = 0; i < sequence.length; i += lineLength) {
+            const lineNumber = i + 1;
+            const lineSequence = sequence.substring(i, i + lineLength);
+            let colorizedSeq = '';
+            for (let j = 0; j < lineSequence.length; j++) {
+                const aa = lineSequence[j];
+                colorizedSeq += `<span class="amino-acid">${aa}</span>`;
+            }
+            
+            formatted += `
+                <div class="sequence-line">
+                    <span class="sequence-position">${lineNumber}</span>
+                    <span class="sequence-bases">${colorizedSeq}</span>
+                </div>
+            `;
+        }
+        
+        return formatted;
+    }
+    
+    /**
+     * Colorize DNA sequence bases
+     */
+    colorizeSequenceBases(sequence) {
+        let colorized = '';
+        for (let i = 0; i < sequence.length; i++) {
+            const base = sequence[i].toLowerCase();
+            colorized += `<span class="base-${base}">${sequence[i]}</span>`;
+        }
+        return colorized;
+    }
+    
+    /**
+     * Setup expandable sequences functionality
+     */
+    setupExpandableSequences() {
+        // Toggle sequence display
+        document.querySelectorAll('.toggle-sequence-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target.closest('.toggle-sequence-btn').dataset.target;
+                const sequenceDisplay = document.querySelector(`[data-sequence-type="${target}"]`);
+                const preview = sequenceDisplay.querySelector('.sequence-preview');
+                const full = sequenceDisplay.querySelector('.sequence-full');
+                const icon = e.target.closest('.toggle-sequence-btn').querySelector('i');
+                const text = e.target.closest('.toggle-sequence-btn');
+                
+                if (full.style.display === 'none') {
+                    preview.style.display = 'none';
+                    full.style.display = 'block';
+                    icon.className = 'fas fa-compress';
+                    text.innerHTML = '<i class="fas fa-compress"></i> Show Preview';
+                } else {
+                    preview.style.display = 'block';
+                    full.style.display = 'none';
+                    icon.className = 'fas fa-expand';
+                    text.innerHTML = '<i class="fas fa-expand"></i> Show Full Sequence';
+                }
+            });
+        });
+        
+        // Copy individual sequences
+        document.querySelectorAll('.copy-sequence-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const button = e.target.closest('.copy-sequence-btn');
+                const type = button.dataset.sequenceType;
+                const geneName = button.dataset.geneName;
+                const chr = button.dataset.chr;
+                const start = button.dataset.start;
+                const end = button.dataset.end;
+                const strand = button.dataset.strand;
+                
+                this.copySpecificSequence(type, geneName, chr, start, end, strand);
+            });
+        });
+    }
+    
+    /**
+     * Copy specific sequence type
+     */
+    copySpecificSequence(type, geneName, chromosome, start, end, strand) {
+        if (!this.currentSequence || !this.currentSequence[chromosome]) {
+            alert('No sequence available to copy');
+            return;
+        }
+        
+        const fullSequence = this.currentSequence[chromosome];
+        let sequence, header, description;
+        
+        switch (type) {
+            case 'dna':
+            case 'cds':
+                sequence = fullSequence.substring(start - 1, end);
+                if (strand === '-1') {
+                    sequence = this.sequenceUtils.getReverseComplement(sequence);
+                }
+                header = `>${geneName}_${type.toUpperCase()} ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
+                description = `${type.toUpperCase()} sequence`;
+                break;
+                
+            case 'translation':
+                const dnaSeq = fullSequence.substring(start - 1, end);
+                sequence = this.translateDNA(dnaSeq, parseInt(strand));
+                header = `>${geneName}_TRANSLATION ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
+                description = 'protein translation';
+                break;
+                
+            default:
+                alert('Unknown sequence type');
+                return;
+        }
+        
+        const fastaContent = `${header}\n${sequence}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            alert(`Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
+    }
+    
+    /**
+     * Copy gene translation (main button functionality)
+     */
+    copyGeneTranslation() {
+        if (!this.selectedGene) return;
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
+            alert('No sequence available to copy');
+            return;
+        }
+        
+        const gene = this.selectedGene.gene;
+        let translation;
+        
+        // Use existing translation if available, otherwise translate the DNA
+        if (gene.qualifiers && gene.qualifiers.translation) {
+            translation = gene.qualifiers.translation;
+        } else {
+            const sequence = this.currentSequence[currentChr];
+            const geneSequence = sequence.substring(gene.start - 1, gene.end);
+            translation = this.translateDNA(geneSequence, gene.strand);
+        }
+        
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+        const fastaHeader = `>${geneName}_TRANSLATION ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+        const fastaContent = `${fastaHeader}\n${translation}`;
+        
+        navigator.clipboard.writeText(fastaContent).then(() => {
+            alert(`Copied ${geneName} translation (${translation.replace(/\*/g, '').length} aa) to clipboard`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
     }
 
     highlightGeneSequence(gene) {
@@ -2705,6 +3014,142 @@ class GenomeBrowser {
             // Trigger resize event for layout adjustment
             window.dispatchEvent(new Event('resize'));
         }
+    }
+
+    createGCTrack(chromosome, sequence) {
+        const track = document.createElement('div');
+        track.className = 'gc-track';
+        
+        const trackHeader = document.createElement('div');
+        trackHeader.className = 'track-header';
+        trackHeader.textContent = 'GC Content & Skew';
+        track.appendChild(trackHeader);
+        
+        const trackContent = document.createElement('div');
+        trackContent.className = 'track-content gc-content-skew-display';
+        
+        // Add draggable functionality
+        this.makeDraggable(trackContent, chromosome);
+        
+        const start = this.currentPosition.start;
+        const end = this.currentPosition.end;
+        const subsequence = sequence.substring(start, end);
+        
+        // Get GC track settings
+        const gcSettings = this.trackRenderer.getTrackSettings('gc'); // Retrieve settings
+
+        // Create GC content visualization (now passing settings)
+        const gcCanvas = this.genomeBrowser.createGCContentVisualization(subsequence, gcSettings); // Pass settings
+        
+        trackContent.appendChild(gcCanvas);
+        track.appendChild(trackContent);
+
+        // Add track settings button
+        const settingsButton = this.trackRenderer.createTrackSettingsButton('gc'); // Use trackRenderer method
+        trackHeader.appendChild(settingsButton);
+        
+        return track;
+    }
+
+    createGCContentVisualization(sequence, settings) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'gc-visualization-canvas';
+        const context = canvas.getContext('2d');
+        
+        // Default settings if none provided (should be handled by TrackRenderer, but for safety)
+        const gcSettings = settings || {
+            contentColor: '#3b82f6', // blue
+            skewPositiveColor: '#10b981', // green
+            skewNegativeColor: '#ef4444', // red
+            lineWidth: 2,
+            height: 140
+        };
+
+        const width = canvas.width = 800; // Arbitrary width, will be scaled by CSS
+        const height = canvas.height = 120; // Fixed height for the visualization
+        const barWidth = 1; // Width of each data point
+        
+        const step = Math.max(1, Math.floor(sequence.length / width)); // Calculate step size to fit data to canvas width
+        
+        let gcContentData = [];
+        let gcSkewData = [];
+        
+        // Calculate GC content and skew for sliding windows
+        const windowSize = 500; // Window size for calculation
+        for (let i = 0; i < sequence.length - windowSize; i += step) {
+            const windowSeq = sequence.substring(i, i + windowSize);
+            let g = 0;
+            let c = 0;
+            let total = 0;
+            
+            for (let j = 0; j < windowSeq.length; j++) {
+                const base = windowSeq[j].toLowerCase();
+                if (base === 'g') g++;
+                else if (base === 'c') c++;
+                if (base === 'g' || base === 'c' || base === 'a' || base === 't') total++;
+            }
+            
+            const gcRatio = total > 0 ? (g + c) / total : 0;
+            const gcSkew = (g + c) > 0 ? (g - c) / (g + c) : 0;
+            
+            gcContentData.push(gcRatio * height); // Scale to canvas height
+            gcSkewData.push(gcSkew * (height / 2) + (height / 2)); // Scale and offset for skew
+        }
+        
+        // Draw GC content and skew
+        context.clearRect(0, 0, width, height);
+        
+        // Draw GC Content (blue bars)
+        context.fillStyle = gcSettings.contentColor; // Use setting
+        for (let i = 0; i < gcContentData.length; i++) {
+            const barHeight = gcContentData[i];
+            context.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+        }
+        
+        // Draw GC Skew (line graph, positive green, negative red)
+        context.lineWidth = gcSettings.lineWidth; // Use setting
+        context.beginPath();
+        context.moveTo(0, gcSkewData[0]);
+        
+        for (let i = 1; i < gcSkewData.length; i++) {
+            context.lineTo(i * barWidth, gcSkewData[i]);
+        }
+        
+        // Apply color gradient based on skew value
+        const gradient = context.createLinearGradient(0, 0, width, 0);
+        // Create color stops based on skew values across the width
+        for(let i = 0; i < gcSkewData.length; i++) {
+            const skewValue = (gcSkewData[i] - (height / 2)) / (height / 2);
+            let color;
+            if (skewValue > 0) {
+                 // Interpolate between white (0 skew) and positive color
+                 const ratio = skewValue; // Skew is already scaled from 0 to 1 relative to height/2
+                 color = this.interpolateColor('#ffffff', gcSettings.skewPositiveColor, ratio); // Use setting
+            } else {
+                 // Interpolate between white (0 skew) and negative color
+                 const ratio = -skewValue; // Use absolute value for interpolation
+                 color = this.interpolateColor('#ffffff', gcSettings.skewNegativeColor, ratio); // Use setting
+            }
+             gradient.addColorStop(i / gcSkewData.length, color);
+        }
+
+        context.strokeStyle = gradient;
+        context.stroke();
+        
+        return canvas;
+    }
+
+    // Helper function for color interpolation
+    interpolateColor(color1, color2, factor) {
+        const result = color1.slice(); // Copy color1
+        for (let i = 1; i < 7; i += 2) {
+            const c1 = parseInt(color1.substr(i, 2), 16);
+            const c2 = parseInt(color2.substr(i, 2), 16);
+            const c = Math.round(c1 + factor * (c2 - c1)).toString(16);
+            result[i] = ('0' + c).slice(-2);
+            result[i+1] = ('0' + c).slice(-2);
+        }
+        return result.join('');
     }
 }
 
