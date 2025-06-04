@@ -512,7 +512,7 @@ class TrackRenderer {
     }
     
     /**
-     * Create sequence display with improved organization
+     * Create sequence display with improved organization and selection capability
      */
     createSequenceDisplay(subsequence, viewport) {
         const seqDisplay = document.createElement('div');
@@ -537,11 +537,14 @@ class TrackRenderer {
             seqDisplay.appendChild(baseElement);
         }
         
+        // Add selection functionality
+        this.addSequenceSelectionHandlers(seqDisplay, viewport);
+        
         return seqDisplay;
     }
     
     /**
-     * Create individual base element
+     * Create individual base element with selection support
      */
     createBaseElement(base, index, viewport, fontSize) {
         const baseElement = document.createElement('span');
@@ -557,11 +560,273 @@ class TrackRenderer {
             line-height: 30px;
         `;
         
-        // Add tooltip with position info
+        // Add position data for selection
         const position = viewport.start + index + 1;
+        baseElement.setAttribute('data-position', position);
+        baseElement.setAttribute('data-index', index);
         baseElement.title = `Position: ${position}, Base: ${base}`;
         
         return baseElement;
+    }
+    
+    /**
+     * Add sequence selection functionality to the sequence display
+     */
+    addSequenceSelectionHandlers(seqDisplay, viewport) {
+        let isSelecting = false;
+        let selectionStart = null;
+        let selectionEnd = null;
+        let startBaseElement = null;
+        let endBaseElement = null;
+        
+        // Prevent interference with track dragging by stopping propagation during selection
+        const stopPropagationIfSelecting = (e) => {
+            if (isSelecting) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        };
+        
+        seqDisplay.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('sequence-base-inline')) {
+                isSelecting = true;
+                seqDisplay.classList.add('selecting');
+                
+                // Clear previous selection
+                this.clearSequenceSelection(seqDisplay);
+                
+                // Start new selection
+                startBaseElement = e.target;
+                endBaseElement = e.target;
+                selectionStart = parseInt(e.target.getAttribute('data-position'));
+                selectionEnd = selectionStart;
+                
+                // Mark as selection start
+                e.target.classList.add('selecting', 'selection-start');
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        seqDisplay.addEventListener('mousemove', (e) => {
+            if (isSelecting && e.target.classList.contains('sequence-base-inline')) {
+                // Update selection end
+                endBaseElement = e.target;
+                const newEnd = parseInt(e.target.getAttribute('data-position'));
+                
+                if (newEnd !== selectionEnd) {
+                    selectionEnd = newEnd;
+                    this.updateSequenceSelection(seqDisplay, selectionStart, selectionEnd);
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        seqDisplay.addEventListener('mouseup', (e) => {
+            if (isSelecting) {
+                isSelecting = false;
+                seqDisplay.classList.remove('selecting');
+                
+                if (selectionStart && selectionEnd) {
+                    this.finalizeSequenceSelection(seqDisplay, selectionStart, selectionEnd, viewport);
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        // Handle mouse leave to stop selection
+        seqDisplay.addEventListener('mouseleave', () => {
+            if (isSelecting) {
+                isSelecting = false;
+                seqDisplay.classList.remove('selecting');
+                
+                if (selectionStart && selectionEnd) {
+                    this.finalizeSequenceSelection(seqDisplay, selectionStart, selectionEnd, viewport);
+                }
+            }
+        });
+        
+        // Prevent dragging interference during selection
+        seqDisplay.addEventListener('mousedown', stopPropagationIfSelecting);
+        seqDisplay.addEventListener('mousemove', stopPropagationIfSelecting);
+        seqDisplay.addEventListener('mouseup', stopPropagationIfSelecting);
+    }
+    
+    /**
+     * Clear existing sequence selection
+     */
+    clearSequenceSelection(seqDisplay) {
+        const bases = seqDisplay.querySelectorAll('.sequence-base-inline');
+        bases.forEach(base => {
+            base.classList.remove('selecting', 'selected', 'selection-start', 'selection-end');
+        });
+    }
+    
+    /**
+     * Update sequence selection display
+     */
+    updateSequenceSelection(seqDisplay, start, end) {
+        // Clear previous selection highlighting
+        this.clearSequenceSelection(seqDisplay);
+        
+        // Ensure start <= end
+        const minPos = Math.min(start, end);
+        const maxPos = Math.max(start, end);
+        
+        // Highlight all bases in selection range
+        const bases = seqDisplay.querySelectorAll('.sequence-base-inline');
+        bases.forEach(base => {
+            const position = parseInt(base.getAttribute('data-position'));
+            if (position >= minPos && position <= maxPos) {
+                base.classList.add('selecting');
+                
+                // Mark start and end positions
+                if (position === minPos) {
+                    base.classList.add('selection-start');
+                }
+                if (position === maxPos) {
+                    base.classList.add('selection-end');
+                }
+            }
+        });
+    }
+    
+    /**
+     * Finalize sequence selection and show result
+     */
+    finalizeSequenceSelection(seqDisplay, start, end, viewport) {
+        // Ensure start <= end
+        const minPos = Math.min(start, end);
+        const maxPos = Math.max(start, end);
+        
+        // Convert to final selection state
+        const bases = seqDisplay.querySelectorAll('.sequence-base-inline');
+        bases.forEach(base => {
+            const position = parseInt(base.getAttribute('data-position'));
+            if (position >= minPos && position <= maxPos) {
+                base.classList.remove('selecting');
+                base.classList.add('selected');
+            }
+        });
+        
+        // Get selected sequence
+        const selectedBases = [];
+        for (let pos = minPos; pos <= maxPos; pos++) {
+            const baseElement = seqDisplay.querySelector(`[data-position="${pos}"]`);
+            if (baseElement) {
+                selectedBases.push(baseElement.textContent);
+            }
+        }
+        
+        const selectedSequence = selectedBases.join('');
+        const selectionLength = maxPos - minPos + 1;
+        
+        // Show selection info
+        this.showSequenceSelectionInfo(minPos, maxPos, selectedSequence, selectionLength);
+        
+        // Store selection in genomeBrowser for potential use by other components
+        this.genomeBrowser.selectedSequence = {
+            start: minPos,
+            end: maxPos,
+            sequence: selectedSequence,
+            length: selectionLength
+        };
+        
+        console.log(`Selected sequence: ${minPos}-${maxPos} (${selectionLength} bp): ${selectedSequence}`);
+    }
+    
+    /**
+     * Show sequence selection information
+     */
+    showSequenceSelectionInfo(start, end, sequence, length) {
+        // Remove any existing selection info
+        const existingInfo = document.getElementById('sequenceSelectionInfo');
+        if (existingInfo) {
+            existingInfo.remove();
+        }
+        
+        // Create new selection info display
+        const selectionInfo = document.createElement('div');
+        selectionInfo.id = 'sequenceSelectionInfo';
+        selectionInfo.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(59, 130, 246, 0.95);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 400px;
+            word-break: break-all;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        `;
+        
+        // Create copy button functionality
+        const copySequence = () => {
+            navigator.clipboard.writeText(sequence).then(() => {
+                // Show brief success feedback
+                const copyBtn = selectionInfo.querySelector('.copy-btn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.style.background = 'rgba(34, 197, 94, 0.8)';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'rgba(255,255,255,0.2)';
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy sequence:', err);
+                alert('Failed to copy sequence to clipboard');
+            });
+        };
+        
+        selectionInfo.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px; color: #e0f2fe;">🧬 Sequence Selection</div>
+            <div style="margin-bottom: 4px;"><strong>Position:</strong> ${start.toLocaleString()} - ${end.toLocaleString()}</div>
+            <div style="margin-bottom: 8px;"><strong>Length:</strong> ${length.toLocaleString()} bp</div>
+            <div style="margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border-left: 3px solid #60a5fa;">
+                <div style="font-size: 10px; color: #bfdbfe; margin-bottom: 4px;">SEQUENCE:</div>
+                <div style="max-height: 100px; overflow-y: auto; line-height: 1.4;">${sequence}</div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="copy-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; flex: 1;">
+                    📋 Copy Sequence
+                </button>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: rgba(239, 68, 68, 0.7); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                    ✕
+                </button>
+            </div>
+        `;
+        
+        // Add copy button event listener
+        const copyBtn = selectionInfo.querySelector('.copy-btn');
+        copyBtn.addEventListener('click', copySequence);
+        
+        // Add hover effects
+        copyBtn.addEventListener('mouseenter', () => {
+            copyBtn.style.background = 'rgba(255,255,255,0.3)';
+        });
+        copyBtn.addEventListener('mouseleave', () => {
+            copyBtn.style.background = 'rgba(255,255,255,0.2)';
+        });
+        
+        document.body.appendChild(selectionInfo);
+        
+        // Auto-hide after 15 seconds (increased time for better usability)
+        setTimeout(() => {
+            if (selectionInfo && selectionInfo.parentElement) {
+                selectionInfo.remove();
+            }
+        }, 15000);
     }
 
     createGCTrack(chromosome, sequence) {
