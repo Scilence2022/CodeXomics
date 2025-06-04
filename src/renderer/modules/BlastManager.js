@@ -645,9 +645,26 @@ class BlastManager {
         }
     }
 
+    // Inject necessary CSS styles
+    injectStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-content-padding {
+                padding: 15px;
+            }
+            /* Add other styles here if needed */
+            #db-management-tab > * {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     initializeModal() {
         // Initialize modal-specific functionality if needed
         // This can be expanded later for modal-specific features
+        this.injectStyles(); // Inject styles when modal is initialized
     }
 
     showBlastModal() {
