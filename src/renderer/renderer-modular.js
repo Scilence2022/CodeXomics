@@ -2907,29 +2907,30 @@ class GenomeBrowser {
             // Show bottom sequence panel
             if (sequenceDisplaySection) {
                 sequenceDisplaySection.style.display = 'flex';
-                // Set proper initial height (not too big on first load)
-                if (!sequenceDisplaySection.style.height || sequenceDisplaySection.style.height === 'auto') {
-                    sequenceDisplaySection.style.height = '250px'; // Default height
-                }
-                // Ensure it's positioned at the bottom
+                
+                // Set proper layout properties to ensure it reaches the bottom
+                sequenceDisplaySection.style.height = '250px'; // Default height
+                sequenceDisplaySection.style.minHeight = '50px';
+                sequenceDisplaySection.style.maxHeight = '60vh';
+                sequenceDisplaySection.style.flex = '0 0 auto'; // Don't grow automatically
                 sequenceDisplaySection.style.position = 'relative';
                 sequenceDisplaySection.style.bottom = '0';
-                sequenceDisplaySection.style.flex = 'none'; // Don't grow automatically
+                sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
+                sequenceDisplaySection.style.flexDirection = 'column';
             }
             
             if (splitter) {
                 splitter.style.display = 'flex';
             }
             
-            // Adjust genome viewer to make room for bottom panel
+            // Adjust genome viewer to make room for bottom panel and ensure proper ordering
             if (genomeViewerSection) {
-                // Use flex to fill remaining space, but set a minimum height
-                genomeViewerSection.style.flex = '1';
+                genomeViewerSection.style.flex = '1'; // Fill remaining space
+                genomeViewerSection.style.flexBasis = 'auto';
                 genomeViewerSection.style.minHeight = '200px'; // Ensure minimum space for tracks
-                // Remove any fixed height if set to allow flexible sizing
-                if (genomeViewerSection.style.height === 'auto' || !genomeViewerSection.style.height) {
-                    genomeViewerSection.style.flexBasis = 'auto';
-                }
+                genomeViewerSection.style.order = '1'; // Ensure it's above sequence section
+                genomeViewerSection.style.display = 'flex';
+                genomeViewerSection.style.flexDirection = 'column';
             }
             
             // Display the sequence content
@@ -2952,6 +2953,7 @@ class GenomeBrowser {
                 genomeViewerSection.style.flex = '1';
                 genomeViewerSection.style.flexBasis = '100%';
                 genomeViewerSection.style.minHeight = 'auto';
+                genomeViewerSection.style.order = '1';
             }
         }
     }
@@ -2995,46 +2997,78 @@ class GenomeBrowser {
                               sequenceDisplaySection.classList.contains('collapsed');
             
             if (isCollapsed) {
-                // Expand - show sequence content
+                // Expand - show sequence content and restore proper layout
                 sequenceContent.style.display = 'flex';
                 sequenceDisplaySection.classList.remove('collapsed');
-                // Remove any height restrictions when expanding
-                sequenceDisplaySection.style.minHeight = '';
-                sequenceDisplaySection.style.maxHeight = '';
+                
+                // Restore proper height and flex properties
+                sequenceDisplaySection.style.minHeight = '50px';
+                sequenceDisplaySection.style.maxHeight = '60vh';
+                sequenceDisplaySection.style.height = '250px'; // Default height
+                sequenceDisplaySection.style.flex = '0 0 auto';
+                sequenceDisplaySection.style.position = 'relative';
+                sequenceDisplaySection.style.bottom = '0';
+                sequenceDisplaySection.style.order = '999'; // Ensure it's at the bottom
                 
                 if (splitter) {
                     splitter.style.display = 'flex';
+                }
+                
+                // Restore genome viewer section to proper flex layout
+                if (genomeViewerSection) {
+                    genomeViewerSection.style.flex = '1';
+                    genomeViewerSection.style.flexBasis = 'auto';
+                    genomeViewerSection.style.minHeight = '200px';
+                    genomeViewerSection.style.order = '1'; // Ensure it's above sequence section
                 }
                 
                 if (toggleButton) {
                     toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
                     toggleButton.title = 'Hide Sequence Panel';
                 }
+                
+                // Re-display the sequence content after expanding
+                const currentChr = document.getElementById('chromosomeSelect')?.value;
+                if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+                    // Use a timeout to ensure the DOM has updated
+                    setTimeout(() => {
+                        this.sequenceUtils.displayEnhancedSequence(currentChr, this.currentSequence[currentChr]);
+                        // Re-initialize sequence selection after content is restored
+                        this.initializeSequenceSelection();
+                    }, 100);
+                }
             } else {
                 // Collapse - hide only sequence content, keep header visible
                 sequenceContent.style.display = 'none';
                 sequenceDisplaySection.classList.add('collapsed');
-                // Set collapsed height to just show the header (approximately 50px)
+                
+                // Set collapsed height to just show the header
                 sequenceDisplaySection.style.minHeight = '50px';
                 sequenceDisplaySection.style.maxHeight = '50px';
+                sequenceDisplaySection.style.height = '50px';
+                sequenceDisplaySection.style.flex = '0 0 auto';
                 
                 if (splitter) {
                     splitter.style.display = 'none';
+                }
+                
+                // Let genome viewer expand to fill available space
+                if (genomeViewerSection) {
+                    genomeViewerSection.style.flex = '1';
+                    genomeViewerSection.style.flexBasis = '100%';
+                    genomeViewerSection.style.minHeight = 'auto';
                 }
                 
                 if (toggleButton) {
                     toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
                     toggleButton.title = 'Show Sequence Panel';
                 }
-                
-                // Let genome viewer expand to fill space
-                if (genomeViewerSection) {
-                    genomeViewerSection.style.flexGrow = '1';
-                }
             }
             
             // Trigger resize event for layout adjustment
-            window.dispatchEvent(new Event('resize'));
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 150);
         }
     }
 

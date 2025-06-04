@@ -2184,6 +2184,9 @@ body {
     position: relative;
     min-height: 200px; /* Increase minimum height for the top tracks panel */
      /*max-height: 70%; Prevent taking more than 70% of available space */
+    order: 1 !important; /* Ensure it comes before sequence section */
+    display: flex;
+    flex-direction: column;
 }
 
 /* Horizontal Splitter between sidebar and viewer */
@@ -2417,9 +2420,10 @@ body {
     max-height: 60vh; /* Maximum 60% of viewport height to prevent covering everything */
     position: relative; /* Establish stacking context */
     z-index: 10; /* Higher z-index to ensure it appears above genome tracks */
-    /* Always dock to bottom */
-    order: 999; /* Ensure it appears last in flex layout */
+    /* Always dock to bottom - ensure this takes priority */
+    order: 999 !important; /* Ensure it appears last in flex layout with important */
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); /* Add shadow above for depth */
+    align-self: stretch; /* Stretch to fill width */
 }
 
 .sequence-display-section.collapsed {
@@ -2444,6 +2448,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+/* Sequence header should also be more visible */
+.sequence-header {
+    background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    position: relative; /* Establish stacking context */
+    z-index: 2; /* Above sequence content */
 }
 
 .sequence-header:hover {
@@ -2477,14 +2489,7 @@ body {
     padding: 15px;
 }
 
-/* Sequence header should also be more visible */
-.sequence-header {
-    background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    position: relative; /* Establish stacking context */
-    z-index: 2; /* Above sequence content */
-}
+
 
 .sequence-display-section.collapsed {
     min-height: 0;
