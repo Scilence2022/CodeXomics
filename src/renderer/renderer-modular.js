@@ -2019,11 +2019,8 @@ class GenomeBrowser {
 
     // Gene Selection Methods
     selectGene(gene, operonInfo = null) {
-        // Remove selection from previously selected gene
-        if (this.selectedGene) {
-            const prevSelectedElements = document.querySelectorAll('.gene-element.selected');
-            prevSelectedElements.forEach(el => el.classList.remove('selected'));
-        }
+        // Clear all existing selections (gene and manual sequence selections)
+        this.clearAllSelections();
         
         // Set new selected gene
         this.selectedGene = { gene, operonInfo };
@@ -2742,7 +2739,8 @@ class GenomeBrowser {
             if (e.target.matches('.sequence-bases span')) {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
-                this.clearSequenceSelection();
+                // Clear all existing selections when starting a new manual selection
+                this.clearAllSelections();
                 e.preventDefault();
             }
         };
@@ -2832,15 +2830,17 @@ class GenomeBrowser {
 
     clearSequenceSelection() {
         this.currentSequenceSelection = null;
-        
-        // Remove visual selection
         const selectedElements = document.querySelectorAll('.sequence-selection');
         selectedElements.forEach(element => {
             element.classList.remove('sequence-selection');
         });
-        
-        // Hide selection info in modal
-        document.getElementById('sequenceSelectionInfo').style.display = 'none';
+    }
+
+    clearAllSelections() {
+        // Clear gene selection (this clears both gene selection and sequence highlights)
+        this.clearGeneSelection();
+        // Clear manual sequence selection
+        this.clearSequenceSelection();
     }
 
     // Helper methods for ChatManager

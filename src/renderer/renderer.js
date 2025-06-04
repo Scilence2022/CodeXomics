@@ -1038,11 +1038,8 @@ class GenomeBrowser {
     }
 
     selectGene(gene, operonInfo = null) {
-        // Remove selection from previously selected gene
-        if (this.selectedGene) {
-            const prevSelectedElements = document.querySelectorAll('.gene-element.selected');
-            prevSelectedElements.forEach(el => el.classList.remove('selected'));
-        }
+        // Clear all existing selections (gene and manual sequence selections)
+        this.clearAllSelections();
         
         // Set new selected gene
         this.selectedGene = { gene, operonInfo };
@@ -1452,7 +1449,10 @@ class GenomeBrowser {
     }
 
     highlightGeneSequence(gene) {
-        // Clear previous highlights
+        // Clear any existing manual sequence selections
+        this.clearSequenceSelection();
+        
+        // Clear any existing highlights
         this.clearSequenceHighlights();
         
         // Only highlight if the gene is within the current view
@@ -3084,27 +3084,37 @@ class GenomeBrowser {
             return;
         }
         
-        const sequence = this.currentSequence[currentChr];
-        const subsequence = sequence.substring(this.currentPosition.start, this.currentPosition.end);
+        const fullSequence = this.currentSequence[currentChr];
+        let textToCopy = '';
+        let sourceDescription = '';
         
-        // Check if there's a text selection
-        const selection = window.getSelection();
-        let textToCopy = subsequence;
+        // Priority 1: Manual sequence selection
+        if (this.currentSequenceSelection) {
+            const start = this.currentSequenceSelection.start;
+            const end = this.currentSequenceSelection.end;
+            textToCopy = fullSequence.substring(start, end + 1);
+            sourceDescription = `selected region ${start + 1}-${end + 1}`;
+        }
+        // Priority 2: Gene-based selection
+        else if (this.selectedGene && this.selectedGene.gene) {
+            const gene = this.selectedGene.gene;
+            textToCopy = fullSequence.substring(gene.start - 1, gene.end);
+            const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+            sourceDescription = `gene ${geneName} (${gene.start}-${gene.end})`;
+        }
+        // Priority 3: Current view window
+        else {
+            textToCopy = fullSequence.substring(this.currentPosition.start, this.currentPosition.end);
+            sourceDescription = `current view (${this.currentPosition.start + 1}-${this.currentPosition.end})`;
+        }
         
-        if (selection.toString().length > 0) {
-            // Use selected text
-            textToCopy = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-        } else {
-            // Prompt user to select a region or copy all
-            const userChoice = confirm('No text selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.');
-            if (!userChoice) {
-                alert('Please select the text you want to copy, then click the Copy button again.');
-                return;
-            }
+        if (!textToCopy) {
+            alert('No sequence to copy');
+            return;
         }
         
         navigator.clipboard.writeText(textToCopy).then(() => {
-            alert(`Copied ${textToCopy.length} bases to clipboard`);
+            alert(`Copied ${textToCopy.length} bases from ${sourceDescription} to clipboard`);
         }).catch(err => {
             console.error('Failed to copy: ', err);
             alert('Failed to copy to clipboard');
@@ -4464,7 +4474,8 @@ class GenomeBrowser {
             if (e.target.matches('.sequence-bases span')) {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
-                this.clearSequenceSelection();
+                // Clear all existing selections when starting a new manual selection
+                this.clearAllSelections();
                 e.preventDefault();
             }
         };
@@ -4556,6 +4567,13 @@ class GenomeBrowser {
         this.currentSequenceSelection = null;
         const selectedBases = document.querySelectorAll('.sequence-selection');
         selectedBases.forEach(el => el.classList.remove('sequence-selection'));
+    }
+
+    clearAllSelections() {
+        // Clear gene selection (this clears both gene selection and sequence highlights)
+        this.clearGeneSelection();
+        // Clear manual sequence selection
+        this.clearSequenceSelection();
     }
 }
 
