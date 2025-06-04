@@ -262,7 +262,7 @@ class TrackRenderer {
         this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
         
         // Add statistics and update sidebar
-        this.addGeneTrackStatistics(trackContent, visibleGenes, operons);
+        this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
         
         return track;
     }
@@ -284,8 +284,8 @@ class TrackRenderer {
      * Render gene elements with improved organization
      */
     renderGeneElements(trackContent, visibleGenes, viewport, operons, settings) {
-        const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end);
-        const layout = this.calculateGeneTrackLayout(geneRows);
+        const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);
+        const layout = this.calculateGeneTrackLayout(geneRows, settings);
         
         // Set calculated height
         trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
@@ -302,12 +302,16 @@ class TrackRenderer {
     /**
      * Calculate layout parameters for gene track
      */
-    calculateGeneTrackLayout(geneRows) {
+    calculateGeneTrackLayout(geneRows, settings) {
         const geneHeight = 23;
         const rowSpacing = 6;
         const rulerHeight = 35;
         const topPadding = 10;
         const bottomPadding = 0;
+        
+        // Apply maximal rows setting
+        const maxRows = settings?.maxRows || 6;
+        const effectiveRows = Math.min(geneRows.length, maxRows);
         
         return {
             geneHeight,
@@ -315,7 +319,9 @@ class TrackRenderer {
             rulerHeight,
             topPadding,
             bottomPadding,
-            totalHeight: rulerHeight + topPadding + (geneRows.length * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding
+            maxRows,
+            effectiveRows,
+            totalHeight: rulerHeight + topPadding + (effectiveRows * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding
         };
     }
     
@@ -398,8 +404,15 @@ class TrackRenderer {
             geneElement.style.minWidth = '8px';
         }
         
-        // Position based on row arrangement
-        geneElement.style.top = `${layout.rulerHeight + layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing)}px`;
+        // Position based on row arrangement - only show if within maxRows
+        if (rowIndex < layout.maxRows) {
+            geneElement.style.top = `${layout.rulerHeight + layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing)}px`;
+            geneElement.style.display = 'block';
+        } else {
+            // Hide genes beyond maxRows
+            geneElement.style.display = 'none';
+            return; // Don't process text content for hidden genes
+        }
         
         // Set text content based on available space
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
@@ -441,21 +454,42 @@ class TrackRenderer {
     /**
      * Add statistics and update sidebar with improved organization
      */
-    addGeneTrackStatistics(trackContent, visibleGenes, operons) {
-        const geneRows = this.arrangeGenesInRows(visibleGenes, this.getCurrentViewport().start, this.getCurrentViewport().end);
-        const layout = this.calculateGeneTrackLayout(geneRows);
+    addGeneTrackStatistics(trackContent, visibleGenes, operons, settings) {
+        const geneRows = this.arrangeGenesInRows(visibleGenes, this.getCurrentViewport().start, this.getCurrentViewport().end, operons, settings);
+        const layout = this.calculateGeneTrackLayout(geneRows, settings);
         
-        // Add gene statistics
-        const statsText = `${visibleGenes.length} features in ${geneRows.length} rows`;
+        // Count visible and hidden genes
+        const totalGenes = visibleGenes.length;
+        let visibleGenesCount = 0;
+        let hiddenGenesCount = 0;
+        
+        geneRows.forEach((rowGenes, rowIndex) => {
+            if (rowIndex < layout.maxRows) {
+                visibleGenesCount += rowGenes.length;
+            } else {
+                hiddenGenesCount += rowGenes.length;
+            }
+        });
+        
+        // Create statistics text
+        let statsText = `${visibleGenesCount} features in ${Math.min(geneRows.length, layout.maxRows)} rows`;
+        if (hiddenGenesCount > 0) {
+            statsText += ` (${hiddenGenesCount} hidden)`;
+        }
+        
         const statsElement = this.createStatsElement(statsText, 'gene-stats', `top: ${layout.rulerHeight + 5}px;`);
         trackContent.appendChild(statsElement);
         
         // Update sidebar operons panel
         const visibleOperons = new Set();
-        visibleGenes.forEach(gene => {
-            const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
-            if (operonInfo.isInOperon) {
-                visibleOperons.add(operonInfo.operonName);
+        geneRows.forEach((rowGenes, rowIndex) => {
+            if (rowIndex < layout.maxRows) {
+                rowGenes.forEach(gene => {
+                    const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+                    if (operonInfo.isInOperon) {
+                        visibleOperons.add(operonInfo.operonName);
+                    }
+                });
             }
         });
         
@@ -1651,39 +1685,166 @@ class TrackRenderer {
     }
 
     // New method to arrange genes into non-overlapping rows
-    arrangeGenesInRows(genes, viewStart, viewEnd) {
+    arrangeGenesInRows(genes, viewStart, viewEnd, operons, settings) {
+        // Get settings with defaults
+        const maxRows = settings?.maxRows || 6;
+        const showOperonsSameRow = settings?.showOperonsSameRow || false;
+        
         // Sort genes by start position
         const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
         const rows = [];
         
-        sortedGenes.forEach(gene => {
-            let placed = false;
+        if (showOperonsSameRow && operons && operons.length > 0) {
+            // Group genes by operons first
+            const operonGroups = new Map();
+            const singleGenes = [];
             
-            // Try to place gene in existing rows
-            for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-                const row = rows[rowIndex];
-                let canPlace = true;
+            sortedGenes.forEach(gene => {
+                const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+                if (operonInfo.isInOperon) {
+                    if (!operonGroups.has(operonInfo.operonName)) {
+                        operonGroups.set(operonInfo.operonName, []);
+                    }
+                    operonGroups.get(operonInfo.operonName).push(gene);
+                } else {
+                    singleGenes.push(gene);
+                }
+            });
+            
+            // Process operon groups first (try to place all genes of an operon in the same row)
+            for (const [operonName, operonGenes] of operonGroups) {
+                // Sort operon genes by position
+                operonGenes.sort((a, b) => a.start - b.start);
                 
-                // Check if gene overlaps with any gene in this row
-                for (const existingGene of row) {
-                    if (this.genesOverlap(gene, existingGene)) {
-                        canPlace = false;
+                // Try to find a row that can fit all operon genes
+                let placedInExistingRow = false;
+                
+                for (let rowIndex = 0; rowIndex < rows.length && rowIndex < maxRows; rowIndex++) {
+                    const row = rows[rowIndex];
+                    let canPlaceAll = true;
+                    
+                    // Check if all operon genes can fit in this row
+                    for (const operonGene of operonGenes) {
+                        let conflicts = false;
+                        for (const existingGene of row) {
+                            if (this.genesOverlap(operonGene, existingGene)) {
+                                conflicts = true;
+                                break;
+                            }
+                        }
+                        if (conflicts) {
+                            canPlaceAll = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canPlaceAll) {
+                        // Add all operon genes to this row
+                        row.push(...operonGenes);
+                        placedInExistingRow = true;
                         break;
                     }
                 }
                 
-                if (canPlace) {
-                    row.push(gene);
-                    placed = true;
-                    break;
+                // If couldn't place in existing row and we haven't reached max rows, create new row
+                if (!placedInExistingRow && rows.length < maxRows) {
+                    rows.push([...operonGenes]);
+                } else if (!placedInExistingRow) {
+                    // If we've reached max rows, place operon genes in available rows with space
+                    operonGenes.forEach(gene => {
+                        let placed = false;
+                        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+                            const row = rows[rowIndex];
+                            let canPlace = true;
+                            
+                            for (const existingGene of row) {
+                                if (this.genesOverlap(gene, existingGene)) {
+                                    canPlace = false;
+                                    break;
+                                }
+                            }
+                            
+                            if (canPlace) {
+                                row.push(gene);
+                                placed = true;
+                                break;
+                            }
+                        }
+                        
+                        // If still can't place, add to the last row (genes will overlap)
+                        if (!placed && rows.length > 0) {
+                            rows[rows.length - 1].push(gene);
+                        }
+                    });
                 }
             }
             
-            // If couldn't place in existing row, create new row
-            if (!placed) {
-                rows.push([gene]);
-            }
-        });
+            // Process single genes
+            singleGenes.forEach(gene => {
+                let placed = false;
+                
+                // Try to place in existing rows
+                for (let rowIndex = 0; rowIndex < rows.length && rowIndex < maxRows; rowIndex++) {
+                    const row = rows[rowIndex];
+                    let canPlace = true;
+                    
+                    for (const existingGene of row) {
+                        if (this.genesOverlap(gene, existingGene)) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canPlace) {
+                        row.push(gene);
+                        placed = true;
+                        break;
+                    }
+                }
+                
+                // If couldn't place in existing row and we haven't reached max rows, create new row
+                if (!placed && rows.length < maxRows) {
+                    rows.push([gene]);
+                } else if (!placed && rows.length > 0) {
+                    // If we've reached max rows, add to the last row (genes will overlap)
+                    rows[rows.length - 1].push(gene);
+                }
+            });
+            
+        } else {
+            // Original algorithm: place genes without operon grouping
+            sortedGenes.forEach(gene => {
+                let placed = false;
+                
+                // Try to place gene in existing rows (up to maxRows)
+                for (let rowIndex = 0; rowIndex < rows.length && rowIndex < maxRows; rowIndex++) {
+                    const row = rows[rowIndex];
+                    let canPlace = true;
+                    
+                    // Check if gene overlaps with any gene in this row
+                    for (const existingGene of row) {
+                        if (this.genesOverlap(gene, existingGene)) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canPlace) {
+                        row.push(gene);
+                        placed = true;
+                        break;
+                    }
+                }
+                
+                // If couldn't place in existing row and we haven't reached max rows, create new row
+                if (!placed && rows.length < maxRows) {
+                    rows.push([gene]);
+                } else if (!placed && rows.length > 0) {
+                    // If we've reached max rows, add to the last row (genes will overlap)
+                    rows[rows.length - 1].push(gene);
+                }
+            });
+        }
         
         return rows;
     }
@@ -2570,12 +2731,14 @@ class TrackRenderer {
                 <div class="form-group">
                     <label for="genesMaxRows">Maximal rows for displaying features:</label>
                     <input type="number" id="genesMaxRows" min="1" max="20" value="${settings.maxRows || 6}">
+                    <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden to reduce visual clutter.</div>
                 </div>
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="genesShowOperonsSameRow" ${settings.showOperonsSameRow ? 'checked' : ''}>
                         Show operon genes in one row
                     </label>
+                    <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible.</div>
                 </div>
             </div>
             <div class="settings-section">
