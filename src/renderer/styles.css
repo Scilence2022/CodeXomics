@@ -9199,3 +9199,10 @@ body {
     color: #95a5a6; 
     font-weight: 600;
 }
+
+/* Sequence Selection for User Selection */
+.sequence-selection {
+    background: rgba(16, 185, 129, 0.3) !important;
+    outline: 1px solid rgba(16, 185, 129, 0.5) !important;
+    cursor: text !important;
+}

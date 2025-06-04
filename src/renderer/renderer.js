@@ -1917,6 +1917,11 @@ class GenomeBrowser {
                 this.highlightGeneSequence(this.selectedGene.gene);
             }, 100);
         }
+
+        // Re-initialize sequence selection after content is updated
+        setTimeout(() => {
+            this.initializeSequenceSelection();
+        }, 100);
     }
 
     measureCharacterWidth(container) {
@@ -4443,36 +4448,58 @@ class GenomeBrowser {
         const sequenceContent = document.getElementById('sequenceContent');
         if (!sequenceContent) return;
         
+        // Remove any existing listeners to prevent duplicates
+        if (this._sequenceSelectionListeners) {
+            sequenceContent.removeEventListener('mousedown', this._sequenceSelectionListeners.mousedown);
+            sequenceContent.removeEventListener('mousemove', this._sequenceSelectionListeners.mousemove);
+            sequenceContent.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
+            document.removeEventListener('mouseup', this._sequenceSelectionListeners.docMouseup);
+        }
+        
         let isSelecting = false;
         let selectionStart = null;
         let selectionEnd = null;
         
-        sequenceContent.addEventListener('mousedown', (e) => {
+        const mousedownHandler = (e) => {
             if (e.target.matches('.sequence-bases span')) {
                 isSelecting = true;
                 selectionStart = this.getSequencePosition(e.target);
                 this.clearSequenceSelection();
                 e.preventDefault();
             }
-        });
+        };
         
-        sequenceContent.addEventListener('mousemove', (e) => {
+        const mousemoveHandler = (e) => {
             if (isSelecting && e.target.matches('.sequence-bases span')) {
                 selectionEnd = this.getSequencePosition(e.target);
                 this.updateSequenceSelection(selectionStart, selectionEnd);
             }
-        });
+        };
         
-        sequenceContent.addEventListener('mouseup', () => {
+        const mouseupHandler = () => {
             if (isSelecting && selectionStart && selectionEnd) {
                 this.finalizeSequenceSelection(selectionStart, selectionEnd);
             }
             isSelecting = false;
-        });
+        };
         
-        document.addEventListener('mouseup', () => {
+        const docMouseupHandler = () => {
             isSelecting = false;
-        });
+        };
+        
+        // Store listeners for cleanup
+        this._sequenceSelectionListeners = {
+            mousedown: mousedownHandler,
+            mousemove: mousemoveHandler,
+            mouseup: mouseupHandler,
+            docMouseup: docMouseupHandler
+        };
+        
+        // Add event listeners
+        sequenceContent.addEventListener('mousedown', mousedownHandler);
+        sequenceContent.addEventListener('mousemove', mousemoveHandler);
+        sequenceContent.addEventListener('mouseup', mouseupHandler);
+        document.addEventListener('mouseup', docMouseupHandler);
     }
 
     getSequencePosition(baseElement) {

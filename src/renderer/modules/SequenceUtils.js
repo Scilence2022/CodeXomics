@@ -49,6 +49,11 @@ class SequenceUtils {
                 this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
             }, 100);
         }
+
+        // Re-initialize sequence selection after content is updated
+        setTimeout(() => {
+            this.genomeBrowser.initializeSequenceSelection();
+        }, 100);
     }
 
     measureCharacterWidth(container) {
