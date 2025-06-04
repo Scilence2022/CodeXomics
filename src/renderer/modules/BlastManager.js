@@ -1143,15 +1143,20 @@ class BlastManager {
         for (const line of lines) {
             if (!line.trim()) continue;
             
+            const parts = line.split('\t');
+            if (parts.length < 12) continue; // Skip lines with insufficient columns
+            
             const [
                 qseqid, sseqid, pident, length, mismatch, gapopen,
-                qstart, qend, sstart, send, evalue, bitscore, stitle
-            ] = line.split('\t');
+                qstart, qend, sstart, send, evalue, bitscore, stitle = 'No description available'
+            ] = parts;
+            
+            console.log('BLAST hit parsed:', { sseqid, pident, length, evalue, bitscore, stitle });
             
             hits.push({
                 id: sseqid,
                 accession: sseqid,
-                description: stitle,
+                description: stitle || sseqid || 'No description available',
                 length: parseInt(length),
                 evalue: evalue,
                 score: `${bitscore} bits`,
@@ -1159,7 +1164,7 @@ class BlastManager {
                 coverage: this.calculateCoverage(parseInt(length), params.sequence.length),
                 alignment: {
                     query: this.getAlignmentSequence(params.sequence, parseInt(qstart), parseInt(qend)),
-                    subject: this.getAlignmentSequence(params.sequence, parseInt(sstart), parseInt(send)),
+                    subject: this.getAlignmentSequence(params.sequence, parseInt(qstart), parseInt(qend)), // For now, use same as query
                     match: this.generateMatchString(parseInt(length), parseInt(mismatch), parseInt(gapopen))
                 }
             });
@@ -1193,8 +1198,23 @@ class BlastManager {
     }
 
     generateMatchString(length, mismatch, gapopen) {
+        // For a simple approximation, generate a match string
+        // In real BLAST, this would be much more complex
         const matches = length - mismatch - gapopen;
-        return '|'.repeat(matches) + ' '.repeat(mismatch) + '-'.repeat(gapopen);
+        const totalLength = length;
+        let matchString = '';
+        
+        for (let i = 0; i < totalLength; i++) {
+            if (i < matches) {
+                matchString += '|'; // match
+            } else if (i < matches + mismatch) {
+                matchString += ' '; // mismatch
+            } else {
+                matchString += '-'; // gap
+            }
+        }
+        
+        return matchString;
     }
 
     async cleanupTempFile(file) {
@@ -1274,7 +1294,7 @@ class BlastManager {
                         </div>
                         <div class="blast-stat">
                             <div class="blast-stat-label">Length:</div>
-                            <div class="blast-stat-value">${hit.length} aa</div>
+                            <div class="blast-stat-value">${hit.length} bp</div>
                         </div>
                         <div class="blast-stat">
                             <div class="blast-stat-label">E-value:</div>
@@ -1290,10 +1310,10 @@ class BlastManager {
                         </div>
                     </div>
                     <div class="blast-alignment">
-<strong>Alignment:</strong>
-Query:   ${hit.alignment.query}
+                        <strong>Alignment:</strong>
+                        <pre class="alignment-display">Query:   ${hit.alignment.query}
          ${hit.alignment.match}
-Subject: ${hit.alignment.subject}
+Subject: ${hit.alignment.subject}</pre>
                     </div>
                 </div>
             </div>
