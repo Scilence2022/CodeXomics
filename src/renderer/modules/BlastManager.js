@@ -851,8 +851,8 @@ class BlastManager {
         // Remove FASTA header if present
         let sequence = rawSequence.replace(/^>.*$/gm, '');
         
-        // Remove whitespace, numbers, and non-sequence characters
-        sequence = sequence.replace(/[^ATGCRYSWKMBDHVN]/gi, '');
+        // Allow common DNA/RNA and protein characters, and ambiguous codes
+        sequence = sequence.replace(/[^A-Z*]/gi, ''); // Basic filter for letters and stop codon
         
         return sequence.toUpperCase();
     }
