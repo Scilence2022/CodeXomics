@@ -17,7 +17,7 @@ class BlastManager {
             supportedFormats: ['fasta', 'fa', 'fas', 'txt'],
             // Local BLAST configuration
             localBlastPath: '/usr/local/bin', // Default BLAST+ installation path
-            localDbPath: '/usr/local/blast/db', // Default local database path
+            localDbPath: '/Users/song/blast/db', // User-specific local database path
             localDatabases: new Map(), // Will store local database information
             supportedLocalFormats: ['fasta', 'fa', 'fas', 'txt', 'gb', 'gbk', 'genbank']
         };
@@ -68,7 +68,20 @@ class BlastManager {
     async runCommand(command) {
         return new Promise((resolve, reject) => {
             const { exec } = require('child_process');
-            exec(command, (error, stdout, stderr) => {
+            const path = require('path');
+
+            // Check if it's a BLAST-related command
+            const isBlastCommand = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'].some(cmd => command.startsWith(cmd));
+
+            let finalCommand = command;
+            if (isBlastCommand) {
+                // Set BLASTDB environment variable for the command
+                const localDbPath = this.config.localDbPath; // Use the configured localDbPath
+                finalCommand = `export BLASTDB=${localDbPath} && ${command}`;
+                console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
+            }
+
+            exec(finalCommand, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                     return;
@@ -98,26 +111,43 @@ class BlastManager {
 
     async loadLocalDatabases() {
         try {
+            const path = require('path');
             // Get list of local databases
-            const result = await this.runCommand('blastdbcmd -list');
+            const result = await this.runCommand(`blastdbcmd -list ${this.config.localDbPath}`);
             const lines = result.split('\n');
             
             for (const line of lines) {
                 if (line.trim()) {
-                    const [dbName, dbType, dbPath] = line.split('\t');
-                    if (dbName && dbType) {
-                        // Get database statistics
-                        const stats = await this.getDatabaseStats(dbName);
-                        
-                        this.config.localDatabases.set(dbName, {
-                            name: dbName,
-                            type: dbType.toLowerCase(),
-                            path: dbPath || this.config.localDbPath,
-                            description: `Local ${dbType} database`,
-                            sequences: stats.sequences,
-                            letters: stats.letters,
-                            lastUpdated: stats.lastUpdated
-                        });
+                    const parts = line.trim().split(' ');
+                    if (parts.length >= 2) {
+                        const dbTypeRaw = parts.pop(); // Last part is the type
+                        // Map database types to BLAST program types
+                        let dbType;
+                        if (dbTypeRaw.toLowerCase() === 'nucleotide') {
+                            dbType = 'blastn'; // Nucleotide databases work with blastn and tblastn
+                        } else if (dbTypeRaw.toLowerCase() === 'protein') {
+                            dbType = 'blastp'; // Protein databases work with blastp and blastx
+                        } else {
+                            dbType = dbTypeRaw.toLowerCase();
+                        }
+                        const dbPathFull = parts.join(' '); // Remaining parts form the full path
+                        const dbName = path.basename(dbPathFull);
+
+                        if (dbName && dbType) {
+                            console.log(`Found local database: ${dbName}, Type: ${dbType}, Path: ${dbPathFull}`);
+                            // Get database statistics - Use the base name for getting stats
+                            const stats = await this.getDatabaseStats(dbName);
+
+                            this.config.localDatabases.set(dbName, {
+                                name: dbName,
+                                type: dbType,
+                                path: path.dirname(dbPathFull), // Store the directory path
+                                description: `Local ${dbTypeRaw} database`,
+                                sequences: stats.sequences,
+                                letters: stats.letters,
+                                lastUpdated: stats.lastUpdated
+                            });
+                        }
                     }
                 }
             }
@@ -286,7 +316,15 @@ class BlastManager {
         // Add local databases if local service is selected
         if (activeService === 'local') {
             for (const [name, info] of this.config.localDatabases) {
-                if (info.type === activeType) {
+                // Check if database is compatible with the selected BLAST type
+                let isCompatible = false;
+                if (info.type === 'blastn' && (activeType === 'blastn' || activeType === 'tblastn')) {
+                    isCompatible = true;
+                } else if (info.type === 'blastp' && (activeType === 'blastp' || activeType === 'blastx')) {
+                    isCompatible = true;
+                }
+                
+                if (isCompatible) {
                     databases.push({
                         value: name,
                         label: `Local: ${name}`,
@@ -347,6 +385,7 @@ class BlastManager {
         setTimeout(() => {
             this.setupEventListeners();
             this.initializeModal();
+            this.selectBlastType('blastn'); // Set default BLAST type
         }, 100);
     }
 
@@ -677,6 +716,9 @@ class BlastManager {
             btn.classList.remove('active');
         });
         document.querySelector(`[data-service="${service}"]`).classList.add('active');
+        
+        // Update database options when service changes
+        this.updateDatabaseOptions();
     }
 
     updateCurrentRegionDisplay() {
