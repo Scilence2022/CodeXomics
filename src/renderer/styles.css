@@ -857,13 +857,164 @@ body {
 }
 
 .track-header {
-    background: #f8f9fa;
-    padding: 8px 12px;
-    font-weight: 600;
-    font-size: 14px;
-    color: #495057;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid #dee2e6;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
     position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.track-title {
+    flex: 1;
+}
+
+.track-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.track-btn {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 10px;
+    color: #6c757d;
+}
+
+.track-btn:hover {
+    background: #fff;
+    color: #495057;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.track-settings-btn:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.track-toggle-btn:hover {
+    color: #10b981;
+    border-color: #10b981;
+}
+
+.track-toggle-btn[data-locked="true"] {
+    background: #fef3c7;
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.track-close-btn:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Track controls locked state */
+.controls-locked {
+    opacity: 0.7;
+}
+
+.controls-locked .track-header {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+.controls-locked .track-content {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Track Settings Modal */
+.settings-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.settings-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.form-group input[type="number"],
+.form-group input[type="color"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.form-group input[type="color"] {
+    width: 60px;
+    height: 32px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.form-group input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.form-group label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+/* Small adjustments for mobile */
+@media (max-width: 768px) {
+    .track-buttons {
+        gap: 2px;
+    }
+    
+    .track-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+    
+    .track-header {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
 }
 
 .track-header::after {

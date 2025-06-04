@@ -100,7 +100,7 @@ class TrackRenderer {
         const track = document.createElement('div');
         track.className = config.className;
         
-        const trackHeader = this.createTrackHeader(config.header);
+        const trackHeader = this.createTrackHeader(config.header, trackType);
         track.appendChild(trackHeader);
         
         const trackContent = this.createTrackContent(config.defaultHeight, chromosome);
@@ -112,10 +112,56 @@ class TrackRenderer {
     /**
      * Create standardized track header
      */
-    createTrackHeader(title) {
+    createTrackHeader(title, trackType) {
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
-        trackHeader.textContent = title;
+        
+        // Create title element
+        const titleElement = document.createElement('span');
+        titleElement.className = 'track-title';
+        titleElement.textContent = title;
+        trackHeader.appendChild(titleElement);
+        
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'track-buttons';
+        
+        // Settings button
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'track-btn track-settings-btn';
+        settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
+        settingsBtn.title = 'Track Settings';
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openTrackSettings(trackType);
+        });
+        
+        // Toggle controls button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'track-btn track-toggle-btn';
+        toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+        toggleBtn.title = 'Toggle Track Controls (Lock/Unlock)';
+        toggleBtn.dataset.locked = 'false';
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleTrackControls(trackType, toggleBtn);
+        });
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'track-btn track-close-btn';
+        closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+        closeBtn.title = 'Hide Track';
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTrack(trackType);
+        });
+        
+        buttonsContainer.appendChild(settingsBtn);
+        buttonsContainer.appendChild(toggleBtn);
+        buttonsContainer.appendChild(closeBtn);
+        trackHeader.appendChild(buttonsContainer);
+        
         return trackHeader;
     }
     
@@ -186,6 +232,9 @@ class TrackRenderer {
         const { track, trackContent } = this.createTrackBase('genes', chromosome);
         const viewport = this.getCurrentViewport();
         
+        // Get track settings
+        const settings = this.getTrackSettings('genes');
+        
         // Add detailed ruler for current viewing region
         const detailedRuler = this.createDetailedRuler(chromosome);
         trackContent.appendChild(detailedRuler);
@@ -209,8 +258,8 @@ class TrackRenderer {
             return track;
         }
         
-        // Process and render genes
-        this.renderGeneElements(trackContent, visibleGenes, viewport, operons);
+        // Process and render genes with settings
+        this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
         
         // Add statistics and update sidebar
         this.addGeneTrackStatistics(trackContent, visibleGenes, operons);
@@ -234,7 +283,7 @@ class TrackRenderer {
     /**
      * Render gene elements with improved organization
      */
-    renderGeneElements(trackContent, visibleGenes, viewport, operons) {
+    renderGeneElements(trackContent, visibleGenes, viewport, operons, settings) {
         const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end);
         const layout = this.calculateGeneTrackLayout(geneRows);
         
@@ -244,7 +293,7 @@ class TrackRenderer {
         // Create gene elements
         geneRows.forEach((rowGenes, rowIndex) => {
             rowGenes.forEach((gene) => {
-                const geneElement = this.createGeneElement(gene, viewport, operons, rowIndex, layout);
+                const geneElement = this.createGeneElement(gene, viewport, operons, rowIndex, layout, settings);
                 trackContent.appendChild(geneElement);
             });
         });
@@ -273,11 +322,11 @@ class TrackRenderer {
     /**
      * Create individual gene element with improved structure
      */
-    createGeneElement(gene, viewport, operons, rowIndex, layout) {
+    createGeneElement(gene, viewport, operons, rowIndex, layout, settings) {
         const geneElement = document.createElement('div');
         
         // Configure element class and style
-        this.configureGeneElementAppearance(geneElement, gene, viewport, operons);
+        this.configureGeneElementAppearance(geneElement, gene, viewport, operons, settings);
         
         // Set position
         this.setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout);
@@ -291,7 +340,7 @@ class TrackRenderer {
     /**
      * Configure gene element appearance and styling
      */
-    configureGeneElementAppearance(geneElement, gene, viewport, operons) {
+    configureGeneElementAppearance(geneElement, gene, viewport, operons, settings) {
         // Normalize gene type for CSS class
         let geneType = gene.type.toLowerCase();
         if (geneType.includes('rna') && !['mrna', 'trna', 'rrna'].includes(geneType)) {
@@ -2350,6 +2399,418 @@ class TrackRenderer {
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
+    }
+
+    // ============================================================================
+    // TRACK BUTTON FUNCTIONALITY METHODS
+    // ============================================================================
+    
+    /**
+     * Open track-specific settings modal
+     */
+    openTrackSettings(trackType) {
+        console.log(`Opening settings for track: ${trackType}`);
+        
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('trackSettingsModal');
+        if (!modal) {
+            modal = this.createTrackSettingsModal();
+            document.body.appendChild(modal);
+        }
+        
+        // Load track-specific settings
+        this.loadTrackSpecificSettings(trackType, modal);
+        
+        // Show modal
+        modal.classList.add('show');
+    }
+    
+    /**
+     * Toggle track controls (resize, reorder, close)
+     */
+    toggleTrackControls(trackType, button) {
+        const isLocked = button.dataset.locked === 'true';
+        const newLocked = !isLocked;
+        
+        button.dataset.locked = newLocked.toString();
+        button.innerHTML = newLocked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-lock-open"></i>';
+        button.title = newLocked ? 'Unlock Track Controls' : 'Lock Track Controls';
+        
+        // Find the track element
+        const trackElement = button.closest('[class*="-track"]');
+        if (trackElement) {
+            if (newLocked) {
+                trackElement.classList.add('controls-locked');
+                // Disable dragging and resizing
+                trackElement.draggable = false;
+            } else {
+                trackElement.classList.remove('controls-locked');
+                // Enable dragging and resizing
+                trackElement.draggable = true;
+            }
+        }
+        
+        console.log(`Track ${trackType} controls ${newLocked ? 'locked' : 'unlocked'}`);
+    }
+    
+    /**
+     * Close/hide track
+     */
+    closeTrack(trackType) {
+        console.log(`Closing track: ${trackType}`);
+        
+        // Map trackType to checkbox IDs
+        const trackMapping = {
+            'genes': 'trackGenes',
+            'gc': 'trackGC', 
+            'variants': 'trackVariants',
+            'reads': 'trackReads',
+            'proteins': 'trackProteins',
+            'wigTracks': 'trackWIG',
+            'sequence': 'trackSequence'
+        };
+        
+        const checkboxId = trackMapping[trackType];
+        if (checkboxId) {
+            const checkbox = document.getElementById(checkboxId);
+            const sidebarCheckbox = document.getElementById('sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1));
+            
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.dispatchEvent(new Event('change'));
+            }
+            
+            if (sidebarCheckbox) {
+                sidebarCheckbox.checked = false;
+                sidebarCheckbox.dispatchEvent(new Event('change'));
+            }
+        }
+    }
+    
+    /**
+     * Create track settings modal
+     */
+    createTrackSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'trackSettingsModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="trackSettingsTitle">Track Settings</h3>
+                    <button class="modal-close" id="closeTrackSettingsModal">&times;</button>
+                </div>
+                <div class="modal-body" id="trackSettingsBody">
+                    <!-- Settings will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary modal-close">Cancel</button>
+                    <button class="btn btn-primary" id="applyTrackSettings">Apply</button>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.classList.contains('modal-close')) {
+                modal.classList.remove('show');
+            }
+        });
+        
+        modal.querySelector('#applyTrackSettings').addEventListener('click', () => {
+            this.applyTrackSettings();
+        });
+        
+        return modal;
+    }
+    
+    /**
+     * Load track-specific settings content
+     */
+    loadTrackSpecificSettings(trackType, modal) {
+        const titleElement = modal.querySelector('#trackSettingsTitle');
+        const bodyElement = modal.querySelector('#trackSettingsBody');
+        
+        // Get current settings for this track
+        const currentSettings = this.getTrackSettings(trackType);
+        
+        switch (trackType) {
+            case 'genes':
+                titleElement.textContent = 'Genes & Features Track Settings';
+                bodyElement.innerHTML = this.createGenesSettingsContent(currentSettings);
+                break;
+                
+            case 'gc':
+                titleElement.textContent = 'GC Content & Skew Track Settings';
+                bodyElement.innerHTML = this.createGCSettingsContent(currentSettings);
+                break;
+                
+            case 'reads':
+                titleElement.textContent = 'Aligned Reads Track Settings';
+                bodyElement.innerHTML = this.createReadsSettingsContent(currentSettings);
+                break;
+                
+            default:
+                titleElement.textContent = `${trackType} Track Settings`;
+                bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
+                break;
+        }
+        
+        // Store current track type for applying settings
+        modal.dataset.trackType = trackType;
+    }
+    
+    /**
+     * Create genes track settings content
+     */
+    createGenesSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Display Options</h4>
+                <div class="form-group">
+                    <label for="genesMaxRows">Maximal rows for displaying features:</label>
+                    <input type="number" id="genesMaxRows" min="1" max="20" value="${settings.maxRows || 6}">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesShowOperonsSameRow" ${settings.showOperonsSameRow ? 'checked' : ''}>
+                        Show operon genes in one row
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Visual Settings</h4>
+                <div class="form-group">
+                    <label for="genesTrackHeight">Track Height (px):</label>
+                    <input type="number" id="genesTrackHeight" min="60" max="400" value="${settings.height || 120}">
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Create GC track settings content
+     */
+    createGCSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Colors & Styles</h4>
+                <div class="form-group">
+                    <label for="gcContentColor">GC Content Color:</label>
+                    <input type="color" id="gcContentColor" value="${settings.contentColor || '#3b82f6'}">
+                </div>
+                <div class="form-group">
+                    <label for="gcSkewPositiveColor">GC Skew Positive Color:</label>
+                    <input type="color" id="gcSkewPositiveColor" value="${settings.skewPositiveColor || '#10b981'}">
+                </div>
+                <div class="form-group">
+                    <label for="gcSkewNegativeColor">GC Skew Negative Color:</label>
+                    <input type="color" id="gcSkewNegativeColor" value="${settings.skewNegativeColor || '#ef4444'}">
+                </div>
+                <div class="form-group">
+                    <label for="gcLineWidth">Line Width:</label>
+                    <input type="number" id="gcLineWidth" min="1" max="5" step="0.5" value="${settings.lineWidth || 2}">
+                </div>
+                <div class="form-group">
+                    <label for="gcTrackHeight">Track Height (px):</label>
+                    <input type="number" id="gcTrackHeight" min="80" max="300" value="${settings.height || 140}">
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Create reads track settings content
+     */
+    createReadsSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Read Display</h4>
+                <div class="form-group">
+                    <label for="readsHeight">Height of each read (px):</label>
+                    <input type="number" id="readsHeight" min="5" max="30" value="${settings.readHeight || 14}">
+                </div>
+                <div class="form-group">
+                    <label for="readsSpacing">Spacing between reads (px):</label>
+                    <input type="number" id="readsSpacing" min="1" max="10" value="${settings.readSpacing || 2}">
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Colors & Styles</h4>
+                <div class="form-group">
+                    <label for="readsForwardColor">Forward reads color:</label>
+                    <input type="color" id="readsForwardColor" value="${settings.forwardColor || '#3b82f6'}">
+                </div>
+                <div class="form-group">
+                    <label for="readsReverseColor">Reverse reads color:</label>
+                    <input type="color" id="readsReverseColor" value="${settings.reverseColor || '#ef4444'}">
+                </div>
+                <div class="form-group">
+                    <label for="readsPairedColor">Paired reads color:</label>
+                    <input type="color" id="readsPairedColor" value="${settings.pairedColor || '#10b981'}">
+                </div>
+                <div class="form-group">
+                    <label for="readsTrackHeight">Track Height (px):</label>
+                    <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Create default settings content for other tracks
+     */
+    createDefaultSettingsContent(trackType, settings) {
+        return `
+            <div class="settings-section">
+                <h4>Basic Settings</h4>
+                <div class="form-group">
+                    <label for="defaultTrackHeight">Track Height (px):</label>
+                    <input type="number" id="defaultTrackHeight" min="50" max="300" value="${settings.height || 80}">
+                </div>
+                <p>More settings for ${trackType} track can be added here.</p>
+            </div>
+        `;
+    }
+    
+    /**
+     * Get current settings for a track
+     */
+    getTrackSettings(trackType) {
+        // Get settings from ConfigManager or default values
+        const defaultSettings = {
+            genes: {
+                maxRows: 6,
+                showOperonsSameRow: false,
+                height: 120
+            },
+            gc: {
+                contentColor: '#3b82f6',
+                skewPositiveColor: '#10b981',
+                skewNegativeColor: '#ef4444',
+                lineWidth: 2,
+                height: 140
+            },
+            reads: {
+                readHeight: 14,
+                readSpacing: 2,
+                forwardColor: '#3b82f6',
+                reverseColor: '#ef4444',
+                pairedColor: '#10b981',
+                height: 150
+            }
+        };
+        
+        // Try to get saved settings
+        let savedSettings = {};
+        if (this.genomeBrowser.configManager) {
+            savedSettings = this.genomeBrowser.configManager.get(`tracks.${trackType}.settings`) || {};
+        } else {
+            const stored = localStorage.getItem(`trackSettings_${trackType}`);
+            if (stored) {
+                try {
+                    savedSettings = JSON.parse(stored);
+                } catch (e) {
+                    console.warn('Failed to parse saved track settings:', e);
+                }
+            }
+        }
+        
+        return { ...defaultSettings[trackType] || {}, ...savedSettings };
+    }
+    
+    /**
+     * Apply track settings
+     */
+    applyTrackSettings() {
+        const modal = document.getElementById('trackSettingsModal');
+        const trackType = modal.dataset.trackType;
+        
+        if (!trackType) return;
+        
+        const settings = this.collectSettingsFromModal(trackType, modal);
+        this.saveTrackSettings(trackType, settings);
+        
+        // Apply settings immediately
+        this.applySettingsToTrack(trackType, settings);
+        
+        // Close modal
+        modal.classList.remove('show');
+        
+        // Refresh the current view
+        this.refreshCurrentView();
+    }
+    
+    /**
+     * Collect settings from modal inputs
+     */
+    collectSettingsFromModal(trackType, modal) {
+        const settings = {};
+        
+        switch (trackType) {
+            case 'genes':
+                settings.maxRows = parseInt(modal.querySelector('#genesMaxRows').value) || 6;
+                settings.showOperonsSameRow = modal.querySelector('#genesShowOperonsSameRow').checked;
+                settings.height = parseInt(modal.querySelector('#genesTrackHeight').value) || 120;
+                break;
+                
+            case 'gc':
+                settings.contentColor = modal.querySelector('#gcContentColor').value;
+                settings.skewPositiveColor = modal.querySelector('#gcSkewPositiveColor').value;
+                settings.skewNegativeColor = modal.querySelector('#gcSkewNegativeColor').value;
+                settings.lineWidth = parseFloat(modal.querySelector('#gcLineWidth').value) || 2;
+                settings.height = parseInt(modal.querySelector('#gcTrackHeight').value) || 140;
+                break;
+                
+            case 'reads':
+                settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 14;
+                settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
+                settings.forwardColor = modal.querySelector('#readsForwardColor').value;
+                settings.reverseColor = modal.querySelector('#readsReverseColor').value;
+                settings.pairedColor = modal.querySelector('#readsPairedColor').value;
+                settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
+                break;
+                
+            default:
+                settings.height = parseInt(modal.querySelector('#defaultTrackHeight').value) || 80;
+                break;
+        }
+        
+        return settings;
+    }
+    
+    /**
+     * Save track settings
+     */
+    saveTrackSettings(trackType, settings) {
+        if (this.genomeBrowser.configManager) {
+            this.genomeBrowser.configManager.set(`tracks.${trackType}.settings`, settings);
+            this.genomeBrowser.configManager.saveConfig();
+        } else {
+            localStorage.setItem(`trackSettings_${trackType}`, JSON.stringify(settings));
+        }
+        
+        console.log(`Saved settings for ${trackType}:`, settings);
+    }
+    
+    /**
+     * Apply settings to track immediately
+     */
+    applySettingsToTrack(trackType, settings) {
+        // Find the track element and apply settings
+        const trackElement = document.querySelector(`.${trackType}-track`);
+        if (trackElement && settings.height) {
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                trackContent.style.height = `${settings.height}px`;
+            }
+        }
+        
+        // Store settings for use during rendering
+        if (!this.trackSettings) {
+            this.trackSettings = {};
+        }
+        this.trackSettings[trackType] = settings;
     }
 }
 
