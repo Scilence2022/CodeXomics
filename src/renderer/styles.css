@@ -154,6 +154,9 @@ body {
 
 .header-right {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 /* Toolbar */
@@ -179,6 +182,128 @@ body {
     font-weight: 500;
     color: #495057;
     white-space: nowrap;
+}
+
+/* MCP Server Controls in Header */
+.mcp-server-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 16px;
+}
+
+.mcp-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.status-dot.status-stopped {
+    background-color: #dc3545;
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+}
+
+.status-dot.status-starting {
+    background-color: #ffc107;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.3);
+    animation: pulse 1.5s infinite;
+}
+
+.status-dot.status-running {
+    background-color: #28a745;
+    box-shadow: 0 0 4px rgba(40, 167, 69, 0.3);
+}
+
+.status-dot.status-stopping {
+    background-color: #fd7e14;
+    box-shadow: 0 0 4px rgba(253, 126, 20, 0.3);
+    animation: pulse 1.5s infinite;
+}
+
+.status-text {
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+#mcpServerBtn {
+    min-width: 70px;
+    transition: all 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(5px);
+}
+
+#mcpServerBtn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#mcpServerBtn.starting,
+#mcpServerBtn.stopping {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+#mcpServerBtn.running {
+    background-color: rgba(40, 167, 69, 0.8);
+    border-color: rgba(40, 167, 69, 0.9);
+}
+
+#mcpServerBtn.running:hover {
+    background-color: rgba(40, 167, 69, 0.9);
+    border-color: rgba(40, 167, 69, 1);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Responsive adjustments for header MCP controls */
+@media (max-width: 1024px) {
+    .mcp-server-controls {
+        margin-right: 12px;
+    }
+    
+    .mcp-status-indicator {
+        font-size: 11px;
+    }
+    
+    #mcpServerBtn {
+        min-width: 60px;
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .mcp-server-controls {
+        margin-right: 8px;
+    }
+    
+    .mcp-status-indicator .status-text {
+        display: none; /* Hide status text on small screens */
+    }
+    
+    #mcpServerBtn span {
+        display: none; /* Hide button text on small screens, show only icon */
+    }
+    
+    #mcpServerBtn {
+        min-width: 40px;
+        padding: 8px;
+    }
 }
 
 /* Main Content */

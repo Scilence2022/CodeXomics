@@ -36,6 +36,17 @@
                 </div>
             </div>
             <div class="header-right">
+                <div class="mcp-server-controls">
+                    <button id="mcpServerBtn" class="btn btn-sm" title="Start/Stop MCP Server">
+                        <i class="fas fa-server"></i>
+                        <span id="mcpServerStatus">Start</span>
+                    </button>
+                    <div class="mcp-status-indicator" id="mcpStatusIndicator">
+                        <span class="status-dot status-stopped"></span>
+                        <span class="status-text">Stopped</span>
+                    </div>
+                </div>
+                
                 <div class="file-menu-container">
                     <button id="optionsBtn" class="btn btn-secondary dropdown-toggle">
                         <i class="fas fa-cog"></i>
@@ -570,9 +581,6 @@
                         <div class="sequence-header">
                             <h4 id="sequenceTitle">Sequence View</h4>
                             <div class="sequence-controls">
-                                <button id="toggleSequencePanel" class="btn btn-sm" title="Hide/Show Sequence Panel">
-                                    <i class="fas fa-chevron-down"></i>
-                                </button>
                                 <button id="copySequenceBtn" class="btn btn-sm">
                                     <i class="fas fa-copy"></i>
                                     Copy

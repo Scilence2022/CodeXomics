@@ -1,8 +1,11 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const MCPGenomeBrowserServer = require('./mcp-server');
 
 let mainWindow;
+let mcpServer = null;
+let mcpServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
 function createWindow() {
   // Create the browser window
@@ -203,6 +206,15 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Clean up MCP server when app is quitting
+app.on('before-quit', () => {
+  if (mcpServer) {
+    console.log('Shutting down MCP Server...');
+    mcpServer.stop();
+    mcpServer = null;
+  }
+});
+
 // IPC handlers
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
@@ -279,4 +291,88 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// Add MCP Server IPC handlers
+ipcMain.handle('mcp-server-start', async () => {
+  try {
+    if (mcpServerStatus === 'running') {
+      return { success: true, message: 'MCP Server is already running', status: 'running' };
+    }
+    
+    if (mcpServerStatus === 'starting') {
+      return { success: false, message: 'MCP Server is already starting', status: 'starting' };
+    }
+
+    mcpServerStatus = 'starting';
+    
+    // Create and start MCP server
+    mcpServer = new MCPGenomeBrowserServer(3000, 3001);
+    
+    return new Promise((resolve) => {
+      try {
+        mcpServer.start();
+        mcpServerStatus = 'running';
+        console.log('MCP Server started successfully');
+        resolve({ 
+          success: true, 
+          message: 'MCP Server started successfully on ports 3000 (HTTP) and 3001 (WebSocket)', 
+          status: 'running',
+          httpPort: 3000,
+          wsPort: 3001
+        });
+      } catch (error) {
+        mcpServerStatus = 'stopped';
+        console.error('Failed to start MCP Server:', error);
+        resolve({ 
+          success: false, 
+          message: `Failed to start MCP Server: ${error.message}`, 
+          status: 'stopped' 
+        });
+      }
+    });
+  } catch (error) {
+    mcpServerStatus = 'stopped';
+    return { success: false, message: error.message, status: 'stopped' };
+  }
+});
+
+ipcMain.handle('mcp-server-stop', async () => {
+  try {
+    if (mcpServerStatus === 'stopped') {
+      return { success: true, message: 'MCP Server is already stopped', status: 'stopped' };
+    }
+    
+    if (mcpServerStatus === 'stopping') {
+      return { success: false, message: 'MCP Server is already stopping', status: 'stopping' };
+    }
+
+    mcpServerStatus = 'stopping';
+    
+    if (mcpServer) {
+      mcpServer.stop();
+      mcpServer = null;
+    }
+    
+    mcpServerStatus = 'stopped';
+    console.log('MCP Server stopped successfully');
+    
+    return { 
+      success: true, 
+      message: 'MCP Server stopped successfully', 
+      status: 'stopped' 
+    };
+  } catch (error) {
+    mcpServerStatus = 'stopped';
+    return { success: false, message: error.message, status: 'stopped' };
+  }
+});
+
+ipcMain.handle('mcp-server-status', async () => {
+  return { 
+    status: mcpServerStatus,
+    isRunning: mcpServerStatus === 'running',
+    httpPort: mcpServerStatus === 'running' ? 3000 : null,
+    wsPort: mcpServerStatus === 'running' ? 3001 : null
+  };
 }); 

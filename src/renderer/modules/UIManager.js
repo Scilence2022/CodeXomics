@@ -211,15 +211,12 @@ class UIManager {
 
     toggleSequencePanel() {
         const sequenceContent = document.getElementById('sequenceContent');
-        const toggleButton = document.getElementById('toggleSequencePanel');
         const splitter = document.getElementById('splitter');
         const sequenceSection = document.getElementById('sequenceDisplaySection');
         
         if (sequenceContent.style.display === 'none') {
             // Show sequence content
             sequenceContent.style.display = 'flex';
-            toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
-            toggleButton.title = 'Hide Sequence Panel';
             
             // Restore splitter functionality
             splitter.style.display = 'flex';
@@ -230,8 +227,6 @@ class UIManager {
         } else {
             // Hide sequence content
             sequenceContent.style.display = 'none';
-            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
-            toggleButton.title = 'Show Sequence Panel';
             
             // Hide splitter when content is hidden
             splitter.style.display = 'none';

@@ -181,6 +181,9 @@ class GenomeBrowser {
         }, 1000);
         
         console.log('🎉 Genome AI Studio initialized successfully!');
+        
+        // Initialize MCP server status check
+        this.initializeMCPServerStatus();
     }
 
     setupEventListeners() {
@@ -198,6 +201,9 @@ class GenomeBrowser {
         document.getElementById('exportFastaBtn').addEventListener('click', () => this.exportManager.exportAsFasta());
         document.getElementById('exportGenbankBtn').addEventListener('click', () => this.exportManager.exportAsGenBank());
         document.getElementById('exportCDSFastaBtn').addEventListener('click', () => this.exportManager.exportCDSAsFasta());
+        
+        // MCP Server control
+        document.getElementById('mcpServerBtn').addEventListener('click', () => this.toggleMCPServer());
         document.getElementById('exportProteinFastaBtn').addEventListener('click', () => this.exportManager.exportProteinAsFasta());
         document.getElementById('exportGFFBtn').addEventListener('click', () => this.exportManager.exportAsGFF());
         document.getElementById('exportBEDBtn').addEventListener('click', () => this.exportManager.exportAsBED());
@@ -254,9 +260,6 @@ class GenomeBrowser {
         // Sequence controls
         document.getElementById('copySequenceBtn').addEventListener('click', () => this.sequenceUtils.copySequence());
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
-
-        // Sequence panel toggle
-        document.getElementById('toggleSequencePanel').addEventListener('click', () => this.uiManager.toggleSequencePanel());
 
         // Modal controls
         this.uiManager.setupModalControls();
@@ -1107,18 +1110,8 @@ class GenomeBrowser {
     
     // Setup the existing toggle button to work with new bottom sequence panel
     setupToggleButtonListener() {
-        const toggleButton = document.getElementById('toggleSequencePanel');
-        if (toggleButton && !toggleButton.hasAttribute('data-updated-listener')) {
-            toggleButton.setAttribute('data-updated-listener', 'true');
-            
-            // Remove old event listeners
-            toggleButton.removeEventListener('click', this.toggleSequencePanel);
-            
-            // Add new event listener
-            toggleButton.addEventListener('click', () => {
-                this.toggleBottomSequencePanel();
-            });
-        }
+        // Toggle button has been removed - no longer needed
+        return;
     }
 
     // Create a resizable splitter between tracks
@@ -2954,9 +2947,10 @@ class GenomeBrowser {
                 sequenceHeader.style.backgroundColor = '';
             });
             
-            sequenceHeader.addEventListener('click', () => {
-                this.toggleBottomSequencePanel();
-            });
+            // Removed click listener to prevent collapse/uncollapse on header click
+            // sequenceHeader.addEventListener('click', () => {
+            //     this.toggleBottomSequencePanel();
+            // });
         }
     }
 
@@ -2966,7 +2960,6 @@ class GenomeBrowser {
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         const splitter = document.getElementById('splitter');
         const genomeViewerSection = document.getElementById('genomeViewerSection');
-        const toggleButton = document.getElementById('toggleSequencePanel');
         
         if (sequenceContent && sequenceDisplaySection) {
             const isCollapsed = sequenceContent.style.display === 'none' || 
@@ -2983,11 +2976,6 @@ class GenomeBrowser {
                 if (splitter) {
                     splitter.style.display = 'flex';
                 }
-                
-                if (toggleButton) {
-                    toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                    toggleButton.title = 'Hide Sequence Panel';
-                }
             } else {
                 // Collapse - hide only sequence content, keep header visible
                 sequenceContent.style.display = 'none';
@@ -2998,11 +2986,6 @@ class GenomeBrowser {
                 
                 if (splitter) {
                     splitter.style.display = 'none';
-                }
-                
-                if (toggleButton) {
-                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
-                    toggleButton.title = 'Show Sequence Panel';
                 }
                 
                 // Let genome viewer expand to fill space
@@ -3150,6 +3133,179 @@ class GenomeBrowser {
             result[i+1] = ('0' + c).slice(-2);
         }
         return result.join('');
+    }
+
+    // MCP Server Control Methods for Built-in Server
+    async initializeMCPServerStatus() {
+        try {
+            await this.updateMCPServerStatus();
+            
+            // Check status periodically
+            setInterval(() => {
+                this.updateMCPServerStatus();
+            }, 5000); // Check every 5 seconds
+        } catch (error) {
+            console.error('Error initializing MCP server status:', error);
+        }
+    }
+
+    async updateMCPServerStatus() {
+        try {
+            // Check both the main process server and the chat manager connections
+            const mainProcessResult = await ipcRenderer.invoke('mcp-server-status');
+            
+            // Check if ChatManager has connections to the built-in server
+            let hasActiveConnections = false;
+            if (this.chatManager?.mcpServerManager) {
+                const connectedCount = this.chatManager.mcpServerManager.getConnectedServersCount();
+                hasActiveConnections = connectedCount > 0;
+                
+                // Check specifically for genome-studio server connection
+                const genomeStudioServer = this.chatManager.mcpServerManager.getServer('genome-studio');
+                const isGenomeStudioConnected = genomeStudioServer && 
+                    this.chatManager.mcpServerManager.activeServers.has('genome-studio');
+                
+                if (isGenomeStudioConnected) {
+                    hasActiveConnections = true;
+                }
+            }
+            
+            // If main process says running OR we have active connections, show as running
+            if (mainProcessResult.isRunning || hasActiveConnections) {
+                this.setMCPServerUIStatus('running', {
+                    httpPort: 3000,
+                    wsPort: 3001,
+                    connectedClients: hasActiveConnections ? 1 : 0
+                });
+            } else {
+                this.setMCPServerUIStatus(mainProcessResult.status, mainProcessResult);
+            }
+        } catch (error) {
+            console.error('Error checking MCP server status:', error);
+            this.setMCPServerUIStatus('stopped');
+        }
+    }
+
+    setMCPServerUIStatus(status, info = {}) {
+        const btn = document.getElementById('mcpServerBtn');
+        const statusText = document.getElementById('mcpServerStatus');
+        const statusIndicator = document.getElementById('mcpStatusIndicator');
+        const statusDot = statusIndicator?.querySelector('.status-dot');
+        const statusTextElement = statusIndicator?.querySelector('.status-text');
+
+        if (!btn || !statusText || !statusIndicator) return;
+
+        // Remove all status classes
+        btn.classList.remove('starting', 'running', 'stopping');
+        statusDot?.classList.remove('status-stopped', 'status-starting', 'status-running', 'status-stopping');
+
+        switch (status) {
+            case 'stopped':
+                statusText.textContent = 'Start';
+                statusTextElement.textContent = 'Stopped';
+                statusDot?.classList.add('status-stopped');
+                btn.disabled = false;
+                btn.title = 'Start MCP Server';
+                break;
+            case 'starting':
+                statusText.textContent = 'Starting...';
+                statusTextElement.textContent = 'Starting';
+                statusDot?.classList.add('status-starting');
+                btn.classList.add('starting');
+                btn.disabled = true;
+                btn.title = 'MCP Server is starting...';
+                break;
+            case 'running':
+                statusText.textContent = 'Stop';
+                const connectedText = info.connectedClients ? ` (${info.connectedClients} client${info.connectedClients !== 1 ? 's' : ''})` : '';
+                statusTextElement.textContent = `Running${connectedText}`;
+                statusDot?.classList.add('status-running');
+                btn.classList.add('running');
+                btn.disabled = false;
+                btn.title = `Stop MCP Server (HTTP: ${info.httpPort || 3000}, WS: ${info.wsPort || 3001})${connectedText}`;
+                break;
+            case 'stopping':
+                statusText.textContent = 'Stopping...';
+                statusTextElement.textContent = 'Stopping';
+                statusDot?.classList.add('status-stopping');
+                btn.classList.add('stopping');
+                btn.disabled = true;
+                btn.title = 'MCP Server is stopping...';
+                break;
+        }
+    }
+
+    async toggleMCPServer() {
+        try {
+            const statusResult = await ipcRenderer.invoke('mcp-server-status');
+            
+            // Check if we have active connections through ChatManager
+            let hasActiveConnections = false;
+            if (this.chatManager?.mcpServerManager) {
+                const connectedCount = this.chatManager.mcpServerManager.getConnectedServersCount();
+                hasActiveConnections = connectedCount > 0;
+                
+                // Check specifically for genome-studio server connection
+                const genomeStudioServer = this.chatManager.mcpServerManager.getServer('genome-studio');
+                const isGenomeStudioConnected = genomeStudioServer && 
+                    this.chatManager.mcpServerManager.activeServers.has('genome-studio');
+                
+                if (isGenomeStudioConnected) {
+                    hasActiveConnections = true;
+                }
+            }
+            
+            const isCurrentlyRunning = statusResult.isRunning || hasActiveConnections;
+            
+            if (isCurrentlyRunning) {
+                // Stop the server and disconnect clients
+                this.setMCPServerUIStatus('stopping');
+                
+                // Disconnect from ChatManager first if connected
+                if (hasActiveConnections && this.chatManager?.mcpServerManager) {
+                    this.chatManager.mcpServerManager.disconnectAll();
+                }
+                
+                const result = await ipcRenderer.invoke('mcp-server-stop');
+                
+                if (result.success) {
+                    this.uiManager.showNotification('MCP Server stopped successfully', 'success');
+                } else {
+                    this.uiManager.showNotification(`Failed to stop MCP Server: ${result.message}`, 'error');
+                }
+            } else {
+                // Start the server
+                this.setMCPServerUIStatus('starting');
+                const result = await ipcRenderer.invoke('mcp-server-start');
+                
+                if (result.success) {
+                    this.uiManager.showNotification(`MCP Server started successfully on ports ${result.httpPort} (HTTP) and ${result.wsPort} (WebSocket)`, 'success');
+                    
+                    // Auto-connect the ChatManager to the built-in server after starting
+                    setTimeout(() => {
+                        if (this.chatManager?.mcpServerManager) {
+                            try {
+                                this.chatManager.mcpServerManager.connectToServer('genome-studio');
+                            } catch (error) {
+                                console.warn('Failed to auto-connect to built-in server:', error);
+                            }
+                        }
+                    }, 1000);
+                } else {
+                    this.uiManager.showNotification(`Failed to start MCP Server: ${result.message}`, 'error');
+                }
+            }
+            
+            // Update status after action
+            setTimeout(() => {
+                this.updateMCPServerStatus();
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error toggling MCP server:', error);
+            this.uiManager.showNotification(`Error controlling MCP Server: ${error.message}`, 'error');
+            this.setMCPServerUIStatus('stopped');
+        }
     }
 }
 
