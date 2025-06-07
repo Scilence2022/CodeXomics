@@ -937,10 +937,18 @@
                     
                     <div class="form-group">
                         <label>
+                            <input type="checkbox" id="mcpAllowAutoActivation"> 
+                            Allow automatic MCP server activation
+                        </label>
+                        <small class="help-text">When enabled, MCP servers can be automatically started/connected when needed by chat or other features. When disabled, servers must be manually started/connected.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
                             <input type="checkbox" id="mcpAutoConnect" checked> 
                             Auto-connect to enabled servers on startup
                         </label>
-                        <small class="help-text">When enabled, all servers marked as "auto-connect" will connect automatically when the application starts.</small>
+                        <small class="help-text">When enabled, all servers marked as "auto-connect" will connect automatically when the application starts. (Requires automatic activation to be enabled)</small>
                     </div>
                     
                     <div class="form-group">

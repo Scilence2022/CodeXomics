@@ -1085,6 +1085,24 @@ body {
     color: #495057;
 }
 
+/* MCP Settings Dependencies */
+.form-group:has(#mcpAutoConnect) {
+    margin-left: 20px;
+    border-left: 2px solid var(--border-color);
+    padding-left: 12px;
+    position: relative;
+}
+
+.form-group:has(#mcpAutoConnect):before {
+    content: '↳';
+    position: absolute;
+    left: -8px;
+    top: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: bold;
+}
+
 .form-group {
     margin-bottom: 12px;
 }

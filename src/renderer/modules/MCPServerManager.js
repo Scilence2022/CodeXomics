@@ -230,8 +230,13 @@ class MCPServerManager {
                 this.serverTools.delete(serverId);
                 this.emit('serverDisconnected', { serverId, server });
 
-                // Auto-reconnect if enabled
-                if (server.enabled && server.autoConnect) {
+                // Auto-reconnect if enabled and auto-activation is allowed
+                const defaultSettings = { allowAutoActivation: false };
+                const mcpSettings = this.configManager ? 
+                    this.configManager.get('mcpSettings', defaultSettings) : 
+                    defaultSettings;
+                    
+                if (mcpSettings.allowAutoActivation && server.enabled && server.autoConnect) {
                     setTimeout(() => {
                         this.connectToServer(serverId);
                     }, server.reconnectDelay * 1000);
@@ -389,6 +394,17 @@ class MCPServerManager {
 
     // Setup auto-connect for enabled servers
     setupAutoConnect() {
+        // Check global auto-activation setting
+        const defaultSettings = { allowAutoActivation: false };
+        const mcpSettings = this.configManager ? 
+            this.configManager.get('mcpSettings', defaultSettings) : 
+            defaultSettings;
+            
+        if (!mcpSettings.allowAutoActivation) {
+            console.log('MCP auto-activation is disabled, skipping auto-connect');
+            return;
+        }
+        
         for (const [serverId, server] of this.servers.entries()) {
             if (server.enabled && server.autoConnect) {
                 this.connectToServer(serverId);

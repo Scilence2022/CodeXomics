@@ -83,6 +83,7 @@ class ChatManager {
 
     async checkAndSetupMCPConnection() {
         const defaultSettings = {
+            allowAutoActivation: false, // NEW: Default to false to avoid unwanted connections
             autoConnect: false, // Default to false to avoid unwanted connections
             serverUrl: 'ws://localhost:3001',
             reconnectDelay: 5
@@ -92,7 +93,7 @@ class ChatManager {
             this.configManager.get('mcpSettings', defaultSettings) : 
             defaultSettings;
         
-        if (mcpSettings.autoConnect) {
+        if (mcpSettings.allowAutoActivation && mcpSettings.autoConnect) {
             this.setupMCPConnection();
         }
     }
@@ -141,12 +142,12 @@ class ChatManager {
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
                 
-                // Only attempt to reconnect if auto-connect is still enabled
+                // Only attempt to reconnect if auto-activation and auto-connect are both enabled
                 const currentSettings = this.configManager ? 
                     this.configManager.get('mcpSettings', defaultSettings) : 
                     defaultSettings;
                     
-                if (currentSettings.autoConnect) {
+                if (currentSettings.allowAutoActivation && currentSettings.autoConnect) {
                     setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
                 }
             };

@@ -327,6 +327,7 @@ class GenomeBrowser {
         if (modal) {
             // Load current settings with proper fallback
             const defaultSettings = {
+                allowAutoActivation: false, // NEW: Default to false (disabled)
                 autoConnect: false,
                 serverUrl: 'ws://localhost:3001',
                 reconnectDelay: 5
@@ -337,6 +338,7 @@ class GenomeBrowser {
                 defaultSettings;
             
             // Populate modal fields
+            document.getElementById('mcpAllowAutoActivation').checked = mcpSettings.allowAutoActivation;
             document.getElementById('mcpAutoConnect').checked = mcpSettings.autoConnect;
             document.getElementById('mcpServerUrl').value = mcpSettings.serverUrl;
             document.getElementById('mcpReconnectDelay').value = mcpSettings.reconnectDelay;
@@ -477,6 +479,7 @@ class GenomeBrowser {
 
     saveMCPSettings() {
         const mcpSettings = {
+            allowAutoActivation: document.getElementById('mcpAllowAutoActivation').checked,
             autoConnect: document.getElementById('mcpAutoConnect').checked,
             serverUrl: document.getElementById('mcpServerUrl').value.trim(),
             reconnectDelay: parseInt(document.getElementById('mcpReconnectDelay').value) || 5
@@ -506,8 +509,8 @@ class GenomeBrowser {
         // Show confirmation
         this.updateStatus('MCP settings saved successfully');
         
-        // If auto-connect is now enabled and not currently connected, try to connect
-        if (mcpSettings.autoConnect && this.chatManager && !this.chatManager.isConnected) {
+        // If auto-connect is now enabled and not currently connected, try to connect (only if auto-activation is allowed)
+        if (mcpSettings.allowAutoActivation && mcpSettings.autoConnect && this.chatManager && !this.chatManager.isConnected) {
             this.chatManager.setupMCPConnection();
         }
         
@@ -3269,9 +3272,9 @@ class GenomeBrowser {
                 const result = await ipcRenderer.invoke('mcp-server-stop');
                 
                 if (result.success) {
-                    this.uiManager.showNotification('MCP Server stopped successfully', 'success');
+                    this.showNotification('MCP Server stopped successfully', 'success');
                 } else {
-                    this.uiManager.showNotification(`Failed to stop MCP Server: ${result.message}`, 'error');
+                    this.showNotification(`Failed to stop MCP Server: ${result.message}`, 'error');
                 }
             } else {
                 // Start the server
@@ -3279,20 +3282,26 @@ class GenomeBrowser {
                 const result = await ipcRenderer.invoke('mcp-server-start');
                 
                 if (result.success) {
-                    this.uiManager.showNotification(`MCP Server started successfully on ports ${result.httpPort} (HTTP) and ${result.wsPort} (WebSocket)`, 'success');
+                    this.showNotification(`MCP Server started successfully on ports ${result.httpPort} (HTTP) and ${result.wsPort} (WebSocket)`, 'success');
                     
-                    // Auto-connect the ChatManager to the built-in server after starting
-                    setTimeout(() => {
-                        if (this.chatManager?.mcpServerManager) {
-                            try {
-                                this.chatManager.mcpServerManager.connectToServer('genome-studio');
-                            } catch (error) {
-                                console.warn('Failed to auto-connect to built-in server:', error);
+                    // Auto-connect the ChatManager to the built-in server after starting (only if auto-activation is allowed)
+                    const currentSettings = this.configManager ? 
+                        this.configManager.get('mcpSettings', { allowAutoActivation: false }) : 
+                        { allowAutoActivation: false };
+                        
+                    if (currentSettings.allowAutoActivation) {
+                        setTimeout(() => {
+                            if (this.chatManager?.mcpServerManager) {
+                                try {
+                                    this.chatManager.mcpServerManager.connectToServer('genome-studio');
+                                } catch (error) {
+                                    console.warn('Failed to auto-connect to built-in server:', error);
+                                }
                             }
-                        }
-                    }, 1000);
+                        }, 1000);
+                    }
                 } else {
-                    this.uiManager.showNotification(`Failed to start MCP Server: ${result.message}`, 'error');
+                    this.showNotification(`Failed to start MCP Server: ${result.message}`, 'error');
                 }
             }
             
@@ -3303,9 +3312,38 @@ class GenomeBrowser {
             
         } catch (error) {
             console.error('Error toggling MCP server:', error);
-            this.uiManager.showNotification(`Error controlling MCP Server: ${error.message}`, 'error');
+            this.showNotification(`Error controlling MCP Server: ${error.message}`, 'error');
             this.setMCPServerUIStatus('stopped');
         }
+    }
+
+    // Global notification method
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 }
 

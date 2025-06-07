@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 
 class MCPGenomeBrowserServer {
     constructor(port = 3000, wsPort = 3001) {
@@ -18,9 +19,10 @@ class MCPGenomeBrowserServer {
         this.app = express();
         this.clients = new Map(); // Store connected Genome AI Studio clients
         this.browserState = new Map(); // Store current state of each browser instance
+        this.wss = null; // Will be created in start()
+        this.server = null; // Will be created in start()
         
         this.setupExpress();
-        this.setupWebSocket();
         this.setupMCPTools();
     }
 
@@ -51,7 +53,16 @@ class MCPGenomeBrowserServer {
     }
 
     setupWebSocket() {
-        this.wss = new WebSocket.Server({ port: this.wsPort });
+        try {
+            this.wss = new WebSocket.Server({ port: this.wsPort });
+        } catch (error) {
+            throw new Error(`Failed to create WebSocket server on port ${this.wsPort}: ${error.message}`);
+        }
+        
+        this.wss.on('error', (error) => {
+            console.error('WebSocket server error:', error);
+            throw error;
+        });
         
         this.wss.on('connection', (ws) => {
             const clientId = uuidv4();
@@ -329,6 +340,19 @@ class MCPGenomeBrowserServer {
                         geneName: { type: 'string', description: 'Gene name to search' },
                         organism: { type: 'string', description: 'Organism name (optional)' },
                         maxResults: { type: 'number', description: 'Maximum number of results to return' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['geneName']
+                }
+            },
+
+            jump_to_gene: {
+                name: 'jump_to_gene',
+                description: 'Jump directly to a gene location by name or locus tag',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        geneName: { type: 'string', description: 'Gene name or locus tag to search for' },
                         clientId: { type: 'string', description: 'Browser client ID' }
                     },
                     required: ['geneName']
@@ -621,11 +645,94 @@ class MCPGenomeBrowserServer {
         });
     }
 
+    /**
+     * Check if a port is available
+     */
+    static checkPort(port) {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            server.listen(port, (err) => {
+                if (err) {
+                    resolve(false); // Port is in use
+                } else {
+                    server.once('close', () => {
+                        resolve(true); // Port is available
+                    });
+                    server.close();
+                }
+            });
+            server.on('error', () => {
+                resolve(false); // Port is in use
+            });
+        });
+    }
+
+    /**
+     * Check if both HTTP and WebSocket ports are available
+     */
+    async checkPortsAvailable() {
+        const httpAvailable = await MCPGenomeBrowserServer.checkPort(this.port);
+        const wsAvailable = await MCPGenomeBrowserServer.checkPort(this.wsPort);
+        
+        return {
+            httpAvailable,
+            wsAvailable,
+            bothAvailable: httpAvailable && wsAvailable
+        };
+    }
+
     start() {
-        this.server = this.app.listen(this.port, () => {
-            console.log(`MCP Server running on port ${this.port}`);
-            console.log(`WebSocket server running on port ${this.wsPort}`);
-            console.log('Available tools:', Object.keys(this.tools).join(', '));
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Check if ports are available before starting
+                const portCheck = await this.checkPortsAvailable();
+                
+                if (!portCheck.bothAvailable) {
+                    const unavailablePorts = [];
+                    if (!portCheck.httpAvailable) unavailablePorts.push(`${this.port} (HTTP)`);
+                    if (!portCheck.wsAvailable) unavailablePorts.push(`${this.wsPort} (WebSocket)`);
+                    
+                    reject(new Error(`Port(s) already in use: ${unavailablePorts.join(', ')}. Please check if another MCP server instance is already running.`));
+                    return;
+                }
+                
+                // Start HTTP server
+                this.server = this.app.listen(this.port, (err) => {
+                    if (err) {
+                        reject(new Error(`Failed to start HTTP server on port ${this.port}: ${err.message}`));
+                        return;
+                    }
+                    
+                    try {
+                        // Start WebSocket server only after HTTP server is ready
+                        this.setupWebSocket();
+                        
+                        console.log(`MCP Server running on port ${this.port}`);
+                        console.log(`WebSocket server running on port ${this.wsPort}`);
+                        console.log('Available tools:', Object.keys(this.tools).join(', '));
+                        
+                        resolve({
+                            httpPort: this.port,
+                            wsPort: this.wsPort,
+                            message: `MCP Server started successfully on ports ${this.port} (HTTP) and ${this.wsPort} (WebSocket)`
+                        });
+                    } catch (wsError) {
+                        // If WebSocket setup fails, close HTTP server
+                        if (this.server) {
+                            this.server.close();
+                            this.server = null;
+                        }
+                        reject(new Error(`Failed to start WebSocket server on port ${this.wsPort}: ${wsError.message}`));
+                    }
+                });
+                
+                this.server.on('error', (err) => {
+                    reject(new Error(`HTTP server error: ${err.message}`));
+                });
+                
+            } catch (error) {
+                reject(new Error(`Failed to start MCP server: ${error.message}`));
+            }
         });
     }
 

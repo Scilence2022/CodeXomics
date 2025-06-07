@@ -674,15 +674,25 @@ class ProteinStructureViewer {
             mcpManager = window.mcpServerManager;
         }
         
-        // If we have an MCP manager but no connections, try to connect to the built-in server
+        // If we have an MCP manager but no connections, try to connect to the built-in server (only if auto-activation is allowed)
         if (mcpManager && mcpManager.getConnectedServersCount() === 0) {
-            console.log('No MCP servers connected, attempting to connect to built-in server...');
-            try {
-                await mcpManager.connectToServer('genome-studio');
-                // Wait a moment for the connection to establish
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            } catch (error) {
-                console.warn('Failed to connect to built-in MCP server:', error.message);
+            // Check if auto-activation is allowed
+            const defaultSettings = { allowAutoActivation: false };
+            const mcpSettings = mcpManager.configManager ? 
+                mcpManager.configManager.get('mcpSettings', defaultSettings) : 
+                defaultSettings;
+                
+            if (mcpSettings.allowAutoActivation) {
+                console.log('No MCP servers connected, attempting to connect to built-in server...');
+                try {
+                    await mcpManager.connectToServer('genome-studio');
+                    // Wait a moment for the connection to establish
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (error) {
+                    console.warn('Failed to connect to built-in MCP server:', error.message);
+                }
+            } else {
+                console.log('MCP auto-activation is disabled, skipping automatic connection');
             }
         }
         

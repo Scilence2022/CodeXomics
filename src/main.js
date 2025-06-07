@@ -297,7 +297,13 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
 ipcMain.handle('mcp-server-start', async () => {
   try {
     if (mcpServerStatus === 'running') {
-      return { success: true, message: 'MCP Server is already running', status: 'running' };
+      return { 
+        success: true, 
+        message: 'MCP Server is already running', 
+        status: 'running',
+        httpPort: 3000,
+        wsPort: 3001
+      };
     }
     
     if (mcpServerStatus === 'starting') {
@@ -306,31 +312,34 @@ ipcMain.handle('mcp-server-start', async () => {
 
     mcpServerStatus = 'starting';
     
-    // Create and start MCP server
-    mcpServer = new MCPGenomeBrowserServer(3000, 3001);
-    
-    return new Promise((resolve) => {
-      try {
-        mcpServer.start();
-        mcpServerStatus = 'running';
-        console.log('MCP Server started successfully');
-        resolve({ 
-          success: true, 
-          message: 'MCP Server started successfully on ports 3000 (HTTP) and 3001 (WebSocket)', 
-          status: 'running',
-          httpPort: 3000,
-          wsPort: 3001
-        });
-      } catch (error) {
-        mcpServerStatus = 'stopped';
-        console.error('Failed to start MCP Server:', error);
-        resolve({ 
-          success: false, 
-          message: `Failed to start MCP Server: ${error.message}`, 
-          status: 'stopped' 
-        });
-      }
-    });
+    try {
+      // Create MCP server
+      mcpServer = new MCPGenomeBrowserServer(3000, 3001);
+      
+      // Start the server (now async)
+      const startResult = await mcpServer.start();
+      
+      mcpServerStatus = 'running';
+      console.log('MCP Server started successfully');
+      
+      return { 
+        success: true, 
+        message: startResult.message, 
+        status: 'running',
+        httpPort: startResult.httpPort,
+        wsPort: startResult.wsPort
+      };
+    } catch (error) {
+      mcpServerStatus = 'stopped';
+      mcpServer = null; // Clear the server instance on failure
+      console.error('Failed to start MCP Server:', error);
+      
+      return { 
+        success: false, 
+        message: `Failed to start MCP Server: ${error.message}`, 
+        status: 'stopped' 
+      };
+    }
   } catch (error) {
     mcpServerStatus = 'stopped';
     return { success: false, message: error.message, status: 'stopped' };
