@@ -394,19 +394,31 @@ class SequenceUtils {
             copyMessage = `Copied ${geneSeq.geneName} sequence (${textToCopy.length} bp) to clipboard`;
             copySource = 'gene';
         }
-        // Priority 2: Check if there's a manual text selection
+        // Priority 2: Check if there's a manual sequence selection (drag selection)
+        else if (this.genomeBrowser.currentSequenceSelection) {
+            const manualSelection = this.genomeBrowser.currentSequenceSelection;
+            console.log('Manual selection:', manualSelection);
+            // Convert to 0-based indexing for substring
+            const startIdx = manualSelection.start;
+            const endIdx = manualSelection.end + 1; // Include end position
+            textToCopy = sequence.substring(startIdx, endIdx);
+            console.log('Extracted sequence:', textToCopy);
+            copyMessage = `Copied selected sequence (${textToCopy.length} bp) to clipboard`;
+            copySource = 'manual';
+        }
+        // Priority 3: Check if there's a text selection
         else {
             const selection = window.getSelection();
             if (selection.toString().length > 0) {
                 // Use selected text
                 textToCopy = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-                copyMessage = `Copied selected sequence (${textToCopy.length} bases) to clipboard`;
-                copySource = 'manual';
+                copyMessage = `Copied text selection (${textToCopy.length} bases) to clipboard`;
+                copySource = 'text';
             } else {
-                // Priority 3: Use entire visible sequence
-                const userChoice = confirm('No gene or text selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.');
+                // Priority 4: Use entire visible sequence
+                const userChoice = confirm('No sequence selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.');
                 if (!userChoice) {
-                    alert('Please click on a gene in the Gene Track or select text in the sequence, then click Copy again.');
+                    alert('Please click on a gene in the Gene Track or drag to select sequence, then click Copy again.');
                     return;
                 }
                 textToCopy = sequence.substring(this.genomeBrowser.currentPosition.start, this.genomeBrowser.currentPosition.end);
@@ -415,10 +427,14 @@ class SequenceUtils {
             }
         }
         
-        // Create FASTA format if copying a gene sequence
+        // Create FASTA format for gene sequences and manual selections
         if (copySource === 'gene') {
             const geneSeq = this.genomeBrowser.sequenceSelection;
             const fastaHeader = `>${geneSeq.geneName} ${currentChr}:${geneSeq.start}-${geneSeq.end}`;
+            textToCopy = `${fastaHeader}\n${textToCopy}`;
+        } else if (copySource === 'manual') {
+            const manualSelection = this.genomeBrowser.currentSequenceSelection;
+            const fastaHeader = `>${currentChr}:${manualSelection.start + 1}-${manualSelection.end + 1}`;
             textToCopy = `${fastaHeader}\n${textToCopy}`;
         }
         
