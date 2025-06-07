@@ -3784,45 +3784,16 @@ body {
     }
 }
 
-/* Unified Sequence Selection Styling (for both gene and manual selections) */
+/* Simplified Sequence Selection Styling (for both gene and manual selections) */
 .sequence-selected {
-    background: linear-gradient(120deg, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.3) 50%, rgba(34, 197, 94, 0.4) 100%) !important;
+    background: rgba(59, 130, 246, 0.3) !important;
     border-radius: 3px !important;
-    position: relative;
     cursor: pointer;
-    transform: scale(1.05);
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .gene-sequence-selected {
-    background: linear-gradient(120deg, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0.3) 50%, rgba(59, 130, 246, 0.4) 100%) !important;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4) !important;
-    animation: selectedGlow 2s ease-in-out infinite;
-}
-
-@keyframes selectedGlow {
-    0%, 100% {
-        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
-        transform: scale(1.05);
-    }
-    50% {
-        box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
-        transform: scale(1.08);
-    }
-}
-
-/* Add visual feedback for copyable selection */
-.gene-sequence-selected::after {
-    content: '';
-    position: absolute;
-    top: -3px;
-    left: -3px;
-    right: -3px;
-    bottom: -3px;
-    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.15), transparent);
-    border-radius: 4px;
-    z-index: -1;
-    pointer-events: none;
+    background: rgba(59, 130, 246, 0.4) !important;
 }
 
 /* Gene Details Actions */
