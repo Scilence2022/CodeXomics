@@ -260,6 +260,28 @@ class GenomeBrowser {
         // Sequence controls
         document.getElementById('copySequenceBtn').addEventListener('click', () => this.sequenceUtils.copySequence());
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
+        
+        // Add click event for selected sequences (both gene and manual)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('gene-sequence-selected')) {
+                // Provide visual feedback that the sequence is ready to copy
+                if (this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene') {
+                    this.showSelectionFeedback();
+                } else {
+                    // Manual selection feedback
+                    this.showNotification('Sequence is selected. Click "Copy" button to copy.', 'info');
+                }
+            }
+        });
+        
+        // Update copy button state when text selection changes
+        document.addEventListener('selectionchange', () => {
+            // Debounce to avoid too frequent updates
+            clearTimeout(this.selectionChangeTimeout);
+            this.selectionChangeTimeout = setTimeout(() => {
+                this.updateCopyButtonState();
+            }, 100);
+        });
 
         // Modal controls
         this.uiManager.setupModalControls();
@@ -2429,8 +2451,9 @@ class GenomeBrowser {
     }
 
     highlightGeneSequence(gene) {
-        // Clear previous highlights
+        // Clear previous highlights and selections
         this.clearSequenceHighlights();
+        this.clearSequenceSelection();
         
         // Only highlight if the gene is within the current view
         const currentStart = this.currentPosition.start;
@@ -2441,7 +2464,18 @@ class GenomeBrowser {
             return;
         }
         
-        // Find sequence bases within the gene range
+        // Set the sequence selection to the gene region
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        this.sequenceSelection = {
+            start: gene.start,
+            end: gene.end,
+            active: true,
+            chromosome: currentChr,
+            source: 'gene', // Mark that this selection came from a gene click
+            geneName: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type
+        };
+        
+        // Find sequence bases within the gene range and mark them as selected
         const sequenceBases = document.querySelectorAll('.sequence-bases span');
         sequenceBases.forEach(baseElement => {
             const parentLine = baseElement.closest('.sequence-line');
@@ -2456,16 +2490,56 @@ class GenomeBrowser {
             
             // Check if this base is within the gene range
             if (absolutePos >= gene.start && absolutePos <= gene.end) {
-                baseElement.classList.add('sequence-highlight');
+                baseElement.classList.add('sequence-selected');
+                baseElement.classList.add('gene-sequence-selected');
             }
         });
         
-        console.log(`Highlighted sequence for gene ${gene.qualifiers?.gene || gene.type} (${gene.start}-${gene.end})`);
+        // Update copy button text to indicate gene sequence is selected
+        this.updateCopyButtonState();
+        
+        console.log(`Selected gene sequence for ${this.sequenceSelection.geneName} (${gene.start}-${gene.end})`);
+    }
+    
+    updateCopyButtonState() {
+        const copyBtn = document.getElementById('copySequenceBtn');
+        if (!copyBtn) return;
+        
+        // Check if there's any active selection (gene or manual)
+        const hasGeneSelection = this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene';
+        const hasManualSelection = this.currentSequenceSelection !== null;
+        const hasTextSelection = window.getSelection() && window.getSelection().toString().length > 0;
+        const hasVisualSelection = document.querySelectorAll('.gene-sequence-selected').length > 0;
+        
+        if (hasGeneSelection) {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.title = `Copy ${this.sequenceSelection.geneName} sequence`;
+            copyBtn.classList.add('gene-copy-active');
+        } else if (hasManualSelection || hasTextSelection || hasVisualSelection) {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.title = 'Copy selected sequence';
+            copyBtn.classList.add('gene-copy-active');
+        } else {
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.title = 'Copy sequence';
+            copyBtn.classList.remove('gene-copy-active');
+        }
+    }
+    
+    showSelectionFeedback() {
+        if (this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene') {
+            // Show a brief tooltip or notification
+            const message = `${this.sequenceSelection.geneName} sequence is selected. Click "Copy" button to copy.`;
+            this.showNotification(message, 'info');
+        }
     }
 
     clearSequenceHighlights() {
-        const highlightedBases = document.querySelectorAll('.sequence-highlight');
-        highlightedBases.forEach(el => el.classList.remove('sequence-highlight'));
+        const highlightedBases = document.querySelectorAll('.sequence-selected, .gene-sequence-selected');
+        highlightedBases.forEach(el => {
+            el.classList.remove('sequence-selected');
+            el.classList.remove('gene-sequence-selected');
+        });
     }
 
     // Action methods for gene details buttons
@@ -2521,8 +2595,9 @@ class GenomeBrowser {
         const selectedElements = document.querySelectorAll('.gene-element.selected');
         selectedElements.forEach(el => el.classList.remove('selected'));
         
-        // Clear sequence highlights
+        // Clear sequence highlights and selection
         this.clearSequenceHighlights();
+        this.clearSequenceSelection();
         
         console.log('Cleared gene selection');
     }
@@ -2552,6 +2627,9 @@ class GenomeBrowser {
         
         // Enable sequence selection in bottom panel
         this.initializeSequenceSelection();
+        
+        // Initialize copy button state
+        this.updateCopyButtonState();
     }
 
     toggleAddFeaturesDropdown() {
@@ -2779,14 +2857,18 @@ class GenomeBrowser {
         const startPos = Math.min(start.position, end.position);
         const endPos = Math.max(start.position, end.position);
         
-        // Highlight selected bases
+        // Use the same styling as gene selection for consistency
         const sequenceBases = document.querySelectorAll('.sequence-bases span');
         sequenceBases.forEach(baseElement => {
             const pos = this.getSequencePosition(baseElement);
             if (pos && pos.position >= startPos && pos.position <= endPos) {
-                baseElement.classList.add('sequence-selection');
+                baseElement.classList.add('sequence-selected');
+                baseElement.classList.add('gene-sequence-selected'); // Use same styling as gene selection
             }
         });
+        
+        // Update copy button state during selection
+        this.updateCopyButtonState();
     }
 
     finalizeSequenceSelection(start, end) {
@@ -2801,20 +2883,31 @@ class GenomeBrowser {
             end: endPos
         };
         
+        // Update copy button state when manual selection is made
+        this.updateCopyButtonState();
+        
         console.log(`Selected sequence: ${start.chromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
     }
 
     clearSequenceSelection() {
         this.currentSequenceSelection = null;
+        this.sequenceSelection = { start: null, end: null, active: false };
         
-        // Remove visual selection
-        const selectedElements = document.querySelectorAll('.sequence-selection');
+        // Remove visual selection (using consistent classes)
+        const selectedElements = document.querySelectorAll('.sequence-selected, .gene-sequence-selected');
         selectedElements.forEach(element => {
-            element.classList.remove('sequence-selection');
+            element.classList.remove('sequence-selected');
+            element.classList.remove('gene-sequence-selected');
         });
         
         // Hide selection info in modal
-        document.getElementById('sequenceSelectionInfo').style.display = 'none';
+        const selectionInfo = document.getElementById('sequenceSelectionInfo');
+        if (selectionInfo) {
+            selectionInfo.style.display = 'none';
+        }
+        
+        // Update copy button state
+        this.updateCopyButtonState();
     }
 
     // Helper methods for ChatManager

@@ -2605,6 +2605,30 @@ body {
     gap: 8px;
 }
 
+/* Copy button state when sequence is selected */
+.gene-copy-active {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+    animation: copyButtonPulse 2s ease-in-out infinite;
+}
+
+.gene-copy-active:hover {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
+
+@keyframes copyButtonPulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        box-shadow: 0 2px 12px rgba(16, 185, 129, 0.5);
+    }
+}
+
 /* Ensure sequence content is readable with transparent background */
 .sequence-content {
     flex: 1; /* Fill all available vertical space */
@@ -3760,35 +3784,45 @@ body {
     }
 }
 
-/* Sequence Highlighting for Selected Gene */
-.sequence-highlight {
-    background: linear-gradient(120deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.2) 50%, rgba(59, 130, 246, 0.3) 100%) !important;
-    border: 1px solid rgba(59, 130, 246, 0.5) !important;
+/* Unified Sequence Selection Styling (for both gene and manual selections) */
+.sequence-selected {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.3) 50%, rgba(34, 197, 94, 0.4) 100%) !important;
     border-radius: 3px !important;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
     position: relative;
+    cursor: pointer;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
 }
 
-.sequence-highlight::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-    border-radius: 4px;
-    z-index: -1;
-    animation: highlightGlow 3s ease-in-out infinite;
+.gene-sequence-selected {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0.3) 50%, rgba(59, 130, 246, 0.4) 100%) !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4) !important;
+    animation: selectedGlow 2s ease-in-out infinite;
 }
 
-@keyframes highlightGlow {
+@keyframes selectedGlow {
     0%, 100% {
-        opacity: 0.5;
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        transform: scale(1.05);
     }
     50% {
-        opacity: 1;
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+        transform: scale(1.08);
     }
+}
+
+/* Add visual feedback for copyable selection */
+.gene-sequence-selected::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.15), transparent);
+    border-radius: 4px;
+    z-index: -1;
+    pointer-events: none;
 }
 
 /* Gene Details Actions */
