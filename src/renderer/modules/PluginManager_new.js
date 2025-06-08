@@ -71,7 +71,7 @@ class PluginManager {
             name: 'Genomic Analysis',
             description: 'Core genomic analysis functions',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             functions: {
                 analyzeGCContent: {
                     description: 'Analyze GC content in genomic regions',
@@ -148,7 +148,7 @@ class PluginManager {
             name: 'Phylogenetic Analysis',
             description: 'Phylogenetic and evolutionary analysis functions',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             functions: {
                 buildPhylogeneticTree: {
                     description: 'Build phylogenetic tree from sequences',
@@ -195,7 +195,7 @@ class PluginManager {
             name: 'Machine Learning Analysis',
             description: 'Machine learning-based genomic analysis',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             functions: {
                 predictGeneFunction: {
                     description: 'Predict gene function using ML models',
@@ -260,7 +260,7 @@ class PluginManager {
             name: 'Phylogenetic Tree',
             description: 'Interactive phylogenetic tree visualization',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['newick', 'tree-object'],
             render: this.renderPhylogeneticTree.bind(this)
         });
@@ -270,7 +270,7 @@ class PluginManager {
             name: 'Sequence Alignment',
             description: 'Multiple sequence alignment visualization',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['fasta', 'alignment-object'],
             render: this.renderSequenceAlignment.bind(this)
         });
@@ -280,7 +280,7 @@ class PluginManager {
             name: 'GC Content Plot',
             description: 'GC content distribution visualization',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['gc-data'],
             render: this.renderGCContentPlot.bind(this)
         });
@@ -290,7 +290,7 @@ class PluginManager {
             name: 'Heatmap',
             description: 'Interactive heatmap for genomic data',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['matrix', 'expression-data'],
             render: this.renderHeatmap.bind(this)
         });
@@ -300,7 +300,7 @@ class PluginManager {
             name: 'Network Graph',
             description: 'Interactive network graph visualization',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['network-data', 'graph-object'],
             render: this.renderNetworkGraph.bind(this)
         });
@@ -310,7 +310,7 @@ class PluginManager {
             name: 'Dot Plot',
             description: 'Sequence comparison dot plot',
             version: '1.0.0',
-            author: 'GenomeExplorer Team',
+            author: 'Genome AI Studio Team',
             supportedDataTypes: ['sequence-comparison'],
             render: this.renderDotPlot.bind(this)
         });
