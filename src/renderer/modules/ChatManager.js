@@ -5298,6 +5298,147 @@ ${this.getPluginSystemInfo()}`;
     }
 
     /**
+     * Download PDB file content from RCSB PDB database
+     */
+    async downloadPDBFile(pdbId) {
+        try {
+            console.log(`Downloading PDB file for ID: ${pdbId}`);
+            
+            const url = `https://files.rcsb.org/download/${pdbId}.pdb`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const pdbData = await response.text();
+            
+            if (!pdbData || pdbData.trim().length === 0) {
+                throw new Error('Empty PDB file received');
+            }
+            
+            // Basic validation - check if it looks like a PDB file
+            if (!pdbData.includes('HEADER') && !pdbData.includes('ATOM')) {
+                throw new Error('Invalid PDB file format');
+            }
+            
+            console.log(`Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`);
+            return pdbData;
+            
+        } catch (error) {
+            console.error(`Error downloading PDB file for ${pdbId}:`, error);
+            throw new Error(`Failed to download PDB file for ${pdbId}: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search for protein structures by gene name
+     */
+    async searchProteinByGene(parameters) {
+        const { geneName, organism, maxResults = 10 } = parameters;
+        
+        try {
+            console.log(`Searching for protein structures by gene: ${geneName}`);
+            
+            // Build search query
+            let query = `${geneName}`;
+            if (organism) {
+                query += ` AND organism:"${organism}"`;
+            }
+            
+            const searchUrl = `https://search.rcsb.org/rcsbsearch/v2/query?json=` + encodeURIComponent(JSON.stringify({
+                "query": {
+                    "type": "terminal",
+                    "service": "text",
+                    "parameters": {
+                        "attribute": "rcsb_entity_source_organism.scientific_name",
+                        "operator": "contains_phrase",
+                        "value": organism || "Homo sapiens"
+                    }
+                },
+                "request_options": {
+                    "paginate": {
+                        "start": 0,
+                        "rows": maxResults
+                    }
+                },
+                "return_type": "entry"
+            }));
+            
+            const response = await fetch(searchUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Search failed: HTTP ${response.status}`);
+            }
+            
+            const searchData = await response.json();
+            const results = [];
+            
+            if (searchData.result_set && searchData.result_set.length > 0) {
+                for (const result of searchData.result_set.slice(0, maxResults)) {
+                    const pdbId = result.identifier;
+                    
+                    // Get basic details for each result
+                    try {
+                        const details = await this.getPDBDetails(pdbId);
+                        results.push({
+                            pdbId: pdbId,
+                            title: details.title || 'Unknown',
+                            resolution: details.resolution,
+                            method: details.method,
+                            organism: details.organism,
+                            geneName: geneName,
+                            releaseDate: details.releaseDate
+                        });
+                    } catch (error) {
+                        console.warn(`Failed to get details for PDB ${pdbId}:`, error.message);
+                        // Add basic result even if details fail
+                        results.push({
+                            pdbId: pdbId,
+                            title: 'Unknown',
+                            geneName: geneName
+                        });
+                    }
+                }
+            }
+            
+            console.log(`Found ${results.length} protein structures for gene: ${geneName}`);
+            return results;
+            
+        } catch (error) {
+            console.error(`Error searching for protein structures:`, error);
+            throw new Error(`Failed to search protein structures: ${error.message}`);
+        }
+    }
+
+    /**
+     * Get detailed information about a PDB structure
+     */
+    async getPDBDetails(pdbId) {
+        try {
+            const url = `https://data.rcsb.org/rest/v1/core/entry/${pdbId}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            return {
+                title: data.struct?.title,
+                resolution: data.rcsb_entry_info?.resolution_combined?.[0],
+                method: data.exptl?.[0]?.method,
+                organism: data.rcsb_entry_container_identifiers?.organism_names?.[0],
+                releaseDate: data.rcsb_accession_info?.initial_release_date
+            };
+        } catch (error) {
+            console.warn(`Failed to get PDB details for ${pdbId}:`, error.message);
+            return {}; // Return empty object if details can't be fetched
+        }
+    }
+
+    /**
      * Test MicrobeGenomicsFunctions integration
      */
     testMicrobeGenomicsIntegration() {
