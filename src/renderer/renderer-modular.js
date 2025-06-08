@@ -136,6 +136,23 @@ class GenomeBrowser {
             console.error('❌ Error initializing ChatManager:', error);
         }
 
+        // Step 5.5: Initialize Plugin Management UI
+        console.log('🧩 About to initialize PluginManagementUI...');
+        try {
+            // Wait for ChatManager to initialize its PluginManager
+            setTimeout(() => {
+                if (this.chatManager && this.chatManager.pluginManager) {
+                    this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
+                    window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers
+                    console.log('✅ PluginManagementUI initialized successfully');
+                } else {
+                    console.warn('⚠️ PluginManager not available, PluginManagementUI initialization delayed');
+                }
+            }, 100);
+        } catch (error) {
+            console.error('❌ Error initializing PluginManagementUI:', error);
+        }
+
         // Step 6: Setup IPC communication
         console.log('📡 Setting up IPC communication...');
         this.setupIPC();

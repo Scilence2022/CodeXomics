@@ -28,6 +28,9 @@ class ChatManager {
         // Initialize MicrobeGenomicsFunctions
         this.initializeMicrobeGenomicsFunctions();
         
+        // Initialize Plugin Manager
+        this.initializePluginManager();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -54,6 +57,84 @@ class ChatManager {
         } else {
             console.warn('MicrobeGenomicsFunctions not available globally');
         }
+    }
+
+    /**
+     * Initialize Plugin Manager integration
+     */
+    initializePluginManager() {
+        try {
+            // Try to load PluginManager from modules in Node.js environment
+            if (typeof require !== 'undefined') {
+                try {
+                    const PluginManagerClass = require('./PluginManager');
+                    this.pluginManager = new PluginManagerClass(this.app, this.configManager);
+                    console.log('PluginManager integrated successfully from module');
+                    
+                    // Listen to plugin events
+                    this.pluginManager.on('functionExecuted', (data) => {
+                        console.log('Plugin function executed:', data);
+                    });
+                    
+                    this.pluginManager.on('visualizationRendered', (data) => {
+                        console.log('Plugin visualization rendered:', data);
+                    });
+                    
+                    this.pluginManager.on('functionError', (data) => {
+                        console.error('Plugin function error:', data);
+                    });
+                    
+                    return;
+                } catch (moduleError) {
+                    console.warn('Failed to load PluginManager from module:', moduleError.message);
+                }
+            }
+            
+            // Fallback for browser environment
+            if (typeof PluginManager !== 'undefined') {
+                this.pluginManager = new PluginManager(this.app, this.configManager);
+                console.log('PluginManager integrated successfully from global');
+            } else {
+                console.warn('PluginManager not available, loading dynamically...');
+                this.loadPluginManager();
+            }
+        } catch (error) {
+            console.error('Failed to initialize PluginManager:', error);
+        }
+    }
+
+    /**
+     * Load Plugin Manager dynamically
+     */
+    async loadPluginManager() {
+        try {
+            // Load plugin system files
+            await this.loadScript('src/renderer/modules/PluginManager.js');
+            await this.loadScript('src/renderer/modules/PluginUtils.js');
+            await this.loadScript('src/renderer/modules/PluginImplementations.js');
+            await this.loadScript('src/renderer/modules/PluginVisualization.js');
+            
+            // Initialize after loading
+            if (typeof PluginManager !== 'undefined') {
+                this.pluginManager = new PluginManager(this.app, this.configManager);
+                console.log('PluginManager loaded and initialized successfully');
+            }
+        } catch (error) {
+            console.error('Failed to load PluginManager:', error);
+        }
+    }
+
+    /**
+     * Load script dynamically
+     */
+    loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
     }
 
     setupMCPServerEventHandlers() {
@@ -1917,7 +1998,58 @@ MICROBE GENOMICS POWER USER EXAMPLES:
    - Get region 2: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene2", "length": 500}}
    - Compare GC: {"tool_name": "compute_gc", "parameters": {"sequence": "region1"}} then {"tool_name": "compute_gc", "parameters": {"sequence": "region2"}}
 
-Remember: These functions provide atomic operations that can be chained together to perform complex genomic analyses!`;
+Remember: These functions provide atomic operations that can be chained together to perform complex genomic analyses!
+
+PLUGIN SYSTEM FUNCTIONS:
+${this.getPluginSystemInfo()}`;
+    }
+
+    /**
+     * Get plugin system information for system message
+     */
+    getPluginSystemInfo() {
+        if (!this.pluginManager) {
+            return 'Plugin system not available.';
+        }
+
+        try {
+            const pluginFunctions = this.pluginManager.getAvailableFunctions();
+            const visualizations = this.pluginManager.getAvailableVisualizations();
+            
+            let info = '';
+            
+            if (pluginFunctions.length > 0) {
+                info += 'Available Plugin Functions:\\n';
+                pluginFunctions.forEach(func => {
+                    info += `- ${func.name}: ${func.description}\\n`;
+                });
+                
+                info += '\\nPlugin Function Examples:\\n';
+                info += '- Analyze GC content: {"tool_name": "genomic-analysis.analyzeGCContent", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "windowSize": 1000}}\\n';
+                info += '- Find motifs: {"tool_name": "genomic-analysis.findMotifs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "motif": "GAATTC", "strand": "both"}}\\n';
+                info += '- Calculate diversity: {"tool_name": "genomic-analysis.calculateDiversity", "parameters": {"sequences": ["ATGC", "CGTA"], "metric": "shannon"}}\\n';
+                info += '- Compare regions: {"tool_name": "genomic-analysis.compareRegions", "parameters": {"regions": [{"chromosome": "chr1", "start": 1000, "end": 2000, "name": "region1"}], "analysisType": "gc"}}\\n';
+                info += '- Build phylogenetic tree: {"tool_name": "phylogenetic-analysis.buildPhylogeneticTree", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC", "name": "Sequence 1"}], "method": "nj"}}\\n';
+                info += '- Predict gene function: {"tool_name": "ml-analysis.predictGeneFunction", "parameters": {"sequence": "ATGCGCTATCG", "model": "cnn", "threshold": 0.7}}\\n';
+                info += '- Cluster sequences: {"tool_name": "ml-analysis.clusterSequences", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGC"}], "algorithm": "kmeans", "numClusters": 3}}\\n';
+            }
+            
+            if (visualizations.length > 0) {
+                info += '\\nAvailable Visualization Plugins:\\n';
+                visualizations.forEach(viz => {
+                    info += `- ${viz.id}: ${viz.description} (supports: ${viz.supportedDataTypes.join(', ')})\\n`;
+                });
+                
+                info += '\\nVisualization Examples:\\n';
+                info += 'Note: Visualizations are automatically rendered when plugin functions return compatible data.\\n';
+                info += 'For example, GC content analysis will automatically show a plot, phylogenetic analysis will show a tree.\\n';
+            }
+            
+            return info;
+        } catch (error) {
+            console.error('Error getting plugin system info:', error);
+            return 'Plugin system available but could not load details.';
+        }
     }
 
     parseToolCall(response) {
@@ -2362,7 +2494,21 @@ Remember: These functions provide atomic operations that can be chained together
                 case 'fetch_protein_structure':
                     result = this.fetchProteinStructure( parameters);
                     break;
+                    
+                // Plugin system functions
                 default:
+                    // Try to execute as plugin function
+                    if (this.pluginManager && toolName.includes('.')) {
+                        try {
+                            result = await this.pluginManager.executeFunctionByName(toolName, parameters);
+                            console.log(`Plugin function ${toolName} executed successfully:`, result);
+                            break;
+                        } catch (pluginError) {
+                            console.warn(`Plugin function execution failed: ${pluginError.message}`);
+                        }
+                    }
+                    
+                    // If no plugin function found, throw error
                     throw new Error(`Unknown tool: ${toolName}`);
             }
             

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenomeExplorer Plugin System Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success {
+            color: green;
+            background-color: #e8f5e8;
+            border-color: #c3e6c3;
+        }
+        .error {
+            color: red;
+            background-color: #fde8e8;
+            border-color: #fac2c2;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>GenomeExplorer Plugin System Integration Test</h1>
+        <p>This test verifies that the plugin system can be properly loaded and integrated with ChatManager in a browser environment.</p>
+        
+        <div id="test-results"></div>
+        
+        <h2>Manual Tests</h2>
+        <button class="test-button" onclick="testPluginFunction()">Test Plugin Function</button>
+        <button class="test-button" onclick="testVisualization()">Test Visualization</button>
+        <button class="test-button" onclick="testChatIntegration()">Test Chat Integration</button>
+        
+        <div id="manual-test-results"></div>
+    </div>
+
+    <!-- Load plugin system modules -->
+    <script src="src/renderer/modules/PluginUtils.js"></script>
+    <script src="src/renderer/modules/PluginImplementations.js"></script>
+    <script src="src/renderer/modules/PluginVisualization.js"></script>
+    <script src="src/renderer/modules/PluginManager.js"></script>
+
+    <script>
+        // Mock app and config manager for testing
+        const mockApp = {
+            genomeBrowser: {
+                getCurrentState: () => ({
+                    currentChromosome: 'chr1',
+                    currentPosition: { start: 1000, end: 5000 },
+                    visibleTracks: ['genes', 'annotations'],
+                    loadedFiles: ['test.gff'],
+                    sequenceLength: 1000000,
+                    annotationsCount: 500,
+                    userDefinedFeaturesCount: 10
+                }),
+                getSequence: (chromosome, start, end) => {
+                    // Mock sequence data
+                    const bases = ['A', 'T', 'G', 'C'];
+                    let sequence = '';
+                    for (let i = 0; i < (end - start); i++) {
+                        sequence += bases[Math.floor(Math.random() * 4)];
+                    }
+                    return sequence;
+                }
+            }
+        };
+
+        const mockConfigManager = {
+            get: (key, defaultValue) => defaultValue,
+            set: (key, value) => {},
+            addChatMessage: (message, sender, timestamp) => `msg_${Date.now()}`
+        };
+
+        let pluginManager = null;
+        let testResults = [];
+
+        // Run automatic tests
+        async function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            testResults = [];
+
+            // Test 1: Plugin Manager Creation
+            try {
+                pluginManager = new PluginManager(mockApp, mockConfigManager);
+                addTestResult('Plugin Manager Creation', true, 'PluginManager created successfully');
+            } catch (error) {
+                addTestResult('Plugin Manager Creation', false, `Error: ${error.message}`);
+                return;
+            }
+
+            // Test 2: Available Functions
+            try {
+                const functions = pluginManager.getAvailableFunctions();
+                addTestResult('Available Functions', functions.length > 0, `Found ${functions.length} functions`);
+            } catch (error) {
+                addTestResult('Available Functions', false, `Error: ${error.message}`);
+            }
+
+            // Test 3: Available Visualizations
+            try {
+                const visualizations = pluginManager.getAvailableVisualizations();
+                addTestResult('Available Visualizations', visualizations.length > 0, `Found ${visualizations.length} visualizations`);
+            } catch (error) {
+                addTestResult('Available Visualizations', false, `Error: ${error.message}`);
+            }
+
+            // Test 4: Function Execution
+            try {
+                const result = await pluginManager.executeFunctionByName('genomic-analysis.analyzeGCContent', {
+                    chromosome: 'chr1',
+                    start: 1000,
+                    end: 2000,
+                    windowSize: 100
+                });
+                addTestResult('Function Execution', result && result.chromosome, 'GC content analysis executed successfully');
+            } catch (error) {
+                addTestResult('Function Execution', false, `Error: ${error.message}`);
+            }
+
+            // Display results
+            displayTestResults();
+        }
+
+        function addTestResult(testName, success, message) {
+            testResults.push({ testName, success, message });
+        }
+
+        function displayTestResults() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '';
+
+            testResults.forEach(result => {
+                const testDiv = document.createElement('div');
+                testDiv.className = `test-section ${result.success ? 'success' : 'error'}`;
+                testDiv.innerHTML = `
+                    <h3>${result.success ? '✅' : '❌'} ${result.testName}</h3>
+                    <p>${result.message}</p>
+                `;
+                resultsDiv.appendChild(testDiv);
+            });
+
+            // Summary
+            const successCount = testResults.filter(r => r.success).length;
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h3>Test Summary</h3>
+                <p>Passed: ${successCount}/${testResults.length} tests</p>
+            `;
+            resultsDiv.appendChild(summaryDiv);
+        }
+
+        // Manual test functions
+        async function testPluginFunction() {
+            const resultsDiv = document.getElementById('manual-test-results');
+            try {
+                const result = await pluginManager.executeFunctionByName('genomic-analysis.findMotifs', {
+                    chromosome: 'chr1',
+                    start: 1000,
+                    end: 3000,
+                    motif: 'GAATTC',
+                    strand: 'both'
+                });
+                
+                resultsDiv.innerHTML = `
+                    <div class="test-section success">
+                        <h3>✅ Plugin Function Test Success</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-section error">
+                        <h3>❌ Plugin Function Test Failed</h3>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testVisualization() {
+            const resultsDiv = document.getElementById('manual-test-results');
+            try {
+                // Create a container for visualization
+                const vizContainer = document.createElement('div');
+                vizContainer.style.width = '400px';
+                vizContainer.style.height = '300px';
+                vizContainer.style.border = '1px solid #ccc';
+                vizContainer.style.margin = '10px';
+
+                // Mock GC content data
+                const mockData = {
+                    chromosome: 'chr1',
+                    start: 1000,
+                    end: 5000,
+                    windowSize: 100,
+                    results: [
+                        { position: 1000, end: 1100, gcContent: 45.2 },
+                        { position: 1100, end: 1200, gcContent: 52.8 },
+                        { position: 1200, end: 1300, gcContent: 38.9 },
+                        { position: 1300, end: 1400, gcContent: 61.3 }
+                    ]
+                };
+
+                await pluginManager.renderVisualization('gc-content-plot', mockData, vizContainer);
+                
+                resultsDiv.innerHTML = `
+                    <div class="test-section success">
+                        <h3>✅ Visualization Test Success</h3>
+                        <p>GC content plot rendered successfully</p>
+                    </div>
+                `;
+                resultsDiv.appendChild(vizContainer);
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-section error">
+                        <h3>❌ Visualization Test Failed</h3>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function testChatIntegration() {
+            const resultsDiv = document.getElementById('manual-test-results');
+            try {
+                // Test if plugin functions are available for ChatManager
+                const functions = pluginManager.getAvailableFunctions();
+                const examples = functions.map(func => 
+                    `{"tool_name": "${func.name}", "parameters": ${JSON.stringify(func.parameters.properties || {})}}`
+                ).slice(0, 3);
+
+                resultsDiv.innerHTML = `
+                    <div class="test-section success">
+                        <h3>✅ Chat Integration Test</h3>
+                        <p>Plugin functions are ready for LLM ChatBox integration.</p>
+                        <h4>Example Function Calls:</h4>
+                        <pre>${examples.join('\n\n')}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-section error">
+                        <h3>❌ Chat Integration Test Failed</h3>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 100);
+        });
+    </script>
+</body>
+</html> 

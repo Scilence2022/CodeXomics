@@ -64,6 +64,11 @@
                             MCP Server Settings
                         </button>
                         <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="pluginManagerBtn">
+                            <i class="fas fa-puzzle-piece"></i>
+                            Plugin Management
+                        </button>
+                        <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="settingsBtn">
                             <i class="fas fa-sliders-h"></i>
                             General Settings
@@ -1415,6 +1420,118 @@
         </div>
     </div>
 
+    <!-- Plugin Management Modal -->
+    <div id="pluginManagementModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-puzzle-piece"></i> Plugin Management</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="plugin-management-tabs">
+                    <div class="tab-header">
+                        <button class="tab-btn active" data-tab="installed">
+                            <i class="fas fa-check-circle"></i>
+                            Installed Plugins
+                        </button>
+                        <button class="tab-btn" data-tab="available">
+                            <i class="fas fa-plus-circle"></i>
+                            Available Plugins
+                        </button>
+                        <button class="tab-btn" data-tab="settings">
+                            <i class="fas fa-cog"></i>
+                            Plugin Settings
+                        </button>
+                    </div>
+                    
+                    <!-- Installed Plugins Tab -->
+                    <div id="installed-plugins-tab" class="tab-content active">
+                        <div class="plugin-section">
+                            <h4><i class="fas fa-code"></i> Function Plugins</h4>
+                            <div id="functionPluginsList" class="plugins-list">
+                                <!-- Function plugins will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="plugin-section">
+                            <h4><i class="fas fa-chart-bar"></i> Visualization Plugins</h4>
+                            <div id="visualizationPluginsList" class="plugins-list">
+                                <!-- Visualization plugins will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Available Plugins Tab -->
+                    <div id="available-plugins-tab" class="tab-content">
+                        <div class="plugin-actions">
+                            <button id="loadPluginBtn" class="btn btn-primary">
+                                <i class="fas fa-plus"></i>
+                                Load Plugin from File
+                            </button>
+                            <button id="refreshPluginsBtn" class="btn btn-secondary">
+                                <i class="fas fa-sync"></i>
+                                Refresh Plugin Directory
+                            </button>
+                        </div>
+                        
+                        <div class="plugin-directory">
+                            <h4><i class="fas fa-folder"></i> Plugin Directory</h4>
+                            <div id="pluginDirectoryList" class="plugins-list">
+                                <!-- Available plugins will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Plugin Settings Tab -->
+                    <div id="settings-plugins-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-folder-open"></i> Plugin Directories</h4>
+                            <div class="form-group">
+                                <label for="pluginDirectory">Default Plugin Directory:</label>
+                                <div class="input-group">
+                                    <input type="text" id="pluginDirectory" class="input-full" value="src/renderer/modules/Plugins" readonly>
+                                    <button id="browsePluginDir" class="btn btn-secondary">
+                                        <i class="fas fa-folder-open"></i>
+                                        Browse
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4><i class="fas fa-shield-alt"></i> Security Settings</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enablePluginSandbox" checked>
+                                    Enable Plugin Sandbox (Recommended)
+                                </label>
+                                <small class="help-text">Restricts plugin access to system resources for security</small>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4><i class="fas fa-bug"></i> Debug Settings</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enablePluginDebug">
+                                    Enable Plugin Debug Mode
+                                </label>
+                                <small class="help-text">Shows detailed plugin execution information in console</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="savePluginSettings" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Save Settings
+                </button>
+                <button class="btn modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- General Settings Modal -->
     <div id="generalSettingsModal" class="modal">
         // ... existing code ...
@@ -1440,6 +1557,8 @@
     <script src="modules/ProteinStructureViewer.js"></script>
     <script src="modules/BlastManager.js"></script>
     <script src="modules/MicrobeGenomicsFunctions.js"></script>
+    <script src="modules/PluginManager.js"></script>
+    <script src="modules/PluginManagementUI.js"></script>
     
     <!-- Main application -->
     <script src="renderer-modular.js"></script>
