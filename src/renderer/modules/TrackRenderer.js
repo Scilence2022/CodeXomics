@@ -389,7 +389,7 @@ class TrackRenderer {
      * Calculate layout parameters for gene track
      */
     calculateGeneTrackLayout(geneRows, settings) {
-        const geneHeight = 23;
+        const geneHeight = settings?.geneHeight || 23;
         const rowSpacing = 6;
         const rulerHeight = 35;
         const topPadding = 10;
@@ -421,7 +421,7 @@ class TrackRenderer {
         this.configureGeneElementAppearance(geneElement, gene, viewport, operons, settings);
         
         // Set position
-        this.setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout);
+        this.setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout, settings);
         
         // Add interaction handlers
         this.addGeneElementHandlers(geneElement, gene, operons);
@@ -476,7 +476,7 @@ class TrackRenderer {
     /**
      * Set gene element position and dimensions
      */
-    setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout) {
+    setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout, settings) {
         const geneStart = Math.max(gene.start, viewport.start);
         const geneEnd = Math.min(gene.end, viewport.end);
         const left = ((geneStart - viewport.start) / viewport.range) * 100;
@@ -493,12 +493,20 @@ class TrackRenderer {
         // Position based on row arrangement - only show if within maxRows
         if (rowIndex < layout.maxRows) {
             geneElement.style.top = `${layout.rulerHeight + layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing)}px`;
+            geneElement.style.height = `${layout.geneHeight}px`;
             geneElement.style.display = 'block';
         } else {
             // Hide genes beyond maxRows
             geneElement.style.display = 'none';
             return; // Don't process text content for hidden genes
         }
+        
+        // Apply font settings
+        const fontSize = settings?.fontSize || 11;
+        const fontFamily = settings?.fontFamily || 'Arial, sans-serif';
+        geneElement.style.fontSize = `${fontSize}px`;
+        geneElement.style.fontFamily = fontFamily;
+        geneElement.style.lineHeight = `${layout.geneHeight}px`;
         
         // Set text content based on available space
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
@@ -2980,6 +2988,26 @@ class TrackRenderer {
                     <label for="genesTrackHeight">Track Height (px):</label>
                     <input type="number" id="genesTrackHeight" min="60" max="400" value="${settings.height || 120}">
                 </div>
+                <div class="form-group">
+                    <label for="genesGeneHeight">Gene Element Height (px):</label>
+                    <input type="number" id="genesGeneHeight" min="12" max="40" value="${settings.geneHeight || 23}">
+                    <div class="help-text">Height of individual gene elements. Affects spacing between gene rows.</div>
+                </div>
+                <div class="form-group">
+                    <label for="genesFontSize">Gene Name Font Size (px):</label>
+                    <input type="number" id="genesFontSize" min="8" max="16" value="${settings.fontSize || 11}">
+                    <div class="help-text">Font size for gene names and labels.</div>
+                </div>
+                <div class="form-group">
+                    <label for="genesFontFamily">Gene Name Font Family:</label>
+                    <select id="genesFontFamily">
+                        <option value="Arial, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Arial, sans-serif' ? 'selected' : ''}>Arial</option>
+                        <option value="Inter, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Inter, sans-serif' ? 'selected' : ''}>Inter</option>
+                        <option value="Helvetica, sans-serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Helvetica, sans-serif' ? 'selected' : ''}>Helvetica</option>
+                        <option value="monospace" ${(settings.fontFamily || 'Arial, sans-serif') === 'monospace' ? 'selected' : ''}>Monospace</option>
+                        <option value="Georgia, serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
+                    </select>
+                </div>
             </div>
         `;
     }
@@ -3078,7 +3106,10 @@ class TrackRenderer {
             genes: {
                 maxRows: 6,
                 showOperonsSameRow: false,
-                height: 120
+                height: 120,
+                geneHeight: 23,
+                fontSize: 11,
+                fontFamily: 'Arial, sans-serif'
             },
             gc: {
                 contentColor: '#3b82f6',
@@ -3158,16 +3189,25 @@ class TrackRenderer {
                 const maxRowsElement = modal.querySelector('#genesMaxRows');
                 const showOperonsElement = modal.querySelector('#genesShowOperonsSameRow');
                 const heightElement = modal.querySelector('#genesTrackHeight');
+                const geneHeightElement = modal.querySelector('#genesGeneHeight');
+                const fontSizeElement = modal.querySelector('#genesFontSize');
+                const fontFamilyElement = modal.querySelector('#genesFontFamily');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
                     showOperonsElement: !!showOperonsElement,
-                    heightElement: !!heightElement
+                    heightElement: !!heightElement,
+                    geneHeightElement: !!geneHeightElement,
+                    fontSizeElement: !!fontSizeElement,
+                    fontFamilyElement: !!fontFamilyElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
                 settings.showOperonsSameRow = showOperonsElement?.checked || false;
                 settings.height = parseInt(heightElement?.value) || 120;
+                settings.geneHeight = parseInt(geneHeightElement?.value) || 23;
+                settings.fontSize = parseInt(fontSizeElement?.value) || 11;
+                settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
                 
                 console.log('Collected gene settings from form:', settings);
                 break;
@@ -3233,9 +3273,9 @@ class TrackRenderer {
                     trackContent.style.height = `${settings.height}px`;
                 }
                 
-                // For gene track, re-render elements to apply row and operon settings
+                // For gene track, re-render elements to apply all settings including height and font
                 if (trackType === 'genes') {
-                    console.log('Re-rendering gene elements due to settings change...');
+                    console.log('Re-rendering gene elements due to settings change...', settings);
                     // Clear existing gene elements before re-rendering
                     const geneElements = trackContent.querySelectorAll('.gene-element, .no-genes-message, .gene-stats, .detailed-ruler-container');
                     geneElements.forEach(el => el.remove());
@@ -3245,15 +3285,21 @@ class TrackRenderer {
                     const detailedRuler = this.createDetailedRuler(currentChr);
                     trackContent.appendChild(detailedRuler);
                     
-                    // Re-fetch data and re-render
+                    // Re-fetch data and re-render with new settings
                     const viewport = this.getCurrentViewport();
                     const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
                     const operons = this.genomeBrowser.detectOperons(annotations);
                     const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
                     
                     if (visibleGenes.length > 0) {
+                        // Re-render with updated settings
                         this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
                         this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
+                        
+                        // Update track height based on new gene heights
+                        const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);
+                        const layout = this.calculateGeneTrackLayout(geneRows, settings);
+                        trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
                     } else {
                         const noGenesMsg = this.createNoDataMessage(
                             'No genes/features in this region or all filtered out',
