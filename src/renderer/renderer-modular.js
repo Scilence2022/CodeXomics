@@ -1021,7 +1021,9 @@ class GenomeBrowser {
             // Show and update the navigation bar
             this.genomeNavigationBar.show(chromosome, sequence.length);
             
-            // PRESERVE TRACK HEIGHTS before clearing container
+            // PRESERVE TRACK HEIGHTS AND HEADER STATES before clearing container
+            this.trackRenderer.saveHeaderStates();
+            
             const preservedHeights = new Map();
             const trackTypeMapping = {
                 'gene': 'genes',

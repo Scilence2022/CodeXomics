@@ -59,6 +59,9 @@ class TrackRenderer {
             }
         };
         
+        // Track header visibility state - survives track recreation
+        this.headerStates = new Map();
+        
         // Common styles for reuse
         this.commonStyles = {
             noDataMessage: `
@@ -147,6 +150,17 @@ class TrackRenderer {
             this.toggleTrackControls(trackType, toggleBtn);
         });
         
+        // Hide header button (available for all tracks)
+        const hideHeaderBtn = document.createElement('button');
+        hideHeaderBtn.className = 'track-btn track-hide-header-btn';
+        hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
+        hideHeaderBtn.title = 'Hide Track Header';
+        hideHeaderBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleTrackHeader(trackType, hideHeaderBtn);
+        });
+        buttonsContainer.appendChild(hideHeaderBtn);
+        
         // Close button
         const closeBtn = document.createElement('button');
         closeBtn.className = 'track-btn track-close-btn';
@@ -213,6 +227,74 @@ class TrackRenderer {
     }
     
     /**
+     * Save header visibility state before track recreation
+     */
+    saveHeaderStates() {
+        const container = document.getElementById('genomeViewer');
+        if (!container) return;
+        
+        const existingTracks = container.querySelectorAll('[class*="-track"]');
+        existingTracks.forEach(track => {
+            const trackHeader = track.querySelector('.track-header');
+            if (trackHeader) {
+                // Determine track type from class name
+                let trackType = null;
+                for (const className of track.classList) {
+                    if (className.endsWith('-track')) {
+                        trackType = className.replace('-track', '');
+                        
+                        // Map specific track class names to track types
+                        const typeMapping = {
+                            'gene': 'genes',
+                            'variant': 'variants',
+                            'wig': 'wigTracks'
+                        };
+                        trackType = typeMapping[trackType] || trackType;
+                        break;
+                    }
+                }
+                
+                if (trackType) {
+                    const isHidden = trackHeader.style.display === 'none';
+                    this.headerStates.set(trackType, isHidden);
+                    console.log(`Saved header state for ${trackType}: ${isHidden ? 'hidden' : 'visible'}`);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Restore header visibility state after track recreation
+     */
+    restoreHeaderState(trackElement, trackType) {
+        if (!this.headerStates.has(trackType)) return;
+        
+        const shouldBeHidden = this.headerStates.get(trackType);
+        if (!shouldBeHidden) return; // If not hidden, no need to restore
+        
+        const trackHeader = trackElement.querySelector('.track-header');
+        const hideHeaderBtn = trackHeader?.querySelector('.track-hide-header-btn');
+        
+        if (trackHeader && hideHeaderBtn) {
+            // Hide the header
+            trackHeader.style.display = 'none';
+            hideHeaderBtn.innerHTML = '<i class="fas fa-plus"></i>';
+            hideHeaderBtn.title = 'Show Track Header';
+            
+            // Add floating button
+            this.createFloatingHeaderButton(trackElement, trackType);
+            
+            // Adjust track content
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                trackContent.style.marginTop = '5px';
+            }
+            
+            console.log(`Restored hidden header state for ${trackType}`);
+        }
+    }
+    
+    /**
      * Filter features by current viewport with validation
      */
     filterFeaturesByViewport(features, viewport) {
@@ -264,6 +346,9 @@ class TrackRenderer {
         
         // Add statistics and update sidebar
         this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'genes');
         
         return track;
     }
@@ -508,6 +593,9 @@ class TrackRenderer {
         const seqDisplay = this.createSequenceDisplay(subsequence, viewport);
         trackContent.appendChild(seqDisplay);
         
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'sequence');
+        
         return track;
     }
     
@@ -575,6 +663,9 @@ class TrackRenderer {
         const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
         trackContent.appendChild(gcDisplay);
         
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'gc');
+        
         return track;
     }
 
@@ -607,6 +698,9 @@ class TrackRenderer {
         } else {
             this.renderVariantElements(trackContent, visibleVariants, viewport);
         }
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'variants');
         
         return track;
     }
@@ -842,6 +936,10 @@ class TrackRenderer {
             trackContent.appendChild(errorMsg);
             trackContent.style.height = '80px'; // Default height for error track
             track.appendChild(trackContent);
+            
+            // Restore header state if it was previously hidden
+            this.restoreHeaderState(track, 'reads');
+            
             return track;
         }
     }
@@ -908,6 +1006,9 @@ class TrackRenderer {
         } else {
             this.renderProteinElements(trackContent, proteins, viewport);
         }
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'proteins');
         
         return track;
     }
@@ -2259,6 +2360,9 @@ class TrackRenderer {
         const statsElement = this.createStatsElement(statsText, 'wig-track-stats');
         trackContent.appendChild(statsElement);
         
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'wigTracks');
+        
         return track;
     }
     
@@ -2622,6 +2726,125 @@ class TrackRenderer {
         }
         
         console.log(`Track ${trackType} controls ${newLocked ? 'locked' : 'unlocked'}`);
+    }
+    
+    /**
+     * Toggle track header visibility
+     */
+    toggleTrackHeader(trackType, button) {
+        console.log(`Toggling header for track: ${trackType}`);
+        
+        // Find the track element
+        const trackElement = button.closest('[class*="-track"]');
+        if (!trackElement) return;
+        
+        const trackHeader = trackElement.querySelector('.track-header');
+        if (!trackHeader) return;
+        
+        const isHidden = trackHeader.style.display === 'none';
+        
+        if (isHidden) {
+            // Show header
+            trackHeader.style.display = '';
+            button.innerHTML = '<i class="fas fa-minus"></i>';
+            button.title = 'Hide Track Header';
+            
+            // Update state
+            this.headerStates.set(trackType, false);
+            
+            // Adjust track content top position
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                trackContent.style.marginTop = '';
+            }
+        } else {
+            // Hide header
+            trackHeader.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-plus"></i>';
+            button.title = 'Show Track Header';
+            
+            // Update state
+            this.headerStates.set(trackType, true);
+            
+            // Add a small floating button to show header again
+            this.createFloatingHeaderButton(trackElement, trackType);
+            
+            // Adjust track content to fill the space
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                trackContent.style.marginTop = '5px';
+            }
+        }
+    }
+    
+    /**
+     * Create floating button to restore hidden header
+     */
+    createFloatingHeaderButton(trackElement, trackType) {
+        // Remove existing floating button if any
+        const existingBtn = trackElement.querySelector('.floating-header-btn');
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+        
+        const floatingBtn = document.createElement('button');
+        floatingBtn.className = 'floating-header-btn';
+        floatingBtn.innerHTML = '<i class="fas fa-plus"></i>';
+        floatingBtn.title = 'Show Track Header';
+        floatingBtn.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        `;
+        
+        floatingBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const trackHeader = trackElement.querySelector('.track-header');
+            if (trackHeader) {
+                trackHeader.style.display = '';
+                
+                // Update state
+                this.headerStates.set(trackType, false);
+                
+                // Update the hide header button
+                const hideHeaderBtn = trackHeader.querySelector('.track-hide-header-btn');
+                if (hideHeaderBtn) {
+                    hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
+                    hideHeaderBtn.title = 'Hide Track Header';
+                }
+                
+                // Adjust track content
+                const trackContent = trackElement.querySelector('.track-content');
+                if (trackContent) {
+                    trackContent.style.marginTop = '';
+                }
+            }
+            floatingBtn.remove();
+        });
+        
+        floatingBtn.addEventListener('mouseenter', () => {
+            floatingBtn.style.opacity = '1';
+        });
+        
+        floatingBtn.addEventListener('mouseleave', () => {
+            floatingBtn.style.opacity = '0.6';
+        });
+        
+        trackElement.appendChild(floatingBtn);
     }
     
     /**
