@@ -504,9 +504,13 @@ class TrackRenderer {
         // Apply font settings
         const fontSize = settings?.fontSize || 11;
         const fontFamily = settings?.fontFamily || 'Arial, sans-serif';
+        const arrowSize = settings?.arrowSize || 8;
         geneElement.style.fontSize = `${fontSize}px`;
         geneElement.style.fontFamily = fontFamily;
         geneElement.style.lineHeight = `${layout.geneHeight}px`;
+        
+        // Apply arrow size setting using CSS custom property
+        geneElement.style.setProperty('--arrow-size', `${arrowSize}px`);
         
         // Set text content based on available space
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
@@ -3008,6 +3012,11 @@ class TrackRenderer {
                         <option value="Georgia, serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="genesArrowSize">Direction Arrow Size (px):</label>
+                    <input type="number" id="genesArrowSize" min="6" max="16" step="1" value="${settings.arrowSize || 8}">
+                    <div class="help-text">Size of the direction arrows (▶ ◀) displayed next to gene names.</div>
+                </div>
             </div>
         `;
     }
@@ -3109,7 +3118,8 @@ class TrackRenderer {
                 height: 120,
                 geneHeight: 23,
                 fontSize: 11,
-                fontFamily: 'Arial, sans-serif'
+                fontFamily: 'Arial, sans-serif',
+                arrowSize: 8
             },
             gc: {
                 contentColor: '#3b82f6',
@@ -3192,6 +3202,7 @@ class TrackRenderer {
                 const geneHeightElement = modal.querySelector('#genesGeneHeight');
                 const fontSizeElement = modal.querySelector('#genesFontSize');
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
+                const arrowSizeElement = modal.querySelector('#genesArrowSize');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -3199,7 +3210,8 @@ class TrackRenderer {
                     heightElement: !!heightElement,
                     geneHeightElement: !!geneHeightElement,
                     fontSizeElement: !!fontSizeElement,
-                    fontFamilyElement: !!fontFamilyElement
+                    fontFamilyElement: !!fontFamilyElement,
+                    arrowSizeElement: !!arrowSizeElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
@@ -3208,6 +3220,7 @@ class TrackRenderer {
                 settings.geneHeight = parseInt(geneHeightElement?.value) || 23;
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
+                settings.arrowSize = parseInt(arrowSizeElement?.value) || 8;
                 
                 console.log('Collected gene settings from form:', settings);
                 break;

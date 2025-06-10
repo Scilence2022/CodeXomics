@@ -1305,14 +1305,14 @@ body {
     content: '◀';
     margin-right: 3px;
     font-weight: bold;
-    font-size: 8px;
+    font-size: var(--arrow-size, 8px);
 }
 
 .gene-element:not(.reverse-strand)::before {
     content: '▶';
     margin-right: 3px;
     font-weight: bold;
-    font-size: 8px;
+    font-size: var(--arrow-size, 8px);
 }
 
 /* Ensure text is always visible */
