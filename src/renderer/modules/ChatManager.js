@@ -31,6 +31,11 @@ class ChatManager {
         // Initialize Plugin Manager
         this.initializePluginManager();
         
+        // Initialize Smart Execution System
+        this.smartExecutor = null;
+        this.isSmartExecutionEnabled = true; // 可配置开关
+        this.initializeSmartExecutor();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -135,6 +140,28 @@ class ChatManager {
             script.onerror = reject;
             document.head.appendChild(script);
         });
+    }
+
+    /**
+     * Initialize Smart Executor for optimized function calls
+     */
+    async initializeSmartExecutor() {
+        try {
+            // Load the required modules
+            await this.loadScript('src/renderer/modules/FunctionCallsOrganizer.js');
+            await this.loadScript('src/renderer/modules/SmartExecutor.js');
+            
+            // Initialize the smart executor
+            if (typeof SmartExecutor !== 'undefined') {
+                this.smartExecutor = new SmartExecutor(this);
+                console.log('SmartExecutor initialized successfully');
+            } else {
+                console.warn('SmartExecutor not available, falling back to standard execution');
+            }
+        } catch (error) {
+            console.error('Failed to initialize SmartExecutor:', error);
+            this.isSmartExecutionEnabled = false;
+        }
     }
 
     setupMCPServerEventHandlers() {
@@ -1481,50 +1508,155 @@ class ChatManager {
                 console.log('Full response:', response);
                 console.log('========================');
                 
-                // Check if the response is a tool call (JSON format)
-                console.log('Attempting to parse tool call...');
+                // Check if the response contains tool calls (JSON format)
+                console.log('Attempting to parse tool call(s)...');
                 const toolCall = this.parseToolCall(response);
-                console.log('Parsed tool call result:', toolCall);
                 
-                if (toolCall) {
-                    console.log('=== TOOL CALL DETECTED ===');
-                    console.log('Tool name:', toolCall.tool_name);
-                    console.log('Parameters:', toolCall.parameters);
+                // Also check for multiple tool calls in response
+                const multipleToolCalls = this.parseMultipleToolCalls(response);
+                console.log('Parsed tool call result:', toolCall);
+                console.log('Multiple tool calls found:', multipleToolCalls.length);
+                
+                // Determine which tools to execute
+                const toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
+                
+                if (toolsToExecute.length > 0) {
+                    console.log(`=== ${toolsToExecute.length} TOOL CALL(S) DETECTED ===`);
+                    console.log('Tools to execute:', toolsToExecute.map(t => t.tool_name));
                     console.log('==========================');
                     
                     try {
-                        console.log('Executing tool...');
-                        // Execute the tool
-                        const toolResult = await this.executeToolByName(toolCall.tool_name, toolCall.parameters);
-                        console.log('Tool execution completed. Result:', toolResult);
+                        console.log('Executing tool(s)...');
                         
-                        // Add the tool call and result to conversation history for next round
+                        let toolResults;
+                        
+                        // Use Smart Executor if available and enabled
+                        if (this.smartExecutor && this.isSmartExecutionEnabled) {
+                            console.log('🚀 Using Smart Executor for optimized execution');
+                            const smartResult = await this.smartExecutor.smartExecute(message, toolsToExecute);
+                            
+                            if (smartResult.success) {
+                                toolResults = smartResult.results;
+                                
+                                // Provide comprehensive feedback
+                                if (smartResult.report) {
+                                    const { summary, categorySummary } = smartResult.report;
+                                    
+                                    // Show quick feedback for different categories
+                                    for (const category of categorySummary) {
+                                        if (category.successful > 0) {
+                                            let icon, message;
+                                            switch (category.name) {
+                                                case 'browserActions':
+                                                    icon = '✓'; message = 'Browser actions completed';
+                                                    break;
+                                                case 'dataRetrieval':
+                                                    icon = '📊'; message = 'Data retrieved';
+                                                    break;
+                                                case 'sequenceAnalysis':
+                                                    icon = '🧬'; message = 'Analysis completed';
+                                                    break;
+                                                case 'blastSearch':
+                                                    icon = '🔍'; message = 'BLAST search completed';
+                                                    break;
+                                                default:
+                                                    icon = '✓'; message = 'Operations completed';
+                                            }
+                                            this.showNotification(`${icon} ${message} (${category.successful}/${category.successful + category.failed})`, 'success');
+                                        }
+                                    }
+                                    
+                                    console.log('Smart execution summary:', summary);
+                                    console.log('Execution time:', smartResult.executionTime, 'ms');
+                                }
+                            } else {
+                                console.warn('Smart execution failed, falling back to standard execution:', smartResult.error);
+                                // Fallback to sequential execution
+                                toolResults = [];
+                                for (const tool of toolsToExecute) {
+                                    try {
+                                        const result = await this.executeToolByName(tool.tool_name, tool.parameters);
+                                        toolResults.push({ 
+                                            tool: tool.tool_name, 
+                                            parameters: tool.parameters,
+                                            success: true, 
+                                            result: result,
+                                            error: null
+                                        });
+                                    } catch (error) {
+                                        toolResults.push({
+                                            tool: tool.tool_name,
+                                            parameters: tool.parameters, 
+                                            success: false, 
+                                            result: null,
+                                            error: error.message
+                                        });
+                                    }
+                                }
+                            }
+                        } else {
+                            // Standard sequential execution
+                            toolResults = [];
+                            for (const tool of toolsToExecute) {
+                                try {
+                                    const result = await this.executeToolByName(tool.tool_name, tool.parameters);
+                                    toolResults.push({ 
+                                        tool: tool.tool_name, 
+                                        parameters: tool.parameters,
+                                        success: true, 
+                                        result: result,
+                                        error: null
+                                    });
+                                } catch (error) {
+                                    toolResults.push({
+                                        tool: tool.tool_name,
+                                        parameters: tool.parameters,
+                                        success: false, 
+                                        result: null,
+                                        error: error.message
+                                    });
+                                }
+                            }
+                        }
+                        
+                        console.log('Tool execution completed. Results:', toolResults);
+                        
+                        // Add the tool calls and results to conversation history for next round
                         conversationHistory.push({
                             role: 'assistant',
-                            content: JSON.stringify({
-                                tool_name: toolCall.tool_name,
-                                parameters: toolCall.parameters
-                            })
+                            content: JSON.stringify(toolsToExecute.length === 1 ? 
+                                { tool_name: toolsToExecute[0].tool_name, parameters: toolsToExecute[0].parameters } :
+                                toolsToExecute.map(t => ({ tool_name: t.tool_name, parameters: t.parameters }))
+                            )
                         });
                         
-                        if (toolResult && !toolResult.error) {
-                            // Add successful tool result to conversation
-                            const toolResultMessage = `Tool execution successful. Result: ${JSON.stringify(toolResult)}`;
+                        // Process results
+                        const successfulResults = toolResults.filter(r => r.success);
+                        const failedResults = toolResults.filter(r => !r.success);
+                        
+                        if (successfulResults.length > 0) {
+                            // Add successful tool results to conversation
+                            const successMessages = successfulResults.map(result => 
+                                `${result.tool} executed successfully: ${JSON.stringify(result.result)}`
+                            );
                             conversationHistory.push({
                                 role: 'user',
-                                content: `Tool result: ${toolResultMessage}`
+                                content: `Tool results: ${successMessages.join('; ')}`
                             });
                             
-                            // Continue to next round to see if LLM wants to make more tool calls
-                            console.log(`Tool executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
-                        } else {
-                            // Tool execution failed - add error and let LLM handle it
-                            const errorMessage = `Tool execution failed: ${toolResult.error || 'Unknown error'}`;
+                            console.log(`${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
+                        }
+                        
+                        if (failedResults.length > 0) {
+                            // Add failed tool results to conversation
+                            const errorMessages = failedResults.map(result => 
+                                `${result.tool} failed: ${result.error || 'Unknown error'}`
+                            );
                             conversationHistory.push({
                                 role: 'user',
-                                content: `Tool error: ${errorMessage}`
+                                content: `Tool errors: ${errorMessages.join('; ')}`
                             });
-                            console.log('Tool execution failed:', errorMessage);
+                            console.log(`${failedResults.length} tool(s) failed:`, failedResults);
                         }
                     } catch (error) {
                         console.error('=== TOOL EXECUTION EXCEPTION ===');
@@ -2231,6 +2363,63 @@ ${this.getPluginSystemInfo()}`;
             console.warn('Error parsing potential tool call:', error);
             return null;
         }
+    }
+
+    /**
+     * Parse multiple tool calls from a response
+     * @param {string} response - LLM response that might contain multiple tool calls
+     * @returns {Array} Array of tool call objects
+     */
+    parseMultipleToolCalls(response) {
+        const toolCalls = [];
+        
+        try {
+            let cleanResponse = response.trim();
+            
+            // Remove thinking tags if present
+            if (cleanResponse.includes('</think>')) {
+                const thinkEndIndex = cleanResponse.lastIndexOf('</think>');
+                cleanResponse = cleanResponse.substring(thinkEndIndex + 8).trim();
+            }
+            
+            // Remove code block markers
+            cleanResponse = cleanResponse.replace(/```json\s*|\s*```/gi, '').trim();
+            cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '').trim();
+            
+            // Try to parse as array first
+            if (cleanResponse.startsWith('[')) {
+                try {
+                    const parsedArray = JSON.parse(cleanResponse);
+                    if (Array.isArray(parsedArray)) {
+                        return parsedArray.filter(item => 
+                            item && typeof item === 'object' && item.tool_name && item.parameters !== undefined
+                        );
+                    }
+                } catch (e) {
+                    // Continue to other parsing methods
+                }
+            }
+            
+            // Find all JSON objects in the response
+            const jsonMatches = cleanResponse.match(/\{[^{}]*"tool_name"[^{}]*"parameters"[^{}]*\}/g);
+            if (jsonMatches) {
+                for (const match of jsonMatches) {
+                    try {
+                        const parsed = JSON.parse(match);
+                        if (parsed.tool_name && parsed.parameters !== undefined) {
+                            toolCalls.push(parsed);
+                        }
+                    } catch (e) {
+                        // Skip invalid JSON
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.warn('Error parsing multiple tool calls:', error);
+        }
+        
+        return toolCalls;
     }
 
     async executeToolByName(toolName, parameters) {

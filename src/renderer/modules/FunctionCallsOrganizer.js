@@ -1,0 +1,441 @@
+/**
+ * FunctionCallsOrganizer - 组织和优化function calls的执行策略
+ * 按照功能类型分类执行，优化ChatBox响应速度和准确性
+ */
+class FunctionCallsOrganizer {
+    constructor(chatManager) {
+        this.chatManager = chatManager;
+        this.app = chatManager.app;
+        
+        // 功能分类定义
+        this.functionCategories = {
+            // 类别1: 浏览器行为类 - 高优先级，立即执行
+            browserActions: {
+                priority: 1,
+                description: "Browser behavior and visual interface actions",
+                functions: [
+                    'navigate_to_position',
+                    'zoom_to_gene', 
+                    'zoom_in',
+                    'zoom_out',
+                    'scroll_left',
+                    'scroll_right',
+                    'toggle_track',
+                    'get_current_state',
+                    'get_track_status',
+                    'bookmark_position',
+                    'get_bookmarks',
+                    'save_view_state',
+                    'navigate_to',
+                    'jump_to_gene',
+                    'get_current_region'
+                ]
+            },
+            
+            // 类别2: 数据检索类 - 中等优先级，快速执行
+            dataRetrieval: {
+                priority: 2,
+                description: "Data retrieval and basic information queries",
+                functions: [
+                    'get_sequence',
+                    'get_gene_details',
+                    'get_chromosome_list',
+                    'search_features',
+                    'search_gene_by_name',
+                    'search_by_position',
+                    'get_nearby_features',
+                    'get_operons',
+                    'get_file_info',
+                    'search_pattern',
+                    'search_motif',
+                    'search_sequence_motif'
+                ]
+            },
+            
+            // 类别3: 序列分析类 - 中等优先级，可能需要计算时间
+            sequenceAnalysis: {
+                priority: 3,
+                description: "Sequence analysis and computational tools",
+                functions: [
+                    'translate_sequence',
+                    'calculate_gc_content',
+                    'find_orfs',
+                    'reverse_complement',
+                    'translate_dna',
+                    'calculate_entropy',
+                    'calc_region_gc',
+                    'compute_gc',
+                    'sequence_statistics',
+                    'codon_usage_analysis',
+                    'analyze_codon_usage',
+                    'calculate_melting_temp',
+                    'calculate_molecular_weight'
+                ]
+            },
+            
+            // 类别4: 高级分析类 - 低优先级，计算密集型
+            advancedAnalysis: {
+                priority: 4,
+                description: "Advanced analysis and prediction tools",
+                functions: [
+                    'analyze_region',
+                    'find_intergenic_regions',
+                    'search_intergenic_regions',
+                    'find_restriction_sites',
+                    'virtual_digest',
+                    'predict_promoter',
+                    'predict_rbs',
+                    'predict_terminator',
+                    'compare_regions',
+                    'find_similar_sequences'
+                ]
+            },
+            
+            // 类别5: BLAST搜索类 - 低优先级，网络依赖型
+            blastSearch: {
+                priority: 5,
+                description: "BLAST searches and similarity analysis",
+                functions: [
+                    'blast_search',
+                    'blast_sequence_from_region',
+                    'get_blast_databases',
+                    'batch_blast_search',
+                    'advanced_blast_search',
+                    'local_blast_database_info'
+                ]
+            },
+            
+            // 类别6: 数据操作类 - 变动优先级，根据操作类型决定
+            dataManipulation: {
+                priority: 3,
+                description: "Data creation, editing, and export operations",
+                functions: [
+                    'create_annotation',
+                    'edit_annotation',
+                    'delete_annotation',
+                    'add_annotation',
+                    'batch_create_annotations',
+                    'merge_annotations',
+                    'export_data',
+                    'export_region_features',
+                    'add_track',
+                    'add_variant'
+                ]
+            },
+            
+            // 类别7: 蛋白质结构类 - 低优先级，外部依赖型
+            proteinStructure: {
+                priority: 5,
+                description: "Protein structure visualization and analysis",
+                functions: [
+                    'open_protein_viewer',
+                    'fetch_protein_structure', 
+                    'search_protein_by_gene',
+                    'get_pdb_details'
+                ]
+            }
+        };
+        
+        // 功能映射表
+        this.functionToCategory = this.buildFunctionMapping();
+    }
+    
+    /**
+     * 构建功能到类别的映射表
+     */
+    buildFunctionMapping() {
+        const mapping = new Map();
+        for (const [categoryName, category] of Object.entries(this.functionCategories)) {
+            for (const functionName of category.functions) {
+                mapping.set(functionName, categoryName);
+            }
+        }
+        return mapping;
+    }
+    
+    /**
+     * 根据用户请求分析需要的功能类型组合
+     * @param {string} userMessage - 用户消息
+     * @param {Array} requestedTools - 请求的工具列表
+     * @returns {Object} 分析结果
+     */
+    analyzeRequestStrategy(userMessage, requestedTools = []) {
+        const strategy = {
+            categories: new Set(),
+            priorityGroups: new Map(),
+            executionPlan: [],
+            estimatedTime: 0
+        };
+        
+        // 分析用户消息中的关键词
+        const messageKeywords = this.extractKeywords(userMessage.toLowerCase());
+        
+        // 分析请求的工具
+        for (const tool of requestedTools) {
+            const category = this.functionToCategory.get(tool);
+            if (category) {
+                strategy.categories.add(category);
+                
+                const categoryInfo = this.functionCategories[category];
+                if (!strategy.priorityGroups.has(categoryInfo.priority)) {
+                    strategy.priorityGroups.set(categoryInfo.priority, []);
+                }
+                strategy.priorityGroups.get(categoryInfo.priority).push({
+                    tool: tool,
+                    category: category
+                });
+            }
+        }
+        
+        // 基于关键词推断可能需要的功能类型
+        const inferredCategories = this.inferCategoriesFromKeywords(messageKeywords);
+        for (const category of inferredCategories) {
+            strategy.categories.add(category);
+        }
+        
+        // 构建执行计划
+        strategy.executionPlan = this.buildExecutionPlan(strategy.priorityGroups);
+        strategy.estimatedTime = this.estimateExecutionTime(strategy.executionPlan);
+        
+        return strategy;
+    }
+    
+    /**
+     * 提取消息中的关键词
+     */
+    extractKeywords(message) {
+        const keywords = {
+            navigation: ['navigate', 'go to', 'jump to', 'zoom', 'scroll', 'move to', 'position'],
+            search: ['search', 'find', 'look for', 'locate', 'get'],
+            analysis: ['analyze', 'calculate', 'compute', 'predict', 'statistics'],
+            blast: ['blast', 'similarity', 'homology', 'compare with database'],
+            visualization: ['show', 'display', 'toggle', 'hide', 'visible', 'track'],
+            sequence: ['sequence', 'dna', 'rna', 'protein', 'translate', 'gc content'],
+            annotation: ['annotate', 'add', 'edit', 'delete', 'modify', 'create']
+        };
+        
+        const found = {};
+        for (const [type, words] of Object.entries(keywords)) {
+            found[type] = words.some(word => message.includes(word));
+        }
+        
+        return found;
+    }
+    
+    /**
+     * 基于关键词推断功能类别
+     */
+    inferCategoriesFromKeywords(keywords) {
+        const categories = [];
+        
+        if (keywords.navigation || keywords.visualization) {
+            categories.push('browserActions');
+        }
+        
+        if (keywords.search) {
+            categories.push('dataRetrieval');
+        }
+        
+        if (keywords.sequence || keywords.analysis) {
+            categories.push('sequenceAnalysis');
+        }
+        
+        if (keywords.blast) {
+            categories.push('blastSearch');
+        }
+        
+        if (keywords.annotation) {
+            categories.push('dataManipulation');
+        }
+        
+        return categories;
+    }
+    
+    /**
+     * 构建执行计划
+     */
+    buildExecutionPlan(priorityGroups) {
+        const plan = [];
+        
+        // 按优先级排序
+        const sortedPriorities = Array.from(priorityGroups.keys()).sort((a, b) => a - b);
+        
+        for (const priority of sortedPriorities) {
+            const group = priorityGroups.get(priority);
+            plan.push({
+                priority: priority,
+                phase: this.getPhaseName(priority),
+                tools: group,
+                parallelizable: this.isParallelizable(priority),
+                estimatedTime: this.estimatePhaseTime(priority, group.length)
+            });
+        }
+        
+        return plan;
+    }
+    
+    /**
+     * 获取阶段名称
+     */
+    getPhaseName(priority) {
+        const phases = {
+            1: 'Immediate Browser Actions',
+            2: 'Data Retrieval',
+            3: 'Sequence Analysis',
+            4: 'Advanced Analysis',
+            5: 'External Services'
+        };
+        return phases[priority] || 'Unknown Phase';
+    }
+    
+    /**
+     * 判断是否可以并行执行
+     */
+    isParallelizable(priority) {
+        // 浏览器行为通常需要顺序执行
+        if (priority === 1) return false;
+        // 其他类型可以并行执行
+        return true;
+    }
+    
+    /**
+     * 估算阶段执行时间（毫秒）
+     */
+    estimatePhaseTime(priority, toolCount) {
+        const baseTime = {
+            1: 100,   // 浏览器行为 - 很快
+            2: 200,   // 数据检索 - 快
+            3: 500,   // 序列分析 - 中等
+            4: 1000,  // 高级分析 - 慢
+            5: 2000   // 外部服务 - 很慢
+        };
+        
+        return (baseTime[priority] || 500) * toolCount;
+    }
+    
+    /**
+     * 估算总执行时间
+     */
+    estimateExecutionTime(executionPlan) {
+        return executionPlan.reduce((total, phase) => {
+            return total + (phase.parallelizable ? phase.estimatedTime / 2 : phase.estimatedTime);
+        }, 0);
+    }
+    
+    /**
+     * 优化执行策略的主入口方法
+     * @param {string} userMessage - 用户消息
+     * @param {Array} requestedTools - 请求的工具
+     * @returns {Object} 优化的执行策略
+     */
+    async optimizeExecution(userMessage, requestedTools) {
+        // 分析请求策略
+        const strategy = this.analyzeRequestStrategy(userMessage, requestedTools);
+        
+        // 生成执行报告
+        const report = this.generateExecutionReport(strategy);
+        
+        // 返回优化建议
+        return {
+            strategy: strategy,
+            report: report,
+            recommendations: this.generateRecommendations(strategy)
+        };
+    }
+    
+    /**
+     * 生成执行报告
+     */
+    generateExecutionReport(strategy) {
+        return {
+            totalCategories: strategy.categories.size,
+            totalPhases: strategy.executionPlan.length,
+            estimatedTime: `${Math.round(strategy.estimatedTime / 1000 * 10) / 10}s`,
+            phases: strategy.executionPlan.map(phase => ({
+                name: phase.phase,
+                priority: phase.priority,
+                toolCount: phase.tools.length,
+                parallel: phase.parallelizable,
+                time: `${Math.round(phase.estimatedTime / 1000 * 10) / 10}s`
+            }))
+        };
+    }
+    
+    /**
+     * 生成优化建议
+     */
+    generateRecommendations(strategy) {
+        const recommendations = [];
+        
+        // 检查是否有浏览器行为需要优先执行
+        if (strategy.categories.has('browserActions')) {
+            recommendations.push({
+                type: 'priority',
+                message: 'Browser actions will be executed first for immediate visual feedback'
+            });
+        }
+        
+        // 检查是否有耗时操作
+        if (strategy.categories.has('blastSearch') || strategy.categories.has('advancedAnalysis')) {
+            recommendations.push({
+                type: 'performance',
+                message: 'Time-consuming operations detected. Consider running in background'
+            });
+        }
+        
+        // 检查是否可以并行执行
+        const parallelPhases = strategy.executionPlan.filter(p => p.parallelizable);
+        if (parallelPhases.length > 1) {
+            recommendations.push({
+                type: 'optimization',
+                message: `${parallelPhases.length} phases can be executed in parallel to improve speed`
+            });
+        }
+        
+        return recommendations;
+    }
+    
+    /**
+     * 按类别获取功能列表
+     */
+    getFunctionsByCategory(categoryName) {
+        return this.functionCategories[categoryName]?.functions || [];
+    }
+    
+    /**
+     * 获取功能的类别信息
+     */
+    getFunctionCategory(functionName) {
+        const categoryName = this.functionToCategory.get(functionName);
+        if (categoryName) {
+            return {
+                name: categoryName,
+                ...this.functionCategories[categoryName]
+            };
+        }
+        return null;
+    }
+    
+    /**
+     * 获取所有类别的统计信息
+     */
+    getCategoryStatistics() {
+        const stats = {};
+        for (const [name, category] of Object.entries(this.functionCategories)) {
+            stats[name] = {
+                description: category.description,
+                priority: category.priority,
+                functionCount: category.functions.length,
+                functions: category.functions
+            };
+        }
+        return stats;
+    }
+}
+
+// 导出类
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FunctionCallsOrganizer;
+} else if (typeof window !== 'undefined') {
+    window.FunctionCallsOrganizer = FunctionCallsOrganizer;
+} 

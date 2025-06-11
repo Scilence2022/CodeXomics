@@ -2,6 +2,49 @@ console.log('Executing src/renderer/renderer-modular.js');
 const { ipcRenderer } = require('electron');
 
 // Force reload - timestamp: 2025-05-31 15:01
+
+// Load Smart Execution System modules early
+if (typeof window !== 'undefined') {
+    // Load FunctionCallsOrganizer
+    const loadFunctionCallsOrganizer = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof FunctionCallsOrganizer !== 'undefined') {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/FunctionCallsOrganizer.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
+    // Load SmartExecutor
+    const loadSmartExecutor = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof SmartExecutor !== 'undefined') {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/SmartExecutor.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
+    // Load modules in sequence
+    loadFunctionCallsOrganizer()
+        .then(() => loadSmartExecutor())
+        .then(() => {
+            console.log('✅ Smart Execution System modules loaded successfully');
+        })
+        .catch(error => {
+            console.warn('⚠️ Failed to load Smart Execution System modules:', error);
+        });
+}
 /**
  * Main GenomeBrowser class - now modular and organized
  */
