@@ -1798,8 +1798,149 @@ class TrackRenderer {
         this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
     }
 
-    // New method to arrange genes into non-overlapping rows
+    // New method to dispatch gene arrangement based on layout mode
     arrangeGenesInRows(genes, viewStart, viewEnd, operons, settings) {
+        const layoutMode = settings?.layoutMode || 'compact';
+        console.log(`Arranging genes with layout mode: ${layoutMode}`);
+
+        if (layoutMode === 'groupByType') {
+            return this.arrangeGenesByType(genes, settings);
+        }
+        // Default to compact mode
+        return this.arrangeGenesCompactly(genes, operons, settings);
+    }
+
+    // New: Arranges genes by feature type
+    arrangeGenesByType(genes, settings) {
+        const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
+        const typeMap = new Map();
+
+        // Define a canonical order for feature types
+        const typeOrder = [
+            'promoter', 'terminator', 'regulatory', 
+            'CDS', 'mRNA', 'tRNA', 'rRNA', 
+            'gene', 'misc_feature', 'repeat_region'
+        ];
+        
+        // Initialize the map to maintain order
+        typeOrder.forEach(type => typeMap.set(type, []));
+
+        // Group genes by their type
+        sortedGenes.forEach(gene => {
+            const type = typeOrder.includes(gene.type) ? gene.type : 'misc_feature';
+            if (!typeMap.has(type)) { // For types not in our canonical order
+                typeMap.set(type, []);
+            }
+            typeMap.get(type).push(gene);
+        });
+
+        const finalRows = [];
+        // Iterate over the ordered map to build final rows
+        for (const [type, genesForType] of typeMap.entries()) {
+            if (genesForType.length === 0) continue;
+
+            const typeRows = [];
+            // Arrange genes within this type into non-overlapping rows
+            genesForType.forEach(gene => {
+                let placed = false;
+                for (const row of typeRows) {
+                    let conflicts = row.some(existingGene => this.genesOverlap(gene, existingGene));
+                    if (!conflicts) {
+                        row.push(gene);
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    typeRows.push([gene]);
+                }
+            });
+            finalRows.push(...typeRows);
+        }
+
+        console.log(`arrangeGenesByType result: created ${finalRows.length} rows`);
+        return finalRows;
+    }
+
+    // New: Arranges genes compactly, forcing into maxRows and allowing overlaps
+    arrangeGenesCompactly(genes, operons, settings) {
+        const maxRows = settings?.maxRows || 6;
+        const showOperonsSameRow = settings?.showOperonsSameRow || false;
+        
+        const sortedGenes = [...genes].sort((a, b) => a.start - b.start);
+        let idealRows = [];
+
+        // First, arrange into ideal non-overlapping rows
+        if (showOperonsSameRow && operons && operons.length > 0) {
+            // Complex logic to group operons (simplified for brevity, can be enhanced)
+            const operonGroups = new Map();
+            const singleGenes = [];
+            
+            sortedGenes.forEach(gene => {
+                const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+                if (operonInfo.isInOperon) {
+                    if (!operonGroups.has(operonInfo.operonName)) operonGroups.set(operonInfo.operonName, []);
+                    operonGroups.get(operonInfo.operonName).push(gene);
+                } else {
+                    singleGenes.push(gene);
+                }
+            });
+
+            const placeInRows = (geneList, rows) => {
+                geneList.forEach(gene => {
+                    let placed = false;
+                    for (let i = 0; i < rows.length; i++) {
+                        if (!rows[i].some(existing => this.genesOverlap(gene, existing))) {
+                            rows[i].push(gene);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) rows.push([gene]);
+                });
+            };
+
+            for (const operonGenes of operonGroups.values()) {
+                placeInRows(operonGenes, idealRows); // Simplified handling
+            }
+            placeInRows(singleGenes, idealRows);
+
+        } else {
+            // Original simpler algorithm for non-operon mode or no operons
+            sortedGenes.forEach(gene => {
+                let placed = false;
+                for (const row of idealRows) {
+                    if (!row.some(existingGene => this.genesOverlap(gene, existingGene))) {
+                        row.push(gene);
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    idealRows.push([gene]);
+                }
+            });
+        }
+        
+        // Now, squash rows if they exceed maxRows
+        if (idealRows.length > maxRows) {
+            const finalRows = idealRows.slice(0, maxRows);
+            for (let i = maxRows; i < idealRows.length; i++) {
+                for (const gene of idealRows[i]) {
+                    // Distribute genes from extra rows into the allowed rows
+                    finalRows[i % maxRows].push(gene);
+                }
+            }
+            console.log(`arrangeGenesCompactly result: squashed ${idealRows.length} rows into ${finalRows.length}`);
+            return finalRows;
+        } else {
+            console.log(`arrangeGenesCompactly result: created ${idealRows.length} rows`);
+            return idealRows;
+        }
+    }
+
+    // Old method, kept for reference. New method dispatches based on layout mode.
+    arrangeGenesInRows_legacy(genes, viewStart, viewEnd, operons, settings) {
         // Get settings with defaults
         const maxRows = settings?.maxRows || 6;
         const showOperonsSameRow = settings?.showOperonsSameRow || false;
@@ -2976,14 +3117,22 @@ class TrackRenderer {
                 <div class="form-group">
                     <label for="genesMaxRows">Maximal rows for displaying features:</label>
                     <input type="number" id="genesMaxRows" min="1" max="20" value="${settings.maxRows || 6}">
-                    <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden to reduce visual clutter.</div>
+                    <div class="help-text">Limits the number of rows shown. Features beyond this limit will be hidden or merged depending on the layout mode.</div>
+                </div>
+                <div class="form-group">
+                    <label for="genesLayoutMode">Layout Mode:</label>
+                    <select id="genesLayoutMode">
+                        <option value="compact" ${settings.layoutMode === 'compact' ? 'selected' : ''}>Compact</option>
+                        <option value="groupByType" ${settings.layoutMode === 'groupByType' ? 'selected' : ''}>Group by Type</option>
+                    </select>
+                    <div class="help-text">"Compact": Fits all features within max rows, allowing overlaps. "Group by Type": Separates features into dedicated rows by type.</div>
                 </div>
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="genesShowOperonsSameRow" ${settings.showOperonsSameRow ? 'checked' : ''}>
-                        Show operon genes in one row
+                        Group genes in the same operon
                     </label>
-                    <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible.</div>
+                    <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible (in Compact mode).</div>
                 </div>
             </div>
             <div class="settings-section">
@@ -3119,7 +3268,8 @@ class TrackRenderer {
                 geneHeight: 23,
                 fontSize: 11,
                 fontFamily: 'Arial, sans-serif',
-                arrowSize: 8
+                arrowSize: 8,
+                layoutMode: 'compact' // 'compact' or 'groupByType'
             },
             gc: {
                 contentColor: '#3b82f6',
@@ -3203,6 +3353,7 @@ class TrackRenderer {
                 const fontSizeElement = modal.querySelector('#genesFontSize');
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
                 const arrowSizeElement = modal.querySelector('#genesArrowSize');
+                const layoutModeElement = modal.querySelector('#genesLayoutMode');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -3211,7 +3362,8 @@ class TrackRenderer {
                     geneHeightElement: !!geneHeightElement,
                     fontSizeElement: !!fontSizeElement,
                     fontFamilyElement: !!fontFamilyElement,
-                    arrowSizeElement: !!arrowSizeElement
+                    arrowSizeElement: !!arrowSizeElement,
+                    layoutModeElement: !!layoutModeElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
@@ -3221,6 +3373,7 @@ class TrackRenderer {
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
                 settings.arrowSize = parseInt(arrowSizeElement?.value) || 8;
+                settings.layoutMode = layoutModeElement?.value || 'compact';
                 
                 console.log('Collected gene settings from form:', settings);
                 break;
@@ -3329,6 +3482,33 @@ class TrackRenderer {
         // Ensure the entire view is refreshed to reflect layout changes
         console.log('Calling refreshCurrentView after applying settings to track...');
         this.refreshCurrentView(); 
+    }
+
+    // Apply settings specifically to the Genes & Features track
+    applySettingsToTrack(trackId, settings) {
+        if (trackId === 'genes') {
+            console.log('applySettingsToTrack called for genes with settings: ', settings);
+            // Always update the settings object
+            this.trackSettings.genes = { ...this.trackSettings.genes, ...settings };
+
+            // Find the track element in the DOM
+            const trackElement = this.tracksContainer.querySelector(`#track-${trackId}`);
+
+            // If the track is not currently rendered, we can't update it.
+            // The settings are saved and will be used the next time it's rendered.
+            if (!trackElement) {
+                console.warn(`Track element not found for ${trackId}. Settings are saved but not applied to a visible track.`);
+                return; // Exit gracefully
+            }
+
+            // Directly update the track height
+            if (settings.height) {
+                trackElement.style.height = `${settings.height}px`;
+            }
+
+            // Re-render the track content to apply other settings like maxRows, fonts, etc.
+            this.genomeBrowser.rerenderTrack(trackId);
+        }
     }
 }
 

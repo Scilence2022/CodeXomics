@@ -706,27 +706,60 @@ class ChatManager {
         
         console.log('navigateToPosition called with params:', params);
         
-        // Use existing navigation functionality
-        if (this.app && this.app.navigationManager) {
-            console.log('Using navigationManager.parseAndGoToPosition');
-            
-            // Format the position string as expected by parseAndGoToPosition
-            const positionString = `${chromosome}:${start}-${end}`;
-            console.log('Formatted position string:', positionString);
-            
-            // Call the parseAndGoToPosition method
-            this.app.navigationManager.parseAndGoToPosition(positionString);
-            
-            return {
-                success: true,
-                chromosome: chromosome,
-                start: start,
-                end: end,
-                message: `Navigated to ${chromosome}:${start}-${end}`
-            };
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
         }
         
-        throw new Error('Navigation manager not available');
+        // Check if the target chromosome exists in loaded data
+        if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
+            throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+        }
+        
+        // First, switch to the target chromosome if it's not currently selected
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (currentChr !== chromosome) {
+            console.log(`Switching from chromosome ${currentChr} to ${chromosome}`);
+            
+            // Use the selectChromosome method to properly switch
+            this.app.selectChromosome(chromosome);
+            
+            // Wait a bit for the UI to update
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Now navigate to the specific position within that chromosome
+        const sequence = this.app.currentSequence[chromosome];
+        
+        // Validate and adjust bounds
+        const validatedStart = Math.max(0, start - 1); // Convert to 0-based
+        const validatedEnd = Math.min(sequence.length, end);
+        
+        if (validatedStart >= validatedEnd) {
+            throw new Error(`Invalid position range: ${start}-${end}`);
+        }
+        
+        // Set the position directly
+        this.app.currentPosition = { start: validatedStart, end: validatedEnd };
+        this.app.currentChromosome = chromosome;
+        
+        // Update the genome view
+        this.app.updateStatistics(chromosome, sequence);
+        this.app.displayGenomeView(chromosome, sequence);
+        
+        // Update navigation bar if it exists
+        if (this.app.genomeNavigationBar) {
+            this.app.genomeNavigationBar.update();
+        }
+        
+        console.log(`Successfully navigated to ${chromosome}:${start}-${end}`);
+        
+        return {
+            success: true,
+            chromosome: chromosome,
+            start: start,
+            end: end,
+            message: `Navigated to ${chromosome}:${start}-${end}`
+        };
     }
 
     async searchFeatures(params) {
