@@ -62,6 +62,9 @@ class TrackRenderer {
         // Track header visibility state - survives track recreation
         this.headerStates = new Map();
         
+        // Track settings storage
+        this.trackSettings = {};
+        
         // Common styles for reuse
         this.commonStyles = {
             noDataMessage: `
@@ -3332,10 +3335,6 @@ class TrackRenderer {
         
         // Close modal
         modal.classList.remove('show');
-        
-        // Refresh the current view
-        console.log('About to call refreshCurrentView...');
-        this.refreshCurrentView();
     }
     
     /**
@@ -3484,32 +3483,7 @@ class TrackRenderer {
         this.refreshCurrentView(); 
     }
 
-    // Apply settings specifically to the Genes & Features track
-    applySettingsToTrack(trackId, settings) {
-        if (trackId === 'genes') {
-            console.log('applySettingsToTrack called for genes with settings: ', settings);
-            // Always update the settings object
-            this.trackSettings.genes = { ...this.trackSettings.genes, ...settings };
 
-            // Find the track element in the DOM
-            const trackElement = this.tracksContainer.querySelector(`#track-${trackId}`);
-
-            // If the track is not currently rendered, we can't update it.
-            // The settings are saved and will be used the next time it's rendered.
-            if (!trackElement) {
-                console.warn(`Track element not found for ${trackId}. Settings are saved but not applied to a visible track.`);
-                return; // Exit gracefully
-            }
-
-            // Directly update the track height
-            if (settings.height) {
-                trackElement.style.height = `${settings.height}px`;
-            }
-
-            // Re-render the track content to apply other settings like maxRows, fonts, etc.
-            this.genomeBrowser.rerenderTrack(trackId);
-        }
-    }
 }
 
 // Export for use in other modules
