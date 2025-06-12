@@ -1,5 +1,6 @@
 console.log('Executing src/renderer/renderer-modular.js');
 const { ipcRenderer } = require('electron');
+const path = require('path');
 
 // Force reload - timestamp: 2025-05-31 15:01
 
@@ -1091,15 +1092,73 @@ class GenomeBrowser {
 
         // Handle plugin menu actions
         ipcRenderer.on('show-plugin-management', () => {
-            // Plugin management is handled by PluginManagementUI
+            console.log('🧩 Plugin Management requested from main menu');
+            
+            // Try multiple approaches to open plugin management
             const pluginManagerBtn = document.getElementById('pluginManagerBtn');
+            
             if (pluginManagerBtn) {
+                console.log('✅ Plugin Manager button found, clicking...');
                 pluginManagerBtn.click();
+            } else {
+                console.warn('⚠️ Plugin Manager button not found, trying direct approach...');
+                
+                // Try to show the modal directly if PluginManagementUI is available
+                if (window.pluginManagementUI) {
+                    console.log('✅ PluginManagementUI found globally, showing modal directly...');
+                    window.pluginManagementUI.showPluginModal();
+                } else if (this.pluginManagementUI) {
+                    console.log('✅ PluginManagementUI found on instance, showing modal directly...');
+                    this.pluginManagementUI.showPluginModal();
+                } else {
+                    console.warn('⚠️ PluginManagementUI not yet initialized, retrying in 500ms...');
+                    setTimeout(() => {
+                        const retryBtn = document.getElementById('pluginManagerBtn');
+                        if (retryBtn) {
+                            console.log('🔄 Retry: Plugin Manager button found, clicking...');
+                            retryBtn.click();
+                        } else if (window.pluginManagementUI) {
+                            console.log('🔄 Retry: Using global PluginManagementUI...');
+                            window.pluginManagementUI.showPluginModal();
+                        } else {
+                            console.error('❌ Plugin Management system not available after retry');
+                            // Fallback: show a simple notification
+                            if (window.genomeBrowser && window.genomeBrowser.showNotification) {
+                                window.genomeBrowser.showNotification('Plugin Management system is still initializing. Please try again in a moment.', 'warning');
+                            }
+                        }
+                    }, 500);
+                }
             }
         });
 
         ipcRenderer.on('show-smart-execution-demo', () => {
             this.showSmartExecutionDemo();
+        });
+
+        // Handle Plugin Function Calling Test
+        ipcRenderer.on('show-plugin-function-calling-test', () => {
+            console.log('🧪 Plugin Function Calling Test requested from main menu');
+            
+            try {
+                // Check if test file exists and open it
+                const testPath = path.join(__dirname, '..', 'test', 'plugin-function-calling-test.html');
+                const { shell } = require('electron');
+                
+                // For now, we'll use IPC to request the main process to open it
+                const { ipcRenderer } = require('electron');
+                ipcRenderer.send('open-plugin-function-calling-test');
+                
+                this.showNotification('Plugin Function Calling Test window is opening...', 'info');
+            } catch (error) {
+                console.error('Failed to open Plugin Function Calling Test:', error);
+                this.showNotification('Unable to open Plugin Function Calling Test window', 'error');
+            }
+        });
+
+        // Handle Resource Manager
+        ipcRenderer.on('open-resource-manager', () => {
+            this.openResourceManager();
         });
 
         // Handle options menu actions from main menu
@@ -3592,6 +3651,22 @@ class GenomeBrowser {
         } catch (error) {
             console.error('Failed to open Smart Execution Demo:', error);
             this.showNotification('无法打开智能执行演示页面', 'error');
+        }
+    }
+
+    /**
+     * Open Resource Manager window
+     */
+    openResourceManager() {
+        try {
+            // Use IPC to request opening the Resource Manager from main process
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.send('open-resource-manager');
+            
+            this.showNotification('Resource Manager window is opening...', 'info');
+        } catch (error) {
+            console.error('Failed to open Resource Manager:', error);
+            this.showNotification('Unable to open Resource Manager window', 'error');
         }
     }
 }

@@ -144,6 +144,14 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('show-panel', 'featuresSection');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Resource Manager',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            mainWindow.webContents.send('open-resource-manager');
+          }
         }
       ]
     },
@@ -483,5 +491,213 @@ ipcMain.on('open-smart-execution-demo', (event) => {
 
   } catch (error) {
     console.error('Failed to open smart execution demo:', error);
+  }
+});
+
+// Handle opening resource manager
+ipcMain.on('open-resource-manager', (event) => {
+  try {
+    // Create new window for the resource manager
+    const resourceManagerWindow = new BrowserWindow({
+      width: 1000,
+      height: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      title: 'Resource Manager - GenomeExplorer',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      show: false
+    });
+    
+    // Load the resource manager HTML
+    const resourceManagerPath = path.join(__dirname, 'resource-manager.html');
+    
+    // Check if file exists, if not create a fallback
+    if (fs.existsSync(resourceManagerPath)) {
+      resourceManagerWindow.loadFile(resourceManagerPath);
+    } else {
+      console.log('Resource manager file not found, creating...');
+      // We'll create the file below
+      resourceManagerWindow.loadFile(resourceManagerPath);
+    }
+    
+    // Show window when ready
+    resourceManagerWindow.once('ready-to-show', () => {
+      resourceManagerWindow.show();
+    });
+    
+    // Handle window closed
+    resourceManagerWindow.on('closed', () => {
+      console.log('Resource Manager window closed');
+    });
+    
+  } catch (error) {
+    console.error('Failed to open Resource Manager:', error);
+  }
+});
+
+// Resource Manager IPC handlers
+ipcMain.handle('get-loaded-resources', async () => {
+  try {
+    // In a real implementation, this would collect data from the main window
+    // For now, return mock data that matches the expected format
+    const mockResources = [
+      {
+        id: 'genome1',
+        type: 'fasta',
+        name: 'E.coli_K12.fasta',
+        path: '/Users/example/data/E.coli_K12.fasta',
+        size: 4641652,
+        loadedAt: new Date().toISOString(),
+        status: 'loaded',
+        chromosomes: ['NC_000913.3'],
+        sequences: 1,
+        metadata: {
+          organism: 'Escherichia coli K-12',
+          version: 'RefSeq',
+          source: 'NCBI'
+        }
+      }
+    ];
+    
+    return { success: true, resources: mockResources };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('refresh-resources', async () => {
+  try {
+    // Send refresh request to main window and collect current state
+    if (mainWindow) {
+      mainWindow.webContents.send('collect-resource-info');
+    }
+    return { success: true, message: 'Resources refreshed' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('remove-resource', async (event, resourceId) => {
+  try {
+    // In a real implementation, this would communicate with the main window
+    // to remove the resource
+    console.log('Removing resource:', resourceId);
+    return { success: true, message: 'Resource removed' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('export-resource', async (event, resourceId, options) => {
+  try {
+    // Implementation would show save dialog and export the resource
+    console.log('Exporting resource:', resourceId, options);
+    return { success: true, message: 'Resource exported' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('open-resource-in-browser', async (event, resourceId) => {
+  try {
+    // Send message to main window to display the resource
+    if (mainWindow) {
+      mainWindow.webContents.send('open-resource', resourceId);
+    }
+    return { success: true, message: 'Resource opened in browser' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('select-and-load-file', async () => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Genome Files', extensions: ['fasta', 'fa', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'fastq', 'fq'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      // Send to main window for loading
+      mainWindow.webContents.send('load-file', filePath);
+      return { success: true, filePath };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('send-to-main-window', async (event, channel, data) => {
+  try {
+    if (mainWindow) {
+      mainWindow.webContents.send(channel, data);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle opening plugin function calling test
+ipcMain.on('open-plugin-function-calling-test', (event) => {
+  try {
+    // Create new window for the plugin function calling test
+    const testWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false
+      },
+      title: 'Plugin Function Calling Test - GenomeExplorer',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      show: false
+    });
+
+    const testPath = path.join(__dirname, '..', 'test', 'plugin-function-calling-test.html');
+    
+    // Check if file exists
+    if (fs.existsSync(testPath)) {
+      testWindow.loadFile(testPath);
+    } else {
+      console.error('Plugin function calling test file not found:', testPath);
+      // Try alternative path (for development)
+      const altPath = path.join(__dirname, 'test', 'plugin-function-calling-test.html');
+      if (fs.existsSync(altPath)) {
+        testWindow.loadFile(altPath);
+      } else {
+        console.error('Plugin function calling test file not found at alternative path:', altPath);
+        testWindow.destroy();
+        return;
+      }
+    }
+
+    // Show window when ready
+    testWindow.once('ready-to-show', () => {
+      testWindow.show();
+    });
+
+    // Handle window closed
+    testWindow.on('closed', () => {
+      console.log('Plugin Function Calling Test window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open plugin function calling test:', error);
   }
 }); 

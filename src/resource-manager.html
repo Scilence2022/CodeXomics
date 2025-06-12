@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Manager - GenomeExplorer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f6fa;
+            color: #2c3e50;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #e1e8ed;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .sidebar-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            font-weight: 600;
+            border-bottom: 1px solid #e1e8ed;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-header:hover {
+            background: #e9ecef;
+        }
+        
+        .sidebar-content {
+            padding: 10px 0;
+            display: none;
+        }
+        
+        .sidebar-content.active {
+            display: block;
+        }
+        
+        .sidebar-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-item:hover {
+            background: #f8f9fa;
+            border-left-color: #007bff;
+        }
+        
+        .sidebar-item.active {
+            background: #e3f2fd;
+            border-left-color: #007bff;
+            color: #007bff;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .toolbar-left {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toolbar-right {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 200px;
+        }
+        
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .resource-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .resource-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        
+        .resource-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .resource-type {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .resource-body {
+            padding: 15px 20px;
+        }
+        
+        .resource-info {
+            margin-bottom: 15px;
+        }
+        
+        .resource-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .resource-info-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .resource-actions {
+            display: flex;
+            gap: 8px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .resource-actions .btn {
+            flex: 1;
+            justify-content: center;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .status-loaded {
+            background: #28a745;
+        }
+        
+        .status-loading {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-error {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .resource-list {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .resource-list-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .resource-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .resource-list-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .resource-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .icon-fasta { background: #28a745; }
+        .icon-gff { background: #007bff; }
+        .icon-vcf { background: #dc3545; }
+        .icon-bam { background: #6f42c1; }
+        .icon-wig { background: #fd7e14; }
+        .icon-other { background: #6c757d; }
+        
+        .resource-details {
+            flex: 1;
+        }
+        
+        .resource-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .resource-path {
+            font-size: 12px;
+            color: #6c757d;
+            font-family: monospace;
+        }
+        
+        .resource-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        
+        .resource-meta-item {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+        
+        .close:hover {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📁 Resource Manager</h1>
+        <p>Manage loaded data files and resources in GenomeExplorer</p>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('sequence-data')">
+                    Sequence Data
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="sequence-data">
+                    <div class="sidebar-item active" onclick="showResourceType('fasta')">
+                        <span>📄 FASTA Files</span>
+                        <span class="badge" id="fasta-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('annotation-data')">
+                    Annotation Data
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="annotation-data">
+                    <div class="sidebar-item" onclick="showResourceType('gff')">
+                        <span>🗂️ GFF/GTF Files</span>
+                        <span class="badge" id="gff-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('variant-data')">
+                    Variant Data
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="variant-data">
+                    <div class="sidebar-item" onclick="showResourceType('vcf')">
+                        <span>📊 VCF Files</span>
+                        <span class="badge" id="vcf-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('reads-data')">
+                    Sequencing Reads
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="reads-data">
+                    <div class="sidebar-item" onclick="showResourceType('bam')">
+                        <span>🧬 BAM/SAM Files</span>
+                        <span class="badge" id="bam-count">0</span>
+                    </div>
+                    <div class="sidebar-item" onclick="showResourceType('fastq')">
+                        <span>📄 FASTQ Files</span>
+                        <span class="badge" id="fastq-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('track-data')">
+                    Track Data
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="track-data">
+                    <div class="sidebar-item" onclick="showResourceType('wig')">
+                        <span>📈 WIG/BigWig Files</span>
+                        <span class="badge" id="wig-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header" onclick="toggleSidebarSection('other-data')">
+                    Other Resources
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content active" id="other-data">
+                    <div class="sidebar-item" onclick="showResourceType('all')">
+                        <span>📋 All Resources</span>
+                        <span class="badge" id="all-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <h3 id="content-title">FASTA Files</h3>
+                    <span id="content-subtitle">Sequence data files</span>
+                </div>
+                <div class="toolbar-right">
+                    <input type="text" class="search-box" placeholder="Search resources..." id="searchBox">
+                    <button class="btn btn-secondary" onclick="refreshResources()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="loadNewResource()">
+                        ➕ Load File
+                    </button>
+                </div>
+            </div>
+
+            <div id="resource-content">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Details Modal -->
+    <div id="resourceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Resource Details</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary" onclick="openInBrowser()">Open in Browser</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Resource Manager functionality
+        class ResourceManager {
+            constructor() {
+                this.resources = new Map();
+                this.currentFilter = 'fasta';
+                this.searchTerm = '';
+                this.init();
+            }
+
+            async init() {
+                // Check if electronAPI is available
+                if (!window.electronAPI) {
+                    console.error('electronAPI not available. Resource Manager requires preload script.');
+                    this.showError('Resource Manager requires secure IPC communication.');
+                    return;
+                }
+
+                // Initialize the Resource Manager
+                await this.loadResources();
+                this.setupEventListeners();
+                this.setupIPCListeners();
+                this.showResourceType('fasta');
+            }
+
+            setupEventListeners() {
+                const searchBox = document.getElementById('searchBox');
+                if (searchBox) {
+                    searchBox.addEventListener('input', (e) => {
+                        this.searchTerm = e.target.value.toLowerCase();
+                        this.renderContent();
+                    });
+                }
+            }
+
+            setupIPCListeners() {
+                // Listen for resource updates from main process
+                if (window.electronAPI) {
+                    window.electronAPI.onResourceUpdate((event, data) => {
+                        this.handleResourceUpdate(data);
+                    });
+                    
+                    window.electronAPI.onResourceAdded((event, resource) => {
+                        this.addResource(resource);
+                    });
+                    
+                    window.electronAPI.onResourceRemoved((event, resourceId) => {
+                        this.removeResourceFromCollection(resourceId);
+                    });
+                }
+            }
+
+            async loadResources() {
+                try {
+                    if (window.electronAPI) {
+                        const result = await window.electronAPI.getLoadedResources();
+                        if (result.success) {
+                            this.resources.clear();
+                            result.resources.forEach(resource => {
+                                // Convert loadedAt string back to Date object
+                                if (typeof resource.loadedAt === 'string') {
+                                    resource.loadedAt = new Date(resource.loadedAt);
+                                }
+                                this.resources.set(resource.id, resource);
+                            });
+                        } else {
+                            console.error('Failed to load resources:', result.error);
+                        }
+                    } else {
+                        // Fallback to mock data if electronAPI is not available
+                        this.loadMockData();
+                    }
+                    
+                    this.updateCounts();
+                } catch (error) {
+                    console.error('Error loading resources:', error);
+                    this.loadMockData();
+                }
+            }
+
+            loadMockData() {
+                const mockResources = [
+                    {
+                        id: 'genome1',
+                        type: 'fasta',
+                        name: 'E.coli_K12.fasta',
+                        path: '/Users/example/data/E.coli_K12.fasta',
+                        size: 4641652,
+                        loadedAt: new Date('2025-01-10T10:30:00'),
+                        status: 'loaded',
+                        chromosomes: ['NC_000913.3'],
+                        sequences: 1,
+                        metadata: {
+                            organism: 'Escherichia coli K-12',
+                            version: 'RefSeq',
+                            source: 'NCBI'
+                        }
+                    }
+                ];
+
+                this.resources.clear();
+                mockResources.forEach(resource => {
+                    this.resources.set(resource.id, resource);
+                });
+                this.updateCounts();
+            }
+
+            addResource(resource) {
+                if (typeof resource.loadedAt === 'string') {
+                    resource.loadedAt = new Date(resource.loadedAt);
+                }
+                this.resources.set(resource.id, resource);
+                this.updateCounts();
+                this.renderContent();
+            }
+
+            removeResourceFromCollection(resourceId) {
+                this.resources.delete(resourceId);
+                this.updateCounts();
+                this.renderContent();
+            }
+
+            handleResourceUpdate(data) {
+                // Handle resource updates from main window
+                if (data.type === 'refresh') {
+                    this.loadResources();
+                }
+            }
+
+            showError(message) {
+                const contentArea = document.getElementById('resource-content');
+                if (contentArea) {
+                    contentArea.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⚠️</div>
+                            <h3>Error</h3>
+                            <p>${message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            updateCounts() {
+                const counts = new Map();
+                
+                // Initialize counts
+                ['fasta', 'gff', 'vcf', 'bam', 'fastq', 'wig'].forEach(type => {
+                    counts.set(type, 0);
+                });
+
+                // Count resources by type
+                this.resources.forEach(resource => {
+                    const currentCount = counts.get(resource.type) || 0;
+                    counts.set(resource.type, currentCount + 1);
+                });
+
+                // Update UI
+                counts.forEach((count, type) => {
+                    const element = document.getElementById(`${type}-count`);
+                    if (element) {
+                        element.textContent = count;
+                    }
+                });
+
+                // Update total count
+                const allCountElement = document.getElementById('all-count');
+                if (allCountElement) {
+                    allCountElement.textContent = this.resources.size;
+                }
+            }
+
+            showResourceType(type) {
+                this.currentFilter = type;
+                
+                // Update active sidebar item
+                document.querySelectorAll('.sidebar-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                event.target.closest('.sidebar-item').classList.add('active');
+
+                // Update content title
+                const titles = {
+                    'fasta': 'FASTA Files',
+                    'gff': 'GFF/GTF Files', 
+                    'vcf': 'VCF Files',
+                    'bam': 'BAM/SAM Files',
+                    'fastq': 'FASTQ Files',
+                    'wig': 'WIG/BigWig Files',
+                    'all': 'All Resources'
+                };
+                
+                const subtitles = {
+                    'fasta': 'Sequence data files',
+                    'gff': 'Annotation files',
+                    'vcf': 'Variant call format files',
+                    'bam': 'Aligned sequence reads',
+                    'fastq': 'Raw sequence reads',
+                    'wig': 'Track data files',
+                    'all': 'All loaded resources'
+                };
+
+                document.getElementById('content-title').textContent = titles[type] || 'Resources';
+                document.getElementById('content-subtitle').textContent = subtitles[type] || '';
+
+                this.renderContent();
+            }
+
+            renderContent() {
+                const contentArea = document.getElementById('resource-content');
+                const filtered = this.getFilteredResources();
+
+                if (filtered.length === 0) {
+                    contentArea.innerHTML = this.renderEmptyState();
+                    return;
+                }
+
+                contentArea.innerHTML = `
+                    <div class="resource-list">
+                        ${filtered.map(resource => this.renderResourceItem(resource)).join('')}
+                    </div>
+                `;
+            }
+
+            getFilteredResources() {
+                let filtered = Array.from(this.resources.values());
+
+                // Filter by type
+                if (this.currentFilter !== 'all') {
+                    filtered = filtered.filter(resource => resource.type === this.currentFilter);
+                }
+
+                // Filter by search term
+                if (this.searchTerm) {
+                    filtered = filtered.filter(resource => 
+                        resource.name.toLowerCase().includes(this.searchTerm) ||
+                        resource.path.toLowerCase().includes(this.searchTerm)
+                    );
+                }
+
+                return filtered;
+            }
+
+            renderResourceItem(resource) {
+                const formatSize = (bytes) => {
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    if (bytes === 0) return '0 B';
+                    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+                };
+
+                const formatDate = (date) => {
+                    return date.toLocaleString();
+                };
+
+                const getResourceIcon = (type) => {
+                    const icons = {
+                        'fasta': 'FA',
+                        'gff': 'GFF',
+                        'vcf': 'VCF',
+                        'bam': 'BAM',
+                        'fastq': 'FQ',
+                        'wig': 'WIG'
+                    };
+                    return icons[type] || 'FILE';
+                };
+
+                const getMetaInfo = (resource) => {
+                    const meta = [];
+                    if (resource.sequences) meta.push(`${resource.sequences} sequences`);
+                    if (resource.features) meta.push(`${resource.features} features`);
+                    if (resource.genes) meta.push(`${resource.genes} genes`);
+                    if (resource.variants) meta.push(`${resource.variants} variants`);
+                    return meta;
+                };
+
+                return `
+                    <div class="resource-list-item" onclick="showResourceDetails('${resource.id}')">
+                        <div class="resource-icon icon-${resource.type}">
+                            ${getResourceIcon(resource.type)}
+                        </div>
+                        <div class="resource-details">
+                            <div class="resource-name">${resource.name}</div>
+                            <div class="resource-path">${resource.path}</div>
+                            <div class="resource-meta">
+                                <div class="resource-meta-item">
+                                    <span class="status-indicator status-${resource.status}"></span>
+                                    ${resource.status}
+                                </div>
+                                <div class="resource-meta-item">${formatSize(resource.size)}</div>
+                                <div class="resource-meta-item">${formatDate(resource.loadedAt)}</div>
+                                ${getMetaInfo(resource).map(info => `<div class="resource-meta-item">${info}</div>`).join('')}
+                            </div>
+                        </div>
+                        <div class="resource-actions">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); openInBrowser('${resource.id}')">View</button>
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); exportResource('${resource.id}')">Export</button>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); removeResource('${resource.id}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderEmptyState() {
+                const messages = {
+                    'fasta': 'No FASTA files loaded',
+                    'gff': 'No annotation files loaded',
+                    'vcf': 'No variant files loaded',
+                    'bam': 'No alignment files loaded',
+                    'fastq': 'No FASTQ files loaded',
+                    'wig': 'No track data files loaded',
+                    'all': 'No resources loaded'
+                };
+
+                return `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📁</div>
+                        <h3>${messages[this.currentFilter] || 'No resources found'}</h3>
+                        <p>Click "Load File" to add new resources to GenomeExplorer.</p>
+                        <button class="btn btn-primary" onclick="loadNewResource()">Load File</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Global functions
+        function toggleSidebarSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const header = event.target;
+            const arrow = header.querySelector('span');
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                arrow.textContent = '▶';
+            } else {
+                content.classList.add('active');
+                arrow.textContent = '▼';
+            }
+        }
+
+        function showResourceType(type) {
+            window.resourceManager.showResourceType(type);
+        }
+
+        function showResourceDetails(resourceId) {
+            const resource = window.resourceManager.resources.get(resourceId);
+            if (!resource) return;
+
+            const modal = document.getElementById('resourceModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = resource.name;
+            
+            modalBody.innerHTML = `
+                <div class="resource-info">
+                    <div class="resource-info-item">
+                        <span class="resource-info-label">Type:</span>
+                        <span>${resource.type.toUpperCase()}</span>
+                    </div>
+                    <div class="resource-info-item">
+                        <span class="resource-info-label">Path:</span>
+                        <span style="font-family: monospace;">${resource.path}</span>
+                    </div>
+                    <div class="resource-info-item">
+                        <span class="resource-info-label">Size:</span>
+                        <span>${(resource.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                    <div class="resource-info-item">
+                        <span class="resource-info-label">Loaded:</span>
+                        <span>${resource.loadedAt.toLocaleString()}</span>
+                    </div>
+                    <div class="resource-info-item">
+                        <span class="resource-info-label">Status:</span>
+                        <span>
+                            <span class="status-indicator status-${resource.status}"></span>
+                            ${resource.status}
+                        </span>
+                    </div>
+                </div>
+                
+                ${resource.metadata ? `
+                    <h4>Metadata</h4>
+                    <div class="resource-info">
+                        ${Object.entries(resource.metadata).map(([key, value]) => `
+                            <div class="resource-info-item">
+                                <span class="resource-info-label">${key}:</span>
+                                <span>${value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('resourceModal').style.display = 'none';
+        }
+
+        async function openInBrowser(resourceId) {
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.openResourceInBrowser(resourceId);
+                    if (result.success) {
+                        console.log('Resource opened in browser:', resourceId);
+                    } else {
+                        console.error('Failed to open resource:', result.error);
+                    }
+                } else {
+                    console.log('Opening resource in browser:', resourceId);
+                }
+            } catch (error) {
+                console.error('Error opening resource:', error);
+            }
+        }
+
+        async function exportResource(resourceId) {
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.exportResource(resourceId, {});
+                    if (result.success) {
+                        console.log('Resource exported:', resourceId);
+                    } else {
+                        console.error('Failed to export resource:', result.error);
+                    }
+                } else {
+                    console.log('Exporting resource:', resourceId);
+                }
+            } catch (error) {
+                console.error('Error exporting resource:', error);
+            }
+        }
+
+        async function removeResource(resourceId) {
+            if (confirm('Are you sure you want to remove this resource?')) {
+                try {
+                    if (window.electronAPI) {
+                        const result = await window.electronAPI.removeResource(resourceId);
+                        if (result.success) {
+                            window.resourceManager.removeResourceFromCollection(resourceId);
+                        } else {
+                            console.error('Failed to remove resource:', result.error);
+                        }
+                    } else {
+                        window.resourceManager.removeResourceFromCollection(resourceId);
+                    }
+                } catch (error) {
+                    console.error('Error removing resource:', error);
+                }
+            }
+        }
+
+        async function refreshResources() {
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.refreshResources();
+                    if (result.success) {
+                        await window.resourceManager.loadResources();
+                    } else {
+                        console.error('Failed to refresh resources:', result.error);
+                    }
+                } else {
+                    await window.resourceManager.loadResources();
+                }
+            } catch (error) {
+                console.error('Error refreshing resources:', error);
+            }
+        }
+
+        async function loadNewResource() {
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.selectAndLoadFile();
+                    if (result.success && !result.canceled) {
+                        console.log('File selected for loading:', result.filePath);
+                        // The file will be loaded in the main window and we'll receive updates
+                    } else if (result.canceled) {
+                        console.log('File selection canceled');
+                    } else {
+                        console.error('Failed to select file:', result.error);
+                    }
+                } else {
+                    console.log('Loading new resource...');
+                }
+            } catch (error) {
+                console.error('Error loading new resource:', error);
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('resourceModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Initialize Resource Manager when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.resourceManager = new ResourceManager();
+        });
+    </script>
+</body>
+</html> 
