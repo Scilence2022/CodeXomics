@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circos Genome Plotter - GenomeExplorer</title>
+    
+    <!-- External Dependencies -->
+    <script src="../node_modules/d3/dist/d3.min.js" onerror="this.onerror=null; this.src='https://d3js.org/d3.v7.min.js'"></script>
+    <script src="../node_modules/papaparse/papaparse.min.js" onerror="this.onerror=null; this.src='https://unpkg.com/papaparse@5/papaparse.min.js'"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .main-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-title i {
+            font-size: 28px;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #4a90e2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .circos-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #circos-svg {
+            background: #fefefe;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-panel {
+            width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            background: #e0f2fe;
+            color: #0891b2;
+            margin-left: 20px;
+        }
+
+        .assistant-message {
+            background: #f0fdf4;
+            color: #166534;
+            margin-right: 20px;
+        }
+
+        .system-message {
+            background: #fef3c7;
+            color: #92400e;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .chat-input-container {
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 40px;
+            font-family: inherit;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .send-btn {
+            width: 100%;
+            margin-top: 8px;
+            background: #10b981;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .send-btn:hover {
+            background: #059669;
+        }
+
+        .parameters-panel {
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .parameter-group {
+            margin-bottom: 16px;
+        }
+
+        .parameter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .parameter-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .color-input {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .range-input {
+            width: 100%;
+        }
+
+        .checkbox-input {
+            margin-right: 8px;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4a90e2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Circos plot specific styles */
+        .chromosome-arc {
+            fill: none;
+            stroke-width: 8;
+            cursor: pointer;
+        }
+
+        .chromosome-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-anchor: middle;
+            cursor: pointer;
+        }
+
+        .track {
+            opacity: 0.8;
+        }
+
+        .tick {
+            stroke: #666;
+            stroke-width: 1;
+        }
+
+        .tick-label {
+            font-size: 10px;
+            fill: #666;
+            text-anchor: middle;
+        }
+
+        .link {
+            fill: none;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        .status-dot.loading {
+            background: #f59e0b;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Circos Plot Panel -->
+        <div class="main-panel">
+            <div class="header">
+                <div class="header-title">
+                    <i class="fas fa-chart-pie"></i>
+                    <h1>Circos Genome Plotter</h1>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <button class="btn btn-primary" id="loadDataBtn">
+                    <i class="fas fa-upload"></i>
+                    Load Data
+                </button>
+                <button class="btn btn-secondary" id="exampleDataBtn">
+                    <i class="fas fa-flask"></i>
+                    Load Example
+                </button>
+                <button class="btn btn-secondary" id="exportBtn">
+                    <i class="fas fa-download"></i>
+                    Export SVG
+                </button>
+                <button class="btn btn-secondary" id="resetBtn">
+                    <i class="fas fa-refresh"></i>
+                    Reset
+                </button>
+                <button class="btn btn-secondary" id="helpBtn">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </button>
+            </div>
+
+            <div class="circos-container" id="circosContainer">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <span>Initializing Circos Plot...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat & Parameters Panel -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <i class="fas fa-robot"></i>
+                <h3>AI Parameter Control</h3>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    Welcome! I can help you adjust Circos plot parameters. Try asking:
+                    <br><br>
+                    • "Change the radius to 300"
+                    <br>• "Add a histogram track"
+                    <br>• "Set chromosome colors to rainbow"
+                    <br>• "Export as high-resolution SVG"
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <textarea class="chat-input" id="chatInput" placeholder="Ask me to adjust plot parameters..." rows="2"></textarea>
+                <button class="send-btn" id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    Send
+                </button>
+            </div>
+
+            <div class="parameters-panel">
+                <h4 style="margin-bottom: 12px; color: #374151;">Quick Parameters</h4>
+                
+                <div class="parameter-group">
+                    <label>Plot Radius</label>
+                    <input type="range" class="range-input" id="radiusSlider" min="150" max="400" value="250">
+                    <span id="radiusValue">250px</span>
+                </div>
+
+                <div class="parameter-group">
+                    <label>Chromosome Width</label>
+                    <input type="range" class="range-input" id="chrWidthSlider" min="5" max="20" value="10">
+                    <span id="chrWidthValue">10px</span>
+                </div>
+
+                <div class="parameter-group">
+                    <label>Gap Between Chromosomes</label>
+                    <input type="range" class="range-input" id="gapSlider" min="1" max="10" value="3">
+                    <span id="gapValue">3°</span>
+                </div>
+
+                <div class="parameter-group">
+                    <label>Show Chromosome Labels</label>
+                    <input type="checkbox" class="checkbox-input" id="showLabelsCheck" checked>
+                </div>
+
+                <div class="parameter-group">
+                    <label>Show Ticks</label>
+                    <input type="checkbox" class="checkbox-input" id="showTicksCheck" checked>
+                </div>
+
+                <div class="parameter-group">
+                    <label>Color Scheme</label>
+                    <select class="parameter-input" id="colorSchemeSelect">
+                        <option value="category10">Default</option>
+                        <option value="rainbow">Rainbow</option>
+                        <option value="blues">Blues</option>
+                        <option value="greens">Greens</option>
+                        <option value="reds">Reds</option>
+                        <option value="viridis">Viridis</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Scripts -->
+    <script src="circos-plotter.js"></script>
+</body>
+</html> 

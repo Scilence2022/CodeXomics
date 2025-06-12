@@ -171,6 +171,14 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('show-goto');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Circos Genome Plotter',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            createCircosWindow();
+          }
         }
       ]
     },
@@ -651,6 +659,49 @@ ipcMain.handle('send-to-main-window', async (event, channel, data) => {
     return { success: false, error: error.message };
   }
 });
+
+// Create Circos Window Function
+function createCircosWindow() {
+  try {
+    // Create new window for the Circos genome plotter
+    const circosWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Circos Genome Plotter - GenomeExplorer',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      show: false
+    });
+
+    const circosPath = path.join(__dirname, 'circos-plotter.html');
+    
+    // Load the Circos plotter HTML
+    circosWindow.loadFile(circosPath);
+
+    // Show window when ready
+    circosWindow.once('ready-to-show', () => {
+      circosWindow.show();
+    });
+
+    // Open DevTools for debugging
+    circosWindow.webContents.openDevTools();
+
+    // Handle window closed
+    circosWindow.on('closed', () => {
+      console.log('Circos Genome Plotter window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open Circos Genome Plotter:', error);
+  }
+}
 
 // Handle opening plugin function calling test
 ipcMain.on('open-plugin-function-calling-test', (event) => {
