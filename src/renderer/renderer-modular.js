@@ -35,11 +35,35 @@ if (typeof window !== 'undefined') {
         });
     };
 
+    // Load ModalDragManager
+    const loadModalDragManager = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof ModalDragManager !== 'undefined') {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/ModalDragManager.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
     // Load modules in sequence
     loadFunctionCallsOrganizer()
         .then(() => loadSmartExecutor())
+        .then(() => loadModalDragManager())
         .then(() => {
             console.log('✅ Smart Execution System modules loaded successfully');
+            // Initialize ModalDragManager
+            if (typeof ModalDragManager !== 'undefined') {
+                window.modalDragManager = new ModalDragManager();
+                // Auto-initialize management modals after DOM is ready
+                setTimeout(() => {
+                    window.modalDragManager.initializeAllModals();
+                }, 500);
+            }
         })
         .catch(error => {
             console.warn('⚠️ Failed to load Smart Execution System modules:', error);
@@ -402,6 +426,9 @@ class GenomeBrowser {
         
         // MCP Settings modal
         document.getElementById('mcpSettingsBtn')?.addEventListener('click', () => this.showMCPSettingsModal());
+        
+        // Smart Execution Demo button
+        document.getElementById('smartExecutionDemoBtn')?.addEventListener('click', () => this.showSmartExecutionDemo());
     }
 
     showMCPSettingsModal() {
@@ -1044,6 +1071,19 @@ class GenomeBrowser {
 
         ipcRenderer.on('show-all-panels', () => {
             this.uiManager.showAllPanels();
+        });
+
+        // Handle plugin menu actions
+        ipcRenderer.on('show-plugin-management', () => {
+            // Plugin management is handled by PluginManagementUI
+            const pluginManagerBtn = document.getElementById('pluginManagerBtn');
+            if (pluginManagerBtn) {
+                pluginManagerBtn.click();
+            }
+        });
+
+        ipcRenderer.on('show-smart-execution-demo', () => {
+            this.showSmartExecutionDemo();
         });
     }
 
@@ -3499,6 +3539,22 @@ class GenomeBrowser {
                 }
             }, 300);
         }, 3000);
+    }
+
+    /**
+     * Show Smart Execution Demo page
+     */
+    showSmartExecutionDemo() {
+        try {
+            // Use IPC to request opening the demo from main process
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.send('open-smart-execution-demo');
+            
+            this.showNotification('智能执行演示窗口正在打开...', 'info');
+        } catch (error) {
+            console.error('Failed to open Smart Execution Demo:', error);
+            this.showNotification('无法打开智能执行演示页面', 'error');
+        }
     }
 }
 

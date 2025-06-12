@@ -167,6 +167,25 @@ function createMenu() {
       ]
     },
     {
+      label: 'Plugins',
+      submenu: [
+        {
+          label: 'Plugin Management',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            mainWindow.webContents.send('show-plugin-management');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Smart Execution Demo',
+          click: () => {
+            mainWindow.webContents.send('show-smart-execution-demo');
+          }
+        }
+      ]
+    },
+    {
       label: 'Help',
       submenu: [
         {
@@ -384,4 +403,54 @@ ipcMain.handle('mcp-server-status', async () => {
     httpPort: mcpServerStatus === 'running' ? 3000 : null,
     wsPort: mcpServerStatus === 'running' ? 3001 : null
   };
+});
+
+// Handle opening smart execution demo
+ipcMain.on('open-smart-execution-demo', (event) => {
+  try {
+    // Create a new window for the Smart Execution Demo
+    const demoWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false
+      },
+      title: 'Smart Execution Demo - GenomeExplorer',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      show: false // Don't show until ready
+    });
+
+    const demoPath = path.join(__dirname, '..', 'test', 'smart-execution-demo.html');
+    
+    // Check if file exists
+    if (fs.existsSync(demoPath)) {
+      demoWindow.loadFile(demoPath);
+    } else {
+      console.error('Smart execution demo file not found:', demoPath);
+      // Try alternative path (for development)
+      const altPath = path.join(__dirname, 'test', 'smart-execution-demo.html');
+      if (fs.existsSync(altPath)) {
+        demoWindow.loadFile(altPath);
+      } else {
+        console.error('Smart execution demo file not found at alternative path:', altPath);
+        demoWindow.destroy();
+        return;
+      }
+    }
+
+    // Show window when ready
+    demoWindow.once('ready-to-show', () => {
+      demoWindow.show();
+    });
+
+    // Handle window closed
+    demoWindow.on('closed', () => {
+      console.log('Smart Execution Demo window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open smart execution demo:', error);
+  }
 }); 

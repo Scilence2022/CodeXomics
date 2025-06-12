@@ -626,6 +626,32 @@ body {
     max-width: 500px;
     max-height: 90vh;
     overflow: hidden;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Draggable modal styles */
+.modal-content.draggable {
+    cursor: move;
+}
+
+.modal-content.dragging {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-lg), 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+}
+
+/* Large modal variants for management interfaces */
+.modal-content.large {
+    max-width: 900px;
+    max-height: 85vh;
+    width: 95%;
+}
+
+.modal-content.extra-large {
+    max-width: 1200px;
+    max-height: 90vh;
+    width: 98%;
 }
 
 .modal-header {
@@ -662,6 +688,84 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(90vh - 140px); /* Account for header and footer */
+}
+
+/* Enhanced scrollbars for modal bodies */
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--text-secondary);
+    border-radius: 4px;
+    opacity: 0.6;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-primary);
+    opacity: 0.8;
+}
+
+/* Drag handle indicator */
+.modal-header.draggable-handle {
+    cursor: move;
+    user-select: none;
+}
+
+.modal-header.draggable-handle:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.modal-header.draggable-handle::before {
+    content: "⋮⋮";
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 14px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.modal-header.draggable-handle:hover::before {
+    opacity: 0.8;
+}
+
+/* Reset position button */
+.reset-position-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    margin-right: 8px;
+    transition: all 0.2s ease;
+}
+
+.reset-position-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.reset-position-btn:active {
+    transform: scale(0.95);
 }
 
 .modal-footer {
