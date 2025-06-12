@@ -529,7 +529,8 @@
                             <option value="greens">Greens</option>
                             <option value="reds">Reds</option>
                             <option value="viridis">Viridis</option>
-                            <option value="custom">Custom</option>
+                            <option value="pastel">Pastel</option>
+                            <option value="dark">Dark</option>
                         </select>
                     </div>
 
@@ -589,6 +590,71 @@
                         <label>Max Links to Show</label>
                         <input type="range" class="range-input" id="maxLinksSlider" min="10" max="100" value="20" step="10">
                         <div class="range-value" id="maxLinksValue">20</div>
+                    </div>
+                </div>
+
+                <!-- Data Tracks -->
+                <div class="parameter-section">
+                    <div class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Data Tracks
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" id="showGCContentCheck">
+                        <label class="checkbox-label" for="showGCContentCheck">Show GC Content</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" id="showGCSkewCheck">
+                        <label class="checkbox-label" for="showGCSkewCheck">Show GC Skew</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" id="showWigDataCheck">
+                        <label class="checkbox-label" for="showWigDataCheck">Show WIG Data</label>
+                    </div>
+
+                    <div class="parameter-group">
+                        <label>GC Window Size</label>
+                        <input type="range" class="range-input" id="gcWindowSlider" min="1000" max="50000" value="10000" step="1000">
+                        <div class="range-value" id="gcWindowValue">10kb</div>
+                    </div>
+
+                    <div class="parameter-group">
+                        <label>Track Height</label>
+                        <input type="range" class="range-input" id="wigHeightSlider" min="10" max="60" value="30" step="5">
+                        <div class="range-value" id="wigHeightValue">30px</div>
+                    </div>
+                </div>
+
+                <!-- Chromosome Order -->
+                <div class="parameter-section">
+                    <div class="section-title">
+                        <i class="fas fa-sort"></i>
+                        Chromosome Order
+                    </div>
+                    
+                    <div class="parameter-group">
+                        <label>Sort Order</label>
+                        <select class="parameter-input" id="chromosomeOrderSelect">
+                            <option value="default">Default</option>
+                            <option value="size">By Size (Large to Small)</option>
+                            <option value="size_asc">By Size (Small to Large)</option>
+                            <option value="name">By Name (Alphabetical)</option>
+                            <option value="reverse">Reverse Default</option>
+                        </select>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-small btn-secondary" id="shuffleOrderBtn">
+                            <i class="fas fa-random"></i>
+                            Shuffle
+                        </button>
+                        <button class="btn btn-small btn-secondary" id="applyOrderBtn">
+                            <i class="fas fa-check"></i>
+                            Apply
+                        </button>
                     </div>
                 </div>
 

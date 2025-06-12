@@ -28,15 +28,31 @@ class CircosPlotter {
         this.linkOpacity = 0.6;
         this.maxGenes = 200;
         this.maxLinks = 20;
+        this.showGCContent = false;
+        this.showGCSkew = false;
+        this.showWigData = false;
+        this.gcWindowSize = 10000;
+        this.wigTrackHeight = 30;
+        this.chromosomeOrder = 'default';
+        
+        // New track options
+        this.showGCContent = false;
+        this.showGCSkew = false;
+        this.showWigData = false;
+        this.gcWindowSize = 10000;
+        this.wigTrackHeight = 30;
+        this.chromosomeOrder = 'default'; // default, size, name, custom
         
         // Color schemes - using safe fallbacks
         this.colorSchemes = {
-            category10: d3.schemeCategory10 || ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
-            rainbow: ['#ff0000', '#ff8000', '#ffff00', '#80ff00', '#00ff00', '#00ff80', '#00ffff', '#0080ff', '#0000ff', '#8000ff'],
+            category10: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
+            rainbow: ['#ff0000', '#ff4000', '#ff8000', '#ffbf00', '#ffff00', '#bfff00', '#80ff00', '#40ff00', '#00ff00', '#00ff40', '#00ff80', '#00ffbf', '#00ffff', '#00bfff', '#0080ff', '#0040ff', '#0000ff', '#4000ff', '#8000ff', '#bf00ff', '#ff00ff', '#ff00bf', '#ff0080', '#ff0040'],
             blues: ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b'],
             greens: ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#41ab5d', '#238b45', '#006d2c', '#00441b'],
             reds: ['#fff5f0', '#fee0d2', '#fcbba1', '#fc9272', '#fb6a4a', '#ef3b2c', '#cb181d', '#a50f15', '#67000d'],
-            viridis: ['#440154', '#482777', '#3f4a8a', '#31678e', '#26838f', '#1f9d8a', '#6cce5a', '#b6de2b', '#fee825']
+            viridis: ['#440154', '#482777', '#3f4a8a', '#31678e', '#26838f', '#1f9d8a', '#6cce5a', '#b6de2b', '#fee825'],
+            pastel: ['#fbb4ae', '#b3cde3', '#ccebc5', '#decbe4', '#fed9a6', '#ffffcc', '#e5d8bd', '#fddaec', '#f2f2f2'],
+            dark: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d', '#666666']
         };
         
         this.tracks = [];
@@ -231,6 +247,50 @@ class CircosPlotter {
         document.getElementById('loadPlantBtn').addEventListener('click', () => this.loadPlantData());
         document.getElementById('loadVirusBtn').addEventListener('click', () => this.loadVirusData());
         
+        // Data track controls
+        document.getElementById('showGCContentCheck').addEventListener('change', (e) => {
+            this.showGCContent = e.target.checked;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('showGCSkewCheck').addEventListener('change', (e) => {
+            this.showGCSkew = e.target.checked;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('showWigDataCheck').addEventListener('change', (e) => {
+            this.showWigData = e.target.checked;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('gcWindowSlider').addEventListener('input', (e) => {
+            this.gcWindowSize = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            if (this.showGCContent || this.showGCSkew) {
+                this.redrawPlot();
+            }
+        });
+        
+        document.getElementById('wigHeightSlider').addEventListener('input', (e) => {
+            this.wigTrackHeight = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        // Chromosome order controls
+        document.getElementById('chromosomeOrderSelect').addEventListener('change', (e) => {
+            this.chromosomeOrder = e.target.value;
+            this.applyChromosomeOrder();
+        });
+        
+        document.getElementById('shuffleOrderBtn').addEventListener('click', () => {
+            this.shuffleChromosomes();
+        });
+        
+        document.getElementById('applyOrderBtn').addEventListener('click', () => {
+            this.applyChromosomeOrder();
+        });
+        
         // Export buttons
         document.getElementById('exportSvgBtn').addEventListener('click', () => this.exportSVG());
         document.getElementById('exportPngBtn').addEventListener('click', () => this.exportPNG());
@@ -255,7 +315,9 @@ class CircosPlotter {
             'geneHeightValue': `${this.geneHeight}px`,
             'linkOpacityValue': `${Math.round(this.linkOpacity * 100)}%`,
             'maxGenesValue': `${this.maxGenes}`,
-            'maxLinksValue': `${this.maxLinks}`
+            'maxLinksValue': `${this.maxLinks}`,
+            'gcWindowValue': `${Math.round(this.gcWindowSize / 1000)}kb`,
+            'wigHeightValue': `${this.wigTrackHeight}px`
         };
         
         Object.entries(updates).forEach(([id, value]) => {
@@ -635,6 +697,145 @@ class CircosPlotter {
         return genes;
     }
 
+    // Chromosome ordering methods
+    applyChromosomeOrder() {
+        if (!this.data || !this.data.chromosomes) return;
+        
+        const originalOrder = [...this.data.chromosomes];
+        
+        switch (this.chromosomeOrder) {
+            case 'size':
+                this.data.chromosomes.sort((a, b) => b.length - a.length);
+                break;
+            case 'size_asc':
+                this.data.chromosomes.sort((a, b) => a.length - b.length);
+                break;
+            case 'name':
+                this.data.chromosomes.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'reverse':
+                this.data.chromosomes.reverse();
+                break;
+            case 'default':
+            default:
+                // Restore original order if we have it stored
+                if (this.originalChromosomeOrder) {
+                    this.data.chromosomes = [...this.originalChromosomeOrder];
+                }
+                break;
+        }
+        
+        // Store original order if not already stored
+        if (!this.originalChromosomeOrder) {
+            this.originalChromosomeOrder = originalOrder;
+        }
+        
+        this.redrawPlot();
+        this.updateStatus(`Chromosomes sorted by: ${this.chromosomeOrder}`);
+    }
+
+    shuffleChromosomes() {
+        if (!this.data || !this.data.chromosomes) return;
+        
+        // Fisher-Yates shuffle
+        for (let i = this.data.chromosomes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.data.chromosomes[i], this.data.chromosomes[j]] = [this.data.chromosomes[j], this.data.chromosomes[i]];
+        }
+        
+        this.chromosomeOrder = 'shuffled';
+        document.getElementById('chromosomeOrderSelect').value = 'default';
+        this.redrawPlot();
+        this.updateStatus('Chromosomes shuffled randomly');
+    }
+
+    // GC content calculation
+    calculateGCContent(sequence, windowSize = 10000) {
+        const gcData = [];
+        for (let i = 0; i < sequence.length; i += windowSize) {
+            const window = sequence.slice(i, i + windowSize);
+            const gcCount = (window.match(/[GC]/gi) || []).length;
+            const gcPercent = (gcCount / window.length) * 100;
+            gcData.push({
+                position: i + windowSize / 2,
+                value: gcPercent
+            });
+        }
+        return gcData;
+    }
+
+    // GC skew calculation
+    calculateGCSkew(sequence, windowSize = 10000) {
+        const skewData = [];
+        for (let i = 0; i < sequence.length; i += windowSize) {
+            const window = sequence.slice(i, i + windowSize);
+            const gCount = (window.match(/G/gi) || []).length;
+            const cCount = (window.match(/C/gi) || []).length;
+            const skew = (gCount - cCount) / (gCount + cCount) || 0;
+            skewData.push({
+                position: i + windowSize / 2,
+                value: skew
+            });
+        }
+        return skewData;
+    }
+
+    // Generate mock GC content data
+    generateMockGCData(chromosome) {
+        const data = [];
+        const numPoints = Math.floor(chromosome.length / this.gcWindowSize);
+        
+        for (let i = 0; i < numPoints; i++) {
+            const position = i * this.gcWindowSize + this.gcWindowSize / 2;
+            // Generate realistic GC content (30-70%)
+            const baseGC = 45; // Base GC content
+            const variation = 15 * Math.sin(i * 0.1) + 10 * Math.random() - 5;
+            const gcContent = Math.max(30, Math.min(70, baseGC + variation));
+            
+            data.push({
+                position: position,
+                value: gcContent
+            });
+        }
+        return data;
+    }
+
+    // Generate mock GC skew data
+    generateMockGCSkew(chromosome) {
+        const data = [];
+        const numPoints = Math.floor(chromosome.length / this.gcWindowSize);
+        
+        for (let i = 0; i < numPoints; i++) {
+            const position = i * this.gcWindowSize + this.gcWindowSize / 2;
+            // Generate realistic GC skew (-0.3 to 0.3)
+            const skew = 0.2 * Math.sin(i * 0.05) + 0.1 * Math.random() - 0.05;
+            
+            data.push({
+                position: position,
+                value: skew
+            });
+        }
+        return data;
+    }
+
+    // Generate mock WIG data
+    generateMockWigData(chromosome) {
+        const data = [];
+        const numPoints = Math.floor(chromosome.length / (this.gcWindowSize / 2));
+        
+        for (let i = 0; i < numPoints; i++) {
+            const position = i * (this.gcWindowSize / 2) + this.gcWindowSize / 4;
+            // Generate mock expression/coverage data
+            const value = Math.max(0, 50 + 30 * Math.sin(i * 0.02) + 20 * Math.random());
+            
+            data.push({
+                position: position,
+                value: value
+            });
+        }
+        return data;
+    }
+
     generatePlantLinks() {
         const links = [];
         for (let i = 0; i < Math.min(this.maxLinks, 10); i++) {
@@ -695,6 +896,23 @@ class CircosPlotter {
         // Draw genes track if enabled
         if (this.showGenes && this.data.genes) {
             this.drawGenesTrack(g);
+        }
+        
+        // Draw data tracks
+        let trackOffset = 0;
+        if (this.showGCContent) {
+            this.drawGCContentTrack(g, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
+        }
+        
+        if (this.showGCSkew) {
+            this.drawGCSkewTrack(g, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
+        }
+        
+        if (this.showWigData) {
+            this.drawWigTrack(g, trackOffset);
+            trackOffset += this.wigTrackHeight + 5;
         }
         
         // Draw links if enabled
@@ -850,6 +1068,140 @@ class CircosPlotter {
                 .on('mouseout', () => {
                     this.hideTooltip();
                 });
+        });
+    }
+
+    drawGCContentTrack(g, trackOffset) {
+        const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
+        
+        this.data.chromosomes.forEach(chr => {
+            const gcData = this.generateMockGCData(chr);
+            
+            // Create line generator
+            const line = d3.line()
+                .x(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value - 30) / 40 * this.wigTrackHeight; // Scale 30-70% to track height
+                    return Math.cos(radians) * radius;
+                })
+                .y(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value - 30) / 40 * this.wigTrackHeight;
+                    return Math.sin(radians) * radius;
+                })
+                .curve(d3.curveCardinal);
+            
+            // Draw baseline
+            const baselineArc = d3.arc()
+                .innerRadius(trackRadius)
+                .outerRadius(trackRadius)
+                .startAngle(chr.startAngle * Math.PI / 180)
+                .endAngle(chr.endAngle * Math.PI / 180);
+            
+            g.append('path')
+                .attr('d', baselineArc)
+                .attr('stroke', '#ddd')
+                .attr('stroke-width', 1)
+                .attr('fill', 'none');
+            
+            // Draw GC content line
+            g.append('path')
+                .datum(gcData)
+                .attr('d', line)
+                .attr('stroke', '#2ca02c')
+                .attr('stroke-width', 2)
+                .attr('fill', 'none')
+                .attr('opacity', 0.8);
+        });
+    }
+
+    drawGCSkewTrack(g, trackOffset) {
+        const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
+        
+        this.data.chromosomes.forEach(chr => {
+            const skewData = this.generateMockGCSkew(chr);
+            
+            // Create line generator
+            const line = d3.line()
+                .x(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value + 0.3) / 0.6 * this.wigTrackHeight; // Scale -0.3 to 0.3 to track height
+                    return Math.cos(radians) * radius;
+                })
+                .y(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value + 0.3) / 0.6 * this.wigTrackHeight;
+                    return Math.sin(radians) * radius;
+                })
+                .curve(d3.curveCardinal);
+            
+            // Draw baseline (zero line)
+            const baselineArc = d3.arc()
+                .innerRadius(trackRadius + this.wigTrackHeight / 2)
+                .outerRadius(trackRadius + this.wigTrackHeight / 2)
+                .startAngle(chr.startAngle * Math.PI / 180)
+                .endAngle(chr.endAngle * Math.PI / 180);
+            
+            g.append('path')
+                .attr('d', baselineArc)
+                .attr('stroke', '#666')
+                .attr('stroke-width', 1)
+                .attr('fill', 'none');
+            
+            // Draw GC skew line
+            g.append('path')
+                .datum(skewData)
+                .attr('d', line)
+                .attr('stroke', '#d62728')
+                .attr('stroke-width', 2)
+                .attr('fill', 'none')
+                .attr('opacity', 0.8);
+        });
+    }
+
+    drawWigTrack(g, trackOffset) {
+        const trackRadius = this.innerRadius + this.chromosomeWidth + this.geneHeight + 10 + trackOffset;
+        
+        this.data.chromosomes.forEach(chr => {
+            const wigData = this.generateMockWigData(chr);
+            const maxValue = Math.max(...wigData.map(d => d.value));
+            
+            // Create area generator for filled track
+            const area = d3.area()
+                .x(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    return Math.cos(radians) * trackRadius;
+                })
+                .y(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    return Math.sin(radians) * trackRadius;
+                })
+                .x1(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value / maxValue) * this.wigTrackHeight;
+                    return Math.cos(radians) * radius;
+                })
+                .y1(d => {
+                    const angle = chr.startAngle + (d.position / chr.length) * (chr.endAngle - chr.startAngle);
+                    const radians = angle * Math.PI / 180;
+                    const radius = trackRadius + (d.value / maxValue) * this.wigTrackHeight;
+                    return Math.sin(radians) * radius;
+                })
+                .curve(d3.curveCardinal);
+            
+            // Draw WIG data as filled area
+            g.append('path')
+                .datum(wigData)
+                .attr('d', area)
+                .attr('fill', '#9467bd')
+                .attr('opacity', 0.6);
         });
     }
 
@@ -1101,9 +1453,15 @@ class CircosPlotter {
             'showTicksCheck': true,
             'showGenesCheck': true,
             'showLinksCheck': true,
+            'showGCContentCheck': false,
+            'showGCSkewCheck': false,
+            'showWigDataCheck': false,
+            'gcWindowSlider': 10000,
+            'wigHeightSlider': 30,
             'colorSchemeSelect': 'category10',
             'backgroundColorPicker': '#ffffff',
             'strokeColorPicker': '#ffffff',
+            'chromosomeOrderSelect': 'default',
             'exportResolutionSelect': '1'
         };
         
