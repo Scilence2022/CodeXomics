@@ -7,15 +7,27 @@ class CircosPlotter {
     constructor() {
         this.data = null;
         this.svg = null;
-        this.width = 600;
-        this.height = 600;
+        this.width = 700;
+        this.height = 700;
         this.radius = 250;
-        this.innerRadius = this.radius - 50;
-        this.chromosomeWidth = 10;
+        this.innerRadiusRatio = 0.8;
+        this.innerRadius = this.radius * this.innerRadiusRatio;
+        this.chromosomeWidth = 12;
         this.gapAngle = 3;
+        this.startAngle = 0;
         this.showLabels = true;
         this.showTicks = true;
+        this.showGenes = true;
+        this.showLinks = true;
         this.colorScheme = 'category10';
+        this.backgroundColor = '#ffffff';
+        this.strokeColor = '#ffffff';
+        this.strokeWidth = 1;
+        this.labelDistance = 25;
+        this.geneHeight = 8;
+        this.linkOpacity = 0.6;
+        this.maxGenes = 200;
+        this.maxLinks = 20;
         
         // Color schemes - using safe fallbacks
         this.colorSchemes = {
@@ -29,7 +41,6 @@ class CircosPlotter {
         
         this.tracks = [];
         this.tooltip = null;
-        this.chatHistory = [];
         
         // Initialize UI and check if successful
         if (!this.initializeUI()) {
@@ -38,12 +49,13 @@ class CircosPlotter {
         }
         
         this.setupEventListeners();
+        this.calculateOptimalSize();
         this.loadExampleData();
     }
 
     initializeUI() {
         // Check if required DOM elements exist
-        const requiredElements = ['statusDot', 'statusText', 'tooltip', 'radiusValue', 'chrWidthValue', 'gapValue'];
+        const requiredElements = ['statusDot', 'statusText', 'tooltip'];
         for (const elementId of requiredElements) {
             if (!document.getElementById(elementId)) {
                 console.error(`Required element #${elementId} not found`);
@@ -61,10 +73,38 @@ class CircosPlotter {
         // Initialize parameter values
         this.updateParameterDisplays();
         
-        // Add initial system message
-        this.addChatMessage('AI Assistant initialized. Ready to help with your Circos plot!', 'assistant');
+        console.log('CircosPlotter UI initialized successfully');
         
         return true;
+    }
+
+    calculateOptimalSize() {
+        const container = document.getElementById('circosContainer');
+        if (!container) return;
+        
+        const containerRect = container.getBoundingClientRect();
+        const padding = 40; // Total padding around the plot
+        
+        // Calculate the maximum square size that fits in the container
+        const maxSize = Math.min(containerRect.width, containerRect.height) - padding;
+        
+        this.width = Math.max(400, maxSize); // Minimum 400px
+        this.height = this.width; // Keep it square
+        
+        // Adjust radius to fit nicely in the new size
+        this.radius = Math.min(this.width, this.height) * 0.35; // 35% of the smaller dimension
+        this.innerRadius = this.radius * this.innerRadiusRatio;
+        
+        // Update the radius slider to match
+        const radiusSlider = document.getElementById('radiusSlider');
+        if (radiusSlider) {
+            radiusSlider.max = this.radius * 1.5;
+            radiusSlider.value = this.radius;
+        }
+        
+        this.updateParameterDisplays();
+        
+        console.log(`Calculated optimal size: ${this.width}x${this.height}, radius: ${this.radius}`);
     }
 
     setupEventListeners() {
@@ -75,23 +115,28 @@ class CircosPlotter {
         document.getElementById('resetBtn').addEventListener('click', () => this.resetPlot());
         document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
         
-        // Chat functionality
-        document.getElementById('sendBtn').addEventListener('click', () => this.sendChatMessage());
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendChatMessage();
-            }
-        });
-        
-        // Parameter controls
+        // Basic parameter controls
         document.getElementById('radiusSlider').addEventListener('input', (e) => {
             this.radius = parseInt(e.target.value);
-            this.innerRadius = this.radius - 50;
+            this.innerRadius = this.radius * this.innerRadiusRatio;
             this.updateParameterDisplays();
             this.redrawPlot();
         });
         
+        document.getElementById('innerRadiusSlider').addEventListener('input', (e) => {
+            this.innerRadiusRatio = parseFloat(e.target.value);
+            this.innerRadius = this.radius * this.innerRadiusRatio;
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        document.getElementById('startAngleSlider').addEventListener('input', (e) => {
+            this.startAngle = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        // Chromosome controls
         document.getElementById('chrWidthSlider').addEventListener('input', (e) => {
             this.chromosomeWidth = parseInt(e.target.value);
             this.updateParameterDisplays();
@@ -99,11 +144,18 @@ class CircosPlotter {
         });
         
         document.getElementById('gapSlider').addEventListener('input', (e) => {
-            this.gapAngle = parseInt(e.target.value);
+            this.gapAngle = parseFloat(e.target.value);
             this.updateParameterDisplays();
             this.redrawPlot();
         });
         
+        document.getElementById('labelDistanceSlider').addEventListener('input', (e) => {
+            this.labelDistance = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        // Checkbox controls
         document.getElementById('showLabelsCheck').addEventListener('change', (e) => {
             this.showLabels = e.target.checked;
             this.redrawPlot();
@@ -114,23 +166,116 @@ class CircosPlotter {
             this.redrawPlot();
         });
         
+        document.getElementById('showGenesCheck').addEventListener('change', (e) => {
+            this.showGenes = e.target.checked;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('showLinksCheck').addEventListener('change', (e) => {
+            this.showLinks = e.target.checked;
+            this.redrawPlot();
+        });
+        
+        // Color controls
         document.getElementById('colorSchemeSelect').addEventListener('change', (e) => {
             this.colorScheme = e.target.value;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('backgroundColorPicker').addEventListener('input', (e) => {
+            this.backgroundColor = e.target.value;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('strokeColorPicker').addEventListener('input', (e) => {
+            this.strokeColor = e.target.value;
+            this.redrawPlot();
+        });
+        
+        document.getElementById('strokeWidthSlider').addEventListener('input', (e) => {
+            this.strokeWidth = parseFloat(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        // Track controls
+        document.getElementById('geneHeightSlider').addEventListener('input', (e) => {
+            this.geneHeight = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        document.getElementById('linkOpacitySlider').addEventListener('input', (e) => {
+            this.linkOpacity = parseFloat(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        document.getElementById('maxGenesSlider').addEventListener('input', (e) => {
+            this.maxGenes = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        document.getElementById('maxLinksSlider').addEventListener('input', (e) => {
+            this.maxLinks = parseInt(e.target.value);
+            this.updateParameterDisplays();
+            this.redrawPlot();
+        });
+        
+        // Sample data buttons
+        document.getElementById('loadHumanBtn').addEventListener('click', () => this.loadHumanData());
+        document.getElementById('loadEcoliBtn').addEventListener('click', () => this.loadEcoliData());
+        document.getElementById('loadYeastBtn').addEventListener('click', () => this.loadYeastData());
+        document.getElementById('loadDrosaBtn').addEventListener('click', () => this.loadDrosophilaData());
+        document.getElementById('loadPlantBtn').addEventListener('click', () => this.loadPlantData());
+        document.getElementById('loadVirusBtn').addEventListener('click', () => this.loadVirusData());
+        
+        // Export buttons
+        document.getElementById('exportSvgBtn').addEventListener('click', () => this.exportSVG());
+        document.getElementById('exportPngBtn').addEventListener('click', () => this.exportPNG());
+        
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            this.calculateOptimalSize();
             this.redrawPlot();
         });
     }
 
     updateParameterDisplays() {
-        document.getElementById('radiusValue').textContent = `${this.radius}px`;
-        document.getElementById('chrWidthValue').textContent = `${this.chromosomeWidth}px`;
-        document.getElementById('gapValue').textContent = `${this.gapAngle}°`;
+        // Safe updates with existence checks
+        const updates = {
+            'radiusValue': `${Math.round(this.radius)}px`,
+            'innerRadiusValue': `${Math.round(this.innerRadiusRatio * 100)}%`,
+            'startAngleValue': `${this.startAngle}°`,
+            'chrWidthValue': `${this.chromosomeWidth}px`,
+            'gapValue': `${this.gapAngle}°`,
+            'labelDistanceValue': `${this.labelDistance}px`,
+            'strokeWidthValue': `${this.strokeWidth}px`,
+            'geneHeightValue': `${this.geneHeight}px`,
+            'linkOpacityValue': `${Math.round(this.linkOpacity * 100)}%`,
+            'maxGenesValue': `${this.maxGenes}`,
+            'maxLinksValue': `${this.maxLinks}`
+        };
+        
+        Object.entries(updates).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
     }
 
     loadExampleData() {
-        // Generate example genome data (simplified human chromosomes)
+        this.loadHumanData();
+    }
+
+    loadHumanData() {
+        // Human genome data (GRCh38)
         this.data = {
+            title: 'Human Genome (Homo sapiens)',
             chromosomes: [
-                { name: 'chr1', length: 249250621, color: '#1f77b4' },
+                { name: 'chr1', length: 248956422, color: '#1f77b4' },
                 { name: 'chr2', length: 242193529, color: '#ff7f0e' },
                 { name: 'chr3', length: 198295559, color: '#2ca02c' },
                 { name: 'chr4', length: 190214555, color: '#d62728' },
@@ -160,57 +305,359 @@ class CircosPlotter {
         };
         
         // Generate example genes and links
-        this.data.genes = this.generateExampleGenes();
-        this.data.links = this.generateExampleLinks();
+        this.data.genes = this.generateHumanGenes();
+        this.data.links = this.generateHumanLinks();
         
-        this.addChatMessage('Example human genome data loaded successfully! 24 chromosomes with sample genes and links.', 'assistant');
+        this.updateStatus('Human genome loaded: 24 chromosomes');
         this.createPlot();
     }
 
-    generateExampleGenes() {
+    updateStatus(message) {
+        const statusText = document.getElementById('statusText');
+        if (statusText) {
+            statusText.textContent = message;
+        }
+        console.log('Status:', message);
+    }
+
+    loadEcoliData() {
+        // E. coli K-12 MG1655 genome
+        this.data = {
+            title: 'E. coli K-12 MG1655',
+            chromosomes: [
+                { name: 'chromosome', length: 4641652, color: '#2ca02c' }
+            ],
+            genes: [
+                { chromosome: 'chromosome', start: 190, end: 255, name: 'thrL', type: 'protein_coding', value: 0.8 },
+                { chromosome: 'chromosome', start: 337, end: 2799, name: 'thrA', type: 'protein_coding', value: 0.9 },
+                { chromosome: 'chromosome', start: 2801, end: 3733, name: 'thrB', type: 'protein_coding', value: 0.85 },
+                { chromosome: 'chromosome', start: 3734, end: 5020, name: 'thrC', type: 'protein_coding', value: 0.75 },
+                { chromosome: 'chromosome', start: 5234, end: 5530, name: 'yaaX', type: 'protein_coding', value: 0.6 },
+                { chromosome: 'chromosome', start: 336000, end: 336879, name: 'lacI', type: 'protein_coding', value: 0.95 },
+                { chromosome: 'chromosome', start: 365000, end: 368200, name: 'lacZ', type: 'protein_coding', value: 0.92 },
+                { chromosome: 'chromosome', start: 368284, end: 369350, name: 'lacY', type: 'protein_coding', value: 0.88 },
+                { chromosome: 'chromosome', start: 369363, end: 370013, name: 'lacA', type: 'protein_coding', value: 0.78 }
+            ],
+            links: []
+        };
+        
+        // Generate additional E. coli genes
+        this.data.genes = this.data.genes.concat(this.generateEcoliGenes());
+        this.data.links = this.generateEcoliLinks();
+        
+        this.updateStatus('E. coli genome loaded: 1 chromosome');
+        this.createPlot();
+    }
+
+    loadYeastData() {
+        // S. cerevisiae genome
+        this.data = {
+            title: 'Saccharomyces cerevisiae',
+            chromosomes: [
+                { name: 'chrI', length: 230218, color: '#ff6b6b' },
+                { name: 'chrII', length: 813184, color: '#4ecdc4' },
+                { name: 'chrIII', length: 316620, color: '#45b7d1' },
+                { name: 'chrIV', length: 1531933, color: '#f9ca24' },
+                { name: 'chrV', length: 576874, color: '#f0932b' },
+                { name: 'chrVI', length: 270161, color: '#eb4d4b' },
+                { name: 'chrVII', length: 1090940, color: '#6c5ce7' },
+                { name: 'chrVIII', length: 562643, color: '#a29bfe' },
+                { name: 'chrIX', length: 439888, color: '#fd79a8' },
+                { name: 'chrX', length: 745751, color: '#fdcb6e' },
+                { name: 'chrXI', length: 666816, color: '#e17055' },
+                { name: 'chrXII', length: 1078177, color: '#00b894' },
+                { name: 'chrXIII', length: 924431, color: '#00cec9' },
+                { name: 'chrXIV', length: 784333, color: '#0984e3' },
+                { name: 'chrXV', length: 1091291, color: '#74b9ff' },
+                { name: 'chrXVI', length: 948066, color: '#e84393' }
+            ],
+            genes: [],
+            links: []
+        };
+        
+        this.data.genes = this.generateYeastGenes();
+        this.data.links = this.generateYeastLinks();
+        
+        this.updateStatus('Yeast genome loaded: 16 chromosomes');
+        this.createPlot();
+    }
+
+    loadDrosophilaData() {
+        // Drosophila melanogaster genome
+        this.data = {
+            title: 'Drosophila melanogaster',
+            chromosomes: [
+                { name: 'chrX', length: 23542271, color: '#e74c3c' },
+                { name: 'chr2L', length: 23513712, color: '#3498db' },
+                { name: 'chr2R', length: 25286936, color: '#2ecc71' },
+                { name: 'chr3L', length: 28110227, color: '#f39c12' },
+                { name: 'chr3R', length: 32079331, color: '#9b59b6' },
+                { name: 'chr4', length: 1348131, color: '#1abc9c' }
+            ],
+            genes: [],
+            links: []
+        };
+        
+        this.data.genes = this.generateDrosophilaGenes();
+        this.data.links = this.generateDrosophilaLinks();
+        
+        this.updateStatus('Drosophila genome loaded: 6 chromosomes');
+        this.createPlot();
+    }
+
+    loadPlantData() {
+        // Arabidopsis thaliana genome
+        this.data = {
+            title: 'Arabidopsis thaliana',
+            chromosomes: [
+                { name: 'chr1', length: 30427671, color: '#27ae60' },
+                { name: 'chr2', length: 19698289, color: '#2ecc71' },
+                { name: 'chr3', length: 23459830, color: '#16a085' },
+                { name: 'chr4', length: 18585056, color: '#1abc9c' },
+                { name: 'chr5', length: 26975502, color: '#52c41a' }
+            ],
+            genes: [],
+            links: []
+        };
+        
+        this.data.genes = this.generatePlantGenes();
+        this.data.links = this.generatePlantLinks();
+        
+        this.updateStatus('Plant genome loaded: 5 chromosomes');
+        this.createPlot();
+    }
+
+    loadVirusData() {
+        // SARS-CoV-2 genome
+        this.data = {
+            title: 'SARS-CoV-2',
+            chromosomes: [
+                { name: 'genome', length: 29903, color: '#e74c3c' }
+            ],
+            genes: [
+                { chromosome: 'genome', start: 266, end: 21555, name: 'ORF1ab', type: 'protein_coding', value: 0.95 },
+                { chromosome: 'genome', start: 21563, end: 25384, name: 'S', type: 'protein_coding', value: 0.98 },
+                { chromosome: 'genome', start: 25393, end: 26220, name: 'ORF3a', type: 'protein_coding', value: 0.7 },
+                { chromosome: 'genome', start: 26245, end: 26472, name: 'E', type: 'protein_coding', value: 0.8 },
+                { chromosome: 'genome', start: 26523, end: 27191, name: 'M', type: 'protein_coding', value: 0.9 },
+                { chromosome: 'genome', start: 27202, end: 27387, name: 'ORF6', type: 'protein_coding', value: 0.6 },
+                { chromosome: 'genome', start: 27394, end: 27759, name: 'ORF7a', type: 'protein_coding', value: 0.65 },
+                { chromosome: 'genome', start: 27756, end: 27887, name: 'ORF7b', type: 'protein_coding', value: 0.55 },
+                { chromosome: 'genome', start: 27894, end: 28259, name: 'ORF8', type: 'protein_coding', value: 0.7 },
+                { chromosome: 'genome', start: 28274, end: 29533, name: 'N', type: 'protein_coding', value: 0.92 },
+                { chromosome: 'genome', start: 29558, end: 29674, name: 'ORF10', type: 'protein_coding', value: 0.5 }
+            ],
+            links: []
+        };
+        
+        this.updateStatus('Virus genome loaded: 1 chromosome');
+        this.createPlot();
+    }
+
+    generateHumanGenes() {
         const genes = [];
         this.data.chromosomes.forEach((chr, chrIndex) => {
-            // Generate random genes for each chromosome
-            const numGenes = Math.floor(chr.length / 1000000) + Math.random() * 50;
+            const numGenes = Math.floor(Math.random() * 50) + 20; // 20-70 genes per chromosome
             for (let i = 0; i < numGenes; i++) {
-                const start = Math.floor(Math.random() * chr.length);
-                const end = start + Math.floor(Math.random() * 50000) + 1000;
+                const start = Math.floor(Math.random() * (chr.length - 50000));
+                const length = Math.floor(Math.random() * 10000) + 1000; // 1kb-11kb
                 genes.push({
                     chromosome: chr.name,
                     start: start,
-                    end: Math.min(end, chr.length),
-                    name: `Gene_${chrIndex}_${i}`,
-                    value: Math.random(),
-                    type: ['protein_coding', 'non_coding', 'pseudogene'][Math.floor(Math.random() * 3)]
+                    end: start + length,
+                    name: `Gene_${chrIndex + 1}_${i + 1}`,
+                    type: Math.random() > 0.7 ? 'non_coding' : 'protein_coding',
+                    value: Math.random()
+                });
+            }
+        });
+        return genes.slice(0, this.maxGenes);
+    }
+
+    generateHumanLinks() {
+        const links = [];
+        // Generate some example synteny/duplication links
+        for (let i = 0; i < this.maxLinks; i++) {
+            const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            
+            if (chr1.name !== chr2.name) {
+                links.push({
+                    source: {
+                        chromosome: chr1.name,
+                        start: Math.floor(Math.random() * (chr1.length - 1000000)),
+                        end: Math.floor(Math.random() * 1000000) + 500000
+                    },
+                    target: {
+                        chromosome: chr2.name,
+                        start: Math.floor(Math.random() * (chr2.length - 1000000)),
+                        end: Math.floor(Math.random() * 1000000) + 500000
+                    },
+                    type: ['synteny', 'duplication', 'inversion'][Math.floor(Math.random() * 3)],
+                    value: Math.random()
+                });
+            }
+        }
+        return links;
+    }
+
+    generateEcoliGenes() {
+        const genes = [];
+        const geneNames = ['dnaA', 'dnaB', 'dnaC', 'dnaG', 'dnaK', 'recA', 'rpoA', 'rpoB', 'rpoC', 'gyrA', 'gyrB'];
+        for (let i = 0; i < Math.min(100, this.maxGenes - 9); i++) {
+            const start = Math.floor(Math.random() * (this.data.chromosomes[0].length - 5000));
+            const length = Math.floor(Math.random() * 3000) + 500;
+            genes.push({
+                chromosome: 'chromosome',
+                start: start,
+                end: start + length,
+                name: geneNames[i % geneNames.length] + `_${Math.floor(i / geneNames.length) + 1}`,
+                type: 'protein_coding',
+                value: Math.random() * 0.5 + 0.5
+            });
+        }
+        return genes;
+    }
+
+    generateEcoliLinks() {
+        return []; // E. coli is single chromosome, no inter-chromosomal links
+    }
+
+    generateYeastGenes() {
+        const genes = [];
+        this.data.chromosomes.forEach((chr, chrIndex) => {
+            const numGenes = Math.floor(chr.length / 5000); // ~1 gene per 5kb
+            for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+                const start = Math.floor(Math.random() * (chr.length - 2000));
+                const length = Math.floor(Math.random() * 1500) + 500;
+                genes.push({
+                    chromosome: chr.name,
+                    start: start,
+                    end: start + length,
+                    name: `Y${chr.name.replace('chr', '')}${String(i + 1).padStart(3, '0')}C`,
+                    type: 'protein_coding',
+                    value: Math.random()
                 });
             }
         });
         return genes;
     }
 
-    generateExampleLinks() {
+    generateYeastLinks() {
         const links = [];
-        const numLinks = 50;
-        
-        for (let i = 0; i < numLinks; i++) {
+        for (let i = 0; i < Math.min(this.maxLinks, 15); i++) {
             const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
             const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
             
-            links.push({
-                source: {
-                    chromosome: chr1.name,
-                    start: Math.floor(Math.random() * chr1.length),
-                    end: Math.floor(Math.random() * chr1.length)
-                },
-                target: {
-                    chromosome: chr2.name,
-                    start: Math.floor(Math.random() * chr2.length),
-                    end: Math.floor(Math.random() * chr2.length)
-                },
-                value: Math.random()
-            });
+            if (chr1.name !== chr2.name) {
+                links.push({
+                    source: {
+                        chromosome: chr1.name,
+                        start: Math.floor(Math.random() * (chr1.length - 50000)),
+                        end: Math.floor(Math.random() * 50000) + 25000
+                    },
+                    target: {
+                        chromosome: chr2.name,
+                        start: Math.floor(Math.random() * (chr2.length - 50000)),
+                        end: Math.floor(Math.random() * 50000) + 25000
+                    },
+                    type: 'duplication',
+                    value: Math.random()
+                });
+            }
         }
-        
+        return links;
+    }
+
+    generateDrosophilaGenes() {
+        const genes = [];
+        this.data.chromosomes.forEach((chr, chrIndex) => {
+            const numGenes = Math.floor(chr.length / 15000); // ~1 gene per 15kb
+            for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+                const start = Math.floor(Math.random() * (chr.length - 10000));
+                const length = Math.floor(Math.random() * 8000) + 2000;
+                genes.push({
+                    chromosome: chr.name,
+                    start: start,
+                    end: start + length,
+                    name: `Dm${chr.name.replace('chr', '')}${String(i + 1).padStart(4, '0')}`,
+                    type: Math.random() > 0.8 ? 'non_coding' : 'protein_coding',
+                    value: Math.random()
+                });
+            }
+        });
+        return genes;
+    }
+
+    generateDrosophilaLinks() {
+        const links = [];
+        for (let i = 0; i < Math.min(this.maxLinks, 12); i++) {
+            const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            
+            if (chr1.name !== chr2.name) {
+                links.push({
+                    source: {
+                        chromosome: chr1.name,
+                        start: Math.floor(Math.random() * (chr1.length - 100000)),
+                        end: Math.floor(Math.random() * 100000) + 50000
+                    },
+                    target: {
+                        chromosome: chr2.name,
+                        start: Math.floor(Math.random() * (chr2.length - 100000)),
+                        end: Math.floor(Math.random() * 100000) + 50000
+                    },
+                    type: 'inversion',
+                    value: Math.random()
+                });
+            }
+        }
+        return links;
+    }
+
+    generatePlantGenes() {
+        const genes = [];
+        this.data.chromosomes.forEach((chr, chrIndex) => {
+            const numGenes = Math.floor(chr.length / 8000); // ~1 gene per 8kb
+            for (let i = 0; i < Math.min(numGenes, Math.floor(this.maxGenes / this.data.chromosomes.length)); i++) {
+                const start = Math.floor(Math.random() * (chr.length - 5000));
+                const length = Math.floor(Math.random() * 4000) + 1000;
+                genes.push({
+                    chromosome: chr.name,
+                    start: start,
+                    end: start + length,
+                    name: `AT${chrIndex + 1}G${String(i + 1).padStart(5, '0')}`,
+                    type: 'protein_coding',
+                    value: Math.random()
+                });
+            }
+        });
+        return genes;
+    }
+
+    generatePlantLinks() {
+        const links = [];
+        for (let i = 0; i < Math.min(this.maxLinks, 10); i++) {
+            const chr1 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            const chr2 = this.data.chromosomes[Math.floor(Math.random() * this.data.chromosomes.length)];
+            
+            if (chr1.name !== chr2.name) {
+                links.push({
+                    source: {
+                        chromosome: chr1.name,
+                        start: Math.floor(Math.random() * (chr1.length - 200000)),
+                        end: Math.floor(Math.random() * 200000) + 100000
+                    },
+                    target: {
+                        chromosome: chr2.name,
+                        start: Math.floor(Math.random() * (chr2.length - 200000)),
+                        end: Math.floor(Math.random() * 200000) + 100000
+                    },
+                    type: 'synteny',
+                    value: Math.random()
+                });
+            }
+        }
         return links;
     }
 
@@ -218,15 +665,16 @@ class CircosPlotter {
         // Clear previous plot
         d3.select('#circosContainer').selectAll('*').remove();
         
-        // Create SVG
+        // Create SVG with dynamic sizing
         this.svg = d3.select('#circosContainer')
             .append('svg')
             .attr('id', 'circos-svg')
             .attr('width', this.width)
-            .attr('height', this.height);
+            .attr('height', this.height)
+            .style('background-color', this.backgroundColor);
         
         const g = this.svg.append('g')
-            .attr('transform', `translate(${this.width/2}, ${this.height/2})`);
+            .attr('transform', `translate(${this.width/2}, ${this.height/2}) rotate(${this.startAngle})`);
         
         // Calculate angles for chromosomes
         this.calculateChromosomeAngles();
@@ -244,14 +692,25 @@ class CircosPlotter {
             this.drawLabels(g);
         }
         
-        // Draw genes track
-        this.drawGenesTrack(g);
+        // Draw genes track if enabled
+        if (this.showGenes && this.data.genes) {
+            this.drawGenesTrack(g);
+        }
         
-        // Draw links
-        this.drawLinks(g);
+        // Draw links if enabled
+        if (this.showLinks && this.data.links) {
+            this.drawLinks(g);
+        }
         
         // Update status
-        document.getElementById('statusText').textContent = `Plotted ${this.data.chromosomes.length} chromosomes`;
+        let statusText = `Plotted ${this.data.chromosomes.length} chromosomes`;
+        if (this.data.genes) {
+            statusText += `, ${this.data.genes.length} genes`;
+        }
+        if (this.data.links) {
+            statusText += `, ${this.data.links.length} links`;
+        }
+        this.updateStatus(statusText);
     }
 
     calculateChromosomeAngles() {
@@ -284,18 +743,18 @@ class CircosPlotter {
             .attr('class', 'chromosome-arc')
             .attr('d', arc)
             .attr('fill', (d, i) => colors[i % colors.length])
-            .attr('stroke', '#fff')
-            .attr('stroke-width', 1)
+            .attr('stroke', this.strokeColor)
+            .attr('stroke-width', this.strokeWidth)
             .style('cursor', 'pointer')
             .on('mouseover', (event, d) => {
-                this.showTooltip(event, `${d.name}<br/>Length: ${d.length.toLocaleString()} bp`);
+                this.showTooltip(event, `${d.name}<br/>Length: ${d.length.toLocaleString()} bp<br/>Coverage: ${((d.endAngle - d.startAngle) / 360 * 100).toFixed(1)}%`);
             })
             .on('mouseout', () => {
                 this.hideTooltip();
             })
             .on('click', (event, d) => {
-                this.addChatMessage(`Clicked on ${d.name} (${d.length.toLocaleString()} bp)`, 'user');
-                this.addChatMessage(`${d.name} is ${(d.length / 1000000).toFixed(1)} Mb long. This chromosome spans ${(d.endAngle - d.startAngle).toFixed(1)}° in the plot.`, 'assistant');
+                console.log(`Clicked on ${d.name}: ${d.length.toLocaleString()} bp`);
+                this.updateStatus(`Selected: ${d.name} (${(d.length / 1000000).toFixed(1)} Mb)`);
             });
     }
 
@@ -348,7 +807,7 @@ class CircosPlotter {
             .attr('transform', d => {
                 const angle = d.midAngle;
                 const radians = angle * Math.PI / 180;
-                const labelRadius = this.innerRadius + this.chromosomeWidth + 20;
+                const labelRadius = this.innerRadius + this.chromosomeWidth + this.labelDistance;
                 const x = Math.cos(radians) * labelRadius;
                 const y = Math.sin(radians) * labelRadius;
                 return `translate(${x}, ${y}) rotate(${angle > 90 && angle < 270 ? angle + 180 : angle})`;
@@ -356,8 +815,8 @@ class CircosPlotter {
             .text(d => d.name)
             .style('cursor', 'pointer')
             .on('click', (event, d) => {
-                this.addChatMessage(`Tell me about ${d.name}`, 'user');
-                this.addChatMessage(`${d.name} is one of the human chromosomes. It contains ${(d.length / 1000000).toFixed(1)} million base pairs and represents ${((d.endAngle - d.startAngle) / 360 * 100).toFixed(1)}% of the genome in this visualization.`, 'assistant');
+                console.log(`Label clicked: ${d.name}`);
+                this.updateStatus(`Chromosome ${d.name}: ${(d.length / 1000000).toFixed(1)} Mb, ${((d.endAngle - d.startAngle) / 360 * 100).toFixed(1)}% coverage`);
             });
     }
 
@@ -365,7 +824,7 @@ class CircosPlotter {
         if (!this.data.genes) return;
         
         const geneRadius = this.innerRadius + this.chromosomeWidth + 5;
-        const geneHeight = 8;
+        const geneHeight = this.geneHeight;
         
         this.data.genes.slice(0, 200).forEach(gene => { // Limit for performance
             const chr = this.data.chromosomes.find(c => c.name === gene.chromosome);
@@ -456,147 +915,57 @@ class CircosPlotter {
         this.tooltip.style('opacity', 0);
     }
 
-    // Chat functionality
-    sendChatMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
+    exportPNG() {
+        const svgElement = document.getElementById('circos-svg');
+        if (!svgElement) {
+            this.updateStatus('Error: No plot to export');
+            return;
+        }
         
-        if (!message) return;
+        const resolution = parseInt(document.getElementById('exportResolutionSelect').value) || 1;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
         
-        this.addChatMessage(message, 'user');
-        input.value = '';
+        // Set canvas size based on resolution
+        canvas.width = this.width * resolution;
+        canvas.height = this.height * resolution;
         
-        // Process AI command
-        this.processAICommand(message);
-    }
-
-    addChatMessage(message, sender) {
-        const messagesContainer = document.getElementById('chatMessages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message`;
-        messageDiv.innerHTML = message;
+        // Create image from SVG
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
         
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // Store in history
-        this.chatHistory.push({ message, sender, timestamp: new Date() });
-    }
-
-    processAICommand(command) {
-        const lowerCommand = command.toLowerCase();
-        
-        // Radius adjustments
-        if (lowerCommand.includes('radius')) {
-            const match = lowerCommand.match(/(\d+)/);
-            if (match) {
-                const newRadius = parseInt(match[1]);
-                if (newRadius >= 150 && newRadius <= 400) {
-                    this.radius = newRadius;
-                    this.innerRadius = this.radius - 50;
-                    document.getElementById('radiusSlider').value = newRadius;
-                    this.updateParameterDisplays();
-                    this.redrawPlot();
-                    this.addChatMessage(`✅ Updated plot radius to ${newRadius}px`, 'assistant');
-                } else {
-                    this.addChatMessage(`❌ Radius must be between 150 and 400 pixels. You requested ${newRadius}px.`, 'assistant');
-                }
-            }
-        }
-        // Chromosome width adjustments
-        else if (lowerCommand.includes('chromosome width') || lowerCommand.includes('chr width')) {
-            const match = lowerCommand.match(/(\d+)/);
-            if (match) {
-                const newWidth = parseInt(match[1]);
-                if (newWidth >= 5 && newWidth <= 20) {
-                    this.chromosomeWidth = newWidth;
-                    document.getElementById('chrWidthSlider').value = newWidth;
-                    this.updateParameterDisplays();
-                    this.redrawPlot();
-                    this.addChatMessage(`✅ Updated chromosome width to ${newWidth}px`, 'assistant');
-                } else {
-                    this.addChatMessage(`❌ Chromosome width must be between 5 and 20 pixels.`, 'assistant');
-                }
-            }
-        }
-        // Color scheme changes
-        else if (lowerCommand.includes('color')) {
-            if (lowerCommand.includes('rainbow')) {
-                this.colorScheme = 'rainbow';
-                document.getElementById('colorSchemeSelect').value = 'rainbow';
-                this.redrawPlot();
-                this.addChatMessage(`🌈 Changed to rainbow color scheme!`, 'assistant');
-            } else if (lowerCommand.includes('blue')) {
-                this.colorScheme = 'blues';
-                document.getElementById('colorSchemeSelect').value = 'blues';
-                this.redrawPlot();
-                this.addChatMessage(`🔵 Changed to blue color scheme!`, 'assistant');
-            } else if (lowerCommand.includes('green')) {
-                this.colorScheme = 'greens';
-                document.getElementById('colorSchemeSelect').value = 'greens';
-                this.redrawPlot();
-                this.addChatMessage(`🟢 Changed to green color scheme!`, 'assistant');
-            } else if (lowerCommand.includes('red')) {
-                this.colorScheme = 'reds';
-                document.getElementById('colorSchemeSelect').value = 'reds';
-                this.redrawPlot();
-                this.addChatMessage(`🔴 Changed to red color scheme!`, 'assistant');
-            } else if (lowerCommand.includes('viridis')) {
-                this.colorScheme = 'viridis';
-                document.getElementById('colorSchemeSelect').value = 'viridis';
-                this.redrawPlot();
-                this.addChatMessage(`💜 Changed to viridis color scheme!`, 'assistant');
-            }
-        }
-        // Label and tick toggles
-        else if (lowerCommand.includes('hide labels') || lowerCommand.includes('remove labels')) {
-            this.showLabels = false;
-            document.getElementById('showLabelsCheck').checked = false;
-            this.redrawPlot();
-            this.addChatMessage(`👁️ Hidden chromosome labels`, 'assistant');
-        }
-        else if (lowerCommand.includes('show labels')) {
-            this.showLabels = true;
-            document.getElementById('showLabelsCheck').checked = true;
-            this.redrawPlot();
-            this.addChatMessage(`👁️ Showing chromosome labels`, 'assistant');
-        }
-        else if (lowerCommand.includes('hide ticks') || lowerCommand.includes('remove ticks')) {
-            this.showTicks = false;
-            document.getElementById('showTicksCheck').checked = false;
-            this.redrawPlot();
-            this.addChatMessage(`📏 Hidden ticks`, 'assistant');
-        }
-        else if (lowerCommand.includes('show ticks')) {
-            this.showTicks = true;
-            document.getElementById('showTicksCheck').checked = true;
-            this.redrawPlot();
-            this.addChatMessage(`📏 Showing ticks`, 'assistant');
-        }
-        // Export commands
-        else if (lowerCommand.includes('export') || lowerCommand.includes('save')) {
-            this.exportSVG();
-            this.addChatMessage(`💾 Exported SVG file!`, 'assistant');
-        }
-        // Help and information
-        else if (lowerCommand.includes('help') || lowerCommand.includes('commands')) {
-            this.addChatMessage(`🤖 Available commands:
+        const img = new Image();
+        img.onload = () => {
+            // Fill background
+            ctx.fillStyle = this.backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-• "Change radius to [number]" - Adjust plot radius
-• "Set chromosome width to [number]" - Adjust chromosome width  
-• "Use rainbow/blue/green/red/viridis colors" - Change color scheme
-• "Show/hide labels" - Toggle chromosome labels
-• "Show/hide ticks" - Toggle tick marks
-• "Export" or "Save" - Export as SVG
-• "Load example" - Load sample data
-• "Reset" - Reset to defaults
-
-Try clicking on chromosomes and genes for more info!`, 'assistant');
-        }
-        // Default response
-        else {
-            this.addChatMessage(`🤔 I didn't understand that command. Try "help" to see available commands, or click on plot elements for information.`, 'assistant');
-        }
+            // Draw SVG
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Download PNG
+            canvas.toBlob((blob) => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `circos-plot-${new Date().toISOString().slice(0, 10)}-${resolution}x.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                
+                this.updateStatus(`PNG exported at ${resolution}x resolution`);
+            });
+            
+            URL.revokeObjectURL(url);
+        };
+        
+        img.onerror = () => {
+            this.updateStatus('Error: Failed to export PNG');
+            URL.revokeObjectURL(url);
+        };
+        
+        img.src = url;
     }
 
     // File operations
@@ -628,9 +997,9 @@ Try clicking on chromosomes and genes for more info!`, 'assistant');
                 }
                 
                 this.createPlot();
-                this.addChatMessage(`📁 Loaded data from ${file.name}`, 'assistant');
+                this.updateStatus(`Loaded data from ${file.name}`);
             } catch (error) {
-                this.addChatMessage(`❌ Error loading file: ${error.message}`, 'assistant');
+                this.updateStatus(`Error loading file: ${error.message}`);
             }
         };
         reader.readAsText(file);
@@ -694,52 +1063,90 @@ Try clicking on chromosomes and genes for more info!`, 'assistant');
     }
 
     resetPlot() {
+        // Reset all parameters to defaults
         this.radius = 250;
-        this.innerRadius = 200;
-        this.chromosomeWidth = 10;
+        this.innerRadiusRatio = 0.8;
+        this.innerRadius = this.radius * this.innerRadiusRatio;
+        this.chromosomeWidth = 12;
         this.gapAngle = 3;
+        this.startAngle = 0;
         this.showLabels = true;
         this.showTicks = true;
+        this.showGenes = true;
+        this.showLinks = true;
         this.colorScheme = 'category10';
+        this.backgroundColor = '#ffffff';
+        this.strokeColor = '#ffffff';
+        this.strokeWidth = 1;
+        this.labelDistance = 25;
+        this.geneHeight = 8;
+        this.linkOpacity = 0.6;
+        this.maxGenes = 200;
+        this.maxLinks = 20;
         
         // Reset UI controls
-        document.getElementById('radiusSlider').value = 250;
-        document.getElementById('chrWidthSlider').value = 10;
-        document.getElementById('gapSlider').value = 3;
-        document.getElementById('showLabelsCheck').checked = true;
-        document.getElementById('showTicksCheck').checked = true;
-        document.getElementById('colorSchemeSelect').value = 'category10';
+        const controls = {
+            'radiusSlider': 250,
+            'innerRadiusSlider': 0.8,
+            'startAngleSlider': 0,
+            'chrWidthSlider': 12,
+            'gapSlider': 3,
+            'labelDistanceSlider': 25,
+            'strokeWidthSlider': 1,
+            'geneHeightSlider': 8,
+            'linkOpacitySlider': 0.6,
+            'maxGenesSlider': 200,
+            'maxLinksSlider': 20,
+            'showLabelsCheck': true,
+            'showTicksCheck': true,
+            'showGenesCheck': true,
+            'showLinksCheck': true,
+            'colorSchemeSelect': 'category10',
+            'backgroundColorPicker': '#ffffff',
+            'strokeColorPicker': '#ffffff',
+            'exportResolutionSelect': '1'
+        };
+        
+        Object.entries(controls).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                if (element.type === 'checkbox') {
+                    element.checked = value;
+                } else {
+                    element.value = value;
+                }
+            }
+        });
         
         this.updateParameterDisplays();
         this.redrawPlot();
-        this.addChatMessage(`🔄 Reset plot to default parameters`, 'assistant');
+        this.updateStatus('Reset to default parameters');
     }
 
     showHelp() {
-        this.addChatMessage(`📚 Circos Genome Plotter Help:
+        const helpText = `Circos Genome Plotter Help:
 
-**Data Loading:**
+Data Loading:
 • Click "Load Data" to upload CSV/JSON files
-• Click "Load Example" for sample human genome data
+• Use sample data buttons for different organisms
 
-**Plot Interaction:**
+Plot Interaction:
 • Click chromosomes for information
 • Hover over elements for tooltips
 • Use mouse to explore genes and links
 
-**AI Commands:**
-• Type natural language commands in the chat
-• Try "change radius to 300" or "use rainbow colors"
-• Ask "help" for a full list of commands
+Parameters:
+• Use sliders and controls for real-time adjustments
+• Detailed parameter sections for fine-tuning
+• Export options for SVG and PNG formats
 
-**Export:**
-• Click "Export SVG" or type "export" in chat
-• High-resolution vector graphics suitable for publications
-
-**Parameters:**
-• Use sliders for quick adjustments
-• AI chat for precise control
-• Real-time updates as you change settings`, 'assistant');
+Export:
+• SVG for vector graphics (publications)
+• PNG for raster images (presentations)
+• Multiple resolution options available`;
+        
+        alert(helpText);
+        this.updateStatus('Help displayed');
     }
 }
 
