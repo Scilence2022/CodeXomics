@@ -387,10 +387,16 @@ class TrackRenderer {
      * Create SVG-based gene visualization
      */
     renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings) {
-        // Create SVG container
+        // Force layout calculation to get accurate width
+        trackContent.style.width = '100%';
+        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        
+        // Create SVG container with proper viewBox
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', layout.totalHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${layout.totalHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'genes-svg-container');
         svg.style.position = 'absolute';
         svg.style.top = `${layout.rulerHeight}px`;
@@ -406,7 +412,7 @@ class TrackRenderer {
             if (rowIndex >= layout.maxRows) return; // Skip hidden rows
             
             rowGenes.forEach((gene) => {
-                const geneGroup = this.createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, trackContent);
+                const geneGroup = this.createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, containerWidth);
                 if (geneGroup) {
                     svg.appendChild(geneGroup);
                 }
@@ -419,7 +425,7 @@ class TrackRenderer {
     /**
      * Create individual SVG gene element
      */
-    createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, trackContent) {
+    createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, containerWidth) {
         // Calculate position and dimensions
         const geneStart = Math.max(gene.start, viewport.start);
         const geneEnd = Math.min(gene.end, viewport.end);
@@ -428,10 +434,10 @@ class TrackRenderer {
         
         if (width <= 0) return null;
 
-        // Get positioning parameters
+        // Get positioning parameters - use accurate container width
         const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
-        const x = (left / 100) * (trackContent.offsetWidth || 800); // Use container width or fallback
-        const elementWidth = Math.max((width / 100) * (trackContent.offsetWidth || 800), 8); // Minimum 8px width
+        const x = (left / 100) * containerWidth;
+        const elementWidth = Math.max((width / 100) * containerWidth, 8); // Minimum 8px width
         const elementHeight = layout.geneHeight;
 
         // Create SVG group for the gene
@@ -1193,10 +1199,16 @@ class TrackRenderer {
      * Create SVG-based reads visualization
      */
     renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight) {
-        // Create SVG container
+        // Force layout calculation to get accurate width
+        trackContent.style.width = '100%';
+        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        
+        // Create SVG container with proper viewBox
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', trackHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${trackHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container');
         svg.style.position = 'absolute';
         svg.style.top = '0';
@@ -1213,7 +1225,7 @@ class TrackRenderer {
         // Create read elements as SVG rectangles
         readRows.forEach((rowReads, rowIndex) => {
             rowReads.forEach((read) => {
-                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, trackContent);
+                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth);
                 if (readGroup) {
                     svg.appendChild(readGroup);
                 }
@@ -1271,7 +1283,7 @@ class TrackRenderer {
     /**
      * Create individual SVG read element
      */
-    createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, trackContent) {
+    createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth) {
         // Calculate position and dimensions
         const readStart = Math.max(read.start, start);
         const readEnd = Math.min(read.end, end);
@@ -1280,8 +1292,7 @@ class TrackRenderer {
         
         if (width <= 0) return null;
 
-        // Calculate pixel positions
-        const containerWidth = trackContent.offsetWidth || 800; // Use actual container width or fallback
+        // Calculate pixel positions - use accurate container width
         const x = (left / 100) * containerWidth;
         const elementWidth = Math.max((width / 100) * containerWidth, 2); // Minimum 2px width
         const y = topPadding + rowIndex * (readHeight + rowSpacing);
