@@ -167,6 +167,31 @@ function createMenu() {
       ]
     },
     {
+      label: 'Options',
+      submenu: [
+        {
+          label: 'Configure LLMs',
+          click: () => {
+            mainWindow.webContents.send('configure-llms');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'MCP Server Settings',
+          click: () => {
+            mainWindow.webContents.send('mcp-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'General Settings',
+          click: () => {
+            mainWindow.webContents.send('general-settings');
+          }
+        }
+      ]
+    },
+    {
       label: 'Plugins',
       submenu: [
         {
@@ -181,6 +206,12 @@ function createMenu() {
           label: 'Smart Execution Demo',
           click: () => {
             mainWindow.webContents.send('show-smart-execution-demo');
+          }
+        },
+        {
+          label: 'Plugin Function Calling Test',
+          click: () => {
+            mainWindow.webContents.send('show-plugin-function-calling-test');
           }
         }
       ]

@@ -50,8 +50,24 @@ if (typeof window !== 'undefined') {
         });
     };
 
+    // Load Plugin Function Calls Integrator
+    const loadPluginFunctionCallsIntegrator = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof PluginFunctionCallsIntegrator !== 'undefined') {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/PluginFunctionCallsIntegrator.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
     // Load modules in sequence
     loadFunctionCallsOrganizer()
+        .then(() => loadPluginFunctionCallsIntegrator())
         .then(() => loadSmartExecutor())
         .then(() => loadModalDragManager())
         .then(() => {
@@ -1084,6 +1100,28 @@ class GenomeBrowser {
 
         ipcRenderer.on('show-smart-execution-demo', () => {
             this.showSmartExecutionDemo();
+        });
+
+        // Handle options menu actions from main menu
+        ipcRenderer.on('configure-llms', () => {
+            const configureLLMBtn = document.getElementById('configureLLMBtn');
+            if (configureLLMBtn) {
+                configureLLMBtn.click();
+            }
+        });
+
+        ipcRenderer.on('mcp-settings', () => {
+            const mcpSettingsBtn = document.getElementById('mcpSettingsBtn');
+            if (mcpSettingsBtn) {
+                mcpSettingsBtn.click();
+            }
+        });
+
+        ipcRenderer.on('general-settings', () => {
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) {
+                settingsBtn.click();
+            }
         });
     }
 

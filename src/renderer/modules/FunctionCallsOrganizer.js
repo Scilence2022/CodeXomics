@@ -133,6 +133,51 @@ class FunctionCallsOrganizer {
                     'search_protein_by_gene',
                     'get_pdb_details'
                 ]
+            },
+            
+            // 类别8: 插件系统 - 基因组分析插件
+            pluginGenomicAnalysis: {
+                priority: 3,
+                description: "Plugin-based genomic analysis functions",
+                functions: [
+                    'genomic-analysis.analyzeGCContent',
+                    'genomic-analysis.findMotifs',
+                    'genomic-analysis.calculateDiversity',
+                    'genomic-analysis.compareRegions'
+                ]
+            },
+            
+            // 类别9: 插件系统 - 系统发育分析插件
+            pluginPhylogenetic: {
+                priority: 4,
+                description: "Plugin-based phylogenetic analysis functions",
+                functions: [
+                    'phylogenetic-analysis.buildPhylogeneticTree',
+                    'phylogenetic-analysis.calculateEvolutionaryDistance'
+                ]
+            },
+            
+            // 类别10: 插件系统 - 生物网络分析插件
+            pluginNetworkAnalysis: {
+                priority: 4,
+                description: "Plugin-based biological network analysis functions",
+                functions: [
+                    'biological-networks.buildProteinInteractionNetwork',
+                    'biological-networks.buildGeneRegulatoryNetwork',
+                    'biological-networks.analyzeNetworkCentrality',
+                    'biological-networks.detectNetworkCommunities'
+                ]
+            },
+            
+            // 类别11: 插件系统 - 机器学习分析插件
+            pluginMachineLearning: {
+                priority: 4,
+                description: "Plugin-based machine learning analysis functions",
+                functions: [
+                    'ml-analysis.predictGeneFunction',
+                    'ml-analysis.classifySequence',
+                    'ml-analysis.clusterSequences'
+                ]
             }
         };
         
@@ -406,6 +451,7 @@ class FunctionCallsOrganizer {
      * 获取功能的类别信息
      */
     getFunctionCategory(functionName) {
+        // 首先检查传统功能映射
         const categoryName = this.functionToCategory.get(functionName);
         if (categoryName) {
             return {
@@ -413,6 +459,44 @@ class FunctionCallsOrganizer {
                 ...this.functionCategories[categoryName]
             };
         }
+        
+        // 检查是否为插件功能（包含点号的函数名）
+        if (functionName.includes('.')) {
+            const [pluginId, ] = functionName.split('.');
+            
+            // 根据插件ID确定分类
+            switch (pluginId) {
+                case 'genomic-analysis':
+                    return {
+                        name: 'pluginGenomicAnalysis',
+                        ...this.functionCategories.pluginGenomicAnalysis
+                    };
+                case 'phylogenetic-analysis':
+                    return {
+                        name: 'pluginPhylogenetic',
+                        ...this.functionCategories.pluginPhylogenetic
+                    };
+                case 'biological-networks':
+                    return {
+                        name: 'pluginNetworkAnalysis',
+                        ...this.functionCategories.pluginNetworkAnalysis
+                    };
+                case 'ml-analysis':
+                    return {
+                        name: 'pluginMachineLearning',
+                        ...this.functionCategories.pluginMachineLearning
+                    };
+                default:
+                    // 未知插件，返回默认分类
+                    return {
+                        name: 'pluginGeneral',
+                        priority: 3,
+                        description: 'General plugin functions',
+                        functions: []
+                    };
+            }
+        }
+        
         return null;
     }
     

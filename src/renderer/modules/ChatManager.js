@@ -31,6 +31,10 @@ class ChatManager {
         // Initialize Plugin Manager
         this.initializePluginManager();
         
+        // Initialize Plugin Function Calls Integrator
+        this.pluginFunctionCallsIntegrator = null;
+        this.initializePluginFunctionCallsIntegrator();
+        
         // Initialize Smart Execution System
         this.smartExecutor = null;
         this.isSmartExecutionEnabled = true; // 可配置开关
@@ -140,6 +144,33 @@ class ChatManager {
             script.onerror = reject;
             document.head.appendChild(script);
         });
+    }
+
+    /**
+     * Initialize Plugin Function Calls Integrator
+     */
+    async initializePluginFunctionCallsIntegrator() {
+        try {
+            // Load the integrator module
+            await this.loadScript('src/renderer/modules/PluginFunctionCallsIntegrator.js');
+            
+            // Initialize after PluginManager is ready
+            const initIntegrator = () => {
+                if (typeof PluginFunctionCallsIntegrator !== 'undefined' && this.pluginManager) {
+                    this.pluginFunctionCallsIntegrator = new PluginFunctionCallsIntegrator(this, this.pluginManager);
+                    console.log('PluginFunctionCallsIntegrator initialized successfully');
+                } else {
+                    console.warn('PluginFunctionCallsIntegrator or PluginManager not available, retrying...');
+                    setTimeout(initIntegrator, 500);
+                }
+            };
+            
+            // Try to initialize, with retry for timing issues
+            setTimeout(initIntegrator, 100);
+            
+        } catch (error) {
+            console.error('Failed to initialize PluginFunctionCallsIntegrator:', error);
+        }
     }
 
     /**
@@ -2173,6 +2204,26 @@ ${this.getPluginSystemInfo()}`;
      * Get plugin system information for system message
      */
     getPluginSystemInfo() {
+        // Use the new integrator if available
+        if (this.pluginFunctionCallsIntegrator) {
+            try {
+                const systemInfo = this.pluginFunctionCallsIntegrator.getPluginFunctionsSystemInfo();
+                const stats = this.pluginFunctionCallsIntegrator.getPluginFunctionStats();
+                
+                let info = systemInfo;
+                info += '\\n\\nPLUGIN SYSTEM STATISTICS:\\n';
+                info += `Total Plugin Functions: ${stats.totalFunctions}\\n`;
+                info += `Available Plugins: ${Object.keys(stats.pluginCounts).join(', ')}\\n`;
+                info += `Function Categories: ${Object.keys(stats.categoryStats).join(', ')}\\n`;
+                
+                return info;
+            } catch (error) {
+                console.error('Error getting plugin system info from integrator:', error);
+                // Fall back to original method
+            }
+        }
+        
+        // Fallback to original method
         if (!this.pluginManager) {
             return 'Plugin system not available.';
         }
@@ -2443,6 +2494,18 @@ ${this.getPluginSystemInfo()}`;
                 } catch (error) {
                     console.warn(`MCP tool execution failed, falling back to local: ${error.message}`);
                     // Fall through to local execution
+                }
+            }
+            
+            // Check if this is a plugin function first
+            if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
+                try {
+                    console.log(`Executing plugin function: ${toolName}`);
+                    const result = await this.pluginFunctionCallsIntegrator.executePluginFunction(toolName, parameters);
+                    return result;
+                } catch (error) {
+                    console.error(`Plugin function execution failed for ${toolName}:`, error);
+                    throw error;
                 }
             }
             
