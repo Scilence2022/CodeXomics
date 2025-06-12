@@ -3931,6 +3931,37 @@ body {
 }
 
 /* Responsive SVG scaling */
+/* Advanced text protection against SVG stretching */
+.genes-svg-container text,
+.reads-svg-container text {
+    vector-effect: non-scaling-stroke !important;
+    font-feature-settings: "kern" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transform-origin: center center !important;
+    transform: scale(1, 1) !important; /* Force 1:1 aspect ratio */
+}
+
+/* Protected text groups */
+.svg-text-protected {
+    transform-origin: center center;
+    transform-box: content-box;
+}
+
+.svg-text-protected text {
+    transform: scale(1, 1) !important;
+    transform-origin: center center !important;
+}
+
+/* Ensure SVG containers fill width but protect text */
+.genes-svg-container,
+.reads-svg-container {
+    shape-rendering: optimizeSpeed;
+    text-rendering: optimizeSpeed;
+    transform-style: preserve-3d; /* Enable 3D transforms for better control */
+}
+
 @media (max-width: 768px) {
     .genes-svg-container {
         transform-origin: left center;

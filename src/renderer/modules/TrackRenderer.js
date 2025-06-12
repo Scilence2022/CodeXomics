@@ -391,7 +391,7 @@ class TrackRenderer {
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         
-        // Create SVG container with proper viewBox
+        // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', layout.totalHeight);
@@ -546,32 +546,54 @@ class TrackRenderer {
         }
     }
 
-    /**
-     * Create SVG text label for gene
+        /**
+     * Create SVG text label for gene with advanced anti-stretch protection
      */
     createSVGGeneText(gene, width, height, settings) {
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
-        const fontSize = Math.min(settings?.fontSize || 11, height * 0.6);
         
+        // Use fixed font size to prevent stretching, with reasonable scaling
+        const baseFontSize = settings?.fontSize || 11;
+        const maxFontSize = Math.min(baseFontSize, height * 0.7);
+        const minFontSize = 8;
+        const fontSize = Math.max(minFontSize, Math.min(maxFontSize, baseFontSize));
+        
+        // Smart text truncation based on available width and font size
         let displayText = geneName;
-        if (width < 80 && geneName.length > 8) {
-            displayText = geneName.substring(0, 8) + '...';
-        } else if (width < 50 && geneName.length > 5) {
-            displayText = geneName.substring(0, 5) + '...';
+        const estimatedCharWidth = fontSize * 0.6; // Approximate character width
+        const maxChars = Math.floor(width / estimatedCharWidth);
+        
+        if (geneName.length > maxChars && maxChars > 3) {
+            displayText = geneName.substring(0, maxChars - 3) + '...';
+        } else if (maxChars <= 3) {
+            displayText = '...';
         }
 
+        // Create a transform group to isolate text from SVG stretching
+        const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        textGroup.setAttribute('class', 'svg-text-protected');
+        
+        // Create text element with fixed sizing
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', width / 2);
         text.setAttribute('y', height / 2);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('dominant-baseline', 'central');
-        text.setAttribute('font-size', fontSize);
+        text.setAttribute('font-size', `${fontSize}px`); // Use px for consistent sizing
         text.setAttribute('font-family', settings?.fontFamily || 'Arial, sans-serif');
+        text.setAttribute('font-weight', '500'); // Slightly bold for better readability
         text.setAttribute('fill', '#333');
         text.setAttribute('pointer-events', 'none');
+        
+        // Advanced protection against stretching
+        text.style.vectorEffect = 'non-scaling-stroke';
+        text.style.transformOrigin = 'center';
+        text.style.transform = 'scale(1, 1)'; // Force 1:1 aspect ratio
+        
         text.textContent = displayText;
+        textGroup.appendChild(text);
 
-        return text;
+        return textGroup;
     }
 
     /**
@@ -1203,7 +1225,7 @@ class TrackRenderer {
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         
-        // Create SVG container with proper viewBox
+        // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', trackHeight);

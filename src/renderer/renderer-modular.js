@@ -13,8 +13,14 @@ if (typeof window !== 'undefined') {
                 resolve();
                 return;
             }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/FunctionCallsOrganizer.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
             const script = document.createElement('script');
-            script.src = 'src/renderer/modules/FunctionCallsOrganizer.js';
+            script.src = 'modules/FunctionCallsOrganizer.js';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -28,8 +34,14 @@ if (typeof window !== 'undefined') {
                 resolve();
                 return;
             }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/SmartExecutor.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
             const script = document.createElement('script');
-            script.src = 'src/renderer/modules/SmartExecutor.js';
+            script.src = 'modules/SmartExecutor.js';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -43,8 +55,14 @@ if (typeof window !== 'undefined') {
                 resolve();
                 return;
             }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/ModalDragManager.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
             const script = document.createElement('script');
-            script.src = 'src/renderer/modules/ModalDragManager.js';
+            script.src = 'modules/ModalDragManager.js';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -58,8 +76,14 @@ if (typeof window !== 'undefined') {
                 resolve();
                 return;
             }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/PluginFunctionCallsIntegrator.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
             const script = document.createElement('script');
-            script.src = 'src/renderer/modules/PluginFunctionCallsIntegrator.js';
+            script.src = 'modules/PluginFunctionCallsIntegrator.js';
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);

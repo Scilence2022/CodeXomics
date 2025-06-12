@@ -73,36 +73,23 @@ class ChatManager {
      */
     initializePluginManager() {
         try {
-            // Try to load PluginManager from modules in Node.js environment
-            if (typeof require !== 'undefined') {
-                try {
-                    const PluginManagerClass = require('./PluginManager');
-                    this.pluginManager = new PluginManagerClass(this.app, this.configManager);
-                    console.log('PluginManager integrated successfully from module');
-                    
-                    // Listen to plugin events
-                    this.pluginManager.on('functionExecuted', (data) => {
-                        console.log('Plugin function executed:', data);
-                    });
-                    
-                    this.pluginManager.on('visualizationRendered', (data) => {
-                        console.log('Plugin visualization rendered:', data);
-                    });
-                    
-                    this.pluginManager.on('functionError', (data) => {
-                        console.error('Plugin function error:', data);
-                    });
-                    
-                    return;
-                } catch (moduleError) {
-                    console.warn('Failed to load PluginManager from module:', moduleError.message);
-                }
-            }
-            
-            // Fallback for browser environment
+            // Check if PluginManager is already available globally
             if (typeof PluginManager !== 'undefined') {
                 this.pluginManager = new PluginManager(this.app, this.configManager);
                 console.log('PluginManager integrated successfully from global');
+                
+                // Listen to plugin events
+                this.pluginManager.on('functionExecuted', (data) => {
+                    console.log('Plugin function executed:', data);
+                });
+                
+                this.pluginManager.on('visualizationRendered', (data) => {
+                    console.log('Plugin visualization rendered:', data);
+                });
+                
+                this.pluginManager.on('functionError', (data) => {
+                    console.error('Plugin function error:', data);
+                });
             } else {
                 console.warn('PluginManager not available, loading dynamically...');
                 this.loadPluginManager();
@@ -118,10 +105,10 @@ class ChatManager {
     async loadPluginManager() {
         try {
             // Load plugin system files
-            await this.loadScript('src/renderer/modules/PluginManager.js');
-            await this.loadScript('src/renderer/modules/PluginUtils.js');
-            await this.loadScript('src/renderer/modules/PluginImplementations.js');
-            await this.loadScript('src/renderer/modules/PluginVisualization.js');
+            await this.loadScript('modules/PluginManager.js');
+            await this.loadScript('modules/PluginUtils.js');
+            await this.loadScript('modules/PluginImplementations.js');
+            await this.loadScript('modules/PluginVisualization.js');
             
             // Initialize after loading
             if (typeof PluginManager !== 'undefined') {
@@ -134,10 +121,18 @@ class ChatManager {
     }
 
     /**
-     * Load script dynamically
+     * Load script dynamically with duplicate check
      */
     loadScript(src) {
         return new Promise((resolve, reject) => {
+            // Check if script is already loaded
+            const existingScript = document.querySelector(`script[src="${src}"]`);
+            if (existingScript) {
+                console.log(`Script ${src} already loaded, skipping...`);
+                resolve();
+                return;
+            }
+            
             const script = document.createElement('script');
             script.src = src;
             script.onload = resolve;
@@ -152,7 +147,7 @@ class ChatManager {
     async initializePluginFunctionCallsIntegrator() {
         try {
             // Load the integrator module
-            await this.loadScript('src/renderer/modules/PluginFunctionCallsIntegrator.js');
+            await this.loadScript('modules/PluginFunctionCallsIntegrator.js');
             
             // Initialize after PluginManager is ready
             const initIntegrator = () => {
@@ -179,8 +174,8 @@ class ChatManager {
     async initializeSmartExecutor() {
         try {
             // Load the required modules
-            await this.loadScript('src/renderer/modules/FunctionCallsOrganizer.js');
-            await this.loadScript('src/renderer/modules/SmartExecutor.js');
+            await this.loadScript('modules/FunctionCallsOrganizer.js');
+            await this.loadScript('modules/SmartExecutor.js');
             
             // Initialize the smart executor
             if (typeof SmartExecutor !== 'undefined') {

@@ -479,7 +479,7 @@ class PluginManagementUI {
         const enableDebug = document.getElementById('enablePluginDebug');
 
         if (pluginDirectory) {
-            pluginDirectory.value = this.configManager?.get('pluginDirectory') || 'src/renderer/modules/Plugins';
+            pluginDirectory.value = this.configManager?.get('pluginDirectory') || 'modules/Plugins';
         }
 
         if (enableSandbox) {
