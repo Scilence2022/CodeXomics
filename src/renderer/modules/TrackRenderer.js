@@ -379,13 +379,236 @@ class TrackRenderer {
         // Set calculated height
         trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
         
-        // Create gene elements
+        // Create SVG-based gene visualization instead of HTML divs
+        this.renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings);
+    }
+
+    /**
+     * Create SVG-based gene visualization
+     */
+    renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings) {
+        // Create SVG container
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', layout.totalHeight);
+        svg.setAttribute('class', 'genes-svg-container');
+        svg.style.position = 'absolute';
+        svg.style.top = `${layout.rulerHeight}px`;
+        svg.style.left = '0';
+        svg.style.pointerEvents = 'all';
+
+        // Create definitions for gradients and patterns
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.appendChild(defs);
+
+        // Create gene elements as SVG paths/rectangles
         geneRows.forEach((rowGenes, rowIndex) => {
+            if (rowIndex >= layout.maxRows) return; // Skip hidden rows
+            
             rowGenes.forEach((gene) => {
-                const geneElement = this.createGeneElement(gene, viewport, operons, rowIndex, layout, settings);
-                trackContent.appendChild(geneElement);
+                const geneGroup = this.createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, trackContent);
+                if (geneGroup) {
+                    svg.appendChild(geneGroup);
+                }
             });
         });
+
+        trackContent.appendChild(svg);
+    }
+
+    /**
+     * Create individual SVG gene element
+     */
+    createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, trackContent) {
+        // Calculate position and dimensions
+        const geneStart = Math.max(gene.start, viewport.start);
+        const geneEnd = Math.min(gene.end, viewport.end);
+        const left = ((geneStart - viewport.start) / viewport.range) * 100;
+        const width = ((geneEnd - geneStart) / viewport.range) * 100;
+        
+        if (width <= 0) return null;
+
+        // Get positioning parameters
+        const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
+        const x = (left / 100) * (trackContent.offsetWidth || 800); // Use container width or fallback
+        const elementWidth = Math.max((width / 100) * (trackContent.offsetWidth || 800), 8); // Minimum 8px width
+        const elementHeight = layout.geneHeight;
+
+        // Create SVG group for the gene
+        const geneGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        geneGroup.setAttribute('class', `svg-gene-element ${gene.type.toLowerCase()}`);
+        geneGroup.setAttribute('transform', `translate(${x}, ${y})`);
+
+        // Get operon information and color
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+        
+        // Create gradient for gene background
+        const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
+        const gradient = this.createSVGGeneGradient(defs, gradientId, operonInfo.color);
+
+        // Create gene shape based on strand direction
+        const geneShape = this.createSVGGeneShape(gene, elementWidth, elementHeight, gradientId, operonInfo);
+        geneGroup.appendChild(geneShape);
+
+        // Add gene text label if there's enough space
+        if (elementWidth > 30) {
+            const geneText = this.createSVGGeneText(gene, elementWidth, elementHeight, settings);
+            if (geneText) {
+                geneGroup.appendChild(geneText);
+            }
+        }
+
+        // Add interaction handlers
+        this.addSVGGeneInteraction(geneGroup, gene, operons, operonInfo, rowIndex);
+
+        return geneGroup;
+    }
+
+    /**
+     * Create SVG gradient for gene visualization
+     */
+    createSVGGeneGradient(defs, gradientId, baseColor) {
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.setAttribute('id', gradientId);
+        gradient.setAttribute('x1', '0%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', '100%');
+        gradient.setAttribute('y2', '100%');
+
+        const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', baseColor);
+        
+        const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', this.lightenColor(baseColor, 20));
+
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        defs.appendChild(gradient);
+
+        return gradient;
+    }
+
+    /**
+     * Create SVG shape for gene (with directional arrow for strand)
+     */
+    createSVGGeneShape(gene, width, height, gradientId, operonInfo) {
+        const isForward = gene.strand !== -1;
+        const arrowSize = Math.min(height * 0.3, 8); // Responsive arrow size
+
+        if (width < 20) {
+            // Simple rectangle for small genes
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '0');
+            rect.setAttribute('y', '0');
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('rx', '2');
+            return rect;
+        } else {
+            // Arrow-shaped path for larger genes
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isForward) {
+                // Forward arrow (pointing right)
+                pathData = `M 0 0 
+                           L ${width - arrowSize} 0 
+                           L ${width} ${height / 2} 
+                           L ${width - arrowSize} ${height} 
+                           L 0 ${height} 
+                           Z`;
+            } else {
+                // Reverse arrow (pointing left)
+                pathData = `M ${arrowSize} 0 
+                           L ${width} 0 
+                           L ${width} ${height} 
+                           L ${arrowSize} ${height} 
+                           L 0 ${height / 2} 
+                           Z`;
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            return path;
+        }
+    }
+
+    /**
+     * Create SVG text label for gene
+     */
+    createSVGGeneText(gene, width, height, settings) {
+        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        const fontSize = Math.min(settings?.fontSize || 11, height * 0.6);
+        
+        let displayText = geneName;
+        if (width < 80 && geneName.length > 8) {
+            displayText = geneName.substring(0, 8) + '...';
+        } else if (width < 50 && geneName.length > 5) {
+            displayText = geneName.substring(0, 5) + '...';
+        }
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', width / 2);
+        text.setAttribute('y', height / 2);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('font-size', fontSize);
+        text.setAttribute('font-family', settings?.fontFamily || 'Arial, sans-serif');
+        text.setAttribute('fill', '#333');
+        text.setAttribute('pointer-events', 'none');
+        text.textContent = displayText;
+
+        return text;
+    }
+
+    /**
+     * Add interaction handlers to SVG gene element
+     */
+    addSVGGeneInteraction(geneGroup, gene, operons, operonInfo, rowIndex) {
+        // Create comprehensive tooltip
+        const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
+        const geneInfo = `${geneName} (${gene.type})`;
+        const positionInfo = `${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
+        const operonDisplay = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
+        const rowInfo = `\nRow: ${rowIndex + 1}`;
+        
+        // Add tooltip using title element
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${geneInfo}\nPosition: ${positionInfo}${operonDisplay}${rowInfo}`;
+        geneGroup.appendChild(title);
+
+        // Add hover effects
+        geneGroup.style.cursor = 'pointer';
+        geneGroup.addEventListener('mouseenter', () => {
+            geneGroup.style.opacity = '0.8';
+            geneGroup.style.transform = geneGroup.getAttribute('transform') + ' scale(1.05)';
+        });
+        
+        geneGroup.addEventListener('mouseleave', () => {
+            geneGroup.style.opacity = '1';
+            geneGroup.style.transform = geneGroup.getAttribute('transform');
+        });
+
+        // Add click handler
+        geneGroup.addEventListener('click', () => {
+            this.showGeneDetails(gene, operonInfo);
+        });
+
+        // Handle selection state
+        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene && 
+            this.genomeBrowser.selectedGene.gene.start === gene.start && 
+            this.genomeBrowser.selectedGene.gene.end === gene.end &&
+            this.genomeBrowser.selectedGene.gene.type === gene.type) {
+            geneGroup.setAttribute('class', geneGroup.getAttribute('class') + ' selected');
+            geneGroup.style.filter = 'drop-shadow(0 0 6px rgba(0,100,200,0.8))';
+        }
     }
     
     /**
@@ -869,44 +1092,8 @@ class TrackRenderer {
             const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
             trackContent.style.height = `${Math.max(trackHeight, 60)}px`; // Minimum 60px height
             
-            // Create read elements
-            readRows.forEach((rowReads, rowIndex) => {
-                rowReads.forEach((read) => {
-                    const readElement = document.createElement('div');
-                    readElement.className = 'read-element';
-                    
-                    const readStart = Math.max(read.start, start);
-                    const readEnd = Math.min(read.end, end);
-                    const left = ((readStart - start) / range) * 100;
-                    const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
-                    
-                    readElement.style.left = `${left}%`;
-                    readElement.style.width = `${width}%`;
-                    readElement.style.height = `${readHeight}px`;
-                    readElement.style.top = `${topPadding + rowIndex * (readHeight + rowSpacing)}px`;
-                    readElement.style.position = 'absolute';
-                    readElement.style.background = read.strand === '+' ? '#00b894' : '#f39c12';
-                    readElement.style.borderRadius = '2px';
-                    readElement.style.cursor = 'pointer';
-                    readElement.style.border = '1px solid rgba(0,0,0,0.2)';
-                    
-                    // Create read tooltip
-                    const readInfo = `Read: ${read.id || 'Unknown'}\n` +
-                                      `Position: ${read.start}-${read.end}\n` +
-                                      `Strand: ${read.strand || 'N/A'}\n` +
-                                      `Mapping Quality: ${read.mappingQuality || 'N/A'}\n` +
-                                      `Row: ${rowIndex + 1}`;
-                    
-                    readElement.title = readInfo;
-                    
-                    // Add click handler for detailed info
-                    readElement.addEventListener('click', () => {
-                        alert(readInfo);
-                    });
-                    
-                    trackContent.appendChild(readElement);
-                });
-            });
+            // Create SVG-based read visualization instead of HTML divs
+            this.renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight);
             
             // Add reads statistics with cache info
             const stats = this.genomeBrowser.readsManager.getCacheStats();
@@ -1000,6 +1187,222 @@ class TrackRenderer {
     // Helper method to check if two reads overlap
     readsOverlap(read1, read2) {
         return !(read1.end < read2.start || read2.end < read1.start);
+    }
+
+    /**
+     * Create SVG-based reads visualization
+     */
+    renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight) {
+        // Create SVG container
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', trackHeight);
+        svg.setAttribute('class', 'reads-svg-container');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.pointerEvents = 'all';
+
+        // Create definitions for gradients and patterns
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.appendChild(defs);
+
+        // Create read gradients
+        this.createReadGradients(defs);
+
+        // Create read elements as SVG rectangles
+        readRows.forEach((rowReads, rowIndex) => {
+            rowReads.forEach((read) => {
+                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, trackContent);
+                if (readGroup) {
+                    svg.appendChild(readGroup);
+                }
+            });
+        });
+
+        trackContent.appendChild(svg);
+    }
+
+    /**
+     * Create gradients for read visualization
+     */
+    createReadGradients(defs) {
+        // Forward strand gradient (green)
+        const forwardGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        forwardGradient.setAttribute('id', 'read-forward-gradient');
+        forwardGradient.setAttribute('x1', '0%');
+        forwardGradient.setAttribute('y1', '0%');
+        forwardGradient.setAttribute('x2', '100%');
+        forwardGradient.setAttribute('y2', '100%');
+
+        const forwardStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        forwardStop1.setAttribute('offset', '0%');
+        forwardStop1.setAttribute('stop-color', '#00b894');
+        
+        const forwardStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        forwardStop2.setAttribute('offset', '100%');
+        forwardStop2.setAttribute('stop-color', '#00a085');
+
+        forwardGradient.appendChild(forwardStop1);
+        forwardGradient.appendChild(forwardStop2);
+        defs.appendChild(forwardGradient);
+
+        // Reverse strand gradient (orange)
+        const reverseGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        reverseGradient.setAttribute('id', 'read-reverse-gradient');
+        reverseGradient.setAttribute('x1', '0%');
+        reverseGradient.setAttribute('y1', '0%');
+        reverseGradient.setAttribute('x2', '100%');
+        reverseGradient.setAttribute('y2', '100%');
+
+        const reverseStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        reverseStop1.setAttribute('offset', '0%');
+        reverseStop1.setAttribute('stop-color', '#f39c12');
+        
+        const reverseStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        reverseStop2.setAttribute('offset', '100%');
+        reverseStop2.setAttribute('stop-color', '#e67e22');
+
+        reverseGradient.appendChild(reverseStop1);
+        reverseGradient.appendChild(reverseStop2);
+        defs.appendChild(reverseGradient);
+    }
+
+    /**
+     * Create individual SVG read element
+     */
+    createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, trackContent) {
+        // Calculate position and dimensions
+        const readStart = Math.max(read.start, start);
+        const readEnd = Math.min(read.end, end);
+        const left = ((readStart - start) / range) * 100;
+        const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
+        
+        if (width <= 0) return null;
+
+        // Calculate pixel positions
+        const containerWidth = trackContent.offsetWidth || 800; // Use actual container width or fallback
+        const x = (left / 100) * containerWidth;
+        const elementWidth = Math.max((width / 100) * containerWidth, 2); // Minimum 2px width
+        const y = topPadding + rowIndex * (readHeight + rowSpacing);
+
+        // Create SVG group for the read
+        const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        readGroup.setAttribute('class', 'svg-read-element');
+        readGroup.setAttribute('transform', `translate(${x}, ${y})`);
+
+        // Create read shape
+        const readShape = this.createSVGReadShape(read, elementWidth, readHeight);
+        readGroup.appendChild(readShape);
+
+        // Add interaction handlers
+        this.addSVGReadInteraction(readGroup, read, rowIndex);
+
+        return readGroup;
+    }
+
+    /**
+     * Create SVG shape for read
+     */
+    createSVGReadShape(read, width, height) {
+        const isForward = read.strand === '+';
+        const gradientId = isForward ? 'read-forward-gradient' : 'read-reverse-gradient';
+        const strokeColor = isForward ? '#00a085' : '#e67e22';
+
+        if (width < 10) {
+            // Simple rectangle for very small reads
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '0');
+            rect.setAttribute('y', '0');
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('stroke', strokeColor);
+            rect.setAttribute('stroke-width', '0.5');
+            rect.setAttribute('rx', '1');
+            return rect;
+        } else {
+            // Slightly rounded rectangle with directional indicator
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '0');
+            rect.setAttribute('y', '0');
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('stroke', strokeColor);
+            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('rx', '2');
+
+            // Add small directional arrow if there's space
+            if (width > 15) {
+                const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const arrowSize = Math.min(height * 0.3, 3);
+                const arrowX = isForward ? width - arrowSize - 2 : 2;
+                const arrowY = height / 2;
+                
+                let points;
+                if (isForward) {
+                    points = `${arrowX},${arrowY - arrowSize} ${arrowX + arrowSize},${arrowY} ${arrowX},${arrowY + arrowSize}`;
+                } else {
+                    points = `${arrowX + arrowSize},${arrowY - arrowSize} ${arrowX},${arrowY} ${arrowX + arrowSize},${arrowY + arrowSize}`;
+                }
+                
+                arrow.setAttribute('points', points);
+                arrow.setAttribute('fill', 'rgba(255,255,255,0.8)');
+                arrow.setAttribute('pointer-events', 'none');
+                
+                // Group the rectangle and arrow
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.appendChild(rect);
+                g.appendChild(arrow);
+                return g;
+            }
+            
+            return rect;
+        }
+    }
+
+    /**
+     * Add interaction handlers to SVG read element
+     */
+    addSVGReadInteraction(readGroup, read, rowIndex) {
+        // Create comprehensive tooltip
+        const readInfo = `Read: ${read.id || 'Unknown'}\n` +
+                         `Position: ${read.start}-${read.end}\n` +
+                         `Strand: ${read.strand || 'N/A'}\n` +
+                         `Mapping Quality: ${read.mappingQuality || 'N/A'}\n` +
+                         `Row: ${rowIndex + 1}`;
+        
+        // Add tooltip using title element
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = readInfo;
+        readGroup.appendChild(title);
+
+        // Add hover effects
+        readGroup.style.cursor = 'pointer';
+        readGroup.addEventListener('mouseenter', () => {
+            readGroup.style.opacity = '0.8';
+            readGroup.style.filter = 'brightness(1.1)';
+        });
+        
+        readGroup.addEventListener('mouseleave', () => {
+            readGroup.style.opacity = '1';
+            readGroup.style.filter = 'none';
+        });
+
+        // Add click handler for detailed info
+        readGroup.addEventListener('click', () => {
+            this.showReadDetails(read, readInfo);
+        });
+    }
+
+    /**
+     * Show detailed read information
+     */
+    showReadDetails(read, readInfo) {
+        // Create a more sophisticated popup or modal for read details
+        // For now, use alert but could be enhanced with a proper modal
+        alert(readInfo);
     }
 
     createProteinTrack(chromosome) {

@@ -3217,6 +3217,7 @@ body {
     min-height: 60px; /* Minimum height for adaptive sizing */
 }
 
+/* Legacy HTML read elements (kept for backward compatibility) */
 .read-element {
     position: absolute;
     border-radius: 2px;
@@ -3231,6 +3232,19 @@ body {
     z-index: 10;
     box-shadow: 0 3px 8px rgba(0,0,0,0.3);
     border-color: rgba(0,0,0,0.4);
+}
+
+/* SVG-based read visualizations */
+.reads-svg-container {
+    overflow: visible;
+}
+
+.svg-read-element {
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.svg-read-element:hover {
+    filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .reads-legend {
@@ -3885,6 +3899,45 @@ body {
     }
     50% {
         box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.6), 0 8px 25px rgba(0,0,0,0.5);
+    }
+}
+
+/* SVG-based gene visualizations */
+.genes-svg-container {
+    overflow: visible;
+}
+
+.svg-gene-element {
+    transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+    transform-origin: center;
+}
+
+.svg-gene-element:hover {
+    filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.svg-gene-element.selected {
+    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+    animation: svgSelectedPulse 2s infinite;
+}
+
+@keyframes svgSelectedPulse {
+    0%, 100% { 
+        filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+    }
+    50% { 
+        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.1);
+    }
+}
+
+/* Responsive SVG scaling */
+@media (max-width: 768px) {
+    .genes-svg-container {
+        transform-origin: left center;
+    }
+    
+    .svg-gene-element text {
+        font-size: 10px !important;
     }
 }
 
