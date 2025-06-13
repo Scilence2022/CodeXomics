@@ -521,16 +521,16 @@
                     </div>
                     
                     <div class="parameter-group">
-                        <label>Color Scheme</label>
-                        <select class="parameter-input" id="colorSchemeSelect">
-                            <option value="category10">Default</option>
-                            <option value="rainbow">Rainbow</option>
-                            <option value="blues">Blues</option>
-                            <option value="greens">Greens</option>
-                            <option value="reds">Reds</option>
-                            <option value="viridis">Viridis</option>
-                            <option value="pastel">Pastel</option>
-                            <option value="dark">Dark</option>
+                        <label>Color Theme</label>
+                        <select class="parameter-input" id="themeSelect">
+                            <option value="scientific">Scientific</option>
+                            <option value="nature">Nature</option>
+                            <option value="ocean">Ocean</option>
+                            <option value="sunset">Sunset</option>
+                            <option value="arctic">Arctic</option>
+                            <option value="cosmic">Cosmic</option>
+                            <option value="forest">Forest</option>
+                            <option value="monochrome">Monochrome</option>
                         </select>
                     </div>
 
@@ -725,6 +725,35 @@
                             <option value="3">Very High (3x)</option>
                             <option value="4">Ultra (4x)</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Legend Settings -->
+                <div class="parameter-section">
+                    <div class="section-title">
+                        <i class="fas fa-info-circle"></i>
+                        Legend & Annotations
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" id="showLegendCheck" checked>
+                        <label class="checkbox-label" for="showLegendCheck">Show Legend</label>
+                    </div>
+
+                    <div class="parameter-group">
+                        <label>Legend Position</label>
+                        <select class="parameter-input" id="legendPositionSelect">
+                            <option value="top-right">Top Right</option>
+                            <option value="top-left">Top Left</option>
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                        </select>
+                    </div>
+
+                    <div class="parameter-group">
+                        <label>Legend Opacity</label>
+                        <input type="range" class="range-input" id="legendOpacitySlider" min="0.5" max="1" value="0.95" step="0.05">
+                        <div class="range-value" id="legendOpacityValue">95%</div>
                     </div>
                 </div>
             </div>
