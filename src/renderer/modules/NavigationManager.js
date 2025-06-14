@@ -518,9 +518,9 @@ class NavigationManager {
             e.stopPropagation();
         };
         
-        const handleMouseLeave = () => {
+        const handleMouseLeave = (e) => {
             if (isDragging) {
-                handleMouseUp();
+                handleMouseUp(e || {preventDefault: () => {}, stopPropagation: () => {}});
             }
         };
         
@@ -577,45 +577,181 @@ class NavigationManager {
 
     /**
      * Perform lightweight visual updates during dragging
-     * Only moves existing elements without re-rendering
+     * Only moves gene elements without re-rendering, keeping rulers static
      */
     performVisualDragUpdate(deltaX, element) {
-        // Find all track content elements
-        const trackContents = element.querySelectorAll('.track-content');
+        console.log('performVisualDragUpdate called with deltaX:', deltaX);
+        console.log('Element being dragged:', element, 'className:', element.className);
         
-        trackContents.forEach(trackContent => {
-            // Move genes and features visually
-            const geneElements = trackContent.querySelectorAll('.gene-element');
-            const svgElements = trackContent.querySelectorAll('svg');
-            const rulerElements = trackContent.querySelectorAll('.ruler');
+        let elementsUpdated = 0;
+        let searchContainers = [];
+        
+        // Check if element itself is a track-content, or contains track-content
+        if (element.classList.contains('track-content')) {
+            searchContainers = [element];
+            console.log('Element itself is track-content');
+        } else {
+            // Find all track content elements within the element
+            const trackContents = element.querySelectorAll('.track-content');
+            searchContainers = Array.from(trackContents);
+            console.log('Found track contents within element:', trackContents.length);
+        }
+        
+        // If still no containers, search in parent genome viewer
+        if (searchContainers.length === 0) {
+            const genomeViewer = document.getElementById('genomeViewer');
+            if (genomeViewer) {
+                const trackContents = genomeViewer.querySelectorAll('.track-content');
+                searchContainers = Array.from(trackContents);
+                console.log('Found track contents in genome viewer:', trackContents.length);
+            }
+        }
+        
+        searchContainers.forEach((trackContent, index) => {
+            console.log(`Processing track content ${index}:`, trackContent);
             
-            // Apply transform to move elements horizontally
+            // Only move gene-related elements, keep rulers static to avoid gaps
+            
+            // Move HTML gene elements (if any)
+            const geneElements = trackContent.querySelectorAll('.gene-element');
+            
+            // Move SVG containers that specifically contain genes
+            const genesSvgContainers = trackContent.querySelectorAll('.genes-svg-container');
+            
+            // Also try to find SVG gene elements directly
+            const svgGeneElements = trackContent.querySelectorAll('.svg-gene-element');
+            
+            // Move gene-specific statistics
+            const geneStatsElements = trackContent.querySelectorAll('.gene-stats');
+            
+            console.log(`Track ${index}: ${geneElements.length} HTML genes, ${genesSvgContainers.length} SVG containers, ${svgGeneElements.length} SVG genes, ${geneStatsElements.length} stats`);
+            
+            // Apply transform to move HTML gene elements
             geneElements.forEach(geneEl => {
                 if (!geneEl.dataset.originalTransform) {
                     geneEl.dataset.originalTransform = geneEl.style.transform || '';
                 }
                 const originalTransform = geneEl.dataset.originalTransform;
-                geneEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+                geneEl.style.transform = `${originalTransform} translateX(${deltaX}px)`.trim();
+                console.log(`Moved HTML gene element, new transform: ${geneEl.style.transform}`);
+                elementsUpdated++;
             });
             
-            // Move SVG elements
-            svgElements.forEach(svgEl => {
+            // Move gene SVG containers (most important for gene visualization)
+            genesSvgContainers.forEach(svgEl => {
                 if (!svgEl.dataset.originalTransform) {
-                    svgEl.dataset.originalTransform = svgEl.style.transform || '';
+                    svgEl.dataset.originalTransform = svgEl.style.transform || svgEl.getAttribute('transform') || '';
                 }
                 const originalTransform = svgEl.dataset.originalTransform;
-                svgEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+                const newTransform = `${originalTransform} translateX(${deltaX}px)`.trim();
+                
+                // For SVG elements, try both style.transform and setAttribute
+                svgEl.style.transform = newTransform;
+                if (svgEl.tagName === 'svg' || svgEl.tagName === 'g') {
+                    svgEl.setAttribute('transform', `translate(${deltaX}, 0)`);
+                }
+                console.log(`Moved SVG container, new transform: ${newTransform}`);
+                elementsUpdated++;
             });
             
-            // Move ruler elements
-            rulerElements.forEach(rulerEl => {
-                if (!rulerEl.dataset.originalTransform) {
-                    rulerEl.dataset.originalTransform = rulerEl.style.transform || '';
+            // Move individual SVG gene elements if containers don't work
+            svgGeneElements.forEach(svgGeneEl => {
+                if (!svgGeneEl.dataset.originalTransform) {
+                    svgGeneEl.dataset.originalTransform = svgGeneEl.getAttribute('transform') || '';
                 }
-                const originalTransform = rulerEl.dataset.originalTransform;
-                rulerEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+                const originalTransform = svgGeneEl.dataset.originalTransform;
+                
+                // For SVG gene elements, use setAttribute for transform
+                let newTransform;
+                if (originalTransform) {
+                    newTransform = `${originalTransform} translate(${deltaX}, 0)`;
+                } else {
+                    newTransform = `translate(${deltaX}, 0)`;
+                }
+                svgGeneEl.setAttribute('transform', newTransform);
+                console.log(`Moved SVG gene element, new transform: ${newTransform}`);
+                elementsUpdated++;
+            });
+            
+            // Move gene statistics elements
+            geneStatsElements.forEach(statsEl => {
+                if (!statsEl.dataset.originalTransform) {
+                    statsEl.dataset.originalTransform = statsEl.style.transform || '';
+                }
+                const originalTransform = statsEl.dataset.originalTransform;
+                statsEl.style.transform = `${originalTransform} translateX(${deltaX}px)`.trim();
+                console.log(`Moved stats element, new transform: ${statsEl.style.transform}`);
+                elementsUpdated++;
             });
         });
+        
+        console.log(`Total elements updated: ${elementsUpdated}`);
+        
+        // If no elements found, try alternative approach - look globally
+        if (elementsUpdated === 0) {
+            console.log('No elements found in track contents, trying global search...');
+            
+            // Try to find gene elements anywhere in the document
+            const allGeneElements = document.querySelectorAll('.gene-element, .svg-gene-element, .genes-svg-container');
+            console.log(`Found ${allGeneElements.length} gene elements globally`);
+            
+            allGeneElements.forEach(el => {
+                const isHTMLElement = el.classList.contains('gene-element');
+                const isSVGContainer = el.classList.contains('genes-svg-container');
+                const isSVGGene = el.classList.contains('svg-gene-element');
+                
+                if (isHTMLElement) {
+                    // Handle HTML gene elements
+                    if (!el.dataset.originalTransform) {
+                        el.dataset.originalTransform = el.style.transform || '';
+                    }
+                    const originalTransform = el.dataset.originalTransform;
+                    el.style.transform = `${originalTransform} translateX(${deltaX}px)`.trim();
+                    console.log(`Globally moved HTML element, new transform: ${el.style.transform}`);
+                } else if (isSVGContainer) {
+                    // Handle SVG containers
+                    if (!el.dataset.originalTransform) {
+                        el.dataset.originalTransform = el.style.transform || el.getAttribute('transform') || '';
+                    }
+                    el.style.transform = `translateX(${deltaX}px)`;
+                    if (el.tagName === 'svg') {
+                        el.setAttribute('transform', `translate(${deltaX}, 0)`);
+                    }
+                    console.log(`Globally moved SVG container, applied translateX(${deltaX}px)`);
+                } else if (isSVGGene) {
+                    // Handle individual SVG gene elements
+                    if (!el.dataset.originalTransform) {
+                        el.dataset.originalTransform = el.getAttribute('transform') || '';
+                    }
+                    const originalTransform = el.dataset.originalTransform;
+                    let newTransform;
+                    if (originalTransform && originalTransform.trim()) {
+                        // Parse existing transform and add translation
+                        if (originalTransform.includes('translate(')) {
+                            // Extract existing translate values and modify
+                            const translateMatch = originalTransform.match(/translate\(([^)]+)\)/);
+                            if (translateMatch) {
+                                const coords = translateMatch[1].split(',').map(n => parseFloat(n.trim()));
+                                const newX = (coords[0] || 0) + deltaX;
+                                const newY = coords[1] || 0;
+                                newTransform = originalTransform.replace(/translate\([^)]+\)/, `translate(${newX}, ${newY})`);
+                            } else {
+                                newTransform = `${originalTransform} translate(${deltaX}, 0)`;
+                            }
+                        } else {
+                            newTransform = `${originalTransform} translate(${deltaX}, 0)`;
+                        }
+                    } else {
+                        newTransform = `translate(${deltaX}, 0)`;
+                    }
+                    el.setAttribute('transform', newTransform);
+                    console.log(`Globally moved SVG gene element, new transform: ${newTransform}`);
+                }
+                elementsUpdated++;
+            });
+            
+            console.log(`Global search updated ${elementsUpdated} elements`);
+        }
         
         // Add visual feedback class to indicate dragging
         element.classList.add('visual-dragging');
@@ -626,14 +762,16 @@ class NavigationManager {
      */
     resetVisualDragUpdates(element) {
         const trackContents = element.querySelectorAll('.track-content');
+        let elementsReset = 0;
         
         trackContents.forEach(trackContent => {
-            // Reset all transformed elements
+            // Reset all transformed elements - fix selector to match what we set
             const transformedElements = trackContent.querySelectorAll('[data-original-transform]');
             
             transformedElements.forEach(el => {
                 el.style.transform = el.dataset.originalTransform || '';
                 delete el.dataset.originalTransform;
+                elementsReset++;
             });
         });
         
