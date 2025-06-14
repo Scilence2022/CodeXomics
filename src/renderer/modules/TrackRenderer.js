@@ -600,6 +600,17 @@ class TrackRenderer {
      * Add interaction handlers to SVG gene element
      */
     addSVGGeneInteraction(geneGroup, gene, operons, operonInfo, rowIndex) {
+        // Add data attributes for reliable gene identification
+        geneGroup.setAttribute('data-gene-start', gene.start);
+        geneGroup.setAttribute('data-gene-end', gene.end);
+        geneGroup.setAttribute('data-gene-type', gene.type);
+        if (gene.qualifiers?.gene) {
+            geneGroup.setAttribute('data-gene-name', gene.qualifiers.gene);
+        }
+        if (gene.qualifiers?.locus_tag) {
+            geneGroup.setAttribute('data-locus-tag', gene.qualifiers.locus_tag);
+        }
+        
         // Create comprehensive tooltip
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
         const geneInfo = `${geneName} (${gene.type})`;
@@ -694,6 +705,17 @@ class TrackRenderer {
         }
         
         geneElement.className = `gene-element ${geneType}`;
+        
+        // Add data attributes for reliable gene identification
+        geneElement.setAttribute('data-gene-start', gene.start);
+        geneElement.setAttribute('data-gene-end', gene.end);
+        geneElement.setAttribute('data-gene-type', gene.type);
+        if (gene.qualifiers?.gene) {
+            geneElement.setAttribute('data-gene-name', gene.qualifiers.gene);
+        }
+        if (gene.qualifiers?.locus_tag) {
+            geneElement.setAttribute('data-locus-tag', gene.qualifiers.locus_tag);
+        }
         
         // Get operon information and assign color
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);

@@ -3885,20 +3885,23 @@ body {
 
 /* Selected Gene Styling */
 .gene-element.selected {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 6px 20px rgba(0,0,0,0.4);
-    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.8), 0 0 15px rgba(59, 130, 246, 0.4);
     z-index: 15 !important;
     border-width: 3px !important;
-    border-color: var(--primary-color) !important;
+    border-color: #3b82f6 !important;
     animation: selectedPulse 2s infinite;
+    outline: 2px solid rgba(59, 130, 246, 0.6);
+    outline-offset: 2px;
 }
 
 @keyframes selectedPulse {
     0%, 100% {
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 6px 20px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.8), 0 0 15px rgba(59, 130, 246, 0.4);
+        outline: 2px solid rgba(59, 130, 246, 0.6);
     }
     50% {
-        box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.6), 0 8px 25px rgba(0,0,0,0.5);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 1), 0 0 20px rgba(59, 130, 246, 0.6);
+        outline: 3px solid rgba(59, 130, 246, 0.8);
     }
 }
 
@@ -3916,17 +3919,25 @@ body {
     filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
-.svg-gene-element.selected {
-    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+.svg-gene-element.selected,
+g.svg-gene-element.selected,
+rect.svg-gene-element.selected,
+path.svg-gene-element.selected {
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.9)) brightness(1.1);
     animation: svgSelectedPulse 2s infinite;
+    /*stroke: #3b82f6 !important;
+    stroke-width: 3 !important;*/
+    opacity: 1 !important;
 }
 
 @keyframes svgSelectedPulse {
     0%, 100% { 
-        filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.9)) brightness(1.1);
+        stroke-width: 3;
     }
     50% { 
-        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 1)) brightness(1.1);
+        filter: drop-shadow(0 0 16px rgba(59, 130, 246, 1)) brightness(1.2);
+        stroke-width: 4;
     }
 }
 

@@ -2274,26 +2274,122 @@ class GenomeBrowser {
     // Gene Selection Methods
     selectGene(gene, operonInfo = null) {
         // Remove selection from previously selected gene
-        if (this.selectedGene) {
-            const prevSelectedElements = document.querySelectorAll('.gene-element.selected');
-            prevSelectedElements.forEach(el => el.classList.remove('selected'));
-        }
+        this.clearGeneSelection();
         
         // Set new selected gene
         this.selectedGene = { gene, operonInfo };
         
-        // Add selection styling to the clicked gene element
-        const geneElements = document.querySelectorAll('.gene-element');
-        geneElements.forEach(el => {
-            // Check if this element represents the selected gene by comparing positions
-            const elementTitle = el.title || '';
-            const genePosition = `${gene.start}-${gene.end}`;
-            if (elementTitle.includes(genePosition)) {
+        // Add selection styling to gene elements using multiple identification methods
+        this.highlightSelectedGene(gene);
+        
+        console.log('Selected gene:', gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
+        
+        // Show visual feedback that a gene was selected
+        this.showGeneSelectionFeedback(gene);
+    }
+
+    /**
+     * Show visual feedback when a gene is selected
+     */
+    showGeneSelectionFeedback(gene) {
+        const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
+        const message = `Selected gene: ${geneName}`;
+        
+        // Show notification if available
+        if (typeof this.showNotification === 'function') {
+            this.showNotification(message, 'info');
+        }
+        
+        // Update status bar if available
+        const statusBar = document.querySelector('.status-bar');
+        if (statusBar) {
+            const statusMessage = statusBar.querySelector('.status-message') || statusBar;
+            const originalText = statusMessage.textContent;
+            statusMessage.textContent = message;
+            statusMessage.style.color = '#3b82f6';
+            statusMessage.style.fontWeight = 'bold';
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                statusMessage.textContent = originalText;
+                statusMessage.style.color = '';
+                statusMessage.style.fontWeight = '';
+            }, 3000);
+        }
+    }
+
+    /**
+     * Highlight the selected gene in the track
+     * Uses multiple methods to identify and highlight the correct gene element
+     */
+    highlightSelectedGene(gene) {
+        // Method 1: Find gene elements by data attributes (most reliable)
+        const geneElementsByData = document.querySelectorAll(`[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`);
+        geneElementsByData.forEach(el => {
+            el.classList.add('selected');
+        });
+
+        // Method 2: Find SVG gene elements
+        const svgGeneElements = document.querySelectorAll('g.svg-gene-element, rect.svg-gene-element, path.svg-gene-element');
+        svgGeneElements.forEach(el => {
+            // Check if the element has the correct gene position data
+            const geneStart = el.getAttribute('data-gene-start') || el.getAttribute('data-start');
+            const geneEnd = el.getAttribute('data-gene-end') || el.getAttribute('data-end');
+            
+            if ((geneStart && parseInt(geneStart) === gene.start) && 
+                (geneEnd && parseInt(geneEnd) === gene.end)) {
                 el.classList.add('selected');
             }
         });
+
+        // Method 3: Find regular gene elements by position matching (fallback)
+        const allGeneElements = document.querySelectorAll('.gene-element');
+        allGeneElements.forEach(el => {
+            // Check title for position information
+            const elementTitle = el.title || '';
+            const genePosition = `${gene.start}-${gene.end}`;
+            
+            // Check if title contains the gene position
+            if (elementTitle.includes(genePosition)) {
+                el.classList.add('selected');
+                return;
+            }
+
+            // Check data attributes as fallback
+            const dataStart = el.getAttribute('data-start') || el.getAttribute('data-gene-start');
+            const dataEnd = el.getAttribute('data-end') || el.getAttribute('data-gene-end');
+            
+            if (dataStart && dataEnd && 
+                parseInt(dataStart) === gene.start && 
+                parseInt(dataEnd) === gene.end) {
+                el.classList.add('selected');
+            }
+        });
+
+        // Method 4: Check if we successfully highlighted any elements
+        const highlightedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
         
-        console.log('Selected gene:', gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
+        if (highlightedElements.length === 0) {
+            console.warn('No gene elements found to highlight for gene:', gene);
+            // Force refresh of the gene track to ensure elements are present
+            this.refreshGeneTrackIfNeeded();
+        } else {
+            console.log(`Highlighted ${highlightedElements.length} gene element(s) for gene:`, gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
+        }
+    }
+
+    /**
+     * Refresh gene track if no elements were found for highlighting
+     */
+    refreshGeneTrackIfNeeded() {
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            console.log('Refreshing gene track to ensure elements are present...');
+            // Small delay to ensure the refresh happens after current execution
+            setTimeout(() => {
+                this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+            }, 100);
+        }
     }
 
     showGeneDetailsPanel() {
@@ -2827,8 +2923,8 @@ class GenomeBrowser {
         // Clear selected gene
         this.selectedGene = null;
         
-        // Remove selection styling from all gene elements
-        const selectedElements = document.querySelectorAll('.gene-element.selected');
+        // Remove selection styling from all gene elements (both regular and SVG)
+        const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
         selectedElements.forEach(el => el.classList.remove('selected'));
         
         // Clear sequence highlights and selection
