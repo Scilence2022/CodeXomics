@@ -1298,6 +1298,34 @@ body {
     cursor: grabbing !important;
 }
 
+/* Visual dragging optimization */
+.visual-dragging {
+    cursor: grabbing !important;
+    pointer-events: none; /* Prevent interference during drag */
+}
+
+.visual-dragging .track-content {
+    transition: none !important; /* Disable transitions during drag for better performance */
+}
+
+.visual-dragging .gene-element,
+.visual-dragging .ruler,
+.visual-dragging svg {
+    transition: none !important; /* Disable transitions during drag */
+    will-change: transform; /* Optimize for transform changes */
+}
+
+/* Smooth transitions when drag ends */
+.track-content {
+    transition: transform 0.1s ease-out;
+}
+
+.gene-element,
+.ruler,
+svg {
+    transition: transform 0.1s ease-out;
+}
+
 /* Draggable cursor states */
 .track-content[style*="cursor: grab"] {
     cursor: grab !important;

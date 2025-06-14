@@ -471,17 +471,15 @@ class NavigationManager {
             
             // Only update if position actually changed
             if (newStart !== this.genomeBrowser.currentPosition.start) {
+                // Update position for visual feedback during drag
                 this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
                 
-                // Throttle updates for better performance
-                if (!this.dragUpdateTimeout) {
-                    this.dragUpdateTimeout = setTimeout(() => {
-                        this.genomeBrowser.updateStatistics(chromosome, sequence);
-                        this.genomeBrowser.displayGenomeView(chromosome, sequence);
-                        // Update navigation bar
-                        this.genomeBrowser.genomeNavigationBar.update();
-                        this.dragUpdateTimeout = null;
-                    }, 32); // Reduced frequency for smoother performance
+                // OPTIMIZED: Only move visual elements during drag, no re-rendering
+                this.performVisualDragUpdate(deltaX, element);
+                
+                // Update navigation bar only (lightweight)
+                if (this.genomeBrowser.genomeNavigationBar) {
+                    this.genomeBrowser.genomeNavigationBar.update();
                 }
             }
         };
@@ -500,12 +498,16 @@ class NavigationManager {
                 return;
             }
             
-            // Final update after drag ends
+            // OPTIMIZED: Clean up any pending visual updates
             if (this.dragUpdateTimeout) {
                 clearTimeout(this.dragUpdateTimeout);
                 this.dragUpdateTimeout = null;
             }
             
+            // Reset visual transforms
+            this.resetVisualDragUpdates(element);
+            
+            // Full re-render after drag ends to calculate new elements in viewport
             const sequence = this.genomeBrowser.currentSequence[chromosome];
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
@@ -571,6 +573,72 @@ class NavigationManager {
             document.removeEventListener('mouseup', handleMouseUp);
             element.removeEventListener('mouseleave', handleMouseLeave);
         };
+    }
+
+    /**
+     * Perform lightweight visual updates during dragging
+     * Only moves existing elements without re-rendering
+     */
+    performVisualDragUpdate(deltaX, element) {
+        // Find all track content elements
+        const trackContents = element.querySelectorAll('.track-content');
+        
+        trackContents.forEach(trackContent => {
+            // Move genes and features visually
+            const geneElements = trackContent.querySelectorAll('.gene-element');
+            const svgElements = trackContent.querySelectorAll('svg');
+            const rulerElements = trackContent.querySelectorAll('.ruler');
+            
+            // Apply transform to move elements horizontally
+            geneElements.forEach(geneEl => {
+                if (!geneEl.dataset.originalTransform) {
+                    geneEl.dataset.originalTransform = geneEl.style.transform || '';
+                }
+                const originalTransform = geneEl.dataset.originalTransform;
+                geneEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+            });
+            
+            // Move SVG elements
+            svgElements.forEach(svgEl => {
+                if (!svgEl.dataset.originalTransform) {
+                    svgEl.dataset.originalTransform = svgEl.style.transform || '';
+                }
+                const originalTransform = svgEl.dataset.originalTransform;
+                svgEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+            });
+            
+            // Move ruler elements
+            rulerElements.forEach(rulerEl => {
+                if (!rulerEl.dataset.originalTransform) {
+                    rulerEl.dataset.originalTransform = rulerEl.style.transform || '';
+                }
+                const originalTransform = rulerEl.dataset.originalTransform;
+                rulerEl.style.transform = `${originalTransform} translateX(${deltaX}px)`;
+            });
+        });
+        
+        // Add visual feedback class to indicate dragging
+        element.classList.add('visual-dragging');
+    }
+
+    /**
+     * Reset visual transforms after drag ends
+     */
+    resetVisualDragUpdates(element) {
+        const trackContents = element.querySelectorAll('.track-content');
+        
+        trackContents.forEach(trackContent => {
+            // Reset all transformed elements
+            const transformedElements = trackContent.querySelectorAll('[data-original-transform]');
+            
+            transformedElements.forEach(el => {
+                el.style.transform = el.dataset.originalTransform || '';
+                delete el.dataset.originalTransform;
+            });
+        });
+        
+        // Remove visual feedback class
+        element.classList.remove('visual-dragging');
     }
 
     // Method to move Search Results panel to the top
