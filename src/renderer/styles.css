@@ -1345,6 +1345,49 @@ body {
     z-index: 10; /* Ensure genes appear above ruler */
 }
 
+/* Triangle shape for very small genes */
+.gene-element.gene-triangle-shape {
+    border-radius: 0;
+    padding: 0;
+    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
+}
+
+/* Reverse triangle for reverse strand genes */
+.gene-element.gene-triangle-shape.reverse-strand {
+    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+}
+
+/* Arrow shape for small genes */
+.gene-element.gene-arrow-shape {
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+/* SVG Triangle and Arrow Styles */
+.gene-triangle {
+    transition: all 0.2s ease;
+}
+
+.gene-triangle:hover {
+    stroke-width: 2 !important;
+    filter: brightness(1.1);
+}
+
+.gene-arrow {
+    transition: all 0.2s ease;
+}
+
+.gene-arrow:hover {
+    filter: brightness(1.1);
+}
+
+/* Enhanced triangle and arrow shape hover effects */
+.gene-element.gene-triangle-shape:hover,
+.gene-element.gene-arrow-shape:hover {
+    transform: scale(1.1);
+    filter: brightness(1.2);
+}
+
 .gene-element:hover {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 6px 16px rgba(0,0,0,0.4);

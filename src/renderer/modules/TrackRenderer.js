@@ -497,26 +497,39 @@ class TrackRenderer {
     }
 
     /**
-     * Create SVG shape for gene (with directional arrow for strand)
+     * Create SVG shape for gene (with directional indicators based on size)
      */
     createSVGGeneShape(gene, width, height, gradientId, operonInfo) {
         const isForward = gene.strand !== -1;
         const arrowSize = Math.min(height * 0.3, 8); // Responsive arrow size
 
-        if (width < 20) {
-            // Simple rectangle for small genes
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', '0');
-            rect.setAttribute('y', '0');
-            rect.setAttribute('width', width);
-            rect.setAttribute('height', height);
-            rect.setAttribute('fill', `url(#${gradientId})`);
-            rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
-            rect.setAttribute('stroke-width', '1');
-            rect.setAttribute('rx', '2');
-            return rect;
+        if (width < 15) {
+            // Use triangle for very small genes to show direction
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isForward) {
+                // Forward triangle (pointing right)
+                pathData = `M 0 0 
+                           L ${width} ${height / 2} 
+                           L 0 ${height} 
+                           Z`;
+            } else {
+                // Reverse triangle (pointing left)
+                pathData = `M ${width} 0 
+                           L 0 ${height / 2} 
+                           L ${width} ${height} 
+                           Z`;
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            path.setAttribute('class', 'gene-triangle');
+            return path;
         } else {
-            // Arrow-shaped path for larger genes
+            // Arrow-shaped path for larger genes (width >= 15px)
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             let pathData;
             
@@ -542,6 +555,7 @@ class TrackRenderer {
             path.setAttribute('fill', `url(#${gradientId})`);
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', '1');
+            path.setAttribute('class', 'gene-arrow');
             return path;
         }
     }
@@ -788,14 +802,29 @@ class TrackRenderer {
         // Apply arrow size setting using CSS custom property
         geneElement.style.setProperty('--arrow-size', `${arrowSize}px`);
         
-        // Set text content based on available space
+        // Set text content and shape based on available space
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
-        if (width > 2) {
+        
+        if (width < 1.0) {
+            // Very small genes: use triangle shape with directional indicator
+            geneElement.classList.add('gene-triangle-shape');
+            geneElement.innerHTML = gene.strand === -1 ? '◀' : '▶';
+            geneElement.style.textAlign = 'center';
+            geneElement.style.fontSize = '10px';
+            geneElement.style.lineHeight = `${layout.geneHeight}px`;
+            geneElement.style.fontWeight = 'bold';
+        } else if (width < 2.0) {
+            // Small genes: use arrow indicator with abbreviated name
+            geneElement.classList.add('gene-arrow-shape');
+            const arrow = gene.strand === -1 ? '◂' : '▸';
+            const shortName = geneName.length > 2 ? geneName.substring(0, 2) : geneName;
+            geneElement.innerHTML = `${arrow}${shortName}`;
+            geneElement.style.fontSize = '9px';
+            geneElement.style.fontWeight = 'bold';
+        } else if (width > 2) {
             geneElement.textContent = geneName.length > 12 ? geneName.substring(0, 12) + '...' : geneName;
-        } else if (width > 0.8) {
-            geneElement.textContent = geneName.substring(0, 3);
         } else {
-            geneElement.textContent = '';
+            geneElement.textContent = geneName.substring(0, 3);
         }
         
         // Create comprehensive tooltip
