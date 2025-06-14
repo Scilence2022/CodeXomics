@@ -513,28 +513,15 @@ class NavigationManager {
                 this.dragUpdateTimeout = null;
             }
             
-            // Calculate final position based on actual visual movement
-            // This ensures the redrawn position matches where elements visually ended up
-            const sequence = this.genomeBrowser.currentSequence[chromosome];
-            const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-            const elementWidth = element.offsetWidth || 800;
-            
-            // Convert cumulative visual movement back to genome position change
-            // Negative because: drag right (positive deltaX) = move left in genome (negative position change)
-            const finalPositionChange = -cumulativeVisualDeltaX * currentRange / elementWidth;
-            const finalNewStart = Math.max(0, Math.min(
-                sequence.length - currentRange,
-                startPosition + finalPositionChange
-            ));
-            const finalNewEnd = finalNewStart + currentRange;
-            
-            // Set the final position based on visual movement
-            this.genomeBrowser.currentPosition = { start: finalNewStart, end: finalNewEnd };
+            // No need to recalculate genome position here because it has
+            // already been accurately updated on the last mousemove event.
+            // Simply clear the temporary visual transforms and re-render.
             
             // Reset visual transforms
             this.resetVisualDragUpdates(element);
             
-            // Full re-render after drag ends - now perfectly matches visual position
+            // Full re-render after drag ends (now matches the logical position set on the last mousemove)
+            const sequence = this.genomeBrowser.currentSequence[chromosome];
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
             // Update navigation bar
