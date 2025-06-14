@@ -401,6 +401,7 @@ class NavigationManager {
         let dragThreshold = 5; // Minimum pixels to move before considering it a drag
         let hasDragged = false;
         let lastUpdateX = 0; // Track last update position to prevent excessive updates
+        let cumulativeVisualDeltaX = 0; // Track cumulative visual movement
         
         element.style.cursor = 'grab';
         element.title = 'Drag left or right to navigate through the genome\nKeyboard: ← → arrows, Home, End';
@@ -417,6 +418,7 @@ class NavigationManager {
             startX = e.clientX;
             lastUpdateX = e.clientX;
             startPosition = this.genomeBrowser.currentPosition.start;
+            cumulativeVisualDeltaX = 0; // Reset cumulative visual movement
             element.style.cursor = 'grabbing';
             element.classList.add('dragging');
             
@@ -458,8 +460,8 @@ class NavigationManager {
             const pixelMovement = deltaX; // Total pixel movement from start
             
             // Convert pixel movement to genome position change
-            // Use a very conservative multiplier to prevent jumping
-            const movementFactor = 1.50; // Increased from 0.05 for better responsiveness
+            // Use 1:1 ratio for exact mouse synchronization
+            const movementFactor = 1.0; // 1:1 ratio for perfect mouse sync
             const positionChange = Math.round(pixelMovement * currentRange * movementFactor / elementWidth);
             
             // Calculate new position (drag right = move left in genome, drag left = move right)
@@ -474,8 +476,15 @@ class NavigationManager {
                 // Update position for visual feedback during drag
                 this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
                 
+                // Calculate cumulative visual movement that matches mouse movement
+                // Visual movement should follow mouse direction directly
+                const newCumulativeVisualDeltaX = deltaX;
+                
                 // OPTIMIZED: Only move visual elements during drag, no re-rendering
-                this.performVisualDragUpdate(deltaX, element);
+                this.performVisualDragUpdate(newCumulativeVisualDeltaX, element);
+                
+                // Update cumulative tracking
+                cumulativeVisualDeltaX = newCumulativeVisualDeltaX;
                 
                 // Update navigation bar only (lightweight)
                 if (this.genomeBrowser.genomeNavigationBar) {
@@ -504,11 +513,28 @@ class NavigationManager {
                 this.dragUpdateTimeout = null;
             }
             
+            // Calculate final position based on actual visual movement
+            // This ensures the redrawn position matches where elements visually ended up
+            const sequence = this.genomeBrowser.currentSequence[chromosome];
+            const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
+            const elementWidth = element.offsetWidth || 800;
+            
+            // Convert cumulative visual movement back to genome position change
+            // Negative because: drag right (positive deltaX) = move left in genome (negative position change)
+            const finalPositionChange = -cumulativeVisualDeltaX * currentRange / elementWidth;
+            const finalNewStart = Math.max(0, Math.min(
+                sequence.length - currentRange,
+                startPosition + finalPositionChange
+            ));
+            const finalNewEnd = finalNewStart + currentRange;
+            
+            // Set the final position based on visual movement
+            this.genomeBrowser.currentPosition = { start: finalNewStart, end: finalNewEnd };
+            
             // Reset visual transforms
             this.resetVisualDragUpdates(element);
             
-            // Full re-render after drag ends to calculate new elements in viewport
-            const sequence = this.genomeBrowser.currentSequence[chromosome];
+            // Full re-render after drag ends - now perfectly matches visual position
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
             // Update navigation bar
