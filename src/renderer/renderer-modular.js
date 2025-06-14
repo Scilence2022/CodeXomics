@@ -1206,6 +1206,19 @@ class GenomeBrowser {
                 settingsBtn.click();
             }
         });
+
+        // Handle Edit menu actions
+        ipcRenderer.on('menu-copy', () => {
+            this.handleMenuCopy();
+        });
+
+        ipcRenderer.on('menu-paste', () => {
+            this.handleMenuPaste();
+        });
+
+        ipcRenderer.on('menu-select-all', () => {
+            this.handleMenuSelectAll();
+        });
     }
 
     // Core genome display method
@@ -3691,6 +3704,171 @@ class GenomeBrowser {
         } catch (error) {
             console.error('Failed to open Resource Manager:', error);
             this.showNotification('Unable to open Resource Manager window', 'error');
+        }
+    }
+
+    /**
+     * Handle Copy action from Edit menu
+     */
+    handleMenuCopy() {
+        try {
+            // Get the currently focused element
+            const activeElement = document.activeElement;
+            
+            // If there's a text selection anywhere on the page
+            const selection = window.getSelection();
+            if (selection && selection.toString().trim()) {
+                navigator.clipboard.writeText(selection.toString()).then(() => {
+                    this.showNotification('✅ Text copied to clipboard', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy selection:', err);
+                    this.showNotification('❌ Failed to copy text', 'error');
+                });
+                return;
+            }
+
+            // If focused on an input field with selected text
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                const start = activeElement.selectionStart;
+                const end = activeElement.selectionEnd;
+                if (start !== end) {
+                    const selectedText = activeElement.value.substring(start, end);
+                    navigator.clipboard.writeText(selectedText).then(() => {
+                        this.showNotification('✅ Text copied to clipboard', 'success');
+                    }).catch(err => {
+                        console.error('Failed to copy input text:', err);
+                        this.showNotification('❌ Failed to copy text', 'error');
+                    });
+                    return;
+                }
+            }
+
+            // Check if there's a sequence to copy (gene or sequence selection)
+            if (this.sequenceUtils && this.currentSequence && Object.keys(this.currentSequence).length > 0) {
+                // Use existing sequence copy functionality
+                this.sequenceUtils.copySequence();
+                return;
+            }
+
+            // If ChatManager is available and there's selected text in chat
+            if (window.chatManager && typeof window.chatManager.copySelectedText === 'function') {
+                const chatSelection = window.getSelection();
+                if (chatSelection && chatSelection.toString().trim()) {
+                    window.chatManager.copySelectedText();
+                    return;
+                }
+            }
+
+            // No content to copy
+            this.showNotification('⚠️ No content selected to copy', 'warning');
+            
+        } catch (error) {
+            console.error('Error in handleMenuCopy:', error);
+            this.showNotification('❌ Error copying content', 'error');
+        }
+    }
+
+    /**
+     * Handle Paste action from Edit menu
+     */
+    handleMenuPaste() {
+        try {
+            const activeElement = document.activeElement;
+            
+            // If focused on an input field or textarea
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                navigator.clipboard.readText().then(text => {
+                    if (!text.trim()) {
+                        this.showNotification('⚠️ Clipboard is empty', 'warning');
+                        return;
+                    }
+
+                    // Insert text at cursor position
+                    const start = activeElement.selectionStart;
+                    const end = activeElement.selectionEnd;
+                    const currentValue = activeElement.value;
+                    const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+                    activeElement.value = newValue;
+
+                    // Set cursor position after pasted text
+                    const newCursorPosition = start + text.length;
+                    activeElement.setSelectionRange(newCursorPosition, newCursorPosition);
+
+                    // Trigger input event for any listeners
+                    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    this.showNotification(`✅ Pasted ${text.length} characters`, 'success');
+                }).catch(err => {
+                    console.error('Failed to paste text:', err);
+                    this.showNotification('❌ Failed to paste from clipboard', 'error');
+                });
+                return;
+            }
+
+            // If ChatManager is available and chat input is present
+            if (window.chatManager && typeof window.chatManager.pasteFromClipboard === 'function') {
+                const chatInput = document.getElementById('chatInput');
+                if (chatInput) {
+                    window.chatManager.pasteFromClipboard();
+                    return;
+                }
+            }
+
+            // No suitable target for pasting
+            this.showNotification('⚠️ No input field selected for pasting', 'warning');
+            
+        } catch (error) {
+            console.error('Error in handleMenuPaste:', error);
+            this.showNotification('❌ Error pasting content', 'error');
+        }
+    }
+
+    /**
+     * Handle Select All action from Edit menu
+     */
+    handleMenuSelectAll() {
+        try {
+            const activeElement = document.activeElement;
+            
+            // If focused on an input field or textarea
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                activeElement.select();
+                this.showNotification('✅ All text selected', 'success');
+                return;
+            }
+
+            // If there's content in the main genome viewer area
+            const genomeViewer = document.getElementById('genomeViewer');
+            if (genomeViewer && genomeViewer.textContent.trim()) {
+                // Select all text in the genome viewer
+                const range = document.createRange();
+                range.selectNodeContents(genomeViewer);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                this.showNotification('✅ Genome content selected', 'success');
+                return;
+            }
+
+            // If there's chat content
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages && chatMessages.textContent.trim()) {
+                const range = document.createRange();
+                range.selectNodeContents(chatMessages);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                this.showNotification('✅ Chat content selected', 'success');
+                return;
+            }
+
+            // Select all content on the page as fallback
+            document.execCommand('selectAll');
+            this.showNotification('✅ All page content selected', 'success');
+            
+        } catch (error) {
+            console.error('Error in handleMenuSelectAll:', error);
+            this.showNotification('❌ Error selecting content', 'error');
         }
     }
 }

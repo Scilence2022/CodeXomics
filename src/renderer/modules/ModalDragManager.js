@@ -192,6 +192,8 @@ class ModalDragManager {
             '#mcpSettingsModal', 
             '#llmConfigModal',
             '#blastModal',
+            '#blastSearchModal',
+            '#blastResultsModal',
             '#searchModal',
             '#gotoModal',
             '#addFeatureModal'
