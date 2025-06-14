@@ -7,6 +7,14 @@ class PluginManagementUI {
         this.pluginManager = pluginManager;
         this.configManager = configManager;
         
+        // Initialize test manager
+        if (typeof PluginTestManager !== 'undefined') {
+            this.testManager = new PluginTestManager(pluginManager);
+        } else {
+            console.warn('PluginTestManager not available, tests will use basic functionality');
+            this.testManager = null;
+        }
+        
         // UI state
         this.currentTab = 'installed';
         this.selectedPlugin = null;
@@ -241,6 +249,11 @@ class PluginManagementUI {
                     <button class="btn btn-sm btn-info" onclick="pluginManagementUI.showPluginDetails('${pluginId}', '${type}')">
                         <i class="fas fa-info-circle"></i>
                         Details
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="pluginManagementUI.runPluginTest('${pluginId}', '${type}')" 
+                            ${plugin.enabled === false ? 'disabled' : ''}>
+                        <i class="fas fa-vial"></i>
+                        Test
                     </button>
                     <button class="btn btn-sm ${statusClass === 'enabled' ? 'btn-warning' : 'btn-success'}" 
                             onclick="pluginManagementUI.togglePlugin('${pluginId}', '${type}')">
@@ -547,6 +560,1208 @@ class PluginManagementUI {
                 messageEl.parentNode.removeChild(messageEl);
             }
         }, 3000);
+    }
+
+    /**
+     * Run comprehensive test for a plugin
+     */
+    async runPluginTest(pluginId, type) {
+        const plugin = type === 'function' ? 
+            this.pluginManager.functionPlugins.get(pluginId) :
+            this.pluginManager.visualizationPlugins.get(pluginId);
+
+        if (!plugin) {
+            this.showMessage(`Plugin "${pluginId}" not found`, 'error');
+            return;
+        }
+
+        if (plugin.enabled === false) {
+            this.showMessage(`Plugin "${plugin.name}" is disabled. Enable it first to run tests.`, 'warning');
+            return;
+        }
+
+        // Show loading message
+        this.showMessage(`Starting test suite for "${plugin.name}"...`, 'info');
+
+        // Create and show test window with enhanced testing
+        this.showEnhancedPluginTestWindow(pluginId, plugin, type);
+    }
+
+    /**
+     * Create and display enhanced plugin test window
+     */
+    showEnhancedPluginTestWindow(pluginId, plugin, type) {
+        // Create test window
+        const testWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        
+        testWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Plugin Test Suite - ${plugin.name}</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                <style>
+                    ${this.getEnhancedTestWindowStyles()}
+                </style>
+            </head>
+            <body>
+                <div class="test-container">
+                    <div class="test-header">
+                        <div class="header-content">
+                            <div class="plugin-info">
+                                <h1><i class="fas fa-vial"></i> Plugin Test Suite</h1>
+                                <h2>${plugin.name} <span class="version">v${plugin.version}</span></h2>
+                                <p class="description">${plugin.description}</p>
+                                <div class="plugin-meta">
+                                    <span class="meta-item">
+                                        <i class="fas fa-user"></i>
+                                        ${plugin.author || 'Unknown Author'}
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-tag"></i>
+                                        ${type === 'function' ? 'Function Plugin' : 'Visualization Plugin'}
+                                    </span>
+                                    ${type === 'function' && plugin.functions ? 
+                                        `<span class="meta-item">
+                                            <i class="fas fa-code"></i>
+                                            ${Object.keys(plugin.functions).length} Functions
+                                        </span>` : ''}
+                                    ${type === 'visualization' && plugin.supportedDataTypes ? 
+                                        `<span class="meta-item">
+                                            <i class="fas fa-chart-bar"></i>
+                                            ${plugin.supportedDataTypes.length} Data Types
+                                        </span>` : ''}
+                                </div>
+                            </div>
+                            <div class="test-controls">
+                                <button class="btn btn-primary" id="runFullTestSuite">
+                                    <i class="fas fa-play"></i>
+                                    Run Full Test Suite
+                                </button>
+                                <button class="btn btn-secondary" id="runQuickTest">
+                                    <i class="fas fa-bolt"></i>
+                                    Quick Test
+                                </button>
+                                <button class="btn btn-info" id="runPerformanceTest">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    Performance Test
+                                </button>
+                                <button class="btn btn-success" id="generateReport">
+                                    <i class="fas fa-file-alt"></i>
+                                    Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="test-dashboard">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-list-check"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalTests">0</div>
+                                    <div class="stat-label">Total Tests</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="passedTests">0</div>
+                                    <div class="stat-label">Passed</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon error">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="failedTests">0</div>
+                                    <div class="stat-label">Failed</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon info">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="testDuration">0ms</div>
+                                    <div class="stat-label">Duration</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon warning">
+                                    <i class="fas fa-percentage"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="successRate">0%</div>
+                                    <div class="stat-label">Success Rate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="test-content">
+                        <div class="test-tabs">
+                            <button class="tab-btn active" data-tab="overview">
+                                <i class="fas fa-home"></i>
+                                Overview
+                            </button>
+                            <button class="tab-btn" data-tab="results">
+                                <i class="fas fa-chart-line"></i>
+                                Test Results
+                            </button>
+                            <button class="tab-btn" data-tab="functions">
+                                <i class="fas fa-code"></i>
+                                ${type === 'function' ? 'Functions' : 'Visualizations'}
+                            </button>
+                            <button class="tab-btn" data-tab="performance">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Performance
+                            </button>
+                            <button class="tab-btn" data-tab="logs">
+                                <i class="fas fa-terminal"></i>
+                                Logs
+                            </button>
+                        </div>
+
+                        <div class="tab-content active" id="overview-tab">
+                            ${typeof PluginTestHelpers !== 'undefined' ? 
+                                PluginTestHelpers.generateOverviewTab(plugin, type) : 
+                                this.generateOverviewTab(plugin, type)}
+                        </div>
+
+                        <div class="tab-content" id="results-tab">
+                            ${typeof PluginTestHelpers !== 'undefined' ? 
+                                PluginTestHelpers.generateResultsTab() : 
+                                this.generateResultsTab()}
+                        </div>
+
+                        <div class="tab-content" id="functions-tab">
+                            ${typeof PluginTestHelpers !== 'undefined' ? 
+                                PluginTestHelpers.generateFunctionsTab(plugin, type) : 
+                                this.generateFunctionsTab(plugin, type)}
+                        </div>
+
+                        <div class="tab-content" id="performance-tab">
+                            ${typeof PluginTestHelpers !== 'undefined' ? 
+                                PluginTestHelpers.generatePerformanceTab() : 
+                                this.generatePerformanceTab()}
+                        </div>
+
+                        <div class="tab-content" id="logs-tab">
+                            ${typeof PluginTestHelpers !== 'undefined' ? 
+                                PluginTestHelpers.generateLogsTab() : 
+                                this.generateLogsTab()}
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    ${typeof PluginTestHelpers !== 'undefined' ? 
+                        PluginTestHelpers.generateEnhancedTestScript(pluginId, plugin, type) : 
+                        this.generateEnhancedTestScript(pluginId, plugin, type)}
+                </script>
+            </body>
+            </html>
+        `);
+
+        testWindow.document.close();
+        testWindow.focus();
+    }
+
+    /**
+     * Create and display plugin test window (fallback method)
+     */
+    showPluginTestWindow(pluginId, plugin, type) {
+        // Create test window
+        const testWindow = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+        
+        testWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Plugin Test - ${plugin.name}</title>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        margin: 0;
+                        padding: 20px;
+                        background: #f5f7fa;
+                        color: #2d3748;
+                    }
+                    .test-container {
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        background: white;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        overflow: hidden;
+                    }
+                    .test-header {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .test-content {
+                        padding: 20px;
+                    }
+                    .test-section {
+                        margin-bottom: 20px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        overflow: hidden;
+                    }
+                    .test-section-header {
+                        background: #f7fafc;
+                        padding: 12px 16px;
+                        border-bottom: 1px solid #e2e8f0;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    }
+                    .test-section-content {
+                        padding: 16px;
+                    }
+                    .test-result {
+                        padding: 12px;
+                        border-radius: 4px;
+                        margin: 8px 0;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    .test-result.success {
+                        background: #f0fff4;
+                        border: 1px solid #9ae6b4;
+                        color: #276749;
+                    }
+                    .test-result.error {
+                        background: #fed7d7;
+                        border: 1px solid #feb2b2;
+                        color: #742a2a;
+                    }
+                    .test-result.warning {
+                        background: #fefcbf;
+                        border: 1px solid #f6e05e;
+                        color: #744210;
+                    }
+                    .test-result.running {
+                        background: #bee3f8;
+                        border: 1px solid #90cdf4;
+                        color: #2c5282;
+                    }
+                    .btn {
+                        background: #4299e1;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: background 0.2s;
+                    }
+                    .btn:hover {
+                        background: #3182ce;
+                    }
+                    .btn:disabled {
+                        background: #a0aec0;
+                        cursor: not-allowed;
+                    }
+                    .test-log {
+                        background: #2d3748;
+                        color: #e2e8f0;
+                        padding: 12px;
+                        border-radius: 4px;
+                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                        font-size: 12px;
+                        max-height: 200px;
+                        overflow-y: auto;
+                        white-space: pre-wrap;
+                    }
+                    .test-stats {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                        gap: 16px;
+                        margin: 16px 0;
+                    }
+                    .stat-card {
+                        background: #f7fafc;
+                        padding: 12px;
+                        border-radius: 6px;
+                        text-align: center;
+                        border: 1px solid #e2e8f0;
+                    }
+                    .stat-value {
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #4299e1;
+                    }
+                    .stat-label {
+                        font-size: 12px;
+                        color: #718096;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .spinner {
+                        display: inline-block;
+                        width: 16px;
+                        height: 16px;
+                        border: 2px solid #e2e8f0;
+                        border-radius: 50%;
+                        border-top-color: #4299e1;
+                        animation: spin 1s ease-in-out infinite;
+                    }
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                    .function-test {
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 4px;
+                        padding: 12px;
+                        margin: 8px 0;
+                    }
+                    .function-name {
+                        font-weight: 600;
+                        color: #495057;
+                        margin-bottom: 4px;
+                    }
+                    .function-desc {
+                        font-size: 13px;
+                        color: #6c757d;
+                        margin-bottom: 8px;
+                    }
+                    .test-parameters {
+                        background: #e9ecef;
+                        padding: 8px;
+                        border-radius: 3px;
+                        font-size: 12px;
+                        font-family: monospace;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="test-container">
+                    <div class="test-header">
+                        <h1><i class="fas fa-vial"></i> Plugin Test Suite</h1>
+                        <h2>${plugin.name} v${plugin.version}</h2>
+                        <p>Comprehensive testing and validation</p>
+                    </div>
+                    
+                    <div class="test-content">
+                        <div class="test-stats">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalTests">0</div>
+                                <div class="stat-label">Total Tests</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="passedTests">0</div>
+                                <div class="stat-label">Passed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="failedTests">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="testDuration">0ms</div>
+                                <div class="stat-label">Duration</div>
+                            </div>
+                        </div>
+
+                        <div class="test-section">
+                            <div class="test-section-header">
+                                <span><i class="fas fa-info-circle"></i> Plugin Information</span>
+                            </div>
+                            <div class="test-section-content">
+                                <p><strong>Name:</strong> ${plugin.name}</p>
+                                <p><strong>Version:</strong> ${plugin.version}</p>
+                                <p><strong>Author:</strong> ${plugin.author || 'Unknown'}</p>
+                                <p><strong>Type:</strong> ${type === 'function' ? 'Function Plugin' : 'Visualization Plugin'}</p>
+                                <p><strong>Description:</strong> ${plugin.description}</p>
+                            </div>
+                        </div>
+
+                        <div class="test-section">
+                            <div class="test-section-header">
+                                <span><i class="fas fa-play-circle"></i> Test Controls</span>
+                                <div>
+                                    <button class="btn" id="runAllTestsBtn">Run All Tests</button>
+                                    <button class="btn" id="runQuickTestBtn">Quick Test</button>
+                                    <button class="btn" id="runPerformanceTestBtn">Performance Test</button>
+                                </div>
+                            </div>
+                            <div class="test-section-content">
+                                <div id="testProgress"></div>
+                            </div>
+                        </div>
+
+                        <div class="test-section">
+                            <div class="test-section-header">
+                                <span><i class="fas fa-list-check"></i> Test Results</span>
+                            </div>
+                            <div class="test-section-content" id="testResults">
+                                <p>Click "Run All Tests" to start comprehensive testing.</p>
+                            </div>
+                        </div>
+
+                        ${type === 'function' ? this.generateFunctionTestsHTML(plugin) : this.generateVisualizationTestsHTML(plugin)}
+
+                        <div class="test-section">
+                            <div class="test-section-header">
+                                <span><i class="fas fa-terminal"></i> Test Log</span>
+                            </div>
+                            <div class="test-section-content">
+                                <div class="test-log" id="testLog">Test log will appear here...\n</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    ${this.generateTestScript(pluginId, plugin, type)}
+                </script>
+            </body>
+            </html>
+        `);
+
+        testWindow.document.close();
+        testWindow.focus();
+    }
+
+    /**
+     * Generate HTML for function plugin tests
+     */
+    generateFunctionTestsHTML(plugin) {
+        if (!plugin.functions || Object.keys(plugin.functions).length === 0) {
+            return `
+                <div class="test-section">
+                    <div class="test-section-header">
+                        <span><i class="fas fa-exclamation-triangle"></i> No Functions Available</span>
+                    </div>
+                    <div class="test-section-content">
+                        <p>This plugin does not expose any testable functions.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        const functionsHTML = Object.entries(plugin.functions).map(([funcName, func]) => `
+            <div class="function-test">
+                <div class="function-name">${funcName}</div>
+                <div class="function-desc">${func.description}</div>
+                <div class="test-parameters">
+                    Parameters: ${JSON.stringify(func.parameters || {}, null, 2)}
+                </div>
+                <button class="btn" onclick="testFunction('${funcName}')">Test Function</button>
+            </div>
+        `).join('');
+
+        return `
+            <div class="test-section">
+                <div class="test-section-header">
+                    <span><i class="fas fa-code"></i> Function Tests</span>
+                </div>
+                <div class="test-section-content">
+                    ${functionsHTML}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate HTML for visualization plugin tests
+     */
+    generateVisualizationTestsHTML(plugin) {
+        const supportedTypes = plugin.supportedDataTypes || [];
+        
+        const testsHTML = supportedTypes.map(dataType => `
+            <div class="function-test">
+                <div class="function-name">Visualization Test: ${dataType}</div>
+                <div class="function-desc">Test rendering with ${dataType} data</div>
+                <button class="btn" onclick="testVisualization('${dataType}')">Test Rendering</button>
+            </div>
+        `).join('');
+
+        return `
+            <div class="test-section">
+                <div class="test-section-header">
+                    <span><i class="fas fa-chart-bar"></i> Visualization Tests</span>
+                </div>
+                <div class="test-section-content">
+                    ${testsHTML}
+                    <div class="function-test">
+                        <div class="function-name">Performance Test</div>
+                        <div class="function-desc">Test rendering performance with large datasets</div>
+                        <button class="btn" onclick="testVisualizationPerformance()">Test Performance</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate JavaScript code for test functionality
+     */
+    generateTestScript(pluginId, plugin, type) {
+        return `
+            let testStats = {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                startTime: null
+            };
+
+            let testLog = [];
+
+            function log(message, level = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = \`[\${timestamp}] [\${level.toUpperCase()}] \${message}\`;
+                testLog.push(logEntry);
+                
+                const logElement = document.getElementById('testLog');
+                logElement.textContent = testLog.join('\\n');
+                logElement.scrollTop = logElement.scrollHeight;
+                
+                console.log(logEntry);
+            }
+
+            function updateStats() {
+                document.getElementById('totalTests').textContent = testStats.total;
+                document.getElementById('passedTests').textContent = testStats.passed;
+                document.getElementById('failedTests').textContent = testStats.failed;
+                
+                if (testStats.startTime) {
+                    const duration = Date.now() - testStats.startTime;
+                    document.getElementById('testDuration').textContent = duration + 'ms';
+                }
+            }
+
+            function addTestResult(testName, success, message, details = '') {
+                testStats.total++;
+                if (success) {
+                    testStats.passed++;
+                } else {
+                    testStats.failed++;
+                }
+                
+                const resultsContainer = document.getElementById('testResults');
+                const resultDiv = document.createElement('div');
+                resultDiv.className = \`test-result \${success ? 'success' : 'error'}\`;
+                resultDiv.innerHTML = \`
+                    <i class="fas \${success ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                    <div>
+                        <strong>\${testName}</strong>: \${message}
+                        \${details ? \`<br><small>\${details}</small>\` : ''}
+                    </div>
+                \`;
+                resultsContainer.appendChild(resultDiv);
+                
+                updateStats();
+                log(\`Test "\${testName}": \${success ? 'PASSED' : 'FAILED'} - \${message}\`);
+            }
+
+            async function runAllTests() {
+                log('Starting comprehensive test suite for ${plugin.name}');
+                testStats.startTime = Date.now();
+                testStats.total = 0;
+                testStats.passed = 0;
+                testStats.failed = 0;
+                
+                document.getElementById('testResults').innerHTML = '';
+                document.getElementById('runAllTestsBtn').disabled = true;
+                
+                try {
+                    // Basic plugin validation tests
+                    await runBasicValidationTests();
+                    
+                    ${type === 'function' ? 'await runFunctionTests();' : 'await runVisualizationTests();'}
+                    
+                    // Performance tests
+                    await runPerformanceTests();
+                    
+                    log(\`Test suite completed. \${testStats.passed}/\${testStats.total} tests passed.\`);
+                    
+                } catch (error) {
+                    log(\`Test suite failed with error: \${error.message}\`, 'error');
+                    addTestResult('Test Suite', false, 'Critical error occurred', error.message);
+                } finally {
+                    document.getElementById('runAllTestsBtn').disabled = false;
+                }
+            }
+
+            async function runBasicValidationTests() {
+                log('Running basic validation tests...');
+                
+                // Test plugin structure
+                const plugin = ${JSON.stringify(plugin)};
+                
+                addTestResult('Plugin Name', !!plugin.name, plugin.name ? \`Name: \${plugin.name}\` : 'Missing plugin name');
+                addTestResult('Plugin Version', !!plugin.version, plugin.version ? \`Version: \${plugin.version}\` : 'Missing version');
+                addTestResult('Plugin Description', !!plugin.description, plugin.description ? 'Description present' : 'Missing description');
+                
+                ${type === 'function' ? `
+                    addTestResult('Functions Available', !!(plugin.functions && Object.keys(plugin.functions).length > 0), 
+                        plugin.functions ? \`\${Object.keys(plugin.functions).length} functions available\` : 'No functions defined');
+                ` : `
+                    addTestResult('Supported Data Types', !!(plugin.supportedDataTypes && plugin.supportedDataTypes.length > 0),
+                        plugin.supportedDataTypes ? \`\${plugin.supportedDataTypes.length} data types supported\` : 'No data types defined');
+                `}
+                
+                // Test plugin manager integration
+                try {
+                    const pluginManager = window.opener.pluginManager || window.opener.window.pluginManager;
+                    if (pluginManager) {
+                        const retrievedPlugin = pluginManager.${type}Plugins.get('${pluginId}');
+                        addTestResult('Plugin Manager Integration', !!retrievedPlugin, 'Plugin found in manager');
+                    } else {
+                        addTestResult('Plugin Manager Integration', false, 'Plugin manager not accessible');
+                    }
+                } catch (error) {
+                    addTestResult('Plugin Manager Integration', false, \`Error: \${error.message}\`);
+                }
+            }
+
+            ${type === 'function' ? `
+                async function runFunctionTests() {
+                    log('Running function tests...');
+                    const plugin = ${JSON.stringify(plugin)};
+                    
+                    if (!plugin.functions) {
+                        addTestResult('Function Tests', false, 'No functions to test');
+                        return;
+                    }
+                    
+                    for (const [funcName, func] of Object.entries(plugin.functions)) {
+                        await testFunction(funcName);
+                    }
+                }
+                
+                async function testFunction(funcName) {
+                    log(\`Testing function: \${funcName}\`);
+                    
+                    try {
+                        const pluginManager = window.opener.pluginManager || window.opener.window.pluginManager;
+                        if (!pluginManager) {
+                            addTestResult(\`Function: \${funcName}\`, false, 'Plugin manager not available');
+                            return;
+                        }
+                        
+                        // Get sample parameters for the function
+                        const sampleParams = generateSampleParameters(funcName);
+                        
+                        log(\`Executing \${funcName} with parameters: \${JSON.stringify(sampleParams)}\`);
+                        
+                        const result = await pluginManager.executeFunctionByName('${pluginId}.' + funcName, sampleParams);
+                        
+                        if (result) {
+                            addTestResult(\`Function: \${funcName}\`, true, 'Executed successfully', \`Result type: \${typeof result}\`);
+                        } else {
+                            addTestResult(\`Function: \${funcName}\`, false, 'Function returned null/undefined');
+                        }
+                        
+                    } catch (error) {
+                        addTestResult(\`Function: \${funcName}\`, false, \`Execution failed: \${error.message}\`);
+                        log(\`Function \${funcName} failed: \${error.message}\`, 'error');
+                    }
+                }
+                
+                function generateSampleParameters(funcName) {
+                    // Generate sample parameters based on function name
+                    const sampleData = {
+                        'analyzeGCContent': {
+                            chromosome: 'chr1',
+                            start: 1000,
+                            end: 2000,
+                            windowSize: 100
+                        },
+                        'findMotifs': {
+                            chromosome: 'chr1',
+                            start: 1000,
+                            end: 2000,
+                            motif: 'ATCG'
+                        },
+                        'calculateDiversity': {
+                            sequences: ['ATCGATCG', 'GCTAGCTA', 'TTAACCGG']
+                        },
+                        'compareRegions': {
+                            regions: [
+                                { chromosome: 'chr1', start: 1000, end: 2000, name: 'region1' },
+                                { chromosome: 'chr1', start: 3000, end: 4000, name: 'region2' }
+                            ]
+                        },
+                        'buildPhylogeneticTree': {
+                            sequences: [
+                                { id: '1', sequence: 'ATCGATCG', name: 'seq1' },
+                                { id: '2', sequence: 'GCTAGCTA', name: 'seq2' }
+                            ]
+                        },
+                        'calculateEvolutionaryDistance': {
+                            sequence1: 'ATCGATCG',
+                            sequence2: 'GCTAGCTA'
+                        }
+                    };
+                    
+                    return sampleData[funcName] || {};
+                }
+            ` : `
+                async function runVisualizationTests() {
+                    log('Running visualization tests...');
+                    const plugin = ${JSON.stringify(plugin)};
+                    
+                    if (!plugin.supportedDataTypes || plugin.supportedDataTypes.length === 0) {
+                        addTestResult('Visualization Tests', false, 'No supported data types to test');
+                        return;
+                    }
+                    
+                    for (const dataType of plugin.supportedDataTypes) {
+                        await testVisualization(dataType);
+                    }
+                }
+                
+                async function testVisualization(dataType) {
+                    log(\`Testing visualization for data type: \${dataType}\`);
+                    
+                    try {
+                        const pluginManager = window.opener.pluginManager || window.opener.window.pluginManager;
+                        if (!pluginManager) {
+                            addTestResult(\`Visualization: \${dataType}\`, false, 'Plugin manager not available');
+                            return;
+                        }
+                        
+                        // Create a test container
+                        const testContainer = document.createElement('div');
+                        testContainer.style.width = '200px';
+                        testContainer.style.height = '200px';
+                        testContainer.style.display = 'none';
+                        document.body.appendChild(testContainer);
+                        
+                        // Generate sample data
+                        const sampleData = generateSampleVisualizationData(dataType);
+                        
+                        log(\`Rendering \${dataType} visualization...\`);
+                        
+                        await pluginManager.renderVisualization('${pluginId}', sampleData, testContainer);
+                        
+                        // Check if something was rendered
+                        const hasContent = testContainer.children.length > 0 || testContainer.innerHTML.trim().length > 0;
+                        
+                        if (hasContent) {
+                            addTestResult(\`Visualization: \${dataType}\`, true, 'Rendered successfully');
+                        } else {
+                            addTestResult(\`Visualization: \${dataType}\`, false, 'No content rendered');
+                        }
+                        
+                        // Clean up
+                        document.body.removeChild(testContainer);
+                        
+                    } catch (error) {
+                        addTestResult(\`Visualization: \${dataType}\`, false, \`Rendering failed: \${error.message}\`);
+                        log(\`Visualization \${dataType} failed: \${error.message}\`, 'error');
+                    }
+                }
+                
+                function generateSampleVisualizationData(dataType) {
+                    const sampleData = {
+                        'network-data': {
+                            nodes: [{ id: 1, name: 'Node 1' }, { id: 2, name: 'Node 2' }],
+                            links: [{ source: 1, target: 2 }]
+                        },
+                        'sequence-comparison': {
+                            sequences: ['ATCG', 'ATCG'],
+                            similarity: 1.0
+                        },
+                        'phylogenetic-tree': {
+                            newick: '(A:0.1,B:0.2,(C:0.3,D:0.4):0.5);'
+                        }
+                    };
+                    
+                    return sampleData[dataType] || { test: true, dataType: dataType };
+                }
+                
+                async function testVisualizationPerformance() {
+                    log('Running visualization performance test...');
+                    
+                    const startTime = Date.now();
+                    try {
+                        // Test with a larger dataset
+                        const largeData = {
+                            nodes: Array.from({length: 100}, (_, i) => ({id: i, name: \`Node \${i}\`})),
+                            links: Array.from({length: 200}, (_, i) => ({source: i % 100, target: (i + 1) % 100}))
+                        };
+                        
+                        const testContainer = document.createElement('div');
+                        testContainer.style.width = '500px';
+                        testContainer.style.height = '500px';
+                        testContainer.style.display = 'none';
+                        document.body.appendChild(testContainer);
+                        
+                        const pluginManager = window.opener.pluginManager || window.opener.window.pluginManager;
+                        await pluginManager.renderVisualization('${pluginId}', largeData, testContainer);
+                        
+                        const duration = Date.now() - startTime;
+                        addTestResult('Performance Test', duration < 5000, \`Rendering took \${duration}ms\`, 
+                            duration < 5000 ? 'Good performance' : 'Performance may need optimization');
+                        
+                        document.body.removeChild(testContainer);
+                        
+                    } catch (error) {
+                        const duration = Date.now() - startTime;
+                        addTestResult('Performance Test', false, \`Failed after \${duration}ms: \${error.message}\`);
+                    }
+                }
+            `}
+
+            async function runPerformanceTests() {
+                log('Running performance tests...');
+                
+                // Memory usage test
+                const initialMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                
+                // Simulate some operations
+                for (let i = 0; i < 1000; i++) {
+                    // Simple operation to test memory usage
+                    const temp = new Array(100).fill(i);
+                }
+                
+                const finalMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                const memoryDelta = finalMemory - initialMemory;
+                
+                addTestResult('Memory Usage', memoryDelta < 10000000, \`Memory delta: \${memoryDelta} bytes\`,
+                    memoryDelta < 10000000 ? 'Acceptable memory usage' : 'High memory usage detected');
+            }
+
+            async function runQuickTest() {
+                log('Running quick test...');
+                testStats.startTime = Date.now();
+                testStats.total = 0;
+                testStats.passed = 0;
+                testStats.failed = 0;
+                
+                document.getElementById('testResults').innerHTML = '';
+                
+                // Just run basic validation
+                await runBasicValidationTests();
+                
+                log('Quick test completed.');
+            }
+
+            // Event listeners
+            document.getElementById('runAllTestsBtn').addEventListener('click', runAllTests);
+            document.getElementById('runQuickTestBtn').addEventListener('click', runQuickTest);
+            document.getElementById('runPerformanceTestBtn').addEventListener('click', runPerformanceTests);
+
+            // Auto-run quick test on load
+            window.addEventListener('load', () => {
+                setTimeout(runQuickTest, 500);
+            });
+        `;
+    }
+
+    /**
+     * Get enhanced test window styles
+     */
+    getEnhancedTestWindowStyles() {
+        return `
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: #f8fafc;
+                color: #2d3748;
+                line-height: 1.6;
+            }
+            .test-container {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .test-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 2rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 2rem;
+            }
+            .plugin-info h1 {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .plugin-info h2 {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+            }
+            .version {
+                font-size: 1rem;
+                opacity: 0.8;
+                font-weight: normal;
+            }
+            .description {
+                font-size: 1.1rem;
+                opacity: 0.9;
+                margin-bottom: 1rem;
+            }
+            .plugin-meta {
+                display: flex;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+            }
+            .meta-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                opacity: 0.9;
+            }
+            .test-controls {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 0.5rem;
+                font-size: 0.95rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            .btn-primary { background: #4299e1; color: white; }
+            .btn-secondary { background: #718096; color: white; }
+            .btn-info { background: #38b2ac; color: white; }
+            .btn-success { background: #48bb78; color: white; }
+            .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+            .test-dashboard {
+                background: white;
+                padding: 1.5rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .stats-grid {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+            .stat-card {
+                background: #f7fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                transition: all 0.2s ease;
+            }
+            .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+            .stat-icon {
+                width: 3rem;
+                height: 3rem;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                background: #e2e8f0;
+                color: #4a5568;
+            }
+            .stat-icon.success { background: #c6f6d5; color: #276749; }
+            .stat-icon.error { background: #fed7d7; color: #742a2a; }
+            .stat-icon.warning { background: #fefcbf; color: #744210; }
+            .stat-icon.info { background: #bee3f8; color: #2c5282; }
+            .stat-value {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #2d3748;
+            }
+            .stat-label {
+                font-size: 0.875rem;
+                color: #718096;
+                text-transform: uppercase;
+                letter-spacing: 0.025em;
+            }
+            .test-content {
+                flex: 1;
+                max-width: 1200px;
+                margin: 0 auto;
+                width: 100%;
+                padding: 0 1.5rem 1.5rem;
+            }
+            .test-tabs {
+                display: flex;
+                gap: 0.25rem;
+                margin-bottom: 1.5rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .tab-btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                background: transparent;
+                color: #718096;
+                font-weight: 500;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .tab-btn:hover { color: #4a5568; }
+            .tab-btn.active {
+                color: #4299e1;
+                border-bottom-color: #4299e1;
+                background: rgba(66, 153, 225, 0.1);
+            }
+            .tab-content {
+                display: none;
+                background: white;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+            .tab-content.active { display: block; }
+            .test-section {
+                margin-bottom: 1.5rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                overflow: hidden;
+            }
+            .test-section-header {
+                background: #f7fafc;
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid #e2e8f0;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .test-section-content { padding: 1.5rem; }
+            .test-result {
+                padding: 1rem;
+                border-radius: 0.5rem;
+                margin: 0.75rem 0;
+                display: flex;
+                align-items: flex-start;
+                gap: 0.75rem;
+                border-left: 4px solid;
+            }
+            .test-result.success {
+                background: #f0fff4;
+                border-left-color: #48bb78;
+                color: #276749;
+            }
+            .test-result.error {
+                background: #fed7d7;
+                border-left-color: #f56565;
+                color: #742a2a;
+            }
+            .test-result.warning {
+                background: #fefcbf;
+                border-left-color: #ed8936;
+                color: #744210;
+            }
+            .test-result.info {
+                background: #ebf8ff;
+                border-left-color: #4299e1;
+                color: #2c5282;
+            }
+            .test-logs {
+                background: #1a202c;
+                color: #e2e8f0;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                font-family: 'Monaco', 'Menlo', monospace;
+                font-size: 0.875rem;
+                max-height: 400px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+            }
+            .function-card {
+                background: #f7fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                margin: 0.75rem 0;
+            }
+            .function-name {
+                font-weight: 600;
+                color: #2d3748;
+                margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .function-desc {
+                color: #718096;
+                font-size: 0.875rem;
+                margin-bottom: 0.75rem;
+            }
+            .function-params {
+                background: #edf2f7;
+                padding: 0.75rem;
+                border-radius: 0.25rem;
+                font-family: monospace;
+                font-size: 0.75rem;
+                margin: 0.5rem 0;
+            }
+            .progress-bar {
+                width: 100%;
+                height: 0.5rem;
+                background: #e2e8f0;
+                border-radius: 0.25rem;
+                overflow: hidden;
+            }
+            .progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #4299e1, #38b2ac);
+                width: 0%;
+                transition: width 0.3s ease;
+            }
+            .spinner {
+                display: inline-block;
+                width: 1rem;
+                height: 1rem;
+                border: 2px solid #e2e8f0;
+                border-radius: 50%;
+                border-top-color: #4299e1;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .chart-container {
+                width: 100%;
+                height: 300px;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #718096;
+            }
+        `;
     }
 
     /**
