@@ -349,11 +349,8 @@ class TrackRenderer {
             return track;
         }
         
-        // Process and render genes with settings
+        // Process and render genes with settings (includes statistics in unified container)
         this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
-        
-        // Add statistics and update sidebar
-        this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
         
         // Restore header state if it was previously hidden
         this.restoreHeaderState(track, 'genes');
@@ -397,9 +394,6 @@ class TrackRenderer {
         
         // Create SVG-based gene visualization
         this.renderGeneElementsSVG(unifiedContainer, geneRows, viewport, operons, layout, settings);
-        
-        // Add statistics to the same container
-        this.addGeneTrackStatistics(unifiedContainer, visibleGenes, operons, settings, layout);
         
         // Add the unified container to trackContent
         trackContent.appendChild(unifiedContainer);
@@ -5050,7 +5044,7 @@ class TrackRenderer {
                 if (trackType === 'genes') {
                     console.log('Re-rendering gene elements due to settings change...', settings);
                     // Clear existing gene elements before re-rendering
-                    const geneElements = trackContent.querySelectorAll('.gene-element, .no-genes-message, .gene-stats, .detailed-ruler-container');
+                    const geneElements = trackContent.querySelectorAll('.gene-element, .no-genes-message, .unified-gene-container, .detailed-ruler-container');
                     geneElements.forEach(el => el.remove());
                     
                     // Re-add detailed ruler
@@ -5065,9 +5059,8 @@ class TrackRenderer {
                     const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
                     
                     if (visibleGenes.length > 0) {
-                        // Re-render with updated settings
+                        // Re-render with updated settings (includes statistics in unified container)
                         this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
-                        this.addGeneTrackStatistics(trackContent, visibleGenes, operons, settings);
                         
                         // Update track height based on new gene heights
                         const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);

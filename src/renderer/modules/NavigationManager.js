@@ -720,7 +720,7 @@ class NavigationManager {
             
             allElements.forEach(el => {
                 const baseTransform = el.dataset.baseTransform || '';
-                const isHTMLElement = el.classList.contains('gene-element') || el.classList.contains('gene-stats');
+                const isHTMLElement = el.classList.contains('gene-element');
                 const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
                 
                 if (isHTMLElement) {
@@ -766,12 +766,12 @@ class NavigationManager {
             console.log('🔧 [DRAG] Cached unified container transform:', originalTransform);
         } else {
             // Fallback to individual elements for backward compatibility
-            const geneElements = document.querySelectorAll('.gene-element, .svg-gene-element, .genes-svg-container, .gene-stats');
+            const geneElements = document.querySelectorAll('.gene-element, .svg-gene-element, .genes-svg-container');
             
             console.log('🔧 [DRAG] Caching transforms for', geneElements.length, 'individual elements');
             
             geneElements.forEach(el => {
-                const isHTMLElement = el.classList.contains('gene-element') || el.classList.contains('gene-stats');
+                const isHTMLElement = el.classList.contains('gene-element');
                 const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
                 
                 if (isHTMLElement) {
@@ -818,7 +818,7 @@ class NavigationManager {
             
             cachedElements.forEach(el => {
                 const baseTransform = el.dataset.baseTransform || '';
-                const isHTMLElement = el.classList.contains('gene-element') || el.classList.contains('gene-stats');
+                const isHTMLElement = el.classList.contains('gene-element');
                 const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
                 
                 if (isHTMLElement) {
