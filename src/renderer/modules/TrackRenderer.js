@@ -150,7 +150,12 @@ class TrackRenderer {
         toggleBtn.dataset.locked = 'false';
         toggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.toggleTrackControls(trackType, toggleBtn);
+            console.log('Toggle button clicked for track:', trackType);
+            try {
+                this.toggleTrackControls(trackType, toggleBtn);
+            } catch (error) {
+                console.error('Error in toggleTrackControls:', error);
+            }
         });
         
         // Hide header button (available for all tracks)
@@ -4155,28 +4160,120 @@ class TrackRenderer {
      * Toggle track controls (resize, reorder, close)
      */
     toggleTrackControls(trackType, button) {
+        console.log('toggleTrackControls called with:', trackType, button);
+        
         const isLocked = button.dataset.locked === 'true';
         const newLocked = !isLocked;
+        
+        console.log('Current lock state:', isLocked, 'New lock state:', newLocked);
         
         button.dataset.locked = newLocked.toString();
         button.innerHTML = newLocked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-lock-open"></i>';
         button.title = newLocked ? 'Unlock Track Controls' : 'Lock Track Controls';
         
-        // Find the track element
-        const trackElement = button.closest('[class*="-track"]');
+        // Find the track element using multiple strategies
+        let trackElement = button.closest('[class*="-track"]');
+        
+        // Fallback: try to find by specific track class names
+        if (!trackElement) {
+            const trackClasses = ['gene-track', 'gc-track', 'variant-track', 'reads-track', 'protein-track', 'wig-track', 'sequence-track'];
+            for (const trackClass of trackClasses) {
+                trackElement = button.closest(`.${trackClass}`);
+                if (trackElement) break;
+            }
+        }
+        
+        // Final fallback: traverse up to find any element with a track-related class
+        if (!trackElement) {
+            let element = button.parentElement;
+            while (element && element !== document.body) {
+                for (const className of element.classList) {
+                    if (className.endsWith('-track')) {
+                        trackElement = element;
+                        break;
+                    }
+                }
+                if (trackElement) break;
+                element = element.parentElement;
+            }
+        }
+        
+        console.log('Found track element:', trackElement);
+        console.log('Track element classes:', trackElement ? Array.from(trackElement.classList) : 'none');
+        
         if (trackElement) {
             if (newLocked) {
                 trackElement.classList.add('controls-locked');
                 // Disable dragging and resizing
                 trackElement.draggable = false;
+                
+                // Additional visual feedback
+                trackElement.style.boxShadow = '0 0 0 2px #f59e0b';
+                trackElement.title = 'Track controls are locked';
+                
+                console.log('Added controls-locked class and disabled dragging');
             } else {
                 trackElement.classList.remove('controls-locked');
                 // Enable dragging and resizing
                 trackElement.draggable = true;
+                
+                // Remove visual feedback
+                trackElement.style.boxShadow = '';
+                trackElement.title = '';
+                
+                console.log('Removed controls-locked class and enabled dragging');
             }
+            
+            // Add a brief animation to show the state change
+            trackElement.style.transition = 'box-shadow 0.3s ease, opacity 0.3s ease';
+            
+        } else {
+            console.warn('Could not find track element for button:', button);
+            console.warn('Button parent hierarchy:', button.parentElement, button.parentElement?.parentElement);
         }
         
         console.log(`Track ${trackType} controls ${newLocked ? 'locked' : 'unlocked'}`);
+        
+        // Create a temporary notification to show the action worked
+        this.showLockNotification(trackType, newLocked);
+    }
+    
+    /**
+     * Show a temporary notification for lock state changes
+     */
+    showLockNotification(trackType, isLocked) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${isLocked ? '#f59e0b' : '#10b981'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease;
+        `;
+        
+        notification.innerHTML = `
+            <i class="fas fa-${isLocked ? 'lock' : 'lock-open'}"></i>
+            ${trackType.charAt(0).toUpperCase() + trackType.slice(1)} track ${isLocked ? 'locked' : 'unlocked'}
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 2 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 2000);
     }
     
     /**
