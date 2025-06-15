@@ -440,6 +440,10 @@ class TrackRenderer {
         const elementWidth = Math.max((width / 100) * containerWidth, 8); // Minimum 8px width
         const elementHeight = layout.geneHeight;
 
+        // Check if gene is partially visible (truncated at left or right edges)
+        const isLeftTruncated = gene.start < viewport.start;
+        const isRightTruncated = gene.end > viewport.end;
+
         // Create SVG group for the gene
         const geneGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         geneGroup.setAttribute('class', `svg-gene-element ${gene.type.toLowerCase()}`);
@@ -452,8 +456,8 @@ class TrackRenderer {
         const gradientId = `gene-gradient-${gene.start}-${gene.end}-${rowIndex}`;
         const gradient = this.createSVGGeneGradient(defs, gradientId, operonInfo.color);
 
-        // Create gene shape based on strand direction
-        const geneShape = this.createSVGGeneShape(gene, elementWidth, elementHeight, gradientId, operonInfo);
+        // Create gene shape based on strand direction and truncation state
+        const geneShape = this.createSVGGeneShape(gene, elementWidth, elementHeight, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
         geneGroup.appendChild(geneShape);
 
         // Add gene text label if there's enough space
@@ -499,7 +503,7 @@ class TrackRenderer {
     /**
      * Create SVG shape for gene (with directional indicators based on size)
      */
-    createSVGGeneShape(gene, width, height, gradientId, operonInfo) {
+    createSVGGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
         const isForward = gene.strand !== -1;
         const arrowSize = Math.min(height * 0.3, 8); // Responsive arrow size
 
@@ -510,23 +514,41 @@ class TrackRenderer {
             
             if (isForward) {
                 // Forward triangle (pointing right)
-                pathData = `M 0 0 
-                           L ${width} ${height / 2} 
-                           L 0 ${height} 
-                           Z`;
+                if (isLeftTruncated) {
+                    // Add jagged left edge
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    // Normal triangle
+                    pathData = `M 0 0 
+                               L ${width} ${height / 2} 
+                               L 0 ${height} 
+                               Z`;
+                }
             } else {
                 // Reverse triangle (pointing left)
-                pathData = `M ${width} 0 
-                           L 0 ${height / 2} 
-                           L ${width} ${height} 
-                           Z`;
+                if (isLeftTruncated) {
+                    // Add jagged left edge
+                    pathData = this.createJaggedTrianglePath(width, height, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge
+                    pathData = this.createJaggedTrianglePath(width, height, false, true, isForward);
+                } else {
+                    // Normal triangle
+                    pathData = `M ${width} 0 
+                               L 0 ${height / 2} 
+                               L ${width} ${height} 
+                               Z`;
+                }
             }
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', '1');
-            path.setAttribute('class', 'gene-triangle');
+            path.setAttribute('class', `gene-triangle ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
         } else {
             // Arrow-shaped path for larger genes (width >= 15px)
@@ -535,28 +557,183 @@ class TrackRenderer {
             
             if (isForward) {
                 // Forward arrow (pointing right)
-                pathData = `M 0 0 
-                           L ${width - arrowSize} 0 
-                           L ${width} ${height / 2} 
-                           L ${width - arrowSize} ${height} 
-                           L 0 ${height} 
-                           Z`;
+                if (isLeftTruncated) {
+                    // Add jagged left edge
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge (but keep arrow tip)
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
+                } else {
+                    // Normal forward arrow
+                    pathData = `M 0 0 
+                               L ${width - arrowSize} 0 
+                               L ${width} ${height / 2} 
+                               L ${width - arrowSize} ${height} 
+                               L 0 ${height} 
+                               Z`;
+                }
             } else {
                 // Reverse arrow (pointing left)
-                pathData = `M ${arrowSize} 0 
-                           L ${width} 0 
-                           L ${width} ${height} 
-                           L ${arrowSize} ${height} 
-                           L 0 ${height / 2} 
-                           Z`;
+                if (isLeftTruncated) {
+                    // Add jagged left edge (but keep arrow tip)
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
+                } else if (isRightTruncated) {
+                    // Add jagged right edge
+                    pathData = this.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
+                } else {
+                    // Normal reverse arrow
+                    pathData = `M ${arrowSize} 0 
+                               L ${width} 0 
+                               L ${width} ${height} 
+                               L ${arrowSize} ${height} 
+                               L 0 ${height / 2} 
+                               Z`;
+                }
             }
             
             path.setAttribute('d', pathData);
             path.setAttribute('fill', `url(#${gradientId})`);
             path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
             path.setAttribute('stroke-width', '1');
-            path.setAttribute('class', 'gene-arrow');
+            path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
+        }
+    }
+
+    /**
+     * Create jagged path for truncated triangular genes
+     */
+    createJaggedTrianglePath(width, height, isLeftJagged, isRightJagged, isForward) {
+        const jaggedDepth = Math.min(4, height * 0.2); // Depth of jagged cuts
+        const jaggedStep = Math.max(2, height / 6); // Height of each jagged tooth
+        
+        if (isForward) {
+            // Forward triangle (pointing right)
+            if (isLeftJagged) {
+                // Left edge (截断面) is jagged - vertical jagged line
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width} ${height / 2} 
+                       L ${jaggedDepth} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge (截断面) is jagged - vertical jagged line  
+                return `M 0 0 
+                       L ${width - jaggedDepth} ${jaggedStep} 
+                       L ${width} 0 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L 0 ${height} 
+                       Z`;
+            }
+        } else {
+            // Reverse triangle (pointing left)
+            if (isLeftJagged) {
+                // Left edge (截断面) is jagged - vertical jagged line
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width} ${height} 
+                       L ${width} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge (截断面) is jagged - vertical jagged line
+                return `M 0 ${height / 2} 
+                       L ${width - jaggedDepth} 0 
+                       L ${width} ${jaggedStep} 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L 0 ${height / 2} 
+                       Z`;
+            }
+        }
+        
+        // Fallback - return normal triangle if no jagged edges
+        if (isForward) {
+            return `M 0 0 L ${width} ${height / 2} L 0 ${height} Z`;
+        } else {
+            return `M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z`;
+        }
+    }
+
+    /**
+     * Create jagged path for truncated arrow-shaped genes
+     */
+    createJaggedArrowPath(width, height, arrowSize, isLeftJagged, isRightJagged, isForward) {
+        const jaggedDepth = Math.min(4, height * 0.2); // Depth of jagged cuts
+        const jaggedStep = Math.max(2, height / 6); // Height of each jagged tooth
+        
+        if (isForward) {
+            // Forward arrow (pointing right)
+            if (isLeftJagged) {
+                // Left edge (截断面) is jagged - vertical jagged line
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width - arrowSize} ${height} 
+                       L ${width} ${height / 2} 
+                       L ${width - arrowSize} 0 
+                       L ${jaggedDepth} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge (截断面) is jagged - the arrow tip is cut off
+                return `M 0 0 
+                       L ${width - jaggedDepth} 0 
+                       L ${width} ${jaggedStep} 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L 0 ${height} 
+                       Z`;
+            }
+        } else {
+            // Reverse arrow (pointing left)
+            if (isLeftJagged) {
+                // Left edge (截断面) is jagged - the arrow tip is cut off
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width} ${height} 
+                       L ${width} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge (截断面) is jagged - vertical jagged line
+                return `M ${arrowSize} 0 
+                       L ${width - jaggedDepth} 0 
+                       L ${width} ${jaggedStep} 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L ${arrowSize} ${height} 
+                       L 0 ${height / 2} 
+                       Z`;
+            }
+        }
+        
+        // Fallback - return normal arrow if no jagged edges
+        if (isForward) {
+            return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
+        } else {
+            return `M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z`;
         }
     }
 
@@ -632,9 +809,23 @@ class TrackRenderer {
         const operonDisplay = operonInfo.isInOperon ? `\nOperon: ${operonInfo.operonName}` : '\nSingle gene';
         const rowInfo = `\nRow: ${rowIndex + 1}`;
         
+        // Add truncation info for partially visible genes
+        const viewport = this.getCurrentViewport();
+        const isLeftTruncated = gene.start < viewport.start;
+        const isRightTruncated = gene.end > viewport.end;
+        let truncationInfo = '';
+        
+        if (isLeftTruncated && isRightTruncated) {
+            truncationInfo = '\n⚠️ Gene extends beyond both edges of current view';
+        } else if (isLeftTruncated) {
+            truncationInfo = '\n⚠️ Gene extends beyond left edge of current view';
+        } else if (isRightTruncated) {
+            truncationInfo = '\n⚠️ Gene extends beyond right edge of current view';
+        }
+        
         // Add tooltip using title element
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        title.textContent = `${geneInfo}\nPosition: ${positionInfo}${operonDisplay}${rowInfo}`;
+        title.textContent = `${geneInfo}\nPosition: ${positionInfo}${operonDisplay}${rowInfo}${truncationInfo}`;
         geneGroup.appendChild(title);
 
         // Add hover effects

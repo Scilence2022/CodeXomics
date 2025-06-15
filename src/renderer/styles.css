@@ -3990,6 +3990,34 @@ svg {
     filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
+/* Jagged/truncated gene styling */
+.gene-triangle.left-truncated,
+.gene-arrow.left-truncated {
+    stroke-dasharray: 2,2;
+    stroke-width: 1.5 !important;
+    opacity: 0.95;
+}
+
+.gene-triangle.right-truncated,
+.gene-arrow.right-truncated {
+    stroke-dasharray: 2,2;
+    stroke-width: 1.5 !important;
+    opacity: 0.95;
+}
+
+/* Enhanced visual indication for truncated genes */
+.svg-gene-element .left-truncated:hover,
+.svg-gene-element .right-truncated:hover {
+    filter: brightness(1.2) drop-shadow(0 3px 6px rgba(255,100,0,0.5));
+    stroke-width: 2 !important;
+}
+
+/* Tooltip enhancement for truncated genes */
+.svg-gene-element.left-truncated title::after,
+.svg-gene-element.right-truncated title::after {
+    content: " (Partially visible)";
+}
+
 .svg-gene-element.selected,
 g.svg-gene-element.selected,
 rect.svg-gene-element.selected,
