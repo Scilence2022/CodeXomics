@@ -1348,6 +1348,15 @@ svg {
     background: #e8f4fd;
 }
 
+/* Unified Gene Container for consistent dragging */
+.unified-gene-container {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    z-index: 5;
+}
+
 /* Enhanced Gene Element Styles for Operon Coloring */
 .gene-element {
     position: absolute;

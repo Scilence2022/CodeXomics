@@ -409,13 +409,16 @@ class TrackRenderer {
         
         // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        // Calculate SVG content height (excluding ruler)
+        const svgContentHeight = layout.totalHeight - layout.rulerHeight;
+        
         svg.setAttribute('width', '100%');
-        svg.setAttribute('height', layout.totalHeight);
-        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${layout.totalHeight}`);
+        svg.setAttribute('height', svgContentHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContentHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'genes-svg-container');
-        svg.style.position = 'absolute';
-        svg.style.top = `${layout.rulerHeight}px`;
+        svg.style.position = 'relative';
+        svg.style.top = '0';
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
 
@@ -451,7 +454,7 @@ class TrackRenderer {
         
         if (width <= 0) return null;
 
-        // Get positioning parameters - use accurate container width
+        // Get positioning parameters - use accurate container width (no ruler offset in SVG)
         const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
         const x = (left / 100) * containerWidth;
         const elementWidth = Math.max((width / 100) * containerWidth, 8); // Minimum 8px width
@@ -1581,7 +1584,7 @@ class TrackRenderer {
         const geneHeight = settings?.geneHeight || 23;
         const rowSpacing = 6;
         const rulerHeight = 35;
-        const topPadding = 10;
+        const topPadding = 2;
         const bottomPadding = 0;
         
         // Apply maximal rows setting
@@ -3570,12 +3573,12 @@ class TrackRenderer {
         rulerContainer.className = 'detailed-ruler-container';
         rulerContainer.style.cssText = `
             position: relative;
-            height: 30px;
+            height: 35px;
             background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
             border-bottom: 1px solid #dee2e6;
-            margin-bottom: 5px;
+            margin-bottom: 0px;
             z-index: 10;
-            overflow: hidden;
+            overflow: visible;
         `;
 
         const canvas = document.createElement('canvas');
@@ -3597,9 +3600,9 @@ class TrackRenderer {
             const dpr = window.devicePixelRatio || 1;
             
             canvas.width = rect.width * dpr;
-            canvas.height = 30 * dpr;
+            canvas.height = 35 * dpr;
             canvas.style.width = rect.width + 'px';
-            canvas.style.height = '30px';
+            canvas.style.height = '35px';
             
             const ctx = canvas.getContext('2d');
             ctx.scale(dpr, dpr);
@@ -3629,14 +3632,14 @@ class TrackRenderer {
         if (range <= 0 || width <= 0) return;
 
         // Clear canvas
-        ctx.clearRect(0, 0, width, 30);
+        ctx.clearRect(0, 0, width, 35);
 
         // Fill background
-        const gradient = ctx.createLinearGradient(0, 0, 0, 30);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 35);
         gradient.addColorStop(0, '#f8f9fa');
         gradient.addColorStop(1, '#e9ecef');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, 30);
+        ctx.fillRect(0, 0, width, 35);
 
         // Calculate intelligent tick spacing
         const { majorInterval, minorInterval } = this.calculateDetailedTickSpacing(range, width);
@@ -3661,7 +3664,7 @@ class TrackRenderer {
                 // Draw major tick
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
-                ctx.lineTo(x, 20);
+                ctx.lineTo(x, 22);
                 ctx.stroke();
 
                 // Draw label with minimum spacing check
@@ -3681,7 +3684,7 @@ class TrackRenderer {
                 }
                 
                 if (canDrawLabel) {
-                    ctx.fillText(label, x, 28);
+                    ctx.fillText(label, x, 32);
                 }
             }
         }
@@ -3707,8 +3710,8 @@ class TrackRenderer {
         // Draw border
         ctx.strokeStyle = '#dee2e6';
         ctx.beginPath();
-        ctx.moveTo(0, 29.5);
-        ctx.lineTo(width, 29.5);
+        ctx.moveTo(0, 34.5);
+        ctx.lineTo(width, 34.5);
         ctx.stroke();
     }
 
