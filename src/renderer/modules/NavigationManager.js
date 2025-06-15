@@ -424,6 +424,7 @@ class NavigationManager {
         // Check if we've moved enough to consider this a drag
         if (!this.dragState.hasDragged && Math.abs(deltaX) > 5) {
             this.dragState.hasDragged = true;
+            console.log('🔧 [DRAG-MOVE] Drag started, threshold exceeded');
         }
 
         if (!this.dragState.hasDragged) return;
@@ -445,6 +446,19 @@ class NavigationManager {
         // Store the calculated position
         this.dragState.lastCalculatedStart = newStart;
 
+        // Debug output for move calculation
+        console.log('🔧 [DRAG-MOVE] Movement calculation:');
+        console.log('  - Mouse deltaX:', deltaX, 'px');
+        console.log('  - Element width:', elementWidth, 'px');
+        console.log('  - Current range:', currentRange, 'bp');
+        console.log('  - Start position:', startPosition, 'bp');
+        console.log('  - Position change:', positionChange, 'bp');
+        console.log('  - Raw new start (before bounds):', startPosition - positionChange, 'bp');
+        console.log('  - Bounded new start:', newStart, 'bp');
+        console.log('  - New end:', newEnd, 'bp');
+        console.log('  - Movement ratio:', (deltaX / elementWidth).toFixed(4), 'px/px');
+        console.log('  - Genome movement:', (newStart - startPosition), 'bp');
+
         // Update the visual representation
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
         this.performVisualDragUpdate(deltaX, element);
@@ -457,7 +471,11 @@ class NavigationManager {
     handleDocumentMouseUp(e) {
         if (!this.dragState.isDragging) return;
 
-        const { element, hasDragged, chromosome } = this.dragState;
+        const { element, hasDragged, chromosome, startPosition, startX } = this.dragState;
+
+        console.log('🔧 [DRAG-END] === DRAG ENDING ===');
+        console.log('🔧 [DRAG-END] hasDragged:', hasDragged);
+        console.log('🔧 [DRAG-END] Total mouse movement:', e.clientX - startX, 'px');
 
         // Immediately reset dragging state
         this.dragState.isDragging = false;
@@ -470,6 +488,7 @@ class NavigationManager {
 
         if (!hasDragged) {
             this.dragState.hasDragged = false;
+            console.log('🔧 [DRAG-END] No significant drag detected, no position change');
             return;
         }
         this.dragState.hasDragged = false;
@@ -480,12 +499,47 @@ class NavigationManager {
         const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
         const finalNewEnd = finalNewStart + currentRange;
         
+        // Debug output for final position
+        console.log('🔧 [DRAG-END] Final position calculation:');
+        console.log('  - Original start position:', startPosition, 'bp');
+        console.log('  - Last calculated start (from move):', finalNewStart, 'bp');
+        console.log('  - Final calculated end:', finalNewEnd, 'bp');
+        console.log('  - Total genome movement:', finalNewStart - startPosition, 'bp');
+        console.log('  - Current range:', currentRange, 'bp');
+        console.log('  - Sequence length:', sequence.length, 'bp');
+        
+        // Verify consistency with drag movement
+        const totalMouseDelta = e.clientX - startX;
+        const elementWidth = this.getEffectiveWidth(element);
+        const expectedPositionChange = Math.round(totalMouseDelta * currentRange / elementWidth);
+        const expectedNewStart = Math.max(0, Math.min(
+            sequence.length - currentRange,
+            startPosition - expectedPositionChange
+        ));
+        
+        console.log('🔧 [DRAG-END] Consistency check:');
+        console.log('  - Expected position change (recalculated):', expectedPositionChange, 'bp');
+        console.log('  - Expected new start (recalculated):', expectedNewStart, 'bp');
+        console.log('  - Actual new start (from last move):', finalNewStart, 'bp');
+        console.log('  - Difference:', Math.abs(expectedNewStart - finalNewStart), 'bp');
+        console.log('  - Match:', expectedNewStart === finalNewStart ? '✅ CONSISTENT' : '❌ MISMATCH');
+        
+        // Set the position before re-render
+        const positionBeforeRender = { ...this.genomeBrowser.currentPosition };
         this.genomeBrowser.currentPosition = { start: finalNewStart, end: finalNewEnd };
         
+        console.log('🔧 [DRAG-END] Position update:');
+        console.log('  - Position before render:', positionBeforeRender);
+        console.log('  - Position after update:', this.genomeBrowser.currentPosition);
+        
         // Trigger a full re-render with the definitive new position
+        console.log('🔧 [DRAG-END] Starting re-render...');
         this.genomeBrowser.updateStatistics(chromosome, sequence);
         this.genomeBrowser.displayGenomeView(chromosome, sequence);
         this.genomeBrowser.genomeNavigationBar.update();
+        
+        console.log('🔧 [DRAG-END] Re-render completed');
+        console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
     }
 
     // Draggable functionality for tracks
@@ -597,7 +651,7 @@ class NavigationManager {
         }
 
         const finalWidth = width || 800; // Fallback to 800 if all else fails
-        console.log(`[Drag] Effective width: ${finalWidth}px (method: ${method})`);
+        console.log('🔧 [DRAG-WIDTH] Effective width:', finalWidth, 'px (method:', method + ')');
         return finalWidth;
     }
 
@@ -609,10 +663,13 @@ class NavigationManager {
         // Find all gene-related elements that were cached
         const allElements = document.querySelectorAll('[data-base-transform]');
         
-        // Debug output (but not too frequent)
-        if (Math.abs(deltaX) % 20 < 5) {
-            console.log('🔧 [DRAG] Visual update - deltaX:', deltaX, 'px, elements:', allElements.length);
-        }
+        // Debug output for visual updates
+        console.log('🔧 [DRAG-VISUAL] Visual update:');
+        console.log('  - deltaX applied:', deltaX, 'px');
+        console.log('  - Elements to update:', allElements.length);
+        
+        let htmlElementsUpdated = 0;
+        let svgElementsUpdated = 0;
         
         allElements.forEach(el => {
             const baseTransform = el.dataset.baseTransform || '';
@@ -626,6 +683,7 @@ class NavigationManager {
                 } else {
                     el.style.transform = `translateX(${deltaX}px)`;
                 }
+                htmlElementsUpdated++;
             } else if (isSVGElement) {
                 // SVG elements: only use transform attribute, never style.transform
                 if (baseTransform) {
@@ -633,8 +691,13 @@ class NavigationManager {
                 } else {
                     el.setAttribute('transform', `translate(${deltaX}, 0)`);
                 }
+                svgElementsUpdated++;
             }
         });
+        
+        console.log('🔧 [DRAG-VISUAL] Update summary:');
+        console.log('  - HTML elements updated:', htmlElementsUpdated);
+        console.log('  - SVG elements updated:', svgElementsUpdated);
         
         // Add visual feedback class
         element.classList.add('visual-dragging');
@@ -674,7 +737,11 @@ class NavigationManager {
         // Find all cached elements and restore their original transforms
         const cachedElements = document.querySelectorAll('[data-base-transform]');
         
-        console.log('🔧 [DRAG] Resetting transforms for', cachedElements.length, 'elements');
+        console.log('🔧 [DRAG-RESET] Resetting visual transforms:');
+        console.log('  - Elements to reset:', cachedElements.length);
+        
+        let htmlElementsReset = 0;
+        let svgElementsReset = 0;
         
         cachedElements.forEach(el => {
             const baseTransform = el.dataset.baseTransform || '';
@@ -684,20 +751,26 @@ class NavigationManager {
             if (isHTMLElement) {
                 // Restore HTML element's style.transform
                 el.style.transform = baseTransform;
-                console.log('🔧 [DRAG] Restored HTML transform:', el.className, '-> "' + baseTransform + '"');
+                htmlElementsReset++;
+                console.log('🔧 [DRAG-RESET] HTML element reset:', el.className, '-> "' + baseTransform + '"');
             } else if (isSVGElement) {
                 // Restore SVG element's transform attribute
                 el.setAttribute('transform', baseTransform);
-                console.log('🔧 [DRAG] Restored SVG transform:', el.tagName, '-> "' + baseTransform + '"');
+                svgElementsReset++;
+                console.log('🔧 [DRAG-RESET] SVG element reset:', el.tagName, '-> "' + baseTransform + '"');
             }
             
             // Clean up cache
             delete el.dataset.baseTransform;
         });
 
+        console.log('🔧 [DRAG-RESET] Reset summary:');
+        console.log('  - HTML elements reset:', htmlElementsReset);
+        console.log('  - SVG elements reset:', svgElementsReset);
+
         // Remove visual feedback class
         element.classList.remove('visual-dragging');
-        console.log('🔧 [DRAG] Transform reset completed');
+        console.log('🔧 [DRAG-RESET] Transform reset completed');
     }
 
     // Method to move Search Results panel to the top
