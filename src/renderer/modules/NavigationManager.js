@@ -451,7 +451,7 @@ class NavigationManager {
             
             // Calculate movement with much more conservative approach
             const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-            const elementWidth = element.offsetWidth || 800; // fallback width
+            const elementWidth = getEffectiveWidth();
             const sequence = this.genomeBrowser.currentSequence[chromosome];
             
             // Calculate how much of the genome each pixel represents
@@ -560,7 +560,7 @@ class NavigationManager {
             // ------------------ 2) 根据视觉位移计算基因组位置变化 ------------------
             const sequence = this.genomeBrowser.currentSequence[chromosome];
             const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-            const elementWidth = element.offsetWidth || 800;
+            const elementWidth = getEffectiveWidth();
 
             // 使用与 handleMouseMove 相同的公式并取整，保证一致性
             const finalPositionChange = Math.round(-actualDeltaX * currentRange / elementWidth);
@@ -641,6 +641,29 @@ class NavigationManager {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
             element.removeEventListener('mouseleave', handleMouseLeave);
+        };
+
+        // Helper: compute effective width of the track that corresponds to genome rendering
+        const getEffectiveWidth = () => {
+            // 1) if element itself is track-content
+            if (element.classList.contains('track-content')) {
+                return element.getBoundingClientRect().width || element.offsetWidth || 800;
+            }
+            // 2) look for inner .track-content
+            const tc = element.querySelector('.track-content');
+            if (tc) {
+                return tc.getBoundingClientRect().width || tc.offsetWidth || 800;
+            }
+            // 3) look in genome viewer as fallback
+            const gv = document.getElementById('genomeViewer');
+            if (gv) {
+                const tc2 = gv.querySelector('.track-content');
+                if (tc2) {
+                    return tc2.getBoundingClientRect().width || tc2.offsetWidth || 800;
+                }
+            }
+            // 4) fallback to element width or default
+            return element.offsetWidth || 800;
         };
     }
 
