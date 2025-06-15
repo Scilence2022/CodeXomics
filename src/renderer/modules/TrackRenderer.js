@@ -4796,7 +4796,7 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label for="readsBorderWidth">Border width (px):</label>
-                    <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 1}">
+                    <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 0}">
                     <div class="help-text">Width of the border around read elements. Set to 0 for no border.</div>
                 </div>
                 <div class="form-group">
@@ -4981,14 +4981,14 @@ class TrackRenderer {
                 break;
                 
             case 'reads':
-                settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 14;
+                settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 6;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
                 settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
                 settings.forwardColor = modal.querySelector('#readsForwardColor').value;
                 settings.reverseColor = modal.querySelector('#readsReverseColor').value;
                 settings.pairedColor = modal.querySelector('#readsPairedColor').value;
                 settings.borderColor = modal.querySelector('#readsBorderColor').value;
-                settings.borderWidth = parseFloat(modal.querySelector('#readsBorderWidth').value) || 1;
+                settings.borderWidth = parseFloat(modal.querySelector('#readsBorderWidth').value) || 0;
                 settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
                 settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
                 settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;

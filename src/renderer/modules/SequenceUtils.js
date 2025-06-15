@@ -23,8 +23,10 @@ class SequenceUtils {
         }
         
         // Update sequence title
-        document.getElementById('sequenceTitle').textContent = 
-            `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
+        const sequenceTitle = document.getElementById('sequenceTitle');
+        if (sequenceTitle) {
+            sequenceTitle.textContent = `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
+        }
         
         // Show sequence display section and splitter if not already visible
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
@@ -473,10 +475,15 @@ class SequenceUtils {
         const gcCount = (sequence.match(/[GC]/g) || []).length;
         const gcContent = ((gcCount / length) * 100).toFixed(2);
 
-        document.getElementById('sequenceLength').textContent = length.toLocaleString();
-        document.getElementById('gcContent').textContent = `${gcContent}%`;
-        document.getElementById('currentPosition').textContent = 
-            `${this.genomeBrowser.currentPosition.start + 1}-${this.genomeBrowser.currentPosition.end}`;
+        const sequenceLength = document.getElementById('sequenceLength');
+        const gcContentElement = document.getElementById('gcContent');
+        const currentPosition = document.getElementById('currentPosition');
+        
+        if (sequenceLength) sequenceLength.textContent = length.toLocaleString();
+        if (gcContentElement) gcContentElement.textContent = `${gcContent}%`;
+        if (currentPosition) {
+            currentPosition.textContent = `${this.genomeBrowser.currentPosition.start + 1}-${this.genomeBrowser.currentPosition.end}`;
+        }
     }
 
     // Chromosome management

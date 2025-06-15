@@ -612,7 +612,12 @@ class UIManager {
     }
 
     updateStatus(message) {
-        document.getElementById('statusText').textContent = message;
+        const statusElement = document.getElementById('statusText');
+        if (statusElement) {
+            statusElement.textContent = message;
+        } else {
+            console.warn('Status element with id "statusText" not found. Status message:', message);
+        }
     }
 
     showLoading(show) {

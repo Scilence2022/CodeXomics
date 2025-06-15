@@ -420,8 +420,10 @@ class CircosPlotter {
         }
         
         // Hide loading indicator and show ready status
-        document.getElementById('statusDot').className = 'status-dot connected';
-        document.getElementById('statusText').textContent = 'Ready';
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        if (statusDot) statusDot.className = 'status-dot connected';
+        if (statusText) statusText.textContent = 'Ready';
         
         // Initialize tooltip
         this.tooltip = d3.select('#tooltip');
