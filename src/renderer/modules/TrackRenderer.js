@@ -405,6 +405,7 @@ class TrackRenderer {
 
         // Create definitions for gradients and patterns
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        this.createSpecializedGradients(defs); // Add specialized gradients for different gene types
         svg.appendChild(defs);
 
         // Create gene elements as SVG paths/rectangles
@@ -501,12 +502,55 @@ class TrackRenderer {
     }
 
     /**
-     * Create SVG shape for gene (with directional indicators based on size)
+     * Create specialized gradients for different gene types
+     */
+    createSpecializedGradients(defs) {
+        const gradients = [
+            { id: 'promoter-gradient', color1: '#1e40af', color2: '#3b82f6' },
+            { id: 'terminator-gradient', color1: '#7f1d1d', color2: '#dc2626' },
+            { id: 'regulatory-gradient', color1: '#c2410c', color2: '#f97316' },
+            { id: 'repeat-gradient', color1: '#374151', color2: '#6b7280' },
+            { id: 'trna-gradient', color1: '#166534', color2: '#22c55e' },
+            { id: 'rrna-gradient', color1: '#14532d', color2: '#16a34a' },
+            { id: 'mrna-gradient', color1: '#15803d', color2: '#4ade80' }
+        ];
+
+        gradients.forEach(gradientDef => {
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', gradientDef.id);
+            gradient.setAttribute('x1', '0%');
+            gradient.setAttribute('y1', '0%');
+            gradient.setAttribute('x2', '100%');
+            gradient.setAttribute('y2', '100%');
+
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('stop-color', gradientDef.color1);
+            
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop2.setAttribute('offset', '100%');
+            stop2.setAttribute('stop-color', gradientDef.color2);
+
+            gradient.appendChild(stop1);
+            gradient.appendChild(stop2);
+            defs.appendChild(gradient);
+        });
+    }
+
+    /**
+     * Create SVG shape for gene (with directional indicators based on size and specialized shapes by type)
      */
     createSVGGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
         const isForward = gene.strand !== -1;
         const arrowSize = Math.min(height * 0.3, 8); // Responsive arrow size
+        const geneType = gene.type.toLowerCase();
 
+        // Create specialized shapes for specific gene types
+        if (this.shouldUseSpecializedShape(geneType)) {
+            return this.createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated);
+        }
+
+        // Default triangle/arrow shapes for CDS, gene, and misc_feature
         if (width < 15) {
             // Use triangle for very small genes to show direction
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -598,6 +642,391 @@ class TrackRenderer {
             path.setAttribute('class', `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
             return path;
         }
+    }
+
+    /**
+     * Check if gene type should use specialized shape
+     */
+    shouldUseSpecializedShape(geneType) {
+        const specializedTypes = ['promoter', 'terminator', 'regulatory', 'repeat_region', 'trna', 'rrna', 'mrna'];
+        return specializedTypes.includes(geneType);
+    }
+
+    /**
+     * Create specialized shapes for specific gene types
+     */
+    createSpecializedGeneShape(gene, width, height, gradientId, operonInfo, isLeftTruncated = false, isRightTruncated = false) {
+        const geneType = gene.type.toLowerCase();
+        const isForward = gene.strand !== -1;
+
+        switch (geneType) {
+            case 'promoter':
+                return this.createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'terminator':
+                return this.createTerminatorShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'regulatory':
+                return this.createRegulatoryShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'repeat_region':
+                return this.createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'trna':
+                return this.createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'rrna':
+                return this.createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'mrna':
+                return this.createMRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            default:
+                // Fallback to regular arrow/triangle
+                return null;
+        }
+    }
+
+    /**
+     * Create promoter shape (vertical line + horizontal arrow)
+     */
+    createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `gene-promoter ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated promoters, use simplified shape
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isLeftTruncated) {
+                pathData = this.createJaggedPromoterPath(width, height, true, false, isForward);
+            } else {
+                pathData = this.createJaggedPromoterPath(width, height, false, true, isForward);
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            group.appendChild(path);
+            return group;
+        }
+
+        // Normal promoter: vertical line + horizontal arrow
+        const strokeWidth = Math.max(1, Math.min(2, height / 12));
+        const arrowLength = Math.min(width * 0.8, height * 2); // 增加箭头长度
+        const arrowHeight = Math.max(4, height * 0.2);
+        
+        // Vertical line (always full height)
+        const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        const verticalLineX = width * 0.3;
+        verticalLine.setAttribute('x1', verticalLineX);
+        verticalLine.setAttribute('y1', 0);
+        verticalLine.setAttribute('x2', verticalLineX);
+        verticalLine.setAttribute('y2', height);
+        verticalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        verticalLine.setAttribute('stroke-width', strokeWidth);
+        
+        // Horizontal arrow - position at line endpoints
+        const horizontalY = isForward ? 0 : height; // +链在顶端，-链在底端
+        const arrowStartX = verticalLineX;
+        
+        // Calculate arrow end position with proper bounds checking
+        let arrowEndX;
+        if (isForward) {
+            arrowEndX = Math.min(width - arrowHeight, arrowStartX + arrowLength);
+        } else {
+            arrowEndX = Math.max(arrowHeight, arrowStartX - arrowLength);
+        }
+        
+        // Horizontal line
+        const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        horizontalLine.setAttribute('x1', arrowStartX);
+        horizontalLine.setAttribute('y1', horizontalY);
+        horizontalLine.setAttribute('x2', arrowEndX);
+        horizontalLine.setAttribute('y2', horizontalY);
+        horizontalLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        horizontalLine.setAttribute('stroke-width', strokeWidth);
+        
+        // Arrow head
+        const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const arrowDirection = isForward ? 1 : -1;
+        
+        const arrowPath = `M ${arrowEndX} ${horizontalY} 
+                          L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY - arrowHeight/2} 
+                          L ${arrowEndX - arrowDirection * arrowHeight} ${horizontalY + arrowHeight/2} Z`;
+        
+        arrowHead.setAttribute('d', arrowPath);
+        arrowHead.setAttribute('fill', this.darkenColor(operonInfo.color, 20));
+        arrowHead.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        arrowHead.setAttribute('stroke-width', strokeWidth);
+        
+        group.appendChild(verticalLine);
+        group.appendChild(horizontalLine);
+        group.appendChild(arrowHead);
+        
+        return group;
+    }
+
+    /**
+     * Create terminator shape (double vertical lines + open circle)
+     */
+    createTerminatorShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `gene-terminator ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated terminators, use simplified shape
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isLeftTruncated) {
+                pathData = this.createJaggedTerminatorPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedTerminatorPath(width, height, false, true);
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            group.appendChild(path);
+            return group;
+        }
+
+        // Normal terminator: double vertical lines + open circle
+        const strokeWidth = Math.max(1, Math.min(2, height / 12));
+        const lineSpacing = Math.max(3, width * 0.1);
+        const circleRadius = Math.min(height * 0.15, width * 0.15);
+        
+        // Long vertical line (at termination position, right side)
+        const longLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        const longLineX = width * 0.7;
+        longLine.setAttribute('x1', longLineX);
+        longLine.setAttribute('y1', 0);
+        longLine.setAttribute('x2', longLineX);
+        longLine.setAttribute('y2', height);
+        longLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        longLine.setAttribute('stroke-width', strokeWidth);
+        
+        // Short vertical line (left of the long line)
+        const shortLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        const shortLineX = longLineX - lineSpacing;
+        const shortLineHeight = height * 0.6;
+        const shortLineY = (height - shortLineHeight) / 2;
+        shortLine.setAttribute('x1', shortLineX);
+        shortLine.setAttribute('y1', shortLineY);
+        shortLine.setAttribute('x2', shortLineX);
+        shortLine.setAttribute('y2', shortLineY + shortLineHeight);
+        shortLine.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        shortLine.setAttribute('stroke-width', strokeWidth);
+        
+        // Open circle at the top of the lines
+        const circleX = (longLineX + shortLineX) / 2; // Center between the two lines
+        const circleY = circleRadius + 2; // Position at top with small margin
+        
+        // Create the opening in the circle (small gap at the bottom pointing down to lines)
+        const gapAngle = Math.PI * 0.3; // 30 degrees opening
+        const startAngle = Math.PI/2 - gapAngle/2; // Start of arc (bottom left of gap)
+        const endAngle = Math.PI/2 + gapAngle/2; // End of arc (bottom right of gap)
+        
+        // Calculate arc path (circle with gap at bottom)
+        const startX = circleX + circleRadius * Math.cos(startAngle);
+        const startY = circleY + circleRadius * Math.sin(startAngle);
+        const endX = circleX + circleRadius * Math.cos(endAngle);
+        const endY = circleY + circleRadius * Math.sin(endAngle);
+        
+        const arcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const arcPathData = `M ${startX} ${startY} A ${circleRadius} ${circleRadius} 0 1 1 ${endX} ${endY}`;
+        arcPath.setAttribute('d', arcPathData);
+        arcPath.setAttribute('fill', 'none');
+        arcPath.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        arcPath.setAttribute('stroke-width', strokeWidth);
+        
+        group.appendChild(longLine);
+        group.appendChild(shortLine);
+        group.appendChild(arcPath); // Use arc instead of full circle to show opening
+        
+        return group;
+    }
+
+    /**
+     * Create regulatory shape (diamond/rhombus)
+     */
+    createRegulatoryShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
+
+        if (isLeftTruncated) {
+            pathData = this.createJaggedRegulatoryPath(width, height, true, false);
+        } else if (isRightTruncated) {
+            pathData = this.createJaggedRegulatoryPath(width, height, false, true);
+        } else {
+            // Diamond shape
+            pathData = `M ${width/2} 0 
+                       L ${width} ${height/2} 
+                       L ${width/2} ${height} 
+                       L 0 ${height/2} Z`;
+        }
+
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', `url(#${gradientId})`);
+        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', `gene-regulatory ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+        return path;
+    }
+
+    /**
+     * Create repeat region shape (wavy rectangle)
+     */
+    createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
+
+        if (isLeftTruncated || isRightTruncated) {
+            // Use jagged edges for truncated repeats
+            if (isLeftTruncated) {
+                pathData = this.createJaggedRepeatPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedRepeatPath(width, height, false, true);
+            }
+        } else {
+            // Wavy top and bottom edges
+            const waveCount = Math.max(2, Math.floor(width / 8));
+            const waveHeight = height * 0.1;
+            let topWave = `M 0 ${waveHeight}`;
+            let bottomWave = `L 0 ${height - waveHeight}`;
+            
+            for (let i = 0; i <= waveCount; i++) {
+                const x = (i / waveCount) * width;
+                const topY = i % 2 === 0 ? waveHeight : 0;
+                const bottomY = i % 2 === 0 ? height - waveHeight : height;
+                topWave += ` L ${x} ${topY}`;
+                bottomWave = `L ${x} ${bottomY} ` + bottomWave;
+            }
+            
+            pathData = topWave + ` L ${width} ${height - waveHeight} ` + bottomWave + ` Z`;
+        }
+
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', `url(#${gradientId})`);
+        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', `gene-repeat ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+        return path;
+    }
+
+    /**
+     * Create tRNA shape (cloverleaf simplified as rounded rectangle)
+     */
+    createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated tRNA, use path with jagged edges
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isLeftTruncated) {
+                pathData = this.createJaggedRNAPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedRNAPath(width, height, false, true);
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            path.setAttribute('class', `gene-trna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+            return path;
+        }
+
+        rect.setAttribute('x', '0');
+        rect.setAttribute('y', '0');
+        rect.setAttribute('width', width);
+        rect.setAttribute('height', height);
+        rect.setAttribute('rx', Math.min(height * 0.3, 4)); // Rounded corners
+        rect.setAttribute('ry', Math.min(height * 0.3, 4));
+        rect.setAttribute('fill', `url(#${gradientId})`);
+        rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        rect.setAttribute('stroke-width', '1');
+        rect.setAttribute('class', 'gene-trna');
+        return rect;
+    }
+
+    /**
+     * Create rRNA shape (circle/oval)
+     */
+    createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated rRNA, use path with jagged edges
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isLeftTruncated) {
+                pathData = this.createJaggedRNAPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedRNAPath(width, height, false, true);
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            path.setAttribute('class', `gene-rrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+            return path;
+        }
+
+        const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        ellipse.setAttribute('cx', width / 2);
+        ellipse.setAttribute('cy', height / 2);
+        ellipse.setAttribute('rx', width / 2);
+        ellipse.setAttribute('ry', height / 2);
+        ellipse.setAttribute('fill', `url(#${gradientId})`);
+        ellipse.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        ellipse.setAttribute('stroke-width', '1');
+        ellipse.setAttribute('class', 'gene-rrna');
+        return ellipse;
+    }
+
+    /**
+     * Create mRNA shape (wavy line/sine wave)
+     */
+    createMRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
+
+        if (isLeftTruncated || isRightTruncated) {
+            if (isLeftTruncated) {
+                pathData = this.createJaggedRNAPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedRNAPath(width, height, false, true);
+            }
+        } else {
+            // Sine wave shape
+            const waveCount = Math.max(2, Math.floor(width / 10));
+            const waveHeight = height * 0.3;
+            const centerY = height / 2;
+            
+            pathData = `M 0 ${centerY}`;
+            
+            for (let i = 0; i <= waveCount * 4; i++) {
+                const x = (i / (waveCount * 4)) * width;
+                const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight;
+                pathData += ` L ${x} ${y}`;
+            }
+            
+            // Create filled shape by adding bottom path
+            pathData += ` L ${width} ${centerY + waveHeight * 0.5}`;
+            for (let i = waveCount * 4; i >= 0; i--) {
+                const x = (i / (waveCount * 4)) * width;
+                const y = centerY + Math.sin((i / waveCount) * Math.PI) * waveHeight * 0.5 + waveHeight * 0.25;
+                pathData += ` L ${x} ${y}`;
+            }
+            pathData += ` Z`;
+        }
+
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', `url(#${gradientId})`);
+        path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', `gene-mrna ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+        return path;
     }
 
     /**
@@ -734,6 +1163,148 @@ class TrackRenderer {
             return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
         } else {
             return `M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z`;
+        }
+    }
+
+    /**
+     * Helper functions for creating jagged paths for specialized shapes
+     */
+    createJaggedPromoterPath(width, height, isLeftJagged, isRightJagged, isForward) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        const flagHeight = height * 0.6;
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} ${height} 
+                   L 0 ${height - jaggedStep} 
+                   L ${jaggedDepth} ${height - jaggedStep * 2} 
+                   L 0 ${height - jaggedStep * 3} 
+                   L ${jaggedDepth} ${height - flagHeight} 
+                   L ${width * 0.8} ${height - flagHeight} 
+                   L ${width} ${height - flagHeight + height * 0.15} 
+                   L ${width * 0.8} ${height - flagHeight + height * 0.3} 
+                   L ${jaggedDepth} ${height - flagHeight + height * 0.3} 
+                   L ${jaggedDepth} ${height} Z`;
+        } else {
+            return `M 0 ${height} 
+                   L 0 ${height - flagHeight} 
+                   L ${width * 0.8} ${height - flagHeight} 
+                   L ${width} ${height - flagHeight + height * 0.15} 
+                   L ${width * 0.8} ${height - flagHeight + height * 0.3} 
+                   L 0 ${height - flagHeight + height * 0.3} 
+                   L 0 ${height} Z`;
+        }
+    }
+
+    createJaggedTerminatorPath(width, height, isLeftJagged, isRightJagged) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        const stemWidth = Math.max(4, width * 0.2);
+        const barHeight = height * 0.3;
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} 0 
+                   L 0 ${jaggedStep} 
+                   L ${jaggedDepth} ${jaggedStep * 2} 
+                   L 0 ${jaggedStep * 3} 
+                   L ${jaggedDepth} ${barHeight} 
+                   L ${width/2 - stemWidth/2} ${barHeight} 
+                   L ${width/2 - stemWidth/2} ${height} 
+                   L ${width/2 + stemWidth/2} ${height} 
+                   L ${width/2 + stemWidth/2} ${barHeight} 
+                   L ${width} ${barHeight} 
+                   L ${width} 0 
+                   L ${jaggedDepth} 0 Z`;
+        } else {
+            return `M 0 0 
+                   L ${width - jaggedDepth} 0 
+                   L ${width} ${jaggedStep} 
+                   L ${width - jaggedDepth} ${jaggedStep * 2} 
+                   L ${width} ${jaggedStep * 3} 
+                   L ${width - jaggedDepth} ${barHeight} 
+                   L ${width/2 + stemWidth/2} ${barHeight} 
+                   L ${width/2 + stemWidth/2} ${height} 
+                   L ${width/2 - stemWidth/2} ${height} 
+                   L ${width/2 - stemWidth/2} ${barHeight} 
+                   L 0 ${barHeight} Z`;
+        }
+    }
+
+    createJaggedRegulatoryPath(width, height, isLeftJagged, isRightJagged) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} ${height * 0.2} 
+                   L 0 ${jaggedStep} 
+                   L ${jaggedDepth} ${jaggedStep * 2} 
+                   L 0 ${jaggedStep * 3} 
+                   L ${jaggedDepth} ${height * 0.8} 
+                   L ${width/2} ${height} 
+                   L ${width} ${height/2} 
+                   L ${width/2} 0 
+                   L ${jaggedDepth} ${height * 0.2} Z`;
+        } else {
+            return `M ${width/2} 0 
+                   L ${width - jaggedDepth} ${height * 0.2} 
+                   L ${width} ${jaggedStep} 
+                   L ${width - jaggedDepth} ${jaggedStep * 2} 
+                   L ${width} ${jaggedStep * 3} 
+                   L ${width - jaggedDepth} ${height * 0.8} 
+                   L ${width/2} ${height} 
+                   L 0 ${height/2} Z`;
+        }
+    }
+
+    createJaggedRepeatPath(width, height, isLeftJagged, isRightJagged) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} 0 
+                   L 0 ${jaggedStep} 
+                   L ${jaggedDepth} ${jaggedStep * 2} 
+                   L 0 ${jaggedStep * 3} 
+                   L ${jaggedDepth} ${jaggedStep * 4} 
+                   L 0 ${height} 
+                   L ${width} ${height} 
+                   L ${width} 0 
+                   L ${jaggedDepth} 0 Z`;
+        } else {
+            return `M 0 0 
+                   L ${width - jaggedDepth} 0 
+                   L ${width} ${jaggedStep} 
+                   L ${width - jaggedDepth} ${jaggedStep * 2} 
+                   L ${width} ${jaggedStep * 3} 
+                   L ${width - jaggedDepth} ${jaggedStep * 4} 
+                   L ${width} ${height} 
+                   L 0 ${height} Z`;
+        }
+    }
+
+    createJaggedRNAPath(width, height, isLeftJagged, isRightJagged) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} 0 
+                   L 0 ${jaggedStep} 
+                   L ${jaggedDepth} ${jaggedStep * 2} 
+                   L 0 ${jaggedStep * 3} 
+                   L ${jaggedDepth} ${jaggedStep * 4} 
+                   L 0 ${height} 
+                   L ${width} ${height} 
+                   L ${width} 0 
+                   L ${jaggedDepth} 0 Z`;
+        } else {
+            return `M 0 0 
+                   L ${width - jaggedDepth} 0 
+                   L ${width} ${jaggedStep} 
+                   L ${width - jaggedDepth} ${jaggedStep * 2} 
+                   L ${width} ${jaggedStep * 3} 
+                   L ${width - jaggedDepth} ${jaggedStep * 4} 
+                   L ${width} ${height} 
+                   L 0 ${height} Z`;
         }
     }
 

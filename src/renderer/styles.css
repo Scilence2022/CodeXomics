@@ -3990,18 +3990,11 @@ svg {
     filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
-/* Jagged/truncated gene styling */
+/* Jagged/truncated gene styling - removed dashed border */
 .gene-triangle.left-truncated,
-.gene-arrow.left-truncated {
-    stroke-dasharray: 2,2;
-    stroke-width: 1.5 !important;
-    opacity: 0.95;
-}
-
+.gene-arrow.left-truncated,
 .gene-triangle.right-truncated,
 .gene-arrow.right-truncated {
-    stroke-dasharray: 2,2;
-    stroke-width: 1.5 !important;
     opacity: 0.95;
 }
 
@@ -4009,13 +4002,57 @@ svg {
 .svg-gene-element .left-truncated:hover,
 .svg-gene-element .right-truncated:hover {
     filter: brightness(1.2) drop-shadow(0 3px 6px rgba(255,100,0,0.5));
+}
+
+/* Specialized gene type styling */
+.svg-gene-element.promoter path,
+.svg-gene-element.promoter rect {
+    fill: url(#promoter-gradient) !important;
+    stroke: #2c5aa0 !important;
     stroke-width: 2 !important;
 }
 
-/* Tooltip enhancement for truncated genes */
-.svg-gene-element.left-truncated title::after,
-.svg-gene-element.right-truncated title::after {
-    content: " (Partially visible)";
+.svg-gene-element.terminator path,
+.svg-gene-element.terminator rect {
+    fill: url(#terminator-gradient) !important;
+    stroke: #8b0000 !important;
+    stroke-width: 2 !important;
+}
+
+.svg-gene-element.regulatory path,
+.svg-gene-element.regulatory rect {
+    fill: url(#regulatory-gradient) !important;
+    stroke: #ff6b35 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-gene-element.repeat_region path,
+.svg-gene-element.repeat_region rect {
+    fill: url(#repeat-gradient) !important;
+    stroke: #4a4a4a !important;
+    stroke-width: 1 !important;
+    stroke-dasharray: 3,2 !important;
+}
+
+.svg-gene-element.trna path,
+.svg-gene-element.trna rect {
+    fill: url(#trna-gradient) !important;
+    stroke: #228b22 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-gene-element.rrna path,
+.svg-gene-element.rrna rect {
+    fill: url(#rrna-gradient) !important;
+    stroke: #006400 !important;
+    stroke-width: 2 !important;
+}
+
+.svg-gene-element.mrna path,
+.svg-gene-element.mrna rect {
+    fill: url(#mrna-gradient) !important;
+    stroke: #32cd32 !important;
+    stroke-width: 1.5 !important;
 }
 
 .svg-gene-element.selected,
