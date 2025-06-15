@@ -366,7 +366,7 @@ class TrackRenderer {
      */
     filterGeneAnnotations(annotations, viewport) {
         const validTypes = ['gene', 'CDS', 'mRNA', 'tRNA', 'rRNA', 'misc_feature', 
-                          'regulatory', 'promoter', 'terminator', 'repeat_region'];
+                          'regulatory', 'promoter', 'terminator', 'repeat_region', 'comment', 'note'];
         
         return annotations.filter(feature => {
             return (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
@@ -517,7 +517,8 @@ class TrackRenderer {
             { id: 'repeat-gradient', color1: '#374151', color2: '#6b7280' },
             { id: 'trna-gradient', color1: '#166534', color2: '#22c55e' },
             { id: 'rrna-gradient', color1: '#14532d', color2: '#16a34a' },
-            { id: 'mrna-gradient', color1: '#15803d', color2: '#4ade80' }
+            { id: 'mrna-gradient', color1: '#15803d', color2: '#4ade80' },
+            { id: 'comment-gradient', color1: '#7c3aed', color2: '#a855f7' }
         ];
 
         gradients.forEach(gradientDef => {
@@ -653,7 +654,7 @@ class TrackRenderer {
      * Check if gene type should use specialized shape
      */
     shouldUseSpecializedShape(geneType) {
-        const specializedTypes = ['promoter', 'terminator', 'regulatory', 'repeat_region', 'trna', 'rrna', 'mrna'];
+        const specializedTypes = ['promoter', 'terminator', 'regulatory', 'repeat_region', 'trna', 'rrna', 'mrna', 'comment', 'note', 'misc_feature'];
         return specializedTypes.includes(geneType);
     }
 
@@ -666,19 +667,23 @@ class TrackRenderer {
 
         switch (geneType) {
             case 'promoter':
-                return this.createPromoterShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createPromoterShape(width, height, 'promoter-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'terminator':
-                return this.createTerminatorShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createTerminatorShape(width, height, 'terminator-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'regulatory':
-                return this.createRegulatoryShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRegulatoryShape(width, height, 'regulatory-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'repeat_region':
-                return this.createRepeatShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRepeatShape(width, height, 'repeat-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'trna':
-                return this.createTRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createTRNAShape(width, height, 'trna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'rrna':
-                return this.createRRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createRRNAShape(width, height, 'rrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             case 'mrna':
-                return this.createMRNAShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward);
+                return this.createMRNAShape(width, height, 'mrna-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
+            case 'comment':
+            case 'note':
+            case 'misc_feature':
+                return this.createCommentShape(width, height, 'comment-gradient', operonInfo, isLeftTruncated, isRightTruncated, isForward);
             default:
                 // Fallback to regular arrow/triangle
                 return null;
@@ -1035,6 +1040,106 @@ class TrackRenderer {
     }
 
     /**
+     * Create comment/note shape (speech bubble or annotation marker)
+     */
+    createCommentShape(width, height, gradientId, operonInfo, isLeftTruncated, isRightTruncated, isForward) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `gene-comment ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`);
+
+        if (isLeftTruncated || isRightTruncated) {
+            // For truncated comments, use simplified shape
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let pathData;
+            
+            if (isLeftTruncated) {
+                pathData = this.createJaggedCommentPath(width, height, true, false);
+            } else {
+                pathData = this.createJaggedCommentPath(width, height, false, true);
+            }
+            
+            path.setAttribute('d', pathData);
+            path.setAttribute('fill', `url(#${gradientId})`);
+            path.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            path.setAttribute('stroke-width', '1');
+            group.appendChild(path);
+            return group;
+        }
+
+        if (width < 15) {
+            // Small comment - simple rounded rectangle with corner indicator
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', 0);
+            rect.setAttribute('y', height * 0.1);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height * 0.8);
+            rect.setAttribute('rx', Math.min(3, width * 0.2));
+            rect.setAttribute('ry', Math.min(3, height * 0.15));
+            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            rect.setAttribute('stroke-width', '1');
+            
+            // Small indicator dot
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', width * 0.8);
+            dot.setAttribute('cy', height * 0.8);
+            dot.setAttribute('r', Math.min(2, width * 0.1));
+            dot.setAttribute('fill', this.darkenColor(operonInfo.color, 30));
+            
+            group.appendChild(rect);
+            group.appendChild(dot);
+        } else {
+            // Large comment - speech bubble shape
+            const bubbleHeight = height * 0.7;
+            const bubbleY = height * 0.1;
+            const cornerRadius = Math.min(4, height * 0.15);
+            const tailSize = Math.min(6, height * 0.2);
+            
+            // Main bubble body (rounded rectangle)
+            const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bubble.setAttribute('x', 0);
+            bubble.setAttribute('y', bubbleY);
+            bubble.setAttribute('width', width * 0.85);
+            bubble.setAttribute('height', bubbleHeight);
+            bubble.setAttribute('rx', cornerRadius);
+            bubble.setAttribute('ry', cornerRadius);
+            bubble.setAttribute('fill', `url(#${gradientId})`);
+            bubble.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            bubble.setAttribute('stroke-width', '1');
+            
+            // Speech bubble tail (small triangle pointing down-right)
+            const tail = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const tailX = width * 0.75;
+            const tailY = bubbleY + bubbleHeight;
+            const tailPath = `M ${tailX} ${tailY} 
+                             L ${tailX + tailSize} ${tailY + tailSize} 
+                             L ${tailX + tailSize * 0.5} ${tailY} Z`;
+            tail.setAttribute('d', tailPath);
+            tail.setAttribute('fill', `url(#${gradientId})`);
+            tail.setAttribute('stroke', this.darkenColor(operonInfo.color, 20));
+            tail.setAttribute('stroke-width', '1');
+            
+            // Comment icon (three dots inside bubble)
+            const dotSpacing = width * 0.15;
+            const dotY = bubbleY + bubbleHeight * 0.5;
+            const dotRadius = Math.min(1.5, height * 0.08);
+            
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', width * 0.2 + i * dotSpacing);
+                dot.setAttribute('cy', dotY);
+                dot.setAttribute('r', dotRadius);
+                dot.setAttribute('fill', this.darkenColor(operonInfo.color, 40));
+                group.appendChild(dot);
+            }
+            
+            group.appendChild(bubble);
+            group.appendChild(tail);
+        }
+        
+        return group;
+    }
+
+    /**
      * Create jagged path for truncated triangular genes
      */
     createJaggedTrianglePath(width, height, isLeftJagged, isRightJagged, isForward) {
@@ -1310,6 +1415,33 @@ class TrackRenderer {
                    L ${width - jaggedDepth} ${jaggedStep * 4} 
                    L ${width} ${height} 
                    L 0 ${height} Z`;
+        }
+    }
+
+    createJaggedCommentPath(width, height, isLeftJagged, isRightJagged) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        const bubbleHeight = height * 0.7;
+        const bubbleY = height * 0.1;
+        
+        if (isLeftJagged) {
+            return `M ${jaggedDepth} ${bubbleY} 
+                   L 0 ${bubbleY + jaggedStep} 
+                   L ${jaggedDepth} ${bubbleY + jaggedStep * 2} 
+                   L 0 ${bubbleY + jaggedStep * 3} 
+                   L ${jaggedDepth} ${bubbleY + bubbleHeight} 
+                   L ${width * 0.85} ${bubbleY + bubbleHeight} 
+                   L ${width * 0.85} ${bubbleY} 
+                   L ${jaggedDepth} ${bubbleY} Z`;
+        } else {
+            return `M 0 ${bubbleY} 
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY} 
+                   L ${width * 0.85} ${bubbleY + jaggedStep} 
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY + jaggedStep * 2} 
+                   L ${width * 0.85} ${bubbleY + jaggedStep * 3} 
+                   L ${width * 0.85 - jaggedDepth} ${bubbleY + bubbleHeight} 
+                   L 0 ${bubbleY + bubbleHeight} 
+                   L 0 ${bubbleY} Z`;
         }
     }
 

@@ -9962,6 +9962,29 @@ path.svg-gene-element.selected {
     font-weight: 600;
 }
 
+/* Comment/Note gene styling */
+.gene-comment {
+    opacity: 0.9;
+}
+
+.gene-comment:hover {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(124, 58, 237, 0.3));
+}
+
+.svg-gene-element.comment,
+.svg-gene-element.note,
+.svg-gene-element.misc_feature {
+    opacity: 0.9;
+}
+
+.svg-gene-element.comment:hover,
+.svg-gene-element.note:hover,
+.svg-gene-element.misc_feature:hover {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(124, 58, 237, 0.3));
+}
+
 /* Track lock notification animations */
 @keyframes slideInRight {
     from {

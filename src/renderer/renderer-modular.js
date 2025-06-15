@@ -2075,6 +2075,8 @@ class GenomeBrowser {
             'promoter': 'promoter',
             'terminator': 'terminator',
             'regulatory': 'regulatory',
+            'comment': 'other',
+            'note': 'other',
             'other': 'other',
             'misc_feature': 'other',
             'repeat_region': 'other'
