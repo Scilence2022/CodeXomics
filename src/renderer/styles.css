@@ -1061,6 +1061,7 @@ body {
     overflow: hidden;
     position: relative;
     z-index: 2; /* Lower than welcome screen but higher than basic genome viewer */
+    padding: 0; /* Remove any internal padding that creates spacing */
 }
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
@@ -1071,6 +1072,11 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background: var(--bg-primary);
+}
+
+/* Remove top margin for the first track to eliminate space at top */
+.gene-track:first-child {
+    margin-top: 0;
 }
 
 .gene-track .track-content {
@@ -1091,7 +1097,7 @@ body {
     align-items: center;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid #dee2e6;
-    padding: 8px 12px;
+    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
     font-size: 14px;
     font-weight: 600;
     color: #495057;
@@ -1100,6 +1106,7 @@ body {
     position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-top: 0; /* Ensure no top margin */
 }
 
 .track-title {
@@ -2220,6 +2227,7 @@ svg {
     margin: 10px 0;
     overflow: hidden;
     flex: 1;
+    padding: 0; /* Ensure no internal padding */
 }
 
 /* Responsive adjustments */
@@ -5904,13 +5912,14 @@ path.svg-gene-element.selected {
 /* Detailed ruler for gene track viewing region */
 .detailed-ruler-container {
     position: relative;
-    height: 60px;
+    height: 35px; /* Reduced height to minimize spacing */
     width: 100%;
     background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
     border-bottom: 0px solid #dee2e6;
     margin-bottom: 0px;
+    margin-top: 0px; /* Ensure no top margin */
     z-index: 15; /* Higher z-index so ruler appears above genes */
-    overflow:   visible;
+    overflow: visible;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
     pointer-events: none; /* Allow clicks to pass through to genes */
 }
@@ -7529,6 +7538,12 @@ path.svg-gene-element.selected {
     margin-bottom: 4px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
+}
+
+/* Remove top margin/padding for the first track to eliminate space at container top */
+[class*="-track"]:first-child {
+    margin-top: 0;
+    padding-top: 0;
 }
 
 [class*="-track"]:hover {
