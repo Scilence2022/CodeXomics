@@ -1079,23 +1079,8 @@ class TrackRenderer {
     }
 
     async createReadsTrack(chromosome) {
-        const track = document.createElement('div');
-        track.className = 'reads-track';
-        
-        const trackHeader = document.createElement('div');
-        trackHeader.className = 'track-header';
-        trackHeader.textContent = 'Aligned Reads';
-        track.appendChild(trackHeader);
-        
-        const trackContent = document.createElement('div');
-        trackContent.className = 'track-content';
-        
-        // Add draggable functionality
-        this.genomeBrowser.makeDraggable(trackContent, chromosome);
-        
-        const start = this.genomeBrowser.currentPosition.start;
-        const end = this.genomeBrowser.currentPosition.end;
-        const range = end - start;
+        const { track, trackContent } = this.createTrackBase('reads', chromosome);
+        const viewport = this.getCurrentViewport();
         
         // Check if ReadsManager has data loaded
         if (!this.genomeBrowser.readsManager.rawReadsData) {
@@ -1113,7 +1098,9 @@ class TrackRenderer {
             `;
             trackContent.appendChild(noDataMsg);
             trackContent.style.height = '80px'; // Default height for empty track
-            track.appendChild(trackContent);
+            
+            // Restore header state if it was previously hidden
+            this.restoreHeaderState(track, 'reads');
             return track;
         }
         
@@ -1134,12 +1121,12 @@ class TrackRenderer {
         
         try {
             // Get reads for current region using ReadsManager
-            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, start, end);
+            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end);
             
             // Remove loading message
             trackContent.removeChild(loadingMsg);
             
-            console.log(`Displaying ${visibleReads.length} reads in region ${start}-${end}`);
+            console.log(`Displaying ${visibleReads.length} reads in region ${viewport.start}-${viewport.end}`);
             
             if (visibleReads.length === 0) {
                 const noReadsMsg = document.createElement('div');
@@ -1156,44 +1143,46 @@ class TrackRenderer {
                 `;
                 trackContent.appendChild(noReadsMsg);
                 trackContent.style.height = '80px'; // Default height for empty track
-                track.appendChild(trackContent);
-                return track;
-            }
+            } else {
+            
+            // Get track settings
+            const settings = this.getTrackSettings('reads');
             
             // Arrange reads into non-overlapping rows
-            const readRows = this.arrangeReadsInRows(visibleReads, start, end);
-            const readHeight = 14; // Height of each read
-            const rowSpacing = 4; // Space between rows
-            const topPadding = 10; // Top padding
-            const bottomPadding = 10; // Bottom padding
+            const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
+            
+            // Limit rows based on maxRows setting
+            const maxRows = settings.maxRows || 20;
+            const limitedReadRows = readRows.slice(0, maxRows);
+            
+            const readHeight = settings.readHeight || 14;
+            const rowSpacing = settings.readSpacing || 2;
+            const topPadding = 10;
+            const bottomPadding = 10;
             
             // Calculate adaptive track height
-            const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
-            trackContent.style.height = `${Math.max(trackHeight, 60)}px`; // Minimum 60px height
+            let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+            trackHeight = Math.max(trackHeight, settings.height || 150);
+            trackContent.style.height = `${trackHeight}px`;
             
             // Create SVG-based read visualization instead of HTML divs
-            this.renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight);
+            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
             
             // Add reads statistics with cache info
+            const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
+            const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
             const stats = this.genomeBrowser.readsManager.getCacheStats();
-            const statsElement = document.createElement('div');
-            statsElement.className = 'reads-stats';
-            statsElement.style.cssText = `
-                position: absolute;
-                top: 5px;
-                right: 10px;
-                background: rgba(255,255,255,0.9);
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-size: 10px;
-                color: #666;
-                border: 1px solid #ddd;
-            `;
-            statsElement.textContent = `${visibleReads.length} reads | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
-            trackContent.appendChild(statsElement);
             
-            track.appendChild(trackContent);
-            return track;
+            let statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
+            if (hiddenRowsCount > 0) {
+                const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
+                statsText += ` (${hiddenReadsTotal} hidden)`;
+            }
+            statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
+            
+                const statsElement = this.createStatsElement(statsText, 'reads-stats');
+                trackContent.appendChild(statsElement);
+            }
             
         } catch (error) {
             // Remove loading message
@@ -1216,13 +1205,12 @@ class TrackRenderer {
             `;
             trackContent.appendChild(errorMsg);
             trackContent.style.height = '80px'; // Default height for error track
-            track.appendChild(trackContent);
-            
-            // Restore header state if it was previously hidden
-            this.restoreHeaderState(track, 'reads');
-            
-            return track;
         }
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'reads');
+        
+        return track;
     }
 
     // New method to arrange reads into non-overlapping rows
@@ -1271,7 +1259,7 @@ class TrackRenderer {
     /**
      * Create SVG-based reads visualization
      */
-    renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight) {
+    renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight, settings = {}) {
         // Force layout calculation to get accurate width
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
@@ -1292,13 +1280,13 @@ class TrackRenderer {
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         svg.appendChild(defs);
 
-        // Create read gradients
-        this.createReadGradients(defs);
+                    // Create read gradients with current settings
+            this.createReadGradients(defs, settings);
 
         // Create read elements as SVG rectangles
         readRows.forEach((rowReads, rowIndex) => {
             rowReads.forEach((read) => {
-                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth);
+                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings);
                 if (readGroup) {
                     svg.appendChild(readGroup);
                 }
@@ -1311,8 +1299,13 @@ class TrackRenderer {
     /**
      * Create gradients for read visualization
      */
-    createReadGradients(defs) {
-        // Forward strand gradient (green)
+    createReadGradients(defs, settings = {}) {
+        // Get colors from settings with defaults
+        const forwardColor = settings.forwardColor || '#00b894';
+        const reverseColor = settings.reverseColor || '#f39c12';
+        const pairedColor = settings.pairedColor || '#6c5ce7';
+        
+        // Forward strand gradient
         const forwardGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
         forwardGradient.setAttribute('id', 'read-forward-gradient');
         forwardGradient.setAttribute('x1', '0%');
@@ -1322,17 +1315,17 @@ class TrackRenderer {
 
         const forwardStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         forwardStop1.setAttribute('offset', '0%');
-        forwardStop1.setAttribute('stop-color', '#00b894');
+        forwardStop1.setAttribute('stop-color', forwardColor);
         
         const forwardStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         forwardStop2.setAttribute('offset', '100%');
-        forwardStop2.setAttribute('stop-color', '#00a085');
+        forwardStop2.setAttribute('stop-color', this.darkenColor(forwardColor, 10));
 
         forwardGradient.appendChild(forwardStop1);
         forwardGradient.appendChild(forwardStop2);
         defs.appendChild(forwardGradient);
 
-        // Reverse strand gradient (orange)
+        // Reverse strand gradient
         const reverseGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
         reverseGradient.setAttribute('id', 'read-reverse-gradient');
         reverseGradient.setAttribute('x1', '0%');
@@ -1342,21 +1335,41 @@ class TrackRenderer {
 
         const reverseStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         reverseStop1.setAttribute('offset', '0%');
-        reverseStop1.setAttribute('stop-color', '#f39c12');
+        reverseStop1.setAttribute('stop-color', reverseColor);
         
         const reverseStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
         reverseStop2.setAttribute('offset', '100%');
-        reverseStop2.setAttribute('stop-color', '#e67e22');
+        reverseStop2.setAttribute('stop-color', this.darkenColor(reverseColor, 10));
 
         reverseGradient.appendChild(reverseStop1);
         reverseGradient.appendChild(reverseStop2);
         defs.appendChild(reverseGradient);
+        
+        // Paired reads gradient
+        const pairedGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        pairedGradient.setAttribute('id', 'read-paired-gradient');
+        pairedGradient.setAttribute('x1', '0%');
+        pairedGradient.setAttribute('y1', '0%');
+        pairedGradient.setAttribute('x2', '100%');
+        pairedGradient.setAttribute('y2', '100%');
+
+        const pairedStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        pairedStop1.setAttribute('offset', '0%');
+        pairedStop1.setAttribute('stop-color', pairedColor);
+        
+        const pairedStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        pairedStop2.setAttribute('offset', '100%');
+        pairedStop2.setAttribute('stop-color', this.darkenColor(pairedColor, 10));
+
+        pairedGradient.appendChild(pairedStop1);
+        pairedGradient.appendChild(pairedStop2);
+        defs.appendChild(pairedGradient);
     }
 
     /**
      * Create individual SVG read element
      */
-    createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth) {
+    createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings = {}) {
         // Calculate position and dimensions
         const readStart = Math.max(read.start, start);
         const readEnd = Math.min(read.end, end);
@@ -1367,16 +1380,21 @@ class TrackRenderer {
 
         // Calculate pixel positions - use accurate container width
         const x = (left / 100) * containerWidth;
-        const elementWidth = Math.max((width / 100) * containerWidth, 2); // Minimum 2px width
+        const minWidth = settings.minWidth || 2;
+        const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         const y = topPadding + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         readGroup.setAttribute('class', 'svg-read-element');
         readGroup.setAttribute('transform', `translate(${x}, ${y})`);
+        
+        // Apply opacity setting
+        const opacity = settings.opacity || 0.9;
+        readGroup.setAttribute('opacity', opacity);
 
         // Create read shape
-        const readShape = this.createSVGReadShape(read, elementWidth, readHeight);
+        const readShape = this.createSVGReadShape(read, elementWidth, readHeight, settings);
         readGroup.appendChild(readShape);
 
         // Add interaction handlers
@@ -1388,10 +1406,38 @@ class TrackRenderer {
     /**
      * Create SVG shape for read
      */
-    createSVGReadShape(read, width, height) {
+    createSVGReadShape(read, width, height, settings = {}) {
         const isForward = read.strand === '+';
-        const gradientId = isForward ? 'read-forward-gradient' : 'read-reverse-gradient';
-        const strokeColor = isForward ? '#00a085' : '#e67e22';
+        const showQualityColors = settings.showQualityColors || false;
+        const showDirectionArrows = settings.showDirectionArrows !== false; // Default to true
+        
+        // Determine fill color based on settings
+        let fillColor, strokeColor;
+        
+        if (showQualityColors && read.mappingQuality !== undefined) {
+            // Color by mapping quality
+            const quality = read.mappingQuality;
+            if (quality >= 30) {
+                fillColor = settings.forwardColor || '#00b894'; // High quality - green
+                strokeColor = settings.borderColor || '#2d3436';
+            } else if (quality >= 10) {
+                fillColor = settings.pairedColor || '#6c5ce7'; // Medium quality - purple
+                strokeColor = settings.borderColor || '#2d3436';
+            } else {
+                fillColor = settings.reverseColor || '#f39c12'; // Low quality - orange
+                strokeColor = settings.borderColor || '#2d3436';
+            }
+        } else {
+            // Color by strand
+            if (isForward) {
+                fillColor = settings.forwardColor || '#00b894';
+            } else {
+                fillColor = settings.reverseColor || '#f39c12';
+            }
+            strokeColor = settings.borderColor || '#2d3436';
+        }
+        
+        const borderWidth = settings.borderWidth || 1;
 
         if (width < 10) {
             // Simple rectangle for very small reads
@@ -1400,25 +1446,25 @@ class TrackRenderer {
             rect.setAttribute('y', '0');
             rect.setAttribute('width', width);
             rect.setAttribute('height', height);
-            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('fill', fillColor);
             rect.setAttribute('stroke', strokeColor);
-            rect.setAttribute('stroke-width', '0.5');
+            rect.setAttribute('stroke-width', borderWidth);
             rect.setAttribute('rx', '1');
             return rect;
         } else {
-            // Slightly rounded rectangle with directional indicator
+            // Slightly rounded rectangle with optional directional indicator
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             rect.setAttribute('x', '0');
             rect.setAttribute('y', '0');
             rect.setAttribute('width', width);
             rect.setAttribute('height', height);
-            rect.setAttribute('fill', `url(#${gradientId})`);
+            rect.setAttribute('fill', fillColor);
             rect.setAttribute('stroke', strokeColor);
-            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('stroke-width', borderWidth);
             rect.setAttribute('rx', '2');
 
-            // Add small directional arrow if there's space
-            if (width > 15) {
+            // Add small directional arrow if enabled and there's space
+            if (showDirectionArrows && width > 15) {
                 const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
                 const arrowSize = Math.min(height * 0.3, 3);
                 const arrowX = isForward ? width - arrowSize - 2 : 2;
@@ -3701,29 +3747,77 @@ class TrackRenderer {
                 <div class="form-group">
                     <label for="readsHeight">Height of each read (px):</label>
                     <input type="number" id="readsHeight" min="5" max="30" value="${settings.readHeight || 14}">
+                    <div class="help-text">Height of individual read elements in pixels.</div>
                 </div>
                 <div class="form-group">
                     <label for="readsSpacing">Spacing between reads (px):</label>
                     <input type="number" id="readsSpacing" min="1" max="10" value="${settings.readSpacing || 2}">
+                    <div class="help-text">Vertical spacing between read rows.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsMaxRows">Maximum visible rows:</label>
+                    <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
+                    <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsTrackHeight">Track Height (px):</label>
+                    <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
+                    <div class="help-text">Total height of the reads track container.</div>
                 </div>
             </div>
             <div class="settings-section">
                 <h4>Colors & Styles</h4>
                 <div class="form-group">
-                    <label for="readsForwardColor">Forward reads color:</label>
-                    <input type="color" id="readsForwardColor" value="${settings.forwardColor || '#3b82f6'}">
+                    <label for="readsForwardColor">Forward reads fill color:</label>
+                    <input type="color" id="readsForwardColor" value="${settings.forwardColor || '#00b894'}">
+                    <div class="help-text">Fill color for reads on the forward strand.</div>
                 </div>
                 <div class="form-group">
-                    <label for="readsReverseColor">Reverse reads color:</label>
-                    <input type="color" id="readsReverseColor" value="${settings.reverseColor || '#ef4444'}">
+                    <label for="readsReverseColor">Reverse reads fill color:</label>
+                    <input type="color" id="readsReverseColor" value="${settings.reverseColor || '#f39c12'}">
+                    <div class="help-text">Fill color for reads on the reverse strand.</div>
                 </div>
                 <div class="form-group">
-                    <label for="readsPairedColor">Paired reads color:</label>
-                    <input type="color" id="readsPairedColor" value="${settings.pairedColor || '#10b981'}">
+                    <label for="readsPairedColor">Paired reads fill color:</label>
+                    <input type="color" id="readsPairedColor" value="${settings.pairedColor || '#6c5ce7'}">
+                    <div class="help-text">Fill color for properly paired reads.</div>
                 </div>
                 <div class="form-group">
-                    <label for="readsTrackHeight">Track Height (px):</label>
-                    <input type="number" id="readsTrackHeight" min="100" max="500" value="${settings.height || 150}">
+                    <label for="readsBorderColor">Border color:</label>
+                    <input type="color" id="readsBorderColor" value="${settings.borderColor || '#2d3436'}">
+                    <div class="help-text">Border color for all read elements.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsBorderWidth">Border width (px):</label>
+                    <input type="number" id="readsBorderWidth" min="0" max="3" step="0.5" value="${settings.borderWidth || 1}">
+                    <div class="help-text">Width of the border around read elements. Set to 0 for no border.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsOpacity">Read opacity (0-1):</label>
+                    <input type="number" id="readsOpacity" min="0.1" max="1" step="0.1" value="${settings.opacity || 0.9}">
+                    <div class="help-text">Transparency level of read elements. 1.0 = fully opaque, 0.1 = very transparent.</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Advanced Options</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowDirectionArrows" ${settings.showDirectionArrows ? 'checked' : ''}>
+                        Show direction arrows
+                    </label>
+                    <div class="help-text">Display small arrows indicating read direction for reads that are wide enough.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowQualityColors" ${settings.showQualityColors ? 'checked' : ''}>
+                        Color by mapping quality
+                    </label>
+                    <div class="help-text">Color reads based on their mapping quality scores instead of strand direction.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsMinWidth">Minimum read width (px):</label>
+                    <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
+                    <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
                 </div>
             </div>
         `;
@@ -3771,9 +3865,16 @@ class TrackRenderer {
             reads: {
                 readHeight: 14,
                 readSpacing: 2,
-                forwardColor: '#3b82f6',
-                reverseColor: '#ef4444',
-                pairedColor: '#10b981',
+                maxRows: 20,
+                forwardColor: '#00b894',
+                reverseColor: '#f39c12',
+                pairedColor: '#6c5ce7',
+                borderColor: '#2d3436',
+                borderWidth: 1,
+                opacity: 0.9,
+                showDirectionArrows: true,
+                showQualityColors: false,
+                minWidth: 2,
                 height: 150
             }
         };
@@ -3875,9 +3976,16 @@ class TrackRenderer {
             case 'reads':
                 settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 14;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
+                settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
                 settings.forwardColor = modal.querySelector('#readsForwardColor').value;
                 settings.reverseColor = modal.querySelector('#readsReverseColor').value;
                 settings.pairedColor = modal.querySelector('#readsPairedColor').value;
+                settings.borderColor = modal.querySelector('#readsBorderColor').value;
+                settings.borderWidth = parseFloat(modal.querySelector('#readsBorderWidth').value) || 1;
+                settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
+                settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
+                settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
+                settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
                 break;
                 
@@ -3958,6 +4066,76 @@ class TrackRenderer {
                             'no-genes-message'
                         );
                         trackContent.appendChild(noGenesMsg);
+                    }
+                }
+                
+                // For reads track, re-render elements to apply all settings
+                if (trackType === 'reads') {
+                    console.log('Re-rendering read elements due to settings change...', settings);
+                    
+                    // Get current chromosome and viewport
+                    const currentChr = document.getElementById('chromosomeSelect').value;
+                    if (currentChr && this.genomeBrowser.readsManager && this.genomeBrowser.readsManager.rawReadsData) {
+                        // Show loading indicator
+                        trackContent.innerHTML = '<div class="reads-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-style: italic; font-size: 12px;">Updating reads display...</div>';
+                        
+                        // Refresh reads track with new settings asynchronously
+                        setTimeout(async () => {
+                            try {
+                                const viewport = this.getCurrentViewport();
+                                const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(currentChr, viewport.start, viewport.end);
+                                
+                                // Clear loading message
+                                trackContent.innerHTML = '';
+                                
+                                if (visibleReads.length === 0) {
+                                    const noReadsMsg = this.createNoDataMessage(
+                                        'No reads in this region',
+                                        'no-reads-message'
+                                    );
+                                    trackContent.appendChild(noReadsMsg);
+                                    trackContent.style.height = '80px';
+                                } else {
+                                    // Apply new settings to arrangement and rendering
+                                    const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
+                                    
+                                    // Limit rows based on maxRows setting
+                                    const limitedReadRows = readRows.slice(0, settings.maxRows || 20);
+                                    
+                                    const readHeight = settings.readHeight || 14;
+                                    const rowSpacing = settings.readSpacing || 2;
+                                    const topPadding = 10;
+                                    const bottomPadding = 10;
+                                    
+                                    // Calculate track height
+                                    let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+                                    trackHeight = Math.max(trackHeight, settings.height || 150);
+                                    trackContent.style.height = `${trackHeight}px`;
+                                    
+                                    // Re-render with new settings
+                                    this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, 
+                                        viewport.end - viewport.start, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                                    
+                                    // Add updated statistics
+                                    const hiddenReadsCount = Math.max(0, readRows.length - limitedReadRows.length);
+                                    const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
+                                    const stats = this.genomeBrowser.readsManager.getCacheStats();
+                                    
+                                    let statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
+                                    if (hiddenReadsCount > 0) {
+                                        const hiddenReadsTotal = readRows.slice(settings.maxRows || 20).reduce((sum, row) => sum + row.length, 0);
+                                        statsText += ` (${hiddenReadsTotal} hidden)`;
+                                    }
+                                    statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
+                                    
+                                    const statsElement = this.createStatsElement(statsText, 'reads-stats');
+                                    trackContent.appendChild(statsElement);
+                                }
+                            } catch (error) {
+                                console.error('Error updating reads track:', error);
+                                trackContent.innerHTML = `<div class="reads-error" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d32f2f; font-style: italic; font-size: 12px;">Error updating reads: ${error.message}</div>`;
+                            }
+                        }, 100);
                     }
                 }
             }
