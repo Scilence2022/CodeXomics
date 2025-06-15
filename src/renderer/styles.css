@@ -4099,23 +4099,53 @@ path.svg-gene-element.selected {
     transform: scale(1, 1) !important; /* Force 1:1 aspect ratio */
 }
 
-/* Protected text groups */
+/* Protected text groups - Enhanced for window resize handling */
 .svg-text-protected {
+    pointer-events: none;
     transform-origin: center center;
     transform-box: content-box;
+    /* Prevent text scaling during window resize */
+    contain: layout;
 }
 
 .svg-text-protected text {
     transform: scale(1, 1) !important;
     transform-origin: center center !important;
+    /* Enhanced protection against stretching */
+    text-rendering: geometricPrecision;
+    shape-rendering: optimizeQuality;
+    font-stretch: normal;
+    font-variant: normal;
 }
 
-/* Ensure SVG containers fill width but protect text */
+/* Enhanced protection for gene text during resize operations */
+.genes-svg-container text[data-resize-protected="true"] {
+    vector-effect: non-scaling-stroke !important;
+    transform: scale(1, 1) !important;
+    transform-origin: center center !important;
+    /* Ensure text maintains aspect ratio during container resize */
+    font-stretch: normal !important;
+    white-space: nowrap !important;
+    text-rendering: geometricPrecision !important;
+}
+
+/* Ensure SVG containers properly handle window resize */
 .genes-svg-container,
 .reads-svg-container {
     shape-rendering: optimizeSpeed;
     text-rendering: optimizeSpeed;
     transform-style: preserve-3d; /* Enable 3D transforms for better control */
+    /* Force re-layout when container size changes */
+    contain: layout;
+}
+
+/* Additional protection for all track SVG elements during resize */
+.track-content svg {
+    /* Ensure SVG responds properly to container changes */
+    max-width: 100%;
+    height: auto;
+    /* Prevent unwanted scaling during resize */
+    transform-origin: top left;
 }
 
 @media (max-width: 768px) {

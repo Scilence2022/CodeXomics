@@ -1486,6 +1486,11 @@ class TrackRenderer {
         const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         textGroup.setAttribute('class', 'svg-text-protected');
         
+        // Add resize-resistant attributes
+        textGroup.setAttribute('data-original-width', width);
+        textGroup.setAttribute('data-original-height', height);
+        textGroup.setAttribute('data-gene-name', geneName);
+        
         // Create text element with fixed sizing
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', width / 2);
@@ -1498,15 +1503,66 @@ class TrackRenderer {
         text.setAttribute('fill', '#333');
         text.setAttribute('pointer-events', 'none');
         
-        // Advanced protection against stretching
+        // Enhanced protection against stretching
         text.style.vectorEffect = 'non-scaling-stroke';
         text.style.transformOrigin = 'center';
         text.style.transform = 'scale(1, 1)'; // Force 1:1 aspect ratio
+        
+        // Additional resize protection attributes
+        text.setAttribute('data-original-font-size', fontSize);
+        text.setAttribute('data-resize-protected', 'true');
         
         text.textContent = displayText;
         textGroup.appendChild(text);
 
         return textGroup;
+    }
+    
+    /**
+     * Update SVG text elements to handle window resize properly
+     * This method recalculates text sizes and positions after resize
+     */
+    updateSVGTextForResize(svgContainer, containerWidth) {
+        if (!svgContainer) return;
+        
+        const textElements = svgContainer.querySelectorAll('text[data-resize-protected="true"]');
+        
+        textElements.forEach(textElement => {
+            const originalFontSize = parseFloat(textElement.getAttribute('data-original-font-size'));
+            const geneGroup = textElement.closest('g.svg-gene-element');
+            
+            if (geneGroup && originalFontSize) {
+                // Get the current transform to understand positioning
+                const transform = geneGroup.getAttribute('transform');
+                if (transform) {
+                    const translateMatch = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                    if (translateMatch) {
+                        const x = parseFloat(translateMatch[1]);
+                        const y = parseFloat(translateMatch[2]);
+                        
+                        // Recalculate text positioning based on new container width
+                        const textGroup = textElement.parentElement;
+                        const originalWidth = parseFloat(textGroup.getAttribute('data-original-width'));
+                        const originalHeight = parseFloat(textGroup.getAttribute('data-original-height'));
+                        
+                        if (originalWidth && originalHeight) {
+                            // Update text position within its group
+                            textElement.setAttribute('x', originalWidth / 2);
+                            textElement.setAttribute('y', originalHeight / 2);
+                            
+                            // Maintain original font size to prevent stretching
+                            textElement.setAttribute('font-size', `${originalFontSize}px`);
+                            
+                            // Ensure transform protection is maintained
+                            textElement.style.vectorEffect = 'non-scaling-stroke';
+                            textElement.style.transform = 'scale(1, 1)';
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('🔤 Updated', textElements.length, 'SVG text elements for resize');
     }
 
     /**
@@ -1600,6 +1656,53 @@ class TrackRenderer {
             maxRows,
             effectiveRows,
             totalHeight: rulerHeight + topPadding + (effectiveRows * (geneHeight + rowSpacing)) - rowSpacing + bottomPadding
+        };
+    }
+    
+    /**
+     * Get current gene track settings for refresh operations
+     */
+    getGeneTrackSettings() {
+        // Try to get settings from the settings modal if available
+        const settings = {};
+        
+        // Check for gene height setting
+        const geneHeightInput = document.getElementById('geneHeight');
+        if (geneHeightInput) {
+            settings.geneHeight = parseInt(geneHeightInput.value) || 23;
+        }
+        
+        // Check for max rows setting
+        const maxRowsInput = document.getElementById('maxRows');
+        if (maxRowsInput) {
+            settings.maxRows = parseInt(maxRowsInput.value) || 6;
+        }
+        
+        // Check for font size setting
+        const fontSizeInput = document.getElementById('fontSize');
+        if (fontSizeInput) {
+            settings.fontSize = parseInt(fontSizeInput.value) || 11;
+        }
+        
+        // Check for font family setting
+        const fontFamilyInput = document.getElementById('fontFamily');
+        if (fontFamilyInput) {
+            settings.fontFamily = fontFamilyInput.value || 'Arial, sans-serif';
+        }
+        
+        // Check for arrow size setting
+        const arrowSizeInput = document.getElementById('arrowSize');
+        if (arrowSizeInput) {
+            settings.arrowSize = parseInt(arrowSizeInput.value) || 8;
+        }
+        
+        // Default settings if no inputs found
+        return Object.keys(settings).length > 0 ? settings : {
+            geneHeight: 23,
+            maxRows: 6,
+            fontSize: 11,
+            fontFamily: 'Arial, sans-serif',
+            arrowSize: 8
         };
     }
     
