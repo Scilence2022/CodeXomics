@@ -375,7 +375,7 @@ class TrackRenderer {
     }
     
     /**
-     * Render gene elements with improved organization
+     * Render gene elements with improved organization and unified dragging
      */
     renderGeneElements(trackContent, visibleGenes, viewport, operons, settings) {
         const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);
@@ -384,8 +384,25 @@ class TrackRenderer {
         // Set calculated height
         trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
         
-        // Create SVG-based gene visualization instead of HTML divs
-        this.renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings);
+        // Create unified draggable container for all gene track elements
+        const unifiedContainer = document.createElement('div');
+        unifiedContainer.className = 'unified-gene-container';
+        unifiedContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        `;
+        
+        // Create SVG-based gene visualization
+        this.renderGeneElementsSVG(unifiedContainer, geneRows, viewport, operons, layout, settings);
+        
+        // Add statistics to the same container
+        this.addGeneTrackStatistics(unifiedContainer, visibleGenes, operons, settings, layout);
+        
+        // Add the unified container to trackContent
+        trackContent.appendChild(unifiedContainer);
     }
 
     /**
@@ -1756,9 +1773,14 @@ class TrackRenderer {
     /**
      * Add statistics and update sidebar with improved organization
      */
-    addGeneTrackStatistics(trackContent, visibleGenes, operons, settings) {
+    addGeneTrackStatistics(container, visibleGenes, operons, settings, layout) {
+        // If layout not provided, calculate it (for backward compatibility)
+        if (!layout) {
+            const geneRows = this.arrangeGenesInRows(visibleGenes, this.getCurrentViewport().start, this.getCurrentViewport().end, operons, settings);
+            layout = this.calculateGeneTrackLayout(geneRows, settings);
+        }
+        
         const geneRows = this.arrangeGenesInRows(visibleGenes, this.getCurrentViewport().start, this.getCurrentViewport().end, operons, settings);
-        const layout = this.calculateGeneTrackLayout(geneRows, settings);
         
         // Count visible and hidden genes
         const totalGenes = visibleGenes.length;
@@ -1780,7 +1802,7 @@ class TrackRenderer {
         }
         
         const statsElement = this.createStatsElement(statsText, 'gene-stats', `top: ${layout.rulerHeight + 5}px;`);
-        trackContent.appendChild(statsElement);
+        container.appendChild(statsElement);
         
         // Update sidebar operons panel
         const visibleOperons = new Set();
