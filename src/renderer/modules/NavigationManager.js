@@ -513,15 +513,71 @@ class NavigationManager {
                 this.dragUpdateTimeout = null;
             }
             
-            // No need to recalculate genome position here because it has
-            // already been accurately updated on the last mousemove event.
-            // Simply clear the temporary visual transforms and re-render.
+            // ------------------ 1) 获取实际视觉位移 ------------------
+            // 优先通过 DOM 读取 transform 中的 translateX，保证使用真正渲染的距离
+            const getActualDeltaX = () => {
+                // 选一个示例元素（HTML gene 或 SVG gene）
+                const sample = element.querySelector('.gene-element') ||
+                                element.querySelector('.svg-gene-element') ||
+                                element.querySelector('.genes-svg-container');
+                if (!sample) return cumulativeVisualDeltaX;
+                let tx = 0;
+                // HTML 元素: 通过 style 或 computedStyle 获取 transform
+                if (sample.style && sample.style.transform) {
+                    const match = sample.style.transform.match(/translateX\((-?[0-9.]+)px\)/);
+                    if (match) tx = parseFloat(match[1]);
+                }
+                if (!tx) {
+                    const computed = window.getComputedStyle(sample);
+                    const transform = computed.transform || computed.webkitTransform;
+                    if (transform && transform !== 'none') {
+                        // matrix(a,b,c,d,tx,ty)
+                        const parts = transform.match(/matrix\(([^)]+)\)/);
+                        if (parts && parts[1]) {
+                            const nums = parts[1].split(',').map(v => parseFloat(v.trim()));
+                            if (nums.length === 6) {
+                                tx = nums[4];
+                            }
+                        }
+                    }
+                }
+                // SVG 元素: 通过 getAttribute('transform')
+                if (!tx && sample.getAttribute) {
+                    const attr = sample.getAttribute('transform');
+                    if (attr) {
+                        const match = attr.match(/translate\(([^,]+),?\s*([^)]+)?\)/);
+                        if (match) {
+                            tx = parseFloat(match[1]);
+                        }
+                    }
+                }
+                // 如果还是取不到，回退到记录值
+                return isNaN(tx) ? cumulativeVisualDeltaX : tx;
+            };
+
+            const actualDeltaX = getActualDeltaX();
+
+            // ------------------ 2) 根据视觉位移计算基因组位置变化 ------------------
+            const sequence = this.genomeBrowser.currentSequence[chromosome];
+            const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
+            const elementWidth = element.offsetWidth || 800;
+
+            // 使用与 handleMouseMove 相同的公式并取整，保证一致性
+            const finalPositionChange = Math.round(-actualDeltaX * currentRange / elementWidth);
+
+            const finalNewStart = Math.max(0, Math.min(
+                sequence.length - currentRange,
+                startPosition + finalPositionChange
+            ));
+            const finalNewEnd = finalNewStart + currentRange;
+            
+            // Set the final position based on visual movement
+            this.genomeBrowser.currentPosition = { start: finalNewStart, end: finalNewEnd };
             
             // Reset visual transforms
             this.resetVisualDragUpdates(element);
             
-            // Full re-render after drag ends (now matches the logical position set on the last mousemove)
-            const sequence = this.genomeBrowser.currentSequence[chromosome];
+            // Full re-render after drag ends - now perfectly matches visual position
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
             // Update navigation bar
@@ -778,14 +834,28 @@ class NavigationManager {
         let elementsReset = 0;
         
         trackContents.forEach(trackContent => {
-            // Reset all transformed elements - fix selector to match what we set
+            // Reset all transformed elements inside trackContent
             const transformedElements = trackContent.querySelectorAll('[data-original-transform]');
-            
             transformedElements.forEach(el => {
                 el.style.transform = el.dataset.originalTransform || '';
+                if (el.tagName === 'svg' || el.tagName === 'g') {
+                    // 还原 SVG 元素的 transform 属性
+                    el.setAttribute('transform', el.dataset.originalTransform || '');
+                }
                 delete el.dataset.originalTransform;
                 elementsReset++;
             });
+        });
+        
+        // 同时处理 performVisualDragUpdate 的全局 fallback
+        const globalTransformed = document.querySelectorAll('[data-original-transform]');
+        globalTransformed.forEach(el => {
+            el.style.transform = el.dataset.originalTransform || '';
+            if (el.tagName === 'svg' || el.tagName === 'g') {
+                el.setAttribute('transform', el.dataset.originalTransform || '');
+            }
+            delete el.dataset.originalTransform;
+            elementsReset++;
         });
         
         // Remove visual feedback class
