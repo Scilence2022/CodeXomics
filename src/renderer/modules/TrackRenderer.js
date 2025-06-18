@@ -1663,7 +1663,13 @@ class TrackRenderer {
      * Get current gene track settings for refresh operations
      */
     getGeneTrackSettings() {
-        // Try to get settings from the settings modal if available
+        // First check if we have saved settings from applySettingsToTrack
+        if (this.trackSettings && this.trackSettings.genes) {
+            console.log('Using saved gene track settings:', this.trackSettings.genes);
+            return this.trackSettings.genes;
+        }
+        
+        // Fallback: Try to get settings from the settings modal if available
         const settings = {};
         
         // Check for gene height setting
@@ -1697,13 +1703,16 @@ class TrackRenderer {
         }
         
         // Default settings if no inputs found
-        return Object.keys(settings).length > 0 ? settings : {
+        const finalSettings = Object.keys(settings).length > 0 ? settings : {
             geneHeight: 23,
             maxRows: 6,
             fontSize: 11,
             fontFamily: 'Arial, sans-serif',
             arrowSize: 8
         };
+        
+        console.log('Using fallback gene track settings:', finalSettings);
+        return finalSettings;
     }
     
     /**
@@ -4373,11 +4382,17 @@ class TrackRenderer {
     }
     
     refreshCurrentView() {
-        // Refresh the current genome view to reflect changes
-        console.log('refreshCurrentView called - delegating to unified refresh');
+        // Refresh the current genome view to reflect changes (use full redraw for consistency with drag-end)
+        console.log('refreshCurrentView called - using full redraw like drag-end');
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        console.log('Current chromosome:', currentChr);
         
-        // Use the unified refresh function for consistency
-        this.refreshViewAfterSettingsChange();
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            console.log('Calling displayGenomeView to refresh tracks...');
+            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        } else {
+            console.warn('Cannot refresh view - missing chromosome or sequence data');
+        }
     }
 
     // ============================================================================
@@ -4950,6 +4965,12 @@ class TrackRenderer {
      * Get current settings for a track
      */
     getTrackSettings(trackType) {
+        // First check if we have saved settings from applySettingsToTrack
+        if (this.trackSettings && this.trackSettings[trackType]) {
+            console.log(`Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
+            return this.trackSettings[trackType];
+        }
+        
         // Get settings from ConfigManager or default values
         const defaultSettings = {
             genes: {
@@ -5005,7 +5026,7 @@ class TrackRenderer {
         }
         
         const finalSettings = { ...defaultSettings[trackType] || {}, ...savedSettings };
-        console.log(`Final merged settings for ${trackType}:`, finalSettings);
+        console.log(`Using fallback merged settings for ${trackType}:`, finalSettings);
         return finalSettings;
     }
     
@@ -5130,197 +5151,12 @@ class TrackRenderer {
         }
         this.trackSettings[trackType] = settings;
         
-        // Find the track element
-        const trackElement = document.querySelector(`.${trackType}-track`);
-        if (trackElement) {
-            const trackContent = trackElement.querySelector('.track-content');
-            if (trackContent) {
-                // Adjust height immediately if applicable
-                if (settings.height) {
-                    trackContent.style.height = `${settings.height}px`;
-                }
-                
-                // For GC track, re-render with new settings  
-                if (trackType === 'gc') {
-                    console.log('Re-rendering GC track due to settings change...', settings);
-                    const currentChr = document.getElementById('chromosomeSelect').value;
-                    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-                        // Clear existing content
-                        trackContent.innerHTML = '';
-                        
-                        // Re-create GC track with new settings
-                        const sequence = this.genomeBrowser.currentSequence[currentChr];
-                        const viewport = this.getCurrentViewport();
-                        const subsequence = sequence.substring(viewport.start, viewport.end);
-                        const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
-                        trackContent.appendChild(gcDisplay);
-                    }
-                }
-                
-                // For gene track, re-render elements to apply all settings including height and font
-                if (trackType === 'genes') {
-                    console.log('Re-rendering gene elements due to settings change...', settings);
-                    // Clear existing gene elements before re-rendering
-                    const geneElements = trackContent.querySelectorAll('.gene-element, .no-genes-message, .unified-gene-container, .detailed-ruler-container');
-                    geneElements.forEach(el => el.remove());
-                    
-                    // Re-add detailed ruler
-                    const currentChr = document.getElementById('chromosomeSelect').value;
-                    const detailedRuler = this.createDetailedRuler(currentChr);
-                    trackContent.appendChild(detailedRuler);
-                    
-                    // Re-fetch data and re-render with new settings
-                    const viewport = this.getCurrentViewport();
-                    const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
-                    const operons = this.genomeBrowser.detectOperons(annotations);
-                    const visibleGenes = this.filterGeneAnnotations(annotations, viewport);
-                    
-                    if (visibleGenes.length > 0) {
-                        // Re-render with updated settings (includes statistics in unified container)
-                        this.renderGeneElements(trackContent, visibleGenes, viewport, operons, settings);
-                        
-                        // Update track height based on new gene heights
-                        const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);
-                        const layout = this.calculateGeneTrackLayout(geneRows, settings);
-                        trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
-                    } else {
-                        const noGenesMsg = this.createNoDataMessage(
-                            'No genes/features in this region or all filtered out',
-                            'no-genes-message'
-                        );
-                        trackContent.appendChild(noGenesMsg);
-                    }
-                }
-                
-                // For reads track, re-render elements to apply all settings
-                if (trackType === 'reads') {
-                    console.log('Re-rendering read elements due to settings change...', settings);
-                    
-                    // Get current chromosome and viewport
-                    const currentChr = document.getElementById('chromosomeSelect').value;
-                    if (currentChr && this.genomeBrowser.readsManager && this.genomeBrowser.readsManager.rawReadsData) {
-                        // Show loading indicator
-                        trackContent.innerHTML = '<div class="reads-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-style: italic; font-size: 12px;">Updating reads display...</div>';
-                        
-                        // Refresh reads track with new settings asynchronously
-                        setTimeout(async () => {
-                            try {
-                                const viewport = this.getCurrentViewport();
-                                const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(currentChr, viewport.start, viewport.end);
-                                
-                                // Clear loading message
-                                trackContent.innerHTML = '';
-                                
-                                if (visibleReads.length === 0) {
-                                    const noReadsMsg = this.createNoDataMessage(
-                                        'No reads in this region',
-                                        'no-reads-message'
-                                    );
-                                    trackContent.appendChild(noReadsMsg);
-                                    trackContent.style.height = '80px';
-                                } else {
-                                    // Apply new settings to arrangement and rendering
-                                    const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
-                                    
-                                    // Limit rows based on maxRows setting
-                                    const limitedReadRows = readRows.slice(0, settings.maxRows || 20);
-                                    
-                                    const readHeight = settings.readHeight || 14;
-                                    const rowSpacing = settings.readSpacing || 2;
-                                    const topPadding = 10;
-                                    const bottomPadding = 10;
-                                    
-                                    // Calculate track height
-                                    let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
-                                    trackHeight = Math.max(trackHeight, settings.height || 150);
-                                    trackContent.style.height = `${trackHeight}px`;
-                                    
-                                    // Re-render with new settings
-                                    this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, 
-                                        viewport.end - viewport.start, readHeight, rowSpacing, topPadding, trackHeight, settings);
-                                    
-                                    // Add updated statistics
-                                    const hiddenReadsCount = Math.max(0, readRows.length - limitedReadRows.length);
-                                    const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
-                                    const stats = this.genomeBrowser.readsManager.getCacheStats();
-                                    
-                                    let statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
-                                    if (hiddenReadsCount > 0) {
-                                        const hiddenReadsTotal = readRows.slice(settings.maxRows || 20).reduce((sum, row) => sum + row.length, 0);
-                                        statsText += ` (${hiddenReadsTotal} hidden)`;
-                                    }
-                                    statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
-                                    
-                                    const statsElement = this.createStatsElement(statsText, 'reads-stats');
-                                    trackContent.appendChild(statsElement);
-                                }
-                            } catch (error) {
-                                console.error('Error updating reads track:', error);
-                                trackContent.innerHTML = `<div class="reads-error" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #d32f2f; font-style: italic; font-size: 12px;">Error updating reads: ${error.message}</div>`;
-                            }
-                        }, 100);
-                    }
-                }
-                
-                // For variant track, apply new settings
-                if (trackType === 'variants') {
-                    console.log('Re-rendering variant track due to settings change...', settings);
-                    const currentChr = document.getElementById('chromosomeSelect').value;
-                    if (currentChr) {
-                        // Clear existing content
-                        trackContent.innerHTML = '';
-                        
-                        // Re-create variant track
-                        const variants = this.genomeBrowser.currentVariants[currentChr] || [];
-                        const viewport = this.getCurrentViewport();
-                        const visibleVariants = variants.filter(v => 
-                            v.end >= viewport.start && v.start <= viewport.end
-                        );
-                        
-                        if (visibleVariants.length === 0) {
-                            const noVariantsMsg = this.createNoDataMessage(
-                                'No variants loaded for this chromosome or in this region',
-                                'no-variants-message'
-                            );
-                            trackContent.appendChild(noVariantsMsg);
-                        } else {
-                            this.renderVariantElements(trackContent, visibleVariants, viewport);
-                        }
-                    }
-                }
-                
-                // For protein track, apply new settings
-                if (trackType === 'proteins') {
-                    console.log('Re-rendering protein track due to settings change...', settings);
-                    const currentChr = document.getElementById('chromosomeSelect').value;
-                    if (currentChr && this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
-                        // Clear existing content
-                        trackContent.innerHTML = '';
-                        
-                        // Re-create protein track
-                        const annotations = this.genomeBrowser.currentAnnotations[currentChr];
-                        const viewport = this.getCurrentViewport();
-                        const proteins = this.filterProteinAnnotations(annotations, viewport);
-                        
-                        if (proteins.length === 0) {
-                            const noProteinsMsg = this.createNoDataMessage(
-                                'No protein-coding sequences in this region',
-                                'no-proteins-message'
-                            );
-                            trackContent.appendChild(noProteinsMsg);
-                        } else {
-                            this.renderProteinElements(trackContent, proteins, viewport);
-                        }
-                    }
-                }
-            }
-        } else {
-            console.warn(`Track element not found for ${trackType}`);
-        }
+        // Store settings - the complete redraw will handle applying all settings including height
+        console.log(`Settings stored for ${trackType}, will be applied during complete redraw`);
         
-        // Trigger a unified view refresh to ensure all tracks are properly updated
-        console.log('Calling unified view refresh after applying settings...');
-        this.refreshViewAfterSettingsChange();
+        // Trigger the same complete redraw that drag-end uses for consistency
+        console.log('Calling complete view redraw after applying settings (same as drag-end)...');
+        this.refreshViewAfterSettingsChange(true); // Force full redraw for consistency
     }
 
     /**
