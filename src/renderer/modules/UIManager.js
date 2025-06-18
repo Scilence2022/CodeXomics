@@ -639,23 +639,31 @@ class UIManager {
     }
     
     performWindowResize() {
-        console.log('🔄 Handling window resize - refreshing SVG tracks');
+        console.log('🔄 Handling window resize - using unified refresh');
         
-        // Recalculate sequence display if visible
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-            if (this.genomeBrowser.visibleTracks.has('sequence')) {
-                this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        // Use the unified refresh function from TrackRenderer for consistency
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.refreshViewAfterSettingsChange) {
+            this.genomeBrowser.trackRenderer.refreshViewAfterSettingsChange();
+        } else {
+            // Fallback to original logic if unified function is not available
+            console.log('⚠️ Unified refresh not available, using fallback logic');
+            
+            // Recalculate sequence display if visible
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                if (this.genomeBrowser.visibleTracks.has('sequence')) {
+                    this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                }
             }
-        }
-        
-        // Refresh all SVG-based tracks to prevent text stretching
-        this.refreshSVGTracks();
-        
-        // Update genome navigation bar if exists
-        if (this.genomeBrowser.genomeNavigationBar) {
-            this.genomeBrowser.genomeNavigationBar.resizeCanvas();
-            this.genomeBrowser.genomeNavigationBar.draw();
+            
+            // Refresh all SVG-based tracks to prevent text stretching
+            this.refreshSVGTracks();
+            
+            // Update genome navigation bar if exists
+            if (this.genomeBrowser.genomeNavigationBar) {
+                this.genomeBrowser.genomeNavigationBar.resizeCanvas();
+                this.genomeBrowser.genomeNavigationBar.draw();
+            }
         }
     }
     

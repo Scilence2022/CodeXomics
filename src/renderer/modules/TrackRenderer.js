@@ -4374,16 +4374,10 @@ class TrackRenderer {
     
     refreshCurrentView() {
         // Refresh the current genome view to reflect changes
-        console.log('refreshCurrentView called');
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        console.log('Current chromosome:', currentChr);
+        console.log('refreshCurrentView called - delegating to unified refresh');
         
-        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-            console.log('Calling displayGenomeView to refresh tracks...');
-            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-        } else {
-            console.warn('Cannot refresh view - missing chromosome or sequence data');
-        }
+        // Use the unified refresh function for consistency
+        this.refreshViewAfterSettingsChange();
     }
 
     // ============================================================================
@@ -5146,6 +5140,23 @@ class TrackRenderer {
                     trackContent.style.height = `${settings.height}px`;
                 }
                 
+                // For GC track, re-render with new settings  
+                if (trackType === 'gc') {
+                    console.log('Re-rendering GC track due to settings change...', settings);
+                    const currentChr = document.getElementById('chromosomeSelect').value;
+                    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                        // Clear existing content
+                        trackContent.innerHTML = '';
+                        
+                        // Re-create GC track with new settings
+                        const sequence = this.genomeBrowser.currentSequence[currentChr];
+                        const viewport = this.getCurrentViewport();
+                        const subsequence = sequence.substring(viewport.start, viewport.end);
+                        const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
+                        trackContent.appendChild(gcDisplay);
+                    }
+                }
+                
                 // For gene track, re-render elements to apply all settings including height and font
                 if (trackType === 'genes') {
                     console.log('Re-rendering gene elements due to settings change...', settings);
@@ -5250,14 +5261,242 @@ class TrackRenderer {
                         }, 100);
                     }
                 }
+                
+                // For variant track, apply new settings
+                if (trackType === 'variants') {
+                    console.log('Re-rendering variant track due to settings change...', settings);
+                    const currentChr = document.getElementById('chromosomeSelect').value;
+                    if (currentChr) {
+                        // Clear existing content
+                        trackContent.innerHTML = '';
+                        
+                        // Re-create variant track
+                        const variants = this.genomeBrowser.currentVariants[currentChr] || [];
+                        const viewport = this.getCurrentViewport();
+                        const visibleVariants = variants.filter(v => 
+                            v.end >= viewport.start && v.start <= viewport.end
+                        );
+                        
+                        if (visibleVariants.length === 0) {
+                            const noVariantsMsg = this.createNoDataMessage(
+                                'No variants loaded for this chromosome or in this region',
+                                'no-variants-message'
+                            );
+                            trackContent.appendChild(noVariantsMsg);
+                        } else {
+                            this.renderVariantElements(trackContent, visibleVariants, viewport);
+                        }
+                    }
+                }
+                
+                // For protein track, apply new settings
+                if (trackType === 'proteins') {
+                    console.log('Re-rendering protein track due to settings change...', settings);
+                    const currentChr = document.getElementById('chromosomeSelect').value;
+                    if (currentChr && this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
+                        // Clear existing content
+                        trackContent.innerHTML = '';
+                        
+                        // Re-create protein track
+                        const annotations = this.genomeBrowser.currentAnnotations[currentChr];
+                        const viewport = this.getCurrentViewport();
+                        const proteins = this.filterProteinAnnotations(annotations, viewport);
+                        
+                        if (proteins.length === 0) {
+                            const noProteinsMsg = this.createNoDataMessage(
+                                'No protein-coding sequences in this region',
+                                'no-proteins-message'
+                            );
+                            trackContent.appendChild(noProteinsMsg);
+                        } else {
+                            this.renderProteinElements(trackContent, proteins, viewport);
+                        }
+                    }
+                }
             }
         } else {
             console.warn(`Track element not found for ${trackType}`);
         }
         
-        // Ensure the entire view is refreshed to reflect layout changes
-        console.log('Calling refreshCurrentView after applying settings to track...');
-        this.refreshCurrentView(); 
+        // Trigger a unified view refresh to ensure all tracks are properly updated
+        console.log('Calling unified view refresh after applying settings...');
+        this.refreshViewAfterSettingsChange();
+    }
+
+    /**
+     * Unified view refresh function for settings changes and window resize
+     */
+    refreshViewAfterSettingsChange(forceFullRedraw = false) {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        console.log('refreshViewAfterSettingsChange called for chromosome:', currentChr, 'forceFullRedraw:', forceFullRedraw);
+        
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            if (forceFullRedraw) {
+                console.log('Performing full view redraw...');
+                // Perform complete redraw of all tracks
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            } else {
+                console.log('Triggering optimized view refresh...');
+                
+                // Update navigation bar canvas if it exists
+                if (this.genomeBrowser.genomeNavigationBar) {
+                    this.genomeBrowser.genomeNavigationBar.resizeCanvas();
+                    this.genomeBrowser.genomeNavigationBar.draw();
+                }
+                
+                // Force recalculation of container widths and SVG dimensions
+                this.updateAllSVGTracks();
+                
+                // Update sequence display if visible
+                if (this.genomeBrowser.visibleTracks.has('sequence')) {
+                    this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                }
+                
+                console.log('✅ Optimized view refresh completed');
+            }
+        } else {
+            console.warn('Cannot refresh view - missing chromosome or sequence data');
+        }
+    }
+    
+    /**
+     * Update all SVG-based tracks with proper dimensions
+     */
+    updateAllSVGTracks() {
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
+            console.log('⚠️ No current chromosome/sequence, skipping SVG update');
+            return;
+        }
+        
+        const sequence = this.genomeBrowser.currentSequence[currentChr];
+        const annotations = this.genomeBrowser.currentAnnotations[currentChr] || [];
+        const operons = this.genomeBrowser.operons || [];
+        
+        console.log('🔄 Updating all SVG tracks for chromosome:', currentChr);
+        
+        // Update gene track SVG
+        if (this.genomeBrowser.visibleTracks.has('genes') && annotations.length > 0) {
+            this.updateGeneTrackSVG(currentChr, sequence, annotations, operons);
+        }
+        
+        // Update reads track SVG
+        if (this.genomeBrowser.visibleTracks.has('reads')) {
+            this.updateReadsTrackSVG(currentChr);
+        }
+        
+        // Update GC track if needed
+        if (this.genomeBrowser.visibleTracks.has('gc') && sequence) {
+            this.updateGCTrackSVG(currentChr, sequence);
+        }
+        
+        // Update other tracks
+        this.updateOtherTracksSVG(currentChr, sequence);
+        
+        console.log('✅ All SVG tracks updated');
+    }
+    
+    /**
+     * Update gene track SVG with proper dimensions
+     */
+    updateGeneTrackSVG(chromosome, sequence, annotations, operons) {
+        const geneTrack = document.querySelector('.gene-track');
+        if (!geneTrack) return;
+        
+        const trackContent = geneTrack.querySelector('.track-content');
+        if (!trackContent) return;
+        
+        const svgContainer = trackContent.querySelector('.genes-svg-container');
+        if (svgContainer) {
+            // Force layout recalculation to get accurate width
+            trackContent.style.width = '100%';
+            const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+            
+            // Update text elements for proper sizing after changes
+            this.updateSVGTextForResize(svgContainer, containerWidth);
+            console.log('🧬 Gene track SVG updated with container width:', containerWidth);
+        }
+    }
+    
+    /**
+     * Update reads track SVG with proper dimensions
+     */
+    updateReadsTrackSVG(chromosome) {
+        const readsTrack = document.querySelector('.reads-track');
+        if (!readsTrack) return;
+        
+        const trackContent = readsTrack.querySelector('.track-content');
+        if (!trackContent) return;
+        
+        const svgContainer = trackContent.querySelector('svg');
+        if (svgContainer) {
+            // Force layout recalculation
+            trackContent.style.width = '100%';
+            const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+            
+            // Update SVG dimensions
+            svgContainer.setAttribute('width', '100%');
+            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+            console.log('📊 Reads track SVG updated with container width:', containerWidth);
+        }
+    }
+    
+    /**
+     * Update GC track SVG with proper dimensions
+     */
+    updateGCTrackSVG(chromosome, sequence) {
+        const gcTrack = document.querySelector('.gc-track');
+        if (!gcTrack) return;
+        
+        const trackContent = gcTrack.querySelector('.track-content');
+        if (!trackContent) return;
+        
+        const svgContainer = trackContent.querySelector('svg');
+        if (svgContainer) {
+            // Force layout recalculation
+            trackContent.style.width = '100%';
+            const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+            
+            // Update SVG dimensions
+            svgContainer.setAttribute('width', '100%');
+            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+            console.log('📈 GC track SVG updated with container width:', containerWidth);
+        }
+    }
+    
+    /**
+     * Update other tracks' SVG elements
+     */
+    updateOtherTracksSVG(chromosome, sequence) {
+        // Update WIG tracks if present
+        const wigTracks = document.querySelectorAll('.wig-track');
+        wigTracks.forEach(wigTrack => {
+            const trackContent = wigTrack.querySelector('.track-content');
+            if (trackContent) {
+                const svgContainer = trackContent.querySelector('svg');
+                if (svgContainer) {
+                    trackContent.style.width = '100%';
+                    const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+                    svgContainer.setAttribute('width', '100%');
+                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+                }
+            }
+        });
+        
+        // Update variant tracks if present
+        const variantTracks = document.querySelectorAll('.variant-track');
+        variantTracks.forEach(variantTrack => {
+            const trackContent = variantTrack.querySelector('.track-content');
+            if (trackContent) {
+                const svgContainer = trackContent.querySelector('svg');
+                if (svgContainer) {
+                    trackContent.style.width = '100%';
+                    const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+                    svgContainer.setAttribute('width', '100%');
+                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+                }
+            }
+        });
     }
 
 
