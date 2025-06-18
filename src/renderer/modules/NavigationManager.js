@@ -223,6 +223,9 @@ class NavigationManager {
         if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[currentChr]) {
             const annotations = this.genomeBrowser.currentAnnotations[currentChr];
             
+            // Parse search terms - support OR operator
+            const searchTerms = this.parseSearchQuery(searchTerm);
+            
             annotations.forEach(annotation => {
                 if (annotation.qualifiers) {
                     // Search in gene names
@@ -234,14 +237,20 @@ class NavigationManager {
                     const searchFields = [geneName, locusTag, product, note].join(' ');
                     const fieldToSearch = caseSensitive ? searchFields : searchFields.toUpperCase();
                     
-                    if (fieldToSearch.includes(searchTerm)) {
+                    // Check if any of the search terms match
+                    const isMatch = searchTerms.some(term => fieldToSearch.includes(term));
+                    
+                    if (isMatch) {
+                        // Find which term(s) matched for highlighting
+                        const matchedTerms = searchTerms.filter(term => fieldToSearch.includes(term));
                         results.push({
                             type: 'gene',
                             position: annotation.start,
                             end: annotation.end,
                             name: geneName || locusTag || annotation.type,
                             details: `${annotation.type}: ${product || 'No description'}`,
-                            annotation: annotation
+                            annotation: annotation,
+                            matchedTerms: matchedTerms
                         });
                     }
                 }
@@ -296,9 +305,15 @@ class NavigationManager {
             this.navigateToSearchResult(0);
             
             // Show brief success message
-            this.genomeBrowser.updateStatus(`Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"`);
+            const searchTerms = this.parseSearchQuery(searchQuery);
+            const termInfo = searchTerms.length > 1 ? ` (${searchTerms.length} terms searched)` : '';
+            this.genomeBrowser.updateStatus(`Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"${termInfo}`);
         } else {
+            const searchTerms = this.parseSearchQuery(searchQuery);
             let searchInfo = `No matches found for "${searchQuery}"`;
+            if (searchTerms.length > 1) {
+                searchInfo += ` (searched for ${searchTerms.length} terms: ${searchTerms.join(', ')})`;
+            }
             if (includeReverseComplement && searchQuery.match(/^[ATGC]+$/i)) {
                 const rc = this.getReverseComplement(searchQuery);
                 searchInfo += ` (also searched for reverse complement: "${rc}")`;
@@ -395,6 +410,20 @@ class NavigationManager {
         
         // Update status
         this.genomeBrowser.updateStatus(`Showing result ${index + 1} of ${this.searchResults.length}: ${result.name}`);
+    }
+
+    // Helper method to parse search query - supports OR operator
+    parseSearchQuery(query) {
+        // Check if query contains OR operator (case insensitive)
+        if (query.toLowerCase().includes(' or ')) {
+            // Split by OR operator and clean up terms
+            return query.split(/\s+or\s+/i)
+                .map(term => term.trim())
+                .filter(term => term.length > 0);
+        } else {
+            // Single search term
+            return [query];
+        }
     }
 
     // Helper method to get reverse complement
