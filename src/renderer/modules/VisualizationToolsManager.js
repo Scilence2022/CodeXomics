@@ -795,6 +795,128 @@ class VisualizationToolsManager {
                 };
             }
             
+            generatePhylogeneticData(dataType) {
+                // Generate phylogenetic tree data
+                const species = [
+                    { id: 'S1', name: 'E.coli', group: 'Bacteria', distance: 0.1 },
+                    { id: 'S2', name: 'S.cerevisiae', group: 'Fungi', distance: 0.3 },
+                    { id: 'S3', name: 'H.sapiens', group: 'Mammals', distance: 0.8 },
+                    { id: 'S4', name: 'M.musculus', group: 'Mammals', distance: 0.75 },
+                    { id: 'S5', name: 'D.melanogaster', group: 'Insects', distance: 0.6 },
+                    { id: 'S6', name: 'C.elegans', group: 'Nematodes', distance: 0.5 }
+                ];
+                
+                // Create hierarchical tree structure
+                const treeData = {
+                    name: 'Common Ancestor',
+                    children: [
+                        {
+                            name: 'Prokaryotes',
+                            children: [{ name: 'E.coli', species: 'S1', distance: 0.1 }]
+                        },
+                        {
+                            name: 'Eukaryotes',
+                            children: [
+                                {
+                                    name: 'Fungi',
+                                    children: [{ name: 'S.cerevisiae', species: 'S2', distance: 0.3 }]
+                                },
+                                {
+                                    name: 'Animals',
+                                    children: [
+                                        {
+                                            name: 'Vertebrates',
+                                            children: [
+                                                { name: 'H.sapiens', species: 'S3', distance: 0.8 },
+                                                { name: 'M.musculus', species: 'S4', distance: 0.75 }
+                                            ]
+                                        },
+                                        { name: 'D.melanogaster', species: 'S5', distance: 0.6 },
+                                        { name: 'C.elegans', species: 'S6', distance: 0.5 }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+                
+                return {
+                    treeType: 'phylogenetic',
+                    tree: treeData,
+                    species: species,
+                    metadata: {
+                        dataType: dataType,
+                        speciesCount: species.length,
+                        treeFormat: 'hierarchical'
+                    }
+                };
+            }
+            
+            generateAlignmentData(dataType) {
+                // Generate sequence alignment data
+                const sequences = [
+                    {
+                        id: 'Seq1',
+                        name: 'Human BRCA1',
+                        sequence: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATC',
+                        length: 60
+                    },
+                    {
+                        id: 'Seq2', 
+                        name: 'Mouse BRCA1',
+                        sequence: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATC',
+                        length: 60
+                    },
+                    {
+                        id: 'Seq3',
+                        name: 'Chimp BRCA1', 
+                        sequence: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATC',
+                        length: 60
+                    }
+                ];
+                
+                // Create alignment with consensus
+                const alignment = {
+                    sequences: sequences,
+                    consensus: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATC',
+                    conservation: Array(60).fill(1), // All positions conserved for simplicity
+                    gaps: Array(60).fill(false)
+                };
+                
+                return {
+                    alignmentType: 'multiple',
+                    alignment: alignment,
+                    metadata: {
+                        dataType: dataType,
+                        sequenceCount: sequences.length,
+                        alignmentLength: 60,
+                        conservationScore: 1.0
+                    }
+                };
+            }
+            
+            generateGenericData(dataType) {
+                // Generate generic visualization data
+                return {
+                    dataType: dataType,
+                    title: 'Generic Visualization',
+                    description: 'This is a placeholder for ' + dataType + ' visualization',
+                    data: {
+                        items: [
+                            { id: 1, name: 'Item 1', value: Math.random() * 100 },
+                            { id: 2, name: 'Item 2', value: Math.random() * 100 },
+                            { id: 3, name: 'Item 3', value: Math.random() * 100 },
+                            { id: 4, name: 'Item 4', value: Math.random() * 100 },
+                            { id: 5, name: 'Item 5', value: Math.random() * 100 }
+                        ]
+                    },
+                    metadata: {
+                        dataType: dataType,
+                        itemCount: 5
+                    }
+                };
+            }
+            
             async createVisualization(data) {
                 const container = document.getElementById('visualizationContainer');
                 container.innerHTML = ''; // 清空容器
@@ -923,6 +1045,194 @@ class VisualizationToolsManager {
                 
                 // 存储可视化引用
                 this.currentVisualization = { svg, simulation, nodes, links };
+            }
+            
+            async createGenericVisualization(data, container) {
+                const width = container.clientWidth - 40;
+                const height = container.clientHeight - 40;
+                
+                // Create a simple visualization based on data type
+                if (data.treeType === 'phylogenetic') {
+                    this.createPhylogeneticTree(data, container, width, height);
+                } else if (data.alignmentType === 'multiple') {
+                    this.createSequenceAlignment(data, container, width, height);
+                } else {
+                    this.createDefaultVisualization(data, container, width, height);
+                }
+            }
+            
+            createPhylogeneticTree(data, container, width, height) {
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('border', '1px solid #e1e8ed')
+                    .style('border-radius', '6px');
+                
+                const g = svg.append('g')
+                    .attr('transform', 'translate(40,20)');
+                
+                // Create tree layout
+                const tree = d3.tree()
+                    .size([height - 40, width - 80]);
+                
+                const root = d3.hierarchy(data.tree);
+                tree(root);
+                
+                // Create links
+                g.selectAll('.link')
+                    .data(root.descendants().slice(1))
+                    .enter().append('path')
+                    .attr('class', 'link')
+                    .attr('d', d => {
+                        const midX = (d.y + d.parent.y) / 2;
+                        return 'M' + d.y + ',' + d.x + 'C' + midX + ',' + d.x + ' ' + midX + ',' + d.parent.x + ' ' + d.parent.y + ',' + d.parent.x;
+                    })
+                    .style('fill', 'none')
+                    .style('stroke', '#ccc')
+                    .style('stroke-width', 2);
+                
+                // Create nodes
+                const node = g.selectAll('.node')
+                    .data(root.descendants())
+                    .enter().append('g')
+                    .attr('class', 'node')
+                    .attr('transform', d => 'translate(' + d.y + ',' + d.x + ')');
+                
+                node.append('circle')
+                    .attr('r', 6)
+                    .style('fill', d => d.children ? '#555' : '#999')
+                    .style('stroke', '#fff')
+                    .style('stroke-width', 2);
+                
+                node.append('text')
+                    .attr('dy', '.35em')
+                    .attr('x', d => d.children ? -13 : 13)
+                    .style('text-anchor', d => d.children ? 'end' : 'start')
+                    .text(d => d.data.name)
+                    .style('font-size', '12px')
+                    .style('fill', '#333');
+                
+                this.currentVisualization = { svg };
+            }
+            
+            createSequenceAlignment(data, container, width, height) {
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('border', '1px solid #e1e8ed')
+                    .style('border-radius', '6px');
+                
+                const g = svg.append('g')
+                    .attr('transform', 'translate(10,20)');
+                
+                const sequences = data.alignment.sequences;
+                const charWidth = 12;
+                const lineHeight = 25;
+                
+                // Color scheme for nucleotides
+                const colorScheme = {
+                    'A': '#ff4444',
+                    'T': '#4444ff', 
+                    'G': '#44ff44',
+                    'C': '#ffff44'
+                };
+                
+                sequences.forEach((seq, i) => {
+                    // Sequence name
+                    g.append('text')
+                        .attr('x', 0)
+                        .attr('y', i * lineHeight + 15)
+                        .text(seq.name)
+                        .style('font-family', 'monospace')
+                        .style('font-size', '12px')
+                        .style('fill', '#333');
+                    
+                    // Sequence characters
+                    const chars = seq.sequence.split('');
+                    chars.forEach((char, j) => {
+                        g.append('text')
+                            .attr('x', 120 + j * charWidth)
+                            .attr('y', i * lineHeight + 15)
+                            .text(char)
+                            .style('font-family', 'monospace')
+                            .style('font-size', '12px')
+                            .style('fill', colorScheme[char] || '#333')
+                            .style('font-weight', 'bold');
+                    });
+                });
+                
+                this.currentVisualization = { svg };
+            }
+            
+            createDefaultVisualization(data, container, width, height) {
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('border', '1px solid #e1e8ed')
+                    .style('border-radius', '6px');
+                
+                const g = svg.append('g')
+                    .attr('transform', 'translate(40,40)');
+                
+                // Create a simple bar chart for generic data
+                if (data.data && data.data.items) {
+                    const items = data.data.items;
+                    const barWidth = (width - 80) / items.length;
+                    const maxValue = d3.max(items, d => d.value);
+                    const scale = (height - 80) / maxValue;
+                    
+                    items.forEach((item, i) => {
+                        const barHeight = item.value * scale;
+                        
+                        // Bar
+                        g.append('rect')
+                            .attr('x', i * barWidth + 10)
+                            .attr('y', height - 80 - barHeight)
+                            .attr('width', barWidth - 20)
+                            .attr('height', barHeight)
+                            .style('fill', '#4ECDC4')
+                            .style('stroke', '#fff')
+                            .style('stroke-width', 1);
+                        
+                        // Label
+                        g.append('text')
+                            .attr('x', i * barWidth + barWidth/2)
+                            .attr('y', height - 60)
+                            .text(item.name)
+                            .style('text-anchor', 'middle')
+                            .style('font-size', '10px')
+                            .style('fill', '#333');
+                        
+                        // Value
+                        g.append('text')
+                            .attr('x', i * barWidth + barWidth/2)
+                            .attr('y', height - 80 - barHeight - 5)
+                            .text(Math.round(item.value))
+                            .style('text-anchor', 'middle')
+                            .style('font-size', '10px')
+                            .style('fill', '#333');
+                    });
+                } else {
+                    // Fallback text
+                    g.append('text')
+                        .attr('x', width/2 - 40)
+                        .attr('y', height/2)
+                        .text(data.title || 'Visualization')
+                        .style('font-size', '16px')
+                        .style('fill', '#333');
+                        
+                    g.append('text')
+                        .attr('x', width/2 - 40)
+                        .attr('y', height/2 + 25)
+                        .text(data.description || 'No data to display')
+                        .style('font-size', '12px')
+                        .style('fill', '#666');
+                }
+                
+                this.currentVisualization = { svg };
             }
             
             updateVisualization() {
