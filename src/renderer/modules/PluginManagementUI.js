@@ -7,7 +7,23 @@ class PluginManagementUI {
         this.pluginManager = pluginManager;
         this.configManager = configManager;
         
-        // Initialize test manager
+        // Initialize test framework
+        if (typeof PluginTestFramework !== 'undefined') {
+            this.testFramework = new PluginTestFramework(pluginManager, configManager);
+        } else {
+            console.warn('PluginTestFramework not available, using basic test functionality');
+            this.testFramework = null;
+        }
+        
+        // Initialize demo generator
+        if (typeof PluginDemoGenerator !== 'undefined') {
+            this.demoGenerator = new PluginDemoGenerator(pluginManager);
+        } else {
+            console.warn('PluginDemoGenerator not available');
+            this.demoGenerator = null;
+        }
+        
+        // Initialize test manager (legacy support)
         if (typeof PluginTestManager !== 'undefined') {
             this.testManager = new PluginTestManager(pluginManager);
         } else {
@@ -22,7 +38,7 @@ class PluginManagementUI {
         // Initialize UI
         this.initializeUI();
         
-        console.log('PluginManagementUI initialized');
+        console.log('PluginManagementUI initialized with enhanced test framework');
     }
 
     /**
@@ -581,10 +597,15 @@ class PluginManagementUI {
         }
 
         // Show loading message
-        this.showMessage(`Starting test suite for "${plugin.name}"...`, 'info');
+        this.showMessage(`Starting enhanced test suite for "${plugin.name}"...`, 'info');
 
-        // Create and show test window with enhanced testing
-        this.showEnhancedPluginTestWindow(pluginId, plugin, type);
+        // Use new test framework if available
+        if (this.testFramework) {
+            this.testFramework.openPluginTestInterface(pluginId, plugin, type);
+        } else {
+            // Fallback to enhanced test window
+            this.showEnhancedPluginTestWindow(pluginId, plugin, type);
+        }
     }
 
     /**

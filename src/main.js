@@ -206,6 +206,42 @@ function createMenu() {
           click: () => {
             createCircosWindow();
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Visualization Tools',
+          submenu: [
+            {
+              label: 'Network Graph Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'network-graph');
+              }
+            },
+            {
+              label: 'Protein Interaction Network',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'protein-interaction-network');
+              }
+            },
+            {
+              label: 'Gene Regulatory Network',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'gene-regulatory-network');
+              }
+            },
+            {
+              label: 'Phylogenetic Tree Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'phylogenetic-tree');
+              }
+            },
+            {
+              label: 'Sequence Alignment Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'sequence-alignment');
+              }
+            }
+          ]
         }
       ]
     },
