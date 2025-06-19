@@ -11,6 +11,12 @@ const PluginImplementations = {
     init(app, configManager) {
         this.app = app;
         this.configManager = configManager;
+        // Bind PluginUtils functions to this context
+        Object.keys(PluginUtils).forEach(key => {
+            if (typeof PluginUtils[key] === 'function' && !this[key]) {
+                this[key] = PluginUtils[key].bind(this);
+            }
+        });
         return this;
     },
     

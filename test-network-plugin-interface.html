@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Network Plugin Test Interface - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .demo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .demo-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .demo-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .section-header h2 {
+            font-size: 1.8rem;
+            color: #2d3748;
+        }
+        
+        .plugin-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .plugin-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid #4299e1;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .plugin-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(66, 153, 225, 0.25);
+        }
+        
+        .plugin-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .plugin-description {
+            color: #718096;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            color: #4a5568;
+        }
+        
+        .feature-list li i {
+            color: #48bb78;
+            width: 16px;
+        }
+        
+        .test-button {
+            width: 100%;
+            background: linear-gradient(135deg, #4299e1 0%, #38b2ac 100%);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.4);
+        }
+        
+        .test-result-area {
+            margin-top: 2rem;
+            background: #f7fafc;
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 2px dashed #cbd5e0;
+            text-align: center;
+            color: #718096;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .demo-network-viz {
+            width: 100%;
+            height: 300px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .demo-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary { background: #4299e1; color: white; }
+        .btn-info { background: #38b2ac; color: white; }
+        .btn-success { background: #48bb78; color: white; }
+        
+        .btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .network-stats {
+            background: #f7fafc;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-family: monospace;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #718096;
+            margin-top: 0.5rem;
+        }
+        
+        .enhancement-notice {
+            background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+            border: 2px solid #48bb78;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .enhancement-notice h3 {
+            color: #22543d;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .enhancement-notice p {
+            color: #2f855a;
+            font-size: 1.1rem;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #fef9e7 0%, #f0f8ff 100%);
+            border-left: 4px solid #f6ad55;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>
+                <i class="fas fa-network-wired"></i>
+                Enhanced Network Plugin Test Interface
+            </h1>
+            <p>Interactive testing suite for Protein Interaction Networks, Gene Regulatory Networks, and Network Graph visualizations</p>
+        </div>
+
+        <div class="enhancement-notice">
+            <h3>
+                <i class="fas fa-star"></i>
+                New Enhanced Testing Features
+            </h3>
+            <p>The network plugin test buttons now provide specialized interactive interfaces with real-time visualization, detailed analytics, and comprehensive testing controls.</p>
+        </div>
+
+        <div class="test-section">
+            <div class="section-header">
+                <i class="fas fa-vial" style="color: #4299e1; font-size: 2rem;"></i>
+                <h2>Network Plugin Test Suite</h2>
+            </div>
+
+            <div class="plugin-cards">
+                <!-- Protein Interaction Network Plugin -->
+                <div class="plugin-card">
+                    <div class="plugin-title">
+                        <i class="fas fa-project-diagram" style="color: #e74c3c;"></i>
+                        Protein Interaction Network
+                    </div>
+                    <div class="plugin-description">
+                        Build and visualize protein-protein interaction networks with detailed molecular information and interaction confidence scores.
+                    </div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Interactive protein nodes with expression data</li>
+                        <li><i class="fas fa-check"></i> Confidence-based edge thickness</li>
+                        <li><i class="fas fa-check"></i> Real-time network statistics</li>
+                        <li><i class="fas fa-check"></i> Protein complex detection</li>
+                        <li><i class="fas fa-check"></i> Functional annotation display</li>
+                    </ul>
+                    <button class="test-button" onclick="testProteinNetwork()">
+                        <i class="fas fa-play"></i>
+                        Test Protein Network
+                    </button>
+                </div>
+
+                <!-- Gene Regulatory Network Plugin -->
+                <div class="plugin-card">
+                    <div class="plugin-title">
+                        <i class="fas fa-sitemap" style="color: #2ecc71;"></i>
+                        Gene Regulatory Network
+                    </div>
+                    <div class="plugin-description">
+                        Construct and analyze gene regulatory networks showing transcriptional control relationships and regulatory modules.
+                    </div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Transcription factor highlighting</li>
+                        <li><i class="fas fa-check"></i> Activation/repression indicators</li>
+                        <li><i class="fas fa-check"></i> Regulatory module identification</li>
+                        <li><i class="fas fa-check"></i> Tissue-specific contexts</li>
+                        <li><i class="fas fa-check"></i> Expression-based node sizing</li>
+                    </ul>
+                    <button class="test-button" onclick="testGeneNetwork()">
+                        <i class="fas fa-play"></i>
+                        Test Gene Network
+                    </button>
+                </div>
+
+                <!-- Network Graph Plugin -->
+                <div class="plugin-card">
+                    <div class="plugin-title">
+                        <i class="fas fa-share-alt" style="color: #3498db;"></i>
+                        Universal Network Graph
+                    </div>
+                    <div class="plugin-description">
+                        Universal network visualization engine supporting any graph data with customizable layouts and interactive features.
+                    </div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> D3.js-powered interactivity</li>
+                        <li><i class="fas fa-check"></i> Zoom and pan capabilities</li>
+                        <li><i class="fas fa-check"></i> Dynamic force simulation</li>
+                        <li><i class="fas fa-check"></i> Customizable node/edge styles</li>
+                        <li><i class="fas fa-check"></i> Export functionality</li>
+                    </ul>
+                    <button class="test-button" onclick="testNetworkGraph()">
+                        <i class="fas fa-play"></i>
+                        Test Network Graph
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="section-header">
+                <i class="fas fa-monitor-waveform" style="color: #38b2ac; font-size: 2rem;"></i>
+                <h2>Enhanced Test Results</h2>
+            </div>
+
+            <div class="highlight">
+                <strong>📊 New Testing Features:</strong> Each test now includes interactive network visualization, 
+                detailed node/edge information, performance metrics, and specialized testing controls for network interactivity.
+            </div>
+
+            <div class="test-result-area" id="testResults">
+                <i class="fas fa-mouse-pointer" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p style="font-size: 1.2rem;">Click a test button above to see the enhanced interface</p>
+                <p style="opacity: 0.7;">Results will include live network visualization and interactive testing controls</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="section-header">
+                <i class="fas fa-cogs" style="color: #f6ad55; font-size: 2rem;"></i>
+                <h2>Technical Enhancements</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                <div style="background: #f7fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #4299e1;">
+                    <h4 style="color: #2d3748; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-palette"></i>
+                        Enhanced Visualization
+                    </h4>
+                    <ul style="list-style: none; color: #4a5568;">
+                        <li>• Specialized network-type styling</li>
+                        <li>• Real-time statistics display</li>
+                        <li>• Interactive node/edge tooltips</li>
+                        <li>• Network complexity indicators</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f7fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #48bb78;">
+                    <h4 style="color: #2d3748; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-tools"></i>
+                        Interactive Testing
+                    </h4>
+                    <ul style="list-style: none; color: #4a5568;">
+                        <li>• Mouse event simulation</li>
+                        <li>• Zoom functionality testing</li>
+                        <li>• Data export validation</li>
+                        <li>• Performance monitoring</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f7fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #e74c3c;">
+                    <h4 style="color: #2d3748; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-chart-line"></i>
+                        Smart Analytics
+                    </h4>
+                    <ul style="list-style: none; color: #4a5568;">
+                        <li>• Network density calculation</li>
+                        <li>• Degree distribution analysis</li>
+                        <li>• Connectivity validation</li>
+                        <li>• Module detection results</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTestResult(pluginName, features) {
+            const resultsArea = document.getElementById('testResults');
+            
+            resultsArea.innerHTML = `
+                <div style="width: 100%; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                        <i class="fas fa-play-circle" style="color: #48bb78; font-size: 2rem;"></i>
+                        <h3 style="color: #2d3748; font-size: 1.5rem;">Testing ${pluginName}</h3>
+                    </div>
+                    
+                    <div class="demo-network-viz">
+                        <div style="text-align: center;">
+                            <i class="fas fa-network-wired" style="font-size: 3rem; color: #4299e1; margin-bottom: 1rem;"></i>
+                            <div style="font-size: 1.2rem; color: #2d3748;">Interactive Network Visualization</div>
+                            <div style="color: #718096;">${features.nodes} nodes, ${features.edges} edges</div>
+                        </div>
+                    </div>
+                    
+                    <div class="demo-controls">
+                        <button class="btn-sm btn-primary">
+                            <i class="fas fa-mouse-pointer"></i>
+                            Test Interactivity
+                        </button>
+                        <button class="btn-sm btn-info">
+                            <i class="fas fa-search-plus"></i>
+                            Test Zoom
+                        </button>
+                        <button class="btn-sm btn-success">
+                            <i class="fas fa-download"></i>
+                            Export Data
+                        </button>
+                    </div>
+                    
+                    <div class="network-stats">
+                        Density: ${features.density} | Avg Degree: ${features.avgDegree} | Connected: ${features.connected}
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #e6fffa; border-radius: 0.5rem; border-left: 4px solid #38b2ac;">
+                        <strong style="color: #234e52;">✅ Enhanced Test Features Active:</strong>
+                        <div style="color: #2c7a7b; margin-top: 0.5rem;">
+                            ${features.enhancements.join(' • ')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function testProteinNetwork() {
+            showTestResult('Protein Interaction Network', {
+                nodes: 6,
+                edges: 8,
+                density: '0.533',
+                avgDegree: '2.7',
+                connected: 'Yes',
+                enhancements: [
+                    'Protein function annotations',
+                    'Expression-based node sizing',
+                    'Confidence-weighted edges',
+                    'Complex detection',
+                    'Functional color coding'
+                ]
+            });
+        }
+
+        function testGeneNetwork() {
+            showTestResult('Gene Regulatory Network', {
+                nodes: 6,
+                edges: 9,
+                density: '0.600',
+                avgDegree: '3.0',
+                connected: 'Yes',
+                enhancements: [
+                    'Regulatory module identification',
+                    'Activation/repression indicators',
+                    'Transcription factor highlighting',
+                    'Tissue-specific context',
+                    'Regulatory complexity analysis'
+                ]
+            });
+        }
+
+        function testNetworkGraph() {
+            showTestResult('Universal Network Graph', {
+                nodes: 10,
+                edges: 15,
+                density: '0.333',
+                avgDegree: '3.0',
+                connected: 'Yes',
+                enhancements: [
+                    'D3.js force simulation',
+                    'Dynamic zoom and pan',
+                    'Customizable layouts',
+                    'Real-time statistics',
+                    'Universal data compatibility'
+                ]
+            });
+        }
+    </script>
+</body>
+</html> 

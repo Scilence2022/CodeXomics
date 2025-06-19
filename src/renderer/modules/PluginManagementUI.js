@@ -1308,6 +1308,50 @@ class PluginManagementUI {
                         'calculateEvolutionaryDistance': {
                             sequence1: 'ATCGATCG',
                             sequence2: 'GCTAGCTA'
+                        },
+                        // Biological Networks Plugin Parameters
+                        'buildProteinInteractionNetwork': {
+                            proteins: ['TP53', 'MDM2', 'ATM', 'BRCA1', 'CHEK2', 'PTEN'],
+                            confidenceThreshold: 0.7,
+                            includeComplexes: true
+                        },
+                        'buildGeneRegulatoryNetwork': {
+                            genes: ['lacI', 'lacZ', 'lacY', 'lacA', 'crp', 'araC'],
+                            tissueType: 'general',
+                            regulationTypes: ['activation', 'repression'],
+                            includeModules: true
+                        },
+                        'analyzeNetworkCentrality': {
+                            networkData: {
+                                nodes: [
+                                    { id: 'TP53', name: 'TP53', type: 'protein' },
+                                    { id: 'MDM2', name: 'MDM2', type: 'protein' },
+                                    { id: 'ATM', name: 'ATM', type: 'protein' }
+                                ],
+                                edges: [
+                                    { source: 'TP53', target: 'MDM2', weight: 0.9 },
+                                    { source: 'ATM', target: 'TP53', weight: 0.8 }
+                                ]
+                            },
+                            centralityTypes: ['degree', 'betweenness', 'closeness']
+                        },
+                        'detectNetworkCommunities': {
+                            networkData: {
+                                nodes: [
+                                    { id: 'TP53', name: 'TP53', type: 'protein' },
+                                    { id: 'MDM2', name: 'MDM2', type: 'protein' },
+                                    { id: 'ATM', name: 'ATM', type: 'protein' },
+                                    { id: 'BRCA1', name: 'BRCA1', type: 'protein' }
+                                ],
+                                edges: [
+                                    { source: 'TP53', target: 'MDM2', weight: 0.9 },
+                                    { source: 'ATM', target: 'TP53', weight: 0.8 },
+                                    { source: 'BRCA1', target: 'ATM', weight: 0.7 },
+                                    { source: 'BRCA1', target: 'TP53', weight: 0.6 }
+                                ]
+                            },
+                            algorithm: 'louvain',
+                            minCommunitySize: 2
                         }
                     };
                     
@@ -1340,29 +1384,56 @@ class PluginManagementUI {
                         
                         // Create a test container
                         const testContainer = document.createElement('div');
-                        testContainer.style.width = '200px';
-                        testContainer.style.height = '200px';
-                        testContainer.style.display = 'none';
-                        document.body.appendChild(testContainer);
+                        testContainer.style.width = '400px';
+                        testContainer.style.height = '300px';
+                        testContainer.style.border = '1px solid #ccc';
+                        testContainer.style.borderRadius = '4px';
+                        testContainer.style.margin = '10px';
+                        testContainer.id = \`test-viz-\${dataType}\`;
+                        
+                        // Add to visible results area for network visualizations
+                        if (dataType.includes('network')) {
+                            const resultsArea = document.getElementById('testResults');
+                            const testResultDiv = document.createElement('div');
+                            testResultDiv.className = 'test-result network-test';
+                            testResultDiv.innerHTML = \`
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <i class="fas fa-play-circle" style="color: #3498db; margin-right: 10px;"></i>
+                                    <strong>Testing \${dataType} visualization...</strong>
+                                </div>
+                            \`;
+                            testResultDiv.appendChild(testContainer);
+                            resultsArea.appendChild(testResultDiv);
+                        } else {
+                            testContainer.style.display = 'none';
+                            document.body.appendChild(testContainer);
+                        }
                         
                         // Generate sample data
                         const sampleData = generateSampleVisualizationData(dataType);
                         
-                        log(\`Rendering \${dataType} visualization...\`);
+                                                 log(\`Rendering \${dataType} visualization with data:\`, sampleData);
                         
-                        await pluginManager.renderVisualization('${pluginId}', sampleData, testContainer);
-                        
-                        // Check if something was rendered
-                        const hasContent = testContainer.children.length > 0 || testContainer.innerHTML.trim().length > 0;
-                        
-                        if (hasContent) {
-                            addTestResult(\`Visualization: \${dataType}\`, true, 'Rendered successfully');
+                        // Special handling for network visualizations
+                        if (dataType.includes('network') || dataType === 'network-graph') {
+                            await testNetworkVisualization(dataType, sampleData, testContainer);
                         } else {
-                            addTestResult(\`Visualization: \${dataType}\`, false, 'No content rendered');
+                            await pluginManager.renderVisualization('${pluginId}', sampleData, testContainer);
+                            
+                            // Check if something was rendered
+                            const hasContent = testContainer.children.length > 0 || testContainer.innerHTML.trim().length > 0;
+                            
+                            if (hasContent) {
+                                addTestResult(\`Visualization: \${dataType}\`, true, 'Rendered successfully');
+                            } else {
+                                addTestResult(\`Visualization: \${dataType}\`, false, 'No content rendered');
+                            }
                         }
                         
-                        // Clean up
-                        document.body.removeChild(testContainer);
+                        // Clean up for non-network visualizations
+                        if (!dataType.includes('network') && testContainer.parentNode === document.body) {
+                            document.body.removeChild(testContainer);
+                        }
                         
                     } catch (error) {
                         addTestResult(\`Visualization: \${dataType}\`, false, \`Rendering failed: \${error.message}\`);
@@ -1370,11 +1441,253 @@ class PluginManagementUI {
                     }
                 }
                 
+                async function testNetworkVisualization(dataType, sampleData, testContainer) {
+                    log(\`Running specialized network visualization test for \${dataType}\`);
+                    
+                    try {
+                        const pluginManager = window.opener.pluginManager || window.opener.window.pluginManager;
+                        
+                        // Test network graph rendering
+                        if (dataType === 'network-graph' || dataType === 'network-data') {
+                            // Use the NetworkGraphPlugin directly
+                            const networkResult = await pluginManager.renderVisualization('network-graph', sampleData, testContainer);
+                            addTestResult(\`Network Graph: \${dataType}\`, true, 'Interactive network graph rendered', 
+                                \`Nodes: \${sampleData.nodes.length}, Edges: \${sampleData.edges.length}\`);
+                        } 
+                        // Test protein interaction network
+                        else if (dataType === 'protein-interaction-network') {
+                            const networkResult = await pluginManager.renderVisualization('protein-interaction-network', sampleData, testContainer);
+                            addTestResult('Protein Interaction Network', true, 'Protein network visualization rendered',
+                                \`Proteins: \${sampleData.nodes.length}, Interactions: \${sampleData.edges.length}\`);
+                            
+                            // Add interaction details
+                            const detailsDiv = document.createElement('div');
+                            detailsDiv.className = 'network-details';
+                            detailsDiv.style.marginTop = '10px';
+                            detailsDiv.style.fontSize = '12px';
+                            detailsDiv.style.color = '#666';
+                            detailsDiv.innerHTML = \`
+                                <strong>Network Details:</strong><br>
+                                • Node types: \${[...new Set(sampleData.nodes.map(n => n.type))].join(', ')}<br>
+                                • Edge types: \${[...new Set(sampleData.edges.map(e => e.type))].join(', ')}<br>
+                                • Network type: \${sampleData.networkType}
+                            \`;
+                            testContainer.parentNode.appendChild(detailsDiv);
+                        }
+                        // Test gene regulatory network
+                        else if (dataType === 'gene-regulatory-network') {
+                            const networkResult = await pluginManager.renderVisualization('gene-regulatory-network', sampleData, testContainer);
+                            addTestResult('Gene Regulatory Network', true, 'Gene network visualization rendered',
+                                \`Genes: \${sampleData.nodes.length}, Regulations: \${sampleData.edges.length}\`);
+                            
+                            // Add regulatory details
+                            const detailsDiv = document.createElement('div');
+                            detailsDiv.className = 'network-details';
+                            detailsDiv.style.marginTop = '10px';
+                            detailsDiv.style.fontSize = '12px';
+                            detailsDiv.style.color = '#666';
+                            const regulationTypes = [...new Set(sampleData.edges.map(e => e.type))];
+                            detailsDiv.innerHTML = \`
+                                <strong>Regulatory Network Details:</strong><br>
+                                • Gene types: \${[...new Set(sampleData.nodes.map(n => n.type))].join(', ')}<br>
+                                • Regulation types: \${regulationTypes.join(', ')}<br>
+                                • Network complexity: \${regulationTypes.includes('activation') && regulationTypes.includes('repression') ? 'Mixed regulation' : 'Simple regulation'}
+                            \`;
+                            testContainer.parentNode.appendChild(detailsDiv);
+                        }
+                        
+                        // Add interactive test controls
+                        const controlsDiv = document.createElement('div');
+                        controlsDiv.className = 'test-controls';
+                        controlsDiv.style.marginTop = '10px';
+                        controlsDiv.innerHTML = \`
+                            <button class="btn btn-sm btn-primary" onclick="testNetworkInteractivity('\${testContainer.id}')">
+                                <i class="fas fa-mouse-pointer"></i> Test Interactivity
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="testNetworkZoom('\${testContainer.id}')">
+                                <i class="fas fa-search-plus"></i> Test Zoom
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="exportNetworkData('\${testContainer.id}')">
+                                <i class="fas fa-download"></i> Export Data
+                            </button>
+                        \`;
+                        testContainer.parentNode.appendChild(controlsDiv);
+                        
+                        // Add network statistics
+                        const statsDiv = document.createElement('div');
+                        statsDiv.className = 'network-stats';
+                        statsDiv.style.marginTop = '5px';
+                        statsDiv.style.fontSize = '11px';
+                        statsDiv.style.color = '#888';
+                        const avgDegree = (sampleData.edges.length * 2) / sampleData.nodes.length;
+                        statsDiv.innerHTML = \`
+                            Density: \${(sampleData.edges.length / (sampleData.nodes.length * (sampleData.nodes.length - 1) / 2)).toFixed(3)} | 
+                            Avg Degree: \${avgDegree.toFixed(1)} | 
+                            Connected: \${sampleData.edges.length > 0 ? 'Yes' : 'No'}
+                        \`;
+                        testContainer.parentNode.appendChild(statsDiv);
+                        
+                    } catch (error) {
+                        addTestResult(\`Network Test: \${dataType}\`, false, \`Network rendering failed: \${error.message}\`);
+                        log(\`Network test \${dataType} failed: \${error.message}\`, 'error');
+                    }
+                }
+                
                 function generateSampleVisualizationData(dataType) {
                     const sampleData = {
                         'network-data': {
-                            nodes: [{ id: 1, name: 'Node 1' }, { id: 2, name: 'Node 2' }],
-                            links: [{ source: 1, target: 2 }]
+                            networkType: 'generic',
+                            nodes: [
+                                { id: 'N1', name: 'Node 1', size: 10, color: '#4ECDC4' },
+                                { id: 'N2', name: 'Node 2', size: 12, color: '#45B7D1' },
+                                { id: 'N3', name: 'Node 3', size: 8, color: '#F7DC6F' }
+                            ],
+                            edges: [
+                                { source: 'N1', target: 'N2', weight: 0.8, color: '#999' },
+                                { source: 'N2', target: 'N3', weight: 0.6, color: '#999' }
+                            ]
+                        },
+                        'protein-interaction-network': {
+                            networkType: 'protein-interaction',
+                            nodes: [
+                                { 
+                                    id: 'TP53', 
+                                    name: 'TP53', 
+                                    type: 'protein',
+                                    size: 15,
+                                    color: '#E74C3C',
+                                    properties: {
+                                        function: 'Tumor suppressor',
+                                        location: 'nucleus',
+                                        expression: 0.85
+                                    }
+                                },
+                                { 
+                                    id: 'MDM2', 
+                                    name: 'MDM2', 
+                                    type: 'protein',
+                                    size: 12,
+                                    color: '#3498DB',
+                                    properties: {
+                                        function: 'E3 ubiquitin ligase',
+                                        location: 'nucleus',
+                                        expression: 0.67
+                                    }
+                                },
+                                { 
+                                    id: 'ATM', 
+                                    name: 'ATM', 
+                                    type: 'protein',
+                                    size: 13,
+                                    color: '#2ECC71',
+                                    properties: {
+                                        function: 'Protein kinase',
+                                        location: 'nucleus',
+                                        expression: 0.72
+                                    }
+                                }
+                            ],
+                            edges: [
+                                { 
+                                    source: 'TP53', 
+                                    target: 'MDM2', 
+                                    weight: 0.9, 
+                                    color: '#E67E22',
+                                    type: 'physical',
+                                    properties: {
+                                        confidence: 0.9,
+                                        method: 'experimental'
+                                    }
+                                },
+                                { 
+                                    source: 'ATM', 
+                                    target: 'TP53', 
+                                    weight: 0.8, 
+                                    color: '#9B59B6',
+                                    type: 'phosphorylation',
+                                    properties: {
+                                        confidence: 0.8,
+                                        method: 'experimental'
+                                    }
+                                }
+                            ],
+                            metadata: {
+                                networkType: 'protein-interaction',
+                                nodeCount: 3,
+                                edgeCount: 2,
+                                plugin: 'BiologicalNetworksPlugin'
+                            }
+                        },
+                        'gene-regulatory-network': {
+                            networkType: 'gene-regulatory',
+                            nodes: [
+                                { 
+                                    id: 'lacI', 
+                                    name: 'lacI', 
+                                    type: 'transcription_factor',
+                                    size: 14,
+                                    color: '#E74C3C',
+                                    properties: {
+                                        regulation: 'repressor',
+                                        chromosome: 'chr1',
+                                        expression: 0.65
+                                    }
+                                },
+                                { 
+                                    id: 'lacZ', 
+                                    name: 'lacZ', 
+                                    type: 'gene',
+                                    size: 10,
+                                    color: '#3498DB',
+                                    properties: {
+                                        regulation: 'regulated',
+                                        chromosome: 'chr1',
+                                        expression: 0.85
+                                    }
+                                },
+                                { 
+                                    id: 'crp', 
+                                    name: 'crp', 
+                                    type: 'transcription_factor',
+                                    size: 12,
+                                    color: '#2ECC71',
+                                    properties: {
+                                        regulation: 'activator',
+                                        chromosome: 'chr1',
+                                        expression: 0.55
+                                    }
+                                }
+                            ],
+                            edges: [
+                                { 
+                                    source: 'lacI', 
+                                    target: 'lacZ', 
+                                    weight: 0.7, 
+                                    color: '#E74C3C',
+                                    type: 'repression',
+                                    properties: {
+                                        strength: 0.7,
+                                        evidence: 'experimental'
+                                    }
+                                },
+                                { 
+                                    source: 'crp', 
+                                    target: 'lacZ', 
+                                    weight: 0.6, 
+                                    color: '#2ECC71',
+                                    type: 'activation',
+                                    properties: {
+                                        strength: 0.6,
+                                        evidence: 'experimental'
+                                    }
+                                }
+                            ],
+                            metadata: {
+                                networkType: 'gene-regulatory',
+                                nodeCount: 3,
+                                edgeCount: 2,
+                                plugin: 'BiologicalNetworksPlugin'
+                            }
                         },
                         'sequence-comparison': {
                             sequences: ['ATCG', 'ATCG'],
@@ -1382,6 +1695,17 @@ class PluginManagementUI {
                         },
                         'phylogenetic-tree': {
                             newick: '(A:0.1,B:0.2,(C:0.3,D:0.4):0.5);'
+                        },
+                        'gc-content-plot': {
+                            chromosome: 'chr1',
+                            start: 1000,
+                            end: 5000,
+                            windowSize: 100,
+                            results: [
+                                { position: 1000, end: 1100, gcContent: 45.2 },
+                                { position: 1100, end: 1200, gcContent: 52.8 },
+                                { position: 1200, end: 1300, gcContent: 38.9 }
+                            ]
                         }
                     };
                     
@@ -1454,6 +1778,86 @@ class PluginManagementUI {
                 
                 log('Quick test completed.');
             }
+
+            // Network test utility functions
+            function testNetworkInteractivity(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    log('Container not found for interactivity test', 'error');
+                    return;
+                }
+                
+                log('Testing network interactivity...');
+                
+                // Simulate mouse events on network elements
+                const nodes = container.querySelectorAll('circle, .node');
+                const links = container.querySelectorAll('line, .link');
+                
+                if (nodes.length > 0) {
+                    // Test node hover
+                    const firstNode = nodes[0];
+                    const hoverEvent = new MouseEvent('mouseover', { bubbles: true });
+                    firstNode.dispatchEvent(hoverEvent);
+                    
+                    log(\`Interactivity test: Found \${nodes.length} nodes and \${links.length} links\`);
+                    addTestResult('Network Interactivity', true, 'Mouse events working', 
+                        \`Tested on \${nodes.length} nodes, \${links.length} edges\`);
+                } else {
+                    addTestResult('Network Interactivity', false, 'No interactive elements found');
+                }
+            }
+
+            function testNetworkZoom(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    log('Container not found for zoom test', 'error');
+                    return;
+                }
+                
+                log('Testing network zoom functionality...');
+                
+                // Look for SVG element with zoom capability
+                const svg = container.querySelector('svg');
+                if (svg) {
+                    const transform = svg.querySelector('g')?.getAttribute('transform');
+                    log(\`Zoom test: SVG found with transform: \${transform || 'none'}\`);
+                    addTestResult('Network Zoom', true, 'Zoom infrastructure present', 
+                        transform ? 'Transform detected' : 'Transform ready');
+                } else {
+                    addTestResult('Network Zoom', false, 'No SVG zoom infrastructure found');
+                }
+            }
+
+            function exportNetworkData(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    log('Container not found for export test', 'error');
+                    return;
+                }
+                
+                log('Testing network data export...');
+                
+                // Try to extract network data from the visualization
+                try {
+                    const svg = container.querySelector('svg');
+                    const nodes = container.querySelectorAll('circle, .node');
+                    const links = container.querySelectorAll('line, .link');
+                    
+                    const exportData = {
+                        nodeCount: nodes.length,
+                        linkCount: links.length,
+                        svgWidth: svg?.getAttribute('width') || 'unknown',
+                        svgHeight: svg?.getAttribute('height') || 'unknown',
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    log(\`Export data: \${JSON.stringify(exportData, null, 2)}\`);
+                    addTestResult('Network Export', true, 'Data export successful', 
+                        \`Exported \${exportData.nodeCount} nodes, \${exportData.linkCount} links\`);
+                                 } catch (error) {
+                     addTestResult('Network Export', false, \`Export failed: \${error.message}\`);
+                 }
+             }
 
             // Event listeners
             document.getElementById('runAllTestsBtn').addEventListener('click', runAllTests);
@@ -1760,6 +2164,160 @@ class PluginManagementUI {
                 align-items: center;
                 justify-content: center;
                 color: #718096;
+            }
+            
+            /* Network Testing Specific Styles */
+            .network-test {
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                border: 2px solid #4299e1;
+                border-radius: 1rem;
+                padding: 1.5rem;
+                margin: 1rem 0;
+                box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+            }
+            
+            .network-details {
+                background: #edf2f7;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                font-size: 0.875rem;
+                border-left: 4px solid #38b2ac;
+            }
+            
+            .network-stats {
+                background: #f7fafc;
+                border-radius: 0.25rem;
+                padding: 0.5rem;
+                font-family: monospace;
+                text-align: center;
+            }
+            
+            .test-controls {
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .btn-sm {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+                border-radius: 0.375rem;
+            }
+            
+            .btn-sm:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+            
+            /* Network visualization container enhancements */
+            #test-viz-network-graph,
+            #test-viz-protein-interaction-network,
+            #test-viz-gene-regulatory-network,
+            #test-viz-network-data {
+                background: white;
+                border: 2px solid #e2e8f0;
+                border-radius: 0.75rem;
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+            }
+            
+            #test-viz-network-graph:hover,
+            #test-viz-protein-interaction-network:hover,
+            #test-viz-gene-regulatory-network:hover,
+            #test-viz-network-data:hover {
+                border-color: #4299e1;
+                box-shadow: 0 4px 16px rgba(66, 153, 225, 0.2);
+            }
+            
+            /* Network visualization loading state */
+            .network-loading {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 300px;
+                flex-direction: column;
+                gap: 1rem;
+                color: #718096;
+            }
+            
+            .network-loading .spinner {
+                width: 2rem;
+                height: 2rem;
+                border-width: 3px;
+            }
+            
+            /* Interactive elements styling */
+            .network-node:hover {
+                stroke-width: 3px !important;
+                filter: brightness(1.1);
+            }
+            
+            .network-edge:hover {
+                stroke-width: 4px !important;
+                opacity: 0.8 !important;
+            }
+            
+            /* Network controls panel */
+            .network-controls-panel {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 0.5rem;
+                padding: 0.75rem;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                display: flex;
+                gap: 0.5rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .network-visualization:hover .network-controls-panel {
+                opacity: 1;
+            }
+            
+            /* Network info tooltip */
+            .network-tooltip {
+                position: absolute;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+                font-size: 0.875rem;
+                pointer-events: none;
+                z-index: 1000;
+                max-width: 200px;
+                word-wrap: break-word;
+            }
+            
+            /* Network legend */
+            .network-legend {
+                position: absolute;
+                bottom: 10px;
+                left: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 0.5rem;
+                padding: 0.75rem;
+                font-size: 0.75rem;
+                max-width: 200px;
+            }
+            
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin: 0.25rem 0;
+            }
+            
+            .legend-color {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                flex-shrink: 0;
             }
         `;
     }

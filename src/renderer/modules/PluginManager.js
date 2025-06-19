@@ -200,24 +200,32 @@ class PluginManager {
             author: 'Genome AI Studio Team',
             functions: {
                 buildProteinInteractionNetwork: {
-                    description: 'Build protein-protein interaction network',
+                    description: 'Build protein-protein interaction network from protein identifiers',
                     parameters: {
                         type: 'object',
                         properties: {
                             proteins: { 
                                 type: 'array', 
                                 items: { type: 'string' },
-                                description: 'Array of protein identifiers' 
+                                description: 'Array of protein identifiers or names (e.g., ["DNA_GYRA", "DNA_GYRB", "SSB_PROTEIN"])' 
                             },
                             confidenceThreshold: { 
                                 type: 'number', 
-                                description: 'Minimum interaction confidence (0-1)', 
-                                default: 0.7 
+                                description: 'Minimum interaction confidence threshold (0.0-1.0)', 
+                                default: 0.7,
+                                minimum: 0.0,
+                                maximum: 1.0
+                            },
+                            includeComplexes: { 
+                                type: 'boolean', 
+                                description: 'Whether to identify protein complexes', 
+                                default: true 
                             },
                             interactionDatabase: { 
                                 type: 'string', 
-                                description: 'Database source for interactions', 
-                                default: 'string' 
+                                description: 'Database source for interactions (string, biogrid, intact)', 
+                                default: 'predicted',
+                                enum: ['predicted', 'string', 'biogrid', 'intact']
                             }
                         },
                         required: ['proteins']
@@ -226,25 +234,31 @@ class PluginManager {
                 },
                 
                 buildGeneRegulatoryNetwork: {
-                    description: 'Construct gene regulatory network',
+                    description: 'Construct gene regulatory network from gene identifiers',
                     parameters: {
                         type: 'object',
                         properties: {
                             genes: { 
                                 type: 'array', 
                                 items: { type: 'string' },
-                                description: 'Array of gene identifiers' 
+                                description: 'Array of gene identifiers or names (e.g., ["lacI", "lacZ", "lacY", "crp"])' 
                             },
                             regulationTypes: {
                                 type: 'array',
                                 items: { type: 'string', enum: ['activation', 'repression', 'binding'] },
-                                description: 'Types of regulation to include',
+                                description: 'Types of regulatory interactions to include',
                                 default: ['activation', 'repression']
                             },
                             tissueType: { 
                                 type: 'string', 
-                                description: 'Tissue/cell type context', 
-                                default: 'all' 
+                                description: 'Tissue or cell type context for regulation', 
+                                default: 'general',
+                                enum: ['general', 'liver', 'brain', 'muscle', 'heart', 'kidney']
+                            },
+                            includeModules: { 
+                                type: 'boolean', 
+                                description: 'Whether to identify regulatory modules', 
+                                default: true 
                             }
                         },
                         required: ['genes']
@@ -253,18 +267,18 @@ class PluginManager {
                 },
                 
                 analyzeNetworkCentrality: {
-                    description: 'Analyze network centrality measures',
+                    description: 'Analyze network centrality measures to identify important nodes',
                     parameters: {
                         type: 'object',
                         properties: {
                             networkData: { 
                                 type: 'object', 
-                                description: 'Network data from previous analysis' 
+                                description: 'Network data object from buildProteinInteractionNetwork or buildGeneRegulatoryNetwork' 
                             },
                             centralityTypes: {
                                 type: 'array',
                                 items: { type: 'string', enum: ['degree', 'betweenness', 'closeness', 'eigenvector'] },
-                                description: 'Centrality measures to calculate',
+                                description: 'Types of centrality measures to calculate (degree, betweenness, closeness, eigenvector)',
                                 default: ['degree', 'betweenness', 'closeness']
                             }
                         },
@@ -274,24 +288,26 @@ class PluginManager {
                 },
                 
                 detectNetworkCommunities: {
-                    description: 'Detect communities in biological networks',
+                    description: 'Detect communities or modules in biological networks',
                     parameters: {
                         type: 'object',
                         properties: {
                             networkData: { 
                                 type: 'object', 
-                                description: 'Network data from previous analysis' 
+                                description: 'Network data object from buildProteinInteractionNetwork or buildGeneRegulatoryNetwork' 
                             },
                             algorithm: {
                                 type: 'string',
                                 enum: ['louvain', 'leiden', 'greedy'],
-                                description: 'Community detection algorithm',
+                                description: 'Community detection algorithm to use',
                                 default: 'louvain'
                             },
                             resolution: { 
                                 type: 'number', 
-                                description: 'Resolution parameter for community detection', 
-                                default: 1.0 
+                                description: 'Resolution parameter for community detection (higher = more communities)', 
+                                default: 1.0,
+                                minimum: 0.1,
+                                maximum: 5.0
                             }
                         },
                         required: ['networkData']
