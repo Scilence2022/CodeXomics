@@ -2078,22 +2078,49 @@ class ChatManager {
      * Get essential tool information that should always be included
      */
     getEssentialToolInformation() {
+        const context = this.getCurrentContext();
+        const toolCount = context.genomeBrowser.toolSources.total;
+        
+        // Get a sample of key tools from each category
+        const keyTools = [
+            // Navigation & State
+            'navigate_to_position', 'get_current_state', 'jump_to_gene', 'zoom_to_gene',
+            // Search & Discovery  
+            'search_features', 'search_gene_by_name', 'search_sequence_motif',
+            // Sequence Analysis
+            'get_sequence', 'translate_dna', 'compute_gc', 'reverse_complement',
+            // Advanced Analysis
+            'analyze_region', 'predict_promoter', 'find_restriction_sites',
+            // BLAST & External
+            'blast_search', 'blast_sequence_from_region',
+            // Protein Structure
+            'open_protein_viewer', 'fetch_protein_structure',
+            // Data Management
+            'get_genome_info', 'export_data', 'create_annotation'
+        ];
+        
         return `
 ===CRITICAL INSTRUCTION FOR TOOL CALLS===
 When a user asks you to perform ANY action that requires using tools, you MUST respond with ONLY a JSON object:
 
 {"tool_name": "tool_name_here", "parameters": {"param1": "value1", "param2": "value2"}}
 
-Key Available Tools:
-- get_genome_info: Get detailed information about loaded genomes
-- navigate_to_position: Navigate to genomic coordinates  
-- search_features: Search for genes/features by name
-- get_current_state: Get current browser state
-- get_sequence: Retrieve DNA sequences
-- analyze_region: Analyze genomic regions
-- blast_search: BLAST sequence similarity search
+AVAILABLE TOOLS SUMMARY:
+- Total Available Tools: ${toolCount}
+- Local Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}  
+- MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
-For complete tool documentation, ask me to show all available tools.`;
+KEY TOOLS BY CATEGORY:
+Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene
+Search & Discovery: search_features, search_gene_by_name, search_sequence_motif
+Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
+Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
+BLAST & External: blast_search, blast_sequence_from_region
+Protein Structure: open_protein_viewer, fetch_protein_structure
+Data Management: get_genome_info, export_data, create_annotation
+
+For complete tool documentation with all ${toolCount} available tools, ask me to show all available tools.`;
     }
 
     /**
@@ -3030,6 +3057,15 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.localBlastDatabaseInfo(parameters);
                     break;
                     
+                // Metabolic pathway tools
+                case 'show_metabolic_pathway':
+                    result = await this.showMetabolicPathway(parameters);
+                    break;
+                    
+                case 'find_pathway_genes':
+                    result = await this.findPathwayGenes(parameters);
+                    break;
+                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -3154,7 +3190,11 @@ ${this.getPluginSystemInfo()}`;
             'open_protein_viewer',
             'fetch_protein_structure',
             'search_protein_by_gene',
-            'get_pdb_details'
+            'get_pdb_details',
+            
+            // Metabolic Pathways
+            'show_metabolic_pathway',
+            'find_pathway_genes'
         ];
         
         // Add plugin functions if available
@@ -6662,6 +6702,194 @@ ${this.getPluginSystemInfo()}`;
         if (!sequence || sequence.length === 0) return 0;
         const gcCount = (sequence.match(/[GC]/gi) || []).length;
         return Math.round((gcCount / sequence.length) * 100 * 100) / 100; // Round to 2 decimal places
+    }
+
+    /**
+     * Show metabolic pathway visualization
+     */
+    async showMetabolicPathway(params) {
+        try {
+            const { pathwayName, highlightGenes = [], organism = 'generic' } = params;
+            
+            // Define pathway templates
+            const pathwayTemplates = {
+                glycolysis: {
+                    name: 'Glycolysis Pathway',
+                    description: 'Glucose metabolism pathway - converts glucose to pyruvate',
+                    genes: ['glk', 'pgi', 'pfkA', 'fbaA', 'tpiA', 'gapA', 'pgk', 'gpmA', 'eno', 'pykF'],
+                    enzymes: [
+                        'Glucokinase (glk)',
+                        'Glucose-6-phosphate isomerase (pgi)',
+                        'Phosphofructokinase (pfkA)', 
+                        'Fructose-bisphosphate aldolase (fbaA)',
+                        'Triosephosphate isomerase (tpiA)',
+                        'Glyceraldehyde-3-phosphate dehydrogenase (gapA)',
+                        'Phosphoglycerate kinase (pgk)',
+                        'Phosphoglycerate mutase (gpmA)',
+                        'Enolase (eno)',
+                        'Pyruvate kinase (pykF)'
+                    ],
+                    metabolites: [
+                        'Glucose → Glucose-6-phosphate → Fructose-6-phosphate',
+                        'Fructose-1,6-bisphosphate → DHAP + G3P',
+                        'G3P → 1,3-BPG → 3-PG → 2-PG → PEP → Pyruvate'
+                    ]
+                },
+                tca_cycle: {
+                    name: 'TCA Cycle (Citric Acid Cycle)',
+                    description: 'Central metabolic pathway for energy production',
+                    genes: ['gltA', 'acnA', 'icdA', 'sucA', 'sucC', 'sdhA', 'fumA', 'mdh'],
+                    enzymes: [
+                        'Citrate synthase (gltA)',
+                        'Aconitase (acnA)',
+                        'Isocitrate dehydrogenase (icdA)',
+                        'α-Ketoglutarate dehydrogenase (sucA)',
+                        'Succinyl-CoA synthetase (sucC)',
+                        'Succinate dehydrogenase (sdhA)',
+                        'Fumarase (fumA)',
+                        'Malate dehydrogenase (mdh)'
+                    ],
+                    metabolites: [
+                        'Acetyl-CoA + Oxaloacetate → Citrate',
+                        'Citrate → Isocitrate → α-Ketoglutarate',
+                        'α-Ketoglutarate → Succinyl-CoA → Succinate',
+                        'Succinate → Fumarate → Malate → Oxaloacetate'
+                    ]
+                },
+                pentose_phosphate: {
+                    name: 'Pentose Phosphate Pathway',
+                    description: 'Alternative glucose oxidation pathway producing NADPH',
+                    genes: ['zwf', 'pgl', 'gnd', 'rpe', 'rpiA', 'tktA', 'talA'],
+                    enzymes: [
+                        'Glucose-6-phosphate dehydrogenase (zwf)',
+                        '6-phosphogluconolactonase (pgl)',
+                        '6-phosphogluconate dehydrogenase (gnd)',
+                        'Ribulose-phosphate 3-epimerase (rpe)',
+                        'Ribose-5-phosphate isomerase (rpiA)',
+                        'Transketolase (tktA)',
+                        'Transaldolase (talA)'
+                    ]
+                }
+            };
+            
+            const pathway = pathwayTemplates[pathwayName.toLowerCase()] || 
+                            pathwayTemplates[pathwayName.replace(/[\s-]/g, '_').toLowerCase()];
+            
+            if (!pathway) {
+                return {
+                    success: false,
+                    error: `Pathway '${pathwayName}' not found. Available pathways: ${Object.keys(pathwayTemplates).join(', ')}`
+                };
+            }
+            
+            // Search for pathway genes in the current genome
+            const foundGenes = [];
+            const searchPromises = pathway.genes.map(async (gene) => {
+                try {
+                    const searchResult = await this.executeMicrobeFunction('searchGeneByName', { name: gene });
+                    if (searchResult && searchResult.feature) {
+                        foundGenes.push({
+                            gene: gene,
+                            found: true,
+                            location: `${searchResult.chromosome}:${searchResult.feature.start}-${searchResult.feature.end}`,
+                            product: searchResult.feature.product || 'Unknown product'
+                        });
+                    } else {
+                        foundGenes.push({ gene: gene, found: false });
+                    }
+                } catch (error) {
+                    foundGenes.push({ gene: gene, found: false, error: error.message });
+                }
+            });
+            
+            await Promise.all(searchPromises);
+            
+            // Generate pathway visualization
+            const visualization = {
+                pathwayName: pathway.name,
+                description: pathway.description,
+                totalGenes: pathway.genes.length,
+                foundGenes: foundGenes.filter(g => g.found).length,
+                geneDetails: foundGenes,
+                enzymes: pathway.enzymes || [],
+                metabolites: pathway.metabolites || [],
+                highlightedGenes: highlightGenes,
+                organism: organism
+            };
+            
+            // Show notification with pathway info
+            this.showNotification(`${pathway.name}: Found ${visualization.foundGenes}/${visualization.totalGenes} genes in current genome`, 'info');
+            
+            return {
+                success: true,
+                pathway: visualization,
+                summary: `Pathway Analysis: ${pathway.name}`,
+                details: `Found ${visualization.foundGenes} out of ${visualization.totalGenes} expected genes`,
+                genes: foundGenes.filter(g => g.found)
+            };
+            
+        } catch (error) {
+            console.error('Error showing metabolic pathway:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Find genes associated with a metabolic pathway
+     */
+    async findPathwayGenes(params) {
+        try {
+            const { pathwayName, includeRegulation = false } = params;
+            
+            // Use the same pathway templates
+            const result = await this.showMetabolicPathway({ pathwayName });
+            
+            if (!result.success) {
+                return result;
+            }
+            
+            const foundGenes = result.genes || [];
+            
+            // If includeRegulation is true, search for regulatory genes
+            let regulatoryGenes = [];
+            if (includeRegulation) {
+                const regulatorySearchTerms = [
+                    `${pathwayName}R`, `${pathwayName}regulator`, `${pathwayName}activator`,
+                    'crp', 'cra', 'fnr', 'arcA' // Common regulatory genes
+                ];
+                
+                for (const term of regulatorySearchTerms) {
+                    try {
+                        const regResult = await this.searchFeatures({ query: term, caseSensitive: false });
+                        if (regResult.success && regResult.results.length > 0) {
+                            regulatoryGenes.push(...regResult.results.slice(0, 3)); // Limit to 3 per term
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to search for regulatory gene ${term}:`, error);
+                    }
+                }
+            }
+            
+            return {
+                success: true,
+                pathwayName: result.pathway.pathwayName,
+                description: result.pathway.description,
+                metabolicGenes: foundGenes,
+                regulatoryGenes: includeRegulation ? regulatoryGenes : [],
+                totalGenes: foundGenes.length + (includeRegulation ? regulatoryGenes.length : 0),
+                summary: `Found ${foundGenes.length} metabolic genes${includeRegulation ? ` and ${regulatoryGenes.length} regulatory genes` : ''} for ${pathwayName}`
+            };
+            
+        } catch (error) {
+            console.error('Error finding pathway genes:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 
     /**

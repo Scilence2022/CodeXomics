@@ -357,6 +357,158 @@ class MCPGenomeBrowserServer {
                     },
                     required: ['geneName']
                 }
+            },
+
+            get_genome_info: {
+                name: 'get_genome_info',
+                description: 'Get comprehensive information about the loaded genome',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    }
+                }
+            },
+
+            search_gene_by_name: {
+                name: 'search_gene_by_name',
+                description: 'Search for a specific gene by name or locus tag',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string', description: 'Gene name or locus tag' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['name']
+                }
+            },
+
+            compute_gc: {
+                name: 'compute_gc',
+                description: 'Calculate GC content percentage for a DNA sequence',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'DNA sequence' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['sequence']
+                }
+            },
+
+            translate_dna: {
+                name: 'translate_dna',
+                description: 'Translate DNA sequence to protein (amino acid sequence)',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        dna: { type: 'string', description: 'DNA sequence to translate' },
+                        frame: { type: 'number', description: 'Reading frame (0, 1, or 2)', default: 0 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['dna']
+                }
+            },
+
+            reverse_complement: {
+                name: 'reverse_complement',
+                description: 'Get reverse complement of DNA sequence',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        dna: { type: 'string', description: 'DNA sequence' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['dna']
+                }
+            },
+
+            find_orfs: {
+                name: 'find_orfs',
+                description: 'Find Open Reading Frames (ORFs) in DNA sequence',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        dna: { type: 'string', description: 'DNA sequence' },
+                        minLength: { type: 'number', description: 'Minimum ORF length in codons', default: 30 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['dna']
+                }
+            },
+
+            search_sequence_motif: {
+                name: 'search_sequence_motif',
+                description: 'Search for sequence motifs in the genome',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        pattern: { type: 'string', description: 'Sequence motif pattern' },
+                        chromosome: { type: 'string', description: 'Chromosome to search (optional)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['pattern']
+                }
+            },
+
+            predict_promoter: {
+                name: 'predict_promoter',
+                description: 'Predict promoter regions in DNA sequence',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        seq: { type: 'string', description: 'DNA sequence to analyze' },
+                        motif: { type: 'string', description: 'Promoter motif pattern (optional)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['seq']
+                }
+            },
+
+            blast_search: {
+                name: 'blast_search',
+                description: 'Perform BLAST sequence similarity search',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'Query sequence' },
+                        blastType: { type: 'string', description: 'BLAST type (blastn, blastp, blastx, tblastn, tblastx)' },
+                        database: { type: 'string', description: 'Target database' },
+                        evalue: { type: 'string', description: 'E-value threshold', default: '0.01' },
+                        maxTargets: { type: 'number', description: 'Maximum number of targets', default: 50 },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['sequence', 'blastType', 'database']
+                }
+            },
+
+            show_metabolic_pathway: {
+                name: 'show_metabolic_pathway',
+                description: 'Display metabolic pathway visualization (e.g., glycolysis, TCA cycle, etc.)',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        pathwayName: { type: 'string', description: 'Pathway name (glycolysis, tca_cycle, pentose_phosphate, etc.)' },
+                        highlightGenes: { type: 'array', description: 'List of genes to highlight in the pathway' },
+                        organism: { type: 'string', description: 'Organism name for pathway context' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['pathwayName']
+                }
+            },
+
+            find_pathway_genes: {
+                name: 'find_pathway_genes',
+                description: 'Find genes associated with a specific metabolic pathway',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        pathwayName: { type: 'string', description: 'Pathway name to search for' },
+                        includeRegulation: { type: 'boolean', description: 'Include regulatory genes', default: false },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['pathwayName']
+                }
             }
         };
     }
@@ -709,7 +861,8 @@ class MCPGenomeBrowserServer {
                         
                         console.log(`MCP Server running on port ${this.port}`);
                         console.log(`WebSocket server running on port ${this.wsPort}`);
-                        console.log('Available tools:', Object.keys(this.tools).join(', '));
+                        console.log(`MCP Server Tools: ${Object.keys(this.tools).length} tools available`);
+                        console.log('Key tools:', Object.keys(this.tools).slice(0, 10).join(', '), Object.keys(this.tools).length > 10 ? '...' : '');
                         
                         resolve({
                             httpPort: this.port,
