@@ -2021,21 +2021,18 @@ class ChatManager {
     }
 
     buildSystemMessage() {
-        // Get the base system message with context information
-        const baseSystemMessage = this.getBaseSystemMessage();
-        
         // Get user-defined system prompt
         const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
         
         // If user has defined a custom system prompt, use it with variable substitution
         if (userSystemPrompt && userSystemPrompt.trim()) {
             const processedPrompt = this.processSystemPromptVariables(userSystemPrompt);
-            // Combine user prompt with essential tool information
-            return `${processedPrompt}\n\n${this.getEssentialToolInformation()}`;
+            // Combine user prompt with complete tool context and information
+            return `${processedPrompt}\n\n${this.getCompleteToolContext()}`;
         }
         
         // Otherwise, use the default system message
-        return baseSystemMessage;
+        return this.getBaseSystemMessage();
     }
 
     /**
@@ -2057,8 +2054,14 @@ class ChatManager {
             sequence_length: context.genomeBrowser.currentState.sequenceLength || 0,
             user_features_count: context.genomeBrowser.currentState.userDefinedFeaturesCount || 0,
             available_tools: context.genomeBrowser.availableTools.join(', '),
+            total_tools: context.genomeBrowser.toolSources.total,
+            local_tools: context.genomeBrowser.toolSources.local,
+            plugin_tools: context.genomeBrowser.toolSources.plugins,
+            mcp_tools: context.genomeBrowser.toolSources.mcp,
+            all_available_tools: context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n'),
             mcp_servers: this.getMCPServersSummary(),
             plugin_functions: this.getPluginFunctionsSummary(),
+            microbe_functions: this.MicrobeFns ? 'Available' : 'Not Available',
             timestamp: new Date().toISOString(),
             date: new Date().toLocaleDateString(),
             time: new Date().toLocaleTimeString()
@@ -2072,6 +2075,204 @@ class ChatManager {
         }
         
         return processedPrompt;
+    }
+
+    /**
+     * Get complete tool context for custom system prompts
+     * This includes all the tool information that the base system message has
+     */
+    getCompleteToolContext() {
+        const context = this.getCurrentContext();
+        
+        // Get MCP server information
+        const mcpServers = this.mcpServerManager.getServerStatus();
+        const connectedServers = mcpServers.filter(s => s.connected);
+        const allMcpTools = this.mcpServerManager.getAllAvailableTools();
+        const toolsByCategory = this.mcpServerManager.getToolsByCategory();
+        
+        let mcpServersInfo = '';
+        if (connectedServers.length > 0) {
+            mcpServersInfo = `
+Connected MCP Servers: ${connectedServers.length}
+${connectedServers.map(server => 
+    `- ${server.name} (${server.category}): ${server.toolCount} tools`
+).join('\n')}
+
+MCP Tools by Category:
+${Object.entries(toolsByCategory).map(([category, tools]) => 
+    `${category.toUpperCase()}:\n${tools.map(tool => 
+        `  - ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`
+    ).join('\n')}`
+).join('\n\n')}
+`;
+        } else {
+            mcpServersInfo = `
+Connected MCP Servers: None
+Note: Additional tools may be available when MCP servers are connected.
+`;
+        }
+
+        // Get MicrobeGenomicsFunctions categories and examples
+        let microbeGenomicsInfo = '';
+        if (this.MicrobeFns) {
+            try {
+                const categories = this.MicrobeFns.getFunctionCategories();
+                const examples = this.MicrobeFns.getUsageExamples();
+                
+                microbeGenomicsInfo = `
+MICROBE GENOMICS FUNCTIONS (Advanced Analysis Tools):
+${Object.entries(categories).map(([category, info]) => 
+    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
+        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+    ).join('\n')}`
+).join('\n\n')}
+
+MICROBE GENOMICS USAGE EXAMPLES:
+${examples.map(example => 
+    `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
+).join('\n\n')}
+`;
+            } catch (error) {
+                microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
+            }
+        }
+
+        // Get plugin system information
+        const pluginSystemInfo = this.getPluginSystemInfo();
+
+        return `
+Current Genome AI Studio State:
+- Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
+- Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
+- Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
+- Loaded files: ${context.genomeBrowser.currentState.loadedFiles.length} files
+- Sequence length: ${context.genomeBrowser.currentState.sequenceLength}
+- Annotations count: ${context.genomeBrowser.currentState.annotationsCount}
+- User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
+
+${mcpServersInfo}
+
+Available Tools Summary:
+- Total Available Tools: ${context.genomeBrowser.toolSources.total}
+- Local Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}
+- MCP Tools: ${context.genomeBrowser.toolSources.mcp}
+
+All Available Tools:
+${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
+
+${microbeGenomicsInfo}
+
+${pluginSystemInfo}
+
+===CRITICAL INSTRUCTION FOR TOOL CALLS===
+When a user asks you to perform ANY action that requires using one of these tools, you MUST respond with ONLY a JSON object. Do NOT add any explanatory text, markdown formatting, or conversational responses around the JSON.
+
+CORRECT format:
+{"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
+
+Tool Selection Priority:
+1. First try MCP server tools (if available and connected)
+2. Use MicrobeGenomicsFunctions for specialized genomic analysis
+3. Fall back to built-in local tools
+4. Use the most appropriate tool for the task regardless of source
+
+Basic Tool Examples:
+- Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+- Get current state: {"tool_name": "get_current_state", "parameters": {}}
+- Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
+- Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+
+MicrobeGenomicsFunctions Examples:
+- Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+- Calculate GC content: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Get upstream region: {"tool_name": "get_upstream_region", "parameters": {"geneObj": {"chromosome": "chr1", "feature": {"start": 1000, "end": 2000}}, "length": 200}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"dna": "ATGAAATAG", "minLength": 30}}
+- Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
+- Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC", "chromosome": "chr1"}}
+- Reverse complement: {"tool_name": "reverse_complement", "parameters": {"dna": "ATGC"}}
+- Translate DNA: {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
+- Calculate entropy: {"tool_name": "calculate_entropy", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Melting temperature: {"tool_name": "calculate_melting_temp", "parameters": {"dna": "ATGCGCTATCG"}}
+- Molecular weight: {"tool_name": "calculate_molecular_weight", "parameters": {"dna": "ATGCGCTATCG"}}
+- Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
+- Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
+- Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
+- Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
+
+CRITICAL DISTINCTION - Search Functions:
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'
+   - "find lacZ" → {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+   - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+
+2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features' or 'search_by_position'
+   - "find genes near 123456" → {"tool_name": "search_by_position", "parameters": {"chromosome": "chr1", "position": 123456}}
+
+3. FOR SEQUENCE MOTIF SEARCHES: use 'search_sequence_motif'
+   - "find GAATTC sites" → {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC"}}
+
+Common Analysis Tools:
+- Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
+- Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
+- Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
+
+Protein Structure Tools:
+- Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
+- Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
+- Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+
+IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
+
+BLAST Search Tools:
+- Search sequence similarity: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "evalue": "0.01", "maxTargets": 50}}
+- BLAST current region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "blastType": "blastn", "database": "nt"}}
+- Get BLAST databases: {"tool_name": "get_blast_databases", "parameters": {}}
+
+BLAST Examples:
+1. DNA sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCG", "blastType": "blastn", "database": "nt"}}
+2. Protein sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "MKELLKAGWKELQPIKEYGIEAVALAYTYQKEQDAIDKELKENITPNVEKKLVWEALKLK", "blastType": "blastp", "database": "nr"}}
+3. Translate and search DNA: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastx", "database": "nr"}}
+4. Search genomic region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "NC_000913.3", "start": 3423681, "end": 3424651, "blastType": "blastn", "database": "refseq_genomic"}}
+
+Enhanced BLAST Tools (Available with MCP BLAST Server):
+- Batch BLAST search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGCGCTATCG"}, {"id": "seq2", "sequence": "ATGAAAGAATT"}], "blastType": "blastn", "database": "nt", "maxTargets": 10}}
+- Advanced BLAST with filtering: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 95, "minCoverage": 80}, "algorithms": {"wordSize": "11", "matrix": "BLOSUM62"}}}
+- Local database info: {"tool_name": "local_blast_database_info", "parameters": {"databasePath": "/path/to/local/db"}}
+
+Enhanced BLAST Examples:
+1. Batch protein search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "protein1", "sequence": "MKELLKAGWKELQP"}, {"id": "protein2", "sequence": "MKLSAGATRVST"}], "blastType": "blastp", "database": "nr"}}
+2. High-specificity DNA search: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 98, "maxEvalue": 1e-10}}}
+
+MICROBE GENOMICS POWER USER EXAMPLES:
+1. Complete Gene Analysis:
+   - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
+   - Get upstream: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result_from_above", "length": 200}}
+   - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
+   - Calculate GC: {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}
+
+2. Sequence Motif Analysis:
+   - Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "TATAAT"}}
+   - Find nearby features: {"tool_name": "search_by_position", "parameters": {"position": "motif_position"}}
+
+3. Comparative Analysis:
+   - Get region 1: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene1", "length": 500}}
+   - Get region 2: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene2", "length": 500}}
+   - Compare GC: {"tool_name": "compute_gc", "parameters": {"sequence": "region1"}} then {"tool_name": "compute_gc", "parameters": {"sequence": "region2"}}
+
+Remember: These functions provide atomic operations that can be chained together to perform complex genomic analyses!
+
+Metabolic Pathway Tools:
+- Display metabolic pathway: {"tool_name": "show_metabolic_pathway", "parameters": {"pathwayName": "glycolysis"}}
+- Find pathway genes: {"tool_name": "find_pathway_genes", "parameters": {"pathwayName": "glycolysis", "includeRegulation": true}}
+
+Metabolic Pathway Examples:
+1. Glycolysis analysis: {"tool_name": "show_metabolic_pathway", "parameters": {"pathwayName": "glycolysis"}}
+2. TCA cycle genes: {"tool_name": "find_pathway_genes", "parameters": {"pathwayName": "tca_cycle", "includeRegulation": false}}
+3. Pentose phosphate pathway: {"tool_name": "show_metabolic_pathway", "parameters": {"pathwayName": "pentose_phosphate"}}
+`;
     }
 
     /**
