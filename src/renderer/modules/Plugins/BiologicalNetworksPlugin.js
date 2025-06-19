@@ -30,7 +30,22 @@ class BiologicalNetworksPlugin {
     /**
      * Generate test sample data for protein interaction network
      */
-    generateProteinTestData() {
+    generateProteinTestData(dataType = 'sample-ppi') {
+        switch (dataType) {
+            case 'ecoli-proteins':
+                return this.generateEColiProteinData();
+            case 'human-proteins':
+                return this.generateHumanProteinData();
+            case 'sample-ppi':
+            default:
+                return this.generateSampleProteinData();
+        }
+    }
+
+    /**
+     * Generate sample protein data
+     */
+    generateSampleProteinData() {
         return [
             {
                 id: 'P1',
@@ -84,9 +99,56 @@ class BiologicalNetworksPlugin {
     }
 
     /**
+     * Generate E.coli protein interaction data
+     */
+    generateEColiProteinData() {
+        return [
+            { id: 'P1', name: 'dnaA', function: 'DNA replication initiation', location: 'cytoplasm', expression: 0.75, domains: ['ATPase', 'DNA_binding'] },
+            { id: 'P2', name: 'dnaB', function: 'replicative helicase', location: 'cytoplasm', expression: 0.82, domains: ['helicase', 'ATP_binding'] },
+            { id: 'P3', name: 'dnaG', function: 'primase', location: 'cytoplasm', expression: 0.69, domains: ['primase', 'RNA_synthesis'] },
+            { id: 'P4', name: 'polA', function: 'DNA polymerase I', location: 'cytoplasm', expression: 0.88, domains: ['polymerase', 'exonuclease'] },
+            { id: 'P5', name: 'polC', function: 'DNA polymerase III', location: 'cytoplasm', expression: 0.95, domains: ['polymerase', 'proofreading'] },
+            { id: 'P6', name: 'ligA', function: 'DNA ligase', location: 'cytoplasm', expression: 0.73, domains: ['ligase', 'ATP_binding'] },
+            { id: 'P7', name: 'recA', function: 'recombination/repair', location: 'cytoplasm', expression: 0.65, domains: ['ATPase', 'DNA_binding'] },
+            { id: 'P8', name: 'ssb', function: 'single-strand DNA binding', location: 'cytoplasm', expression: 0.91, domains: ['ssDNA_binding'] }
+        ];
+    }
+
+    /**
+     * Generate human protein interaction data
+     */
+    generateHumanProteinData() {
+        return [
+            { id: 'H1', name: 'TP53', function: 'tumor suppressor', location: 'nucleus', expression: 0.67, domains: ['DNA_binding', 'transactivation'] },
+            { id: 'H2', name: 'MDM2', function: 'ubiquitin ligase', location: 'nucleus', expression: 0.58, domains: ['RING_finger', 'p53_binding'] },
+            { id: 'H3', name: 'CDKN1A', function: 'cell cycle inhibitor', location: 'nucleus', expression: 0.74, domains: ['CDK_binding'] },
+            { id: 'H4', name: 'GADD45A', function: 'growth arrest', location: 'nucleus', expression: 0.62, domains: ['PCNA_binding'] },
+            { id: 'H5', name: 'BAX', function: 'apoptosis regulator', location: 'mitochondria', expression: 0.71, domains: ['Bcl2_family'] },
+            { id: 'H6', name: 'PUMA', function: 'pro-apoptotic', location: 'mitochondria', expression: 0.55, domains: ['BH3_only'] },
+            { id: 'H7', name: 'ATM', function: 'DNA damage checkpoint', location: 'nucleus', expression: 0.83, domains: ['kinase', 'HEAT_repeats'] },
+            { id: 'H8', name: 'CHEK2', function: 'checkpoint kinase', location: 'nucleus', expression: 0.69, domains: ['kinase', 'FHA'] }
+        ];
+    }
+
+    /**
      * Generate test sample data for gene regulatory network
      */
-    generateGeneTestData() {
+    generateGeneTestData(dataType = 'lac-operon') {
+        switch (dataType) {
+            case 'ara-operon':
+                return this.generateAraOperonData();
+            case 'trp-operon':
+                return this.generateTrpOperonData();
+            case 'lac-operon':
+            default:
+                return this.generateLacOperonData();
+        }
+    }
+
+    /**
+     * Generate lac operon regulatory network data
+     */
+    generateLacOperonData() {
         return [
             {
                 id: 'G1',
@@ -158,6 +220,33 @@ class BiologicalNetworksPlugin {
     }
 
     /**
+     * Generate ara operon regulatory network data
+     */
+    generateAraOperonData() {
+        return [
+            { id: 'A1', name: 'araC', type: 'transcription_factor', regulation: 'dual_regulator', chromosome: 'chr1', start: 70000, end: 70900, strand: '+', expression: 0.65 },
+            { id: 'A2', name: 'araB', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 71000, end: 72500, strand: '+', expression: 0.82 },
+            { id: 'A3', name: 'araA', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 72600, end: 74100, strand: '+', expression: 0.78 },
+            { id: 'A4', name: 'araD', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 74200, end: 75300, strand: '+', expression: 0.75 },
+            { id: 'A5', name: 'crp', type: 'transcription_factor', regulation: 'activator', chromosome: 'chr1', start: 76000, end: 76600, strand: '+', expression: 0.55 }
+        ];
+    }
+
+    /**
+     * Generate trp operon regulatory network data
+     */
+    generateTrpOperonData() {
+        return [
+            { id: 'T1', name: 'trpE', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 80000, end: 81500, strand: '+', expression: 0.45 },
+            { id: 'T2', name: 'trpD', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 81600, end: 82800, strand: '+', expression: 0.42 },
+            { id: 'T3', name: 'trpC', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 82900, end: 84200, strand: '+', expression: 0.38 },
+            { id: 'T4', name: 'trpB', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 84300, end: 85400, strand: '+', expression: 0.35 },
+            { id: 'T5', name: 'trpA', type: 'gene', regulation: 'regulated', chromosome: 'chr1', start: 85500, end: 86200, strand: '+', expression: 0.32 },
+            { id: 'T6', name: 'trpR', type: 'transcription_factor', regulation: 'repressor', chromosome: 'chr1', start: 87000, end: 87600, strand: '-', expression: 0.68 }
+        ];
+    }
+
+    /**
      * Build protein-protein interaction network
      * Compatible with ChatBox LLM calling format
      */
@@ -174,7 +263,8 @@ class BiologicalNetworksPlugin {
 
             // Convert string array to object array if needed
             if (proteins.length > 0 && typeof proteins[0] === 'string') {
-                const testData = this.generateProteinTestData();
+                const dataType = params.dataType || 'sample-ppi';
+                const testData = this.generateProteinTestData(dataType);
                 proteins = proteins.map(proteinId => {
                     const found = testData.find(p => p.id === proteinId || p.name === proteinId);
                     return found || {
@@ -267,7 +357,8 @@ class BiologicalNetworksPlugin {
 
             // Convert string array to object array if needed
             if (genes.length > 0 && typeof genes[0] === 'string') {
-                const testData = this.generateGeneTestData();
+                const dataType = params.dataType || 'lac-operon';
+                const testData = this.generateGeneTestData(dataType);
                 genes = genes.map(geneId => {
                     const found = testData.find(g => g.id === geneId || g.name === geneId);
                     return found || {

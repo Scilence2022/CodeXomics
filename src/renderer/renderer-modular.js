@@ -269,6 +269,10 @@ class GenomeBrowser {
         window.generalSettingsManager = this.generalSettingsManager; // Make globally available
         console.log('✅ GeneralSettingsManager initialized successfully');
         
+        // Step 5.7: Initialize Visualization Tools Manager
+        this.initializeVisualizationToolsManager();
+        console.log('✅ VisualizationToolsManager initialized successfully');
+        
         // Add global tool validation function for debugging
         window.validateAllTools = () => {
             if (this.chatManager && this.chatManager.validateAllTools) {
@@ -1232,13 +1236,14 @@ class GenomeBrowser {
             console.log(`🎨 Opening visualization tool: ${pluginId}`);
             
             try {
-                if (this.pluginManagementUI && this.pluginManagementUI.testFramework) {
-                    this.pluginManagementUI.testFramework.openVisualizationTool(pluginId);
-                } else if (window.pluginManagementUI && window.pluginManagementUI.testFramework) {
-                    window.pluginManagementUI.testFramework.openVisualizationTool(pluginId);
+                // 使用新的可视化工具管理器
+                if (this.visualizationToolsManager) {
+                    this.visualizationToolsManager.openVisualizationTool(pluginId);
+                } else if (window.visualizationToolsManager) {
+                    window.visualizationToolsManager.openVisualizationTool(pluginId);
                 } else {
-                    console.warn('Plugin test framework not available, opening basic tool window');
-                    this.openBasicVisualizationTool(pluginId);
+                    console.warn('VisualizationToolsManager not available, initializing...');
+                    this.initializeVisualizationToolsManager(pluginId);
                 }
             } catch (error) {
                 console.error(`Failed to open visualization tool ${pluginId}:`, error);
@@ -3863,6 +3868,58 @@ class GenomeBrowser {
         } catch (error) {
             console.error('Failed to open Resource Manager:', error);
             this.showNotification('Unable to open Resource Manager window', 'error');
+        }
+    }
+
+    /**
+     * Initialize Visualization Tools Manager
+     */
+    async initializeVisualizationToolsManager(pluginId = null) {
+        try {
+            // 加载VisualizationToolsManager脚本
+            if (typeof VisualizationToolsManager === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'modules/VisualizationToolsManager.js';
+                script.onload = () => {
+                    this.createVisualizationToolsManager(pluginId);
+                };
+                script.onerror = () => {
+                    console.error('Failed to load VisualizationToolsManager');
+                    if (pluginId) {
+                        this.openBasicVisualizationTool(pluginId);
+                    }
+                };
+                document.head.appendChild(script);
+            } else {
+                this.createVisualizationToolsManager(pluginId);
+            }
+        } catch (error) {
+            console.error('Error initializing VisualizationToolsManager:', error);
+            if (pluginId) {
+                this.openBasicVisualizationTool(pluginId);
+            }
+        }
+    }
+
+    /**
+     * Create Visualization Tools Manager instance
+     */
+    createVisualizationToolsManager(pluginId = null) {
+        try {
+            this.visualizationToolsManager = new VisualizationToolsManager(this, this.configManager);
+            window.visualizationToolsManager = this.visualizationToolsManager;
+            
+            if (pluginId) {
+                // 打开请求的工具
+                setTimeout(() => {
+                    this.visualizationToolsManager.openVisualizationTool(pluginId);
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error creating VisualizationToolsManager:', error);
+            if (pluginId) {
+                this.openBasicVisualizationTool(pluginId);
+            }
         }
     }
 
