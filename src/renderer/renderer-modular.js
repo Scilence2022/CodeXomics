@@ -264,10 +264,20 @@ class GenomeBrowser {
         // Step 5.6: Initialize General Settings Manager
         console.log('⚙️ About to initialize GeneralSettingsManager...');
         try {
-            this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
-            this.generalSettingsManager.init();
-            window.generalSettingsManager = this.generalSettingsManager; // Make globally available
-            console.log('✅ GeneralSettingsManager initialized successfully');
+                    this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+        this.generalSettingsManager.init();
+        window.generalSettingsManager = this.generalSettingsManager; // Make globally available
+        console.log('✅ GeneralSettingsManager initialized successfully');
+        
+        // Add global tool validation function for debugging
+        window.validateAllTools = () => {
+            if (this.chatManager && this.chatManager.validateAllTools) {
+                return this.chatManager.validateAllTools();
+            } else {
+                console.warn('ChatManager or validateAllTools method not available');
+                return null;
+            }
+        };
         } catch (error) {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
         }
@@ -479,6 +489,9 @@ class GenomeBrowser {
         // MCP Settings modal
         document.getElementById('mcpSettingsBtn')?.addEventListener('click', () => this.showMCPSettingsModal());
         
+        // General Settings modal
+        document.getElementById('settingsBtn')?.addEventListener('click', () => this.showGeneralSettingsModal());
+        
         // Smart Execution Demo button
         document.getElementById('smartExecutionDemoBtn')?.addEventListener('click', () => this.showSmartExecutionDemo());
     }
@@ -516,6 +529,24 @@ class GenomeBrowser {
             
             // Show modal
             modal.classList.add('show');
+        }
+    }
+
+    showGeneralSettingsModal() {
+        const modal = document.getElementById('generalSettingsModal');
+        if (modal) {
+            // Initialize GeneralSettingsManager if not already done
+            if (this.generalSettingsManager && this.generalSettingsManager.isInitialized) {
+                // Load current settings
+                this.generalSettingsManager.loadSettings();
+            } else {
+                console.warn('GeneralSettingsManager not initialized');
+            }
+            
+            // Show modal
+            modal.classList.add('show');
+        } else {
+            console.error('General Settings modal not found');
         }
     }
 

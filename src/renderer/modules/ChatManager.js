@@ -2168,7 +2168,13 @@ Current Genome AI Studio State:
 
 ${mcpServersInfo}
 
-Built-in Local Tools:
+Available Tools Summary:
+- Total Available Tools: ${context.genomeBrowser.toolSources.total}
+- Local Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}
+- MCP Tools: ${context.genomeBrowser.toolSources.mcp}
+
+All Available Tools:
 ${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
 
 ${microbeGenomicsInfo}
@@ -2811,20 +2817,105 @@ ${this.getPluginSystemInfo()}`;
                     result = this.executeMicrobeFunction('zoomOut', parameters);
                     break;
                     
-                case 'compute_gc':
-                    result = this.executeMicrobeFunction('computeGC', parameters);
+                case 'search_gene_by_name':
+                    result = this.executeMicrobeFunction('searchGeneByName', parameters);
                     break;
                     
-                case 'reverse_complement':
-                    result = this.executeMicrobeFunction('reverseComplement', parameters);
+                case 'search_by_position':
+                    result = this.executeMicrobeFunction('searchByPosition', parameters);
+                    break;
+                    
+                case 'search_sequence_motif':
+                    result = this.executeMicrobeFunction('searchSequenceMotif', parameters);
+                    break;
+                    
+                case 'search_intergenic_regions':
+                    result = this.executeMicrobeFunction('searchIntergenicRegions', parameters);
                     break;
                     
                 case 'translate_dna':
                     result = this.executeMicrobeFunction('translateDNA', parameters);
                     break;
                     
-                case 'find_orfs':
-                    result = this.executeMicrobeFunction('findORFs', parameters);
+                case 'compute_gc':
+                    result = this.executeMicrobeFunction('computeGC', parameters);
+                    break;
+                    
+                case 'calc_region_gc':
+                    result = this.executeMicrobeFunction('calcRegionGC', parameters);
+                    break;
+                    
+                case 'reverse_complement':
+                    result = this.executeMicrobeFunction('reverseComplement', parameters);
+                    break;
+                    
+                case 'analyze_codon_usage':
+                    result = this.executeMicrobeFunction('analyzeCodonUsage', parameters);
+                    break;
+                    
+                case 'calculate_entropy':
+                    result = this.executeMicrobeFunction('calculateEntropy', parameters);
+                    break;
+                    
+                case 'calculate_melting_temp':
+                    result = this.executeMicrobeFunction('calculateMeltingTemp', parameters);
+                    break;
+                    
+                case 'calculate_molecular_weight':
+                    result = this.executeMicrobeFunction('calculateMolecularWeight', parameters);
+                    break;
+                    
+                case 'predict_promoter':
+                    result = this.executeMicrobeFunction('predictPromoter', parameters);
+                    break;
+                    
+                case 'predict_rbs':
+                    result = this.executeMicrobeFunction('predictRBS', parameters);
+                    break;
+                    
+                case 'predict_terminator':
+                    result = this.executeMicrobeFunction('predictTerminator', parameters);
+                    break;
+                    
+                case 'get_upstream_region':
+                    result = this.executeMicrobeFunction('getUpstreamRegion', parameters);
+                    break;
+                    
+                case 'get_downstream_region':
+                    result = this.executeMicrobeFunction('getDownstreamRegion', parameters);
+                    break;
+                    
+                case 'add_annotation':
+                    result = this.executeMicrobeFunction('addAnnotation', parameters);
+                    break;
+                    
+                case 'merge_annotations':
+                    result = this.executeMicrobeFunction('mergeAnnotations', parameters);
+                    break;
+                    
+                case 'add_track':
+                    result = this.executeMicrobeFunction('addTrack', parameters);
+                    break;
+                    
+                case 'add_variant':
+                    result = this.executeMicrobeFunction('addVariant', parameters);
+                    break;
+                    
+                case 'get_genome_info':
+                    result = await this.getGenomeInfo(parameters);
+                    break;
+                    
+                case 'fetch_protein_structure':
+                    result = await this.fetchProteinStructure(parameters);
+                    break;
+                    
+                case 'search_protein_by_gene':
+                    result = await this.searchProteinByGene(parameters);
+                    break;
+                    
+                case 'get_pdb_details':
+                    result = await this.getPDBDetails(parameters.pdbId);
+                    break;
                     break;
                     
                 case 'calculate_entropy':
@@ -2914,6 +3005,31 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.getGenomeInfo(parameters);
                     break;
                     
+                // BLAST tools
+                case 'blast_search':
+                    result = await this.blastSearch(parameters);
+                    break;
+                    
+                case 'blast_sequence_from_region':
+                    result = await this.blastSequenceFromRegion(parameters);
+                    break;
+                    
+                case 'get_blast_databases':
+                    result = this.getBlastDatabases(parameters);
+                    break;
+                    
+                case 'batch_blast_search':
+                    result = await this.batchBlastSearch(parameters);
+                    break;
+                    
+                case 'advanced_blast_search':
+                    result = await this.advancedBlastSearch(parameters);
+                    break;
+                    
+                case 'local_blast_database_info':
+                    result = await this.localBlastDatabaseInfo(parameters);
+                    break;
+                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -2947,53 +3063,135 @@ ${this.getPluginSystemInfo()}`;
 
     getCurrentContext() {
         // Build comprehensive context for the LLM
+        
+        // Collect all available tools from different sources
+        const localTools = [
+            // Core Navigation & State
+            'navigate_to_position',
+            'get_current_state',
+            'get_current_region',
+            'jump_to_gene',
+            'scroll_left',
+            'scroll_right',
+            'zoom_in',
+            'zoom_out',
+            'zoom_to_gene',
+            'bookmark_position',
+            'get_bookmarks',
+            'save_view_state',
+            
+            // Search & Discovery
+            'search_features',
+            'search_gene_by_name',
+            'search_by_position',
+            'search_motif',
+            'search_pattern',
+            'search_sequence_motif',
+            'search_intergenic_regions',
+            'get_nearby_features',
+            'find_intergenic_regions',
+            
+            // Sequence Analysis
+            'get_sequence',
+            'translate_sequence',
+            'translate_dna',
+            'calculate_gc_content',
+            'compute_gc',
+            'calc_region_gc',
+            'reverse_complement',
+            'find_orfs',
+            'sequence_statistics',
+            'codon_usage_analysis',
+            'analyze_codon_usage',
+            'calculate_entropy',
+            'calculate_melting_temp',
+            'calculate_molecular_weight',
+            
+            // Advanced Analysis
+            'analyze_region',
+            'compare_regions',
+            'find_similar_sequences',
+            'find_restriction_sites',
+            'virtual_digest',
+            'predict_promoter',
+            'predict_rbs',
+            'predict_terminator',
+            'get_upstream_region',
+            'get_downstream_region',
+            
+            // Annotation & Features
+            'get_gene_details',
+            'get_operons',
+            'create_annotation',
+            'add_annotation',
+            'edit_annotation',
+            'delete_annotation',
+            'batch_create_annotations',
+            'merge_annotations',
+            
+            // Track Management
+            'toggle_track',
+            'get_track_status',
+            'add_track',
+            'add_variant',
+            
+            // Data Export/Import
+            'export_data',
+            'export_region_features',
+            'get_file_info',
+            'get_chromosome_list',
+            'get_genome_info',
+            
+            // BLAST & External Analysis
+            'blast_search',
+            'blast_sequence_from_region',
+            'get_blast_databases',
+            'batch_blast_search',
+            'advanced_blast_search',
+            'local_blast_database_info',
+            
+            // Protein Structure
+            'open_protein_viewer',
+            'fetch_protein_structure',
+            'search_protein_by_gene',
+            'get_pdb_details'
+        ];
+        
+        // Add plugin functions if available
+        const pluginTools = [];
+        if (this.pluginFunctionCallsIntegrator) {
+            try {
+                const pluginFunctions = Array.from(this.pluginFunctionCallsIntegrator.pluginFunctionMap.keys());
+                pluginTools.push(...pluginFunctions);
+            } catch (error) {
+                console.warn('Failed to get plugin functions:', error);
+            }
+        }
+        
+        // Add MCP tools if available
+        const mcpTools = [];
+        if (this.mcpServerManager) {
+            try {
+                const allMcpTools = this.mcpServerManager.getAllAvailableTools();
+                mcpTools.push(...allMcpTools.map(tool => tool.name));
+            } catch (error) {
+                console.warn('Failed to get MCP tools:', error);
+            }
+        }
+        
+        // Combine all tools and remove duplicates
+        const allAvailableTools = [...new Set([...localTools, ...pluginTools, ...mcpTools])];
+        
         const context = {
             genomeBrowser: {
                 currentState: this.getCurrentState(),
-                availableTools: [
-                    'navigate_to_position',
-                    'search_features', 
-                    'get_current_state',
-                    'get_sequence',
-                    'toggle_track',
-                    'create_annotation',
-                    'analyze_region',
-                    'export_data',
-                    'get_gene_details',
-                    'translate_sequence',
-                    'calculate_gc_content',
-                    'find_orfs',
-                    'get_operons',
-                    'zoom_to_gene',
-                    'get_chromosome_list',
-                    'get_track_status',
-                    'search_motif',
-                    'search_pattern',
-                    'get_nearby_features',
-                    'find_intergenic_regions',
-                    'find_restriction_sites',
-                    'virtual_digest',
-                    'sequence_statistics',
-                    'codon_usage_analysis',
-                    'bookmark_position',
-                    'get_bookmarks',
-                    'save_view_state',
-                    'compare_regions',
-                    'find_similar_sequences',
-                    'edit_annotation',
-                    'delete_annotation',
-                    'batch_create_annotations',
-                    'get_file_info',
-                    'export_region_features',
-                    'open_protein_viewer',
-                    'blast_search',
-                    'blast_sequence_from_region',
-                    'get_blast_databases',
-                    'batch_blast_search',
-                    'advanced_blast_search',
-                    'local_blast_database_info',
-                    'get_genome_info'
-                ]
+                availableTools: allAvailableTools,
+                toolSources: {
+                    local: localTools.length,
+                    plugins: pluginTools.length,
+                    mcp: mcpTools.length,
+                    total: allAvailableTools.length
+                }
             }
         };
 
@@ -6464,5 +6662,128 @@ ${this.getPluginSystemInfo()}`;
         if (!sequence || sequence.length === 0) return 0;
         const gcCount = (sequence.match(/[GC]/gi) || []).length;
         return Math.round((gcCount / sequence.length) * 100 * 100) / 100; // Round to 2 decimal places
+    }
+
+    /**
+     * 验证和检查所有可用的tools
+     * @returns {Object} 详细的tools验证报告
+     */
+    validateAllTools() {
+        const report = {
+            timestamp: new Date().toISOString(),
+            summary: {},
+            details: {},
+            issues: [],
+            recommendations: []
+        };
+        
+        try {
+            const context = this.getCurrentContext();
+            const allTools = context.genomeBrowser.availableTools;
+            
+            // 统计各类工具数量
+            report.summary = {
+                totalTools: allTools.length,
+                localTools: context.genomeBrowser.toolSources.local,
+                pluginTools: context.genomeBrowser.toolSources.plugins,
+                mcpTools: context.genomeBrowser.toolSources.mcp
+            };
+            
+            // 检查每个工具的可执行性
+            const toolCategories = {
+                navigation: [],
+                search: [],
+                sequence: [],
+                analysis: [],
+                annotation: [],
+                blast: [],
+                protein: [],
+                plugin: [],
+                mcp: []
+            };
+            
+            allTools.forEach(tool => {
+                let category = 'other';
+                
+                if (tool.includes('navigate') || tool.includes('zoom') || tool.includes('scroll') || tool.includes('jump')) {
+                    category = 'navigation';
+                } else if (tool.includes('search') || tool.includes('find')) {
+                    category = 'search';
+                } else if (tool.includes('sequence') || tool.includes('translate') || tool.includes('gc') || tool.includes('reverse')) {
+                    category = 'sequence';
+                } else if (tool.includes('analyze') || tool.includes('calculate') || tool.includes('predict') || tool.includes('statistics')) {
+                    category = 'analysis';
+                } else if (tool.includes('annotation') || tool.includes('gene') || tool.includes('operons')) {
+                    category = 'annotation';
+                } else if (tool.includes('blast')) {
+                    category = 'blast';
+                } else if (tool.includes('protein') || tool.includes('pdb')) {
+                    category = 'protein';
+                } else if (tool.includes('.')) {
+                    category = 'plugin';
+                }
+                
+                toolCategories[category].push(tool);
+            });
+            
+            report.details.categories = toolCategories;
+            
+            // 检查MicrobeGenomicsFunctions集成
+            const microbeTools = [];
+            if (window.MicrobeGenomicsFunctions) {
+                const microbeFunctions = window.MicrobeGenomicsFunctions.getFunctionCategories();
+                Object.values(microbeFunctions).forEach(category => {
+                    microbeTools.push(...category.functions);
+                });
+            }
+            
+            report.details.microbeGenomics = {
+                available: !!window.MicrobeGenomicsFunctions,
+                functionCount: microbeTools.length,
+                functions: microbeTools
+            };
+            
+            // 检查插件系统
+            report.details.plugins = {
+                integratorAvailable: !!this.pluginFunctionCallsIntegrator,
+                managerAvailable: !!this.pluginManager,
+                mappedFunctions: this.pluginFunctionCallsIntegrator ? 
+                    this.pluginFunctionCallsIntegrator.pluginFunctionMap.size : 0
+            };
+            
+            // 检查MCP服务器
+            report.details.mcp = {
+                managerAvailable: !!this.mcpServerManager,
+                connectedServers: this.mcpServerManager ? 
+                    this.mcpServerManager.getConnectedServersCount() : 0,
+                availableTools: this.mcpServerManager ? 
+                    this.mcpServerManager.getAllAvailableTools().length : 0
+            };
+            
+            // 生成建议
+            if (report.summary.totalTools < 50) {
+                report.recommendations.push('工具数量较少，可能需要检查插件和MCP服务器连接');
+            }
+            
+            if (!report.details.microbeGenomics.available) {
+                report.issues.push('MicrobeGenomicsFunctions未正确加载');
+            }
+            
+            if (!report.details.plugins.integratorAvailable) {
+                report.issues.push('插件函数调用集成器未初始化');
+            }
+            
+            if (report.details.mcp.connectedServers === 0) {
+                report.recommendations.push('建议连接MCP服务器以获得更多工具');
+            }
+            
+            console.log('🔍 Tools Validation Report:', report);
+            return report;
+            
+        } catch (error) {
+            report.issues.push(`验证过程出错: ${error.message}`);
+            console.error('Tools validation failed:', error);
+            return report;
+        }
     }
 } 
