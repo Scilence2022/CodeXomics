@@ -261,6 +261,17 @@ class GenomeBrowser {
             console.error('❌ Error initializing PluginManagementUI:', error);
         }
 
+        // Step 5.6: Initialize General Settings Manager
+        console.log('⚙️ About to initialize GeneralSettingsManager...');
+        try {
+            this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+            this.generalSettingsManager.init();
+            window.generalSettingsManager = this.generalSettingsManager; // Make globally available
+            console.log('✅ GeneralSettingsManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing GeneralSettingsManager:', error);
+        }
+
         // Step 6: Setup IPC communication
         console.log('📡 Setting up IPC communication...');
         this.setupIPC();
