@@ -137,6 +137,25 @@ class LLMConfigManager {
             this.testConnection();
         });
 
+        // System prompt controls
+        const resetSystemPromptBtn = document.getElementById('resetSystemPrompt');
+        if (resetSystemPromptBtn) {
+            resetSystemPromptBtn.addEventListener('click', () => {
+                const systemPromptField = document.getElementById('systemPrompt');
+                if (systemPromptField) {
+                    systemPromptField.value = '';
+                    this.showNotification('System prompt reset to default', 'success');
+                }
+            });
+        }
+
+        const previewSystemPromptBtn = document.getElementById('previewSystemPrompt');
+        if (previewSystemPromptBtn) {
+            previewSystemPromptBtn.addEventListener('click', () => {
+                this.previewSystemPrompt();
+            });
+        }
+
         // Local model select change
         const localModelSelect = document.getElementById('localModel');
         if (localModelSelect) {
@@ -334,11 +353,16 @@ class LLMConfigManager {
             const functionCallRoundsField = document.getElementById('functionCallRounds');
             const functionCallRounds = functionCallRoundsField ? parseInt(functionCallRoundsField.value) : 3;
 
+            // Get system prompt setting
+            const systemPromptField = document.getElementById('systemPrompt');
+            const systemPrompt = systemPromptField ? systemPromptField.value.trim() : '';
+
             if (this.configManager) {
                 // Use ConfigManager if available (now with async support)
                 await this.configManager.set('llm.providers', this.providers);
                 await this.configManager.set('llm.currentProvider', this.currentProvider);
                 await this.configManager.set('llm.functionCallRounds', functionCallRounds);
+                await this.configManager.set('llm.systemPrompt', systemPrompt);
                 await this.configManager.saveConfig();
                 console.log('Configuration saved via ConfigManager');
             } else {
@@ -430,6 +454,13 @@ class LLMConfigManager {
             const functionCallRoundsField = document.getElementById('functionCallRounds');
             if (functionCallRoundsField) {
                 functionCallRoundsField.value = functionCallRounds;
+            }
+
+            // Load system prompt setting
+            const systemPrompt = this.configManager.get('llm.systemPrompt', '');
+            const systemPromptField = document.getElementById('systemPrompt');
+            if (systemPromptField) {
+                systemPromptField.value = systemPrompt;
             }
         }
     }
@@ -1103,6 +1134,99 @@ If the user is asking a general question that doesn't require a tool, respond no
         }
 
         return systemMessage;
+    }
+
+    previewSystemPrompt() {
+        const systemPromptField = document.getElementById('systemPrompt');
+        if (!systemPromptField) return;
+
+        const userPrompt = systemPromptField.value.trim();
+        let previewPrompt;
+
+        if (userPrompt) {
+            // Process the user-defined prompt with sample variables
+            previewPrompt = this.processSystemPromptVariables(userPrompt, {
+                currentChromosome: 'chr1',
+                currentPosition: { start: 1000, end: 5000 },
+                annotationsCount: 125,
+                userDefinedFeaturesCount: 8
+            });
+        } else {
+            // Show the default system prompt with sample context
+            const sampleContext = {
+                genomeBrowser: {
+                    currentState: {
+                        currentChromosome: 'chr1',
+                        currentPosition: { start: 1000, end: 5000 },
+                        annotationsCount: 125,
+                        userDefinedFeaturesCount: 8
+                    }
+                }
+            };
+            previewPrompt = this.buildSystemMessage(sampleContext);
+        }
+
+        // Create modal to show preview
+        this.showSystemPromptPreview(previewPrompt, userPrompt ? 'Custom' : 'Default');
+    }
+
+    processSystemPromptVariables(systemPrompt, context = {}) {
+        let processedPrompt = systemPrompt;
+        
+        // Replace variables with context values
+        const variables = {
+            '{{CURRENT_CHROMOSOME}}': context.currentChromosome || 'N/A',
+            '{{CURRENT_POSITION}}': context.currentPosition ? 
+                `${context.currentPosition.start}-${context.currentPosition.end}` : 'N/A',
+            '{{ANNOTATIONS_COUNT}}': context.annotationsCount || 0,
+            '{{USER_FEATURES_COUNT}}': context.userDefinedFeaturesCount || 0
+        };
+
+        for (const [variable, value] of Object.entries(variables)) {
+            processedPrompt = processedPrompt.replace(new RegExp(variable, 'g'), value);
+        }
+
+        return processedPrompt;
+    }
+
+    showSystemPromptPreview(prompt, type) {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal show" id="systemPromptPreviewModal" style="z-index: 10001;">
+                <div class="modal-content" style="max-width: 800px; max-height: 80vh;">
+                    <div class="modal-header">
+                        <h3>${type} System Prompt Preview</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body" style="overflow-y: auto;">
+                        <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #374151;">${prompt}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn modal-close">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Add event listeners
+        const modal = document.getElementById('systemPromptPreviewModal');
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.remove();
+            });
+        });
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     }
 
     showNotification(message, type = 'info') {

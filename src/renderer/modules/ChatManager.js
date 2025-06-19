@@ -2021,6 +2021,85 @@ class ChatManager {
     }
 
     buildSystemMessage() {
+        // Get the base system message with context information
+        const baseSystemMessage = this.getBaseSystemMessage();
+        
+        // Get user-defined system prompt
+        const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
+        
+        // If user has defined a custom system prompt, use it with variable substitution
+        if (userSystemPrompt && userSystemPrompt.trim()) {
+            const processedPrompt = this.processSystemPromptVariables(userSystemPrompt);
+            // Combine user prompt with essential tool information
+            return `${processedPrompt}\n\n${this.getEssentialToolInformation()}`;
+        }
+        
+        // Otherwise, use the default system message
+        return baseSystemMessage;
+    }
+
+    /**
+     * Process variables in user-defined system prompts
+     * Supports variables like {genome_info}, {current_state}, etc.
+     */
+    processSystemPromptVariables(systemPrompt) {
+        const context = this.getCurrentContext();
+        
+        // Define available variables
+        const variables = {
+            genome_info: this.getGenomeInfoSummary(),
+            current_state: this.getCurrentStateSummary(context),
+            loaded_files: this.getLoadedFilesSummary(),
+            visible_tracks: this.getVisibleTracksSummary(),
+            current_chromosome: context.genomeBrowser.currentState.currentChromosome || 'None',
+            current_position: this.getCurrentPositionSummary(context),
+            annotations_count: context.genomeBrowser.currentState.annotationsCount || 0,
+            sequence_length: context.genomeBrowser.currentState.sequenceLength || 0,
+            user_features_count: context.genomeBrowser.currentState.userDefinedFeaturesCount || 0,
+            available_tools: context.genomeBrowser.availableTools.join(', '),
+            mcp_servers: this.getMCPServersSummary(),
+            plugin_functions: this.getPluginFunctionsSummary(),
+            timestamp: new Date().toISOString(),
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString()
+        };
+        
+        // Replace variables in the format {variable_name}
+        let processedPrompt = systemPrompt;
+        for (const [varName, varValue] of Object.entries(variables)) {
+            const regex = new RegExp(`\\{${varName}\\}`, 'gi');
+            processedPrompt = processedPrompt.replace(regex, varValue);
+        }
+        
+        return processedPrompt;
+    }
+
+    /**
+     * Get essential tool information that should always be included
+     */
+    getEssentialToolInformation() {
+        return `
+===CRITICAL INSTRUCTION FOR TOOL CALLS===
+When a user asks you to perform ANY action that requires using tools, you MUST respond with ONLY a JSON object:
+
+{"tool_name": "tool_name_here", "parameters": {"param1": "value1", "param2": "value2"}}
+
+Key Available Tools:
+- get_genome_info: Get detailed information about loaded genomes
+- navigate_to_position: Navigate to genomic coordinates  
+- search_features: Search for genes/features by name
+- get_current_state: Get current browser state
+- get_sequence: Retrieve DNA sequences
+- analyze_region: Analyze genomic regions
+- blast_search: BLAST sequence similarity search
+
+For complete tool documentation, ask me to show all available tools.`;
+    }
+
+    /**
+     * Get the original base system message with all context
+     */
+    getBaseSystemMessage() {
         const context = this.getCurrentContext();
         
         // Get MCP server information
@@ -2110,6 +2189,7 @@ Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
+- Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
 - Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
 
@@ -2193,6 +2273,61 @@ Remember: These functions provide atomic operations that can be chained together
 
 PLUGIN SYSTEM FUNCTIONS:
 ${this.getPluginSystemInfo()}`;
+    }
+
+    /**
+     * Helper methods for generating variable content
+     */
+    getGenomeInfoSummary() {
+        if (!this.app || !this.app.currentSequence) {
+            return 'No genome loaded';
+        }
+        
+        const sequences = Object.keys(this.app.currentSequence);
+        const totalLength = Object.values(this.app.currentSequence).reduce((sum, seq) => sum + seq.length, 0);
+        const annotationCount = this.app.currentAnnotations ? 
+            Object.values(this.app.currentAnnotations).reduce((sum, annotations) => sum + annotations.length, 0) : 0;
+        
+        return `${sequences.length} sequence(s), ${totalLength.toLocaleString()} bp total, ${annotationCount} annotations`;
+    }
+
+    getCurrentStateSummary(context) {
+        const state = context.genomeBrowser.currentState;
+        return `Chromosome: ${state.currentChromosome || 'None'}, Position: ${state.currentPosition?.start || 0}-${state.currentPosition?.end || 0}`;
+    }
+
+    getLoadedFilesSummary() {
+        if (!this.app || !this.app.loadedFiles) {
+            return 'No files loaded';
+        }
+        return `${this.app.loadedFiles.length} file(s) loaded`;
+    }
+
+    getVisibleTracksSummary() {
+        const tracks = this.getVisibleTracks();
+        return tracks.length > 0 ? tracks.join(', ') : 'No tracks visible';
+    }
+
+    getCurrentPositionSummary(context) {
+        const pos = context.genomeBrowser.currentState.currentPosition;
+        if (!pos) return 'No position set';
+        return `${pos.start}-${pos.end} (${(pos.end - pos.start + 1).toLocaleString()} bp)`;
+    }
+
+    getMCPServersSummary() {
+        const servers = this.mcpServerManager.getServerStatus();
+        const connected = servers.filter(s => s.connected);
+        return connected.length > 0 ? 
+            `${connected.length} connected: ${connected.map(s => s.name).join(', ')}` :
+            'No MCP servers connected';
+    }
+
+    getPluginFunctionsSummary() {
+        if (this.pluginFunctionCallsIntegrator) {
+            const stats = this.pluginFunctionCallsIntegrator.getPluginFunctionStats();
+            return `${stats.totalFunctions} plugin functions available`;
+        }
+        return 'Plugin system not available';
     }
 
     /**
@@ -2775,6 +2910,10 @@ ${this.getPluginSystemInfo()}`;
                     result = this.fetchProteinStructure( parameters);
                     break;
                     
+                case 'get_genome_info':
+                    result = await this.getGenomeInfo(parameters);
+                    break;
+                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -2852,7 +2991,8 @@ ${this.getPluginSystemInfo()}`;
                     'get_blast_databases',
                     'batch_blast_search',
                     'advanced_blast_search',
-                    'local_blast_database_info'
+                    'local_blast_database_info',
+                    'get_genome_info'
                 ]
             }
         };
@@ -6196,5 +6336,133 @@ ${this.getPluginSystemInfo()}`;
         }
 
         return filteredHits;
+    }
+
+    async getGenomeInfo(params) {
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
+        }
+
+        const genomeInfo = {
+            loadedGenomes: {},
+            currentGenome: null,
+            summary: {
+                totalSequences: 0,
+                totalLength: 0,
+                totalAnnotations: 0,
+                loadedFiles: 0
+            },
+            fileTypes: {
+                sequences: [],
+                annotations: [],
+                variants: [],
+                reads: [],
+                tracks: []
+            }
+        };
+
+        // Get sequence information
+        if (this.app.currentSequence && Object.keys(this.app.currentSequence).length > 0) {
+            for (const [chromosome, sequence] of Object.entries(this.app.currentSequence)) {
+                genomeInfo.loadedGenomes[chromosome] = {
+                    name: chromosome,
+                    length: sequence.length,
+                    gcContent: this.calculateGCContent(sequence),
+                    type: 'sequence'
+                };
+                genomeInfo.summary.totalLength += sequence.length;
+            }
+            genomeInfo.summary.totalSequences = Object.keys(this.app.currentSequence).length;
+            genomeInfo.fileTypes.sequences = Object.keys(this.app.currentSequence);
+        }
+
+        // Get annotation information
+        if (this.app.currentAnnotations && Object.keys(this.app.currentAnnotations).length > 0) {
+            for (const [chromosome, annotations] of Object.entries(this.app.currentAnnotations)) {
+                if (genomeInfo.loadedGenomes[chromosome]) {
+                    genomeInfo.loadedGenomes[chromosome].annotations = annotations.length;
+                    
+                    // Count feature types
+                    const featureTypes = {};
+                    annotations.forEach(feature => {
+                        featureTypes[feature.type] = (featureTypes[feature.type] || 0) + 1;
+                    });
+                    genomeInfo.loadedGenomes[chromosome].featureTypes = featureTypes;
+                } else {
+                    genomeInfo.loadedGenomes[chromosome] = {
+                        name: chromosome,
+                        annotations: annotations.length,
+                        type: 'annotations_only'
+                    };
+                }
+                genomeInfo.summary.totalAnnotations += annotations.length;
+            }
+            genomeInfo.fileTypes.annotations = Object.keys(this.app.currentAnnotations);
+        }
+
+        // Get variants information
+        if (this.app.currentVariants && Object.keys(this.app.currentVariants).length > 0) {
+            for (const [chromosome, variants] of Object.entries(this.app.currentVariants)) {
+                if (genomeInfo.loadedGenomes[chromosome]) {
+                    genomeInfo.loadedGenomes[chromosome].variants = variants.length;
+                } else {
+                    genomeInfo.loadedGenomes[chromosome] = {
+                        name: chromosome,
+                        variants: variants.length,
+                        type: 'variants_only'
+                    };
+                }
+            }
+            genomeInfo.fileTypes.variants = Object.keys(this.app.currentVariants);
+        }
+
+        // Get reads information
+        if (this.app.readsManager && this.app.readsManager.stats) {
+            const stats = this.app.readsManager.stats;
+            genomeInfo.summary.totalReads = stats.totalReads;
+            genomeInfo.summary.loadedRegions = stats.loadedRegions;
+            genomeInfo.fileTypes.reads = ['SAM file loaded'];
+        }
+
+        // Get current viewing state
+        if (this.app.currentChromosome) {
+            genomeInfo.currentGenome = {
+                chromosome: this.app.currentChromosome,
+                position: this.app.currentPosition,
+                visibleTracks: this.getVisibleTracks(),
+                sequenceLength: this.app.sequenceLength
+            };
+        }
+
+        // Get loaded files information
+        if (this.app.loadedFiles && this.app.loadedFiles.length > 0) {
+            genomeInfo.summary.loadedFiles = this.app.loadedFiles.length;
+            genomeInfo.loadedFilesList = this.app.loadedFiles.map(file => ({
+                name: file.name || 'Unknown',
+                type: file.type || 'Unknown',
+                size: file.size || 0
+            }));
+        }
+
+        // Calculate some derived statistics
+        if (genomeInfo.summary.totalSequences > 0) {
+            genomeInfo.summary.averageSequenceLength = Math.round(genomeInfo.summary.totalLength / genomeInfo.summary.totalSequences);
+        }
+
+        if (genomeInfo.summary.totalLength > 0 && genomeInfo.summary.totalAnnotations > 0) {
+            genomeInfo.summary.geneDensity = Math.round((genomeInfo.summary.totalAnnotations / genomeInfo.summary.totalLength) * 1000); // genes per kb
+        }
+
+        return {
+            success: true,
+            genomeInfo: genomeInfo,
+            message: `Retrieved information for ${genomeInfo.summary.totalSequences} sequence(s) with ${genomeInfo.summary.totalAnnotations} annotations`
+        };
+    }
+
+    calculateGCContent(sequence) {
+        if (!sequence || sequence.length === 0) return 0;
+        const gcCount = (sequence.match(/[GC]/gi) || []).length;
+        return Math.round((gcCount / sequence.length) * 100 * 100) / 100; // Round to 2 decimal places
     }
 } 
