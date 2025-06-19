@@ -10,7 +10,7 @@ class ChatManager {
         this.chatHistory = [];
         
         // Context mode toggle state - false means send full conversation, true means send only current message
-        this.contextModeEnabled = false;
+        this.contextModeEnabled = true; // Default to Current message only mode
         
         this.mcpSocket = null;
         this.clientId = null;
@@ -1181,7 +1181,7 @@ class ChatManager {
                     <div class="chat-input-options">
                         <div class="context-mode-toggle">
                             <label class="toggle-label">
-                                <input type="checkbox" id="contextModeToggle" />
+                                <input type="checkbox" id="contextModeToggle" checked />
                                 <span class="toggle-slider"></span>
                                 <span class="toggle-text">Current message only</span>
                             </label>
@@ -3877,6 +3877,13 @@ ${this.getPluginSystemInfo()}`;
             messagesContainer.appendChild(welcomeMessage);
         }
         
+        // Clear chat input box
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.value = '';
+            chatInput.style.height = 'auto'; // Reset height for auto-resize
+        }
+        
         // Clear chat history from config
         this.configManager.clearChatHistory();
     }
@@ -5400,6 +5407,13 @@ ${this.getPluginSystemInfo()}`;
         messagesContainer.innerHTML = '';
         if (welcomeMessage) {
             messagesContainer.appendChild(welcomeMessage);
+        }
+        
+        // Clear chat input box
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.value = '';
+            chatInput.style.height = 'auto'; // Reset height for auto-resize
         }
         
         // Add a new conversation indicator in UI only
