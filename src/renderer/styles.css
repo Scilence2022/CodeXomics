@@ -9162,11 +9162,27 @@ path.svg-gene-element.selected {
 .llm-config-modal {
     max-width: 600px;
     width: 95%;
-    max-height: 80vh;
+    max-height: calc(100vh - 40px); /* More flexible height for better footer visibility */
+    display: flex;
+    flex-direction: column;
 }
 
 .llm-config-modal .modal-body {
     padding: 0;
+    flex: 1 1 auto; /* Allow body to grow and shrink */
+    overflow-y: auto; /* Enable scrolling */
+    max-height: calc(100vh - 140px); /* Leave space for header and footer */
+    min-height: 0; /* Allow content to shrink */
+}
+
+.llm-config-modal .modal-footer {
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    margin-top: auto; /* Push footer to bottom */
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    z-index: 10;
 }
 
 /* Provider Tabs */
@@ -9370,7 +9386,7 @@ path.svg-gene-element.selected {
 /* Critical fixes for modal display issues on small screens */
 
 @media (max-width: 768px) {
-    /* Ensure modals fit properly on small screens */
+    /* Ensure modals fit properly on small screens with flexible height */
     .modal-content {
         width: 95vw !important;
         max-width: 95vw !important;
@@ -9379,6 +9395,7 @@ path.svg-gene-element.selected {
         position: relative;
         display: flex !important;
         flex-direction: column !important;
+        min-height: 0 !important; /* Allow content to shrink */
     }
     
     .modal-content.large,
@@ -9393,6 +9410,7 @@ path.svg-gene-element.selected {
         overflow-y: auto !important;
         padding: 15px !important;
         flex: 1 1 auto !important;
+        min-height: 0 !important; /* Allow content to shrink */
     }
     
     /* Fix modal footer to be always visible at bottom */
@@ -9406,6 +9424,7 @@ path.svg-gene-element.selected {
         padding: 15px !important;
         box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
         flex: 0 0 auto !important;
+        flex-shrink: 0 !important; /* Prevent footer from shrinking */
     }
     
     /* Ensure buttons are touch-friendly */
@@ -9418,7 +9437,19 @@ path.svg-gene-element.selected {
     /* Fix modal header */
     .modal-header {
         flex: 0 0 auto !important;
+        flex-shrink: 0 !important; /* Prevent header from shrinking */
         padding: 15px !important;
+    }
+    
+    /* LLM Config Modal specific fixes - override the fixed height limitation */
+    #llmConfigModal .modal-content {
+        max-height: calc(100vh - 20px) !important;
+        height: auto !important; /* Remove fixed height */
+    }
+    
+    #llmConfigModal .modal-body {
+        max-height: calc(100vh - 140px) !important;
+        min-height: 0 !important; /* Allow content to shrink */
     }
     
     /* BLAST Modal specific fixes */
@@ -9427,16 +9458,8 @@ path.svg-gene-element.selected {
     }
     
     #blastModal .modal-body {
-        max-height: calc(100vh - 160px) !important;
-    }
-    
-    /* LLM Config Modal specific fixes */
-    #llmConfigModal .modal-content {
-        max-height: calc(100vh - 20px) !important;
-    }
-    
-    #llmConfigModal .modal-body {
-        max-height: calc(100vh - 160px) !important;
+        max-height: calc(100vh - 140px) !important;
+        min-height: 0 !important;
     }
     
     /* General Settings Modal specific fixes */
@@ -9445,7 +9468,44 @@ path.svg-gene-element.selected {
     }
     
     #generalSettingsModal .modal-body {
-        max-height: calc(100vh - 160px) !important;
+        max-height: calc(100vh - 140px) !important;
+        min-height: 0 !important;
+    }
+    
+    /* MCP Settings Modal specific fixes */
+    #mcpSettingsModal .modal-content {
+        max-height: calc(100vh - 20px) !important;
+    }
+    
+    #mcpSettingsModal .modal-body {
+        max-height: calc(100vh - 140px) !important;
+        min-height: 0 !important;
+    }
+    
+    /* Override llm-config-modal class restrictions on small screens */
+    .llm-config-modal {
+        max-height: calc(100vh - 20px) !important; /* Override 80vh restriction */
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .llm-config-modal .modal-body {
+        padding: 0 !important;
+        min-height: 0 !important; /* Allow content to shrink */
+        overflow-y: auto !important; /* Ensure scrollability */
+        flex: 1 1 auto !important; /* Allow body to grow and shrink */
+        max-height: calc(100vh - 120px) !important; /* Leave space for header and footer */
+    }
+    
+    .llm-config-modal .modal-footer {
+        flex-shrink: 0 !important; /* Prevent footer from shrinking */
+        margin-top: auto !important; /* Push footer to bottom */
+        position: sticky !important;
+        bottom: 0 !important;
+        background: white !important;
+        border-top: 1px solid #dee2e6 !important;
+        z-index: 10 !important;
     }
     
     /* Fix tabs on mobile for settings */
@@ -14567,226 +14627,7 @@ path.svg-gene-element.selected {
     97.5% { transform: scale(0.9); }
 }
 
-/* ===== LLM CONFIGURATION MODAL STYLES ===== */
 
-/* LLM Configuration Modal */
-.llm-config-modal {
-    max-width: 600px;
-    width: 95%;
-    max-height: 80vh;
-}
-
-.llm-config-modal .modal-body {
-    padding: 0;
-}
-
-/* Provider Tabs */
-.llm-provider-tabs {
-    display: flex;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
-    overflow: hidden;
-}
-
-.tab-button {
-    flex: 1;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    color: #6c757d;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.tab-button:hover {
-    background: #e9ecef;
-    color: #495057;
-}
-
-.tab-button.active {
-    background: white;
-    color: #495057;
-    font-weight: 600;
-}
-
-.tab-button.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #667eea;
-}
-
-/* Provider Configuration Panels */
-.llm-provider-config {
-    padding: 20px;
-    min-height: 300px;
-}
-
-.provider-config {
-    display: none;
-}
-
-.provider-config.active {
-    display: block;
-}
-
-.provider-config .form-group {
-    margin-bottom: 16px;
-}
-
-.provider-config .form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: #374151;
-    font-size: 14px;
-}
-
-.provider-config .help-text {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: #6b7280;
-    line-height: 1.4;
-}
-
-.provider-config .help-text a {
-    color: #667eea;
-    text-decoration: none;
-}
-
-.provider-config .help-text a:hover {
-    text-decoration: underline;
-}
-
-/* Configuration Status */
-.llm-config-status {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    margin: 0 -20px -20px -20px;
-}
-
-.status-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #6c757d;
-    font-size: 14px;
-}
-
-.status-info i {
-    color: #667eea;
-}
-
-.status-info strong {
-    color: #374151;
-}
-
-#testConnectionBtn {
-    background: #6c757d;
-    color: white;
-    border: none;
-    transition: all 0.2s ease;
-}
-
-#testConnectionBtn:hover {
-    background: #5a6268;
-    transform: translateY(-1px);
-}
-
-#testConnectionBtn.testing {
-    background: #ffc107;
-    color: #212529;
-}
-
-#testConnectionBtn.testing i {
-    animation: spin 1s linear infinite;
-}
-
-#testConnectionBtn.success {
-    background: #28a745;
-    color: white;
-}
-
-#testConnectionBtn.error {
-    background: #dc3545;
-    color: white;
-}
-
-/* Provider-specific styling */
-.provider-config input[type="password"],
-.provider-config input[type="text"],
-.provider-config select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: border-color 0.2s ease;
-}
-
-.provider-config input:focus,
-.provider-config select:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.provider-config input[type="checkbox"] {
-    margin-right: 8px;
-    transform: scale(1.1);
-}
-
-/* Provider Icons */
-.tab-button::before {
-    margin-right: 6px;
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-}
-
-.tab-button[data-provider="openai"]::before {
-    content: '\f544'; /* fa-openai */
-}
-
-.tab-button[data-provider="anthropic"]::before {
-    content: '\f135'; /* fa-rocket */
-}
-
-.tab-button[data-provider="google"]::before {
-    content: '\f1a0'; /* fa-google */
-}
-
-.tab-button[data-provider="local"]::before {
-    content: '\f233'; /* fa-server */
-}
-
-/* Security indicator for API keys */
-.provider-config input[type="password"]:not(:placeholder-shown) {
-    background: linear-gradient(45deg, transparent 0%, rgba(16, 185, 129, 0.1) 100%);
-    border-color: #10b981;
-}
-
-/* Success/Error states */
-.form-group.success input {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.05);
-}
-
-.form-group.error input {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.05);
-}
 
 .form-group .error-message {
     color: #ef4444;
