@@ -1506,7 +1506,9 @@ class ChatManager {
         try {
             // Get maximum function call rounds from configuration
             const maxRounds = this.configManager.get('llm.functionCallRounds', 3);
+            const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
             console.log('Maximum function call rounds:', maxRounds);
+            console.log('Early completion enabled:', enableEarlyCompletion);
 
             // Get current studio context
             const context = this.getCurrentContext();
@@ -1518,9 +1520,10 @@ class ChatManager {
             
             let currentRound = 0;
             let finalResponse = null;
+            let taskCompleted = false;
             
             // Iterative function calling loop
-            while (currentRound < maxRounds) {
+            while (currentRound < maxRounds && !taskCompleted) {
                 currentRound++;
                 console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
                 
@@ -1533,6 +1536,22 @@ class ChatManager {
                 console.log('Response length:', response ? response.length : 'null');
                 console.log('Full response:', response);
                 console.log('========================');
+                
+                // Check for task completion signals if early completion is enabled
+                if (enableEarlyCompletion) {
+                    const completionResult = this.checkTaskCompletion(response);
+                    if (completionResult.isCompleted) {
+                        console.log('=== TASK COMPLETION DETECTED ===');
+                        console.log('Completion reason:', completionResult.reason);
+                        console.log('Completion confidence:', completionResult.confidence);
+                        console.log('================================');
+                        
+                        taskCompleted = true;
+                        finalResponse = completionResult.summary || response;
+                        this.showNotification(`Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`, 'success');
+                        break;
+                    }
+                }
                 
                 // Check if the response contains tool calls (JSON format)
                 console.log('Attempting to parse tool call(s)...');
@@ -2042,10 +2061,16 @@ class ChatManager {
     processSystemPromptVariables(systemPrompt) {
         const context = this.getCurrentContext();
         
+        // Create detailed current state
+        const detailedCurrentState = this.getDetailedCurrentState(context);
+        
+        // Create comprehensive tools list  
+        const allToolsDetailed = this.getAllToolsDetailed(context);
+        
         // Define available variables
         const variables = {
             genome_info: this.getGenomeInfoSummary(),
-            current_state: this.getCurrentStateSummary(context),
+            current_state: detailedCurrentState,
             loaded_files: this.getLoadedFilesSummary(),
             visible_tracks: this.getVisibleTracksSummary(),
             current_chromosome: context.genomeBrowser.currentState.currentChromosome || 'None',
@@ -2054,6 +2079,7 @@ class ChatManager {
             sequence_length: context.genomeBrowser.currentState.sequenceLength || 0,
             user_features_count: context.genomeBrowser.currentState.userDefinedFeaturesCount || 0,
             available_tools: context.genomeBrowser.availableTools.join(', '),
+            all_tools: allToolsDetailed,
             total_tools: context.genomeBrowser.toolSources.total,
             local_tools: context.genomeBrowser.toolSources.local,
             plugin_tools: context.genomeBrowser.toolSources.plugins,
@@ -2061,7 +2087,7 @@ class ChatManager {
             all_available_tools: context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n'),
             mcp_servers: this.getMCPServersSummary(),
             plugin_functions: this.getPluginFunctionsSummary(),
-            microbe_functions: this.MicrobeFns ? 'Available' : 'Not Available',
+            microbe_functions: this.getMicrobeGenomicsFunctionsDetailed(),
             timestamp: new Date().toISOString(),
             date: new Date().toLocaleDateString(),
             time: new Date().toLocaleTimeString()
@@ -2075,6 +2101,329 @@ class ChatManager {
         }
         
         return processedPrompt;
+    }
+
+    /**
+     * Check if the LLM response indicates task completion
+     * Returns an object with completion status and details
+     */
+    checkTaskCompletion(response) {
+        console.log('=== Checking Task Completion ===');
+        console.log('Response length:', response ? response.length : 0);
+        
+        const result = {
+            isCompleted: false,
+            reason: '',
+            confidence: 0,
+            summary: null
+        };
+        
+        if (!response || typeof response !== 'string') {
+            return result;
+        }
+        
+        const lowercaseResponse = response.toLowerCase();
+        
+        // Define completion indicators with weights
+        const completionIndicators = [
+            // Strong completion signals
+            { patterns: ['task completed', 'task finished', 'task done', 'completed successfully'], weight: 0.9, reason: 'Explicit task completion statement' },
+            { patterns: ['analysis complete', 'analysis finished', 'analysis done'], weight: 0.85, reason: 'Analysis completion indicated' },
+            { patterns: ['i have completed', 'i have finished', 'i have done'], weight: 0.8, reason: 'Direct completion confirmation' },
+            { patterns: ['the task is complete', 'the task is finished', 'the task is done'], weight: 0.85, reason: 'Task status confirmation' },
+            
+            // Summary/conclusion signals
+            { patterns: ['in summary', 'to summarize', 'in conclusion', 'overall'], weight: 0.7, reason: 'Summary provided' },
+            { patterns: ['final result', 'final analysis', 'final summary'], weight: 0.75, reason: 'Final results provided' },
+            { patterns: ['that completes', 'this completes', 'this concludes'], weight: 0.8, reason: 'Completion statement' },
+            
+            // Question/offer for next steps
+            { patterns: ['is there anything else', 'anything else you need', 'what else would you like'], weight: 0.65, reason: 'Offering further assistance' },
+            { patterns: ['do you need anything else', 'would you like me to', 'let me know if you need'], weight: 0.6, reason: 'Proactive assistance offer' },
+            { patterns: ['please let me know if', 'feel free to ask if'], weight: 0.55, reason: 'Open-ended assistance offer' },
+            
+            // Results presentation
+            { patterns: ['here are the results', 'the results show', 'results summary'], weight: 0.65, reason: 'Results presented' },
+            { patterns: ['based on the analysis', 'the data shows', 'findings indicate'], weight: 0.6, reason: 'Analysis findings presented' },
+            
+            // Tool execution completion without follow-up
+            { patterns: ['successfully navigated', 'successfully retrieved', 'successfully analyzed'], weight: 0.5, reason: 'Tool execution completed' }
+        ];
+        
+        let maxWeight = 0;
+        let bestReason = '';
+        
+        // Check for completion indicators
+        for (const indicator of completionIndicators) {
+            for (const pattern of indicator.patterns) {
+                if (lowercaseResponse.includes(pattern)) {
+                    if (indicator.weight > maxWeight) {
+                        maxWeight = indicator.weight;
+                        bestReason = indicator.reason;
+                    }
+                    console.log(`Found completion indicator: "${pattern}" (weight: ${indicator.weight})`);
+                }
+            }
+        }
+        
+        // Additional context checks
+        let contextBonus = 0;
+        
+        // Check if no tool calls are present (conversational response)
+        const hasToolCall = this.parseToolCall(response) !== null || this.parseMultipleToolCalls(response).length > 0;
+        if (!hasToolCall && maxWeight > 0) {
+            contextBonus += 0.15;
+            console.log('No tool calls detected - adding context bonus');
+        }
+        
+        // Check response length - longer responses with completion indicators are more likely to be final
+        if (response.length > 100 && maxWeight > 0) {
+            contextBonus += 0.1;
+            console.log('Substantial response length - adding context bonus');
+        }
+        
+        // Check for direct answers without need for more tools
+        if (lowercaseResponse.includes('the answer is') || lowercaseResponse.includes('the result is') || 
+            lowercaseResponse.includes('found') && !hasToolCall) {
+            contextBonus += 0.1;
+            console.log('Direct answer detected - adding context bonus');
+        }
+        
+        const finalConfidence = Math.min(maxWeight + contextBonus, 1.0);
+        
+        // Determine completion status based on confidence threshold
+        const completionThreshold = this.configManager.get('llm.completionThreshold', 0.7);
+        
+        if (finalConfidence >= completionThreshold) {
+            result.isCompleted = true;
+            result.confidence = finalConfidence;
+            result.reason = bestReason;
+            
+            // Extract summary if available
+            const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            if (sentences.length > 0) {
+                // Use the entire response as summary for now
+                result.summary = response.trim();
+            }
+        }
+        
+        console.log(`Task completion check result: ${result.isCompleted} (confidence: ${finalConfidence}, threshold: ${completionThreshold})`);
+        if (result.isCompleted) {
+            console.log(`Completion reason: ${result.reason}`);
+        }
+        
+        return result;
+    }
+
+    /**
+     * Get detailed current state information for system prompts
+     */
+    getDetailedCurrentState(context) {
+        const state = context.genomeBrowser.currentState;
+        const tracks = this.getVisibleTracks();
+        const mcpServers = this.mcpServerManager.getServerStatus();
+        const connectedServers = mcpServers.filter(s => s.connected);
+        
+        let detailedState = `GENOME BROWSER CURRENT STATE:
+
+NAVIGATION & POSITION:
+- Current Chromosome: ${state.currentChromosome || 'None'}
+- Current Position: ${state.currentPosition ? `${state.currentPosition.start}-${state.currentPosition.end}` : 'None'}
+- Position Range: ${state.currentPosition ? `${(state.currentPosition.end - state.currentPosition.start + 1).toLocaleString()} bp` : 'N/A'}
+- Sequence Length: ${state.sequenceLength ? state.sequenceLength.toLocaleString() : 'Unknown'} bp
+
+DATA STATUS:
+- Loaded Files: ${state.loadedFiles.length} file(s)
+- Annotations Count: ${state.annotationsCount || 0}
+- User-defined Features: ${state.userDefinedFeaturesCount || 0}
+- Visible Tracks: ${tracks.length > 0 ? tracks.join(', ') : 'None'}
+
+SYSTEM STATUS:
+- MCP Servers Connected: ${connectedServers.length}${connectedServers.length > 0 ? ` (${connectedServers.map(s => s.name).join(', ')})` : ''}
+- Plugin System: ${this.pluginFunctionCallsIntegrator ? 'Active' : 'Inactive'}
+- MicrobeGenomics Functions: ${this.MicrobeFns ? 'Available' : 'Not Available'}
+
+TOOL AVAILABILITY:
+- Total Tools: ${context.genomeBrowser.toolSources.total}
+- Local Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}
+- MCP Tools: ${context.genomeBrowser.toolSources.mcp}`;
+
+        return detailedState;
+    }
+
+    /**
+     * Get comprehensive tools information for system prompts
+     */
+    getAllToolsDetailed(context) {
+        const mcpServers = this.mcpServerManager.getServerStatus();
+        const connectedServers = mcpServers.filter(s => s.connected);
+        const toolsByCategory = this.mcpServerManager.getToolsByCategory();
+        
+        let toolsInfo = `COMPREHENSIVE TOOLS DOCUMENTATION:
+
+TOOL STATISTICS:
+- Total Available Tools: ${context.genomeBrowser.toolSources.total}
+- Local/Built-in Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}
+- MCP Server Tools: ${context.genomeBrowser.toolSources.mcp}
+
+MCP SERVER TOOLS:`;
+        
+        if (connectedServers.length > 0) {
+            toolsInfo += `
+Connected Servers: ${connectedServers.length}
+${connectedServers.map(server => `- ${server.name} (${server.category}): ${server.toolCount} tools`).join('\n')}
+
+MCP Tools by Category:
+${Object.entries(toolsByCategory).map(([category, tools]) => 
+    `${category.toUpperCase()}:\n${tools.map(tool => 
+        `  - ${tool.name}: ${tool.description || 'No description'}`
+    ).join('\n')}`
+).join('\n\n')}`;
+        } else {
+            toolsInfo += `
+No MCP servers connected. Available tools are limited to local and plugin functions.`;
+        }
+
+        // Add MicrobeGenomics Functions details
+        if (this.MicrobeFns) {
+            try {
+                const categories = this.MicrobeFns.getFunctionCategories();
+                toolsInfo += `
+
+MICROBE GENOMICS FUNCTIONS:
+${Object.entries(categories).map(([category, info]) => 
+    `${category.toUpperCase()} (${info.description}):\n${info.functions.map(fn => 
+        `  - ${fn}: Use as "${fn.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase()}"`
+    ).join('\n')}`
+).join('\n\n')}`;
+            } catch (error) {
+                toolsInfo += `\nMicrobeGenomics Functions: Available but details unavailable`;
+            }
+        }
+
+        // Add Plugin Tools details
+        if (this.pluginFunctionCallsIntegrator) {
+            try {
+                const pluginInfo = this.pluginFunctionCallsIntegrator.getPluginFunctionsSystemInfo();
+                const stats = this.pluginFunctionCallsIntegrator.getPluginFunctionStats();
+                
+                toolsInfo += `
+
+PLUGIN SYSTEM TOOLS:
+Total Plugin Functions: ${stats.totalFunctions}
+Available Plugins: ${Object.keys(stats.pluginCounts).join(', ')}
+Function Categories: ${Object.keys(stats.categoryStats).join(', ')}
+
+${pluginInfo}`;
+            } catch (error) {
+                toolsInfo += `\nPlugin Tools: Available but details unavailable`;
+            }
+        }
+
+        // Add comprehensive tool examples
+        toolsInfo += `
+
+CORE LOCAL TOOLS:
+Navigation & State:
+  - navigate_to_position: Navigate to specific chromosome position
+  - get_current_state: Get current browser state
+  - jump_to_gene: Navigate to specific gene
+  - zoom_in/zoom_out: Adjust view zoom level
+  - scroll_left/scroll_right: Pan the view
+
+Search & Discovery:
+  - search_features: Search for features by text
+  - search_gene_by_name: Find specific genes
+  - search_motif: Find sequence motifs
+  - search_by_position: Find features near position
+
+Sequence Analysis:
+  - get_sequence: Extract DNA sequence
+  - translate_dna: Translate DNA to protein
+  - compute_gc: Calculate GC content
+  - reverse_complement: Get reverse complement
+  - find_orfs: Find open reading frames
+  - sequence_statistics: Analyze sequence composition
+
+Advanced Analysis:
+  - analyze_region: Comprehensive region analysis
+  - blast_search: BLAST sequence similarity
+  - predict_promoter: Predict promoter regions
+  - find_restriction_sites: Find enzyme cut sites
+  - show_metabolic_pathway: Display pathway diagrams
+
+Annotation & Data:
+  - create_annotation: Add new annotations
+  - toggle_track: Show/hide data tracks
+  - export_data: Export in various formats
+  - get_genome_info: Get genome metadata
+
+Protein Structure:
+  - open_protein_viewer: Display 3D protein structures
+  - fetch_protein_structure: Get PDB structure data
+  - search_protein_by_gene: Find proteins by gene name
+
+TOOL USAGE EXAMPLES:
+Basic Navigation:
+  {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+  {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+
+Sequence Analysis:
+  {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+  {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
+  {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
+
+Search Operations:
+  {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+  {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+  {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
+
+Advanced Analysis:
+  {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt"}}
+  {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
+  {"tool_name": "show_metabolic_pathway", "parameters": {"pathway": "glycolysis"}}
+
+Protein Structure:
+  {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
+  {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+
+Data Management:
+  {"tool_name": "create_annotation", "parameters": {"type": "gene", "name": "test_gene", "chromosome": "chr1", "start": 1000, "end": 2000}}
+  {"tool_name": "export_data", "parameters": {"format": "fasta", "chromosome": "chr1", "start": 1000, "end": 2000}}`;
+
+        return toolsInfo;
+    }
+
+    /**
+     * Get detailed MicrobeGenomics Functions information
+     */
+    getMicrobeGenomicsFunctionsDetailed() {
+        if (!this.MicrobeFns) {
+            return 'MicrobeGenomics Functions: Not Available';
+        }
+
+        try {
+            const categories = this.MicrobeFns.getFunctionCategories();
+            const examples = this.MicrobeFns.getUsageExamples();
+            
+            let info = `MicrobeGenomics Functions: Available with ${Object.keys(categories).length} categories\n\n`;
+            
+            info += 'CATEGORIES:\n';
+            Object.entries(categories).forEach(([category, categoryInfo]) => {
+                info += `- ${category}: ${categoryInfo.description} (${categoryInfo.functions.length} functions)\n`;
+            });
+            
+            info += '\nUSAGE EXAMPLES:\n';
+            examples.forEach((example, index) => {
+                info += `${index + 1}. ${example.task}\n`;
+            });
+            
+            return info;
+        } catch (error) {
+            return 'MicrobeGenomics Functions: Available but details unavailable';
+        }
     }
 
     /**
@@ -2384,6 +2733,9 @@ ${examples.map(example =>
         }
 
         return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
+
+IMPORTANT: Task Completion Instructions
+When you believe you have completed the user's task or fully answered their question, you can end the conversation early by providing a summary response WITHOUT any tool calls. Use clear completion indicators like "Task completed", "Analysis finished", "In summary", or "The results show" to signal completion. This allows for efficient task execution without using unnecessary function call rounds.
 
 Current Genome AI Studio State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}

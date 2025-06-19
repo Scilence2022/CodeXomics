@@ -212,6 +212,15 @@ class LLMConfigManager {
                 this.hideConfigModal();
             });
         });
+        
+        // Completion threshold slider handler
+        const completionThresholdSlider = document.getElementById('completionThreshold');
+        const completionThresholdValue = document.getElementById('completionThresholdValue');
+        if (completionThresholdSlider && completionThresholdValue) {
+            completionThresholdSlider.addEventListener('input', (e) => {
+                completionThresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
+            });
+        }
     }
 
     toggleOptionsDropdown() {
@@ -353,6 +362,13 @@ class LLMConfigManager {
             const functionCallRoundsField = document.getElementById('functionCallRounds');
             const functionCallRounds = functionCallRoundsField ? parseInt(functionCallRoundsField.value) : 3;
 
+            // Get early completion settings
+            const enableEarlyCompletionField = document.getElementById('enableEarlyCompletion');
+            const enableEarlyCompletion = enableEarlyCompletionField ? enableEarlyCompletionField.checked : true;
+            
+            const completionThresholdField = document.getElementById('completionThreshold');
+            const completionThreshold = completionThresholdField ? parseFloat(completionThresholdField.value) : 0.7;
+
             // Get system prompt setting
             const systemPromptField = document.getElementById('systemPrompt');
             const systemPrompt = systemPromptField ? systemPromptField.value.trim() : '';
@@ -362,6 +378,8 @@ class LLMConfigManager {
                 await this.configManager.set('llm.providers', this.providers);
                 await this.configManager.set('llm.currentProvider', this.currentProvider);
                 await this.configManager.set('llm.functionCallRounds', functionCallRounds);
+                await this.configManager.set('llm.enableEarlyCompletion', enableEarlyCompletion);
+                await this.configManager.set('llm.completionThreshold', completionThreshold);
                 await this.configManager.set('llm.systemPrompt', systemPrompt);
                 await this.configManager.saveConfig();
                 console.log('Configuration saved via ConfigManager');
@@ -454,6 +472,23 @@ class LLMConfigManager {
             const functionCallRoundsField = document.getElementById('functionCallRounds');
             if (functionCallRoundsField) {
                 functionCallRoundsField.value = functionCallRounds;
+            }
+
+            // Load early completion settings
+            const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
+            const enableEarlyCompletionField = document.getElementById('enableEarlyCompletion');
+            if (enableEarlyCompletionField) {
+                enableEarlyCompletionField.checked = enableEarlyCompletion;
+            }
+            
+            const completionThreshold = this.configManager.get('llm.completionThreshold', 0.7);
+            const completionThresholdField = document.getElementById('completionThreshold');
+            const completionThresholdValueField = document.getElementById('completionThresholdValue');
+            if (completionThresholdField) {
+                completionThresholdField.value = completionThreshold;
+            }
+            if (completionThresholdValueField) {
+                completionThresholdValueField.textContent = completionThreshold.toFixed(2);
             }
 
             // Load system prompt setting

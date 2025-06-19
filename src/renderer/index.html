@@ -918,6 +918,22 @@
                         <input type="number" id="functionCallRounds" min="1" max="10" value="3" class="input-full">
                         <small class="help-text">Maximum number of consecutive function calls the AI can make (1-10). Higher values allow more complex multi-step operations but may take longer.</small>
                     </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="enableEarlyCompletion" checked>
+                            Enable Early Task Completion
+                        </label>
+                        <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="completionThreshold">Task Completion Confidence Threshold:</label>
+                        <input type="range" id="completionThreshold" min="0.5" max="1.0" step="0.05" value="0.7" class="slider">
+                        <div class="slider-value">
+                            <span id="completionThresholdValue">0.7</span>
+                            <small>(50% = Low confidence, 100% = High confidence)</small>
+                        </div>
+                        <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
+                    </div>
                 </div>
                 
                 <div class="llm-config-status">

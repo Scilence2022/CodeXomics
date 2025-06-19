@@ -216,7 +216,9 @@ class ConfigManager {
                 systemPrompt: '',
                 conversationMemory: 10, // Number of messages to remember
                 autoSave: true,
-                functionCallRounds: 3  // Maximum number of function call rounds
+                functionCallRounds: 3,  // Maximum number of function call rounds
+                enableEarlyCompletion: true,  // Enable early task completion detection
+                completionThreshold: 0.7  // Confidence threshold for task completion (0.0-1.0)
             },
             ui: {
                 theme: 'default',

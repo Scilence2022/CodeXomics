@@ -17771,6 +17771,63 @@ path.svg-gene-element.selected {
     text-align: center;
 }
 
+.function-call-settings .slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    outline: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.function-call-settings .slider:hover {
+    opacity: 1;
+}
+
+.function-call-settings .slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.function-call-settings .slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.function-call-settings .slider-value {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.function-call-settings .slider-value span {
+    font-weight: 600;
+    color: #3b82f6;
+    min-width: 40px;
+}
+
+.function-call-settings .slider-value small {
+    color: #64748b;
+    font-size: 12px;
+}
+
 @media (prefers-color-scheme: dark) {
     .system-prompt-settings {
         background: rgba(34, 197, 94, 0.1);
