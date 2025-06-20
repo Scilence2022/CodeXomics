@@ -36,6 +36,12 @@ class ReadsManager {
         // Parse header to get basic information
         await this.parseHeader();
         
+        // For very large files, warn about memory usage
+        const fileSizeMB = (fileData.length * 2) / (1024 * 1024); // Rough estimate (UTF-16)
+        if (fileSizeMB > 100) {
+            console.warn(`Large SAM file in memory: ~${fileSizeMB.toFixed(1)} MB. Consider using streaming for better performance.`);
+        }
+        
         console.log('ReadsManager initialized with dynamic loading');
     }
 

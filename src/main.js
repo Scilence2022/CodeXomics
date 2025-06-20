@@ -355,6 +355,26 @@ app.on('before-quit', () => {
 // IPC handlers
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
+    // Check file size first
+    const stats = fs.statSync(filePath);
+    const fileSizeMB = stats.size / (1024 * 1024);
+    
+    // For files larger than 500MB, refuse to read entirely into memory
+    // JavaScript has a string length limit of ~512MB
+    if (fileSizeMB > 500) {
+      return { 
+        success: false, 
+        error: `File is too large (${fileSizeMB.toFixed(1)} MB) to read into memory. Use streaming mode instead.`,
+        requiresStreaming: true,
+        fileSize: stats.size
+      };
+    }
+    
+    // For files larger than 100MB, warn but allow
+    if (fileSizeMB > 100) {
+      console.warn(`Reading large file into memory: ${fileSizeMB.toFixed(1)} MB`);
+    }
+    
     const data = fs.readFileSync(filePath, 'utf8');
     return { success: true, data };
   } catch (error) {
@@ -370,46 +390,71 @@ ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 10
     let buffer = '';
     let lineCount = 0;
     
+    console.log(`Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(filePath)}`);
+    
     return new Promise((resolve, reject) => {
-      const stream = fs.createReadStream(filePath, { encoding: 'utf8', highWaterMark: chunkSize });
+      const stream = fs.createReadStream(filePath, { 
+        encoding: 'utf8', 
+        highWaterMark: chunkSize 
+      });
       
       stream.on('data', (chunk) => {
-        totalRead += Buffer.byteLength(chunk, 'utf8');
-        buffer += chunk;
-        
-        // Process complete lines
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // Keep incomplete line in buffer
-        
-        // Send lines to renderer for processing
-        if (lines.length > 0) {
-          lineCount += lines.length;
-          event.sender.send('file-lines-chunk', { lines, lineCount });
+        try {
+          totalRead += Buffer.byteLength(chunk, 'utf8');
+          buffer += chunk;
+          
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Keep incomplete line in buffer
+          
+          // Send lines to renderer for processing
+          if (lines.length > 0) {
+            lineCount += lines.length;
+            event.sender.send('file-lines-chunk', { lines, lineCount });
+          }
+          
+          // Send progress update
+          const progress = Math.round((totalRead / fileSize) * 100);
+          event.sender.send('file-read-progress', { progress, totalRead, fileSize });
+          
+          // Log progress for very large files
+          if (totalRead % (50 * 1024 * 1024) === 0) { // Every 50MB
+            console.log(`Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`);
+          }
+        } catch (chunkError) {
+          console.error('Error processing chunk:', chunkError);
+          stream.destroy();
+          reject({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
         }
-        
-        // Send progress update
-        const progress = Math.round((totalRead / fileSize) * 100);
-        event.sender.send('file-read-progress', { progress, totalRead, fileSize });
       });
       
       stream.on('end', () => {
-        // Process any remaining data in buffer
-        if (buffer.trim()) {
-          lineCount += 1;
-          event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
+        try {
+          // Process any remaining data in buffer
+          if (buffer.trim()) {
+            lineCount += 1;
+            event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
+          }
+          
+          console.log(`Stream complete: ${lineCount} lines, ${(totalRead / (1024 * 1024)).toFixed(1)} MB`);
+          
+          // Signal completion
+          event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
+          resolve({ success: true, totalLines: lineCount, size: totalRead });
+        } catch (endError) {
+          console.error('Error finalizing stream:', endError);
+          reject({ success: false, error: `Error finalizing stream: ${endError.message}` });
         }
-        
-        // Signal completion
-        event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
-        resolve({ success: true, totalLines: lineCount, size: totalRead });
       });
       
       stream.on('error', (error) => {
-        reject({ success: false, error: error.message });
+        console.error('Stream error:', error);
+        reject({ success: false, error: `File read error: ${error.message}` });
       });
     });
   } catch (error) {
-    return { success: false, error: error.message };
+    console.error('Error setting up stream:', error);
+    return { success: false, error: `Failed to set up file stream: ${error.message}` };
   }
 });
 
