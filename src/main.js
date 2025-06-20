@@ -209,6 +209,14 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Conversation Evolution System',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            mainWindow.webContents.send('open-evolution-interface');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Visualization Tools',
           submenu: [
             {

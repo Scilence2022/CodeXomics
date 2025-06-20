@@ -264,14 +264,34 @@ class GenomeBrowser {
         // Step 5.6: Initialize General Settings Manager
         console.log('⚙️ About to initialize GeneralSettingsManager...');
         try {
-                    this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
-        this.generalSettingsManager.init();
-        window.generalSettingsManager = this.generalSettingsManager; // Make globally available
-        console.log('✅ GeneralSettingsManager initialized successfully');
+            this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+            this.generalSettingsManager.init();
+            window.generalSettingsManager = this.generalSettingsManager; // Make globally available
+            console.log('✅ GeneralSettingsManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing GeneralSettingsManager:', error);
+        }
         
         // Step 5.7: Initialize Visualization Tools Manager
-        this.initializeVisualizationToolsManager();
-        console.log('✅ VisualizationToolsManager initialized successfully');
+        try {
+            this.initializeVisualizationToolsManager();
+            console.log('✅ VisualizationToolsManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing VisualizationToolsManager:', error);
+        }
+        
+        // Step 5.8: Initialize Conversation Evolution System
+        console.log('🧬 About to initialize ConversationEvolutionManager...');
+        try {
+            this.conversationEvolutionManager = new ConversationEvolutionManager(this, this.configManager, this.chatManager);
+            this.evolutionInterfaceManager = new EvolutionInterfaceManager(this.conversationEvolutionManager, this.configManager);
+            
+            window.conversationEvolutionManager = this.conversationEvolutionManager; // Make globally available
+            window.evolutionInterfaceManager = this.evolutionInterfaceManager; // Make globally available
+            console.log('✅ ConversationEvolutionManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing ConversationEvolutionManager:', error);
+        }
         
         // Add global tool validation function for debugging
         window.validateAllTools = () => {
@@ -282,9 +302,6 @@ class GenomeBrowser {
                 return null;
             }
         };
-        } catch (error) {
-            console.error('❌ Error initializing GeneralSettingsManager:', error);
-        }
 
         // Step 6: Setup IPC communication
         console.log('📡 Setting up IPC communication...');
@@ -334,6 +351,11 @@ class GenomeBrowser {
         
         // Initialize MCP server status check
         this.initializeMCPServerStatus();
+        
+        // Add debug functionality for evolution system
+        setTimeout(() => {
+            this.addEvolutionDebugSupport();
+        }, 2000);
     }
 
     setupEventListeners() {
@@ -1270,6 +1292,25 @@ class GenomeBrowser {
             const settingsBtn = document.getElementById('settingsBtn');
             if (settingsBtn) {
                 settingsBtn.click();
+            }
+        });
+
+        // Handle evolution interface from Tools menu
+        ipcRenderer.on('open-evolution-interface', () => {
+            console.log('🧬 Opening conversation evolution interface');
+            
+            try {
+                if (this.evolutionInterfaceManager) {
+                    this.evolutionInterfaceManager.openEvolutionInterface();
+                } else if (window.evolutionInterfaceManager) {
+                    window.evolutionInterfaceManager.openEvolutionInterface();
+                } else {
+                    console.warn('EvolutionInterfaceManager not available');
+                    this.showNotification('Evolution system is not yet initialized', 'warning');
+                }
+            } catch (error) {
+                console.error('Failed to open evolution interface:', error);
+                this.showNotification('Unable to open evolution interface', 'error');
             }
         });
 
@@ -4183,6 +4224,294 @@ class GenomeBrowser {
         } catch (error) {
             console.error('Error in handleMenuSelectAll:', error);
             this.showNotification('❌ Error selecting content', 'error');
+        }
+    }
+
+    /**
+     * 添加进化系统调试支持
+     */
+    addEvolutionDebugSupport() {
+        console.log('🧪 Adding evolution debug support...');
+        
+        // 添加调试按钮到页面
+        const debugBtn = document.createElement('button');
+        debugBtn.id = 'debugEvolutionBtn';
+        debugBtn.innerHTML = '🧬 调试进化界面';
+        debugBtn.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            font-family: monospace;
+        `;
+        
+        debugBtn.addEventListener('click', () => {
+            console.log('🧪 Debug button clicked');
+            this.testEvolutionInterface();
+        });
+        
+        document.body.appendChild(debugBtn);
+        console.log('✅ Evolution debug button added');
+    }
+
+    /**
+     * 测试进化界面显示
+     */
+    testEvolutionInterface() {
+        console.log('🧪 Testing evolution interface...');
+        
+        try {
+            // 检查EvolutionInterfaceManager是否存在
+            if (this.evolutionInterfaceManager) {
+                console.log('✅ EvolutionInterfaceManager found');
+                this.evolutionInterfaceManager.openEvolutionInterface();
+            } else if (window.evolutionInterfaceManager) {
+                console.log('✅ Global EvolutionInterfaceManager found');
+                window.evolutionInterfaceManager.openEvolutionInterface();
+            } else {
+                console.error('❌ EvolutionInterfaceManager not available');
+                this.createDiagnosticModal();
+            }
+        } catch (error) {
+            console.error('❌ Test failed:', error);
+            this.createDiagnosticModal();
+        }
+    }
+
+    /**
+     * 创建诊断模态框
+     */
+    createDiagnosticModal() {
+        console.log('🧪 Creating diagnostic modal...');
+        
+        // 移除现有的诊断模态框
+        const existing = document.getElementById('diagnosticModal');
+        if (existing) {
+            existing.remove();
+        }
+        
+        const modal = document.createElement('div');
+        modal.id = 'diagnosticModal';
+        modal.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            z-index: 10000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        `;
+        
+        // 检查系统状态
+        const evolutionManagerStatus = this.conversationEvolutionManager ? '✅ 已加载' : '❌ 未找到';
+        const interfaceManagerStatus = this.evolutionInterfaceManager ? '✅ 已加载' : '❌ 未找到';
+        const globalEvolutionStatus = window.conversationEvolutionManager ? '✅ 已加载' : '❌ 未找到';
+        const globalInterfaceStatus = window.evolutionInterfaceManager ? '✅ 已加载' : '❌ 未找到';
+        const classStatus = window.EvolutionInterfaceManager ? '✅ 已加载' : '❌ 未找到';
+        
+        modal.innerHTML = `
+            <div style="
+                background: #1e1e1e !important;
+                color: #e0e0e0 !important;
+                padding: 30px !important;
+                border-radius: 10px !important;
+                max-width: 700px !important;
+                width: 90% !important;
+                max-height: 80% !important;
+                overflow-y: auto !important;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+            ">
+                <h2 style="margin: 0 0 20px 0; color: #ff6b6b;">🧬 进化系统诊断</h2>
+                <p>检测到进化界面显示问题。以下是系统状态诊断:</p>
+                
+                <div style="margin: 20px 0;">
+                    <strong>管理器实例状态:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px; font-family: monospace; font-size: 13px;">
+                        <li>this.conversationEvolutionManager: ${evolutionManagerStatus}</li>
+                        <li>this.evolutionInterfaceManager: ${interfaceManagerStatus}</li>
+                        <li>window.conversationEvolutionManager: ${globalEvolutionStatus}</li>
+                        <li>window.evolutionInterfaceManager: ${globalInterfaceStatus}</li>
+                        <li>window.EvolutionInterfaceManager: ${classStatus}</li>
+                    </ul>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <strong>调试建议:</strong>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li>打开浏览器控制台 (F12) 查看错误信息</li>
+                        <li>点击下面的"强制创建界面"按钮测试</li>
+                        <li>刷新页面重新初始化系统</li>
+                        <li>检查是否所有进化系统文件都已加载</li>
+                    </ol>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="window.genomeBrowser.forceCreateEvolutionInterface()" style="
+                        background: #28a745;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin-right: 10px;
+                    ">强制创建界面</button>
+                    <button onclick="document.getElementById('diagnosticModal').remove()" style="
+                        background: #4a9eff;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin-right: 10px;
+                    ">关闭</button>
+                    <button onclick="location.reload()" style="
+                        background: #666;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    ">刷新页面</button>
+                </div>
+            </div>
+        `;
+        
+        // 点击背景关闭
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        document.body.appendChild(modal);
+        console.log('✅ Diagnostic modal created');
+    }
+
+    /**
+     * 强制创建进化界面（用于调试）
+     */
+    forceCreateEvolutionInterface() {
+        console.log('🧪 Force creating evolution interface...');
+        
+        try {
+            // 关闭诊断模态框
+            const diagnostic = document.getElementById('diagnosticModal');
+            if (diagnostic) {
+                diagnostic.remove();
+            }
+            
+            // 创建简化的测试界面
+            const testModal = document.createElement('div');
+            testModal.id = 'testEvolutionModal';
+            testModal.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: rgba(0, 0, 0, 0.8) !important;
+                z-index: 10000 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+            
+            testModal.innerHTML = `
+                <div style="
+                    background: #1e1e1e !important;
+                    color: #e0e0e0 !important;
+                    padding: 30px !important;
+                    border-radius: 12px !important;
+                    width: 90% !important;
+                    max-width: 1200px !important;
+                    height: 80% !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+                ">
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-bottom: 20px;
+                        border-bottom: 1px solid #333;
+                        margin-bottom: 20px;
+                    ">
+                        <h2 style="margin: 0; color: #4a9eff;">🧬 对话进化系统 (测试版)</h2>
+                        <button onclick="document.getElementById('testEvolutionModal').remove()" style="
+                            background: none;
+                            border: none;
+                            color: #fff;
+                            font-size: 24px;
+                            cursor: pointer;
+                            padding: 8px;
+                        ">✕</button>
+                    </div>
+                    
+                    <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                        <div style="
+                            background: #2a2a2a;
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin-bottom: 20px;
+                        ">
+                            <h3 style="color: #4a9eff; margin-top: 0;">系统状态</h3>
+                            <p>这是进化系统的测试界面。正在开发中的功能包括：</p>
+                            <ul>
+                                <li>🎯 对话分析和失败检测</li>
+                                <li>🧠 智能功能需求识别</li>
+                                <li>🚀 自动插件生成</li>
+                                <li>📊 进化过程监控</li>
+                                <li>📈 详细报告生成</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="
+                            background: #2a2a2a;
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin-bottom: 20px;
+                        ">
+                            <h3 style="color: #28a745; margin-top: 0;">✅ 界面显示成功！</h3>
+                            <p>如果您能看到这个界面，说明基本的模态框功能是正常工作的。</p>
+                            <p>原始进化界面可能遇到的问题：</p>
+                            <ul>
+                                <li>CSS样式冲突</li>
+                                <li>JavaScript初始化错误</li>
+                                <li>模块加载问题</li>
+                                <li>事件监听器设置失败</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="
+                            background: #2a2a2a;
+                            border-radius: 8px;
+                            padding: 20px;
+                        ">
+                            <h3 style="color: #ffa502; margin-top: 0;">🔧 下一步调试</h3>
+                            <p>请检查浏览器控制台 (F12) 中是否有错误信息，并将这些信息提供给开发者。</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(testModal);
+            console.log('✅ Test evolution interface created successfully');
+            
+        } catch (error) {
+            console.error('❌ Failed to force create interface:', error);
+            alert('无法创建测试界面: ' + error.message);
         }
     }
 }
