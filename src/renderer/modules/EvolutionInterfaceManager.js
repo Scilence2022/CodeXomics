@@ -23,9 +23,16 @@ class EvolutionInterfaceManager {
      * 打开进化界面
      */
     openEvolutionInterface() {
-        console.log('🧬 Opening Evolution Interface...');
+        console.log('🧬 EvolutionInterfaceManager: Opening Evolution Interface...');
         
         try {
+            // 移除任何现有的模态框
+            const existingModal = document.getElementById('evolutionModal');
+            if (existingModal) {
+                console.log('♻️ Removing existing modal');
+                existingModal.remove();
+            }
+            
             this.createEvolutionModal();
             console.log('✅ Modal created successfully');
             
@@ -33,8 +40,11 @@ class EvolutionInterfaceManager {
             console.log('✅ Tab rendered successfully');
             
             if (this.modal) {
+                // 强制显示模态框
                 this.modal.style.display = 'block';
-                console.log('✅ Modal displayed');
+                this.modal.style.visibility = 'visible';
+                this.modal.style.opacity = '1';
+                console.log('✅ Modal displayed with forced styles');
                 
                 // 强制重绘
                 this.modal.offsetHeight;
@@ -43,6 +53,12 @@ class EvolutionInterfaceManager {
                 setTimeout(() => {
                     const modalRect = this.modal.getBoundingClientRect();
                     console.log('📏 Modal dimensions:', modalRect);
+                    console.log('📊 Modal computed styles:', {
+                        display: getComputedStyle(this.modal).display,
+                        visibility: getComputedStyle(this.modal).visibility,
+                        opacity: getComputedStyle(this.modal).opacity,
+                        zIndex: getComputedStyle(this.modal).zIndex
+                    });
                     
                     const content = this.modal.querySelector('.evolution-modal-content');
                     if (content) {
@@ -60,6 +76,7 @@ class EvolutionInterfaceManager {
             document.addEventListener('keydown', this.handleKeydown.bind(this));
         } catch (error) {
             console.error('❌ Failed to open evolution interface:', error);
+            console.error('Error details:', error.stack);
         }
     }
 
@@ -161,32 +178,32 @@ class EvolutionInterfaceManager {
         styles.id = 'evolutionStyles';
         styles.textContent = `
             .evolution-modal {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background: rgba(0, 0, 0, 0.7) !important;
-                z-index: 10000 !important;
-                display: none !important;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 99999;
+                display: block;
             }
 
             .evolution-modal-content {
-                position: absolute !important;
-                top: 50% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                width: 95% !important;
-                max-width: 1400px !important;
-                height: 90% !important;
-                background: #1e1e1e !important;
-                border-radius: 12px !important;
-                display: flex !important;
-                flex-direction: column !important;
-                color: #e0e0e0 !important;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
-                min-height: 600px !important;
-                min-width: 800px !important;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 90%;
+                max-width: 1200px;
+                height: 85%;
+                background: #1e1e1e;
+                border-radius: 8px;
+                display: flex;
+                flex-direction: column;
+                color: #e0e0e0;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                min-height: 500px;
+                min-width: 700px;
             }
 
             .evolution-header {
