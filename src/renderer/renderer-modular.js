@@ -1233,7 +1233,6 @@ class GenomeBrowser {
                 const { shell } = require('electron');
                 
                 // For now, we'll use IPC to request the main process to open it
-                const { ipcRenderer } = require('electron');
                 ipcRenderer.send('open-plugin-function-calling-test');
                 
                 this.showNotification('Plugin Function Calling Test window is opening...', 'info');
@@ -3881,7 +3880,6 @@ class GenomeBrowser {
     showSmartExecutionDemo() {
         try {
             // Use IPC to request opening the demo from main process
-            const { ipcRenderer } = require('electron');
             ipcRenderer.send('open-smart-execution-demo');
             
             this.showNotification('智能执行演示窗口正在打开...', 'info');
@@ -3897,7 +3895,6 @@ class GenomeBrowser {
     openResourceManager() {
         try {
             // Use IPC to request opening the Resource Manager from main process
-            const { ipcRenderer } = require('electron');
             ipcRenderer.send('open-resource-manager');
             
             this.showNotification('Resource Manager window is opening...', 'info');

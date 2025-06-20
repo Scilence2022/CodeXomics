@@ -3,7 +3,7 @@
  * This module contains all the concrete implementations of plugin functions
  */
 
-const PluginUtils = require('./PluginUtils');
+// PluginUtils will be available as a global variable when PluginUtils.js is loaded
 
 const PluginImplementations = {
     
@@ -11,12 +11,14 @@ const PluginImplementations = {
     init(app, configManager) {
         this.app = app;
         this.configManager = configManager;
-        // Bind PluginUtils functions to this context
-        Object.keys(PluginUtils).forEach(key => {
-            if (typeof PluginUtils[key] === 'function' && !this[key]) {
-                this[key] = PluginUtils[key].bind(this);
-            }
-        });
+        // Bind PluginUtils functions to this context if PluginUtils is available
+        if (typeof PluginUtils !== 'undefined') {
+            Object.keys(PluginUtils).forEach(key => {
+                if (typeof PluginUtils[key] === 'function' && !this[key]) {
+                    this[key] = PluginUtils[key].bind(this);
+                }
+            });
+        }
         return this;
     },
     
