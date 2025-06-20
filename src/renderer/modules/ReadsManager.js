@@ -3,8 +3,6 @@
  * Only loads reads for the current viewing region and manages memory efficiently
  */
 
-const { ipcRenderer } = require('electron');
-
 class ReadsManager {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
@@ -367,7 +365,14 @@ class ReadsManager {
      * Load reads for a specific region using file streaming (for very large files)
      */
     async loadReadsForRegionStream(chromosome, start, end) {
+        console.log(`[ReadsManager] loadReadsForRegionStream called with:`, {
+            chromosome, start, end,
+            currentFile: this.currentFile,
+            isStreaming: this.isStreaming
+        });
+        
         if (!this.currentFile) {
+            console.error('[ReadsManager] No currentFile set for streaming');
             throw new Error('No SAM file loaded for streaming');
         }
 
@@ -420,18 +425,28 @@ class ReadsManager {
             };
             
             const completeHandler = (event, { totalLines }) => {
-                ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-                ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                if (typeof ipcRenderer !== 'undefined') {
+                    ipcRenderer.removeListener('file-lines-chunk', linesHandler);
+                    ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                }
                 
                 console.log(`Loaded ${reads.length} reads for region ${chromosome}:${start}-${end} from streaming`);
                 resolve(reads);
             };
             
             const errorHandler = (error) => {
-                ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-                ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                if (typeof ipcRenderer !== 'undefined') {
+                    ipcRenderer.removeListener('file-lines-chunk', linesHandler);
+                    ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                }
                 reject(error);
             };
+            
+            // Check if ipcRenderer is available
+            if (typeof ipcRenderer === 'undefined') {
+                reject(new Error('ipcRenderer not available'));
+                return;
+            }
             
             // Set up event listeners
             ipcRenderer.on('file-lines-chunk', linesHandler);

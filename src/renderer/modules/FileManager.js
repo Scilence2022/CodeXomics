@@ -98,9 +98,9 @@ class FileManager {
                 data: null // Will be populated during streaming or regular reading
             };
 
-            // Use streaming for files > 50MB or any SAM files > 10MB to avoid memory issues
+            // Use streaming for files > 50MB or any SAM files > 50MB to avoid memory issues
             // SAM files can be extremely large and benefit from streaming even at smaller sizes
-            const shouldUseStreaming = (fileSizeMB > 50) || (extension === '.sam' && fileSizeMB > 10);
+            const shouldUseStreaming = (fileSizeMB > 50) || (extension === '.sam' && fileSizeMB > 50);
             
             if (shouldUseStreaming) {
                 console.log(`Using streaming mode for large file: ${fileSizeMB.toFixed(1)} MB`);
@@ -250,7 +250,8 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     
                     // Initialize ReadsManager in streaming mode
                     this.genomeBrowser.updateStatus('Initializing streaming reads system...');
-                    this.genomeBrowser.readsManager.initializeWithStreamingSAM(this.currentFile.info.path)
+                    console.log(`[FileManager] Initializing ReadsManager with file path: ${filePath}`);
+                    this.genomeBrowser.readsManager.initializeWithStreamingSAM(filePath)
                         .then(() => {
                             // Set estimated read count for statistics
                             this.genomeBrowser.readsManager.stats.totalReads = estimatedReads;
