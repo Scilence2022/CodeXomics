@@ -621,6 +621,7 @@ class TrackRenderer {
             
             if (isForward) {
                 // Forward arrow (pointing right)
+                const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
                 if (isLeftTruncated) {
                     // Add jagged left edge
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
@@ -638,6 +639,7 @@ class TrackRenderer {
                 }
             } else {
                 // Reverse arrow (pointing left)
+                const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
                 if (isLeftTruncated) {
                     // Add jagged left edge (but keep arrow tip)
                     pathData = this.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
@@ -1159,6 +1161,7 @@ class TrackRenderer {
     createJaggedTrianglePath(width, height, isLeftJagged, isRightJagged, isForward) {
         const jaggedDepth = Math.min(4, height * 0.2); // Depth of jagged cuts
         const jaggedStep = Math.max(2, height / 6); // Height of each jagged tooth
+        const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
         
         if (isForward) {
             // Forward triangle (pointing right)
@@ -1214,6 +1217,76 @@ class TrackRenderer {
         }
         
         // Fallback - return normal arrow if no jagged edges
+        if (isForward) {
+            return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
+        } else {
+            return `M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z`;
+        }
+    }
+
+    /**
+     * Create jagged arrow path for truncated arrow-shaped genes
+     */
+    createJaggedArrowPath(width, height, arrowSize, isLeftJagged, isRightJagged, isForward) {
+        const jaggedDepth = Math.min(4, height * 0.2);
+        const jaggedStep = Math.max(2, height / 6);
+        
+        if (isForward) {
+            // Forward arrow (pointing right)
+            if (isLeftJagged) {
+                // Left edge is jagged
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width - arrowSize} ${height} 
+                       L ${width} ${height / 2} 
+                       L ${width - arrowSize} 0 
+                       L ${jaggedDepth} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge is completely jagged (no arrow tip for truncated genes)
+                return `M 0 0 
+                       L ${width - jaggedDepth} 0 
+                       L ${width} ${jaggedStep} 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L 0 ${height} 
+                       Z`;
+            }
+        } else {
+            // Reverse arrow (pointing left)
+            if (isLeftJagged) {
+                // Left edge is completely jagged (no arrow tip for truncated genes)
+                return `M ${jaggedDepth} 0 
+                       L 0 ${jaggedStep} 
+                       L ${jaggedDepth} ${jaggedStep * 2} 
+                       L 0 ${jaggedStep * 3} 
+                       L ${jaggedDepth} ${jaggedStep * 4} 
+                       L 0 ${height} 
+                       L ${width} ${height} 
+                       L ${width} 0 
+                       Z`;
+            } else if (isRightJagged) {
+                // Right edge is jagged
+                return `M ${arrowSize} 0 
+                       L ${width - jaggedDepth} 0 
+                       L ${width} ${jaggedStep} 
+                       L ${width - jaggedDepth} ${jaggedStep * 2} 
+                       L ${width} ${jaggedStep * 3} 
+                       L ${width - jaggedDepth} ${jaggedStep * 4} 
+                       L ${width} ${height} 
+                       L ${arrowSize} ${height} 
+                       L 0 ${height / 2} 
+                       Z`;
+            }
+        }
+        
+        // Fallback - return normal arrow
         if (isForward) {
             return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
         } else {
