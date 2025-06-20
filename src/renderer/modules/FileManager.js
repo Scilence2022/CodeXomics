@@ -197,22 +197,20 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async loadFileStream(filePath) {
-        // Use true streaming for very large SAM files to avoid memory issues
+        // Use streaming mode for very large SAM files to completely avoid memory accumulation
         return new Promise(async (resolve, reject) => {
             try {
-                let accumulatedData = '';
-                let headerProcessed = false;
                 let estimatedReads = 0;
                 let processedLines = 0;
+                let headerProcessed = false;
                 
                 // Set up event listeners for streaming
                 const linesHandler = (event, { lines, lineCount }) => {
-                    // Process lines in chunks to build the SAM data incrementally
+                    // Process lines to count reads and gather basic info, but don't accumulate data
                     for (const line of lines) {
                         const trimmed = line.trim();
                         if (!trimmed) continue;
                         
-                        accumulatedData += line + '\n';
                         processedLines++;
                         
                         // Count non-header lines to estimate reads
@@ -220,7 +218,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                             estimatedReads++;
                         }
                         
-                        // Process header information early
+                        // Process header information early (but don't store line data)
                         if (!headerProcessed && trimmed.startsWith('@')) {
                             // Could extract reference information here if needed
                         }
@@ -228,7 +226,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     
                     // Update status periodically
                     if (processedLines % 10000 === 0) {
-                        this.genomeBrowser.updateStatus(`Processing SAM file... ${processedLines} lines (${estimatedReads} reads)`);
+                        this.genomeBrowser.updateStatus(`Processing SAM file... ${processedLines} lines (${estimatedReads} reads estimated)`);
                     }
                 };
                 
@@ -236,7 +234,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     const { progress, totalRead, fileSize } = progressData;
                     const readMB = (totalRead / (1024 * 1024)).toFixed(1);
                     const totalMB = (fileSize / (1024 * 1024)).toFixed(1);
-                    this.genomeBrowser.updateStatus(`Reading large SAM file... ${progress}% (${readMB}/${totalMB} MB)`);
+                    this.genomeBrowser.updateStatus(`Analyzing large SAM file... ${progress}% (${readMB}/${totalMB} MB)`);
                 };
                 
                 const completeHandler = (event, { totalLines, totalBytes }) => {
@@ -245,23 +243,24 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                     ipcRenderer.removeListener('file-read-progress', progressHandler);
                     ipcRenderer.removeListener('file-stream-complete', completeHandler);
                     
-                    console.log(`Stream complete: ${totalLines} lines, ${totalBytes} bytes`);
+                    console.log(`Stream analysis complete: ${totalLines} lines, ${(totalBytes / (1024 * 1024)).toFixed(1)} MB`);
                     
-                    // Store the accumulated data
-                    this.currentFile.data = accumulatedData;
+                    // Don't store the data - just set up streaming mode
+                    this.currentFile.data = null; // Explicitly set to null to save memory
                     
-                    // Initialize ReadsManager with the accumulated data
-                    this.genomeBrowser.updateStatus('Initializing dynamic reads loading system...');
-                    this.genomeBrowser.readsManager.initializeWithSAMData(this.currentFile.data, this.currentFile.info.path)
+                    // Initialize ReadsManager in streaming mode
+                    this.genomeBrowser.updateStatus('Initializing streaming reads system...');
+                    this.genomeBrowser.readsManager.initializeWithStreamingSAM(this.currentFile.info.path)
                         .then(() => {
+                            // Set estimated read count for statistics
+                            this.genomeBrowser.readsManager.stats.totalReads = estimatedReads;
+                            
                             // Clear old reads to save memory
                             this.genomeBrowser.currentReads = {};
                             
-                            // Log initialization
-                            const stats = this.genomeBrowser.readsManager.getCacheStats();
-                            console.log(`Large SAM file initialized with ReadsManager - estimated ${stats.totalReads} reads`);
+                            console.log(`Large SAM file initialized in streaming mode - estimated ${estimatedReads} reads`);
                             
-                            this.genomeBrowser.updateStatus(`Initialized large SAM file with dynamic loading (${stats.totalReads} reads estimated)`);
+                            this.genomeBrowser.updateStatus(`Initialized large SAM file with streaming mode (${estimatedReads} reads estimated)`);
                             
                             // Auto-enable reads track
                             this.autoEnableTracksForFileType('.sam');
@@ -282,8 +281,8 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 ipcRenderer.on('file-read-progress', progressHandler);
                 ipcRenderer.on('file-stream-complete', completeHandler);
                 
-                // Start streaming
-                this.genomeBrowser.updateStatus('Starting streaming read of large SAM file...');
+                // Start streaming - this will only analyze the file, not store it
+                this.genomeBrowser.updateStatus('Starting analysis of large SAM file (streaming mode)...');
                 const result = await ipcRenderer.invoke('read-file-stream', filePath);
                 
                 if (!result.success) {

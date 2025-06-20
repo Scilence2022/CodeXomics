@@ -2,6 +2,9 @@
  * ReadsManager - Dynamic loading and caching system for NGS reads
  * Only loads reads for the current viewing region and manages memory efficiently
  */
+
+const { ipcRenderer } = require('electron');
+
 class ReadsManager {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
@@ -69,30 +72,42 @@ class ReadsManager {
     }
 
     /**
-     * Get reads for a specific region, using cache when possible
+     * Get reads for a specific region (main entry point)
      */
     async getReadsForRegion(chromosome, start, end) {
+        if (!this.rawReadsData && !this.isStreaming) {
+            console.warn('No SAM data loaded');
+            return [];
+        }
+
         const regionKey = this.getRegionKey(chromosome, start, end);
         
         // Check cache first
         if (this.cache.has(regionKey)) {
             this.stats.cacheHits++;
-            const cachedData = this.cache.get(regionKey);
-            // Update access time for LRU
-            cachedData.lastAccessed = Date.now();
-            console.log(`Cache hit for region ${regionKey}`);
-            return this.filterReadsForExactRegion(cachedData.reads, start, end);
+            const cached = this.cache.get(regionKey);
+            cached.lastAccessed = Date.now();
+            
+            // Filter to exact boundaries
+            return this.filterReadsForExactRegion(cached.reads, start, end);
+        }
+
+        this.stats.cacheMisses++;
+        
+        // Use appropriate loading method based on mode
+        let reads;
+        if (this.isStreaming) {
+            // Use streaming mode for very large files
+            reads = await this.loadReadsForRegionStream(chromosome, start, end);
+        } else {
+            // Use in-memory mode for normal files
+            reads = await this.loadReadsForRegion(chromosome, start, end);
         }
         
-        this.stats.cacheMisses++;
-        console.log(`Cache miss for region ${regionKey}, loading reads...`);
-        
-        // Load reads for this region
-        const reads = await this.loadReadsForRegion(chromosome, start, end);
-        
-        // Cache the result
+        // Cache the results
         this.cacheRegion(regionKey, reads);
         
+        // Filter to exact boundaries and return
         return this.filterReadsForExactRegion(reads, start, end);
     }
 
@@ -316,6 +331,121 @@ class ReadsManager {
         this.rawReadsData = null;
         this.cache.clear();
         this.currentFile = null;
+    }
+
+    /**
+     * Initialize reads manager with streaming SAM data
+     * This method processes SAM data in chunks to avoid memory issues
+     */
+    async initializeWithStreamingSAM(filePath) {
+        this.currentFile = filePath;
+        this.cache.clear();
+        this.stats.totalReads = 0;
+        this.stats.loadedRegions = 0;
+        this.stats.cacheHits = 0;
+        this.stats.cacheMisses = 0;
+        this.rawReadsData = null; // Don't store the full data in memory
+        this.isStreaming = true;
+        
+        console.log('ReadsManager initialized with streaming mode for large SAM files');
+    }
+
+    /**
+     * Process SAM data chunks during streaming
+     */
+    processStreamingChunk(lines) {
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('@')) continue;
+            
+            // Count reads for statistics
+            this.stats.totalReads++;
+        }
+    }
+
+    /**
+     * Load reads for a specific region using file streaming (for very large files)
+     */
+    async loadReadsForRegionStream(chromosome, start, end) {
+        if (!this.currentFile) {
+            throw new Error('No SAM file loaded for streaming');
+        }
+
+        // For streaming mode, we need to read the file on-demand
+        // This is more memory-efficient but slower for repeated access
+        const bufferSize = Math.max(50000, end - start + 20000); // Buffer region
+        const searchStart = Math.max(0, start - bufferSize);
+        const searchEnd = end + bufferSize;
+        
+        const reads = [];
+        
+        return new Promise((resolve, reject) => {
+            let processedLines = 0;
+            
+            const linesHandler = (event, { lines }) => {
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith('@')) continue;
+                    
+                    const fields = trimmed.split('\t');
+                    if (fields.length < 11) continue;
+                    
+                    const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
+                    
+                    // Skip unmapped reads or reads not on this chromosome
+                    if (rname === '*' || pos === '0' || rname !== chromosome) continue;
+                    
+                    const readStart = parseInt(pos) - 1; // Convert to 0-based
+                    const readEnd = readStart + seq.length;
+                    
+                    // Check if read overlaps with our search region
+                    if (readEnd >= searchStart && readStart <= searchEnd) {
+                        const read = {
+                            id: qname,
+                            chromosome: rname,
+                            start: readStart,
+                            end: readEnd,
+                            strand: (parseInt(flag) & 16) ? '-' : '+',
+                            mappingQuality: parseInt(mapq),
+                            cigar: cigar,
+                            sequence: seq,
+                            quality: qual
+                        };
+                        
+                        reads.push(read);
+                    }
+                    
+                    processedLines++;
+                }
+            };
+            
+            const completeHandler = (event, { totalLines }) => {
+                ipcRenderer.removeListener('file-lines-chunk', linesHandler);
+                ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                
+                console.log(`Loaded ${reads.length} reads for region ${chromosome}:${start}-${end} from streaming`);
+                resolve(reads);
+            };
+            
+            const errorHandler = (error) => {
+                ipcRenderer.removeListener('file-lines-chunk', linesHandler);
+                ipcRenderer.removeListener('file-stream-complete', completeHandler);
+                reject(error);
+            };
+            
+            // Set up event listeners
+            ipcRenderer.on('file-lines-chunk', linesHandler);
+            ipcRenderer.on('file-stream-complete', completeHandler);
+            
+            // Start streaming the file for this region
+            ipcRenderer.invoke('read-file-stream', this.currentFile)
+                .then(result => {
+                    if (!result.success) {
+                        errorHandler(new Error(result.error));
+                    }
+                })
+                .catch(errorHandler);
+        });
     }
 }
 
