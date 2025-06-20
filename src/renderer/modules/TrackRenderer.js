@@ -4803,7 +4803,7 @@ class TrackRenderer {
                 <h4>Read Display</h4>
                 <div class="form-group">
                     <label for="readsHeight">Height of each read (px):</label>
-                    <input type="number" id="readsHeight" min="5" max="30" value="${settings.readHeight || 14}">
+                    <input type="number" id="readsHeight" min="2" max="30" value="${settings.readHeight || 4}">
                     <div class="help-text">Height of individual read elements in pixels.</div>
                 </div>
                 <div class="form-group">
@@ -4841,7 +4841,7 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label for="readsBorderColor">Border color:</label>
-                    <input type="color" id="readsBorderColor" value="${settings.borderColor || '#2d3436'}">
+                    <input type="color" id="readsBorderColor" value="${settings.borderColor || '#ffffff'}">
                     <div class="help-text">Border color for all read elements.</div>
                 </div>
                 <div class="form-group">
@@ -4875,6 +4875,11 @@ class TrackRenderer {
                     <label for="readsMinWidth">Minimum read width (px):</label>
                     <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
                     <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsStreamingThreshold">Streaming threshold (MB):</label>
+                    <input type="number" id="readsStreamingThreshold" min="10" max="1000" value="${settings.streamingThreshold || 50}">
+                    <div class="help-text">File size threshold in MB above which SAM files will be loaded using streaming mode for better memory management.</div>
                 </div>
             </div>
         `;
@@ -4926,19 +4931,20 @@ class TrackRenderer {
                 height: 140
             },
             reads: {
-                readHeight: 14,
+                readHeight: 4,
                 readSpacing: 2,
                 maxRows: 20,
                 forwardColor: '#00b894',
                 reverseColor: '#f39c12',
                 pairedColor: '#6c5ce7',
-                borderColor: '#2d3436',
-                borderWidth: 1,
+                borderColor: '#ffffff',
+                borderWidth: 0,
                 opacity: 0.9,
                 showDirectionArrows: true,
                 showQualityColors: false,
                 minWidth: 2,
-                height: 150
+                height: 150,
+                streamingThreshold: 50
             }
         };
         
@@ -5037,7 +5043,7 @@ class TrackRenderer {
                 break;
                 
             case 'reads':
-                settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 6;
+                settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
                 settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
                 settings.forwardColor = modal.querySelector('#readsForwardColor').value;
@@ -5049,6 +5055,7 @@ class TrackRenderer {
                 settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
                 settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
                 settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
+                settings.streamingThreshold = parseInt(modal.querySelector('#readsStreamingThreshold').value) || 50;
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
                 break;
                 

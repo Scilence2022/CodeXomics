@@ -79,10 +79,14 @@ class FileManager {
             const fileSizeMB = fileInfo.info.size / (1024 * 1024);
             const extension = fileInfo.info.extension.toLowerCase();
             
+            // Get streaming threshold from track settings for consistent behavior
+            const readsSettings = this.genomeBrowser.trackRenderer.getTrackSettings('reads');
+            const streamingThreshold = readsSettings.streamingThreshold || 50;
+            
             // Skip warning for SAM/BAM files since they use dynamic loading and can handle large files efficiently
             const usesDynamicLoading = extension === '.sam' || extension === '.bam';
             
-            if (fileSizeMB > 50 && !usesDynamicLoading) {
+            if (fileSizeMB > streamingThreshold && !usesDynamicLoading) {
                 const proceed = confirm(
                     `This file is ${fileSizeMB.toFixed(1)} MB. Large files may take time to load and parse. Continue?`
                 );
@@ -98,9 +102,9 @@ class FileManager {
                 data: null // Will be populated during streaming or regular reading
             };
 
-            // Use streaming for files > 50MB or any SAM files > 50MB to avoid memory issues
+            // Use streaming for files > threshold or any SAM files > threshold to avoid memory issues
             // SAM files can be extremely large and benefit from streaming even at smaller sizes
-            const shouldUseStreaming = (fileSizeMB > 50) || (extension === '.sam' && fileSizeMB > 50);
+            const shouldUseStreaming = (fileSizeMB > streamingThreshold) || (extension === '.sam' && fileSizeMB > streamingThreshold);
             
             if (shouldUseStreaming) {
                 console.log(`Using streaming mode for large file: ${fileSizeMB.toFixed(1)} MB`);
