@@ -1200,75 +1200,6 @@ class TrackRenderer {
                        Z`;
             } else if (isRightJagged) {
                 // Right edge (截断面) is jagged - vertical jagged line
-                return `M 0 ${height / 2} 
-                       L ${width - jaggedDepth} 0 
-                       L ${width} ${jaggedStep} 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L 0 ${height / 2} 
-                       Z`;
-            }
-        }
-        
-        // Fallback - return normal triangle if no jagged edges
-        if (isForward) {
-            return `M 0 0 L ${width} ${height / 2} L 0 ${height} Z`;
-        } else {
-            return `M ${width} 0 L 0 ${height / 2} L ${width} ${height} Z`;
-        }
-    }
-
-    /**
-     * Create jagged path for truncated arrow-shaped genes
-     */
-    createJaggedArrowPath(width, height, arrowSize, isLeftJagged, isRightJagged, isForward) {
-        const jaggedDepth = Math.min(4, height * 0.2); // Depth of jagged cuts
-        const jaggedStep = Math.max(2, height / 6); // Height of each jagged tooth
-        
-        if (isForward) {
-            // Forward arrow (pointing right)
-            if (isLeftJagged) {
-                // Left edge (截断面) is jagged - vertical jagged line
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width - arrowSize} ${height} 
-                       L ${width} ${height / 2} 
-                       L ${width - arrowSize} 0 
-                       L ${jaggedDepth} 0 
-                       Z`;
-            } else if (isRightJagged) {
-                // Right edge (截断面) is jagged - the arrow tip is cut off
-                return `M 0 0 
-                       L ${width - jaggedDepth} 0 
-                       L ${width} ${jaggedStep} 
-                       L ${width - jaggedDepth} ${jaggedStep * 2} 
-                       L ${width} ${jaggedStep * 3} 
-                       L ${width - jaggedDepth} ${jaggedStep * 4} 
-                       L ${width} ${height} 
-                       L 0 ${height} 
-                       Z`;
-            }
-        } else {
-            // Reverse arrow (pointing left)
-            if (isLeftJagged) {
-                // Left edge (截断面) is jagged - the arrow tip is cut off
-                return `M ${jaggedDepth} 0 
-                       L 0 ${jaggedStep} 
-                       L ${jaggedDepth} ${jaggedStep * 2} 
-                       L 0 ${jaggedStep * 3} 
-                       L ${jaggedDepth} ${jaggedStep * 4} 
-                       L 0 ${height} 
-                       L ${width} ${height} 
-                       L ${width} 0 
-                       Z`;
-            } else if (isRightJagged) {
-                // Right edge (截断面) is jagged - vertical jagged line
                 return `M ${arrowSize} 0 
                        L ${width - jaggedDepth} 0 
                        L ${width} ${jaggedStep} 
@@ -2112,8 +2043,12 @@ class TrackRenderer {
         const { track, trackContent } = this.createTrackBase('reads', chromosome);
         const viewport = this.getCurrentViewport();
         
-        // Check if ReadsManager has data loaded
-        if (!this.genomeBrowser.readsManager.rawReadsData) {
+        // Check if ReadsManager has data loaded (either in-memory or streaming mode)
+        const hasReadsData = this.genomeBrowser.readsManager.rawReadsData || 
+                           this.genomeBrowser.readsManager.isStreaming ||
+                           this.genomeBrowser.readsManager.currentFile;
+        
+        if (!hasReadsData) {
             const noDataMsg = document.createElement('div');
             noDataMsg.className = 'no-reads-message';
             noDataMsg.textContent = 'No SAM/BAM file loaded. Load a SAM/BAM file to see aligned reads.';
