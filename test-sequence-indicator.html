@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sequence Gene Indicator Test</title>
+    <title>Enhanced Sequence Gene Indicator Test</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -52,13 +52,15 @@
         }
 
         .gene-indicator-svg:hover path,
-        .gene-indicator-svg:hover rect {
+        .gene-indicator-svg:hover rect,
+        .gene-indicator-svg:hover line {
             opacity: 1 !important;
             filter: brightness(1.1);
         }
 
         .gene-indicator-svg path,
-        .gene-indicator-svg rect {
+        .gene-indicator-svg rect,
+        .gene-indicator-svg line {
             cursor: pointer;
         }
         
@@ -69,36 +71,68 @@
             padding: 15px;
             margin-bottom: 20px;
         }
+
+        .legend {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-symbol {
+            width: 30px;
+            height: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
     <div class="test-container">
         <div class="demo-info">
-            <h3>Sequence Gene Indicator Demo</h3>
-            <p>演示在序列行下方显示简单的基因形状指示条，颜色与Genes & Features track一致：</p>
+            <h3>Enhanced Sequence Gene Indicator Demo</h3>
+            <p>演示在序列行下方显示增强的基因形状指示条，包含：</p>
             <ul>
-                <li>CDS基因：蓝色矩形</li>
-                <li>Promoter：箭头形状</li>
-                <li>tRNA/rRNA：波浪形状</li>
-                <li>Terminator：圆角矩形</li>
+                <li><strong>基因体：</strong>不同基因类型有不同形状和颜色</li>
+                <li><strong>起始标记：</strong>竖线表示基因起始位置</li>
+                <li><strong>终止箭头：</strong>箭头表示基因终止位置和方向</li>
+                <li><strong>方向指示：</strong>→ 正链，← 负链</li>
             </ul>
         </div>
         
         <div id="sequence-demo">
-            <!-- Demo sequence with gene indicators -->
+            <!-- Demo sequence with enhanced gene indicators -->
             <div class="sequence-line-group">
                 <div class="sequence-line">
                     <span class="sequence-position">1</span>
                     <div class="sequence-bases">ATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC</div>
                 </div>
                 <div class="gene-indicator-line">
-                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
-                        <!-- Promoter (arrow) -->
-                        <path d="M 0 1 L 57 1 L 60 3 L 57 5 L 0 5 Z" fill="#ff6b6b" opacity="0.8" title="Promoter"/>
-                        <!-- CDS (rectangle) -->
-                        <rect x="60" y="1" width="180" height="4" fill="#4ecdc4" opacity="0.8" title="CDS Gene"/>
-                        <!-- Terminator (rounded rectangle) -->
-                        <rect x="240" y="1" width="60" height="4" rx="2" ry="2" fill="#ffe66d" opacity="0.8" title="Terminator"/>
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 8px;">
+                        <!-- Promoter gene with start line and end arrow (forward) -->
+                        <!-- Start line -->
+                        <line x1="0" y1="1" x2="0" y2="7" stroke="#b8860b" stroke-width="1.5" opacity="0.9" title="Gene start: Promoter"/>
+                        <!-- Gene body (promoter arrow shape) -->
+                        <path d="M 0 2 L 57 2 L 60 4 L 57 6 L 0 6 Z" fill="#f1c40f" opacity="0.7" title="Promoter"/>
+                        <!-- End arrow (right-pointing) -->
+                        <path d="M 57 1 L 60 4 L 57 7 Z" fill="#b8860b" opacity="1" title="Gene end (Promoter) →"/>
+                        
+                        <!-- CDS gene (forward) -->
+                        <line x1="80" y1="1" x2="80" y2="7" stroke="#5e2b7a" stroke-width="1.5" opacity="0.9" title="Gene start: CDS"/>
+                        <rect x="80" y="2" width="180" height="4" fill="#8e44ad" opacity="0.7" title="CDS Gene"/>
+                        <path d="M 257 1 L 260 4 L 257 7 Z" fill="#5e2b7a" opacity="1" title="Gene end (CDS) →"/>
+                        
+                        <!-- Terminator (forward) -->
+                        <line x1="280" y1="1" x2="280" y2="7" stroke="#8b4513" stroke-width="1.5" opacity="0.9" title="Gene start: Terminator"/>
+                        <rect x="280" y="2" width="60" height="4" rx="2" ry="2" fill="#d35400" opacity="0.7" title="Terminator"/>
+                        <path d="M 337 1 L 340 4 L 337 7 Z" fill="#8b4513" opacity="1" title="Gene end (Terminator) →"/>
                     </svg>
                 </div>
             </div>
@@ -109,11 +143,16 @@
                     <div class="sequence-bases">GCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGC</div>
                 </div>
                 <div class="gene-indicator-line">
-                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
-                        <!-- tRNA (wavy shape) -->
-                        <path d="M 0 2 Q 20 1 40 2 Q 60 1 80 2 L 80 5 L 0 5 Z" fill="#a8e6cf" opacity="0.8" title="tRNA"/>
-                        <!-- Another CDS -->
-                        <rect x="120" y="1" width="240" height="4" fill="#4ecdc4" opacity="0.8" title="CDS Gene 2"/>
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 8px;">
+                        <!-- tRNA (forward) -->
+                        <line x1="0" y1="1" x2="0" y2="7" stroke="#1e6b47" stroke-width="1.5" opacity="0.9" title="Gene start: tRNA"/>
+                        <path d="M 0 3 Q 20 2 40 2.5 Q 60 2 80 3 L 80 6 L 0 6 Z" fill="#27ae60" opacity="0.7" title="tRNA"/>
+                        <path d="M 77 1 L 80 4 L 77 7 Z" fill="#1e6b47" opacity="1" title="Gene end (tRNA) →"/>
+                        
+                        <!-- CDS (reverse strand) -->
+                        <line x1="120" y1="1" x2="120" y2="7" stroke="#5e2b7a" stroke-width="1.5" opacity="0.9" title="Gene start: CDS"/>
+                        <rect x="120" y="2" width="200" height="4" fill="#8e44ad" opacity="0.7" title="CDS Gene (reverse)"/>
+                        <path d="M 323 1 L 320 4 L 323 7 Z" fill="#5e2b7a" opacity="1" title="Gene end (CDS) ←"/>
                     </svg>
                 </div>
             </div>
@@ -124,27 +163,62 @@
                     <div class="sequence-bases">CATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC</div>
                 </div>
                 <div class="gene-indicator-line">
-                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
-                        <!-- Regulatory element -->
-                        <rect x="0" y="1" width="120" height="4" fill="#ff9ff3" opacity="0.8" title="Regulatory Element"/>
-                        <!-- Reverse strand promoter (left arrow) -->
-                        <path d="M 123 1 L 180 1 L 180 5 L 123 5 L 120 3 Z" fill="#ff6b6b" opacity="0.8" title="Promoter (reverse)"/>
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 8px;">
+                        <!-- rRNA (reverse strand) -->
+                        <line x1="0" y1="1" x2="0" y2="7" stroke="#1f5582" stroke-width="1.5" opacity="0.9" title="Gene start: rRNA"/>
+                        <path d="M 0 3 Q 30 2 60 2.5 Q 90 2 120 3 L 120 6 L 0 6 Z" fill="#2980b9" opacity="0.7" title="rRNA"/>
+                        <path d="M 123 1 L 120 4 L 123 7 Z" fill="#1f5582" opacity="1" title="Gene end (rRNA) ←"/>
+                        
+                        <!-- Regulatory element (forward) -->
+                        <line x1="160" y1="1" x2="160" y2="7" stroke="#882b2b" stroke-width="1.5" opacity="0.9" title="Gene start: Regulatory"/>
+                        <rect x="160" y="2" width="120" height="4" fill="#c0392b" opacity="0.7" title="Regulatory Element"/>
+                        <path d="M 277 1 L 280 4 L 277 7 Z" fill="#882b2b" opacity="1" title="Gene end (Regulatory) →"/>
                     </svg>
                 </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h4>基因指示条图例</h4>
+            <div class="legend-item">
+                <div class="legend-symbol" style="background: #8e44ad; border-radius: 0;"></div>
+                <span><strong>CDS</strong> - 编码序列（紫色矩形）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-symbol" style="background: #f1c40f; clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%);"></div>
+                <span><strong>Promoter</strong> - 启动子（黄色箭头）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-symbol" style="background: #27ae60; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;"></div>
+                <span><strong>tRNA/rRNA</strong> - RNA基因（绿色/蓝色波浪形）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-symbol" style="background: #d35400; border-radius: 2px;"></div>
+                <span><strong>Terminator</strong> - 终止子（橙色圆角矩形）</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-symbol" style="background: #c0392b;"></div>
+                <span><strong>Regulatory</strong> - 调控元件（红色矩形）</span>
+            </div>
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                <p><strong>标记说明：</strong></p>
+                <p>｜ 竖线 = 基因起始位置</p>
+                <p>► 右箭头 = 正链基因终止</p>
+                <p>◄ 左箭头 = 负链基因终止</p>
             </div>
         </div>
     </div>
     
     <script>
         // Add some interactivity
-        document.querySelectorAll('.gene-indicator-svg path, .gene-indicator-svg rect').forEach(element => {
+        document.querySelectorAll('.gene-indicator-svg path, .gene-indicator-svg rect, .gene-indicator-svg line').forEach(element => {
             element.addEventListener('mouseover', function() {
                 this.style.opacity = '1';
                 this.style.filter = 'brightness(1.2)';
             });
             
             element.addEventListener('mouseout', function() {
-                this.style.opacity = '0.8';
+                this.style.opacity = this.getAttribute('opacity') || '0.7';
                 this.style.filter = 'none';
             });
         });

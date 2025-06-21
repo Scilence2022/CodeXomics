@@ -757,26 +757,131 @@ class SequenceUtils {
      * Create gene indicator bar below sequence line - simple narrow shapes with track-consistent colors
      */
     createGeneIndicatorBar(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false) {
-        const barHeight = 6; // Very narrow indicator bar
+        const barHeight = 8; // Slightly taller to accommodate arrows and markers
         const lineWidth = sequence.length * charWidth;
         
         // Create SVG for the indicator bar
         let svg = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`;
         
-        // Get feature segments for this sequence line
-        const featureSegments = this.createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified);
+        // Process genes that overlap with this sequence line
+        const lineEndAbs = lineStartAbs + sequence.length;
+        const overlappingGenes = annotations.filter(gene => 
+            gene.start <= lineEndAbs && gene.end >= lineStartAbs + 1 &&
+            this.genomeBrowser.shouldShowGeneType(gene.type)
+        );
         
-        // Draw simple indicator shapes
-        featureSegments.forEach(segment => {
-            if (segment.feature) {
-                const x = segment.startIndex * charWidth;
-                const width = (segment.endIndex - segment.startIndex + 1) * charWidth;
-                svg += this.createSimpleIndicatorShape(segment.feature, x, width, barHeight, operons);
-            }
+        // Draw gene indicators for each overlapping gene
+        overlappingGenes.forEach(gene => {
+            svg += this.createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons);
         });
         
         svg += '</svg>';
         return svg;
+    }
+
+    /**
+     * Create individual gene indicator with start line, gene body, and end arrow
+     */
+    createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons) {
+        // Get gene color - same as Genes & Features track
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
+        const geneColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type);
+        
+        // Calculate positions relative to the sequence line
+        const geneStartInLine = Math.max(gene.start, lineStartAbs + 1) - lineStartAbs - 1;
+        const geneEndInLine = Math.min(gene.end, lineEndAbs) - lineStartAbs - 1;
+        
+        // Convert to pixel positions
+        const startX = geneStartInLine * charWidth;
+        const endX = (geneEndInLine + 1) * charWidth;
+        const width = endX - startX;
+        
+        if (width <= 0) return '';
+        
+        const isForward = gene.strand !== -1;
+        const geneType = gene.type.toLowerCase();
+        
+        let indicator = '';
+        
+        // Gene body shape
+        indicator += this.createGeneBodyShape(gene, startX, width, barHeight, geneColor, geneType);
+        
+        // Start marker (vertical line) - only if gene actually starts in this line
+        if (gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+            indicator += `<line x1="${startX}" y1="1" x2="${startX}" y2="${barHeight-1}" 
+                               stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="1.5" opacity="0.9"
+                               title="Gene start: ${gene.qualifiers?.gene || gene.type}"/>`;
+        }
+        
+        // End marker (arrow) - only if gene actually ends in this line
+        if (gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+            indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene);
+        }
+        
+        return indicator;
+    }
+
+    /**
+     * Create gene body shape based on gene type
+     */
+    createGeneBodyShape(gene, x, width, height, color, geneType) {
+        const isForward = gene.strand !== -1;
+        
+        let shape = '';
+        
+        if (geneType === 'promoter') {
+            // Simple arrow for promoter
+            if (isForward) {
+                shape = `<path d="M ${x} 2 L ${x + width - 3} 2 L ${x + width} ${height/2} L ${x + width - 3} ${height - 2} L ${x} ${height - 2} Z" 
+                               fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+            } else {
+                shape = `<path d="M ${x + 3} 2 L ${x + width} 2 L ${x + width} ${height - 2} L ${x + 3} ${height - 2} L ${x} ${height/2} Z" 
+                               fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+            }
+        } else if (geneType === 'terminator') {
+            // Rounded rectangle for terminator
+            shape = `<rect x="${x}" y="2" width="${width}" height="${height - 4}" rx="2" ry="2" 
+                           fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+        } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
+            // Wavy shape for RNA
+            const waveHeight = 1;
+            shape = `<path d="M ${x} ${2 + waveHeight} 
+                            Q ${x + width/4} 2 ${x + width/2} ${2 + waveHeight/2}
+                            Q ${x + 3*width/4} 2 ${x + width} ${2 + waveHeight}
+                            L ${x + width} ${height - 2}
+                            L ${x} ${height - 2} Z" 
+                            fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+        } else {
+            // Simple rectangle for CDS and others
+            shape = `<rect x="${x}" y="2" width="${width}" height="${height - 4}" 
+                           fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+        }
+        
+        return shape;
+    }
+
+    /**
+     * Create end arrow marker to show gene direction and termination
+     */
+    createGeneEndArrow(x, height, color, isForward, gene) {
+        const arrowSize = 3;
+        const darkColor = this.darkenHexColor(color, 40);
+        
+        let arrow = '';
+        
+        if (isForward) {
+            // Right-pointing arrow
+            arrow = `<path d="M ${x-arrowSize} 1 L ${x} ${height/2} L ${x-arrowSize} ${height-1} Z" 
+                           fill="${darkColor}" opacity="1"
+                           title="Gene end (${gene.qualifiers?.gene || gene.type}) →"/>`;
+        } else {
+            // Left-pointing arrow
+            arrow = `<path d="M ${x+arrowSize} 1 L ${x} ${height/2} L ${x+arrowSize} ${height-1} Z" 
+                           fill="${darkColor}" opacity="1"
+                           title="Gene end (${gene.qualifiers?.gene || gene.type}) ←"/>`;
+        }
+        
+        return arrow;
     }
 
     /**
