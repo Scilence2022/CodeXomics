@@ -1308,17 +1308,7 @@ class GenomeBrowser {
             }
         });
 
-        // Handle CRISPR designer from Tools menu
-        ipcRenderer.on('open-crispr-designer', () => {
-            console.log('✂️ Opening CRISPR Guide RNA Designer');
-            
-            try {
-                this.openCrisprDesigner();
-            } catch (error) {
-                console.error('Failed to open CRISPR designer:', error);
-                this.showNotification('Unable to open CRISPR designer', 'error');
-            }
-        });
+
 
         // Handle Edit menu actions
         ipcRenderer.on('menu-copy', () => {
@@ -4231,28 +4221,7 @@ class GenomeBrowser {
         }
     }
 
-    // CRISPR Designer functionality
-    openCrisprDesigner() {
-        const modal = document.getElementById('crisprDesignModal');
-        if (modal) {
-            // Initialize CRISPR designer if not already done
-            if (!window.crisprDesigner) {
-                window.crisprDesigner = new window.CrisprDesigner(this);
-                window.crisprDesigner.initialize();
-            }
-            
-            // Update current viewport info
-            window.crisprDesigner.updateCurrentViewportInfo();
-            
-            // Show modal
-            modal.style.display = 'flex';
-            
-            console.log('✂️ CRISPR Guide RNA Designer opened');
-        } else {
-            console.error('CRISPR design modal not found');
-            this.showNotification('CRISPR designer interface not available', 'error');
-        }
-    }
+
 
 }
 

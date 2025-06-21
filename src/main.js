@@ -220,7 +220,7 @@ function createMenu() {
           label: 'CRISPR Guide RNA Design',
           accelerator: 'CmdOrCtrl+Shift+G',
           click: () => {
-            mainWindow.webContents.send('open-crispr-designer');
+            createCrisprDesignerWindow();
           }
         },
         { type: 'separator' },
@@ -825,6 +825,29 @@ function createCircosWindow() {
   } catch (error) {
     console.error('Failed to open Circos Genome Plotter:', error);
   }
+}
+
+// Create CRISPR Designer window
+function createCrisprDesignerWindow() {
+  // Create new window for CRISPR Designer
+  const crisprWindow = new BrowserWindow({
+    width: 1400,
+    height: 1000,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    icon: path.join(__dirname, 'assets/icon.png'),
+    title: 'CRISPR Guide RNA Design Tool - GenomeExplorer'
+  });
+
+  crisprWindow.loadFile('src/crispr-designer.html');
+  
+  crisprWindow.on('closed', () => {
+    console.log('CRISPR Designer window closed');
+  });
+  
+  return crisprWindow;
 }
 
 // Handle opening plugin function calling test

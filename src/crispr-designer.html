@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRISPR Guide RNA Design Tool - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .app-title i {
+            font-size: 28px;
+            color: #f39c12;
+        }
+
+        .app-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-left: 40px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        /* CRISPR Design Tabs */
+        .crispr-design-tabs {
+            width: 100%;
+        }
+
+        .crispr-design-tabs .tab-header {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+            overflow: hidden;
+            margin-bottom: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .crispr-design-tabs .tab-btn {
+            flex: 1;
+            padding: 16px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 15px;
+        }
+
+        .crispr-design-tabs .tab-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .crispr-design-tabs .tab-btn.active {
+            background: #3498db;
+            color: white;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .crispr-design-tabs .tab-btn i {
+            font-size: 16px;
+        }
+
+        .crispr-design-tabs .tab-content {
+            display: none;
+            padding: 30px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            min-height: 600px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .crispr-design-tabs .tab-content.active {
+            display: block;
+        }
+
+        .crispr-section {
+            margin-bottom: 32px;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .crispr-section h4 {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+        }
+
+        .crispr-section h4 i {
+            color: #3498db;
+            font-size: 20px;
+        }
+
+        .crispr-section h5 {
+            margin: 16px 0 12px 0;
+            color: #34495e;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .parameter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .parameter-group label {
+            font-weight: 500;
+            color: #34495e;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .parameter-group input,
+        .parameter-group select,
+        .parameter-group textarea {
+            padding: 10px 14px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .parameter-group input:focus,
+        .parameter-group select:focus,
+        .parameter-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .parameter-group textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .advanced-parameters {
+            margin-top: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            background: white;
+            overflow: hidden;
+        }
+
+        .advanced-parameters summary {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #34495e;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            transition: background 0.3s ease;
+        }
+
+        .advanced-parameters summary:hover {
+            background: #e9ecef;
+        }
+
+        .advanced-parameters summary i {
+            transition: transform 0.3s ease;
+        }
+
+        .advanced-parameters[open] summary i {
+            transform: rotate(90deg);
+        }
+
+        .advanced-grid {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            background: white;
+        }
+
+        .design-actions,
+        .evaluate-actions,
+        .primer-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .viewport-info {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .viewport-info h5 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+        }
+
+        .viewport-detail {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .no-viewport {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .no-viewport i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #dee2e6;
+        }
+
+        .evaluation-parameters {
+            margin: 20px 0;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metrics-grid label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #34495e;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+
+        .metrics-grid label:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .metrics-grid input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
+
+        .primer-parameters {
+            margin: 20px 0;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .results-header h4 {
+            margin: 0;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .crispr-results {
+            min-height: 400px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6c757d;
+        }
+
+        .no-results i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #dee2e6;
+        }
+
+        .no-results p {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .guide-result {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .guide-result:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .guide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .guide-sequence {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+            color: #2c3e50;
+            letter-spacing: 1px;
+        }
+
+        .guide-score {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+        }
+
+        .guide-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .guide-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .guide-detail .label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .guide-detail .value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .guide-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .evaluation-results,
+        .primer-results {
+            margin-top: 24px;
+        }
+
+        .primer-result {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .primer-pair {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .primer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .primer-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .primer-sequence {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #34495e;
+            letter-spacing: 0.5px;
+        }
+
+        .primer-properties {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .form-control {
+            width: 100%;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .app-title {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .app-subtitle {
+                margin-left: 0;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .crispr-design-tabs .tab-header {
+                flex-direction: column;
+            }
+
+            .parameters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .advanced-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .guide-details {
+                grid-template-columns: 1fr;
+            }
+
+            .design-actions,
+            .evaluate-actions,
+            .primer-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Application Header -->
+        <div class="app-header">
+            <div class="app-title">
+                <i class="fas fa-cut"></i>
+                <div>
+                    <h1>CRISPR Guide RNA Design Tool</h1>
+                    <div class="app-subtitle">Advanced genome editing guide design and analysis</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="helpBtn" class="header-btn">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </button>
+                <button id="saveProjectBtn" class="header-btn">
+                    <i class="fas fa-save"></i>
+                    Save Project
+                </button>
+                <button id="loadProjectBtn" class="header-btn">
+                    <i class="fas fa-folder-open"></i>
+                    Load Project
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="crispr-design-tabs">
+                <div class="tab-header">
+                    <button class="tab-btn active" data-tab="design">
+                        <i class="fas fa-search"></i>
+                        Target Design
+                    </button>
+                    <button class="tab-btn" data-tab="evaluate">
+                        <i class="fas fa-chart-bar"></i>
+                        Evaluate Guides
+                    </button>
+                    <button class="tab-btn" data-tab="primer">
+                        <i class="fas fa-dna"></i>
+                        Primer Design
+                    </button>
+                    <button class="tab-btn" data-tab="results">
+                        <i class="fas fa-list"></i>
+                        Results
+                    </button>
+                </div>
+                
+                <!-- Target Design Tab -->
+                <div id="design-tab" class="tab-content active">
+                    <div class="crispr-section">
+                        <h4><i class="fas fa-target"></i> Target Sequence Input</h4>
+                        <div class="parameter-group">
+                            <label for="crisprTargetType">Input Type:</label>
+                            <select id="crisprTargetType" class="form-control">
+                                <option value="sequence">Direct Sequence Input</option>
+                                <option value="gene">Gene Name</option>
+                                <option value="region">Genomic Region</option>
+                                <option value="current">Current Viewport</option>
+                            </select>
+                        </div>
+                        
+                        <div id="sequenceInput" class="input-section">
+                            <div class="parameter-group">
+                                <label for="crisprTargetSequence">Target Sequence:</label>
+                                <textarea id="crisprTargetSequence" class="form-control" 
+                                    placeholder="Enter DNA sequence (FASTA format accepted)..." 
+                                    rows="8"></textarea>
+                                <div class="help-text">
+                                    Enter the target DNA sequence for guide RNA design. 
+                                    Minimum 50bp, maximum 10kb recommended.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="geneInput" class="input-section" style="display: none;">
+                            <div class="parameter-group">
+                                <label for="crisprTargetGene">Gene Name:</label>
+                                <input type="text" id="crisprTargetGene" class="form-control" 
+                                    placeholder="Enter gene name (e.g., lacZ, rpoB)...">
+                                <div class="help-text">
+                                    Enter the gene name to design guides for gene knockout or modification.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="regionInput" class="input-section" style="display: none;">
+                            <div class="parameters-grid">
+                                <div class="parameter-group">
+                                    <label for="crisprTargetChromosome">Chromosome:</label>
+                                    <select id="crisprTargetChromosome" class="form-control">
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="crisprTargetStart">Start Position:</label>
+                                    <input type="number" id="crisprTargetStart" class="form-control" min="1">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="crisprTargetEnd">End Position:</label>
+                                    <input type="number" id="crisprTargetEnd" class="form-control" min="1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="currentViewportInfo" class="input-section" style="display: none;">
+                            <div class="viewport-info">
+                                <h5>Current Viewport:</h5>
+                                <div id="currentViewportDetails">
+                                    <div class="no-viewport">
+                                        <i class="fas fa-info-circle"></i>
+                                        <p>No genome loaded or viewport available</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="crispr-section">
+                        <h4><i class="fas fa-cog"></i> Design Parameters</h4>
+                        <div class="parameters-grid">
+                            <div class="parameter-group">
+                                <label for="crisprSystem">CRISPR System:</label>
+                                <select id="crisprSystem" class="form-control">
+                                    <option value="cas9">Cas9 (SpCas9)</option>
+                                    <option value="cas12a">Cas12a (Cpf1)</option>
+                                    <option value="cas13">Cas13 (RNA targeting)</option>
+                                    <option value="miniCas9">MiniCas9</option>
+                                    <option value="dCas9">dCas9 (Deactivated)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="parameter-group">
+                                <label for="pamSequence">PAM Sequence:</label>
+                                <input type="text" id="pamSequence" class="form-control" value="NGG" readonly>
+                                <small class="help-text">Automatically updated based on CRISPR system</small>
+                            </div>
+                            
+                            <div class="parameter-group">
+                                <label for="guideLength">Guide Length:</label>
+                                <select id="guideLength" class="form-control">
+                                    <option value="17">17 nt</option>
+                                    <option value="18">18 nt</option>
+                                    <option value="19">19 nt</option>
+                                    <option value="20" selected>20 nt (Standard)</option>
+                                    <option value="21">21 nt</option>
+                                    <option value="22">22 nt</option>
+                                    <option value="23">23 nt</option>
+                                </select>
+                            </div>
+                            
+                            <div class="parameter-group">
+                                <label for="targetStrand">Target Strand:</label>
+                                <select id="targetStrand" class="form-control">
+                                    <option value="both">Both Strands</option>
+                                    <option value="plus">Plus Strand (+)</option>
+                                    <option value="minus">Minus Strand (-)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="parameter-group">
+                                <label for="maxGuides">Maximum Guides:</label>
+                                <input type="number" id="maxGuides" class="form-control" value="50" min="1" max="200">
+                            </div>
+                            
+                            <div class="parameter-group">
+                                <label for="minEfficiencyScore">Min Efficiency Score:</label>
+                                <input type="number" id="minEfficiencyScore" class="form-control" value="0.3" min="0" max="1" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Parameters -->
+                        <details class="advanced-parameters">
+                            <summary><i class="fas fa-chevron-right"></i> Advanced Parameters</summary>
+                            <div class="advanced-grid">
+                                <div class="parameter-group">
+                                    <label>
+                                        <input type="checkbox" id="avoidRepeats" checked>
+                                        Avoid Repetitive Sequences
+                                    </label>
+                                </div>
+                                <div class="parameter-group">
+                                    <label>
+                                        <input type="checkbox" id="checkOffTargets" checked>
+                                        Check Off-Target Effects
+                                    </label>
+                                </div>
+                                <div class="parameter-group">
+                                    <label>
+                                        <input type="checkbox" id="gcContentFilter" checked>
+                                        Filter by GC Content
+                                    </label>
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="minGC">Min GC Content (%):</label>
+                                    <input type="number" id="minGC" class="form-control" value="20" min="0" max="100">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="maxGC">Max GC Content (%):</label>
+                                    <input type="number" id="maxGC" class="form-control" value="80" min="0" max="100">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="maxHomopolymer">Max Homopolymer Length:</label>
+                                    <input type="number" id="maxHomopolymer" class="form-control" value="4" min="2" max="10">
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                    
+                    <div class="design-actions">
+                        <button id="designGuidesBtn" class="btn btn-primary">
+                            <i class="fas fa-magic"></i>
+                            Design Guide RNAs
+                        </button>
+                        <button id="clearDesignBtn" class="btn btn-secondary">
+                            <i class="fas fa-eraser"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Evaluate Guides Tab -->
+                <div id="evaluate-tab" class="tab-content">
+                    <div class="crispr-section">
+                        <h4><i class="fas fa-calculator"></i> Guide RNA Evaluation</h4>
+                        <div class="parameter-group">
+                            <label for="evaluateGuideSequence">Guide RNA Sequence:</label>
+                            <textarea id="evaluateGuideSequence" class="form-control" 
+                                placeholder="Enter guide RNA sequences (one per line)..." 
+                                rows="8"></textarea>
+                            <div class="help-text">
+                                Enter guide RNA sequences to evaluate their efficiency and specificity.
+                            </div>
+                        </div>
+                        
+                        <div class="evaluation-parameters">
+                            <h5>Evaluation Metrics:</h5>
+                            <div class="metrics-grid">
+                                <label><input type="checkbox" id="evalEfficiency" checked> Efficiency Score</label>
+                                <label><input type="checkbox" id="evalSpecificity" checked> Specificity Score</label>
+                                <label><input type="checkbox" id="evalGCContent" checked> GC Content</label>
+                                <label><input type="checkbox" id="evalSecondaryStructure" checked> Secondary Structure</label>
+                                <label><input type="checkbox" id="evalOffTargets" checked> Off-Target Analysis</label>
+                                <label><input type="checkbox" id="evalDoench" checked> Doench Score</label>
+                            </div>
+                        </div>
+                        
+                        <div class="evaluate-actions">
+                            <button id="evaluateGuidesBtn" class="btn btn-primary">
+                                <i class="fas fa-chart-line"></i>
+                                Evaluate Guides
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="evaluationResults" class="evaluation-results">
+                        <!-- Evaluation results will be displayed here -->
+                    </div>
+                </div>
+                
+                <!-- Primer Design Tab -->
+                <div id="primer-tab" class="tab-content">
+                    <div class="crispr-section">
+                        <h4><i class="fas fa-dna"></i> PCR Primer Design</h4>
+                        <div class="parameter-group">
+                            <label for="primerPurpose">Primer Purpose:</label>
+                            <select id="primerPurpose" class="form-control">
+                                <option value="screening">Screening PCR</option>
+                                <option value="sequencing">Sequencing Verification</option>
+                                <option value="cloning">Cloning/Construction</option>
+                                <option value="genotyping">Genotyping</option>
+                            </select>
+                        </div>
+                        
+                        <div class="primer-parameters">
+                            <h5>Primer Parameters:</h5>
+                            <div class="parameters-grid">
+                                <div class="parameter-group">
+                                    <label for="primerLength">Primer Length:</label>
+                                    <input type="number" id="primerLength" class="form-control" value="20" min="15" max="30">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="primerTm">Target Tm (°C):</label>
+                                    <input type="number" id="primerTm" class="form-control" value="60" min="50" max="70">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="primerGC">Target GC (%):</label>
+                                    <input type="number" id="primerGC" class="form-control" value="50" min="40" max="60">
+                                </div>
+                                <div class="parameter-group">
+                                    <label for="productSize">Product Size (bp):</label>
+                                    <input type="number" id="productSize" class="form-control" value="500" min="100" max="2000">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="primer-actions">
+                            <button id="designPrimersBtn" class="btn btn-primary">
+                                <i class="fas fa-magic"></i>
+                                Design Primers
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="primerResults" class="primer-results">
+                        <!-- Primer design results will be displayed here -->
+                    </div>
+                </div>
+                
+                <!-- Results Tab -->
+                <div id="results-tab" class="tab-content">
+                    <div class="results-header">
+                        <h4><i class="fas fa-list"></i> Design Results</h4>
+                        <div class="results-actions">
+                            <button id="exportResultsBtn" class="btn btn-secondary">
+                                <i class="fas fa-download"></i>
+                                Export Results
+                            </button>
+                            <button id="clearResultsBtn" class="btn btn-secondary">
+                                <i class="fas fa-trash"></i>
+                                Clear Results
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="crisprResults" class="crispr-results">
+                        <div class="no-results">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No results available. Please design guide RNAs first.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="renderer/modules/CrisprDesigner.js"></script>
+    <script>
+        // Initialize CRISPR Designer when page loads
+        let crisprDesigner = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧬 CRISPR Designer window loaded');
+            
+            // Create a mock genome browser object for standalone mode
+            const mockGenomeBrowser = {
+                currentSequence: null,
+                currentAnnotations: {},
+                trackRenderer: null,
+                showNotification: (message, type) => {
+                    console.log(`[${type.toUpperCase()}] ${message}`);
+                    alert(message);
+                },
+                navigateToPosition: (chr, start, end) => {
+                    console.log(`Navigate to ${chr}:${start}-${end}`);
+                    alert(`Would navigate to ${chr}:${start}-${end} in main browser`);
+                }
+            };
+            
+            // Initialize CRISPR Designer
+            crisprDesigner = new window.CrisprDesigner(mockGenomeBrowser);
+            crisprDesigner.initialize();
+            
+            // Make it globally available for button clicks
+            window.crisprDesigner = crisprDesigner;
+            
+            // Add header button handlers
+            document.getElementById('helpBtn').addEventListener('click', () => {
+                alert('CRISPR Guide RNA Design Tool Help\n\n1. Choose your target input method\n2. Set design parameters\n3. Click "Design Guide RNAs"\n4. Review results and export');
+            });
+            
+            document.getElementById('saveProjectBtn').addEventListener('click', () => {
+                crisprDesigner.saveProject();
+            });
+            
+            document.getElementById('loadProjectBtn').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const projectData = JSON.parse(event.target.result);
+                                // Load project data
+                                crisprDesigner.designResults = projectData.designResults || [];
+                                crisprDesigner.evaluationResults = projectData.evaluationResults || [];
+                                crisprDesigner.primerResults = projectData.primerResults || [];
+                                crisprDesigner.currentTarget = projectData.target || null;
+                                
+                                // Update displays
+                                crisprDesigner.displayDesignResults();
+                                crisprDesigner.displayEvaluationResults();
+                                crisprDesigner.displayPrimerResults();
+                                
+                                crisprDesigner.showNotification('Project loaded successfully', 'success');
+                            } catch (error) {
+                                crisprDesigner.showNotification('Failed to load project file', 'error');
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            });
+            
+            console.log('✅ CRISPR Designer initialized successfully');
+        });
+    </script>
+</body>
+</html> 
