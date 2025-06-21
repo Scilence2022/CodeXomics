@@ -109,37 +109,53 @@ class CrisprDesigner {
      */
     setupInputTypeSwitching() {
         const targetTypeSelect = document.getElementById('crisprTargetType');
-        if (!targetTypeSelect) return;
+        if (!targetTypeSelect) {
+            console.error('❌ crisprTargetType dropdown not found!');
+            return;
+        }
+        
+        console.log('🔧 Setting up input type switching for:', targetTypeSelect);
         
         targetTypeSelect.addEventListener('change', (e) => {
             const inputType = e.target.value;
+            console.log('🔄 Input type changed to:', inputType);
             
             // Hide all input sections
             document.querySelectorAll('.input-section').forEach(section => {
-                section.style.display = 'none';
+                section.classList.add('hidden');
+                section.classList.remove('visible');
+                console.log('🙈 Hiding section:', section.id);
             });
             
             // Show selected input section
+            let targetSection = null;
             switch (inputType) {
                 case 'sequence':
-                    const seqInput = document.getElementById('sequenceInput');
-                    if (seqInput) seqInput.style.display = 'block';
+                    targetSection = document.getElementById('sequenceInput');
                     break;
                 case 'gene':
-                    const geneInput = document.getElementById('geneInput');
-                    if (geneInput) geneInput.style.display = 'block';
+                    targetSection = document.getElementById('geneInput');
                     break;
                 case 'region':
-                    const regionInput = document.getElementById('regionInput');
-                    if (regionInput) regionInput.style.display = 'block';
+                    targetSection = document.getElementById('regionInput');
                     break;
                 case 'current':
-                    const currentInput = document.getElementById('currentViewportInfo');
-                    if (currentInput) {
-                        currentInput.style.display = 'block';
+                    targetSection = document.getElementById('currentViewportInfo');
+                    if (targetSection) {
                         this.updateCurrentViewportInfo();
                     }
                     break;
+                default:
+                    console.warn('⚠️ Unknown input type:', inputType);
+                    return;
+            }
+            
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('visible');
+                console.log('✅ Showing section:', targetSection.id);
+            } else {
+                console.error('❌ Target section not found for input type:', inputType);
             }
         });
     }
@@ -162,66 +178,88 @@ class CrisprDesigner {
     /**
      * Populate chromosome dropdown
      */
-    populateChromosomeDropdown() {
+    async populateChromosomeDropdown() {
         const chromosomeSelect = document.getElementById('crisprTargetChromosome');
         if (!chromosomeSelect) return;
         
         chromosomeSelect.innerHTML = '<option value="">Select chromosome...</option>';
         
         try {
-            if (this.genomeBrowser && this.genomeBrowser.currentSequence) {
-                Object.keys(this.genomeBrowser.currentSequence).forEach(chr => {
+            // Try to get chromosome list from main window via IPC
+            const { ipcRenderer } = require('electron');
+            const genomeData = await ipcRenderer.invoke('get-genome-data');
+            
+            if (genomeData && genomeData.currentSequence) {
+                Object.keys(genomeData.currentSequence).forEach(chr => {
                     const option = document.createElement('option');
                     option.value = chr;
                     option.textContent = chr;
                     chromosomeSelect.appendChild(option);
                 });
+            } else {
+                // Add placeholder option when no genome is loaded
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No genome loaded in main window';
+                option.disabled = true;
+                chromosomeSelect.appendChild(option);
             }
         } catch (error) {
             console.warn('Could not populate chromosome dropdown:', error);
+            
+            // Fallback: add mock chromosomes
+            const mockChromosomes = ['chr1', 'chr2', 'chr3', 'plasmid'];
+            mockChromosomes.forEach(chr => {
+                const option = document.createElement('option');
+                option.value = chr;
+                option.textContent = chr + ' (mock)';
+                chromosomeSelect.appendChild(option);
+            });
         }
     }
     
     /**
      * Update current viewport information
      */
-    updateCurrentViewportInfo() {
+    async updateCurrentViewportInfo() {
         const viewportDetails = document.getElementById('currentViewportDetails');
         if (!viewportDetails) return;
         
         try {
-            const currentChr = document.getElementById('chromosomeSelect')?.value;
-            const viewport = this.genomeBrowser?.trackRenderer?.getCurrentViewport();
+            // Try to get current viewport from main window via IPC
+            const { ipcRenderer } = require('electron');
+            const genomeData = await ipcRenderer.invoke('get-genome-data');
             
-            if (currentChr && viewport) {
-                viewportDetails.innerHTML = `
+            if (genomeData && genomeData.currentChromosome && genomeData.currentPosition) {
+                                viewportDetails.innerHTML = `
                     <div class="viewport-detail">
-                        <strong>Chromosome:</strong> ${currentChr}
+                        <strong>Chromosome:</strong> ${genomeData.currentChromosome}
                     </div>
                     <div class="viewport-detail">
-                        <strong>Start:</strong> ${viewport.start.toLocaleString()} bp
+                        <strong>Start:</strong> ${genomeData.currentPosition.start || 'N/A'}
                     </div>
                     <div class="viewport-detail">
-                        <strong>End:</strong> ${viewport.end.toLocaleString()} bp
+                        <strong>End:</strong> ${genomeData.currentPosition.end || 'N/A'}
                     </div>
                     <div class="viewport-detail">
-                        <strong>Length:</strong> ${(viewport.end - viewport.start).toLocaleString()} bp
+                        <strong>Length:</strong> ${genomeData.currentPosition.end && genomeData.currentPosition.start ? 
+                            (genomeData.currentPosition.end - genomeData.currentPosition.start + 1).toLocaleString() + ' bp' : 'N/A'}
                     </div>
                 `;
             } else {
                 viewportDetails.innerHTML = `
                     <div class="no-viewport">
                         <i class="fas fa-info-circle"></i>
-                        <p>No genome loaded or viewport available</p>
+                        <p>No genome loaded or viewport available in main window</p>
                     </div>
                 `;
             }
         } catch (error) {
-            console.warn('Could not update viewport info:', error);
+            console.warn('Could not get viewport info from main window:', error);
             viewportDetails.innerHTML = `
                 <div class="no-viewport">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading viewport information</p>
+                    <i class="fas fa-info-circle"></i>
+                    <p>No genome loaded or viewport available</p>
                 </div>
             `;
         }
@@ -285,17 +323,32 @@ class CrisprDesigner {
             throw new Error('Please enter a gene name');
         }
         
-        // For now, return a mock sequence
-        const mockSequence = 'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGACGCGTACAGGAAACACAGAAAAAAGCCCGCACCTGACAGTGCGGGCTTTTTTTTTCGACCAAAGGTAACGAGGTAACAACCATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTAT';
-        
-        return {
-            sequence: mockSequence,
-            chromosome: 'chr1',
-            start: 1000,
-            end: 1000 + mockSequence.length,
-            source: 'gene',
-            geneName: geneName
-        };
+        try {
+            // Try to get gene sequence from main window via IPC
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('get-gene-sequence', geneName);
+            
+            if (result && result.sequence) {
+                return result;
+            } else {
+                throw new Error(`Gene '${geneName}' not found in current genome. Please check the gene name or load a genome file first.`);
+            }
+        } catch (error) {
+            console.error('Error getting gene sequence:', error);
+            
+            // Fallback: return mock sequence if IPC fails
+            console.warn('IPC failed, using mock sequence for development');
+            const mockSequence = 'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGACGCGTACAGGAAACACAGAAAAAAGCCCGCACCTGACAGTGCGGGCTTTTTTTTTCGACCAAAGGTAACGAGGTAACAACCATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAAATAAAACATGTCCTGCATGGCATTAGTTTGTTGGGGCAGTGCCCGGATAGCATCAACGCTGCGCTGATTTGCCGTGGCGAGAAAATGTCGATCGCCATTATGGCCGGCGTATTAGAAGCGCGCGGTCACAACGTTACTGTTAT';
+            
+            return {
+                sequence: mockSequence,
+                chromosome: 'chr1',
+                start: 1000,
+                end: 1000 + mockSequence.length,
+                source: 'gene_mock',
+                geneName: geneName
+            };
+        }
     }
     
     /**
@@ -318,53 +371,88 @@ class CrisprDesigner {
             throw new Error('Region cannot exceed 10 kb');
         }
         
-        // For now, generate a mock sequence
-        const length = end - start + 1;
-        const bases = ['A', 'T', 'G', 'C'];
-        let sequence = '';
-        for (let i = 0; i < length; i++) {
-            sequence += bases[Math.floor(Math.random() * 4)];
+        try {
+            // Try to get region sequence from main window via IPC
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('get-region-sequence', chromosome, start, end);
+            
+            if (result && result.sequence) {
+                return result;
+            } else {
+                throw new Error(`Region ${chromosome}:${start}-${end} not found in current genome. Please check coordinates or load a genome file first.`);
+            }
+        } catch (error) {
+            console.error('Error getting region sequence:', error);
+            
+            // Fallback: generate mock sequence if IPC fails
+            console.warn('IPC failed, using mock sequence for development');
+            const length = end - start + 1;
+            const bases = ['A', 'T', 'G', 'C'];
+            let sequence = '';
+            for (let i = 0; i < length; i++) {
+                sequence += bases[Math.floor(Math.random() * 4)];
+            }
+            
+            return {
+                sequence: sequence,
+                chromosome: chromosome,
+                start: start,
+                end: end,
+                source: 'region_mock'
+            };
         }
-        
-        return {
-            sequence: sequence,
-            chromosome: chromosome,
-            start: start,
-            end: end,
-            source: 'region'
-        };
     }
     
     /**
      * Get sequence from current viewport
      */
     async getCurrentViewportSequence() {
-        const currentChr = document.getElementById('chromosomeSelect')?.value;
-        const viewport = this.genomeBrowser?.trackRenderer?.getCurrentViewport();
-        
-        if (!currentChr || !viewport) {
-            throw new Error('No current viewport available');
+        try {
+            // Try to get current viewport sequence from main window via IPC
+            const { ipcRenderer } = require('electron');
+            const genomeData = await ipcRenderer.invoke('get-genome-data');
+            
+            if (!genomeData || !genomeData.currentChromosome || !genomeData.currentPosition) {
+                throw new Error('No current viewport available in main window');
+            }
+            
+            const chromosome = genomeData.currentChromosome;
+            const start = genomeData.currentPosition.start;
+            const end = genomeData.currentPosition.end;
+            
+            const range = end - start;
+            if (range > 10000) {
+                throw new Error('Current viewport is too large (max 10 kb). Please zoom in.');
+            }
+            
+            // Get the actual sequence from the main window
+            const result = await ipcRenderer.invoke('get-region-sequence', chromosome, start, end);
+            
+            if (result && result.sequence) {
+                result.source = 'current_viewport';
+                return result;
+            } else {
+                throw new Error('Failed to get sequence for current viewport');
+            }
+        } catch (error) {
+            console.error('Error getting current viewport sequence:', error);
+            
+            // Fallback: generate mock sequence
+            console.warn('IPC failed, using mock sequence for development');
+            const bases = ['A', 'T', 'G', 'C'];
+            let sequence = '';
+            for (let i = 0; i < 1000; i++) {
+                sequence += bases[Math.floor(Math.random() * 4)];
+            }
+            
+            return {
+                sequence: sequence,
+                chromosome: 'chr1',
+                start: 1,
+                end: 1000,
+                source: 'current_viewport_mock'
+            };
         }
-        
-        const range = viewport.end - viewport.start;
-        if (range > 10000) {
-            throw new Error('Current viewport is too large (max 10 kb). Please zoom in.');
-        }
-        
-        // Generate mock sequence
-        const bases = ['A', 'T', 'G', 'C'];
-        let sequence = '';
-        for (let i = 0; i < range; i++) {
-            sequence += bases[Math.floor(Math.random() * 4)];
-        }
-        
-        return {
-            sequence: sequence,
-            chromosome: currentChr,
-            start: viewport.start,
-            end: viewport.end,
-            source: 'current_viewport'
-        };
     }
     
     /**

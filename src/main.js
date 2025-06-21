@@ -843,6 +843,17 @@ function createCrisprDesignerWindow() {
 
   crisprWindow.loadFile('src/crispr-designer.html');
   
+  // Store reference to main window for data communication
+  crisprWindow.mainWindow = mainWindow;
+  
+  // Handle data requests from CRISPR window
+  crisprWindow.webContents.on('did-finish-load', () => {
+    // Setup IPC communication between CRISPR window and main window
+    crisprWindow.webContents.send('main-window-ready', {
+      hasMainWindow: true
+    });
+  });
+  
   crisprWindow.on('closed', () => {
     console.log('CRISPR Designer window closed');
   });
@@ -897,5 +908,121 @@ ipcMain.on('open-plugin-function-calling-test', (event) => {
 
   } catch (error) {
     console.error('Failed to open plugin function calling test:', error);
+  }
+});
+
+// Handle genome data requests from CRISPR Designer
+ipcMain.handle('get-genome-data', async (event) => {
+  try {
+    // Get the sender window (CRISPR window)
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    // Get main window data
+    if (senderWindow && senderWindow.mainWindow) {
+      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            return {
+              currentSequence: window.genomeBrowser.currentSequence || null,
+              currentAnnotations: window.genomeBrowser.currentAnnotations || {},
+              currentPosition: window.genomeBrowser.currentPosition || null,
+              currentChromosome: document.getElementById('chromosomeSelect')?.value || null
+            };
+          }
+          return null;
+        })()
+      `);
+      return result;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting genome data:', error);
+    return null;
+  }
+});
+
+// Handle gene sequence requests
+ipcMain.handle('get-gene-sequence', async (event, geneName) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    if (senderWindow && senderWindow.mainWindow) {
+      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          if (window.genomeBrowser && '${geneName}') {
+            const annotations = window.genomeBrowser.currentAnnotations || {};
+            const sequences = window.genomeBrowser.currentSequence || {};
+            
+            // Search for gene in annotations
+            for (const [chromosome, chrAnnotations] of Object.entries(annotations)) {
+              if (chrAnnotations && chrAnnotations.length) {
+                const gene = chrAnnotations.find(g => 
+                  g.name === '${geneName}' || 
+                  g.gene === '${geneName}' || 
+                  g.locus_tag === '${geneName}' ||
+                  (g.name && g.name.toLowerCase() === '${geneName}'.toLowerCase()) ||
+                  (g.gene && g.gene.toLowerCase() === '${geneName}'.toLowerCase())
+                );
+                
+                if (gene && sequences[chromosome]) {
+                  const sequence = sequences[chromosome].substring(gene.start - 1, gene.end);
+                  return {
+                    sequence: sequence,
+                    chromosome: chromosome,
+                    start: gene.start,
+                    end: gene.end,
+                    geneName: gene.name || gene.gene || '${geneName}',
+                    strand: gene.strand || '+',
+                    source: 'gene_annotation'
+                  };
+                }
+              }
+            }
+            
+            return null;
+          }
+          return null;
+        })()
+      `);
+      return result;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting gene sequence:', error);
+    return null;
+  }
+});
+
+// Handle region sequence requests
+ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
+  try {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    if (senderWindow && senderWindow.mainWindow) {
+      const result = await senderWindow.mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.genomeBrowser) {
+            const sequences = window.genomeBrowser.currentSequence || {};
+            
+            if (sequences['${chromosome}']) {
+              const sequence = sequences['${chromosome}'].substring(${start} - 1, ${end});
+              return {
+                sequence: sequence,
+                chromosome: '${chromosome}',
+                start: ${start},
+                end: ${end},
+                source: 'genomic_region'
+              };
+            }
+          }
+          return null;
+        })()
+      `);
+      return result;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting region sequence:', error);
+    return null;
   }
 }); 

@@ -181,6 +181,14 @@
         .input-section {
             margin-bottom: 20px;
         }
+        
+        .input-section.hidden {
+            display: none !important;
+        }
+        
+        .input-section.visible {
+            display: block !important;
+        }
 
         .parameters-grid {
             display: grid;
@@ -702,7 +710,7 @@
                             </select>
                         </div>
                         
-                        <div id="sequenceInput" class="input-section">
+                        <div id="sequenceInput" class="input-section visible">
                             <div class="parameter-group">
                                 <label for="crisprTargetSequence">Target Sequence:</label>
                                 <textarea id="crisprTargetSequence" class="form-control" 
@@ -715,7 +723,7 @@
                             </div>
                         </div>
                         
-                        <div id="geneInput" class="input-section" style="display: none;">
+                        <div id="geneInput" class="input-section hidden">
                             <div class="parameter-group">
                                 <label for="crisprTargetGene">Gene Name:</label>
                                 <input type="text" id="crisprTargetGene" class="form-control" 
@@ -726,7 +734,7 @@
                             </div>
                         </div>
                         
-                        <div id="regionInput" class="input-section" style="display: none;">
+                        <div id="regionInput" class="input-section hidden">
                             <div class="parameters-grid">
                                 <div class="parameter-group">
                                     <label for="crisprTargetChromosome">Chromosome:</label>
@@ -745,7 +753,7 @@
                             </div>
                         </div>
                         
-                        <div id="currentViewportInfo" class="input-section" style="display: none;">
+                        <div id="currentViewportInfo" class="input-section hidden">
                             <div class="viewport-info">
                                 <h5>Current Viewport:</h5>
                                 <div id="currentViewportDetails">
@@ -983,6 +991,47 @@
         // Initialize CRISPR Designer when page loads
         let crisprDesigner = null;
         
+        // Function to show styled notifications
+        function showStyledNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                max-width: 400px;
+                font-size: 14px;
+                line-height: 1.4;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 10);
+            
+            // Remove after 4 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🧬 CRISPR Designer window loaded');
             
@@ -993,17 +1042,39 @@
                 trackRenderer: null,
                 showNotification: (message, type) => {
                     console.log(`[${type.toUpperCase()}] ${message}`);
-                    alert(message);
+                    showStyledNotification(message, type);
                 },
                 navigateToPosition: (chr, start, end) => {
                     console.log(`Navigate to ${chr}:${start}-${end}`);
-                    alert(`Would navigate to ${chr}:${start}-${end} in main browser`);
+                    showStyledNotification(`Would navigate to ${chr}:${start}-${end} in main browser`, 'info');
                 }
             };
             
             // Initialize CRISPR Designer
             crisprDesigner = new window.CrisprDesigner(mockGenomeBrowser);
+            
+            // Override showNotification method for standalone window
+            crisprDesigner.showNotification = showStyledNotification;
+            
             crisprDesigner.initialize();
+            
+            // Debug: Check if the dropdown exists and trigger initial setup
+            const targetTypeSelect = document.getElementById('crisprTargetType');
+            if (targetTypeSelect) {
+                console.log('🔍 Target type dropdown found:', targetTypeSelect.value);
+                
+                // Ensure the default 'sequence' input is shown
+                const sequenceInput = document.getElementById('sequenceInput');
+                if (sequenceInput) {
+                    sequenceInput.style.display = 'block';
+                    console.log('✅ Default sequence input shown');
+                }
+                
+                // Test the change event
+                targetTypeSelect.dispatchEvent(new Event('change'));
+            } else {
+                console.error('❌ Target type dropdown not found!');
+            }
             
             // Make it globally available for button clicks
             window.crisprDesigner = crisprDesigner;
