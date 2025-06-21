@@ -217,6 +217,14 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'CRISPR Guide RNA Design',
+          accelerator: 'CmdOrCtrl+Shift+G',
+          click: () => {
+            mainWindow.webContents.send('open-crispr-designer');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Visualization Tools',
           submenu: [
             {
