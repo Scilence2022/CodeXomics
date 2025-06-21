@@ -1641,7 +1641,7 @@ class TrackRenderer {
      * Calculate layout parameters for gene track
      */
     calculateGeneTrackLayout(geneRows, settings) {
-        const geneHeight = settings?.geneHeight || 23;
+        const geneHeight = settings?.geneHeight || 12;
         const rowSpacing = 6;
         const rulerHeight = 35;
         const topPadding = 2;
@@ -1679,7 +1679,7 @@ class TrackRenderer {
         // Check for gene height setting
         const geneHeightInput = document.getElementById('geneHeight');
         if (geneHeightInput) {
-            settings.geneHeight = parseInt(geneHeightInput.value) || 23;
+            settings.geneHeight = parseInt(geneHeightInput.value) || 12;
         }
         
         // Check for max rows setting
@@ -1700,19 +1700,12 @@ class TrackRenderer {
             settings.fontFamily = fontFamilyInput.value || 'Arial, sans-serif';
         }
         
-        // Check for arrow size setting
-        const arrowSizeInput = document.getElementById('arrowSize');
-        if (arrowSizeInput) {
-            settings.arrowSize = parseInt(arrowSizeInput.value) || 8;
-        }
-        
         // Default settings if no inputs found
         const finalSettings = Object.keys(settings).length > 0 ? settings : {
-            geneHeight: 23,
+            geneHeight: 12,
             maxRows: 6,
             fontSize: 11,
-            fontFamily: 'Arial, sans-serif',
-            arrowSize: 8
+            fontFamily: 'Arial, sans-serif'
         };
         
         console.log('Using fallback gene track settings:', finalSettings);
@@ -1823,13 +1816,9 @@ class TrackRenderer {
         // Apply font settings
         const fontSize = settings?.fontSize || 11;
         const fontFamily = settings?.fontFamily || 'Arial, sans-serif';
-        const arrowSize = settings?.arrowSize || 8;
         geneElement.style.fontSize = `${fontSize}px`;
         geneElement.style.fontFamily = fontFamily;
         geneElement.style.lineHeight = `${layout.geneHeight}px`;
-        
-        // Apply arrow size setting using CSS custom property
-        geneElement.style.setProperty('--arrow-size', `${arrowSize}px`);
         
         // Set text content and shape based on available space
         const geneName = gene.qualifiers.gene || gene.qualifiers.locus_tag || gene.qualifiers.product || gene.type;
@@ -4809,7 +4798,7 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label for="genesGeneHeight">Gene Element Height (px):</label>
-                    <input type="number" id="genesGeneHeight" min="12" max="40" value="${settings.geneHeight || 23}">
+                    <input type="number" id="genesGeneHeight" min="12" max="40" value="${settings.geneHeight || 12}">
                     <div class="help-text">Height of individual gene elements. Affects spacing between gene rows.</div>
                 </div>
                 <div class="form-group">
@@ -4826,11 +4815,6 @@ class TrackRenderer {
                         <option value="monospace" ${(settings.fontFamily || 'Arial, sans-serif') === 'monospace' ? 'selected' : ''}>Monospace</option>
                         <option value="Georgia, serif" ${(settings.fontFamily || 'Arial, sans-serif') === 'Georgia, serif' ? 'selected' : ''}>Georgia</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="genesArrowSize">Direction Arrow Size (px):</label>
-                    <input type="number" id="genesArrowSize" min="6" max="16" step="1" value="${settings.arrowSize || 8}">
-                    <div class="help-text">Size of the direction arrows (▶ ◀) displayed next to gene names.</div>
                 </div>
             </div>
         `;
@@ -4990,10 +4974,9 @@ class TrackRenderer {
                 maxRows: 6,
                 showOperonsSameRow: false,
                 height: 120,
-                geneHeight: 23,
+                geneHeight: 12,
                 fontSize: 11,
                 fontFamily: 'Arial, sans-serif',
-                arrowSize: 8,
                 layoutMode: 'compact' // 'compact' or 'groupByType'
             },
             gc: {
@@ -5081,7 +5064,6 @@ class TrackRenderer {
                 const geneHeightElement = modal.querySelector('#genesGeneHeight');
                 const fontSizeElement = modal.querySelector('#genesFontSize');
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
-                const arrowSizeElement = modal.querySelector('#genesArrowSize');
                 const layoutModeElement = modal.querySelector('#genesLayoutMode');
                 
                 console.log('Form elements found:', {
@@ -5091,17 +5073,15 @@ class TrackRenderer {
                     geneHeightElement: !!geneHeightElement,
                     fontSizeElement: !!fontSizeElement,
                     fontFamilyElement: !!fontFamilyElement,
-                    arrowSizeElement: !!arrowSizeElement,
                     layoutModeElement: !!layoutModeElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
                 settings.showOperonsSameRow = showOperonsElement?.checked || false;
                 settings.height = parseInt(heightElement?.value) || 120;
-                settings.geneHeight = parseInt(geneHeightElement?.value) || 23;
+                settings.geneHeight = parseInt(geneHeightElement?.value) || 12;
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
-                settings.arrowSize = parseInt(arrowSizeElement?.value) || 8;
                 settings.layoutMode = layoutModeElement?.value || 'compact';
                 
                 console.log('Collected gene settings from form:', settings);
