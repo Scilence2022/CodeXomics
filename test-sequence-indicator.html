@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Gene Indicator Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            margin: 20px;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .sequence-line-group {
+            margin-bottom: 8px;
+        }
+
+        .sequence-line {
+            margin-bottom: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .sequence-position {
+            display: inline-block;
+            width: 100px;
+            color: #666;
+            text-align: right;
+            margin-right: 10px;
+        }
+
+        .sequence-bases {
+            display: inline-block;
+        }
+
+        .gene-indicator-line {
+            margin-left: 100px;
+            padding-left: 10px;
+            margin-top: 1px;
+            margin-bottom: 3px;
+        }
+
+        .gene-indicator-svg {
+            display: block;
+        }
+
+        .gene-indicator-svg:hover path,
+        .gene-indicator-svg:hover rect {
+            opacity: 1 !important;
+            filter: brightness(1.1);
+        }
+
+        .gene-indicator-svg path,
+        .gene-indicator-svg rect {
+            cursor: pointer;
+        }
+        
+        .demo-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="demo-info">
+            <h3>Sequence Gene Indicator Demo</h3>
+            <p>演示在序列行下方显示简单的基因形状指示条，颜色与Genes & Features track一致：</p>
+            <ul>
+                <li>CDS基因：蓝色矩形</li>
+                <li>Promoter：箭头形状</li>
+                <li>tRNA/rRNA：波浪形状</li>
+                <li>Terminator：圆角矩形</li>
+            </ul>
+        </div>
+        
+        <div id="sequence-demo">
+            <!-- Demo sequence with gene indicators -->
+            <div class="sequence-line-group">
+                <div class="sequence-line">
+                    <span class="sequence-position">1</span>
+                    <div class="sequence-bases">ATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC</div>
+                </div>
+                <div class="gene-indicator-line">
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
+                        <!-- Promoter (arrow) -->
+                        <path d="M 0 1 L 57 1 L 60 3 L 57 5 L 0 5 Z" fill="#ff6b6b" opacity="0.8" title="Promoter"/>
+                        <!-- CDS (rectangle) -->
+                        <rect x="60" y="1" width="180" height="4" fill="#4ecdc4" opacity="0.8" title="CDS Gene"/>
+                        <!-- Terminator (rounded rectangle) -->
+                        <rect x="240" y="1" width="60" height="4" rx="2" ry="2" fill="#ffe66d" opacity="0.8" title="Terminator"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="sequence-line-group">
+                <div class="sequence-line">
+                    <span class="sequence-position">61</span>
+                    <div class="sequence-bases">GCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGC</div>
+                </div>
+                <div class="gene-indicator-line">
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
+                        <!-- tRNA (wavy shape) -->
+                        <path d="M 0 2 Q 20 1 40 2 Q 60 1 80 2 L 80 5 L 0 5 Z" fill="#a8e6cf" opacity="0.8" title="tRNA"/>
+                        <!-- Another CDS -->
+                        <rect x="120" y="1" width="240" height="4" fill="#4ecdc4" opacity="0.8" title="CDS Gene 2"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="sequence-line-group">
+                <div class="sequence-line">
+                    <span class="sequence-position">121</span>
+                    <div class="sequence-bases">CATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC</div>
+                </div>
+                <div class="gene-indicator-line">
+                    <svg class="gene-indicator-svg" style="width: 720px; height: 6px;">
+                        <!-- Regulatory element -->
+                        <rect x="0" y="1" width="120" height="4" fill="#ff9ff3" opacity="0.8" title="Regulatory Element"/>
+                        <!-- Reverse strand promoter (left arrow) -->
+                        <path d="M 123 1 L 180 1 L 180 5 L 123 5 L 120 3 Z" fill="#ff6b6b" opacity="0.8" title="Promoter (reverse)"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactivity
+        document.querySelectorAll('.gene-indicator-svg path, .gene-indicator-svg rect').forEach(element => {
+            element.addEventListener('mouseover', function() {
+                this.style.opacity = '1';
+                this.style.filter = 'brightness(1.2)';
+            });
+            
+            element.addEventListener('mouseout', function() {
+                this.style.opacity = '0.8';
+                this.style.filter = 'none';
+            });
+        });
+    </script>
+</body>
+</html> 

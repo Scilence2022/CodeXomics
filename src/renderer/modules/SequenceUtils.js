@@ -97,10 +97,13 @@ class SequenceUtils {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
             const lineStartPos = viewStart + i;
             
+            html += `<div class="sequence-line-group">`;
             html += `<div class="sequence-line">`;
             html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            // Added font-size: 0 to parent, individual bases will have their font-size reset
-            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</span>`;
+            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
+            html += `</div>`;
+            // Add gene feature indicator bar below the sequence
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth)}</div>`;
             html += `</div>`;
         }
         
@@ -151,10 +154,13 @@ class SequenceUtils {
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
             const lineStartPos = viewStart + i;
+            html += `<div class="sequence-line-group">`;
             html += `<div class="sequence-line">`;
             html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            // Added font-size: 0 to parent, individual bases will have their font-size reset
-            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</span>`;
+            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
+            html += `</div>`;
+            // Add gene feature indicator bar below the sequence
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth)}</div>`;
             html += `</div>`;
         }
         container.innerHTML = html;
@@ -177,13 +183,240 @@ class SequenceUtils {
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
             const lineStartPos = viewStart + i;
+            html += `<div class="sequence-line-group">`;
             html += `<div class="sequence-line">`;
             html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            // Added font-size: 0 to parent, individual bases will have their font-size reset
-            html += `<span class="sequence-bases" style="white-space: nowrap; font-size: 0;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons, false)}</span>`;
+            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons, true)}</div>`;
+            html += `</div>`;
+            // Add gene feature indicator bar below the sequence
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, true)}</div>`;
             html += `</div>`;
         }
         container.innerHTML = html;
+    }
+
+    /**
+     * Create SVG-enhanced sequence display with professional gene feature backgrounds
+     */
+    createSVGEnhancedSequence(sequence, lineStartAbs, annotations, operons, charWidth, lineLength, simplified = false) {
+        const baseFontSize = 14;
+        const lineHeight = 20; // Height for the SVG background layer
+        const lineWidth = sequence.length * charWidth;
+        
+        // Create SVG background layer
+        let svgLayer = `<svg class="sequence-svg-background" style="position: absolute; top: 0; left: 0; width: ${lineWidth}px; height: ${lineHeight}px; z-index: 1; pointer-events: none;">`;
+        
+        // Add definitions for gradients
+        svgLayer += '<defs>';
+        svgLayer += this.createSequenceSVGGradients();
+        svgLayer += '</defs>';
+        
+        // Group features by position to create proper layering
+        const featureSegments = this.createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified);
+        
+        // Draw feature backgrounds as SVG shapes
+        featureSegments.forEach(segment => {
+            if (segment.feature) {
+                const x = segment.startIndex * charWidth;
+                const width = (segment.endIndex - segment.startIndex + 1) * charWidth;
+                svgLayer += this.createSequenceFeatureSVG(segment.feature, x, width, lineHeight, operons);
+            }
+        });
+        
+        svgLayer += '</svg>';
+        
+        // Create text layer with sequence bases
+        let textLayer = `<div class="sequence-text-layer" style="position: relative; z-index: 2; font-size: 0;">`;
+        
+        for (let i = 0; i < sequence.length; i++) {
+            const base = sequence[i];
+            const baseTextColor = this.getBaseColor(base);
+            
+            const style = `color: ${baseTextColor}; font-size: ${baseFontSize}px; display: inline-block; padding: 0; margin: 0; vertical-align: top; width: ${charWidth}px; text-align: center;`;
+            textLayer += `<span class="base-${base.toLowerCase()}" style="${style}">${base}</span>`;
+        }
+        
+        textLayer += '</div>';
+        
+        return svgLayer + textLayer;
+    }
+
+    /**
+     * Create feature segments for a sequence line
+     */
+    createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified = false) {
+        const segments = [];
+        
+        for (let i = 0; i < sequence.length; i++) {
+            const absPos = lineStartAbs + i + 1;
+            let feature = null;
+            
+            if (!simplified) {
+                const overlappingFeatures = annotations.filter(f => 
+                    absPos >= f.start && absPos <= f.end && 
+                    this.genomeBrowser.shouldShowGeneType(f.type)
+                );
+                
+                if (overlappingFeatures.length > 0) {
+                    // Sort by priority
+                    const sortedFeatures = overlappingFeatures.sort((a, b) => {
+                        const typeOrder = { 'CDS': 1, 'mRNA': 2, 'tRNA': 2, 'rRNA': 2, 'promoter': 3, 'terminator': 3, 'regulatory': 3, 'gene': 4 };
+                        return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
+                    });
+                    feature = sortedFeatures[0];
+                }
+            } else {
+                const overlapping = annotations.find(f => absPos >= f.start && absPos <= f.end);
+                if (overlapping) feature = { type: 'simplified', ...overlapping };
+            }
+            
+            segments.push({
+                startIndex: i,
+                endIndex: i,
+                feature: feature
+            });
+        }
+        
+        // Merge consecutive segments with the same feature
+        const mergedSegments = [];
+        let currentSegment = null;
+        
+        segments.forEach(segment => {
+            if (!currentSegment || !this.featuresEqual(currentSegment.feature, segment.feature)) {
+                if (currentSegment) mergedSegments.push(currentSegment);
+                currentSegment = { ...segment };
+            } else {
+                currentSegment.endIndex = segment.endIndex;
+            }
+        });
+        
+        if (currentSegment) mergedSegments.push(currentSegment);
+        
+        return mergedSegments;
+    }
+
+    /**
+     * Check if two features are equal for merging purposes
+     */
+    featuresEqual(feature1, feature2) {
+        if (!feature1 && !feature2) return true;
+        if (!feature1 || !feature2) return false;
+        return feature1.start === feature2.start && 
+               feature1.end === feature2.end && 
+               feature1.type === feature2.type;
+    }
+
+    /**
+     * Create SVG gradients for sequence features
+     */
+    createSequenceSVGGradients() {
+        const gradients = [
+            { id: 'seq-cds-gradient', color1: '#8e44ad', color2: '#a569bd' },
+            { id: 'seq-mrna-gradient', color1: '#16a085', color2: '#48c9b0' },
+            { id: 'seq-trna-gradient', color1: '#27ae60', color2: '#58d68d' },
+            { id: 'seq-rrna-gradient', color1: '#2980b9', color2: '#5dade2' },
+            { id: 'seq-promoter-gradient', color1: '#f1c40f', color2: '#f7dc6f' },
+            { id: 'seq-terminator-gradient', color1: '#d35400', color2: '#ec7063' },
+            { id: 'seq-regulatory-gradient', color1: '#c0392b', color2: '#e74c3c' },
+            { id: 'seq-simplified-gradient', color1: '#95a5a6', color2: '#bdc3c7' }
+        ];
+
+        let defsContent = '';
+        gradients.forEach(gradientDef => {
+            defsContent += `<linearGradient id="${gradientDef.id}" x1="0%" y1="0%" x2="100%" y2="100%">`;
+            defsContent += `<stop offset="0%" stop-color="${gradientDef.color1}" />`;
+            defsContent += `<stop offset="100%" stop-color="${gradientDef.color2}" />`;
+            defsContent += `</linearGradient>`;
+        });
+        
+        return defsContent;
+    }
+
+    /**
+     * Create SVG feature shape for sequence background
+     */
+    createSequenceFeatureSVG(feature, x, width, height, operons) {
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(feature, operons);
+        const isForward = feature.strand !== -1;
+        const geneType = feature.type.toLowerCase();
+        
+        // Use operon color if available, otherwise use type-specific gradient
+        let fillColor = `url(#seq-${geneType}-gradient)`;
+        if (operonInfo && operonInfo.color) {
+            // Create a subtle background with operon color
+            fillColor = this.hexToRgba(operonInfo.color, 0.3);
+        }
+        
+        let shape = '';
+        const margin = 1; // Small margin to prevent overlap
+        
+        if (geneType === 'promoter') {
+            // Arrow shape for promoters
+            const arrowSize = Math.min(height * 0.3, 4);
+            const direction = isForward ? 1 : -1;
+            shape = `<path d="M ${x + margin} ${margin} 
+                            L ${x + width - arrowSize - margin} ${margin} 
+                            L ${x + width - margin} ${height/2} 
+                            L ${x + width - arrowSize - margin} ${height - margin} 
+                            L ${x + margin} ${height - margin} Z" 
+                            fill="${fillColor}" 
+                            stroke="${this.darkenHexColor(operonInfo?.color || '#f1c40f', 20)}" 
+                            stroke-width="0.5" 
+                            opacity="0.7"/>`;
+        } else if (geneType === 'terminator') {
+            // Rectangle with rounded ends for terminators
+            shape = `<rect x="${x + margin}" y="${margin}" 
+                           width="${width - 2*margin}" height="${height - 2*margin}" 
+                           rx="3" ry="3" 
+                           fill="${fillColor}" 
+                           stroke="${this.darkenHexColor(operonInfo?.color || '#d35400', 20)}" 
+                           stroke-width="0.5" 
+                           opacity="0.7"/>`;
+        } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
+            // Wavy-edged rectangle for RNA types
+            const waveHeight = 2;
+            shape = `<path d="M ${x + margin} ${margin + waveHeight} 
+                            Q ${x + width/4} ${margin} ${x + width/2} ${margin + waveHeight/2}
+                            Q ${x + 3*width/4} ${margin} ${x + width - margin} ${margin + waveHeight}
+                            L ${x + width - margin} ${height - margin - waveHeight}
+                            Q ${x + 3*width/4} ${height - margin} ${x + width/2} ${height - margin - waveHeight/2}
+                            Q ${x + width/4} ${height - margin} ${x + margin} ${height - margin - waveHeight} Z" 
+                            fill="${fillColor}" 
+                            stroke="${this.darkenHexColor(operonInfo?.color || this.getFeatureTypeColor(feature.type), 20)}" 
+                            stroke-width="0.5" 
+                            opacity="0.7"/>`;
+        } else {
+            // Default rectangle for CDS and other features
+            shape = `<rect x="${x + margin}" y="${margin}" 
+                           width="${width - 2*margin}" height="${height - 2*margin}" 
+                           fill="${fillColor}" 
+                           stroke="${this.darkenHexColor(operonInfo?.color || this.getFeatureTypeColor(feature.type), 20)}" 
+                           stroke-width="0.5" 
+                           opacity="0.6"/>`;
+        }
+        
+        // Add feature tooltip
+        const featureTitle = `${feature.qualifiers?.gene || feature.qualifiers?.locus_tag || feature.type} (${feature.start}-${feature.end})`;
+        return `<g title="${featureTitle}">${shape}</g>`;
+    }
+
+    /**
+     * Darken a hex color by a percentage
+     */
+    darkenHexColor(hex, percent) {
+        if (!hex || hex === 'transparent') return '#666666';
+        if (!hex.startsWith('#')) return hex;
+        
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        
+        const factor = (100 - percent) / 100;
+        const newR = Math.round(r * factor);
+        const newG = Math.round(g * factor);
+        const newB = Math.round(b * factor);
+        
+        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
     }
 
     colorizeSequence(sequence, lineStartAbs, annotations, operons, simplified = false) { // old method, to be replaced by colorizeSequenceWithFeatures
@@ -518,6 +751,76 @@ class SequenceUtils {
         
         // Show sequence and annotations
         this.genomeBrowser.displayGenomeView(chromosome, sequence);
+    }
+
+    /**
+     * Create gene indicator bar below sequence line - simple narrow shapes with track-consistent colors
+     */
+    createGeneIndicatorBar(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false) {
+        const barHeight = 6; // Very narrow indicator bar
+        const lineWidth = sequence.length * charWidth;
+        
+        // Create SVG for the indicator bar
+        let svg = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`;
+        
+        // Get feature segments for this sequence line
+        const featureSegments = this.createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified);
+        
+        // Draw simple indicator shapes
+        featureSegments.forEach(segment => {
+            if (segment.feature) {
+                const x = segment.startIndex * charWidth;
+                const width = (segment.endIndex - segment.startIndex + 1) * charWidth;
+                svg += this.createSimpleIndicatorShape(segment.feature, x, width, barHeight, operons);
+            }
+        });
+        
+        svg += '</svg>';
+        return svg;
+    }
+
+    /**
+     * Create simple indicator shape with colors consistent with Genes & Features track
+     */
+    createSimpleIndicatorShape(feature, x, width, height, operons) {
+        const operonInfo = this.genomeBrowser.getGeneOperonInfo(feature, operons);
+        const geneType = feature.type.toLowerCase();
+        const isForward = feature.strand !== -1;
+        
+        // Use the same colors as Genes & Features track
+        let fillColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(feature.type);
+        
+        let shape = '';
+        
+        if (geneType === 'promoter') {
+            // Simple arrow for promoter
+            if (isForward) {
+                shape = `<path d="M ${x} 1 L ${x + width - 3} 1 L ${x + width} ${height/2} L ${x + width - 3} ${height - 1} L ${x} ${height - 1} Z" 
+                               fill="${fillColor}" opacity="0.8" title="${feature.qualifiers?.gene || feature.type}"/>`;
+            } else {
+                shape = `<path d="M ${x + 3} 1 L ${x + width} 1 L ${x + width} ${height - 1} L ${x + 3} ${height - 1} L ${x} ${height/2} Z" 
+                               fill="${fillColor}" opacity="0.8" title="${feature.qualifiers?.gene || feature.type}"/>`;
+            }
+        } else if (geneType === 'terminator') {
+            // Rounded rectangle for terminator
+            shape = `<rect x="${x}" y="1" width="${width}" height="${height - 2}" rx="2" ry="2" 
+                           fill="${fillColor}" opacity="0.8" title="${feature.qualifiers?.gene || feature.type}"/>`;
+        } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
+            // Wavy top for RNA
+            const waveHeight = 1;
+            shape = `<path d="M ${x} ${1 + waveHeight} 
+                            Q ${x + width/4} 1 ${x + width/2} ${1 + waveHeight/2}
+                            Q ${x + 3*width/4} 1 ${x + width} ${1 + waveHeight}
+                            L ${x + width} ${height - 1}
+                            L ${x} ${height - 1} Z" 
+                            fill="${fillColor}" opacity="0.8" title="${feature.qualifiers?.gene || feature.type}"/>`;
+        } else {
+            // Simple rectangle for CDS and others
+            shape = `<rect x="${x}" y="1" width="${width}" height="${height - 2}" 
+                           fill="${fillColor}" opacity="0.8" title="${feature.qualifiers?.gene || feature.type}"/>`;
+        }
+        
+        return shape;
     }
 }
 

@@ -30322,6 +30322,76 @@ path.svg-gene-element.selected {
     background: var(--text-secondary);
 }
 
+/* SVG Enhanced Sequence Display Styles */
+.sequence-bases-container {
+    position: relative;
+    display: inline-block;
+    white-space: nowrap;
+    line-height: 20px;
+    min-height: 20px;
+}
+
+.sequence-svg-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.sequence-text-layer {
+    position: relative;
+    z-index: 2;
+    font-size: 0;
+    line-height: 20px;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+/* Enhanced sequence feature visualization */
+.sequence-svg-background rect,
+.sequence-svg-background path {
+    transition: opacity 0.2s ease;
+}
+
+.sequence-svg-background g:hover rect,
+.sequence-svg-background g:hover path {
+    opacity: 0.9 !important;
+    filter: brightness(1.1);
+}
+
+/* Improved base styling for SVG-enhanced display */
+.sequence-text-layer .base-a,
+.sequence-text-layer .base-t,
+.sequence-text-layer .base-g,
+.sequence-text-layer .base-c,
+.sequence-text-layer .base-n {
+    font-weight: 600;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.8);
+    cursor: default;
+}
+
+.sequence-text-layer .base-a { 
+    color: #2ecc71; /* Green */
+}
+
+.sequence-text-layer .base-t { 
+    color: #e74c3c; /* Red */
+}
+
+.sequence-text-layer .base-g { 
+    color: #f39c12; /* Orange */
+}
+
+.sequence-text-layer .base-c { 
+    color: #3498db; /* Blue */
+}
+
+.sequence-text-layer .base-n { 
+    color: #7f8c8d; /* Grey */
+}
+
 /* Protein sequence specific styling */
 [data-sequence-type="translation"] .sequence-bases span {
     padding: 1px 2px;
@@ -30848,4 +30918,36 @@ path.svg-gene-element.selected {
     .guide-details {
         grid-template-columns: 1fr;
     }
+}
+
+/* Gene Indicator Bar Styles - Simple shapes below sequence lines */
+.sequence-line-group {
+    margin-bottom: 8px;
+}
+
+.sequence-line {
+    margin-bottom: 2px;
+}
+
+.gene-indicator-line {
+    margin-left: 100px; /* Align with sequence bases, accounting for position column */
+    padding-left: 5px; /* Match the sequence padding */
+    margin-top: 1px;
+    margin-bottom: 3px;
+}
+
+.gene-indicator-svg {
+    display: block;
+}
+
+.gene-indicator-svg:hover path,
+.gene-indicator-svg:hover rect {
+    opacity: 1 !important;
+    filter: brightness(1.1);
+}
+
+/* Ensure gene indicator tooltips work */
+.gene-indicator-svg path,
+.gene-indicator-svg rect {
+    cursor: pointer;
 }
