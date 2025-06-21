@@ -30948,6 +30948,13 @@ path.svg-gene-element.selected {
 
 /* Ensure gene indicator tooltips work */
 .gene-indicator-svg path,
-.gene-indicator-svg rect {
+.gene-indicator-svg rect,
+.gene-indicator-svg line {
     cursor: pointer;
+}
+
+/* Hover effects for gene indicators */
+.gene-indicator-hover:hover {
+    opacity: 1 !important;
+    filter: brightness(1.2);
 }

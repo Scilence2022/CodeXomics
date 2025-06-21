@@ -90,6 +90,9 @@ class SequenceUtils {
         // Ensure at least some bases are shown, e.g., 10, and remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
+        // Get sequence track settings
+        const sequenceSettings = this.getSequenceTrackSettings();
+        
         let html = '<div class="detailed-sequence-view">';
         html += '<div class="sequence-info"><strong>DNA Sequence (colored by features):</strong></div>';
         
@@ -103,7 +106,7 @@ class SequenceUtils {
             html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
             html += `</div>`;
             // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth)}</div>`;
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
             html += `</div>`;
         }
         
@@ -150,6 +153,9 @@ class SequenceUtils {
         // Remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
+        // Get sequence track settings
+        const sequenceSettings = this.getSequenceTrackSettings();
+        
         let html = '';
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
@@ -160,7 +166,7 @@ class SequenceUtils {
             html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
             html += `</div>`;
             // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth)}</div>`;
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
             html += `</div>`;
         }
         container.innerHTML = html;
@@ -179,6 +185,9 @@ class SequenceUtils {
         // Remove upper cap to fill width
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
 
+        // Get sequence track settings
+        const sequenceSettings = this.getSequenceTrackSettings();
+
         let html = '';
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
@@ -189,7 +198,7 @@ class SequenceUtils {
             html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons, true)}</div>`;
             html += `</div>`;
             // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, true)}</div>`;
+            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, true, sequenceSettings)}</div>`;
             html += `</div>`;
         }
         container.innerHTML = html;
@@ -756,8 +765,13 @@ class SequenceUtils {
     /**
      * Create gene indicator bar below sequence line - simple narrow shapes with track-consistent colors
      */
-    createGeneIndicatorBar(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false) {
-        const barHeight = 8; // Slightly taller to accommodate arrows and markers
+    createGeneIndicatorBar(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false, settings = {}) {
+        // Check if indicators should be shown
+        if (settings.showIndicators === false) {
+            return '<div style="height: 0px;"></div>';
+        }
+        
+        const barHeight = settings.indicatorHeight || 12; // Use settings or default
         const lineWidth = sequence.length * charWidth;
         
         // Create SVG for the indicator bar
@@ -765,14 +779,24 @@ class SequenceUtils {
         
         // Process genes that overlap with this sequence line
         const lineEndAbs = lineStartAbs + sequence.length;
-        const overlappingGenes = annotations.filter(gene => 
-            gene.start <= lineEndAbs && gene.end >= lineStartAbs + 1 &&
-            this.genomeBrowser.shouldShowGeneType(gene.type)
-        );
+        const overlappingGenes = annotations.filter(gene => {
+            if (gene.start > lineEndAbs || gene.end < lineStartAbs + 1) return false;
+            if (!this.genomeBrowser.shouldShowGeneType(gene.type)) return false;
+            
+            // Apply gene type filters from settings
+            const geneType = gene.type.toLowerCase();
+            if (geneType === 'cds' && settings.showCDS === false) return false;
+            if (['trna', 'rrna', 'mrna'].includes(geneType) && settings.showRNA === false) return false;
+            if (geneType === 'promoter' && settings.showPromoter === false) return false;
+            if (geneType === 'terminator' && settings.showTerminator === false) return false;
+            if (geneType === 'regulatory' && settings.showRegulatory === false) return false;
+            
+            return true;
+        });
         
         // Draw gene indicators for each overlapping gene
         overlappingGenes.forEach(gene => {
-            svg += this.createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons);
+            svg += this.createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons, settings);
         });
         
         svg += '</svg>';
@@ -782,7 +806,7 @@ class SequenceUtils {
     /**
      * Create individual gene indicator with start line, gene body, and end arrow
      */
-    createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons) {
+    createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons, settings = {}) {
         // Get gene color - same as Genes & Features track
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
         const geneColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type);
@@ -804,18 +828,19 @@ class SequenceUtils {
         let indicator = '';
         
         // Gene body shape
-        indicator += this.createGeneBodyShape(gene, startX, width, barHeight, geneColor, geneType);
+        indicator += this.createGeneBodyShape(gene, startX, width, barHeight, geneColor, geneType, settings);
         
-        // Start marker (vertical line) - only if gene actually starts in this line
-        if (gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
-            indicator += `<line x1="${startX}" y1="1" x2="${startX}" y2="${barHeight-1}" 
-                               stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="1.5" opacity="0.9"
-                               title="Gene start: ${gene.qualifiers?.gene || gene.type}"/>`;
+        // Start marker (vertical line) - only if gene actually starts in this line and enabled
+        if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+            const markerWidth = settings.startMarkerWidth || 3;
+            indicator += `<line x1="${startX}" y1="2" x2="${startX}" y2="${barHeight-2}" 
+                               stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
+                               ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
         }
         
-        // End marker (arrow) - only if gene actually ends in this line
-        if (gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
-            indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene);
+        // End marker (arrow) - only if gene actually ends in this line and enabled
+        if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+            indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene, settings);
         }
         
         return indicator;
@@ -824,37 +849,40 @@ class SequenceUtils {
     /**
      * Create gene body shape based on gene type
      */
-    createGeneBodyShape(gene, x, width, height, color, geneType) {
+    createGeneBodyShape(gene, x, width, height, color, geneType, settings = {}) {
         const isForward = gene.strand !== -1;
+        const opacity = settings.indicatorOpacity || 0.7;
+        const tooltipAttr = settings.showTooltips !== false ? `title="${gene.qualifiers?.gene || gene.type}"` : '';
+        const hoverClass = settings.showHoverEffects !== false ? 'gene-indicator-hover' : '';
         
         let shape = '';
         
         if (geneType === 'promoter') {
             // Simple arrow for promoter
             if (isForward) {
-                shape = `<path d="M ${x} 2 L ${x + width - 3} 2 L ${x + width} ${height/2} L ${x + width - 3} ${height - 2} L ${x} ${height - 2} Z" 
-                               fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+                shape = `<path d="M ${x} 3 L ${x + width - 6} 3 L ${x + width} ${height/2} L ${x + width - 6} ${height - 3} L ${x} ${height - 3} Z" 
+                               fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
             } else {
-                shape = `<path d="M ${x + 3} 2 L ${x + width} 2 L ${x + width} ${height - 2} L ${x + 3} ${height - 2} L ${x} ${height/2} Z" 
-                               fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+                shape = `<path d="M ${x + 6} 3 L ${x + width} 3 L ${x + width} ${height - 3} L ${x + 6} ${height - 3} L ${x} ${height/2} Z" 
+                               fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
             }
         } else if (geneType === 'terminator') {
             // Rounded rectangle for terminator
-            shape = `<rect x="${x}" y="2" width="${width}" height="${height - 4}" rx="2" ry="2" 
-                           fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+            shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" rx="3" ry="3" 
+                           fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
             // Wavy shape for RNA
-            const waveHeight = 1;
-            shape = `<path d="M ${x} ${2 + waveHeight} 
-                            Q ${x + width/4} 2 ${x + width/2} ${2 + waveHeight/2}
-                            Q ${x + 3*width/4} 2 ${x + width} ${2 + waveHeight}
-                            L ${x + width} ${height - 2}
-                            L ${x} ${height - 2} Z" 
-                            fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+            const waveHeight = 2;
+            shape = `<path d="M ${x} ${3 + waveHeight} 
+                            Q ${x + width/4} 3 ${x + width/2} ${3 + waveHeight/2}
+                            Q ${x + 3*width/4} 3 ${x + width} ${3 + waveHeight}
+                            L ${x + width} ${height - 3}
+                            L ${x} ${height - 3} Z" 
+                            fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         } else {
             // Simple rectangle for CDS and others
-            shape = `<rect x="${x}" y="2" width="${width}" height="${height - 4}" 
-                           fill="${color}" opacity="0.7" title="${gene.qualifiers?.gene || gene.type}"/>`;
+            shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" 
+                           fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         }
         
         return shape;
@@ -863,22 +891,23 @@ class SequenceUtils {
     /**
      * Create end arrow marker to show gene direction and termination
      */
-    createGeneEndArrow(x, height, color, isForward, gene) {
-        const arrowSize = 3;
+    createGeneEndArrow(x, height, color, isForward, gene, settings = {}) {
+        const arrowSize = settings.arrowSize || 6; // Use settings or default
         const darkColor = this.darkenHexColor(color, 40);
+        const tooltipAttr = settings.showTooltips !== false ? 
+            `title="Gene end (${gene.qualifiers?.gene || gene.type}) ${isForward ? '→' : '←'}"` : '';
+        const hoverClass = settings.showHoverEffects !== false ? 'gene-indicator-hover' : '';
         
         let arrow = '';
         
         if (isForward) {
             // Right-pointing arrow
-            arrow = `<path d="M ${x-arrowSize} 1 L ${x} ${height/2} L ${x-arrowSize} ${height-1} Z" 
-                           fill="${darkColor}" opacity="1"
-                           title="Gene end (${gene.qualifiers?.gene || gene.type}) →"/>`;
+            arrow = `<path d="M ${x-arrowSize} 2 L ${x} ${height/2} L ${x-arrowSize} ${height-2} Z" 
+                           fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
         } else {
             // Left-pointing arrow
-            arrow = `<path d="M ${x+arrowSize} 1 L ${x} ${height/2} L ${x+arrowSize} ${height-1} Z" 
-                           fill="${darkColor}" opacity="1"
-                           title="Gene end (${gene.qualifiers?.gene || gene.type}) ←"/>`;
+            arrow = `<path d="M ${x+arrowSize} 2 L ${x} ${height/2} L ${x+arrowSize} ${height-2} Z" 
+                           fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
         }
         
         return arrow;
@@ -926,6 +955,34 @@ class SequenceUtils {
         }
         
         return shape;
+    }
+
+    /**
+     * Get sequence track settings from trackRenderer
+     */
+    getSequenceTrackSettings() {
+        // Try to get settings from trackRenderer if available
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.getTrackSettings) {
+            return this.genomeBrowser.trackRenderer.getTrackSettings('sequence');
+        }
+        
+        // Return default settings if trackRenderer not available
+        return {
+            showIndicators: true,
+            indicatorHeight: 12,
+            indicatorOpacity: 0.7,
+            showStartMarkers: true,
+            showEndArrows: true,
+            startMarkerWidth: 3,
+            arrowSize: 6,
+            showCDS: true,
+            showRNA: true,
+            showPromoter: true,
+            showTerminator: true,
+            showRegulatory: true,
+            showTooltips: true,
+            showHoverEffects: true
+        };
     }
 }
 

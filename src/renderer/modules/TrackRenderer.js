@@ -4752,6 +4752,11 @@ class TrackRenderer {
                 bodyElement.innerHTML = this.createReadsSettingsContent(currentSettings);
                 break;
                 
+            case 'sequence':
+                titleElement.textContent = 'Sequence Track Settings';
+                bodyElement.innerHTML = this.createSequenceSettingsContent(currentSettings);
+                break;
+                
             default:
                 titleElement.textContent = `${trackType} Track Settings`;
                 bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -5112,6 +5117,23 @@ class TrackRenderer {
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
                 break;
                 
+            case 'sequence':
+                settings.showIndicators = modal.querySelector('#sequenceShowIndicators').checked;
+                settings.indicatorHeight = parseInt(modal.querySelector('#sequenceIndicatorHeight').value) || 12;
+                settings.indicatorOpacity = parseFloat(modal.querySelector('#sequenceIndicatorOpacity').value) || 0.7;
+                settings.showStartMarkers = modal.querySelector('#sequenceShowStartMarkers').checked;
+                settings.showEndArrows = modal.querySelector('#sequenceShowEndArrows').checked;
+                settings.startMarkerWidth = parseFloat(modal.querySelector('#sequenceStartMarkerWidth').value) || 3;
+                settings.arrowSize = parseInt(modal.querySelector('#sequenceArrowSize').value) || 6;
+                settings.showCDS = modal.querySelector('#sequenceShowCDS').checked;
+                settings.showRNA = modal.querySelector('#sequenceShowRNA').checked;
+                settings.showPromoter = modal.querySelector('#sequenceShowPromoter').checked;
+                settings.showTerminator = modal.querySelector('#sequenceShowTerminator').checked;
+                settings.showRegulatory = modal.querySelector('#sequenceShowRegulatory').checked;
+                settings.showTooltips = modal.querySelector('#sequenceShowTooltips').checked;
+                settings.showHoverEffects = modal.querySelector('#sequenceShowHoverEffects').checked;
+                break;
+                
             default:
                 settings.height = parseInt(modal.querySelector('#defaultTrackHeight').value) || 80;
                 break;
@@ -5330,6 +5352,110 @@ class TrackRenderer {
         });
     }
 
+    /**
+     * Create sequence track settings content
+     */
+    createSequenceSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Gene Indicator Bar Settings</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowIndicators" ${settings.showIndicators !== false ? 'checked' : ''}>
+                        Show gene indicator bars below sequence lines
+                    </label>
+                    <div class="help-text">Display colored bars below each sequence line showing gene locations and types.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceIndicatorHeight">Indicator bar height (px):</label>
+                    <input type="number" id="sequenceIndicatorHeight" min="6" max="20" value="${settings.indicatorHeight || 12}">
+                    <div class="help-text">Height of the gene indicator bars below sequence lines.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceIndicatorOpacity">Indicator opacity (0-1):</label>
+                    <input type="number" id="sequenceIndicatorOpacity" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
+                    <div class="help-text">Transparency level of gene indicator bars.</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Gene Markers</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowStartMarkers" ${settings.showStartMarkers !== false ? 'checked' : ''}>
+                        Show gene start markers (vertical lines)
+                    </label>
+                    <div class="help-text">Display vertical lines at gene start positions.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowEndArrows" ${settings.showEndArrows !== false ? 'checked' : ''}>
+                        Show gene end arrows
+                    </label>
+                    <div class="help-text">Display directional arrows at gene end positions showing strand direction.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceStartMarkerWidth">Start marker width (px):</label>
+                    <input type="number" id="sequenceStartMarkerWidth" min="1" max="6" step="0.5" value="${settings.startMarkerWidth || 3}">
+                    <div class="help-text">Width of the vertical start marker lines.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceArrowSize">End arrow size (px):</label>
+                    <input type="number" id="sequenceArrowSize" min="3" max="12" value="${settings.arrowSize || 6}">
+                    <div class="help-text">Size of the directional arrows at gene ends.</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Gene Type Filters</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowCDS" ${settings.showCDS !== false ? 'checked' : ''}>
+                        Show CDS genes
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowRNA" ${settings.showRNA !== false ? 'checked' : ''}>
+                        Show RNA genes (tRNA, rRNA, mRNA)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowPromoter" ${settings.showPromoter !== false ? 'checked' : ''}>
+                        Show promoters
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowTerminator" ${settings.showTerminator !== false ? 'checked' : ''}>
+                        Show terminators
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowRegulatory" ${settings.showRegulatory !== false ? 'checked' : ''}>
+                        Show regulatory elements
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4>Tooltips & Interaction</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowTooltips" ${settings.showTooltips !== false ? 'checked' : ''}>
+                        Show tooltips on hover
+                    </label>
+                    <div class="help-text">Display gene information when hovering over indicator elements.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceShowHoverEffects" ${settings.showHoverEffects !== false ? 'checked' : ''}>
+                        Enable hover effects
+                    </label>
+                    <div class="help-text">Highlight indicator elements when hovering over them.</div>
+                </div>
+            </div>
+        `;
+    }
 
 }
 
