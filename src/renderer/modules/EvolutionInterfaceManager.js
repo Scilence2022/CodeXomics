@@ -1,6 +1,6 @@
 /**
- * EvolutionInterfaceManager - 进化界面管理器
- * 为对话进化系统提供用户界面，包括对话历史查看、缺失功能管理、插件生成等
+ * EvolutionInterfaceManager - Evolution Interface Manager
+ * Provides user interface for conversation evolution system, including conversation history viewing, missing feature management, plugin generation, etc.
  */
 class EvolutionInterfaceManager {
     constructor(evolutionManager, configManager) {
@@ -99,7 +99,7 @@ class EvolutionInterfaceManager {
         this.modal.innerHTML = `
             <div class="evolution-modal-content">
                 <div class="evolution-header">
-                    <h2>🧬 对话进化系统</h2>
+                    <h2>🧬 Conversation Evolution System</h2>
                     <button class="close-btn" onclick="evolutionInterfaceManager.closeEvolutionInterface()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -108,23 +108,23 @@ class EvolutionInterfaceManager {
                 <div class="evolution-tabs">
                     <button class="tab-btn ${this.currentTab === 'conversations' ? 'active' : ''}" 
                             onclick="evolutionInterfaceManager.switchTab('conversations')">
-                        <i class="fas fa-comments"></i> 对话历史
+                        <i class="fas fa-comments"></i> Conversation History
                     </button>
                     <button class="tab-btn ${this.currentTab === 'missing' ? 'active' : ''}" 
                             onclick="evolutionInterfaceManager.switchTab('missing')">
-                        <i class="fas fa-exclamation-triangle"></i> 缺失功能
+                        <i class="fas fa-exclamation-triangle"></i> Missing Features
                     </button>
                     <button class="tab-btn ${this.currentTab === 'plugins' ? 'active' : ''}" 
                             onclick="evolutionInterfaceManager.switchTab('plugins')">
-                        <i class="fas fa-puzzle-piece"></i> 生成插件
+                        <i class="fas fa-puzzle-piece"></i> Generated Plugins
                     </button>
                     <button class="tab-btn ${this.currentTab === 'evolution' ? 'active' : ''}" 
                             onclick="evolutionInterfaceManager.switchTab('evolution')">
-                        <i class="fas fa-dna"></i> 进化过程
+                        <i class="fas fa-dna"></i> Evolution Process
                     </button>
                     <button class="tab-btn ${this.currentTab === 'reports' ? 'active' : ''}" 
                             onclick="evolutionInterfaceManager.switchTab('reports')">
-                        <i class="fas fa-chart-line"></i> 进化报告
+                        <i class="fas fa-chart-line"></i> Evolution Reports
                     </button>
                 </div>
                 
@@ -132,21 +132,21 @@ class EvolutionInterfaceManager {
                     <div class="toolbar-left">
                         <button class="btn btn-primary" onclick="evolutionInterfaceManager.startEvolution()" 
                                 ${this.isEvolutionRunning ? 'disabled' : ''}>
-                            <i class="fas fa-play"></i> 开始进化
+                            <i class="fas fa-play"></i> Start Evolution
                         </button>
                         <button class="btn btn-secondary" onclick="evolutionInterfaceManager.refreshData()">
-                            <i class="fas fa-refresh"></i> 刷新数据
+                            <i class="fas fa-refresh"></i> Refresh Data
                         </button>
                     </div>
                     <div class="toolbar-right">
                         <span class="evolution-stats" id="evolutionStats">
-                            载入中...
+                            Loading...
                         </span>
                     </div>
                 </div>
                 
                 <div class="evolution-content" id="evolutionContent">
-                    <!-- 内容将在这里动态加载 -->
+                    <!-- Content will be dynamically loaded here -->
                 </div>
             </div>
         `;
@@ -588,7 +588,7 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * 渲染对话历史标签页
+     * Render conversation history tab
      */
     renderConversationsTab() {
         const conversations = this.evolutionManager.evolutionData.conversations;
@@ -597,8 +597,8 @@ class EvolutionInterfaceManager {
             this.contentContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-comments"></i>
-                    <h3>暂无对话记录</h3>
-                    <p>开始使用ChatBox与系统对话后，对话记录将在这里显示</p>
+                    <h3>No Conversation Records</h3>
+                    <p>Start using ChatBox to interact with the system, and conversation records will be displayed here</p>
                 </div>
             `;
             return;
@@ -606,18 +606,18 @@ class EvolutionInterfaceManager {
 
         let html = `
             <div class="selection-toolbar" id="selectionToolbar">
-                <span id="selectionCount">已选择 0 个对话</span>
+                <span id="selectionCount">0 conversations selected</span>
                 <button class="btn btn-secondary" onclick="evolutionInterfaceManager.analyzeSelectedConversations()">
-                    <i class="fas fa-search"></i> 分析选中对话
+                    <i class="fas fa-search"></i> Analyze Selected
                 </button>
                 <button class="btn btn-secondary" onclick="evolutionInterfaceManager.exportSelectedConversations()">
-                    <i class="fas fa-download"></i> 导出选中对话
+                    <i class="fas fa-download"></i> Export Selected
                 </button>
             </div>
             <div class="conversation-list">
         `;
 
-        // 按时间倒序排列
+        // Sort by time in descending order
         const sortedConversations = [...conversations].sort((a, b) => 
             new Date(b.startTime) - new Date(a.startTime)
         );
@@ -631,17 +631,17 @@ class EvolutionInterfaceManager {
                     <div class="conversation-header">
                         <span class="conversation-id">${conv.id}</span>
                         <span class="conversation-status ${conv.completed ? 'completed' : 'active'}">
-                            ${conv.completed ? '已完成' : '进行中'}
+                            ${conv.completed ? 'Completed' : 'Active'}
                         </span>
                     </div>
                     <div class="conversation-stats">
-                        <span><i class="fas fa-clock"></i> ${duration || '进行中'}</span>
-                        <span><i class="fas fa-comments"></i> ${conv.stats.messageCount} 消息</span>
-                        <span><i class="fas fa-exclamation-triangle"></i> ${conv.stats.errorCount} 错误</span>
-                        <span><i class="fas fa-chart-line"></i> ${(successRate * 100).toFixed(1)}% 成功率</span>
+                        <span><i class="fas fa-clock"></i> ${duration || 'Ongoing'}</span>
+                        <span><i class="fas fa-comments"></i> ${conv.stats.messageCount} messages</span>
+                        <span><i class="fas fa-exclamation-triangle"></i> ${conv.stats.errorCount} errors</span>
+                        <span><i class="fas fa-chart-line"></i> ${(successRate * 100).toFixed(1)}% success rate</span>
                     </div>
                     <div class="conversation-summary">
-                        ${conv.analysis?.conversationSummary || '尚未分析'}
+                        ${conv.analysis?.conversationSummary || 'Not analyzed yet'}
                     </div>
                 </div>
             `;
@@ -652,7 +652,7 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * 渲染缺失功能标签页
+     * Render missing functions tab
      */
     renderMissingFunctionsTab() {
         const missingFunctions = this.evolutionManager.evolutionData.missingFunctions;
@@ -661,8 +661,8 @@ class EvolutionInterfaceManager {
             this.contentContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-check-circle"></i>
-                    <h3>暂无缺失功能</h3>
-                    <p>系统尚未检测到缺失的功能需求</p>
+                    <h3>No Missing Functions</h3>
+                    <p>The system has not detected any missing feature requirements</p>
                 </div>
             `;
             return;
@@ -670,38 +670,38 @@ class EvolutionInterfaceManager {
 
         let html = `
             <div class="selection-toolbar" id="selectionToolbar">
-                <span id="selectionCount">已选择 0 个功能</span>
+                <span id="selectionCount">0 functions selected</span>
                 <button class="btn btn-primary" onclick="evolutionInterfaceManager.generatePluginsForSelected()">
-                    <i class="fas fa-magic"></i> 为选中功能生成插件
+                    <i class="fas fa-magic"></i> Generate Plugins for Selected
                 </button>
                 <button class="btn btn-secondary" onclick="evolutionInterfaceManager.markAsResolved()">
-                    <i class="fas fa-check"></i> 标记为已解决
+                    <i class="fas fa-check"></i> Mark as Resolved
                 </button>
             </div>
         `;
 
-        // 按优先级和出现次数排序
+        // Sort by priority and occurrence count
         const sortedFunctions = [...missingFunctions].sort((a, b) => 
             (b.priority + b.occurrences) - (a.priority + a.occurrences)
         );
 
         for (const func of sortedFunctions) {
             const priorityClass = func.priority >= 8 ? 'high' : func.priority >= 6 ? 'medium' : 'low';
-            const priorityText = func.priority >= 8 ? '高' : func.priority >= 6 ? '中' : '低';
+            const priorityText = func.priority >= 8 ? 'High' : func.priority >= 6 ? 'Medium' : 'Low';
             
             html += `
                 <div class="missing-function-item" data-id="${func.id}" onclick="evolutionInterfaceManager.toggleFunctionSelection('${func.id}')">
                     <div class="missing-function-header">
                         <div>
-                            <span class="priority-badge priority-${priorityClass}">${priorityText}优先级</span>
-                            <span class="occurrences">出现 ${func.occurrences} 次</span>
+                            <span class="priority-badge priority-${priorityClass}">${priorityText} Priority</span>
+                            <span class="occurrences">Occurred ${func.occurrences} times</span>
                         </div>
                         <span class="last-occurrence">${new Date(func.lastOccurrence).toLocaleDateString()}</span>
                     </div>
                     <h4>${func.description}</h4>
-                    <p><strong>用户意图:</strong> ${func.userIntent}</p>
+                    <p><strong>User Intent:</strong> ${func.userIntent}</p>
                     <details>
-                        <summary>建议实现方案</summary>
+                        <summary>Suggested Implementation</summary>
                         <pre class="implementation-suggestion">${func.suggestedImplementation}</pre>
                     </details>
                 </div>
@@ -712,7 +712,7 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * 渲染插件标签页
+     * Render plugins tab
      */
     renderPluginsTab() {
         const plugins = this.evolutionManager.evolutionData.generatedPlugins;
@@ -721,8 +721,8 @@ class EvolutionInterfaceManager {
             this.contentContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-puzzle-piece"></i>
-                    <h3>暂无生成的插件</h3>
-                    <p>系统尚未自动生成任何插件</p>
+                    <h3>No Generated Plugins</h3>
+                    <p>The system has not automatically generated any plugins yet</p>
                 </div>
             `;
             return;
@@ -730,20 +730,20 @@ class EvolutionInterfaceManager {
 
         let html = `
             <div class="selection-toolbar" id="selectionToolbar">
-                <span id="selectionCount">已选择 0 个插件</span>
+                <span id="selectionCount">0 plugins selected</span>
                 <button class="btn btn-primary" onclick="evolutionInterfaceManager.installSelectedPlugins()">
-                    <i class="fas fa-download"></i> 安装选中插件
+                    <i class="fas fa-download"></i> Install Selected
                 </button>
                 <button class="btn btn-secondary" onclick="evolutionInterfaceManager.testSelectedPlugins()">
-                    <i class="fas fa-vial"></i> 测试选中插件
+                    <i class="fas fa-vial"></i> Test Selected
                 </button>
                 <button class="btn btn-secondary" onclick="evolutionInterfaceManager.exportSelectedPlugins()">
-                    <i class="fas fa-code"></i> 导出代码
+                    <i class="fas fa-code"></i> Export Code
                 </button>
             </div>
         `;
 
-        // 按生成时间倒序排列
+        // Sort by generation time in descending order
         const sortedPlugins = [...plugins].sort((a, b) => 
             new Date(b.generatedAt) - new Date(a.generatedAt)
         );
@@ -792,28 +792,28 @@ class EvolutionInterfaceManager {
         let html = `
             <div class="evolution-process">
                 <h3>
-                    <i class="fas fa-dna"></i> 进化控制面板
+                    <i class="fas fa-dna"></i> Evolution Control Panel
                 </h3>
-                <p>通过AI分析对话历史和缺失功能，自动生成所需的插件来改进系统能力。</p>
+                <p>Analyze conversation history and missing features through AI to automatically generate required plugins and improve system capabilities.</p>
                 
                 <div class="evolution-controls">
                     <button class="btn btn-primary" onclick="evolutionInterfaceManager.startEvolution()" 
                             ${this.isEvolutionRunning ? 'disabled' : ''}>
-                        <i class="fas fa-play"></i> 开始自动进化
+                        <i class="fas fa-play"></i> Start Auto Evolution
                     </button>
                     <button class="btn btn-secondary" onclick="evolutionInterfaceManager.generateEvolutionReport()">
-                        <i class="fas fa-chart-line"></i> 生成进化报告
+                        <i class="fas fa-chart-line"></i> Generate Evolution Report
                     </button>
                 </div>
                 
                 ${this.isEvolutionRunning ? `
                     <div class="progress-container">
-                        <h4>进化进度</h4>
+                        <h4>Evolution Progress</h4>
                         <div class="progress-bar">
                             <div class="progress-fill" id="evolutionProgress" style="width: 0%"></div>
                         </div>
                         <div class="evolution-log" id="evolutionLog">
-                            正在初始化进化过程...
+                            Initializing evolution process...
                         </div>
                     </div>
                 ` : ''}
@@ -823,7 +823,7 @@ class EvolutionInterfaceManager {
         if (history.length > 0) {
             html += `
                 <div class="evolution-history">
-                    <h3><i class="fas fa-history"></i> 进化历史</h3>
+                    <h3><i class="fas fa-history"></i> Evolution History</h3>
             `;
 
             for (const record of history.reverse()) {
@@ -832,11 +832,11 @@ class EvolutionInterfaceManager {
                         <div class="record-header">
                             <span class="record-time">${new Date(record.timestamp).toLocaleString()}</span>
                             <span class="record-stats">
-                                处理 ${record.processedFunctions} 个功能，生成 ${record.generatedPlugins} 个插件
+                                Processed ${record.processedFunctions} functions, generated ${record.generatedPlugins} plugins
                             </span>
                         </div>
                         <details>
-                            <summary>查看详细结果</summary>
+                            <summary>View Detailed Results</summary>
                             <pre>${JSON.stringify(record, null, 2)}</pre>
                         </details>
                     </div>
@@ -850,86 +850,86 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * 渲染报告标签页
+     * Render reports tab
      */
     renderReportsTab() {
         const report = this.evolutionManager.generateEvolutionReport();
         
         let html = `
             <div class="report-section">
-                <h3><i class="fas fa-chart-line"></i> 进化统计报告</h3>
+                <h3><i class="fas fa-chart-line"></i> Evolution Statistics Report</h3>
                 
                 <div class="metrics-grid">
                     <div class="metric-item">
                         <div class="metric-value">${report.summary.totalConversations}</div>
-                        <div class="metric-label">总对话数</div>
+                        <div class="metric-label">Total Conversations</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-value">${report.summary.completedConversations}</div>
-                        <div class="metric-label">完成对话</div>
+                        <div class="metric-label">Completed Conversations</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-value">${report.summary.missingFunctions}</div>
-                        <div class="metric-label">缺失功能</div>
+                        <div class="metric-label">Missing Functions</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-value">${report.summary.generatedPlugins}</div>
-                        <div class="metric-label">生成插件</div>
+                        <div class="metric-label">Generated Plugins</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-value">${report.summary.successfulPlugins}</div>
-                        <div class="metric-label">成功插件</div>
+                        <div class="metric-label">Successful Plugins</div>
                     </div>
                     <div class="metric-item">
-                        <div class="metric-value">${report.summary.lastEvolutionDate ? new Date(report.summary.lastEvolutionDate).toLocaleDateString() : '未进化'}</div>
-                        <div class="metric-label">上次进化</div>
+                        <div class="metric-value">${report.summary.lastEvolutionDate ? new Date(report.summary.lastEvolutionDate).toLocaleDateString() : 'Not evolved'}</div>
+                        <div class="metric-label">Last Evolution</div>
                     </div>
                 </div>
             </div>
             
             <div class="report-section">
-                <h3><i class="fas fa-exclamation-triangle"></i> 高优先级缺失功能</h3>
+                <h3><i class="fas fa-exclamation-triangle"></i> High Priority Missing Functions</h3>
                 ${report.topMissingFunctions.length > 0 ? `
                     <div class="missing-functions-list">
                         ${report.topMissingFunctions.slice(0, 5).map(func => `
                             <div class="function-summary">
                                 <strong>${func.description}</strong>
-                                <span class="priority-info">优先级: ${func.priority}, 出现次数: ${func.occurrences}</span>
+                                <span class="priority-info">Priority: ${func.priority}, Occurrences: ${func.occurrences}</span>
                             </div>
                         `).join('')}
                     </div>
-                ` : '<p>当前没有高优先级的缺失功能</p>'}
+                ` : '<p>No high priority missing functions currently</p>'}
             </div>
             
             <div class="report-section">
-                <h3><i class="fas fa-puzzle-piece"></i> 生成插件状态</h3>
+                <h3><i class="fas fa-puzzle-piece"></i> Generated Plugin Status</h3>
                 ${report.generatedPlugins.length > 0 ? `
                     <div class="plugins-list">
                         ${report.generatedPlugins.map(plugin => `
                             <div class="plugin-summary">
                                 <strong>${plugin.name}</strong>
-                                <span class="plugin-status status-${plugin.status}">${plugin.status === 'tested' ? '已测试' : plugin.status === 'failed' ? '测试失败' : '已生成'}</span>
+                                <span class="plugin-status status-${plugin.status}">${plugin.status === 'tested' ? 'Tested' : plugin.status === 'failed' ? 'Test Failed' : 'Generated'}</span>
                                 <span class="generation-time">${new Date(plugin.generatedAt).toLocaleDateString()}</span>
                             </div>
                         `).join('')}
                     </div>
-                ` : '<p>尚未生成任何插件</p>'}
+                ` : '<p>No plugins generated yet</p>'}
             </div>
             
             <div class="report-section">
-                <h3><i class="fas fa-comments"></i> 最近对话情况</h3>
+                <h3><i class="fas fa-comments"></i> Recent Conversation Activity</h3>
                 ${report.recentConversations.length > 0 ? `
                     <div class="conversations-summary">
                         ${report.recentConversations.map(conv => `
                             <div class="conversation-summary">
                                 <span class="conv-id">${conv.id.substring(0, 8)}...</span>
                                 <span class="conv-duration">${conv.duration}</span>
-                                <span class="conv-messages">${conv.messageCount} 消息</span>
-                                <span class="conv-success">${(conv.successRate * 100).toFixed(1)}% 成功率</span>
+                                <span class="conv-messages">${conv.messageCount} messages</span>
+                                <span class="conv-success">${(conv.successRate * 100).toFixed(1)}% success rate</span>
                             </div>
                         `).join('')}
                     </div>
-                ` : '<p>暂无对话记录</p>'}
+                ` : '<p>No conversation records yet</p>'}
             </div>
         `;
 
@@ -946,10 +946,10 @@ class EvolutionInterfaceManager {
         this.updateToolbarState();
 
         try {
-            // 如果当前在进化标签页，显示进度
+            // Show progress if currently on evolution tab
             if (this.currentTab === 'evolution') {
                 this.renderEvolutionTab();
-                this.updateEvolutionProgress(0, '开始分析缺失功能...');
+                this.updateEvolutionProgress(0, 'Starting to analyze missing functions...');
             }
 
             // 执行进化过程
@@ -960,7 +960,7 @@ class EvolutionInterfaceManager {
 
         } catch (error) {
             console.error('Evolution process failed:', error);
-            this.showError('进化过程失败: ' + error.message);
+            this.showError('Evolution process failed: ' + error.message);
         } finally {
             this.isEvolutionRunning = false;
             this.updateToolbarState();
@@ -1023,7 +1023,7 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * 更新进化统计信息
+     * Update evolution statistics
      */
     updateEvolutionStats() {
         console.log('📊 Updating evolution stats...');
@@ -1035,14 +1035,14 @@ class EvolutionInterfaceManager {
                 try {
                     const stats = this.evolutionManager.getEvolutionStats();
                     console.log('📊 Stats data:', stats);
-                    statsElement.textContent = `对话: ${stats.completedConversations}/${stats.totalConversations} | 缺失功能: ${stats.missingFunctions} | 生成插件: ${stats.successfulPlugins}/${stats.generatedPlugins}`;
+                    statsElement.textContent = `Conversations: ${stats.completedConversations}/${stats.totalConversations} | Missing Functions: ${stats.missingFunctions} | Generated Plugins: ${stats.successfulPlugins}/${stats.generatedPlugins}`;
                 } catch (error) {
                     console.error('❌ Failed to get stats:', error);
-                    statsElement.textContent = '统计信息加载失败';
+                    statsElement.textContent = 'Failed to load statistics';
                 }
             } else {
                 console.log('⚠️ Evolution manager not available');
-                statsElement.textContent = '系统初始化中...';
+                statsElement.textContent = 'System initializing...';
             }
         } else {
             console.error('❌ Stats element not found');
@@ -1108,9 +1108,9 @@ class EvolutionInterfaceManager {
             const count = this.selectedItems.size;
             toolbar.classList.toggle('visible', count > 0);
             
-            const itemType = this.currentTab === 'conversations' ? '个对话' : 
-                            this.currentTab === 'missing' ? '个功能' : '个插件';
-            countElement.textContent = `已选择 ${count} ${itemType}`;
+            const itemType = this.currentTab === 'conversations' ? 'conversations' : 
+                            this.currentTab === 'missing' ? 'functions' : 'plugins';
+            countElement.textContent = `${count} ${itemType} selected`;
         }
 
         // 更新选中项样式
@@ -1152,7 +1152,7 @@ class EvolutionInterfaceManager {
      */
     async generatePluginsForSelected() {
         if (this.selectedItems.size === 0) {
-            alert('请先选择要生成插件的功能');
+            alert('Please select functions to generate plugins for');
             return;
         }
 
@@ -1164,12 +1164,12 @@ class EvolutionInterfaceManager {
                 await this.evolutionManager.generatePluginForMissingFunction(func);
             }
             
-            alert(`成功为 ${selectedFunctions.length} 个功能生成插件`);
+            alert(`Successfully generated plugins for ${selectedFunctions.length} functions`);
             this.refreshData();
             this.selectedItems.clear();
             this.updateSelectionUI();
         } catch (error) {
-            this.showError('生成插件失败: ' + error.message);
+            this.showError('Plugin generation failed: ' + error.message);
         }
     }
 
@@ -1178,44 +1178,44 @@ class EvolutionInterfaceManager {
      */
     async analyzeSelectedConversations() {
         if (this.selectedItems.size === 0) {
-            alert('请先选择要分析的对话');
+            alert('Please select conversations to analyze');
             return;
         }
 
-        // TODO: 实现对话分析逻辑
-        alert('对话分析功能正在开发中');
+        // TODO: Implement conversation analysis logic
+        alert('Conversation analysis feature is under development');
     }
 
     /**
      * 导出选中内容
      */
     exportSelectedConversations() {
-        // TODO: 实现导出逻辑
-        alert('导出功能正在开发中');
+        // TODO: Implement export logic
+        alert('Export feature is under development');
     }
 
     /**
-     * 安装选中插件
+     * Install selected plugins
      */
     installSelectedPlugins() {
-        // TODO: 实现插件安装逻辑
-        alert('插件安装功能正在开发中');
+        // TODO: Implement plugin installation logic
+        alert('Plugin installation feature is under development');
     }
 
     /**
-     * 测试选中插件
+     * Test selected plugins
      */
     testSelectedPlugins() {
-        // TODO: 实现插件测试逻辑
-        alert('插件测试功能正在开发中');
+        // TODO: Implement plugin testing logic
+        alert('Plugin testing feature is under development');
     }
 
     /**
-     * 导出选中插件代码
+     * Export selected plugin code
      */
     exportSelectedPlugins() {
-        // TODO: 实现代码导出逻辑
-        alert('代码导出功能正在开发中');
+        // TODO: Implement code export logic
+        alert('Code export feature is under development');
     }
 
     /**
