@@ -410,22 +410,11 @@
             try {
                 console.log('🧬 Initializing Conversation Evolution System...');
                 
-                // Create a minimal config manager for standalone mode
-                const configManager = {
-                    config: {},
-                    get: function(key, defaultValue) { 
-                        console.log('ConfigManager.get called with:', key, defaultValue);
-                        return this.config[key] !== undefined ? this.config[key] : defaultValue; 
-                    },
-                    set: function(key, value) { 
-                        console.log('ConfigManager.set called with:', key, value);
-                        this.config[key] = value; 
-                        return Promise.resolve(); 
-                    },
-                    getConfig: function(key, defaultValue) { return this.get(key, defaultValue); },
-                    setConfig: function(key, value) { return this.set(key, value); },
-                    saveConfig: function() { return Promise.resolve(); }
-                };
+                // Create config manager using the full ConfigManager class
+                const configManager = new ConfigManager();
+                
+                // Wait for config manager to initialize
+                await configManager.waitForInitialization();
                 
                 // Create evolution manager
                 evolutionManager = new ConversationEvolutionManager(null, configManager, null);
