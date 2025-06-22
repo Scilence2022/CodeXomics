@@ -72,8 +72,28 @@ class LLMConfigManager {
     }
 
     initializeUI() {
-        this.setupEventListeners();
-        this.updateUI();
+        // Check if we're in a context where UI elements are available
+        if (this.hasRequiredUIElements()) {
+            this.setupEventListeners();
+            this.updateUI();
+        } else {
+            console.log('LLMConfigManager: Running in headless mode (no UI elements available)');
+        }
+    }
+
+    /**
+     * Check if required UI elements are available
+     */
+    hasRequiredUIElements() {
+        // Check for key UI elements that LLMConfigManager expects
+        const requiredElements = [
+            'optionsBtn',
+            'configureLLMBtn',
+            'saveLLMConfigBtn',
+            'testConnectionBtn'
+        ];
+        
+        return requiredElements.some(id => document.getElementById(id) !== null);
     }
 
     setupEventListeners() {
@@ -83,41 +103,31 @@ class LLMConfigManager {
             return;
         }
         
+        // Double-check that UI elements are available before setting up listeners
+        if (!this.hasRequiredUIElements()) {
+            console.log('LLMConfigManager: Skipping event listener setup - no UI elements found');
+            return;
+        }
+        
         console.log('Setting up LLM Config Manager event listeners...');
         
         // Options menu dropdown
         const optionsBtn = document.getElementById('optionsBtn');
-        console.log('Options button found:', optionsBtn);
-        
         if (optionsBtn) {
             optionsBtn.addEventListener('click', (e) => {
                 console.log('Options button clicked');
                 e.stopPropagation();
                 this.toggleOptionsDropdown();
             });
-        } else {
-            console.error('Options button not found in DOM');
-        }
-
-        // Check if dropdown menu exists
-        const optionsDropdownMenu = document.getElementById('optionsDropdownMenu');
-        console.log('Options dropdown menu found:', optionsDropdownMenu);
-        
-        if (!optionsDropdownMenu) {
-            console.error('Options dropdown menu not found in DOM');
         }
 
         // Configure LLM button
         const configureLLMBtn = document.getElementById('configureLLMBtn');
-        console.log('Configure LLM button found:', configureLLMBtn);
-        
         if (configureLLMBtn) {
             configureLLMBtn.addEventListener('click', () => {
                 console.log('Configure LLM button clicked');
                 this.showConfigModal();
             });
-        } else {
-            console.error('Configure LLM button not found in DOM');
         }
 
         // Provider tabs
@@ -128,14 +138,20 @@ class LLMConfigManager {
         });
 
         // Save configuration
-        document.getElementById('saveLLMConfigBtn').addEventListener('click', () => {
-            this.saveConfiguration();
-        });
+        const saveLLMConfigBtn = document.getElementById('saveLLMConfigBtn');
+        if (saveLLMConfigBtn) {
+            saveLLMConfigBtn.addEventListener('click', () => {
+                this.saveConfiguration();
+            });
+        }
 
         // Test connection
-        document.getElementById('testConnectionBtn').addEventListener('click', () => {
-            this.testConnection();
-        });
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        if (testConnectionBtn) {
+            testConnectionBtn.addEventListener('click', () => {
+                this.testConnection();
+            });
+        }
 
         // System prompt controls
         const resetSystemPromptBtn = document.getElementById('resetSystemPrompt');
@@ -193,8 +209,6 @@ class LLMConfigManager {
                         this.showNotification('Failed to paste from clipboard. Ensure permissions are granted if prompted.', 'error');
                     }
                 });
-            } else {
-                console.warn(`Could not find paste button or input for: ${config.btnId}/${config.inputId}`);
             }
         });
 
@@ -501,6 +515,11 @@ class LLMConfigManager {
     }
 
     updateUI() {
+        // Skip UI updates if not in UI mode
+        if (!this.hasRequiredUIElements()) {
+            return;
+        }
+        
         // Update current provider display
         const currentProviderElement = document.getElementById('currentProvider');
         if (currentProviderElement) {
