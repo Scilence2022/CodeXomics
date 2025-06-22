@@ -10,6 +10,7 @@ class ChatBoxSettingsManager {
             showThinkingProcess: true,
             showToolCalls: true,
             hideThinkingAfterConversation: false,
+            preserveThinkingHistory: true, // 新增：保留历史思考过程
             
             // Behavior settings
             autoScrollToBottom: true,

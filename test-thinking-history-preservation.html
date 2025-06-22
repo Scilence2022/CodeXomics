@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thinking Process History Preservation Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2d3748;
+        }
+
+        .test-header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .test-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .test-btn.danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .test-btn.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .status {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .test-steps {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-steps h3 {
+            margin-top: 0;
+            color: #c53030;
+        }
+
+        .test-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .test-steps li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .verification-checklist {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .verification-checklist h3 {
+            margin-top: 0;
+            color: #2f855a;
+        }
+
+        .verification-checklist ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .verification-checklist li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        #app {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            min-height: 400px;
+            background: #f8fafc;
+            margin-top: 20px;
+        }
+
+        .thinking-simulation {
+            background: #edf2f7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4a5568;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .metric-card h4 {
+            margin: 0 0 10px 0;
+            color: #4a5568;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* 导入思考过程样式 */
+        .thinking-process {
+            border-left: 4px solid #667eea !important;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%) !important;
+            margin: 8px 0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .thinking-process.thinking-completed {
+            border-left: 4px solid #10b981 !important;
+            background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%) !important;
+            opacity: 0.85;
+        }
+
+        .thinking-completed .thinking-header {
+            color: #10b981 !important;
+        }
+
+        .thinking-completed .thinking-header i {
+            color: #10b981 !important;
+        }
+
+        .thinking-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .thinking-content {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #374151;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .thinking-timestamp {
+            font-size: 11px;
+            color: #6b7280;
+            font-style: italic;
+            margin-top: 8px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .message.user-message {
+            background: #e6fffa;
+            border-color: #81e6d9;
+        }
+
+        .message.assistant-message {
+            background: #f0f7ff;
+            border-color: #90cdf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1><i class="fas fa-brain"></i> Thinking Process History Test</h1>
+            <p>验证ChatBox思考过程历史保留功能</p>
+        </div>
+
+        <div class="test-steps">
+            <h3><i class="fas fa-list-ol"></i> 测试步骤</h3>
+            <ol>
+                <li><strong>开始第一个对话</strong> - 点击"开始对话1"观察思考过程</li>
+                <li><strong>完成第一个对话</strong> - 点击"结束对话1"，思考过程应转为已完成状态</li>
+                <li><strong>开始第二个对话</strong> - 点击"开始对话2"，新思考过程应出现</li>
+                <li><strong>验证历史保留</strong> - 第一个对话的思考过程应该保留并可见</li>
+                <li><strong>测试控制功能</strong> - 使用切换和清除按钮验证功能</li>
+            </ol>
+        </div>
+
+        <div class="verification-checklist">
+            <h3><i class="fas fa-check-circle"></i> 验证要点</h3>
+            <ul>
+                <li>✅ 新对话开始时，上一个思考过程不消失</li>
+                <li>✅ 已完成的思考过程显示为绿色样式</li>
+                <li>✅ 每个思考过程都有唯一ID避免冲突</li>
+                <li>✅ 切换按钮可以隐藏/显示历史思考过程</li>
+                <li>✅ 清除按钮可以删除所有历史思考过程</li>
+                <li>✅ 正在进行的思考过程保持动画效果</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <button class="test-btn" onclick="startConversation(1)">
+                <i class="fas fa-play"></i> 开始对话1
+            </button>
+            <button class="test-btn" onclick="updateThinking(1)">
+                <i class="fas fa-sync"></i> 更新对话1思考
+            </button>
+            <button class="test-btn success" onclick="endConversation(1)">
+                <i class="fas fa-check"></i> 结束对话1
+            </button>
+            <button class="test-btn" onclick="startConversation(2)">
+                <i class="fas fa-play"></i> 开始对话2
+            </button>
+            <button class="test-btn" onclick="updateThinking(2)">
+                <i class="fas fa-sync"></i> 更新对话2思考
+            </button>
+            <button class="test-btn success" onclick="endConversation(2)">
+                <i class="fas fa-check"></i> 结束对话2
+            </button>
+            <button class="test-btn" onclick="toggleHistory()">
+                <i class="fas fa-eye-slash"></i> 切换历史显示
+            </button>
+            <button class="test-btn danger" onclick="clearHistory()">
+                <i class="fas fa-trash"></i> 清除历史
+            </button>
+        </div>
+
+        <div class="status" id="testStatus">
+            准备开始测试。点击"开始对话1"按钮开始。
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+                <strong>🧪 思考过程历史保留测试环境</strong><br>
+                这个测试模拟了ChatBox中的思考过程历史保留功能。<br>
+                <em>使用上方按钮依次测试不同场景。</em>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <h4>总对话数</h4>
+                <div class="value" id="conversationCount">0</div>
+            </div>
+            <div class="metric-card">
+                <h4>活跃思考过程</h4>
+                <div class="value" id="activeThinking">0</div>
+            </div>
+            <div class="metric-card">
+                <h4>历史思考过程</h4>
+                <div class="value" id="historyThinking">0</div>
+            </div>
+            <div class="metric-card">
+                <h4>思考过程可见性</h4>
+                <div class="value" id="visibilityStatus">显示</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conversationCounter = 0;
+        let activeConversations = new Map();
+        let historyVisible = true;
+
+        function updateStatus(message) {
+            document.getElementById('testStatus').textContent = message;
+        }
+
+        function updateMetrics() {
+            const activeElements = document.querySelectorAll('.thinking-process:not(.thinking-completed)');
+            const historyElements = document.querySelectorAll('.thinking-process.thinking-completed');
+            
+            document.getElementById('conversationCount').textContent = conversationCounter;
+            document.getElementById('activeThinking').textContent = activeElements.length;
+            document.getElementById('historyThinking').textContent = historyElements.length;
+            document.getElementById('visibilityStatus').textContent = historyVisible ? '显示' : '隐藏';
+        }
+
+        function startConversation(id) {
+            if (activeConversations.has(id)) {
+                updateStatus(`⚠️ 对话${id}已经在进行中`);
+                return;
+            }
+
+            conversationCounter++;
+            const requestId = `req_${Date.now()}_${id}`;
+            activeConversations.set(id, requestId);
+
+            // 移除现有的相同ID思考过程（模拟addThinkingMessage的逻辑）
+            const existingThinking = document.getElementById(`thinkingProcess_${requestId}`);
+            if (existingThinking) {
+                existingThinking.remove();
+            }
+
+            const messagesContainer = document.getElementById('chatMessages');
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'thinking-process';
+            thinkingDiv.id = `thinkingProcess_${requestId}`;
+            thinkingDiv.innerHTML = `
+                <div class="thinking-header">
+                    <i class="fas fa-cog fa-spin"></i>
+                    <span>AI Thinking Process (对话${id})</span>
+                </div>
+                <div class="thinking-content">🔄 开始分析对话${id}的问题...</div>
+            `;
+
+            messagesContainer.appendChild(thinkingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            updateStatus(`✅ 对话${id}已开始，思考过程已启动`);
+            updateMetrics();
+        }
+
+        function updateThinking(id) {
+            if (!activeConversations.has(id)) {
+                updateStatus(`⚠️ 对话${id}尚未开始`);
+                return;
+            }
+
+            const requestId = activeConversations.get(id);
+            const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
+            
+            if (thinkingElement) {
+                const content = thinkingElement.querySelector('.thinking-content');
+                if (content) {
+                    const messages = [
+                        `🧬 正在分析基因组数据...`,
+                        `📊 计算GC含量和统计信息...`,
+                        `🔍 搜索特征序列模式...`,
+                        `⚡ 执行生物信息学工具...`,
+                        `📈 生成分析结果图表...`
+                    ];
+                    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                    content.innerHTML += '<br>' + randomMessage;
+                }
+            }
+
+            updateStatus(`🔄 对话${id}思考过程已更新`);
+            updateMetrics();
+        }
+
+        function endConversation(id) {
+            if (!activeConversations.has(id)) {
+                updateStatus(`⚠️ 对话${id}尚未开始`);
+                return;
+            }
+
+            const requestId = activeConversations.get(id);
+            const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
+            
+            if (thinkingElement) {
+                // 移除动画，改变样式为已完成状态
+                const spinningIcon = thinkingElement.querySelector('.fa-spin');
+                if (spinningIcon) {
+                    spinningIcon.classList.remove('fa-spin');
+                    spinningIcon.classList.remove('fa-cog');
+                    spinningIcon.classList.add('fa-check-circle');
+                }
+
+                // 更新头部文本
+                const headerText = thinkingElement.querySelector('.thinking-header span');
+                if (headerText) {
+                    headerText.textContent = `AI Thinking Process (对话${id} - 已完成)`;
+                }
+
+                // 添加已完成样式
+                thinkingElement.classList.add('thinking-completed');
+
+                // 移除ID避免冲突
+                thinkingElement.removeAttribute('id');
+
+                // 添加时间戳
+                const timestamp = new Date().toLocaleTimeString();
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = 'thinking-timestamp';
+                timestampDiv.textContent = `完成时间: ${timestamp}`;
+                thinkingElement.appendChild(timestampDiv);
+            }
+
+            activeConversations.delete(id);
+            updateStatus(`✅ 对话${id}已完成，思考过程已转为历史记录`);
+            updateMetrics();
+        }
+
+        function toggleHistory() {
+            const historyElements = document.querySelectorAll('.thinking-process.thinking-completed');
+            
+            if (historyElements.length === 0) {
+                updateStatus('📝 没有历史思考过程可切换');
+                return;
+            }
+
+            historyVisible = !historyVisible;
+            
+            historyElements.forEach(element => {
+                element.style.display = historyVisible ? 'block' : 'none';
+            });
+
+            const toggleBtn = event.target.closest('button');
+            if (toggleBtn) {
+                if (historyVisible) {
+                    toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏历史';
+                } else {
+                    toggleBtn.innerHTML = '<i class="fas fa-eye"></i> 显示历史';
+                }
+            }
+
+            updateStatus(`✅ 历史思考过程已${historyVisible ? '显示' : '隐藏'}`);
+            updateMetrics();
+        }
+
+        function clearHistory() {
+            const historyElements = document.querySelectorAll('.thinking-process.thinking-completed');
+            
+            if (historyElements.length === 0) {
+                updateStatus('📝 没有历史思考过程可清除');
+                return;
+            }
+
+            historyElements.forEach(element => {
+                element.style.transition = 'opacity 0.3s ease-out';
+                element.style.opacity = '0';
+                
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                        updateMetrics();
+                    }
+                }, 300);
+            });
+
+            updateStatus('✅ 历史思考过程已清除');
+            setTimeout(updateMetrics, 350);
+        }
+
+        // 初始化指标
+        updateMetrics();
+
+        // 定期验证状态
+        setInterval(() => {
+            updateMetrics();
+        }, 1000);
+
+        // 自动测试序列（可选）
+        function runAutoTest() {
+            updateStatus('🤖 开始自动测试序列...');
+            
+            setTimeout(() => startConversation(1), 1000);
+            setTimeout(() => updateThinking(1), 2000);
+            setTimeout(() => updateThinking(1), 3000);
+            setTimeout(() => endConversation(1), 4500);
+            setTimeout(() => startConversation(2), 6000);
+            setTimeout(() => updateThinking(2), 7000);
+            setTimeout(() => endConversation(2), 8500);
+            setTimeout(() => {
+                updateStatus('✅ 自动测试完成！检查两个思考过程是否都保留。');
+            }, 9000);
+        }
+
+        // 添加自动测试按钮
+        const controls = document.querySelector('.controls');
+        const autoTestBtn = document.createElement('button');
+        autoTestBtn.className = 'test-btn success';
+        autoTestBtn.innerHTML = '<i class="fas fa-robot"></i> 自动测试';
+        autoTestBtn.onclick = runAutoTest;
+        controls.appendChild(autoTestBtn);
+    </script>
+</body>
+</html> 

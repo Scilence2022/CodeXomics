@@ -1370,6 +1370,14 @@ class ChatManager {
                             <i class="fas fa-trash"></i>
                             Clear
                         </button>
+                        <button id="clearThinkingBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-brain"></i>
+                            Clear Thinking
+                        </button>
+                        <button id="toggleThinkingBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-eye-slash"></i>
+                            Hide History
+                        </button>
                         <button id="exportChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-download"></i>
                             Export
@@ -1533,6 +1541,14 @@ class ChatManager {
 
         document.getElementById('clearChatBtn')?.addEventListener('click', () => {
             this.clearChat();
+        });
+
+        document.getElementById('clearThinkingBtn')?.addEventListener('click', () => {
+            this.clearThinkingHistory();
+        });
+
+        document.getElementById('toggleThinkingBtn')?.addEventListener('click', () => {
+            this.toggleThinkingHistory();
         });
 
         document.getElementById('exportChatBtn')?.addEventListener('click', () => {
@@ -7862,6 +7878,12 @@ ${this.getPluginSystemInfo()}`;
      * 结束对话状态管理
      */
     endConversation() {
+        // 在清除状态之前，先保存当前的思考过程
+        const currentRequestId = this.conversationState.currentRequestId;
+        
+        // 将当前思考过程转换为历史记录
+        this.finalizeCurrentThinkingProcess(currentRequestId);
+        
         this.conversationState.isProcessing = false;
         this.conversationState.currentRequestId = null;
         this.conversationState.abortController = null;
@@ -7872,9 +7894,45 @@ ${this.getPluginSystemInfo()}`;
         // 更新UI状态
         this.updateUIState();
         
-        // 根据设置决定是否移除思考过程消息
-        if (this.hideThinkingAfterConversation) {
-            this.removeThinkingMessages();
+        // 注意：我们不再自动移除思考过程，而是将其转换为历史记录
+    }
+
+    /**
+     * 将当前思考过程转换为历史记录
+     */
+    finalizeCurrentThinkingProcess(requestId) {
+        if (!requestId) return;
+        
+        const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
+        if (thinkingElement) {
+            // 移除动画和交互元素，转换为静态历史记录
+            const spinningIcon = thinkingElement.querySelector('.fa-spin');
+            if (spinningIcon) {
+                spinningIcon.classList.remove('fa-spin');
+                spinningIcon.classList.remove('fa-cog');
+                spinningIcon.classList.add('fa-check-circle');
+            }
+            
+            // 更新头部文本表示已完成
+            const headerText = thinkingElement.querySelector('.thinking-header span');
+            if (headerText) {
+                headerText.textContent = 'AI Thinking Process (Completed)';
+            }
+            
+            // 更改样式表示已完成
+            thinkingElement.classList.add('thinking-completed');
+            
+            // 移除ID，避免与新的思考过程冲突
+            thinkingElement.removeAttribute('id');
+            
+            // 添加时间戳（如果启用）
+            if (this.showTimestamps) {
+                const timestamp = new Date().toLocaleTimeString();
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = 'thinking-timestamp';
+                timestampDiv.textContent = `Completed at ${timestamp}`;
+                thinkingElement.querySelector('.message-content').appendChild(timestampDiv);
+            }
         }
     }
 
@@ -7954,13 +8012,17 @@ ${this.getPluginSystemInfo()}`;
             return;
         }
         
-        // 首先移除之前的思考过程消息
-        this.removeThinkingMessages();
+        // 只移除当前正在进行的思考过程（如果有的话）
+        const currentRequestId = this.conversationState.currentRequestId || Date.now();
+        const existingThinking = document.getElementById(`thinkingProcess_${currentRequestId}`);
+        if (existingThinking) {
+            existingThinking.remove();
+        }
         
         const messagesContainer = document.getElementById('chatMessages');
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'message assistant-message thinking-process';
-        const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+        const thinkingId = `thinkingProcess_${currentRequestId}`;
         thinkingDiv.id = thinkingId;
         thinkingDiv.innerHTML = `
             <div class="message-content">
@@ -8094,7 +8156,7 @@ ${this.getPluginSystemInfo()}`;
     }
 
     /**
-     * 移除思考过程消息
+     * 移除思考过程消息（保留原有方法用于特殊情况）
      */
     removeThinkingMessages() {
         // 移除所有思考过程消息
@@ -8110,6 +8172,60 @@ ${this.getPluginSystemInfo()}`;
                 }
             }, 500);
         });
+    }
+
+    /**
+     * 清除历史思考过程（用户手动操作）
+     */
+    clearThinkingHistory() {
+        const thinkingDivs = document.querySelectorAll('.thinking-process.thinking-completed');
+        thinkingDivs.forEach(thinkingDiv => {
+            thinkingDiv.style.transition = 'opacity 0.3s ease-out';
+            thinkingDiv.style.opacity = '0';
+            
+            setTimeout(() => {
+                if (thinkingDiv.parentNode) {
+                    thinkingDiv.parentNode.removeChild(thinkingDiv);
+                }
+            }, 300);
+        });
+        
+        this.showNotification('✅ Thinking process history cleared', 'success');
+    }
+
+    /**
+     * 切换思考过程历史显示
+     */
+    toggleThinkingHistory() {
+        const thinkingDivs = document.querySelectorAll('.thinking-process.thinking-completed');
+        const toggleBtn = document.getElementById('toggleThinkingBtn');
+        
+        if (thinkingDivs.length === 0) {
+            this.showNotification('📝 No thinking history to toggle', 'info');
+            return;
+        }
+        
+        const isCurrentlyVisible = thinkingDivs[0].style.display !== 'none';
+        
+        thinkingDivs.forEach(thinkingDiv => {
+            if (isCurrentlyVisible) {
+                thinkingDiv.style.display = 'none';
+            } else {
+                thinkingDiv.style.display = 'block';
+            }
+        });
+        
+        // 更新按钮文本和图标
+        if (toggleBtn) {
+            if (isCurrentlyVisible) {
+                toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Show History';
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide History';
+            }
+        }
+        
+        const action = isCurrentlyVisible ? 'hidden' : 'shown';
+        this.showNotification(`✅ Thinking history ${action}`, 'success');
     }
 
     /**

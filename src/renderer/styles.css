@@ -8999,6 +8999,26 @@ path.svg-gene-element.selected {
     margin: 8px 0;
 }
 
+/* 已完成的思考过程样式 */
+.thinking-process.thinking-completed {
+    border-left: 4px solid #10b981 !important;
+    background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%) !important;
+    opacity: 0.85;
+}
+
+.thinking-completed .thinking-header {
+    color: #10b981 !important;
+}
+
+.thinking-completed .thinking-header i {
+    color: #10b981 !important;
+}
+
+.thinking-completed .message-icon {
+    background: #10b981 !important;
+    color: white;
+}
+
 .thinking-text {
     background: transparent !important;
     border: none !important;
@@ -9028,6 +9048,16 @@ path.svg-gene-element.selected {
 .thinking-process .message-icon {
     background: #667eea;
     color: white;
+}
+
+/* 思考过程时间戳 */
+.thinking-timestamp {
+    font-size: 11px;
+    color: #6b7280;
+    font-style: italic;
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* 工具调用结果详情 */
