@@ -41,6 +41,108 @@ class ConversationEvolutionStorageManager {
     }
 
     /**
+     * Add conversation record from ChatBox
+     */
+    addConversationRecord(conversationData) {
+        try {
+            if (!this.historyData.conversations) {
+                this.historyData.conversations = [];
+            }
+
+            // Convert ChatBox conversation data to our storage format
+            const conversationRecord = {
+                id: conversationData.id,
+                startTime: conversationData.startTime,
+                endTime: conversationData.endTime,
+                source: 'chatbox_integration',
+                events: conversationData.events,
+                context: conversationData.context,
+                stats: conversationData.stats,
+                metadata: {
+                    ...conversationData.metadata,
+                    processedAt: new Date().toISOString(),
+                    version: this.storageConfig.version || '1.0.0'
+                }
+            };
+
+            // Add to conversations array
+            this.historyData.conversations.push(conversationRecord);
+
+            // Update storage stats
+            this.updateStorageStats(conversationRecord);
+
+            // Auto-save
+            this.debouncedSave();
+
+            console.log('🧬 Added conversation record:', conversationRecord.id);
+
+        } catch (error) {
+            console.error('❌ Failed to add conversation record:', error);
+        }
+    }
+
+    /**
+     * Add analysis record
+     */
+    addAnalysisRecord(analysisData) {
+        try {
+            if (!this.historyData.analysisRecords) {
+                this.historyData.analysisRecords = [];
+            }
+
+            const analysisRecord = {
+                id: `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                timestamp: new Date().toISOString(),
+                ...analysisData
+            };
+
+            this.historyData.analysisRecords.push(analysisRecord);
+
+            // Update storage stats
+            this.historyData.storageStats.totalAnalysisCount++;
+            this.historyData.storageStats.lastUpdateDate = new Date().toISOString();
+
+            // Auto-save
+            this.debouncedSave();
+
+            console.log('🧬 Added analysis record:', analysisRecord.id);
+
+        } catch (error) {
+            console.error('❌ Failed to add analysis record:', error);
+        }
+    }
+
+    /**
+     * Update storage statistics
+     */
+    updateStorageStats(conversationRecord) {
+        if (!this.historyData.storageStats) {
+            this.historyData.storageStats = {
+                totalConversations: 0,
+                totalMessages: 0,
+                totalAnalysisCount: 0,
+                totalPluginsGenerated: 0,
+                firstRecordDate: null,
+                lastUpdateDate: null,
+                storageSize: 0
+            };
+        }
+
+        const stats = this.historyData.storageStats;
+        
+        stats.totalConversations++;
+        stats.totalMessages += conversationRecord.stats?.messageCount || 0;
+        stats.lastUpdateDate = new Date().toISOString();
+        
+        if (!stats.firstRecordDate) {
+            stats.firstRecordDate = conversationRecord.startTime;
+        }
+
+        // Calculate approximate storage size
+        stats.storageSize = JSON.stringify(this.historyData).length;
+    }
+
+    /**
      * 初始化存储系统
      */
     async initializeStorage() {
@@ -408,171 +510,14 @@ class ConversationEvolutionStorageManager {
     }
 
     /**
-     * 🧬 Add conversation event to evolution storage
-     * This method stores individual conversation events for real-time analysis
-     */
-    addConversationEvent(conversationEvent) {
-        try {
-            // Create a simplified event record for storage
-            const eventRecord = {
-                id: conversationEvent.id,
-                timestamp: conversationEvent.timestamp,
-                sender: conversationEvent.sender,
-                isError: conversationEvent.isError,
-                messageLength: conversationEvent.evolutionMetadata?.messageLength || 0,
-                wordsCount: conversationEvent.evolutionMetadata?.wordsCount || 0,
-                hasThinkingProcess: conversationEvent.evolutionMetadata?.hasThinkingProcess || false,
-                toolCallsCount: conversationEvent.evolutionMetadata?.toolCallsCount || 0,
-                processingTime: conversationEvent.evolutionMetadata?.processingTime || 0,
-                llmProvider: conversationEvent.evolutionMetadata?.llmProvider || 'unknown',
-                modelName: conversationEvent.evolutionMetadata?.modelName || 'unknown',
-                context: {
-                    currentChromosome: conversationEvent.context?.currentChromosome,
-                    currentPosition: conversationEvent.context?.currentPosition,
-                    visibleTracks: conversationEvent.context?.visibleTracks,
-                    loadedFilesCount: conversationEvent.context?.loadedFiles?.length || 0
-                },
-                // Store message content for analysis (consider privacy settings)
-                messagePreview: this.createMessagePreview(conversationEvent.message),
-                
-                // Evolution analysis data
-                evolutionSignals: {
-                    isFailure: conversationEvent.isError,
-                    hasEvolutionKeywords: this.hasEvolutionKeywords(conversationEvent.message),
-                    hasToolCalls: conversationEvent.evolutionMetadata?.toolCallsCount > 0,
-                    hasThinking: conversationEvent.evolutionMetadata?.hasThinkingProcess
-                }
-            };
-            
-            // Add to evolution timeline
-            this.historyData.evolutionTimeline.push({
-                type: 'conversation_event',
-                timestamp: conversationEvent.timestamp,
-                data: eventRecord
-            });
-            
-            // Update statistics
-            this.historyData.storageStats.totalMessages++;
-            this.historyData.storageStats.lastUpdateDate = new Date().toISOString();
-            
-            // Save if auto-save is enabled
-            if (this.storageConfig.autoSave) {
-                this.debouncedSave();
-            }
-            
-            return eventRecord.id;
-        } catch (error) {
-            console.error('Failed to add conversation event:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * 🧬 Create a privacy-safe preview of the message
-     */
-    createMessagePreview(message) {
-        try {
-            // Create a preview that preserves structure but limits content
-            const maxLength = 200;
-            if (message.length <= maxLength) {
-                return message;
-            }
-            
-            // Try to preserve important parts while truncating
-            const preview = message.substring(0, maxLength);
-            const lastSpace = preview.lastIndexOf(' ');
-            return lastSpace > maxLength * 0.7 ? preview.substring(0, lastSpace) + '...' : preview + '...';
-        } catch (error) {
-            return '[Message Preview Error]';
-        }
-    }
-
-    /**
-     * 🧬 Check if message contains evolution-relevant keywords
-     */
-    hasEvolutionKeywords(message) {
-        const evolutionKeywords = [
-            'error', 'failed', 'cannot', 'unable', 'not available',
-            'not found', 'not supported', 'not implemented',
-            'I need to implement', 'missing function', 'would need a function',
-            'this functionality doesn\'t exist', 'feature is not available'
-        ];
-        
-        const lowerMessage = message.toLowerCase();
-        return evolutionKeywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()));
-    }
-
-    /**
-     * 🧬 Get total events count
-     */
-    getTotalEvents() {
-        return this.historyData.evolutionTimeline.length;
-    }
-
-    /**
-     * 🧬 Get storage size in bytes
-     */
-    getStorageSize() {
-        try {
-            const dataString = JSON.stringify(this.historyData);
-            return new Blob([dataString]).size;
-        } catch (error) {
-            return 0;
-        }
-    }
-
-    /**
-     * 🧬 Debounced save for performance
-     */
-    debouncedSave() {
-        if (this._saveTimeout) {
-            clearTimeout(this._saveTimeout);
-        }
-        this._saveTimeout = setTimeout(() => {
-            this.saveHistoryData();
-        }, this.storageConfig.autoSaveInterval || 5000);
-    }
-
-    /**
      * 获取存储统计信息
      */
     getStorageStats() {
         return {
             ...this.historyData.storageStats,
             currentStorageSize: this.calculateStorageSize(),
-            lastUpdateDate: new Date().toISOString(),
-            
-            // 🧬 Enhanced evolution statistics
-            totalEvents: this.getTotalEvents(),
-            realTimeStorageSize: this.getStorageSize(),
-            eventsLastHour: this.getEventsLastHour(),
-            avgEventsPerDay: this.getAverageEventsPerDay()
+            lastUpdateDate: new Date().toISOString()
         };
-    }
-
-    /**
-     * 🧬 Get events from the last hour
-     */
-    getEventsLastHour() {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        return this.historyData.evolutionTimeline.filter(event => 
-            new Date(event.timestamp) > oneHourAgo
-        ).length;
-    }
-
-    /**
-     * 🧬 Get average events per day
-     */
-    getAverageEventsPerDay() {
-        if (this.historyData.evolutionTimeline.length === 0) return 0;
-        
-        const oldestEvent = this.historyData.evolutionTimeline[0];
-        const newestEvent = this.historyData.evolutionTimeline[this.historyData.evolutionTimeline.length - 1];
-        
-        if (!oldestEvent || !newestEvent) return 0;
-        
-        const daysDiff = (new Date(newestEvent.timestamp) - new Date(oldestEvent.timestamp)) / (1000 * 60 * 60 * 24);
-        return daysDiff > 0 ? Math.round(this.historyData.evolutionTimeline.length / daysDiff) : 0;
     }
 
     /**

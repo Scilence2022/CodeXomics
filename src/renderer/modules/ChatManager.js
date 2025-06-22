@@ -59,6 +59,12 @@ class ChatManager {
         this.isSmartExecutionEnabled = true; // 可配置开关
         this.initializeSmartExecutor();
         
+        // Initialize Conversation Evolution Integration
+        this.evolutionManager = null;
+        this.currentConversationData = null;
+        this.evolutionEnabled = true;
+        this.initializeEvolutionIntegration();
+        
         // Set global reference for copy button functionality
         window.chatManager = this;
         
@@ -256,6 +262,81 @@ class ChatManager {
             console.error('Failed to initialize SmartExecutor:', error);
             this.isSmartExecutionEnabled = false;
         }
+    }
+
+    /**
+     * Initialize Conversation Evolution Integration
+     */
+    async initializeEvolutionIntegration() {
+        try {
+            // Check if ConversationEvolutionManager is available globally
+            if (typeof window !== 'undefined' && window.evolutionManager) {
+                this.evolutionManager = window.evolutionManager;
+                console.log('🧬 Evolution Manager connected to ChatBox');
+            } else {
+                console.log('🧬 Evolution Manager not available yet, will connect when available');
+            }
+            
+            // Initialize current conversation data structure
+            this.resetCurrentConversationData();
+            
+        } catch (error) {
+            console.error('❌ Failed to initialize Evolution integration:', error);
+        }
+    }
+
+    /**
+     * Connect to Evolution Manager (called when Evolution Manager becomes available)
+     */
+    connectToEvolutionManager(evolutionManager) {
+        if (evolutionManager && this.evolutionEnabled) {
+            this.evolutionManager = evolutionManager;
+            console.log('🧬 Evolution Manager connected to ChatBox successfully');
+            
+            // If there's a current conversation in progress, sync it
+            if (this.currentConversationData && this.currentConversationData.events.length > 0) {
+                this.syncCurrentConversationToEvolution();
+            }
+        }
+    }
+
+    /**
+     * Reset current conversation data structure
+     */
+    resetCurrentConversationData() {
+        this.currentConversationData = {
+            id: this.generateConversationId(),
+            startTime: new Date().toISOString(),
+            endTime: null,
+            events: [],
+            context: this.getCurrentContext(),
+            stats: {
+                messageCount: 0,
+                userMessageCount: 0,
+                assistantMessageCount: 0,
+                errorCount: 0,
+                successCount: 0,
+                toolCallCount: 0,
+                failureCount: 0,
+                thinkingProcessCount: 0
+            },
+            metadata: {
+                source: 'chatbox',
+                chatboxVersion: '1.0.0',
+                features: {
+                    thinkingProcess: this.showThinkingProcess,
+                    toolCalls: this.showToolCalls,
+                    smartExecution: this.isSmartExecutionEnabled
+                }
+            }
+        };
+    }
+
+    /**
+     * Generate unique conversation ID
+     */
+    generateConversationId() {
+        return `chatbox_conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     setupMCPServerEventHandlers() {
@@ -2889,33 +2970,137 @@ ${examples.map(example =>
 ).join('\n\n')}
 `;
             } catch (error) {
-                console.error('Error generating microbe genomics info:', error);
-                microbeGenomicsInfo = 'Microbe Genomics Functions available but could not load details.';
+                microbeGenomicsInfo = '\nMicrobeGenomicsFunctions: Available but could not load details\n';
             }
         }
 
-        // Return the base system message
-        return `
-You are a helpful AI assistant for a genome visualization and analysis platform called GenomeExplorer.
+        return `You are an AI assistant for a Genome AI Studio application. You have access to the following tools and current state:
+
+IMPORTANT: Task Completion Instructions
+When you believe you have completed the user's task or fully answered their question, you can end the conversation early by providing a summary response WITHOUT any tool calls. Use clear completion indicators like "Task completed", "Analysis finished", "In summary", or "The results show" to signal completion. This allows for efficient task execution without using unnecessary function call rounds.
+
+Current Genome AI Studio State:
+- Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
+- Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
+- Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
+- Loaded files: ${context.genomeBrowser.currentState.loadedFiles.length} files
+- Sequence length: ${context.genomeBrowser.currentState.sequenceLength}
+- Annotations count: ${context.genomeBrowser.currentState.annotationsCount}
+- User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
 ${mcpServersInfo}
 
+Available Tools Summary:
+- Total Available Tools: ${context.genomeBrowser.toolSources.total}
+- Local Tools: ${context.genomeBrowser.toolSources.local}
+- Plugin Tools: ${context.genomeBrowser.toolSources.plugins}
+- MCP Tools: ${context.genomeBrowser.toolSources.mcp}
+
+All Available Tools:
+${context.genomeBrowser.availableTools.map(tool => `- ${tool}`).join('\n')}
+
 ${microbeGenomicsInfo}
 
-${this.getPluginSystemInfo()}
+===CRITICAL INSTRUCTION FOR TOOL CALLS===
+When a user asks you to perform ANY action that requires using one of these tools, you MUST respond with ONLY a JSON object. Do NOT add any explanatory text, markdown formatting, or conversational responses around the JSON.
 
-Current System State:
-- Genome: ${this.getGenomeInfoSummary()}
-- Files: ${this.getLoadedFilesSummary()}
-- Tracks: ${this.getVisibleTracksSummary()}
-- MCP: ${this.getMCPServersSummary()}
-- Plugins: ${this.getPluginFunctionsSummary()}
+CORRECT format:
+{"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
 
-Current Context:
-${JSON.stringify(context, null, 2)}
+Tool Selection Priority:
+1. First try MCP server tools (if available and connected)
+2. Use MicrobeGenomicsFunctions for specialized genomic analysis
+3. Fall back to built-in local tools
+4. Use the most appropriate tool for the task regardless of source
 
-Please help the user with genome analysis tasks, visualization, and tool usage.
-`;
+Basic Tool Examples:
+- Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
+- Get current state: {"tool_name": "get_current_state", "parameters": {}}
+- Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
+- Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+
+MicrobeGenomicsFunctions Examples:
+- Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+- Calculate GC content: {"tool_name": "compute_gc", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Get upstream region: {"tool_name": "get_upstream_region", "parameters": {"geneObj": {"chromosome": "chr1", "feature": {"start": 1000, "end": 2000}}, "length": 200}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"dna": "ATGAAATAG", "minLength": 30}}
+- Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "ATGCTATAAT"}}
+- Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC", "chromosome": "chr1"}}
+- Reverse complement: {"tool_name": "reverse_complement", "parameters": {"dna": "ATGC"}}
+- Translate DNA: {"tool_name": "translate_dna", "parameters": {"dna": "ATGAAATAG", "frame": 0}}
+- Calculate entropy: {"tool_name": "calculate_entropy", "parameters": {"sequence": "ATGCGCTATCG"}}
+- Melting temperature: {"tool_name": "calculate_melting_temp", "parameters": {"dna": "ATGCGCTATCG"}}
+- Molecular weight: {"tool_name": "calculate_molecular_weight", "parameters": {"dna": "ATGCGCTATCG"}}
+- Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
+- Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
+- Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
+- Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
+
+CRITICAL DISTINCTION - Search Functions:
+1. FOR TEXT-BASED SEARCHES (gene names, products): use 'search_features' or 'search_gene_by_name'
+   - "find lacZ" → {"tool_name": "search_gene_by_name", "parameters": {"name": "lacZ"}}
+   - "search DNA polymerase" → {"tool_name": "search_features", "parameters": {"query": "DNA polymerase", "caseSensitive": false}}
+
+2. FOR POSITION-BASED SEARCHES (near coordinates): use 'get_nearby_features' or 'search_by_position'
+   - "find genes near 123456" → {"tool_name": "search_by_position", "parameters": {"chromosome": "chr1", "position": 123456}}
+
+3. FOR SEQUENCE MOTIF SEARCHES: use 'search_sequence_motif'
+   - "find GAATTC sites" → {"tool_name": "search_sequence_motif", "parameters": {"pattern": "GAATTC"}}
+
+Common Analysis Tools:
+- Find restriction sites: {"tool_name": "find_restriction_sites", "parameters": {"enzyme": "EcoRI"}}
+- Calculate GC content: {"tool_name": "sequence_statistics", "parameters": {"include": ["composition"]}}
+- Find ORFs: {"tool_name": "find_orfs", "parameters": {"chromosome": "chr1", "start": 1000, "end": 5000, "minLength": 300}}
+- Search motifs: {"tool_name": "search_motif", "parameters": {"pattern": "GAATTC", "allowMismatches": 0}}
+
+Protein Structure Tools:
+- Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
+- Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
+- Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+
+IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
+
+BLAST Search Tools:
+- Search sequence similarity: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "evalue": "0.01", "maxTargets": 50}}
+- BLAST current region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000, "blastType": "blastn", "database": "nt"}}
+- Get BLAST databases: {"tool_name": "get_blast_databases", "parameters": {}}
+
+BLAST Examples:
+1. DNA sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCG", "blastType": "blastn", "database": "nt"}}
+2. Protein sequence search: {"tool_name": "blast_search", "parameters": {"sequence": "MKELLKAGWKELQPIKEYGIEAVALAYTYQKEQDAIDKELKENITPNVEKKLVWEALKLK", "blastType": "blastp", "database": "nr"}}
+3. Translate and search DNA: {"tool_name": "blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastx", "database": "nr"}}
+4. Search genomic region: {"tool_name": "blast_sequence_from_region", "parameters": {"chromosome": "NC_000913.3", "start": 3423681, "end": 3424651, "blastType": "blastn", "database": "refseq_genomic"}}
+
+Enhanced BLAST Tools (Available with MCP BLAST Server):
+- Batch BLAST search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "seq1", "sequence": "ATGCGCTATCG"}, {"id": "seq2", "sequence": "ATGAAAGAATT"}], "blastType": "blastn", "database": "nt", "maxTargets": 10}}
+- Advanced BLAST with filtering: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGCGCTATCG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 95, "minCoverage": 80}, "algorithms": {"wordSize": "11", "matrix": "BLOSUM62"}}}
+- Local database info: {"tool_name": "local_blast_database_info", "parameters": {"databasePath": "/path/to/local/db"}}
+
+Enhanced BLAST Examples:
+1. Batch protein search: {"tool_name": "batch_blast_search", "parameters": {"sequences": [{"id": "protein1", "sequence": "MKELLKAGWKELQP"}, {"id": "protein2", "sequence": "MKLSAGATRVST"}], "blastType": "blastp", "database": "nr"}}
+2. High-specificity DNA search: {"tool_name": "advanced_blast_search", "parameters": {"sequence": "ATGAAAGAATTGAAAGAAGCTGGCTGG", "blastType": "blastn", "database": "nt", "filters": {"minIdentity": 98, "maxEvalue": 1e-10}}}
+MICROBE GENOMICS POWER USER EXAMPLES:
+1. Complete Gene Analysis:
+   - Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "dnaA"}}
+   - Get upstream: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "result_from_above", "length": 200}}
+   - Predict promoter: {"tool_name": "predict_promoter", "parameters": {"seq": "upstream_sequence"}}
+   - Calculate GC: {"tool_name": "compute_gc", "parameters": {"sequence": "upstream_sequence"}}
+
+2. Sequence Motif Analysis:
+   - Search motif: {"tool_name": "search_sequence_motif", "parameters": {"pattern": "TATAAT"}}
+   - Find nearby features: {"tool_name": "search_by_position", "parameters": {"position": "motif_position"}}
+
+3. Comparative Analysis:
+   - Get region 1: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene1", "length": 500}}
+   - Get region 2: {"tool_name": "get_upstream_region", "parameters": {"geneObj": "gene2", "length": 500}}
+   - Compare GC: {"tool_name": "compute_gc", "parameters": {"sequence": "region1"}} then {"tool_name": "compute_gc", "parameters": {"sequence": "region2"}}
+
+Remember: These functions provide atomic operations that can be chained together to perform complex genomic analyses!
+
+PLUGIN SYSTEM FUNCTIONS:
+${this.getPluginSystemInfo()}`;
     }
 
     /**
@@ -3851,14 +4036,25 @@ Please help the user with genome analysis tasks, visualization, and tool usage.
     addMessageToChat(message, sender, isError = false) {
         const timestamp = new Date().toISOString();
         
-        // Add to configuration manager for persistence
+        // Add to configuration manager for persistence (ChatBox原有功能)
         const messageId = this.configManager.addChatMessage(message, sender, timestamp);
+        
+        // Add to Evolution data structure for detailed analysis
+        this.addToEvolutionData({
+            type: 'message',
+            timestamp: timestamp,
+            messageId: messageId,
+            sender: sender,
+            content: message,
+            isError: isError,
+            metadata: {
+                source: 'direct_message',
+                visible: true
+            }
+        });
         
         // Display the message in UI
         this.displayChatMessage(message, sender, timestamp, messageId);
-        
-        // 🧬 Forward to Conversation Evolution System for analysis
-        this.notifyConversationEvolution(message, sender, isError, timestamp, messageId);
     }
 
     copyMessage(messageId) {
@@ -7699,299 +7895,449 @@ Please help the user with genome analysis tasks, visualization, and tool usage.
     }
 
     /**
-     * 🧬 Notify Conversation Evolution System about new messages
-     * This method forwards ChatBox conversations to the Evolution system for analysis
+     * 更新UI状态
      */
-    notifyConversationEvolution(message, sender, isError, timestamp, messageId) {
-        try {
-            // Get the global evolution manager
-            const evolutionManager = window.conversationEvolutionManager;
-            
-            if (evolutionManager && evolutionManager.recordConversationData) {
-                // Create detailed conversation event with all available context
-                const conversationEvent = {
-                    id: messageId,
-                    message: message,
-                    sender: sender,
-                    isError: isError,
-                    timestamp: timestamp,
-                    
-                    // Include additional context for better analysis
-                    context: {
-                        currentChromosome: this.app?.currentChromosome || null,
-                        currentPosition: this.app?.currentPosition || null,
-                        loadedFiles: this.app?.loadedFiles || [],
-                        visibleTracks: this.getVisibleTracks(),
-                        isProcessing: this.isProcessing,
-                        conversationState: this.conversationState || 'active',
-                        
-                        // Include thinking process data if available
-                        hasThinkingProcess: message.includes('<thinking>') || message.includes('thinking...'),
-                        toolCalls: this.extractToolCallsFromMessage(message),
-                        
-                        // Performance and timing data
-                        processingTime: this.lastProcessingTime || 0,
-                        messageLength: message.length,
-                        
-                        // LLM configuration context
-                        llmProvider: this.configManager?.get('llm.currentProvider'),
-                        modelName: this.getCurrentModelName()
-                    }
-                };
-                
-                // Forward to evolution system for real-time analysis
-                evolutionManager.recordConversationData(
-                    conversationEvent.message,
-                    conversationEvent.sender,
-                    conversationEvent.isError,
-                    conversationEvent.context,
-                    conversationEvent.timestamp
-                );
-                
-                console.log('🧬 Conversation data forwarded to Evolution System:', {
-                    sender: sender,
-                    messageLength: message.length,
-                    hasError: isError,
-                    hasThinking: conversationEvent.context.hasThinkingProcess,
-                    toolCallsCount: conversationEvent.context.toolCalls.length
-                });
-                
-            } else {
-                console.log('🧬 Evolution Manager not available, skipping notification');
+    updateUIState() {
+        const sendBtn = document.getElementById('sendChatBtn');
+        const abortBtn = document.getElementById('abortChatBtn');
+        const chatInput = document.getElementById('chatInput');
+        
+        if (this.conversationState.isProcessing) {
+            // Conversation in progress - disable send button, show abort button
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                sendBtn.classList.add('processing');
             }
-        } catch (error) {
-            console.error('🧬 Error notifying Conversation Evolution System:', error);
-            // Don't throw error to prevent disrupting chat functionality
+            if (abortBtn) {
+                abortBtn.style.display = 'block';
+            }
+            if (chatInput) {
+                chatInput.disabled = true;
+                chatInput.placeholder = 'Conversation in progress, please wait...';
+            }
+        } else {
+            // Conversation ended - restore normal state
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                sendBtn.classList.remove('processing');
+            }
+            if (abortBtn) {
+                abortBtn.style.display = 'none';
+            }
+            if (chatInput) {
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Ask me anything about your genome data...';
+            }
         }
     }
 
     /**
-     * Extract tool calls information from message content
+     * 添加思考过程消息
      */
-    extractToolCallsFromMessage(message) {
-        const toolCalls = [];
+    addThinkingMessage(message) {
+        // 检查是否启用思考过程显示
+        if (!this.showThinkingProcess) {
+            // 即使不显示，也要为Evolution记录思考过程
+            this.addToEvolutionData({
+                type: 'thinking_process',
+                timestamp: new Date().toISOString(),
+                content: message,
+                visible: false,
+                metadata: {
+                    source: 'ai_thinking',
+                    requestId: this.conversationState.currentRequestId,
+                    step: 'initial_thinking'
+                }
+            });
+            return;
+        }
         
-        // Look for tool call patterns in the message
-        const toolCallPatterns = [
-            /\*\*Tool Call:\*\*\s*(\w+)/gi,
-            /Calling\s+(\w+)\s*function/gi,
-            /Executing\s+(\w+)/gi,
-            /Using\s+(\w+)\s+tool/gi
-        ];
+        // 首先移除之前的思考过程消息
+        this.removeThinkingMessages();
         
-        toolCallPatterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(message)) !== null) {
-                toolCalls.push({
-                    tool: match[1],
-                    position: match.index,
-                    fullMatch: match[0]
-                });
+        const messagesContainer = document.getElementById('chatMessages');
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.className = 'message assistant-message thinking-process';
+        const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+        thinkingDiv.id = thinkingId;
+        thinkingDiv.innerHTML = `
+            <div class="message-content">
+                <div class="message-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="message-text thinking-text">
+                    <div class="thinking-header">
+                        <i class="fas fa-cog fa-spin"></i>
+                        <span>AI Thinking Process</span>
+                    </div>
+                    <div class="thinking-content">${message}</div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(thinkingDiv);
+        
+        // Add to Evolution data structure
+        this.addToEvolutionData({
+            type: 'thinking_process',
+            timestamp: new Date().toISOString(),
+            content: message,
+            elementId: thinkingId,
+            visible: true,
+            metadata: {
+                source: 'ai_thinking',
+                requestId: this.conversationState.currentRequestId,
+                step: 'initial_thinking'
             }
         });
         
-        return toolCalls;
-    }
-
-    /**
-     * Get current LLM model name
-     */
-    getCurrentModelName() {
-        try {
-            const currentProvider = this.configManager?.get('llm.currentProvider');
-            if (currentProvider) {
-                const providerConfig = this.configManager?.get(`llm.providers.${currentProvider}`);
-                return providerConfig?.model || 'unknown';
-            }
-            return 'unknown';
-        } catch (error) {
-            return 'unknown';
+        // 根据设置决定是否自动滚动
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
 
     /**
-     * Update UI state based on conversation status
+     * 更新思考过程消息
      */
-    updateUIState() {
-        try {
-            const sendButton = document.getElementById('sendChatBtn');
-            const messageInput = document.getElementById('chatInput');
-            const abortButton = document.getElementById('abortChatBtn');
-            
-            if (sendButton) {
-                if (this.conversationState.isProcessing) {
-                    sendButton.disabled = true;
-                    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    sendButton.classList.add('processing');
-                } else {
-                    sendButton.disabled = false;
-                    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
-                    sendButton.classList.remove('processing');
-                }
+    updateThinkingMessage(message) {
+        // Add to Evolution data first (regardless of visibility)
+        this.addToEvolutionData({
+            type: 'thinking_process',
+            timestamp: new Date().toISOString(),
+            content: message,
+            visible: this.showThinkingProcess,
+            metadata: {
+                source: 'ai_thinking',
+                requestId: this.conversationState.currentRequestId,
+                step: 'update_thinking'
             }
-            
-            if (messageInput) {
-                messageInput.disabled = this.conversationState.isProcessing;
-                if (this.conversationState.isProcessing) {
-                    messageInput.placeholder = 'Processing request...';
-                } else {
-                    messageInput.placeholder = 'Ask me anything about your genome data...';
-                }
-            }
-            
-            // Show/hide abort button based on processing state
-            if (abortButton) {
-                if (this.conversationState.isProcessing) {
-                    abortButton.style.display = 'inline-block';
-                } else {
-                    abortButton.style.display = 'none';
-                }
-            }
-            
-            console.log('UI state updated - processing:', this.conversationState.isProcessing);
-            
-        } catch (error) {
-            console.warn('Failed to update UI state:', error);
-        }
-    }
-
-    /**
-     * Add thinking process message to chat
-     */
-    addThinkingMessage(text) {
-        if (!this.showThinkingProcess) return;
+        });
         
-        try {
-            const chatMessages = document.getElementById('chatMessages');
-            if (!chatMessages) return;
-            
-            const thinkingId = 'thinking-' + Date.now();
-            const thinkingElement = document.createElement('div');
-            thinkingElement.id = thinkingId;
-            thinkingElement.className = 'thinking-message';
-            thinkingElement.innerHTML = `
-                <div class="message assistant-message thinking">
-                    <div class="message-content">
-                        <i class="fas fa-brain message-icon thinking-icon"></i>
-                        <div class="message-text">
-                            <div class="thinking-text">
-                                <i class="fas fa-spinner fa-spin"></i>
-                                <span class="thinking-content">${text}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            chatMessages.appendChild(thinkingElement);
-            
-            // Scroll to bottom if auto-scroll is enabled
-            if (this.autoScrollToBottom) {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-            
-            // Store reference for updates
-            this.currentThinkingElement = thinkingElement;
-            
-        } catch (error) {
-            console.warn('Failed to add thinking message:', error);
+        // 检查是否启用思考过程显示
+        if (!this.showThinkingProcess) {
+            return;
         }
-    }
-
-    /**
-     * Update existing thinking process message
-     */
-    updateThinkingMessage(text) {
-        if (!this.showThinkingProcess || !this.currentThinkingElement) return;
         
-        try {
-            const thinkingContent = this.currentThinkingElement.querySelector('.thinking-content');
+        // 查找当前请求的思考过程消息
+        const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+        let thinkingDiv = document.getElementById(thinkingId);
+        
+        // 如果没有找到，查找任何思考过程消息
+        if (!thinkingDiv) {
+            thinkingDiv = document.querySelector('.thinking-process');
+        }
+        
+        if (thinkingDiv) {
+            const thinkingContent = thinkingDiv.querySelector('.thinking-content');
             if (thinkingContent) {
-                thinkingContent.textContent = text;
+                thinkingContent.innerHTML += '<br>' + message;
             }
-        } catch (error) {
-            console.warn('Failed to update thinking message:', error);
+        } else {
+            this.addThinkingMessage(message);
+        }
+        
+        // 根据设置决定是否自动滚动
+        const messagesContainer = document.getElementById('chatMessages');
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
 
     /**
-     * Display LLM thinking process from response
+     * 显示LLM的思考过程
      */
     displayLLMThinking(response) {
-        if (!this.showThinkingProcess || !response) return;
+        // 检查响应中是否包含思考标签
+        const thinkingMatch = response.match(/<think>([\s\S]*?)<\/think>/);
+        if (thinkingMatch) {
+            const thinkingContent = thinkingMatch[1].trim();
+            this.updateThinkingMessage(`💭 Model thinking: ${thinkingContent}`);
+        }
         
-        try {
-            // Extract thinking content from <thinking> tags
-            const thinkingMatch = response.match(/<thinking>(.*?)<\/thinking>/s);
-            if (thinkingMatch) {
-                const thinkingContent = thinkingMatch[1].trim();
-                if (thinkingContent) {
-                    // Remove current thinking message and add LLM's thinking
-                    this.removeCurrentThinkingMessage();
-                    
-                    const chatMessages = document.getElementById('chatMessages');
-                    if (!chatMessages) return;
-                    
-                    const thinkingElement = document.createElement('div');
-                    thinkingElement.className = 'thinking-message llm-thinking';
-                    thinkingElement.innerHTML = `
-                        <div class="message assistant-message thinking">
-                            <div class="message-content">
-                                <i class="fas fa-lightbulb message-icon thinking-icon"></i>
-                                <div class="message-text">
-                                    <div class="thinking-header">🤔 AI Thinking Process:</div>
-                                    <div class="thinking-content">${thinkingContent}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    chatMessages.appendChild(thinkingElement);
-                    
-                    // Scroll to bottom if auto-scroll is enabled
-                    if (this.autoScrollToBottom) {
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn('Failed to display LLM thinking:', error);
+        // 检查是否有工具调用分析
+        if (response.includes('tool_name') || response.includes('function_name')) {
+            this.updateThinkingMessage('🔧 Analyzing required tool calls...');
         }
     }
 
     /**
-     * Remove current thinking message
+     * 添加工具调用消息
      */
-    removeCurrentThinkingMessage() {
-        try {
-            if (this.currentThinkingElement && this.currentThinkingElement.parentNode) {
-                this.currentThinkingElement.parentNode.removeChild(this.currentThinkingElement);
-                this.currentThinkingElement = null;
+    addToolCallMessage(toolsToExecute) {
+        // Add to Evolution data first (always record tool calls)
+        this.addToEvolutionData({
+            type: 'tool_calls',
+            timestamp: new Date().toISOString(),
+            content: toolsToExecute,
+            visible: this.showToolCalls,
+            metadata: {
+                source: 'tool_execution',
+                requestId: this.conversationState.currentRequestId,
+                toolCount: toolsToExecute.length,
+                toolNames: toolsToExecute.map(t => t.tool_name)
             }
-        } catch (error) {
-            console.warn('Failed to remove current thinking message:', error);
+        });
+        
+        // 检查是否启用工具调用显示
+        if (!this.showToolCalls) {
+            return;
         }
+        
+        const toolList = toolsToExecute.map(tool => 
+            `• ${tool.tool_name}(${JSON.stringify(tool.parameters)})`
+        ).join('<br>');
+        
+        this.updateThinkingMessage(`⚡ Executing tool calls:<br>${toolList}`);
     }
 
     /**
-     * Remove all thinking messages from chat
+     * 移除思考过程消息
      */
     removeThinkingMessages() {
-        try {
-            const chatMessages = document.getElementById('chatMessages');
-            if (!chatMessages) return;
+        // 移除所有思考过程消息
+        const thinkingDivs = document.querySelectorAll('.thinking-process');
+        thinkingDivs.forEach(thinkingDiv => {
+            // 添加淡出动画
+            thinkingDiv.style.transition = 'opacity 0.5s ease-out';
+            thinkingDiv.style.opacity = '0';
             
-            const thinkingMessages = chatMessages.querySelectorAll('.thinking-message');
-            thinkingMessages.forEach(element => {
-                if (element.parentNode) {
-                    element.parentNode.removeChild(element);
+            setTimeout(() => {
+                if (thinkingDiv.parentNode) {
+                    thinkingDiv.parentNode.removeChild(thinkingDiv);
                 }
-            });
-            
-            this.currentThinkingElement = null;
-            
-        } catch (error) {
-            console.warn('Failed to remove thinking messages:', error);
+            }, 500);
+        });
+    }
+
+    /**
+     * 添加工具执行结果显示
+     */
+    addToolResultMessage(toolResults) {
+        const successCount = toolResults.filter(r => r.success).length;
+        const failCount = toolResults.filter(r => !r.success).length;
+        
+        // Add to Evolution data first (always record tool results)
+        this.addToEvolutionData({
+            type: 'tool_results',
+            timestamp: new Date().toISOString(),
+            content: toolResults,
+            visible: this.showToolCalls,
+            metadata: {
+                source: 'tool_execution_results',
+                requestId: this.conversationState.currentRequestId,
+                successCount: successCount,
+                failCount: failCount,
+                totalCount: toolResults.length,
+                tools: toolResults.map(r => ({ tool: r.tool, success: r.success }))
+            }
+        });
+        
+        if (!this.showToolCalls) return;
+        
+        let resultMessage = `✅ Tool execution completed: ${successCount} succeeded`;
+        if (failCount > 0) {
+            resultMessage += `, ${failCount} failed`;
+        }
+        
+        // 显示详细结果
+        const detailsHtml = toolResults.map(result => {
+            const icon = result.success ? '✅' : '❌';
+            const status = result.success ? 'succeeded' : `failed: ${result.error}`;
+            return `${icon} ${result.tool}: ${status}`;
+        }).join('<br>');
+        
+        this.updateThinkingMessage(`${resultMessage}<br><details><summary>Detailed results</summary>${detailsHtml}</details>`);
+    }
+
+    /**
+     * Add data to Evolution system for analysis
+     */
+    addToEvolutionData(eventData) {
+        if (!this.evolutionEnabled || !this.currentConversationData) {
+            return;
+        }
+
+        // Add timestamp if not provided
+        if (!eventData.timestamp) {
+            eventData.timestamp = new Date().toISOString();
+        }
+
+        // Add event to current conversation
+        this.currentConversationData.events.push(eventData);
+
+        // Update statistics
+        this.updateConversationStats(eventData);
+
+        // Auto-save to Evolution storage periodically
+        this.debouncedSaveToEvolution();
+
+        console.log(`🧬 Added ${eventData.type} to Evolution data:`, eventData);
+    }
+
+    /**
+     * Update conversation statistics
+     */
+    updateConversationStats(eventData) {
+        if (!this.currentConversationData || !this.currentConversationData.stats) {
+            return;
+        }
+
+        const stats = this.currentConversationData.stats;
+
+        switch (eventData.type) {
+            case 'message':
+                stats.messageCount++;
+                if (eventData.sender === 'user') {
+                    stats.userMessageCount++;
+                } else if (eventData.sender === 'assistant') {
+                    stats.assistantMessageCount++;
+                }
+                if (eventData.isError) {
+                    stats.errorCount++;
+                } else {
+                    stats.successCount++;
+                }
+                break;
+
+            case 'thinking_process':
+                stats.thinkingProcessCount++;
+                break;
+
+            case 'tool_calls':
+                stats.toolCallCount += eventData.metadata?.toolCount || 1;
+                break;
+
+            case 'tool_results':
+                if (eventData.metadata?.failCount > 0) {
+                    stats.failureCount += eventData.metadata.failCount;
+                }
+                if (eventData.metadata?.successCount > 0) {
+                    stats.successCount += eventData.metadata.successCount;
+                }
+                break;
         }
     }
-}
+
+    /**
+     * Debounced save to Evolution storage
+     */
+    debouncedSaveToEvolution() {
+        if (this._evolutionSaveTimeout) {
+            clearTimeout(this._evolutionSaveTimeout);
+        }
+        
+        this._evolutionSaveTimeout = setTimeout(() => {
+            this.syncCurrentConversationToEvolution();
+        }, 2000); // Save every 2 seconds
+    }
+
+    /**
+     * Sync current conversation to Evolution storage
+     */
+    syncCurrentConversationToEvolution() {
+        if (!this.evolutionManager || !this.currentConversationData) {
+            return;
+        }
+
+        try {
+            // Update end time
+            this.currentConversationData.endTime = new Date().toISOString();
+            
+            // Send to Evolution Manager
+            if (typeof this.evolutionManager.addConversationData === 'function') {
+                this.evolutionManager.addConversationData(this.currentConversationData);
+                console.log('🧬 Synced conversation data to Evolution storage');
+            } else {
+                console.warn('🧬 Evolution Manager does not support addConversationData method');
+            }
+        } catch (error) {
+            console.error('❌ Failed to sync conversation to Evolution storage:', error);
+        }
+    }
+
+    /**
+     * Start new conversation for Evolution tracking
+     */
+    startNewConversationForEvolution() {
+        // Finalize current conversation
+        if (this.currentConversationData && this.currentConversationData.events.length > 0) {
+            this.syncCurrentConversationToEvolution();
+        }
+
+        // Reset for new conversation
+        this.resetCurrentConversationData();
+        
+        console.log('🧬 Started new conversation for Evolution tracking:', this.currentConversationData.id);
+    }
+
+    /**
+     * Override startNewChat to include Evolution tracking
+     */
+    startNewChat() {
+        console.log('Starting new chat...');
+        
+        // Original ChatBox functionality
+        this.clearChat();
+        this.conversationState.contextModeEnabled = false;
+        
+        // Add conversation separator for ChatBox history
+        if (this.configManager) {
+            this.configManager.addChatMessage('--- CONVERSATION_SEPARATOR ---', 'system');
+        }
+        
+        // Start new conversation for Evolution tracking
+        this.startNewConversationForEvolution();
+        
+        this.showNotification('✅ New conversation started', 'success');
+    }
+
+    /**
+     * Get Evolution data summary for debugging
+     */
+    getEvolutionDataSummary() {
+        if (!this.currentConversationData) {
+            return 'No conversation data available';
+        }
+
+        const stats = this.currentConversationData.stats;
+        return {
+            conversationId: this.currentConversationData.id,
+            startTime: this.currentConversationData.startTime,
+            endTime: this.currentConversationData.endTime,
+            eventCount: this.currentConversationData.events.length,
+            statistics: stats,
+            evolutionManagerConnected: !!this.evolutionManager,
+            lastEventType: this.currentConversationData.events.length > 0 ? 
+                this.currentConversationData.events[this.currentConversationData.events.length - 1].type : 'none'
+        };
+    }
+
+    /**
+     * Test Evolution integration
+     */
+    testEvolutionIntegration() {
+        console.log('=== Testing Evolution Integration ===');
+        
+        const summary = this.getEvolutionDataSummary();
+        console.log('Current Evolution Data:', summary);
+        
+        // Test adding some sample data
+        this.addToEvolutionData({
+            type: 'test_event',
+            content: 'This is a test event for Evolution integration',
+            metadata: { source: 'integration_test' }
+        });
+        
+        const updatedSummary = this.getEvolutionDataSummary();
+        console.log('Updated Evolution Data:', updatedSummary);
+        
+        return {
+            status: 'Evolution integration test completed',
+            summary: updatedSummary,
+            testEventAdded: true
+        };
+    }
+} 
