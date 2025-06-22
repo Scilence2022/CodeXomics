@@ -73,8 +73,8 @@ class ReadsManager {
      * Get reads for a specific region (main entry point)
      */
     async getReadsForRegion(chromosome, start, end) {
-        if (!this.rawReadsData && !this.isStreaming) {
-            console.warn('No SAM data loaded');
+        if (!this.rawReadsData && !this.isStreaming && !this.isBamMode) {
+            console.warn('No SAM/BAM data loaded');
             return [];
         }
 
@@ -94,7 +94,10 @@ class ReadsManager {
         
         // Use appropriate loading method based on mode
         let reads;
-        if (this.isStreaming) {
+        if (this.isBamMode && this.bamReader) {
+            // Use BAM reader for binary BAM files
+            reads = await this.loadReadsForRegionBAM(chromosome, start, end);
+        } else if (this.isStreaming) {
             // Use streaming mode for very large files
             reads = await this.loadReadsForRegionStream(chromosome, start, end);
         } else {
@@ -349,6 +352,28 @@ class ReadsManager {
     }
 
     /**
+     * Initialize reads manager with BAM reader
+     * This method uses the BamReader to handle binary BAM files efficiently
+     */
+    async initializeWithBAMReader(bamReader) {
+        this.bamReader = bamReader;
+        this.currentFile = bamReader.filePath;
+        this.cache.clear();
+        this.rawReadsData = null; // BAM data is handled by bamReader
+        this.isStreaming = false; // BAM reader handles streaming internally
+        this.isBamMode = true;
+        
+        // Get statistics from BAM reader
+        const stats = bamReader.getStats();
+        this.stats.totalReads = stats.totalReads;
+        this.stats.loadedRegions = 0;
+        this.stats.cacheHits = 0;
+        this.stats.cacheMisses = 0;
+        
+        console.log('ReadsManager initialized with BAM reader mode');
+    }
+
+    /**
      * Process SAM data chunks during streaming
      */
     processStreamingChunk(lines) {
@@ -358,6 +383,43 @@ class ReadsManager {
             
             // Count reads for statistics
             this.stats.totalReads++;
+        }
+    }
+
+    /**
+     * Load reads for a specific region using BAM reader
+     */
+    async loadReadsForRegionBAM(chromosome, start, end) {
+        console.log(`[ReadsManager] loadReadsForRegionBAM called with:`, {
+            chromosome, start, end,
+            currentFile: this.currentFile,
+            isBamMode: this.isBamMode
+        });
+        
+        if (!this.bamReader) {
+            console.error('[ReadsManager] No BAM reader available');
+            throw new Error('No BAM reader available');
+        }
+
+        try {
+            // Expand the search region to include some buffer for better caching
+            const bufferSize = this.regionSize;
+            const searchStart = Math.max(0, start - bufferSize);
+            const searchEnd = end + bufferSize;
+            
+            this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start}-${end}...`);
+            
+            // Get reads using BAM reader
+            const reads = await this.bamReader.getReadsForRegion(chromosome, searchStart, searchEnd);
+            
+            console.log(`[ReadsManager] Retrieved ${reads.length} reads from BAM file`);
+            
+            this.stats.loadedRegions++;
+            return reads;
+            
+        } catch (error) {
+            console.error('[ReadsManager] Error loading BAM reads:', error);
+            throw error;
         }
     }
 

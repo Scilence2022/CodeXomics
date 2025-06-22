@@ -181,6 +181,17 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         ipcRenderer.removeListener('file-read-progress', progressHandler);
         
         if (!fileData.success) {
+            // Check if this is a BAM file
+            if (fileData.isBamFile) {
+                this.genomeBrowser.updateStatus('BAM file detected, switching to BAM parsing mode...');
+                console.log(`BAM file detected: ${(fileData.fileSize / (1024 * 1024)).toFixed(1)} MB`);
+                
+                // Skip regular file reading for BAM files - they'll be handled by BAM parser
+                this.currentFile.data = null; // BAM files don't use text data
+                await this.parseFile();
+                return;
+            }
+            
             // Check if the error is due to file being too large for memory
             if (fileData.requiresStreaming) {
                 this.genomeBrowser.updateStatus('File too large for memory loading, switching to streaming...');
@@ -726,13 +737,81 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async parseBAM() {
-        // BAM files are binary format and require special parsing libraries
-        // For now, we'll show an informative error message
-        throw new Error(`BAM files are binary format and not currently supported. Please convert your BAM file to SAM format using tools like samtools:
-        
+        try {
+            // Import BamReader if not already loaded
+            if (typeof BamReader === 'undefined') {
+                console.log('Loading BamReader module...');
+                const script = document.createElement('script');
+                script.src = './modules/BamReader.js';
+                document.head.appendChild(script);
+                
+                // Wait for BamReader to be available
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                });
+            }
+
+            this.genomeBrowser.updateStatus('Initializing BAM file reader...');
+            
+            // Create BAM reader instance
+            const bamReader = new BamReader(this.currentFile.path);
+            
+            // Initialize the BAM reader
+            await bamReader.initialize();
+            
+            // Store BAM reader for later use
+            this.genomeBrowser.bamReader = bamReader;
+            
+            // Get header and reference information
+            const header = bamReader.getHeader();
+            const stats = bamReader.getStats();
+            
+            console.log(`BAM file loaded successfully: ${stats.references.length} references, ~${stats.totalReads} reads`);
+            
+            // Initialize ReadsManager with BAM data
+            await this.genomeBrowser.readsManager.initializeWithBAMReader(bamReader);
+            
+            // Clear old reads to save memory
+            this.genomeBrowser.currentReads = {};
+            
+            this.genomeBrowser.updateStatus(`Loaded BAM file with ${stats.references.length} references (~${stats.totalReads} reads)`);
+            
+            // Auto-enable reads track
+            this.autoEnableTracksForFileType('.bam');
+            
+            // If we already have sequence data, refresh the view
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+            
+        } catch (error) {
+            console.error('Error parsing BAM file:', error);
+            
+            // Provide helpful error message
+            let errorMessage = error.message;
+            
+            if (error.message.includes('Failed to load BAM parsing library')) {
+                errorMessage = `BAM file support requires additional libraries. Please ensure the application is properly installed with all dependencies.
+                
+If the issue persists, you can convert your BAM file to SAM format using samtools:
+
 samtools view -h your_file.bam > your_file.sam
 
-Then load the SAM file instead. SAM files contain the same alignment data in text format that can be parsed by this application.`);
+Then load the SAM file instead.`;
+            } else if (error.message.includes('BAI index')) {
+                errorMessage = `BAM file loaded but no BAI index found. For better performance with large BAM files, create an index:
+
+samtools index your_file.bam
+
+The BAM file will still work but may be slower for large files.
+
+Original error: ${error.message}`;
+            }
+            
+            throw new Error(errorMessage);
+        }
     }
 
     async parseGFF() {

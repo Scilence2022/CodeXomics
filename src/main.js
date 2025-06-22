@@ -366,6 +366,17 @@ ipcMain.handle('read-file', async (event, filePath) => {
     // Check file size first
     const stats = fs.statSync(filePath);
     const fileSizeMB = stats.size / (1024 * 1024);
+    const extension = path.extname(filePath).toLowerCase();
+    
+    // For BAM files, don't try to read as text
+    if (extension === '.bam') {
+      return { 
+        success: false, 
+        error: 'BAM files are binary format and should be handled by specialized BAM reader.',
+        isBamFile: true,
+        fileSize: stats.size
+      };
+    }
     
     // For files larger than 500MB, refuse to read entirely into memory
     // JavaScript has a string length limit of ~512MB
@@ -388,6 +399,208 @@ ipcMain.handle('read-file', async (event, filePath) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// BAM file handlers
+let bamFiles = new Map(); // Cache BAM file instances
+
+ipcMain.handle('bam-initialize', async (event, filePath) => {
+  try {
+    console.log('Initializing BAM file:', filePath);
+    
+    // Import BAM libraries - use the newer bamPath approach to avoid buffer issues
+    const { BamFile } = require('@gmod/bam');
+    
+    // Check if BAI index exists
+    let baiPath = null;
+    const standardBaiPath = filePath + '.bai';
+    if (fs.existsSync(standardBaiPath)) {
+      baiPath = standardBaiPath;
+      console.log('Found BAI index:', baiPath);
+    } else {
+      const altBaiPath = filePath.replace('.bam', '.bai');
+      if (fs.existsSync(altBaiPath)) {
+        baiPath = altBaiPath;
+        console.log('Found BAI index:', altBaiPath);
+      } else {
+        console.warn('No BAI index found. Performance may be slower for large files.');
+      }
+    }
+    
+    // Create BAM file instance using direct path (avoids buffer issues)
+    // This approach uses the built-in LocalFile handling within @gmod/bam
+    const bamFileConfig = {
+      bamPath: filePath
+    };
+    
+    // Add BAI path if available
+    if (baiPath) {
+      bamFileConfig.baiPath = baiPath;
+    }
+    
+    // Optional: Add cache configuration
+    bamFileConfig.cacheSize = 100;
+    bamFileConfig.yieldThreadTime = 100;
+    
+    console.log('Creating BAM file instance with config:', bamFileConfig);
+    const bamFile = new BamFile(bamFileConfig);
+    
+    // Get header first - this is required before any other operations
+    console.log('Getting BAM header...');
+    const header = await bamFile.getHeader();
+    console.log('BAM header retrieved successfully');
+    console.log('Header references:', header.references?.length || 0);
+    
+    // Get file size
+    const stats = fs.statSync(filePath);
+    
+    // Try to estimate total reads more safely
+    let totalReads = 0;
+    if (baiPath && header.references && header.references.length > 0) {
+      // Try to get counts for first few references only to avoid errors
+      const maxRefsToCheck = Math.min(3, header.references.length);
+      console.log(`Checking read counts for ${maxRefsToCheck} references...`);
+      
+      for (let i = 0; i < maxRefsToCheck; i++) {
+        const ref = header.references[i];
+        try {
+          const count = await bamFile.lineCount(ref.name);
+          if (count && count > 0) {
+            totalReads += count;
+            console.log(`Reference ${ref.name}: ${count} reads`);
+          }
+        } catch (error) {
+          console.warn(`Error counting reads for ${ref.name}:`, error.message);
+          // Continue with other references
+        }
+      }
+      
+      // If we got some counts but not all refs, estimate the rest
+      if (totalReads > 0 && maxRefsToCheck < header.references.length) {
+        const avgPerRef = totalReads / maxRefsToCheck;
+        totalReads += avgPerRef * (header.references.length - maxRefsToCheck);
+        console.log(`Estimated total reads: ${Math.floor(totalReads)}`);
+      }
+    }
+    
+    // If we couldn't get counts from index, estimate based on file size
+    if (totalReads === 0) {
+      totalReads = Math.floor(stats.size / 100); // Rough estimate: ~100 bytes per read
+      console.log(`Estimated reads from file size: ${totalReads}`);
+    }
+    
+    // Cache the BAM file instance
+    bamFiles.set(filePath, bamFile);
+    
+    const result = {
+      success: true,
+      header: header,
+      references: header.references || [],
+      totalReads: Math.floor(totalReads),
+      fileSize: stats.size
+    };
+    
+    console.log('BAM initialization successful:', {
+      references: result.references.length,
+      totalReads: result.totalReads,
+      fileSize: `${(result.fileSize / (1024 * 1024)).toFixed(2)} MB`
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error initializing BAM file:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Clean up any cached instance
+    bamFiles.delete(filePath);
+    return {
+      success: false,
+      error: `Failed to initialize BAM file: ${error.message}. Please ensure the BAM file is properly formatted and not corrupted.`
+    };
+  }
+});
+
+ipcMain.handle('bam-get-reads', async (event, params) => {
+  try {
+    const { filePath, chromosome, start, end } = params;
+    
+    console.log(`Getting BAM reads for ${chromosome}:${start}-${end}`);
+    
+    // Get cached BAM file instance
+    const bamFile = bamFiles.get(filePath);
+    if (!bamFile) {
+      throw new Error('BAM file not initialized. Please reinitialize the BAM file.');
+    }
+    
+    // Validate input parameters
+    if (!chromosome || typeof chromosome !== 'string') {
+      throw new Error('Invalid chromosome parameter');
+    }
+    
+    if (typeof start !== 'number' || typeof end !== 'number' || start < 0 || end < start) {
+      throw new Error('Invalid start/end coordinates');
+    }
+    
+    // Limit the query range to prevent excessive memory usage
+    const maxRangeSize = 10000000; // 10MB max range
+    if (end - start > maxRangeSize) {
+      throw new Error(`Query range too large. Maximum range size is ${maxRangeSize} bases.`);
+    }
+    
+    // Get records from BAM file using the correct API
+    // Note: @gmod/bam uses 0-based half-open coordinates
+    console.log(`Fetching records for range ${chromosome}:${start}-${end}`);
+    const records = await bamFile.getRecordsForRange(chromosome, start, end);
+    
+    console.log(`Retrieved ${records.length} raw records from BAM file`);
+    
+    // Convert records to our internal format with better error handling
+    const reads = [];
+    for (let i = 0; i < records.length; i++) {
+      try {
+        const record = records[i];
+        
+        const read = {
+          id: record.name || record.qname || `read_${i}`,
+          chromosome: record.refName || chromosome,
+          start: record.start,
+          end: record.end,
+          strand: (record.strand === 1 || record.strand === '+') ? '+' : '-',
+          mappingQuality: record.mq || record.mapq || 0,
+          cigar: record.CIGAR || record.cigar || '',
+          sequence: record.seq || '',
+          quality: record.qual || '',
+          flags: record.flags || 0,
+          templateLength: record.template_length || record.tlen || 0,
+          tags: record.tags || {}
+        };
+        
+        reads.push(read);
+      } catch (recordError) {
+        console.warn(`Error processing record ${i}:`, recordError.message);
+        // Continue processing other records
+      }
+    }
+    
+    console.log(`Successfully converted ${reads.length} BAM reads`);
+    
+    return {
+      success: true,
+      reads: reads
+    };
+  } catch (error) {
+    console.error('Error getting BAM reads:', error);
+    console.error('Error stack:', error.stack);
+    return {
+      success: false,
+      error: `Failed to read BAM records: ${error.message}`
+    };
+  }
+});
+
+// Clean up BAM files when app is quitting
+app.on('before-quit', () => {
+  bamFiles.clear();
 });
 
 ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {

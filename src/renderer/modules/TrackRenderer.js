@@ -2105,9 +2105,10 @@ class TrackRenderer {
         const { track, trackContent } = this.createTrackBase('reads', chromosome);
         const viewport = this.getCurrentViewport();
         
-        // Check if ReadsManager has data loaded (either in-memory or streaming mode)
+        // Check if ReadsManager has data loaded (either in-memory, streaming, or BAM mode)
         const hasReadsData = this.genomeBrowser.readsManager.rawReadsData || 
                            this.genomeBrowser.readsManager.isStreaming ||
+                           this.genomeBrowser.readsManager.isBamMode ||
                            this.genomeBrowser.readsManager.currentFile;
         
         if (!hasReadsData) {
