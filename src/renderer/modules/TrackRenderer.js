@@ -5125,7 +5125,9 @@ class TrackRenderer {
                 settings.showStartMarkers = modal.querySelector('#sequenceShowStartMarkers').checked;
                 settings.showEndArrows = modal.querySelector('#sequenceShowEndArrows').checked;
                 settings.startMarkerWidth = parseFloat(modal.querySelector('#sequenceStartMarkerWidth').value) || 3;
+                settings.startMarkerHeight = parseInt(modal.querySelector('#sequenceStartMarkerHeight').value) || 85;
                 settings.arrowSize = parseInt(modal.querySelector('#sequenceArrowSize').value) || 6;
+                settings.arrowHeight = parseInt(modal.querySelector('#sequenceArrowHeight').value) || 85;
                 settings.showCDS = modal.querySelector('#sequenceShowCDS').checked;
                 settings.showRNA = modal.querySelector('#sequenceShowRNA').checked;
                 settings.showPromoter = modal.querySelector('#sequenceShowPromoter').checked;
@@ -5400,9 +5402,19 @@ class TrackRenderer {
                     <div class="help-text">Width of the vertical start marker lines.</div>
                 </div>
                 <div class="form-group">
+                    <label for="sequenceStartMarkerHeight">Start marker height (% of bar):</label>
+                    <input type="number" id="sequenceStartMarkerHeight" min="50" max="100" value="${settings.startMarkerHeight || 85}">
+                    <div class="help-text">Height of start markers as percentage of indicator bar height (50-100%).</div>
+                </div>
+                <div class="form-group">
                     <label for="sequenceArrowSize">End arrow size (px):</label>
                     <input type="number" id="sequenceArrowSize" min="3" max="12" value="${settings.arrowSize || 6}">
                     <div class="help-text">Size of the directional arrows at gene ends.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceArrowHeight">End arrow height (% of bar):</label>
+                    <input type="number" id="sequenceArrowHeight" min="50" max="100" value="${settings.arrowHeight || 85}">
+                    <div class="help-text">Height of end arrows as percentage of indicator bar height (50-100%).</div>
                 </div>
             </div>
             <div class="settings-section">

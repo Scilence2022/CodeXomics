@@ -833,7 +833,10 @@ class SequenceUtils {
         // Start marker (vertical line) - only if gene actually starts in this line and enabled
         if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
             const markerWidth = settings.startMarkerWidth || 3;
-            indicator += `<line x1="${startX}" y1="2" x2="${startX}" y2="${barHeight-2}" 
+            const markerHeightPercent = settings.startMarkerHeight || 85;
+            const markerHeight = (barHeight * markerHeightPercent / 100);
+            const markerOffset = (barHeight - markerHeight) / 2;
+            indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
                                stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
                                ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
         }
@@ -893,6 +896,9 @@ class SequenceUtils {
      */
     createGeneEndArrow(x, height, color, isForward, gene, settings = {}) {
         const arrowSize = settings.arrowSize || 6; // Use settings or default
+        const arrowHeightPercent = settings.arrowHeight || 85;
+        const arrowHeight = (height * arrowHeightPercent / 100);
+        const arrowOffset = (height - arrowHeight) / 2;
         const darkColor = this.darkenHexColor(color, 40);
         const tooltipAttr = settings.showTooltips !== false ? 
             `title="Gene end (${gene.qualifiers?.gene || gene.type}) ${isForward ? '→' : '←'}"` : '';
@@ -900,13 +906,17 @@ class SequenceUtils {
         
         let arrow = '';
         
+        const arrowTop = arrowOffset;
+        const arrowMiddle = height / 2;
+        const arrowBottom = arrowOffset + arrowHeight;
+        
         if (isForward) {
             // Right-pointing arrow
-            arrow = `<path d="M ${x-arrowSize} 2 L ${x} ${height/2} L ${x-arrowSize} ${height-2} Z" 
+            arrow = `<path d="M ${x-arrowSize} ${arrowTop} L ${x} ${arrowMiddle} L ${x-arrowSize} ${arrowBottom} Z" 
                            fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
         } else {
             // Left-pointing arrow
-            arrow = `<path d="M ${x+arrowSize} 2 L ${x} ${height/2} L ${x+arrowSize} ${height-2} Z" 
+            arrow = `<path d="M ${x+arrowSize} ${arrowTop} L ${x} ${arrowMiddle} L ${x+arrowSize} ${arrowBottom} Z" 
                            fill="${darkColor}" opacity="1" ${tooltipAttr} class="${hoverClass}"/>`;
         }
         
@@ -974,7 +984,9 @@ class SequenceUtils {
             showStartMarkers: true,
             showEndArrows: true,
             startMarkerWidth: 3,
+            startMarkerHeight: 85,
             arrowSize: 6,
+            arrowHeight: 85,
             showCDS: true,
             showRNA: true,
             showPromoter: true,

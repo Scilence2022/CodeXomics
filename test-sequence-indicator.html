@@ -145,9 +145,13 @@
                 <button class="btn" onclick="updateDisplay()">Apply Settings</button>
             </div>
             <div class="settings-row">
-                <label>Height: <input type="range" id="indicatorHeight" min="8" max="20" value="12"> <span id="heightValue">12</span>px</label>
+                <label>Bar Height: <input type="range" id="indicatorHeight" min="8" max="20" value="12"> <span id="heightValue">12</span>px</label>
                 <label>Opacity: <input type="range" id="indicatorOpacity" min="0.3" max="1" step="0.1" value="0.7"> <span id="opacityValue">0.7</span></label>
                 <label>Arrow Size: <input type="range" id="arrowSize" min="3" max="12" value="8"> <span id="arrowValue">8</span>px</label>
+            </div>
+            <div class="settings-row">
+                <label>Start Height: <input type="range" id="startMarkerHeight" min="50" max="100" value="85"> <span id="startHeightValue">85</span>%</label>
+                <label>Arrow Height: <input type="range" id="arrowHeight" min="50" max="100" value="85"> <span id="arrowHeightValue">85</span>%</label>
             </div>
             <div class="settings-row">
                 <label><input type="checkbox" id="showCDS" checked> CDS</label>
@@ -186,10 +190,13 @@
             </div>
             <div style="margin-top: 10px; font-size: 14px; color: #666;">
                 <p><strong>增强的标记说明：</strong></p>
-                <p>｜ 竖线（粗3px）= 基因起始位置</p>
-                <p>► 右箭头（大8px）= 正链基因终止</p>
-                <p>◄ 左箭头（大8px）= 负链基因终止</p>
+                <p>｜ 竖线（可调宽度）= 基因起始位置</p>
+                <p>► 右箭头（可调大小）= 正链基因终止</p>
+                <p>◄ 左箭头（可调大小）= 负链基因终止</p>
                 <p>🎛️ 可通过设置面板实时调整所有参数</p>
+                <p><strong>新增高度设置：</strong></p>
+                <p>• 起始标记高度：50-100%（指示条高度百分比）</p>
+                <p>• 箭头高度：50-100%（指示条高度百分比）</p>
             </div>
         </div>
     </div>
@@ -203,6 +210,8 @@
             showStartMarkers: true,
             showEndArrows: true,
             arrowSize: 8,
+            startMarkerHeight: 85,
+            arrowHeight: 85,
             showCDS: true,
             showRNA: true,
             showPromoter: true,
@@ -238,20 +247,28 @@
                 indicator += `<rect x="${x}" y="3" width="${width}" height="${height - 6}" fill="${color}" opacity="${opacity}"/>`;
             }
             
-            // Start marker
+            // Start marker with configurable height
             if (settings.showStartMarkers && hasStart) {
                 const darkColor = darkenColor(color, 30);
-                indicator += `<line x1="${x}" y1="2" x2="${x}" y2="${height-2}" stroke="${darkColor}" stroke-width="3" opacity="0.9"/>`;
+                const markerHeight = (height * settings.startMarkerHeight / 100);
+                const markerOffset = (height - markerHeight) / 2;
+                indicator += `<line x1="${x}" y1="${markerOffset}" x2="${x}" y2="${markerOffset + markerHeight}" stroke="${darkColor}" stroke-width="3" opacity="0.9"/>`;
             }
             
-            // End arrow
+            // End arrow with configurable height
             if (settings.showEndArrows && hasEnd) {
                 const darkColor = darkenColor(color, 40);
                 const arrowSize = settings.arrowSize;
+                const arrowHeight = (height * settings.arrowHeight / 100);
+                const arrowOffset = (height - arrowHeight) / 2;
+                const arrowTop = arrowOffset;
+                const arrowMiddle = height / 2;
+                const arrowBottom = arrowOffset + arrowHeight;
+                
                 if (isForward) {
-                    indicator += `<path d="M ${x + width - arrowSize} 2 L ${x + width} ${height/2} L ${x + width - arrowSize} ${height-2} Z" fill="${darkColor}" opacity="1"/>`;
+                    indicator += `<path d="M ${x + width - arrowSize} ${arrowTop} L ${x + width} ${arrowMiddle} L ${x + width - arrowSize} ${arrowBottom} Z" fill="${darkColor}" opacity="1"/>`;
                 } else {
-                    indicator += `<path d="M ${x + arrowSize} 2 L ${x} ${height/2} L ${x + arrowSize} ${height-2} Z" fill="${darkColor}" opacity="1"/>`;
+                    indicator += `<path d="M ${x + arrowSize} ${arrowTop} L ${x} ${arrowMiddle} L ${x + arrowSize} ${arrowBottom} Z" fill="${darkColor}" opacity="1"/>`;
                 }
             }
             
@@ -277,6 +294,8 @@
             settings.showStartMarkers = document.getElementById('showStartMarkers').checked;
             settings.showEndArrows = document.getElementById('showEndArrows').checked;
             settings.arrowSize = parseInt(document.getElementById('arrowSize').value);
+            settings.startMarkerHeight = parseInt(document.getElementById('startMarkerHeight').value);
+            settings.arrowHeight = parseInt(document.getElementById('arrowHeight').value);
             settings.showCDS = document.getElementById('showCDS').checked;
             settings.showRNA = document.getElementById('showRNA').checked;
             settings.showPromoter = document.getElementById('showPromoter').checked;
@@ -339,17 +358,36 @@
             `;
         }
         
-        // Update value displays
+        // Update value displays and trigger demo update
         document.getElementById('indicatorHeight').addEventListener('input', function() {
             document.getElementById('heightValue').textContent = this.value;
+            updateDisplay();
         });
         
         document.getElementById('indicatorOpacity').addEventListener('input', function() {
             document.getElementById('opacityValue').textContent = this.value;
+            updateDisplay();
         });
         
         document.getElementById('arrowSize').addEventListener('input', function() {
             document.getElementById('arrowValue').textContent = this.value;
+            updateDisplay();
+        });
+        
+        document.getElementById('startMarkerHeight').addEventListener('input', function() {
+            document.getElementById('startHeightValue').textContent = this.value;
+            updateDisplay();
+        });
+        
+        document.getElementById('arrowHeight').addEventListener('input', function() {
+            document.getElementById('arrowHeightValue').textContent = this.value;
+            updateDisplay();
+        });
+        
+        // Checkbox event listeners
+        ['showIndicators', 'showStartMarkers', 'showEndArrows', 'showCDS', 'showRNA', 'showPromoter', 'showTerminator', 'showRegulatory']
+        .forEach(id => {
+            document.getElementById(id).addEventListener('change', updateDisplay);
         });
         
         // Initial generation
