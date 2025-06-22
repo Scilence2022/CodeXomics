@@ -35,7 +35,14 @@ class ConversationEvolutionManager {
     async initializeEvolutionSystem() {
         try {
             // 获取LLM配置管理器
-            this.llmConfigManager = this.chatManager.llmConfigManager;
+            if (this.chatManager && this.chatManager.llmConfigManager) {
+                // 使用现有的LLM配置管理器（集成模式）
+                this.llmConfigManager = this.chatManager.llmConfigManager;
+            } else {
+                // 创建独立的LLM配置管理器（独立模式）
+                console.log('Creating standalone LLMConfigManager for evolution system...');
+                this.llmConfigManager = new LLMConfigManager(this.configManager);
+            }
             
             // 初始化分析引擎
             this.analysisEngine = new ConversationAnalysisEngine(this);
@@ -46,7 +53,7 @@ class ConversationEvolutionManager {
             // 加载进化数据
             await this.loadEvolutionData();
             
-            // 设置对话监听
+            // 设置对话监听（仅在集成模式下）
             this.setupConversationMonitoring();
             
             console.log('Evolution system initialized successfully');
@@ -108,16 +115,30 @@ class ConversationEvolutionManager {
      */
     getCurrentContext() {
         try {
-            const context = this.chatManager.getCurrentContext();
-            return {
-                currentChromosome: context.genomeBrowser.currentChromosome,
-                currentPosition: context.genomeBrowser.currentPosition,
-                loadedFiles: context.genomeBrowser.loadedFiles,
-                availableTools: context.genomeBrowser.toolSources.total,
-                pluginCount: context.genomeBrowser.toolSources.plugins
-            };
+            if (this.chatManager && this.chatManager.getCurrentContext) {
+                // 集成模式：从chatManager获取上下文
+                const context = this.chatManager.getCurrentContext();
+                return {
+                    currentChromosome: context.genomeBrowser.currentChromosome,
+                    currentPosition: context.genomeBrowser.currentPosition,
+                    loadedFiles: context.genomeBrowser.loadedFiles,
+                    availableTools: context.genomeBrowser.toolSources.total,
+                    pluginCount: context.genomeBrowser.toolSources.plugins
+                };
+            } else {
+                // 独立模式：返回基本上下文信息
+                return {
+                    mode: 'standalone',
+                    timestamp: new Date().toISOString(),
+                    systemStatus: 'active',
+                    evolutionSystemActive: true
+                };
+            }
         } catch (error) {
-            return { error: 'Failed to get context' };
+            return { 
+                error: 'Failed to get context',
+                mode: this.chatManager ? 'integrated' : 'standalone'
+            };
         }
     }
 
