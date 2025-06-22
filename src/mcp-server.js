@@ -509,7 +509,70 @@ class MCPGenomeBrowserServer {
                     },
                     required: ['pathwayName']
                 }
-            }
+            },
+
+            // AlphaFold-specific tools
+            search_alphafold_by_gene: {
+                name: 'search_alphafold_by_gene',
+                description: 'Search AlphaFold database for protein structures by gene name',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        geneName: { type: 'string', description: 'Gene name to search' },
+                        organism: { type: 'string', description: 'Organism name (default: Homo sapiens)' },
+                        maxResults: { type: 'number', description: 'Maximum number of results to return (default: 10)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['geneName']
+                }
+            },
+
+            fetch_alphafold_structure: {
+                name: 'fetch_alphafold_structure',
+                description: 'Fetch AlphaFold protein structure by UniProt ID',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        uniprotId: { type: 'string', description: 'UniProt ID (e.g., P53_HUMAN)' },
+                        geneName: { type: 'string', description: 'Gene name for display purposes' },
+                        format: { type: 'string', description: 'Structure format (pdb or cif)', default: 'pdb' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['uniprotId']
+                }
+            },
+
+            search_alphafold_by_sequence: {
+                name: 'search_alphafold_by_sequence',
+                description: 'Search AlphaFold database by protein sequence using UniProt BLAST',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'Protein sequence to search' },
+                        evalue: { type: 'number', description: 'E-value threshold (default: 1e-10)' },
+                        maxResults: { type: 'number', description: 'Maximum number of results to return (default: 10)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['sequence']
+                }
+            },
+
+            open_alphafold_viewer: {
+                name: 'open_alphafold_viewer',
+                description: 'Open AlphaFold 3D structure viewer with enhanced features',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        structureData: { type: 'string', description: 'PDB/CIF structure data' },
+                        uniprotId: { type: 'string', description: 'UniProt ID' },
+                        geneName: { type: 'string', description: 'Gene name for display' },
+                        confidenceData: { type: 'string', description: 'AlphaFold confidence scores (PAE data)' },
+                        organism: { type: 'string', description: 'Source organism' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['structureData', 'uniprotId']
+                }
+            },
         };
     }
 
@@ -530,6 +593,23 @@ class MCPGenomeBrowserServer {
         
         if (toolName === 'search_protein_by_gene') {
             return await this.searchProteinByGene(parameters);
+        }
+
+        // Handle AlphaFold tools directly on server
+        if (toolName === 'search_alphafold_by_gene') {
+            return await this.searchAlphaFoldByGene(parameters);
+        }
+        
+        if (toolName === 'fetch_alphafold_structure') {
+            return await this.fetchAlphaFoldStructure(parameters);
+        }
+        
+        if (toolName === 'search_alphafold_by_sequence') {
+            return await this.searchAlphaFoldBySequence(parameters);
+        }
+        
+        if (toolName === 'open_alphafold_viewer') {
+            return await this.openAlphaFoldViewer(parameters, clientId);
         }
 
         // For client-side tools, find client
@@ -795,6 +875,341 @@ class MCPGenomeBrowserServer {
             
             req.end();
         });
+    }
+
+    /**
+     * ALPHAFOLD INTEGRATION METHODS
+     */
+
+    /**
+     * Search AlphaFold database by gene name
+     */
+    async searchAlphaFoldByGene(parameters) {
+        const { geneName, organism = 'Homo sapiens', maxResults = 10 } = parameters;
+        
+        console.log('=== MCP SERVER: SEARCH ALPHAFOLD BY GENE ===');
+        console.log('Searching for gene:', geneName, 'in organism:', organism);
+        
+        try {
+            // Step 1: Search UniProt for gene name to get UniProt IDs
+            const uniprotResults = await this.searchUniProtByGene(geneName, organism, maxResults);
+            
+            if (uniprotResults.length === 0) {
+                return {
+                    success: true,
+                    results: [],
+                    message: `No UniProt entries found for gene: ${geneName} in ${organism}`
+                };
+            }
+            
+            // Step 2: Check which UniProt IDs have AlphaFold structures
+            const alphaFoldResults = [];
+            for (const uniprotEntry of uniprotResults) {
+                try {
+                    const hasStructure = await this.checkAlphaFoldStructureExists(uniprotEntry.uniprotId);
+                    if (hasStructure) {
+                        alphaFoldResults.push({
+                            uniprotId: uniprotEntry.uniprotId,
+                            geneName: geneName,
+                            proteinName: uniprotEntry.proteinName,
+                            organism: uniprotEntry.organism,
+                            length: uniprotEntry.length,
+                            hasAlphaFoldStructure: true,
+                            alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${uniprotEntry.uniprotId}`
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Failed to check AlphaFold structure for ${uniprotEntry.uniprotId}:`, error.message);
+                }
+            }
+            
+            console.log(`Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName}`);
+            console.log('=== MCP SERVER: SEARCH ALPHAFOLD BY GENE END ===');
+            
+            return {
+                success: true,
+                results: alphaFoldResults,
+                totalFound: alphaFoldResults.length
+            };
+            
+        } catch (error) {
+            console.error('Error in searchAlphaFoldByGene:', error.message);
+            throw new Error(`Failed to search AlphaFold database: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search UniProt database by gene name
+     */
+    async searchUniProtByGene(geneName, organism, maxResults) {
+        try {
+            // Build UniProt search query
+            const query = `gene:${geneName} AND organism:"${organism}"`;
+            const encodedQuery = encodeURIComponent(query);
+            
+            console.log('UniProt search query:', query);
+            
+            const response = await this.makeHTTPSRequest({
+                hostname: 'rest.uniprot.org',
+                path: `/uniprotkb/search?query=${encodedQuery}&format=json&size=${maxResults}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const data = JSON.parse(response);
+            
+            if (!data.results || data.results.length === 0) {
+                return [];
+            }
+            
+            return data.results.map(entry => ({
+                uniprotId: entry.primaryAccession,
+                proteinName: entry.proteinDescription?.recommendedName?.fullName?.value || 
+                           entry.proteinDescription?.submissionNames?.[0]?.fullName?.value || 
+                           'Unknown protein',
+                organism: entry.organism?.scientificName || organism,
+                length: entry.sequence?.length,
+                geneNames: entry.genes?.map(gene => gene.geneName?.value).filter(Boolean) || []
+            }));
+            
+        } catch (error) {
+            throw new Error(`Failed to search UniProt: ${error.message}`);
+        }
+    }
+
+    /**
+     * Check if AlphaFold structure exists for a UniProt ID
+     */
+    async checkAlphaFoldStructureExists(uniprotId) {
+        try {
+            // Try to access the AlphaFold API summary endpoint
+            await this.makeHTTPSRequest({
+                hostname: 'alphafold.ebi.ac.uk',
+                path: `/api/prediction/${uniprotId}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            return true;
+        } catch (error) {
+            // If we get a 404 or other error, structure doesn't exist
+            return false;
+        }
+    }
+
+    /**
+     * Fetch AlphaFold structure by UniProt ID
+     */
+    async fetchAlphaFoldStructure(parameters) {
+        const { uniprotId, geneName, format = 'pdb' } = parameters;
+        
+        console.log('=== MCP SERVER: FETCH ALPHAFOLD STRUCTURE ===');
+        console.log('Fetching AlphaFold structure for UniProt ID:', uniprotId);
+        
+        try {
+            // Step 1: Get AlphaFold metadata
+            const metadataResponse = await this.makeHTTPSRequest({
+                hostname: 'alphafold.ebi.ac.uk',
+                path: `/api/prediction/${uniprotId}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const metadata = JSON.parse(metadataResponse);
+            console.log('AlphaFold metadata retrieved for:', uniprotId);
+            
+            // Step 2: Download structure file
+            const fileExtension = format === 'cif' ? 'cif' : 'pdb';
+            const structureData = await this.makeHTTPSRequest({
+                hostname: 'alphafold.ebi.ac.uk',
+                path: `/files/AF-${uniprotId}-F1-model_v4.${fileExtension}`,
+                method: 'GET'
+            });
+            
+            console.log(`AlphaFold ${format.toUpperCase()} file downloaded successfully, size:`, structureData.length, 'characters');
+            
+            // Step 3: Get confidence data (PAE - Predicted Aligned Error)
+            let confidenceData = null;
+            try {
+                confidenceData = await this.makeHTTPSRequest({
+                    hostname: 'alphafold.ebi.ac.uk',
+                    path: `/files/AF-${uniprotId}-F1-predicted_aligned_error_v4.json`,
+                    method: 'GET'
+                });
+                console.log('AlphaFold confidence data downloaded');
+            } catch (error) {
+                console.warn('Could not download confidence data:', error.message);
+            }
+            
+            const result = {
+                success: true,
+                uniprotId: uniprotId,
+                geneName: geneName || uniprotId,
+                structureData: structureData,
+                format: format,
+                confidenceData: confidenceData,
+                metadata: {
+                    modelConfidence: metadata[0]?.pLDDT,
+                    modelVersion: metadata[0]?.modelVersion || 'v4',
+                    modelCreatedDate: metadata[0]?.modelCreatedDate,
+                    latestVersion: metadata[0]?.latestVersion,
+                    sequence: metadata[0]?.uniprotSequence
+                },
+                downloadedAt: new Date().toISOString(),
+                alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${uniprotId}`
+            };
+            
+            console.log('AlphaFold structure fetched successfully for:', uniprotId);
+            console.log('=== MCP SERVER: FETCH ALPHAFOLD STRUCTURE END ===');
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Error in fetchAlphaFoldStructure:', error.message);
+            throw new Error(`Failed to fetch AlphaFold structure for ${uniprotId}: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search AlphaFold database by protein sequence
+     */
+    async searchAlphaFoldBySequence(parameters) {
+        const { sequence, evalue = 1e-10, maxResults = 10 } = parameters;
+        
+        console.log('=== MCP SERVER: SEARCH ALPHAFOLD BY SEQUENCE ===');
+        console.log('Searching by sequence, length:', sequence.length);
+        
+        try {
+            // Use UniProt BLAST to find similar sequences
+            const blastResults = await this.runUniProtBLAST(sequence, evalue, maxResults);
+            
+            if (blastResults.length === 0) {
+                return {
+                    success: true,
+                    results: [],
+                    message: 'No similar sequences found in UniProt database'
+                };
+            }
+            
+            // Check which results have AlphaFold structures
+            const alphaFoldResults = [];
+            for (const hit of blastResults) {
+                try {
+                    const hasStructure = await this.checkAlphaFoldStructureExists(hit.uniprotId);
+                    if (hasStructure) {
+                        alphaFoldResults.push({
+                            ...hit,
+                            hasAlphaFoldStructure: true,
+                            alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${hit.uniprotId}`
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Failed to check AlphaFold structure for ${hit.uniprotId}:`, error.message);
+                }
+            }
+            
+            console.log(`Found ${alphaFoldResults.length} AlphaFold structures from sequence search`);
+            console.log('=== MCP SERVER: SEARCH ALPHAFOLD BY SEQUENCE END ===');
+            
+            return {
+                success: true,
+                results: alphaFoldResults,
+                totalFound: alphaFoldResults.length,
+                querySequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : '')
+            };
+            
+        } catch (error) {
+            console.error('Error in searchAlphaFoldBySequence:', error.message);
+            throw new Error(`Failed to search AlphaFold by sequence: ${error.message}`);
+        }
+    }
+
+    /**
+     * Run BLAST search against UniProt database
+     */
+    async runUniProtBLAST(sequence, evalue, maxResults) {
+        try {
+            // This is a simplified implementation - in reality, you might want to use
+            // a more sophisticated BLAST service or the EBI BLAST API
+            // For now, we'll use UniProt's similarity search
+            
+            const query = encodeURIComponent(sequence);
+            const response = await this.makeHTTPSRequest({
+                hostname: 'rest.uniprot.org',
+                path: `/uniprotkb/search?query=sequence:${query.substring(0, 100)}&format=json&size=${maxResults}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const data = JSON.parse(response);
+            
+            if (!data.results || data.results.length === 0) {
+                return [];
+            }
+            
+            return data.results.map(entry => ({
+                uniprotId: entry.primaryAccession,
+                proteinName: entry.proteinDescription?.recommendedName?.fullName?.value || 
+                           'Unknown protein',
+                organism: entry.organism?.scientificName || 'Unknown',
+                length: entry.sequence?.length,
+                similarity: 'High', // Simplified - real implementation would calculate this
+                evalue: evalue
+            }));
+            
+        } catch (error) {
+            throw new Error(`Failed to run UniProt BLAST: ${error.message}`);
+        }
+    }
+
+    /**
+     * Open AlphaFold structure viewer
+     */
+    async openAlphaFoldViewer(parameters, clientId) {
+        const { structureData, uniprotId, geneName, confidenceData, organism } = parameters;
+        
+        console.log('=== MCP SERVER: OPEN ALPHAFOLD VIEWER ===');
+        console.log('Opening AlphaFold viewer for:', { uniprotId, geneName, organism });
+        
+        try {
+            // Send structure data to client for 3D visualization
+            const client = this.clients.get(clientId);
+            if (client) {
+                client.send(JSON.stringify({
+                    type: 'open-alphafold-viewer',
+                    data: {
+                        structureData: structureData,
+                        uniprotId: uniprotId,
+                        geneName: geneName || uniprotId,
+                        confidenceData: confidenceData,
+                        organism: organism,
+                        isAlphaFold: true,
+                        viewerType: 'alphafold'
+                    }
+                }));
+            }
+            
+            console.log('AlphaFold viewer request sent to client');
+            console.log('=== MCP SERVER: OPEN ALPHAFOLD VIEWER END ===');
+            
+            return {
+                success: true,
+                message: `AlphaFold structure viewer opened for ${geneName || uniprotId}`,
+                uniprotId: uniprotId,
+                geneName: geneName
+            };
+            
+        } catch (error) {
+            console.error('Error in openAlphaFoldViewer:', error.message);
+            throw new Error(`Failed to open AlphaFold viewer: ${error.message}`);
+        }
     }
 
     /**

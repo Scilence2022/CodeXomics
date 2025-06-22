@@ -27,17 +27,25 @@ class ProteinStructureViewer {
         const toolbar = document.querySelector('.toolbar') || document.querySelector('.navigation-controls');
         if (!toolbar) return;
 
-        // Check if button already exists
+        // Check if buttons already exist
         if (document.getElementById('protein-viewer-btn')) return;
 
         const proteinBtn = document.createElement('button');
         proteinBtn.id = 'protein-viewer-btn';
         proteinBtn.className = 'btn';
         proteinBtn.innerHTML = '<i class="fas fa-cube"></i> 3D Proteins';
-        proteinBtn.title = 'Open Protein Structure Viewer';
+        proteinBtn.title = 'Open Protein Structure Viewer (PDB)';
         proteinBtn.onclick = () => this.showProteinSearchDialog();
         
+        const alphaFoldBtn = document.createElement('button');
+        alphaFoldBtn.id = 'alphafold-viewer-btn';
+        alphaFoldBtn.className = 'btn';
+        alphaFoldBtn.innerHTML = '<i class="fas fa-dna"></i> AlphaFold';
+        alphaFoldBtn.title = 'Search AlphaFold Database';
+        alphaFoldBtn.onclick = () => this.showAlphaFoldSearchDialog();
+        
         toolbar.appendChild(proteinBtn);
+        toolbar.appendChild(alphaFoldBtn);
     }
 
     /**
@@ -196,6 +204,146 @@ class ProteinStructureViewer {
 
                 .protein-search-dialog .btn:hover {
                     opacity: 0.9;
+                }
+
+                /* AlphaFold-specific styles */
+                .alphafold-search-dialog {
+                    border: none;
+                    border-radius: 12px;
+                    box-shadow: 0 6px 30px rgba(0,0,0,0.3);
+                    max-width: 600px;
+                    width: 95%;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                }
+
+                .alphafold-search-dialog .dialog-header {
+                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                    color: white;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .alphafold-search-dialog .dialog-header h3 {
+                    margin: 0;
+                    font-size: 1.3em;
+                }
+
+                .alphafold-search-dialog .close-btn {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 1.5em;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .alphafold-search-dialog .close-btn:hover {
+                    background: rgba(255,255,255,0.2);
+                }
+
+                .alphafold-search-dialog .dialog-body {
+                    padding: 25px;
+                }
+
+                .alphafold-search-dialog .input-group {
+                    margin-bottom: 20px;
+                }
+
+                .alphafold-search-dialog .input-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .alphafold-search-dialog .input-group input,
+                .alphafold-search-dialog .input-group select {
+                    width: 100%;
+                    padding: 12px 15px;
+                    border: 2px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    transition: border-color 0.3s ease;
+                }
+
+                .alphafold-search-dialog .input-group input:focus,
+                .alphafold-search-dialog .input-group select:focus {
+                    outline: none;
+                    border-color: #4CAF50;
+                    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+                }
+
+                .alphafold-search-dialog .button-group {
+                    display: flex;
+                    gap: 15px;
+                    margin-top: 25px;
+                }
+
+                .alphafold-search-dialog .btn {
+                    padding: 12px 25px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                }
+
+                .alphafold-search-dialog .btn-primary {
+                    background: #4CAF50;
+                    color: white;
+                }
+
+                .alphafold-search-dialog .btn-primary:hover {
+                    background: #45a049;
+                    transform: translateY(-1px);
+                }
+
+                .alphafold-search-dialog .btn-secondary {
+                    background: #6c757d;
+                    color: white;
+                }
+
+                .alphafold-search-dialog .btn-secondary:hover {
+                    background: #5a6268;
+                }
+
+                .alphafold-result-item {
+                    background: #f8fff8;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .alphafold-result-item:hover {
+                    background: #f0fff0;
+                    border-color: #4CAF50;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+
+                .alphafold-result-title {
+                    font-weight: 600;
+                    color: #2E7D32;
+                    margin-bottom: 5px;
+                }
+
+                .alphafold-result-details {
+                    font-size: 13px;
+                    color: #666;
+                    line-height: 1.4;
                 }
 
                 .search-results {
@@ -649,7 +797,22 @@ class ProteinStructureViewer {
     handleMCPMessage(data) {
         if (data.type === 'open_protein_viewer') {
             this.openStructureViewer(data.pdbData, data.proteinName, data.pdbId);
+        } else if (data.type === 'open-alphafold-viewer') {
+            this.openAlphaFoldViewer(data.data);
         }
+    }
+
+    /**
+     * Open AlphaFold structure viewer
+     */
+    openAlphaFoldViewer(alphaFoldData) {
+        const { structureData, uniprotId, geneName, confidenceData, organism } = alphaFoldData;
+        
+        console.log('Opening AlphaFold viewer for:', { uniprotId, geneName, organism });
+        
+        // Use the existing structure viewer but with AlphaFold branding
+        const proteinName = `${geneName} (AlphaFold - ${organism})`;
+        this.openStructureViewer(structureData, proteinName, uniprotId);
     }
 
     /**
@@ -715,6 +878,166 @@ class ProteinStructureViewer {
         }
         
         throw new Error('MCP Server not connected or not available. Please ensure the MCP server is running and connected.');
+    }
+
+    /**
+     * ALPHAFOLD INTEGRATION METHODS
+     */
+
+    /**
+     * Show AlphaFold search dialog
+     */
+    showAlphaFoldSearchDialog() {
+        // Remove any existing dialog first
+        const existingDialog = document.querySelector('.alphafold-search-dialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        const dialog = this.createAlphaFoldSearchDialog();
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        
+        // Focus and clear the input field
+        setTimeout(() => {
+            const inputField = document.getElementById('alphafold-gene-input');
+            if (inputField) {
+                inputField.value = '';
+                inputField.focus();
+                console.log('AlphaFold input field reset and focused');
+            }
+        }, 100);
+    }
+
+    /**
+     * Create AlphaFold search dialog
+     */
+    createAlphaFoldSearchDialog() {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'alphafold-search-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-content">
+                <div class="dialog-header">
+                    <h3>Search AlphaFold Database</h3>
+                    <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
+                </div>
+                <div class="dialog-body">
+                    <div class="input-group">
+                        <label for="alphafold-gene-input">Gene Name:</label>
+                        <input type="text" id="alphafold-gene-input" placeholder="Enter gene name (e.g., TP53, BRCA1)">
+                    </div>
+                    <div class="input-group">
+                        <label for="alphafold-organism-input">Organism:</label>
+                        <select id="alphafold-organism-input">
+                            <option value="Homo sapiens">Human (Homo sapiens)</option>
+                            <option value="Mus musculus">Mouse (Mus musculus)</option>
+                            <option value="Escherichia coli">E. coli</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="proteinStructureViewer.searchAlphaFold()">
+                            Search AlphaFold
+                        </button>
+                        <button class="btn btn-secondary" onclick="this.closest('dialog').close()">
+                            Cancel
+                        </button>
+                    </div>
+                    <div id="alphafold-search-results" class="search-results"></div>
+                </div>
+            </div>
+        `;
+        return dialog;
+    }
+
+    /**
+     * Search AlphaFold database
+     */
+    async searchAlphaFold() {
+        const geneName = document.getElementById('alphafold-gene-input').value.trim();
+        const organism = document.getElementById('alphafold-organism-input').value;
+        const resultsDiv = document.getElementById('alphafold-search-results');
+        
+        if (!geneName) {
+            alert('Please enter a gene name');
+            return;
+        }
+        
+        resultsDiv.innerHTML = '<div class="loading">Searching AlphaFold database...</div>';
+        
+        try {
+            const results = await this.requestMCPTool('search_alphafold_by_gene', {
+                geneName: geneName,
+                organism: organism,
+                maxResults: 10
+            });
+            
+            this.displayAlphaFoldResults(resultsDiv, results.results || []);
+            
+        } catch (error) {
+            console.error('AlphaFold search error:', error);
+            resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        }
+    }
+
+    /**
+     * Display AlphaFold search results
+     */
+    displayAlphaFoldResults(resultsDiv, results) {
+        if (!results || results.length === 0) {
+            resultsDiv.innerHTML = '<div class="no-results">No AlphaFold structures found.</div>';
+            return;
+        }
+        
+        let html = `<h4>Found ${results.length} AlphaFold structure(s):</h4>`;
+        
+        for (const result of results) {
+            const uniprotId = result.uniprotId;
+            const geneName = result.geneName || 'Unknown';
+            const proteinName = result.proteinName || 'Unknown protein';
+            const organism = result.organism || 'Unknown organism';
+            
+            html += `
+                <div class="alphafold-result-item" onclick="proteinStructureViewer.loadAlphaFoldStructure('${uniprotId}', '${geneName}')">
+                    <div class="alphafold-result-title">
+                        ${geneName} (${uniprotId})
+                    </div>
+                    <div class="alphafold-result-details">
+                        <strong>Protein:</strong> ${proteinName}<br>
+                        <strong>Organism:</strong> ${organism}
+                    </div>
+                </div>
+            `;
+        }
+        
+        resultsDiv.innerHTML = html;
+    }
+
+    /**
+     * Load AlphaFold structure
+     */
+    async loadAlphaFoldStructure(uniprotId, geneName) {
+        try {
+            console.log('Loading AlphaFold structure:', uniprotId, geneName);
+            
+            const result = await this.requestMCPTool('fetch_alphafold_structure', {
+                uniprotId: uniprotId,
+                geneName: geneName,
+                format: 'pdb'
+            });
+            
+            // Close search dialog
+            const searchDialog = document.querySelector('.alphafold-search-dialog');
+            if (searchDialog) {
+                searchDialog.close();
+            }
+            
+            // Open structure viewer
+            this.openStructureViewer(result.structureData, `${geneName} (AlphaFold)`, uniprotId);
+            
+        } catch (error) {
+            console.error('Error loading AlphaFold structure:', error);
+            alert(`Failed to load AlphaFold structure: ${error.message}`);
+        }
     }
 }
 
