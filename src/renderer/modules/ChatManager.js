@@ -2309,6 +2309,29 @@ class ChatManager {
         
         // Check if no tool calls are present (conversational response)
         const hasToolCall = this.parseToolCall(response) !== null || this.parseMultipleToolCalls(response).length > 0;
+        
+        // CRITICAL: For analysis tasks, don't mark as complete if we only have basic data retrieval
+        const isAnalysisTask = lowercaseResponse.includes('analyze') || lowercaseResponse.includes('analysis');
+        const hasAnalysisResults = lowercaseResponse.includes('results') || lowercaseResponse.includes('findings') || 
+                                   lowercaseResponse.includes('statistics') || lowercaseResponse.includes('composition') ||
+                                   lowercaseResponse.includes('frequency') || lowercaseResponse.includes('usage');
+        
+        // Check if this is a request for summary rather than providing one
+        const isSummaryRequest = lowercaseResponse.includes('please provide') || lowercaseResponse.includes('provide a summary') ||
+                                lowercaseResponse.includes('give me a summary') || lowercaseResponse.includes('can you summarize');
+        
+        // If it's an analysis task but we don't have analysis results, reduce confidence significantly
+        if (isAnalysisTask && !hasAnalysisResults && maxWeight > 0) {
+            maxWeight *= 0.3; // Significantly reduce confidence
+            console.log('Analysis task detected without results - reducing confidence');
+        }
+        
+        // If this is a summary request (not providing summary), reduce confidence heavily
+        if (isSummaryRequest && maxWeight > 0) {
+            maxWeight *= 0.2; // Even more reduction for summary requests
+            console.log('Summary request detected - reducing confidence heavily');
+        }
+        
         if (!hasToolCall && maxWeight > 0) {
             contextBonus += 0.15;
             console.log('No tool calls detected - adding context bonus');
@@ -5033,7 +5056,13 @@ ${this.getPluginSystemInfo()}`;
         const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
         const chr = geneDetails.chromosome;
         
-        const sequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
+        let sequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
+        
+        // Handle negative strand genes - get reverse complement
+        if (gene.strand === '-') {
+            sequence = this.reverseComplement(sequence);
+        }
+        
         const codonCounts = {};
         const aminoAcidCounts = {};
         
