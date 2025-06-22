@@ -23,6 +23,9 @@ class ConversationEvolutionManager {
         // LLM配置
         this.llmConfigManager = null;
         
+        // 存储管理器
+        this.storageManager = null;
+        
         // 初始化
         this.initializeEvolutionSystem();
         
@@ -34,21 +37,32 @@ class ConversationEvolutionManager {
      */
     async initializeEvolutionSystem() {
         try {
+            console.log('🚀 Initializing Conversation Evolution System...');
+            
+            // 初始化存储管理器
+            this.storageManager = new ConversationEvolutionStorageManager(this.configManager);
+            
+            // 初始化独立存储系统
+            await this.storageManager.initializeIndependentStorage();
+            
             // 获取LLM配置管理器
             if (this.chatManager && this.chatManager.llmConfigManager) {
                 // 使用现有的LLM配置管理器（集成模式）
                 this.llmConfigManager = this.chatManager.llmConfigManager;
+                console.log('📡 Using integrated LLM configuration manager');
             } else {
                 // 创建独立的LLM配置管理器（独立模式）
-                console.log('Creating standalone LLMConfigManager for evolution system...');
+                console.log('⚙️  Creating standalone LLMConfigManager for evolution system...');
                 this.llmConfigManager = new LLMConfigManager(this.configManager);
             }
             
             // 初始化分析引擎
             this.analysisEngine = new ConversationAnalysisEngine(this);
+            console.log('🔍 Conversation analysis engine initialized');
             
             // 初始化插件生成器
             this.pluginGenerator = new AutoPluginGenerator(this);
+            console.log('🔧 Auto plugin generator initialized');
             
             // 加载进化数据
             await this.loadEvolutionData();
@@ -56,9 +70,12 @@ class ConversationEvolutionManager {
             // 设置对话监听（仅在集成模式下）
             this.setupConversationMonitoring();
             
-            console.log('Evolution system initialized successfully');
+            console.log('✅ Evolution system initialized successfully');
+            console.log('📊 Storage info:', this.storageManager.getStorageInfo());
+            
         } catch (error) {
-            console.error('Failed to initialize evolution system:', error);
+            console.error('❌ Failed to initialize evolution system:', error);
+            throw error;
         }
     }
 
@@ -357,6 +374,8 @@ class ConversationEvolutionManager {
      */
     async generateAndTestPlugin(spec) {
         try {
+            const startTime = Date.now();
+            
             // 生成插件代码
             const pluginCode = await this.pluginGenerator.generatePluginCode(spec);
             
@@ -379,6 +398,33 @@ class ConversationEvolutionManager {
             
             // 记录生成的插件
             this.evolutionData.generatedPlugins.push(plugin);
+            
+            // 保存插件生成记录到存储系统
+            if (this.storageManager) {
+                const generationTime = Date.now() - startTime;
+                this.storageManager.savePluginGenerationRecord({
+                    pluginId: plugin.id,
+                    conversationId: spec.conversationId,
+                    analysisId: spec.analysisId,
+                    name: plugin.name,
+                    type: spec.type || 'auto-generated',
+                    specification: spec,
+                    method: 'auto-generation',
+                    sourceAnalysis: spec.sourceAnalysis || {},
+                    generationTime: generationTime,
+                    testResults: testResults,
+                    status: plugin.status,
+                    codeStats: {
+                        linesOfCode: pluginCode ? pluginCode.split('\n').length : 0,
+                        complexity: this.calculateCodeComplexity(pluginCode),
+                        dependencies: this.extractDependencies(pluginCode)
+                    },
+                    tags: spec.tags || [],
+                    category: spec.category || 'unknown'
+                }).catch(error => {
+                    console.error('Failed to save plugin generation record:', error);
+                });
+            }
             
             return plugin;
         } catch (error) {
@@ -473,8 +519,17 @@ class ConversationEvolutionManager {
             conversation.completed = true;
             conversation.endTime = new Date().toISOString();
             
+            // 保存完整对话到存储系统
+            if (this.storageManager) {
+                this.storageManager.saveCompleteConversation(conversation).catch(error => {
+                    console.error('Failed to save complete conversation to storage:', error);
+                });
+            }
+            
             // 进行完整对话分析
             this.analyzeCompletedConversation(conversation);
+            
+            console.log('Conversation completed and saved:', conversation.id);
         }
     }
 
@@ -486,8 +541,25 @@ class ConversationEvolutionManager {
             const analysis = await this.analysisEngine.analyzeFullConversation(conversation);
             conversation.analysis = analysis;
             
+            // 保存分析记录到存储系统
+            if (this.storageManager && analysis) {
+                this.storageManager.saveAnalysisRecord({
+                    conversationId: conversation.id,
+                    analysisType: 'completed-conversation',
+                    results: analysis,
+                    missingFunctions: analysis.criticalMissingFunctions || [],
+                    suggestions: analysis.suggestions || [],
+                    priority: analysis.overallPriority || 0,
+                    processingTime: analysis.processingTime || 0,
+                    confidence: analysis.confidence || 0,
+                    context: conversation.context
+                }).catch(error => {
+                    console.error('Failed to save analysis record:', error);
+                });
+            }
+            
             // 如果发现重要的缺失功能，考虑生成插件
-            if (analysis.criticalMissingFunctions.length > 0) {
+            if (analysis.criticalMissingFunctions && analysis.criticalMissingFunctions.length > 0) {
                 for (const missingFunc of analysis.criticalMissingFunctions) {
                     await this.considerPluginGeneration(missingFunc);
                 }
@@ -690,6 +762,85 @@ class ConversationEvolutionManager {
         const seconds = Math.floor((diffMs % 60000) / 1000);
         
         return `${minutes}m ${seconds}s`;
+    }
+
+    /**
+     * 计算代码复杂度（简化版）
+     */
+    calculateCodeComplexity(code) {
+        if (!code) return 0;
+        
+        // 简单的复杂度计算：基于控制结构和函数数量
+        const controlStructures = (code.match(/\b(if|else|for|while|switch|case|try|catch)\b/g) || []).length;
+        const functions = (code.match(/function\s+\w+/g) || []).length;
+        const methods = (code.match(/\w+\s*:\s*function/g) || []).length;
+        
+        return controlStructures + functions + methods;
+    }
+
+    /**
+     * 提取代码依赖
+     */
+    extractDependencies(code) {
+        if (!code) return [];
+        
+        const dependencies = [];
+        
+        // 提取常见的依赖模式
+        const imports = code.match(/import\s+.*?\s+from\s+['"`]([^'"`]+)['"`]/g) || [];
+        const requires = code.match(/require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g) || [];
+        
+        imports.forEach(imp => {
+            const match = imp.match(/from\s+['"`]([^'"`]+)['"`]/);
+            if (match) dependencies.push(match[1]);
+        });
+        
+        requires.forEach(req => {
+            const match = req.match(/['"`]([^'"`]+)['"`]/);
+            if (match) dependencies.push(match[1]);
+        });
+        
+        return [...new Set(dependencies)]; // 去重
+    }
+
+    /**
+     * 获取存储管理器的历史统计
+     */
+    getStorageStats() {
+        if (this.storageManager) {
+            return this.storageManager.getStorageStats();
+        }
+        return null;
+    }
+
+    /**
+     * 获取对话历史（通过存储管理器）
+     */
+    getConversationHistory(filters = {}) {
+        if (this.storageManager) {
+            return this.storageManager.getConversationHistory(filters);
+        }
+        return [];
+    }
+
+    /**
+     * 搜索对话（通过存储管理器）
+     */
+    searchConversations(query, options = {}) {
+        if (this.storageManager) {
+            return this.storageManager.searchConversations(query, options);
+        }
+        return [];
+    }
+
+    /**
+     * 导出对话历史（通过存储管理器）
+     */
+    async exportConversationHistory(format = 'json', filters = {}) {
+        if (this.storageManager) {
+            return await this.storageManager.exportConversationHistory(format, filters);
+        }
+        throw new Error('Storage manager not available');
     }
 }
 

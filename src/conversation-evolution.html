@@ -366,6 +366,12 @@
                     </button>
                 </div>
                 <div class="toolbar-right">
+                    <button class="btn btn-secondary" onclick="showHistoryManager()">
+                        <i class="fas fa-history"></i> History Manager
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportHistory()">
+                        <i class="fas fa-download"></i> Export History
+                    </button>
                     <span class="evolution-stats" id="evolutionStats">
                         Loading statistics...
                     </span>
@@ -384,6 +390,7 @@
     <!-- Load required modules -->
     <script src="renderer/modules/ConfigManager.js"></script>
     <script src="renderer/modules/LLMConfigManager.js"></script>
+    <script src="renderer/modules/ConversationEvolutionStorageManager.js"></script>
     <script src="renderer/modules/ConversationAnalysisEngine.js"></script>
     <script src="renderer/modules/AutoPluginGenerator.js"></script>
     <script src="renderer/modules/ConversationEvolutionManager.js"></script>
@@ -683,6 +690,420 @@
                 // TODO: Implement clear functionality
             }
         });
+        
+        // History management functions
+        function showHistoryManager() {
+            console.log('📋 Opening History Manager...');
+            
+            const content = document.getElementById('tabContent');
+            const storageStats = evolutionManager?.getStorageStats() || null;
+            
+            let statsHTML = '';
+            if (storageStats) {
+                statsHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h4>${storageStats.totalConversations}</h4>
+                            <p>Total Conversations</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${storageStats.totalMessages}</h4>
+                            <p>Total Messages</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${storageStats.totalAnalysisCount}</h4>
+                            <p>Analysis Records</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${storageStats.totalPluginsGenerated}</h4>
+                            <p>Generated Plugins</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${(storageStats.storageSize / 1024).toFixed(2)} KB</h4>
+                            <p>Storage Size</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>${storageStats.lastUpdateDate ? new Date(storageStats.lastUpdateDate).toLocaleDateString() : 'N/A'}</h4>
+                            <p>Last Updated</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                statsHTML = '<p class="error-text">Storage statistics not available</p>';
+            }
+            
+            content.innerHTML = `
+                <div class="history-manager">
+                    <h3><i class="fas fa-history"></i> History Manager</h3>
+                    <p>Manage and analyze conversation history stored by the Evolution System.</p>
+                    
+                    <div class="history-section">
+                        <h4>Storage Statistics</h4>
+                        ${statsHTML}
+                    </div>
+                    
+                    <div class="history-actions">
+                        <div class="action-group">
+                            <h4>Conversation History</h4>
+                            <button class="btn btn-primary" onclick="showStoredConversations()">
+                                <i class="fas fa-eye"></i> View All Conversations
+                            </button>
+                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
+                                <i class="fas fa-search"></i> Search Conversations
+                            </button>
+                        </div>
+                        
+                        <div class="action-group">
+                            <h4>Export & Backup</h4>
+                            <button class="btn btn-success" onclick="exportHistory('json')">
+                                <i class="fas fa-download"></i> Export as JSON
+                            </button>
+                            <button class="btn btn-success" onclick="exportHistory('csv')">
+                                <i class="fas fa-file-csv"></i> Export as CSV
+                            </button>
+                            <button class="btn btn-success" onclick="exportHistory('txt')">
+                                <i class="fas fa-file-alt"></i> Export as Text
+                            </button>
+                        </div>
+                        
+                        <div class="action-group">
+                            <h4>Maintenance</h4>
+                            <button class="btn btn-warning" onclick="cleanupHistory()">
+                                <i class="fas fa-broom"></i> Cleanup Old Data
+                            </button>
+                            <button class="btn btn-danger" onclick="clearAllHistory()">
+                                <i class="fas fa-trash"></i> Clear All History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add CSS for stats grid
+            if (!document.getElementById('historyManagerStyles')) {
+                const styles = document.createElement('style');
+                styles.id = 'historyManagerStyles';
+                styles.textContent = `
+                    .stats-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                        gap: 16px;
+                        margin: 16px 0;
+                    }
+                    .stat-item {
+                        text-align: center;
+                        padding: 16px;
+                        background: #2a2a2a;
+                        border-radius: 8px;
+                        border: 1px solid #444;
+                    }
+                    .stat-item h4 {
+                        margin: 0 0 8px 0;
+                        color: #4a9eff;
+                        font-size: 24px;
+                    }
+                    .stat-item p {
+                        margin: 0;
+                        color: #ccc;
+                        font-size: 14px;
+                    }
+                    .history-actions {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                        gap: 24px;
+                        margin-top: 24px;
+                    }
+                    .action-group {
+                        padding: 16px;
+                        background: #2a2a2a;
+                        border-radius: 8px;
+                        border: 1px solid #444;
+                    }
+                    .action-group h4 {
+                        margin: 0 0 16px 0;
+                        color: #fff;
+                        border-bottom: 2px solid #4a9eff;
+                        padding-bottom: 8px;
+                    }
+                    .action-group .btn {
+                        width: 100%;
+                        margin-bottom: 8px;
+                    }
+                    .error-text {
+                        color: #ff6b6b;
+                        font-style: italic;
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+        }
+        
+        function showStoredConversations() {
+            console.log('👁️ Showing stored conversations...');
+            
+            try {
+                const conversations = evolutionManager?.getConversationHistory({
+                    sortBy: 'startTime',
+                    sortOrder: 'desc',
+                    limit: 50
+                }) || [];
+                
+                let conversationHTML = '';
+                if (conversations.length > 0) {
+                    conversationHTML = conversations.map((conv, index) => `
+                        <div class="conversation-item" onclick="viewConversationDetails('${conv.id}')">
+                            <div class="conv-header">
+                                <h5>Conversation ${index + 1}</h5>
+                                <span class="conv-time">${new Date(conv.startTime).toLocaleDateString()}</span>
+                            </div>
+                            <div class="conv-stats">
+                                <span class="badge">${conv.messageCount} messages</span>
+                                <span class="badge">${conv.stats.errorCount} errors</span>
+                                <span class="badge">${conv.duration || 'N/A'}</span>
+                                <span class="badge badge-${conv.metadata?.category || 'standard'}">${conv.metadata?.category || 'standard'}</span>
+                            </div>
+                            <div class="conv-preview">
+                                ${conv.messages.slice(0, 2).map(msg => `
+                                    <div class="message-preview">
+                                        <strong>${msg.sender}:</strong> ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    conversationHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-comments"></i>
+                            <p>No stored conversations found</p>
+                            <small>Conversations will appear here after they are completed and saved</small>
+                        </div>
+                    `;
+                }
+                
+                const content = document.getElementById('tabContent');
+                content.innerHTML = `
+                    <div class="stored-conversations">
+                        <div class="section-header">
+                            <h3><i class="fas fa-comments"></i> Stored Conversations</h3>
+                            <button class="btn btn-secondary" onclick="showHistoryManager()">
+                                <i class="fas fa-arrow-left"></i> Back to History Manager
+                            </button>
+                        </div>
+                        <div class="conversations-list">
+                            ${conversationHTML}
+                        </div>
+                    </div>
+                `;
+                
+                // Add conversation styles
+                if (!document.getElementById('conversationStyles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'conversationStyles';
+                    styles.textContent = `
+                        .conversation-item {
+                            background: #2a2a2a;
+                            border: 1px solid #444;
+                            border-radius: 8px;
+                            padding: 16px;
+                            margin-bottom: 12px;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        }
+                        .conversation-item:hover {
+                            background: #333;
+                            border-color: #4a9eff;
+                        }
+                        .conv-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 8px;
+                        }
+                        .conv-header h5 {
+                            margin: 0;
+                            color: #fff;
+                        }
+                        .conv-time {
+                            color: #888;
+                            font-size: 14px;
+                        }
+                        .conv-stats {
+                            margin-bottom: 12px;
+                        }
+                        .badge {
+                            display: inline-block;
+                            padding: 4px 8px;
+                            background: #444;
+                            color: #ccc;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            margin-right: 8px;
+                        }
+                        .badge-problematic { background: #ff6b6b; color: #fff; }
+                        .badge-plugin-generation { background: #4ecdc4; color: #fff; }
+                        .badge-extended { background: #45b7d1; color: #fff; }
+                        .badge-tool-intensive { background: #f9ca24; color: #333; }
+                        .message-preview {
+                            font-size: 13px;
+                            color: #ccc;
+                            margin-bottom: 4px;
+                            line-height: 1.4;
+                        }
+                        .section-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 20px;
+                        }
+                    `;
+                    document.head.appendChild(styles);
+                }
+                
+            } catch (error) {
+                console.error('Error showing stored conversations:', error);
+                showError('Failed to load stored conversations: ' + error.message);
+            }
+        }
+        
+        function searchStoredConversations() {
+            console.log('🔍 Opening conversation search...');
+            const query = prompt('Enter search term (searches messages, context, and analysis):');
+            if (!query) return;
+            
+            try {
+                const results = evolutionManager?.searchConversations(query, {
+                    fields: ['messages', 'context', 'analysis'],
+                    caseSensitive: false
+                }) || [];
+                
+                console.log(`Found ${results.length} conversations matching "${query}"`);
+                showSearchResults(query, results);
+            } catch (error) {
+                console.error('Search failed:', error);
+                showError('Search failed: ' + error.message);
+            }
+        }
+        
+        function showSearchResults(query, results) {
+            const content = document.getElementById('tabContent');
+            
+            let resultsHTML = '';
+            if (results.length > 0) {
+                resultsHTML = results.map((conv, index) => `
+                    <div class="search-result" onclick="viewConversationDetails('${conv.id}')">
+                        <div class="result-header">
+                            <h5>Match ${index + 1}</h5>
+                            <span class="result-score">${conv.messageCount} messages</span>
+                        </div>
+                        <div class="result-info">
+                            <span class="result-date">${new Date(conv.startTime).toLocaleString()}</span>
+                            <span class="result-category badge badge-${conv.metadata?.category || 'standard'}">${conv.metadata?.category || 'standard'}</span>
+                        </div>
+                        <div class="result-preview">
+                            ${conv.messages.filter(msg => 
+                                msg.content.toLowerCase().includes(query.toLowerCase())
+                            ).slice(0, 2).map(msg => `
+                                <div class="match-preview">
+                                    <strong>${msg.sender}:</strong> ${highlightMatch(msg.content, query)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                resultsHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No conversations found matching "${query}"</p>
+                        <small>Try a different search term or check your spelling</small>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = `
+                <div class="search-results">
+                    <div class="section-header">
+                        <h3><i class="fas fa-search"></i> Search Results for "${query}"</h3>
+                        <div>
+                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
+                                <i class="fas fa-search"></i> New Search
+                            </button>
+                            <button class="btn btn-secondary" onclick="showHistoryManager()">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                        </div>
+                    </div>
+                    <p class="search-info">Found ${results.length} conversation(s) matching your search</p>
+                    <div class="results-list">
+                        ${resultsHTML}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function highlightMatch(text, query) {
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<mark>$1</mark>');
+        }
+        
+        async function exportHistory(format = 'json') {
+            console.log(`📤 Exporting history as ${format.toUpperCase()}...`);
+            
+            try {
+                if (evolutionManager && evolutionManager.exportConversationHistory) {
+                    await evolutionManager.exportConversationHistory(format);
+                    console.log('✅ History exported successfully');
+                } else {
+                    throw new Error('Export functionality not available');
+                }
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed: ' + error.message);
+            }
+        }
+        
+        async function cleanupHistory() {
+            const confirmed = confirm('This will remove old conversation data (older than 30 days) while keeping recent conversations. Continue?');
+            if (!confirmed) return;
+            
+            console.log('🧹 Cleaning up old history data...');
+            
+            try {
+                if (evolutionManager && evolutionManager.storageManager && evolutionManager.storageManager.cleanupHistory) {
+                    const result = await evolutionManager.storageManager.cleanupHistory({
+                        olderThanDays: 30,
+                        keepMinimum: 10,
+                        removeErrors: false,
+                        removeEmpty: true
+                    });
+                    
+                    alert(`Cleanup completed: Removed ${result.removedConversations} conversations. ${result.remainingConversations} conversations remain.`);
+                    showHistoryManager(); // Refresh view
+                } else {
+                    throw new Error('Cleanup functionality not available');
+                }
+            } catch (error) {
+                console.error('Cleanup failed:', error);
+                alert('Cleanup failed: ' + error.message);
+            }
+        }
+        
+        async function clearAllHistory() {
+            const confirmed = confirm('⚠️ This will permanently delete ALL conversation history. This action cannot be undone. Are you absolutely sure?');
+            if (!confirmed) return;
+            
+            const doubleConfirmed = confirm('🚨 FINAL WARNING: This will erase all stored conversations, analysis records, and plugin generation history. Type "DELETE ALL" to confirm.');
+            if (!doubleConfirmed) return;
+            
+            console.log('🗑️ Clearing all history data...');
+            alert('Clear all history functionality will be implemented in a future update.');
+        }
+        
+        function viewConversationDetails(conversationId) {
+            console.log('👁️ Viewing conversation details:', conversationId);
+            alert(`Detailed conversation view for ${conversationId} will be implemented in a future update.`);
+        }
         
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initializeEvolutionSystem);

@@ -89,7 +89,8 @@ class ConfigManager {
                         llm: electronAPI_path.join(configDir, 'llm-config.json'),
                         ui: electronAPI_path.join(configDir, 'ui-preferences.json'),
                         chat: electronAPI_path.join(configDir, 'chat-history.json'),
-                        app: electronAPI_path.join(configDir, 'app-settings.json')
+                        app: electronAPI_path.join(configDir, 'app-settings.json'),
+                        evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json')
                     };
                     console.log('electronAPI config paths:', paths);
                     console.log('=== getConfigPath Debug End (electronAPI success) ===');
@@ -123,7 +124,8 @@ class ConfigManager {
                                 llm: path.join(configDir, 'llm-config.json'),
                                 ui: path.join(configDir, 'ui-preferences.json'),
                                 chat: path.join(configDir, 'chat-history.json'),
-                                app: path.join(configDir, 'app-settings.json')
+                                app: path.join(configDir, 'app-settings.json'),
+                                evolution: path.join(configDir, 'conversation-evolution-data.json')
                             };
                             
                             console.log('Final config paths using require:');
@@ -275,6 +277,93 @@ class ConfigManager {
     }
 
     /**
+     * Get default evolution configuration structure
+     */
+    getDefaultEvolutionConfig() {
+        return {
+            version: '1.0.0',
+            lastModified: new Date().toISOString(),
+            
+            // 存储配置
+            storageConfig: {
+                maxConversations: 1000,
+                maxHistoryLength: 10000,
+                autoSave: true,
+                autoSaveInterval: 5000, // 5秒
+                enableBackup: true,
+                backupInterval: 86400000, // 24小时
+                compressionEnabled: true,
+                maxFileSize: 50 * 1024 * 1024 // 50MB
+            },
+            
+            // 历史数据结构
+            historyData: {
+                conversations: [],
+                analysisRecords: [],
+                pluginGenerationHistory: [],
+                evolutionTimeline: [],
+                storageStats: {
+                    totalConversations: 0,
+                    totalMessages: 0,
+                    totalAnalysisCount: 0,
+                    totalPluginsGenerated: 0,
+                    firstRecordDate: null,
+                    lastUpdateDate: null,
+                    storageSize: 0
+                }
+            },
+            
+            // 分析引擎配置
+            analysisConfig: {
+                enableRealTimeAnalysis: true,
+                failureDetectionKeywords: [
+                    'error', 'failed', 'cannot', 'unable', 'not available', 
+                    'not found', 'not supported', 'not implemented',
+                    'sorry', 'unfortunately', 'not possible'
+                ],
+                successDetectionKeywords: [
+                    'success', 'completed', 'done', 'finished', 'resolved', 
+                    'working', 'created', 'generated', 'saved'
+                ],
+                minConversationLength: 3, // Minimum messages before analysis
+                analysisThreshold: 0.7, // Confidence threshold for analysis
+                pluginGenerationThreshold: 0.8 // Threshold to trigger plugin generation
+            },
+            
+            // 插件生成配置
+            pluginGenerationConfig: {
+                enabled: true,
+                autoGenerate: false, // Manual approval required
+                testingEnabled: true,
+                maxGenerationAttempts: 3,
+                templateEngine: 'default',
+                codeValidation: true,
+                securityScan: true,
+                outputDirectory: 'src/renderer/modules/Plugins/Generated'
+            },
+            
+            // 用户界面配置
+            uiConfig: {
+                showEvolutionPanel: true,
+                showAnalysisResults: true,
+                showPluginGeneration: true,
+                notificationsEnabled: true,
+                autoRefreshInterval: 10000, // 10秒
+                maxDisplayItems: 100
+            },
+            
+            // 导出配置
+            exportConfig: {
+                defaultFormat: 'json',
+                includeSensitiveData: false,
+                compressionLevel: 6,
+                timestampFormat: 'ISO',
+                supportedFormats: ['json', 'csv', 'txt']
+            }
+        };
+    }
+
+    /**
      * Initialize configuration system
      */
     async initializeConfig() {
@@ -354,7 +443,8 @@ class ConfigManager {
                 llm: this.configPath.llm,
                 ui: this.configPath.ui,
                 chat: this.configPath.chat,
-                app: this.configPath.app
+                app: this.configPath.app,
+                evolution: this.configPath.evolution
             };
 
             for (const [section, filePath] of Object.entries(configFiles)) {
@@ -496,7 +586,8 @@ class ConfigManager {
                 [this.configPath.llm]: this.config.llm,
                 [this.configPath.ui]: this.config.ui,
                 [this.configPath.chat]: this.config.chat,
-                [this.configPath.app]: this.config.app
+                [this.configPath.app]: this.config.app,
+                [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig()
             };
 
             for (const [filePath, data] of Object.entries(configFiles)) {
