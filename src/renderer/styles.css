@@ -8887,6 +8887,207 @@ path.svg-gene-element.selected {
     border-color: #0ea5e9;
 }
 
+/* ===== THINKING PROCESS STYLES ===== */
+
+/* Thinking Message Container */
+.thinking-message {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 85%;
+    align-self: flex-start;
+    animation: thinkingFadeIn 0.5s ease-out;
+}
+
+@keyframes thinkingFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Thinking Message Content */
+.thinking-message .message {
+    margin: 0;
+}
+
+.thinking-message .assistant-message {
+    align-self: flex-start;
+}
+
+.thinking-message .message-content {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+/* Thinking Icon */
+.thinking-icon {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+    animation: thinkingPulse 2s infinite ease-in-out;
+}
+
+@keyframes thinkingPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.5);
+    }
+}
+
+/* Thinking Message Text */
+.thinking-message .message-text {
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border: 1px solid #d8b4fe;
+    color: #6b21a8;
+    position: relative;
+    overflow: hidden;
+}
+
+.thinking-message .message-text::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(147, 51, 234, 0.1) 50%, 
+        transparent 100%);
+    animation: thinkingShimmer 3s infinite ease-in-out;
+}
+
+@keyframes thinkingShimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Thinking Text Content */
+.thinking-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.thinking-text .fa-spinner {
+    color: #9333ea;
+    font-size: 12px;
+}
+
+.thinking-content {
+    flex: 1;
+    font-style: italic;
+    color: #7c3aed;
+}
+
+/* LLM Thinking Display */
+.llm-thinking .thinking-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    animation: none;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.llm-thinking .message-text {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #fbbf24;
+    color: #92400e;
+}
+
+.llm-thinking .message-text::before {
+    display: none;
+}
+
+.thinking-header {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #b45309;
+    font-size: 13px;
+}
+
+.llm-thinking .thinking-content {
+    color: #92400e;
+    font-style: normal;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    font-size: 13px;
+}
+
+/* Thinking Animation Variants */
+.thinking-message.processing .thinking-icon {
+    animation: thinkingRotate 2s linear infinite;
+}
+
+@keyframes thinkingRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Dark Mode Support for Thinking */
+@media (prefers-color-scheme: dark) {
+    .thinking-message .message-text {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border-color: #6366f1;
+        color: #c7d2fe;
+    }
+    
+    .llm-thinking .message-text {
+        background: linear-gradient(135deg, #451a03 0%, #92400e 100%);
+        border-color: #f59e0b;
+        color: #fcd34d;
+    }
+    
+    .thinking-header {
+        color: #fbbf24;
+    }
+    
+    .llm-thinking .thinking-content {
+        color: #fed7aa;
+    }
+    
+    .thinking-content {
+        color: #c7d2fe;
+    }
+}
+
+/* Responsive Thinking Messages */
+@media (max-width: 480px) {
+    .thinking-message {
+        max-width: 95%;
+    }
+    
+    .thinking-text {
+        gap: 6px;
+    }
+    
+    .thinking-header {
+        font-size: 12px;
+    }
+    
+    .llm-thinking .thinking-content {
+        font-size: 12px;
+    }
+}
+
 /* Chat Input */
 .chat-input-container {
     padding: 16px;

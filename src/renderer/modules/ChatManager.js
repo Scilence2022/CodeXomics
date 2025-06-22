@@ -7854,4 +7854,144 @@ Please help the user with genome analysis tasks, visualization, and tool usage.
             console.warn('Failed to update UI state:', error);
         }
     }
+
+    /**
+     * Add thinking process message to chat
+     */
+    addThinkingMessage(text) {
+        if (!this.showThinkingProcess) return;
+        
+        try {
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+            
+            const thinkingId = 'thinking-' + Date.now();
+            const thinkingElement = document.createElement('div');
+            thinkingElement.id = thinkingId;
+            thinkingElement.className = 'thinking-message';
+            thinkingElement.innerHTML = `
+                <div class="message assistant-message thinking">
+                    <div class="message-content">
+                        <i class="fas fa-brain message-icon thinking-icon"></i>
+                        <div class="message-text">
+                            <div class="thinking-text">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span class="thinking-content">${text}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(thinkingElement);
+            
+            // Scroll to bottom if auto-scroll is enabled
+            if (this.autoScrollToBottom) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Store reference for updates
+            this.currentThinkingElement = thinkingElement;
+            
+        } catch (error) {
+            console.warn('Failed to add thinking message:', error);
+        }
+    }
+
+    /**
+     * Update existing thinking process message
+     */
+    updateThinkingMessage(text) {
+        if (!this.showThinkingProcess || !this.currentThinkingElement) return;
+        
+        try {
+            const thinkingContent = this.currentThinkingElement.querySelector('.thinking-content');
+            if (thinkingContent) {
+                thinkingContent.textContent = text;
+            }
+        } catch (error) {
+            console.warn('Failed to update thinking message:', error);
+        }
+    }
+
+    /**
+     * Display LLM thinking process from response
+     */
+    displayLLMThinking(response) {
+        if (!this.showThinkingProcess || !response) return;
+        
+        try {
+            // Extract thinking content from <thinking> tags
+            const thinkingMatch = response.match(/<thinking>(.*?)<\/thinking>/s);
+            if (thinkingMatch) {
+                const thinkingContent = thinkingMatch[1].trim();
+                if (thinkingContent) {
+                    // Remove current thinking message and add LLM's thinking
+                    this.removeCurrentThinkingMessage();
+                    
+                    const chatMessages = document.getElementById('chatMessages');
+                    if (!chatMessages) return;
+                    
+                    const thinkingElement = document.createElement('div');
+                    thinkingElement.className = 'thinking-message llm-thinking';
+                    thinkingElement.innerHTML = `
+                        <div class="message assistant-message thinking">
+                            <div class="message-content">
+                                <i class="fas fa-lightbulb message-icon thinking-icon"></i>
+                                <div class="message-text">
+                                    <div class="thinking-header">🤔 AI Thinking Process:</div>
+                                    <div class="thinking-content">${thinkingContent}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    chatMessages.appendChild(thinkingElement);
+                    
+                    // Scroll to bottom if auto-scroll is enabled
+                    if (this.autoScrollToBottom) {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to display LLM thinking:', error);
+        }
+    }
+
+    /**
+     * Remove current thinking message
+     */
+    removeCurrentThinkingMessage() {
+        try {
+            if (this.currentThinkingElement && this.currentThinkingElement.parentNode) {
+                this.currentThinkingElement.parentNode.removeChild(this.currentThinkingElement);
+                this.currentThinkingElement = null;
+            }
+        } catch (error) {
+            console.warn('Failed to remove current thinking message:', error);
+        }
+    }
+
+    /**
+     * Remove all thinking messages from chat
+     */
+    removeThinkingMessages() {
+        try {
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+            
+            const thinkingMessages = chatMessages.querySelectorAll('.thinking-message');
+            thinkingMessages.forEach(element => {
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            });
+            
+            this.currentThinkingElement = null;
+            
+        } catch (error) {
+            console.warn('Failed to remove thinking messages:', error);
+        }
+    }
 }
