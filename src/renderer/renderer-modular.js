@@ -427,6 +427,11 @@ class GenomeBrowser {
         // Sequence controls
         document.getElementById('copySequenceBtn').addEventListener('click', () => this.sequenceUtils.copySequence());
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
+        document.getElementById('sequenceSettingsBtn').addEventListener('click', () => {
+            if (this.trackRenderer) {
+                this.trackRenderer.openTrackSettings('sequence');
+            }
+        });
         
         // Add click event for selected sequences (both gene and manual)
         document.addEventListener('click', (e) => {
