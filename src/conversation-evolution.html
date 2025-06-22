@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation Evolution System - GenomeExplorer</title>
+    <link rel="stylesheet" href="renderer/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        #evolutionApp {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .evolution-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 20px 24px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .evolution-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4a9eff;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .evolution-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .evolution-tabs {
+            display: flex;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+            padding: 0 24px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #888;
+            padding: 16px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-btn:hover {
+            color: #bbb;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab-btn.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        .evolution-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: #252525;
+            border-bottom: 1px solid #333;
+        }
+        
+        .toolbar-left {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4a9eff;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #357abd;
+        }
+        
+        .btn-primary:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #777;
+        }
+        
+        .evolution-stats {
+            font-size: 13px;
+            color: #aaa;
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #333;
+            border-top: 3px solid #4a9eff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #ff6b6b;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        /* Additional styles for empty states and other components */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            min-height: 300px;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #444;
+        }
+        
+        .empty-state p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        
+        .empty-state small {
+            font-size: 13px;
+            color: #888;
+        }
+        
+        .conversation-list,
+        .missing-features-list,
+        .plugins-list,
+        .reports-section {
+            width: 100%;
+        }
+        
+        .conversation-list h3,
+        .missing-features-list h3,
+        .plugins-list h3,
+        .reports-section h3,
+        .evolution-process h3 {
+            margin: 0 0 16px 0;
+            color: #4a9eff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .conversation-list p,
+        .missing-features-list p,
+        .plugins-list p,
+        .reports-section p,
+        .evolution-process p {
+            margin: 0 0 24px 0;
+            color: #ccc;
+            line-height: 1.5;
+        }
+        
+        .evolution-controls {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .status-info {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #4a9eff;
+        }
+        
+        .status-info p {
+            margin: 8px 0;
+            color: #ddd;
+        }
+        
+        .status-info strong {
+            color: #4a9eff;
+        }
+        
+        .progress-container {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .progress-container h4 {
+            margin: 0 0 16px 0;
+            color: #4a9eff;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a9eff, #0984e3);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .evolution-log {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="evolutionApp">
+        <div class="evolution-header">
+            <h1>
+                <i class="fas fa-dna"></i>
+                Conversation Evolution System
+            </h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>System Active</span>
+            </div>
+        </div>
+        
+        <div class="evolution-content">
+            <div class="evolution-tabs">
+                <button class="tab-btn active" id="conversationsTab" onclick="switchTab('conversations')">
+                    <i class="fas fa-comments"></i> Conversation History
+                </button>
+                <button class="tab-btn" id="missingTab" onclick="switchTab('missing')">
+                    <i class="fas fa-exclamation-triangle"></i> Missing Features
+                </button>
+                <button class="tab-btn" id="pluginsTab" onclick="switchTab('plugins')">
+                    <i class="fas fa-puzzle-piece"></i> Generated Plugins
+                </button>
+                <button class="tab-btn" id="evolutionTab" onclick="switchTab('evolution')">
+                    <i class="fas fa-dna"></i> Evolution Process
+                </button>
+                <button class="tab-btn" id="reportsTab" onclick="switchTab('reports')">
+                    <i class="fas fa-chart-line"></i> Evolution Reports
+                </button>
+            </div>
+            
+            <div class="evolution-toolbar">
+                <div class="toolbar-left">
+                    <button class="btn btn-primary" id="startEvolutionBtn" onclick="startEvolution()">
+                        <i class="fas fa-play"></i> Start Evolution
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <i class="fas fa-refresh"></i> Refresh Data
+                    </button>
+                </div>
+                <div class="toolbar-right">
+                    <span class="evolution-stats" id="evolutionStats">
+                        Loading statistics...
+                    </span>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="tabContent">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Initializing Conversation Evolution System...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required modules -->
+    <script src="renderer/modules/ConfigManager.js"></script>
+    <script src="renderer/modules/ConversationAnalysisEngine.js"></script>
+    <script src="renderer/modules/AutoPluginGenerator.js"></script>
+    <script src="renderer/modules/ConversationEvolutionManager.js"></script>
+    <script src="renderer/modules/EvolutionInterfaceManager.js"></script>
+    
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // Global variables
+        let currentTab = 'conversations';
+        let evolutionManager = null;
+        let interfaceManager = null;
+        let isEvolutionRunning = false;
+        
+        // Initialize the evolution system
+        async function initializeEvolutionSystem() {
+            try {
+                console.log('🧬 Initializing Conversation Evolution System...');
+                
+                // Create a minimal config manager for standalone mode
+                const configManager = {
+                    config: {},
+                    getConfig: function(key, defaultValue) { return this.config[key] || defaultValue; },
+                    setConfig: function(key, value) { this.config[key] = value; },
+                    saveConfig: function() { return Promise.resolve(); }
+                };
+                
+                // Create evolution manager
+                evolutionManager = new ConversationEvolutionManager(null, configManager, null);
+                
+                // Create interface manager with the evolution manager
+                interfaceManager = new EvolutionInterfaceManager(evolutionManager, configManager);
+                
+                // Make globally available
+                window.evolutionManager = evolutionManager;
+                window.interfaceManager = interfaceManager;
+                window.evolutionInterfaceManager = interfaceManager;
+                
+                // Initialize the interface
+                if (interfaceManager.initializeStandaloneInterface) {
+                    interfaceManager.initializeStandaloneInterface();
+                } else {
+                    renderCurrentTab();
+                    updateStats();
+                }
+                
+                console.log('✅ Evolution system initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize evolution system:', error);
+                showError('Failed to initialize evolution system: ' + error.message);
+            }
+        }
+        
+        // Switch tabs
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Render tab content
+            renderCurrentTab();
+        }
+        
+        // Render current tab content
+        function renderCurrentTab() {
+            const content = document.getElementById('tabContent');
+            
+            switch (currentTab) {
+                case 'conversations':
+                    renderConversationsTab();
+                    break;
+                case 'missing':
+                    renderMissingFeaturesTab();
+                    break;
+                case 'plugins':
+                    renderPluginsTab();
+                    break;
+                case 'evolution':
+                    renderEvolutionTab();
+                    break;
+                case 'reports':
+                    renderReportsTab();
+                    break;
+                default:
+                    content.innerHTML = '<div class="error-container"><i class="fas fa-exclamation-triangle error-icon"></i><p>Unknown tab: ' + currentTab + '</p></div>';
+            }
+        }
+        
+        // Render individual tab contents
+        function renderConversationsTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="conversation-list">
+                    <h3><i class="fas fa-comments"></i> Conversation History</h3>
+                    <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>No conversations recorded yet</p>
+                        <small>Conversations will appear here as you interact with the AI system</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderMissingFeaturesTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="missing-features-list">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Missing Features</h3>
+                    <p>Features and capabilities that have been requested but are not currently available in the system.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>No missing features identified yet</p>
+                        <small>Missing features will be automatically detected from conversation analysis</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderPluginsTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="plugins-list">
+                    <h3><i class="fas fa-puzzle-piece"></i> Generated Plugins</h3>
+                    <p>Plugins that have been automatically generated to address missing features and capabilities.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-puzzle-piece"></i>
+                        <p>No plugins generated yet</p>
+                        <small>Plugins will be generated automatically when missing features are identified</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderEvolutionTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="evolution-process">
+                    <h3><i class="fas fa-dna"></i> Evolution Control Panel</h3>
+                    <p>Monitor and control the automatic evolution process that analyzes conversations and generates solutions.</p>
+                    
+                    <div class="evolution-controls">
+                        <button class="btn btn-primary" onclick="startEvolution()" ${isEvolutionRunning ? 'disabled' : ''}>
+                            <i class="fas fa-play"></i> Start Auto Evolution
+                        </button>
+                        <button class="btn btn-secondary" onclick="generateReport()">
+                            <i class="fas fa-chart-line"></i> Generate Evolution Report
+                        </button>
+                    </div>
+                    
+                    ${isEvolutionRunning ? `
+                        <div class="progress-container">
+                            <h4>Evolution Progress</h4>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="evolutionProgress" style="width: 0%"></div>
+                            </div>
+                            <div class="evolution-log" id="evolutionLog">
+                                Initializing evolution process...
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="status-info">
+                            <p><strong>Status:</strong> Evolution system is ready</p>
+                            <p><strong>Next Action:</strong> Start evolution process to analyze conversations and generate solutions</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+        
+        function renderReportsTab() {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="reports-section">
+                    <h3><i class="fas fa-chart-line"></i> Evolution Reports</h3>
+                    <p>Detailed analysis and statistics about the evolution process and system improvements.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <p>No reports generated yet</p>
+                        <small>Reports will be available after running the evolution process</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Evolution system functions
+        async function startEvolution() {
+            if (isEvolutionRunning) return;
+            
+            isEvolutionRunning = true;
+            document.getElementById('startEvolutionBtn').disabled = true;
+            
+            try {
+                if (interfaceManager && interfaceManager.startEvolution) {
+                    await interfaceManager.startEvolution();
+                } else {
+                    throw new Error('Evolution interface not properly initialized');
+                }
+            } catch (error) {
+                console.error('Evolution process failed:', error);
+                showError('Evolution process failed: ' + error.message);
+            } finally {
+                isEvolutionRunning = false;
+                document.getElementById('startEvolutionBtn').disabled = false;
+                renderCurrentTab();
+            }
+        }
+        
+        function refreshData() {
+            console.log('🔄 Refreshing evolution data...');
+            if (interfaceManager && interfaceManager.refreshData) {
+                interfaceManager.refreshData();
+            }
+            renderCurrentTab();
+            updateStats();
+        }
+        
+        function generateReport() {
+            console.log('📊 Generating evolution report...');
+            switchTab('reports');
+        }
+        
+        function updateStats() {
+            const statsElement = document.getElementById('evolutionStats');
+            if (statsElement) {
+                if (evolutionManager && evolutionManager.getEvolutionStats) {
+                    try {
+                        const stats = evolutionManager.getEvolutionStats();
+                        statsElement.textContent = `Conversations: ${stats.completedConversations}/${stats.totalConversations} | Missing Features: ${stats.missingFunctions} | Generated Plugins: ${stats.successfulPlugins}/${stats.generatedPlugins}`;
+                    } catch (error) {
+                        statsElement.textContent = 'Statistics unavailable';
+                    }
+                } else {
+                    statsElement.textContent = 'System initializing...';
+                }
+            }
+        }
+        
+        function showError(message) {
+            const content = document.getElementById('tabContent');
+            content.innerHTML = `
+                <div class="error-container">
+                    <i class="fas fa-exclamation-triangle error-icon"></i>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-refresh"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+        
+        // IPC handlers for menu actions
+        ipcRenderer.on('switch-tab', (event, tabName) => {
+            switchTab(tabName);
+        });
+        
+        ipcRenderer.on('start-evolution', () => {
+            startEvolution();
+        });
+        
+        ipcRenderer.on('refresh-evolution-data', () => {
+            refreshData();
+        });
+        
+        ipcRenderer.on('generate-evolution-report', () => {
+            generateReport();
+        });
+        
+        ipcRenderer.on('export-evolution-data', () => {
+            console.log('📤 Exporting evolution data...');
+            // TODO: Implement export functionality
+        });
+        
+        ipcRenderer.on('import-evolution-data', () => {
+            console.log('📥 Importing evolution data...');
+            // TODO: Implement import functionality
+        });
+        
+        ipcRenderer.on('clear-evolution-data', () => {
+            if (confirm('Are you sure you want to clear all evolution data? This action cannot be undone.')) {
+                console.log('🗑️ Clearing evolution data...');
+                // TODO: Implement clear functionality
+            }
+        });
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeEvolutionSystem);
+        
+        // Handle window focus for data refresh
+        window.addEventListener('focus', () => {
+            updateStats();
+        });
+    </script>
+</body>
+</html> 

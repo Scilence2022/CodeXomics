@@ -16,13 +16,60 @@ class EvolutionInterfaceManager {
         this.modal = null;
         this.contentContainer = null;
         
-        console.log('EvolutionInterfaceManager initialized');
+        // 检测是否在独立窗口模式
+        this.isStandaloneMode = this.detectStandaloneMode();
+        
+        console.log('EvolutionInterfaceManager initialized', this.isStandaloneMode ? '(Standalone Mode)' : '(Modal Mode)');
     }
 
     /**
-     * 打开进化界面
+     * 检测是否在独立窗口模式
+     */
+    detectStandaloneMode() {
+        return document.title.includes('Conversation Evolution System') && 
+               !document.getElementById('app');
+    }
+
+    /**
+     * 初始化独立窗口界面
+     */
+    initializeStandaloneInterface() {
+        if (!this.isStandaloneMode) return;
+        
+        console.log('🧬 Initializing standalone evolution interface...');
+        
+        try {
+            // 在独立窗口模式下，界面元素已经在HTML中定义
+            this.contentContainer = document.getElementById('tabContent');
+            
+            if (!this.contentContainer) {
+                throw new Error('Content container not found in standalone mode');
+            }
+            
+            // 渲染初始内容
+            this.renderCurrentTab();
+            
+            // 更新统计信息
+            this.updateEvolutionStats();
+            
+            console.log('✅ Standalone interface initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize standalone interface:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 打开进化界面 (适配独立窗口模式)
      */
     openEvolutionInterface() {
+        if (this.isStandaloneMode) {
+            // 在独立窗口模式下，界面已经存在，只需要初始化
+            this.initializeStandaloneInterface();
+            return;
+        }
+        
+        // 原有的模态框模式代码
         console.log('🧬 EvolutionInterfaceManager: Opening Evolution Interface...');
         
         try {
@@ -552,15 +599,31 @@ class EvolutionInterfaceManager {
      * 切换标签页
      */
     switchTab(tabName) {
+        console.log('🔄 Switching to tab:', tabName);
         this.currentTab = tabName;
         
-        // 更新标签页样式
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[onclick*="'${tabName}'"]`).classList.add('active');
+        if (this.isStandaloneMode) {
+            // 独立窗口模式：更新tab按钮状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const targetTab = document.getElementById(tabName + 'Tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+        } else {
+            // 模态框模式：原有逻辑
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            const activeTab = Array.from(tabs).find(tab => 
+                tab.onclick && tab.onclick.toString().includes(tabName)
+            );
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+        }
         
-        // 渲染内容
         this.renderCurrentTab();
     }
 
@@ -568,6 +631,19 @@ class EvolutionInterfaceManager {
      * 渲染当前标签页内容
      */
     renderCurrentTab() {
+        if (this.isStandaloneMode) {
+            // 独立窗口模式：内容容器已存在
+            this.contentContainer = document.getElementById('tabContent');
+        } else {
+            // 模态框模式：使用evolutionContent容器
+            this.contentContainer = document.getElementById('evolutionContent');
+        }
+        
+        if (!this.contentContainer) {
+            console.error('Content container not found for current mode');
+            return;
+        }
+        
         switch (this.currentTab) {
             case 'conversations':
                 this.renderConversationsTab();

@@ -212,7 +212,7 @@ function createMenu() {
           label: 'Conversation Evolution System',
           accelerator: 'CmdOrCtrl+Shift+E',
           click: () => {
-            mainWindow.webContents.send('open-evolution-interface');
+            createEvolutionWindow();
           }
         },
         { type: 'separator' },
@@ -1042,36 +1042,276 @@ function createCircosWindow() {
 
 // Create CRISPR Designer window
 function createCrisprDesignerWindow() {
-  // Create new window for CRISPR Designer
   const crisprWindow = new BrowserWindow({
-    width: 1400,
-    height: 1000,
+    width: 1200,
+    height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      webSecurity: false
     },
-    icon: path.join(__dirname, 'assets/icon.png'),
-    title: 'CRISPR Guide RNA Design Tool - GenomeExplorer'
+    icon: path.join(__dirname, '../assets/icon.png'),
+    show: false
   });
 
-  crisprWindow.loadFile('src/crispr-designer.html');
-  
-  // Store reference to main window for data communication
-  crisprWindow.mainWindow = mainWindow;
-  
-  // Handle data requests from CRISPR window
-  crisprWindow.webContents.on('did-finish-load', () => {
-    // Setup IPC communication between CRISPR window and main window
-    crisprWindow.webContents.send('main-window-ready', {
-      hasMainWindow: true
-    });
+  crisprWindow.loadFile(path.join(__dirname, 'crispr-designer.html'));
+
+  crisprWindow.once('ready-to-show', () => {
+    crisprWindow.show();
   });
-  
+
+  // Open DevTools for debugging
+  crisprWindow.webContents.openDevTools();
+
   crisprWindow.on('closed', () => {
-    console.log('CRISPR Designer window closed');
+    // Dereference the window object
   });
+}
+
+// Create Conversation Evolution System window
+function createEvolutionWindow() {
+  const evolutionWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true,
+      webSecurity: false,
+      cache: false
+    },
+    icon: path.join(__dirname, '../assets/icon.png'),
+    show: false,
+    title: 'Conversation Evolution System'
+  });
+
+  // Load the evolution system HTML
+  evolutionWindow.loadFile(path.join(__dirname, 'conversation-evolution.html'));
+
+  // Clear cache aggressively to ensure fresh file loading
+  evolutionWindow.webContents.session.clearCache();
+  evolutionWindow.webContents.session.clearStorageData();
   
-  return crisprWindow;
+  // Force reload after cache clear
+  evolutionWindow.webContents.once('did-finish-load', () => {
+    evolutionWindow.webContents.reload();
+  });
+
+  // Show window when ready to prevent visual flash
+  evolutionWindow.once('ready-to-show', () => {
+    evolutionWindow.show();
+  });
+
+  // Open DevTools for debugging
+  evolutionWindow.webContents.openDevTools();
+
+  // Create evolution-specific menu
+  const evolutionMenuTemplate = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Export Evolution Data',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            evolutionWindow.webContents.send('export-evolution-data');
+          }
+        },
+        {
+          label: 'Import Evolution Data',
+          accelerator: 'CmdOrCtrl+I',
+          click: () => {
+            evolutionWindow.webContents.send('import-evolution-data');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Close Window',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            evolutionWindow.close();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Evolution',
+      submenu: [
+        {
+          label: 'Start Evolution Process',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            evolutionWindow.webContents.send('start-evolution');
+          }
+        },
+        {
+          label: 'Stop Evolution Process',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => {
+            evolutionWindow.webContents.send('stop-evolution');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Refresh Data',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            evolutionWindow.webContents.send('refresh-evolution-data');
+          }
+        },
+        {
+          label: 'Clear All Data',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            evolutionWindow.webContents.send('clear-evolution-data');
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        {
+          label: 'Conversation History',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            evolutionWindow.webContents.send('switch-tab', 'conversations');
+          }
+        },
+        {
+          label: 'Missing Features',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            evolutionWindow.webContents.send('switch-tab', 'missing');
+          }
+        },
+        {
+          label: 'Generated Plugins',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            evolutionWindow.webContents.send('switch-tab', 'plugins');
+          }
+        },
+        {
+          label: 'Evolution Process',
+          accelerator: 'CmdOrCtrl+4',
+          click: () => {
+            evolutionWindow.webContents.send('switch-tab', 'evolution');
+          }
+        },
+        {
+          label: 'Evolution Reports',
+          accelerator: 'CmdOrCtrl+5',
+          click: () => {
+            evolutionWindow.webContents.send('switch-tab', 'reports');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Plugins',
+      submenu: [
+        {
+          label: 'Generate Plugin for Selected',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            evolutionWindow.webContents.send('generate-plugins-for-selected');
+          }
+        },
+        {
+          label: 'Test Selected Plugins',
+          accelerator: 'CmdOrCtrl+T',
+          click: () => {
+            evolutionWindow.webContents.send('test-selected-plugins');
+          }
+        },
+        {
+          label: 'Install Selected Plugins',
+          accelerator: 'CmdOrCtrl+Shift+I',
+          click: () => {
+            evolutionWindow.webContents.send('install-selected-plugins');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Export Selected Plugins',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            evolutionWindow.webContents.send('export-selected-plugins');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Analysis',
+      submenu: [
+        {
+          label: 'Analyze Selected Conversations',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            evolutionWindow.webContents.send('analyze-selected-conversations');
+          }
+        },
+        {
+          label: 'Generate Evolution Report',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            evolutionWindow.webContents.send('generate-evolution-report');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Mark as Resolved',
+          accelerator: 'CmdOrCtrl+M',
+          click: () => {
+            evolutionWindow.webContents.send('mark-as-resolved');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Evolution System Guide',
+          click: () => {
+            evolutionWindow.webContents.send('show-evolution-guide');
+          }
+        },
+        {
+          label: 'About Evolution System',
+          click: () => {
+            dialog.showMessageBox(evolutionWindow, {
+              type: 'info',
+              title: 'About Conversation Evolution System',
+              message: 'Conversation Evolution System v1.0',
+              detail: 'AI-powered conversation analysis and plugin generation system for Genome AI Studio'
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  // Set the evolution-specific menu for this window
+  const evolutionMenu = Menu.buildFromTemplate(evolutionMenuTemplate);
+  evolutionWindow.setMenu(evolutionMenu);
+
+  evolutionWindow.on('closed', () => {
+    // Dereference the window object
+  });
 }
 
 // Handle opening plugin function calling test

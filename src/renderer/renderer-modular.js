@@ -1294,24 +1294,8 @@ class GenomeBrowser {
             }
         });
 
-        // Handle evolution interface from Tools menu
-        ipcRenderer.on('open-evolution-interface', () => {
-            console.log('🧬 Opening conversation evolution interface');
-            
-            try {
-                if (this.evolutionInterfaceManager) {
-                    this.evolutionInterfaceManager.openEvolutionInterface();
-                } else if (window.evolutionInterfaceManager) {
-                    window.evolutionInterfaceManager.openEvolutionInterface();
-                } else {
-                    console.warn('EvolutionInterfaceManager not available');
-                    this.showNotification('Evolution system is not yet initialized', 'warning');
-                }
-            } catch (error) {
-                console.error('Failed to open evolution interface:', error);
-                this.showNotification('Unable to open evolution interface', 'error');
-            }
-        });
+        // Evolution interface is now handled as a separate window
+        // No IPC handler needed - menu action creates new window directly
 
 
 
