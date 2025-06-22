@@ -34,6 +34,13 @@ class LLMConfigManager {
                 baseUrl: 'https://api.deepseek.com/v1',
                 enabled: false
             },
+            siliconflow: {
+                name: 'SiliconFlow',
+                apiKey: '',
+                model: 'Qwen/Qwen2.5-72B-Instruct',
+                baseUrl: 'https://api.siliconflow.cn/v1',
+                enabled: false
+            },
             local: {
                 name: 'Local LLM',
                 apiKey: '',
@@ -191,6 +198,7 @@ class LLMConfigManager {
             { btnId: 'pasteAnthropicApiKeyBtn', inputId: 'anthropicApiKey' },
             { btnId: 'pasteGoogleApiKeyBtn', inputId: 'googleApiKey' },
             { btnId: 'pasteDeepseekApiKeyBtn', inputId: 'deepseekApiKey' },
+            { btnId: 'pasteSiliconflowApiKeyBtn', inputId: 'siliconflowApiKey' },
             { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' }
         ];
 
@@ -583,10 +591,12 @@ class LLMConfigManager {
                     return await this.testAnthropic(config);
                 case 'google':
                     return await this.testGoogle(config);
-                case 'deepseek':
-                    return await this.testDeepSeek(config);
-                case 'local':
-                    return await this.testLocal(config);
+                            case 'deepseek':
+                return await this.testDeepSeek(config);
+            case 'siliconflow':
+                return await this.testSiliconFlow(config);
+            case 'local':
+                return await this.testLocal(config);
                 default:
                     throw new Error('Unknown provider type');
             }
@@ -663,6 +673,27 @@ class LLMConfigManager {
         return { success: true };
     }
 
+    async testSiliconFlow(config) {
+        const response = await fetch(`${config.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: config.model,
+                messages: [{ role: 'user', content: 'Hello, can you confirm you are working?' }],
+                max_tokens: 10
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return { success: true };
+    }
+
     async testLocal(config) {
         const response = await fetch(`${config.baseUrl}/models`, {
             headers: config.apiKey ? {
@@ -697,6 +728,8 @@ class LLMConfigManager {
                     return await this.sendGoogleMessage(provider, message, context);
                 case 'deepseek':
                     return await this.sendDeepSeekMessage(provider, message, context);
+                case 'siliconflow':
+                    return await this.sendSiliconFlowMessage(provider, message, context);
                 case 'local':
                     return await this.sendLocalMessage(provider, message, context);
                 default:
@@ -725,6 +758,8 @@ class LLMConfigManager {
                     return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context);
                 case 'deepseek':
                     return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context);
+                case 'siliconflow':
+                    return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
                 case 'local':
                     return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
                 default:
@@ -986,6 +1021,67 @@ class LLMConfigManager {
 
     async sendDeepSeekMessageWithHistory(provider, conversationHistory, context) {
         console.log('Sending to DeepSeek - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: conversationHistory,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: conversationHistory,
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    async sendSiliconFlowMessage(provider, message, context) {
+        const messages = this.buildMessages(message, context);
+        console.log('Sending to SiliconFlow - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: messages,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: messages,
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context) {
+        console.log('Sending to SiliconFlow - Request Payload:', JSON.stringify({
             model: provider.model,
             messages: conversationHistory,
             max_tokens: 2000,

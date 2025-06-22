@@ -203,6 +203,15 @@ class ConfigManager {
                         maxTokens: 4096,
                         temperature: 0.7
                     },
+                    siliconflow: {
+                        name: 'SiliconFlow',
+                        apiKey: '',
+                        model: 'Qwen/Qwen2.5-72B-Instruct',
+                        baseUrl: 'https://api.siliconflow.cn/v1',
+                        enabled: false,
+                        maxTokens: 4096,
+                        temperature: 0.7
+                    },
                     local: {
                         name: 'Local LLM',
                         apiKey: '',
