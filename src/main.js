@@ -272,6 +272,13 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'ChatBox Settings',
+          click: () => {
+            mainWindow.webContents.send('chatbox-settings');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'MCP Server Settings',
           click: () => {
             mainWindow.webContents.send('mcp-settings');

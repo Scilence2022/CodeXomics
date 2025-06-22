@@ -28,7 +28,11 @@ class ChatManager {
             currentStep: 0
         };
         
-        // 思考过程和工具调用显示
+        // Initialize ChatBox Settings Manager
+        this.chatBoxSettingsManager = null;
+        this.initializeChatBoxSettings();
+        
+        // 思考过程和工具调用显示 - 现在从设置管理器获取
         this.showThinkingProcess = true;
         this.showToolCalls = true;
         this.detailedLogging = true;
@@ -68,6 +72,55 @@ class ChatManager {
         setTimeout(() => {
             this.loadChatHistory();
         }, 100);
+    }
+
+    /**
+     * Initialize ChatBox Settings Manager
+     */
+    async initializeChatBoxSettings() {
+        try {
+            // Load the settings manager module
+            await this.loadScript('modules/ChatBoxSettingsManager.js');
+            
+            // Initialize the settings manager
+            if (typeof ChatBoxSettingsManager !== 'undefined') {
+                this.chatBoxSettingsManager = new ChatBoxSettingsManager(this.configManager);
+                
+                // Update display flags from settings
+                this.updateSettingsFromManager();
+                
+                // Listen for settings changes
+                window.addEventListener('chatbox-settingsChanged', (event) => {
+                    this.updateSettingsFromManager();
+                });
+                
+                // Set global reference for settings modal
+                window.chatBoxSettingsManager = this.chatBoxSettingsManager;
+                
+                console.log('ChatBoxSettingsManager initialized successfully');
+            } else {
+                console.warn('ChatBoxSettingsManager not available');
+            }
+        } catch (error) {
+            console.error('Failed to initialize ChatBoxSettingsManager:', error);
+        }
+    }
+
+    /**
+     * Update internal settings from settings manager
+     */
+    updateSettingsFromManager() {
+        if (this.chatBoxSettingsManager) {
+            this.showThinkingProcess = this.chatBoxSettingsManager.getSetting('showThinkingProcess', true);
+            this.showToolCalls = this.chatBoxSettingsManager.getSetting('showToolCalls', true);
+            this.hideThinkingAfterConversation = this.chatBoxSettingsManager.getSetting('hideThinkingAfterConversation', false);
+            this.autoScrollToBottom = this.chatBoxSettingsManager.getSetting('autoScrollToBottom', true);
+            this.showTimestamps = this.chatBoxSettingsManager.getSetting('showTimestamps', false);
+            this.maxHistoryMessages = this.chatBoxSettingsManager.getSetting('maxHistoryMessages', 1000);
+            this.responseTimeout = this.chatBoxSettingsManager.getSetting('responseTimeout', 30000);
+            
+            console.log('🔧 Settings updated from ChatBoxSettingsManager');
+        }
     }
 
     /**
@@ -1439,6 +1492,15 @@ class ChatManager {
         document.getElementById('contextModeToggle')?.addEventListener('change', (e) => {
             this.contextModeEnabled = e.target.checked;
             console.log('Context mode changed:', this.contextModeEnabled ? 'Current message only' : 'Full conversation');
+        });
+
+        // ChatBox settings event handler
+        window.addEventListener('chatbox-settings', () => {
+            if (this.chatBoxSettingsManager) {
+                this.chatBoxSettingsManager.showSettingsModal();
+            } else {
+                console.warn('ChatBoxSettingsManager not initialized');
+            }
         });
     }
 
@@ -7686,8 +7748,10 @@ ${this.getPluginSystemInfo()}`;
         // 更新UI状态
         this.updateUIState();
         
-        // 移除思考过程消息
-        this.removeThinkingMessages();
+        // 根据设置决定是否移除思考过程消息
+        if (this.hideThinkingAfterConversation) {
+            this.removeThinkingMessages();
+        }
     }
 
     /**
@@ -7749,6 +7813,11 @@ ${this.getPluginSystemInfo()}`;
      * 添加思考过程消息
      */
     addThinkingMessage(message) {
+        // 检查是否启用思考过程显示
+        if (!this.showThinkingProcess) {
+            return;
+        }
+        
         // 首先移除之前的思考过程消息
         this.removeThinkingMessages();
         
@@ -7772,13 +7841,22 @@ ${this.getPluginSystemInfo()}`;
         `;
         
         messagesContainer.appendChild(thinkingDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // 根据设置决定是否自动滚动
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     }
 
     /**
      * 更新思考过程消息
      */
     updateThinkingMessage(message) {
+        // 检查是否启用思考过程显示
+        if (!this.showThinkingProcess) {
+            return;
+        }
+        
         // 查找当前请求的思考过程消息
         const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
         let thinkingDiv = document.getElementById(thinkingId);
@@ -7797,9 +7875,11 @@ ${this.getPluginSystemInfo()}`;
             this.addThinkingMessage(message);
         }
         
-        // 自动滚动到底部
+        // 根据设置决定是否自动滚动
         const messagesContainer = document.getElementById('chatMessages');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     }
 
     /**
@@ -7823,6 +7903,11 @@ ${this.getPluginSystemInfo()}`;
      * 添加工具调用消息
      */
     addToolCallMessage(toolsToExecute) {
+        // 检查是否启用工具调用显示
+        if (!this.showToolCalls) {
+            return;
+        }
+        
         const toolList = toolsToExecute.map(tool => 
             `• ${tool.tool_name}(${JSON.stringify(tool.parameters)})`
         ).join('<br>');

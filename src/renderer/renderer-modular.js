@@ -1294,6 +1294,13 @@ class GenomeBrowser {
             }
         });
 
+        // Handle ChatBox settings
+        ipcRenderer.on('chatbox-settings', () => {
+            console.log('📱 ChatBox Settings requested from main menu');
+            // Dispatch event to trigger settings modal
+            window.dispatchEvent(new CustomEvent('chatbox-settings'));
+        });
+
         // Evolution interface is now handled as a separate window
         // No IPC handler needed - menu action creates new window directly
 
