@@ -406,8 +406,17 @@
                 // Create a minimal config manager for standalone mode
                 const configManager = {
                     config: {},
-                    getConfig: function(key, defaultValue) { return this.config[key] || defaultValue; },
-                    setConfig: function(key, value) { this.config[key] = value; },
+                    get: function(key, defaultValue) { 
+                        console.log('ConfigManager.get called with:', key, defaultValue);
+                        return this.config[key] !== undefined ? this.config[key] : defaultValue; 
+                    },
+                    set: function(key, value) { 
+                        console.log('ConfigManager.set called with:', key, value);
+                        this.config[key] = value; 
+                        return Promise.resolve(); 
+                    },
+                    getConfig: function(key, defaultValue) { return this.get(key, defaultValue); },
+                    setConfig: function(key, value) { return this.set(key, value); },
                     saveConfig: function() { return Promise.resolve(); }
                 };
                 
