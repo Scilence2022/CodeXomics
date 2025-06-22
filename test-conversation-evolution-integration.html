@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧬 Conversation Evolution Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #4a9eff;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .test-section {
+            background-color: #3a3a3a;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4a9eff;
+        }
+        
+        .test-log {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+            border: 1px solid #444;
+        }
+        
+        .success {
+            color: #10b981;
+        }
+        
+        .error {
+            color: #ef4444;
+        }
+        
+        .info {
+            color: #3b82f6;
+        }
+        
+        .warning {
+            color: #f59e0b;
+        }
+        
+        button {
+            background-color: #4a9eff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #3d85d9;
+        }
+        
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background-color: #444;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #555;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4a9eff;
+        }
+        
+        .stat-label {
+            color: #ccc;
+            font-size: 0.9em;
+        }
+        
+        .flow-diagram {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .flow-step {
+            display: inline-block;
+            background-color: #4a9eff;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .flow-arrow {
+            display: inline-block;
+            color: #4a9eff;
+            font-size: 1.5em;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Conversation Evolution Integration Test</h1>
+        
+        <div class="test-section">
+            <h2>📋 Data Flow Architecture</h2>
+            <div class="flow-diagram">
+                <div class="flow-step">ChatBox 对话</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">ChatManager.addMessageToChat()</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">Evolution.recordConversationData()</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">独立存储分析</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">插件生成</div>
+            </div>
+            <p><strong>目标：</strong>确保ChatBox对话内容同时存储到ChatBox历史对话和Conversation Evolution的独立存储中，实现完整的数据流。</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔬 Test Controls</h2>
+            <button onclick="runBasicIntegrationTest()" id="basicTestBtn">Run Basic Integration Test</button>
+            <button onclick="runFailureDetectionTest()" id="failureTestBtn">Run Failure Detection Test</button>
+            <button onclick="runThinkingProcessTest()" id="thinkingTestBtn">Run Thinking Process Test</button>
+            <button onclick="runToolCallTest()" id="toolCallTestBtn">Run Tool Call Test</button>
+            <button onclick="runCompleteIntegrationTest()" id="completeTestBtn">Run Complete Integration Test</button>
+            <button onclick="clearLog()" id="clearBtn">Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Test Statistics</h2>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalEvents">0</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="failureEvents">0</div>
+                    <div class="stat-label">Failure Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="thinkingEvents">0</div>
+                    <div class="stat-label">Thinking Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="toolCallEvents">0</div>
+                    <div class="stat-label">Tool Call Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="storageSize">0</div>
+                    <div class="stat-label">Storage Size (KB)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="missingFunctions">0</div>
+                    <div class="stat-label">Missing Functions</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Test Log</h2>
+            <div class="test-log" id="testLog">
+Ready to run tests...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局测试状态
+        let testStats = {
+            totalEvents: 0,
+            failureEvents: 0,
+            thinkingEvents: 0,
+            toolCallEvents: 0,
+            storageSize: 0,
+            missingFunctions: 0
+        };
+
+        let mockEvolutionManager = null;
+
+        // 日志功能
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').textContent = 'Log cleared...\n';
+        }
+
+        // 更新统计显示
+        function updateStats() {
+            document.getElementById('totalEvents').textContent = testStats.totalEvents;
+            document.getElementById('failureEvents').textContent = testStats.failureEvents;
+            document.getElementById('thinkingEvents').textContent = testStats.thinkingEvents;
+            document.getElementById('toolCallEvents').textContent = testStats.toolCallEvents;
+            document.getElementById('storageSize').textContent = (testStats.storageSize / 1024).toFixed(1);
+            document.getElementById('missingFunctions').textContent = testStats.missingFunctions;
+        }
+
+        // 模拟组件
+        class MockApp {
+            constructor() {
+                this.currentChromosome = 'chr1';
+                this.currentPosition = { start: 1000, end: 2000 };
+                this.loadedFiles = ['genome.fasta', 'annotation.gff'];
+            }
+            
+            getAllToolNames() {
+                return ['navigate_to_position', 'search_features', 'get_sequence', 'blast_search'];
+            }
+        }
+
+        class MockConfigManager {
+            constructor() {
+                this.data = {};
+            }
+            
+            get(key, defaultValue = null) {
+                const keys = key.split('.');
+                let current = this.data;
+                for (const k of keys) {
+                    if (current[k] === undefined) return defaultValue;
+                    current = current[k];
+                }
+                return current;
+            }
+            
+            async set(key, value) {
+                const keys = key.split('.');
+                let current = this.data;
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                    current = current[keys[i]];
+                }
+                current[keys[keys.length - 1]] = value;
+            }
+            
+            addChatMessage(message, sender, timestamp) {
+                return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
+        }
+
+        // 模拟 ConversationEvolutionStorageManager
+        class MockStorageManager {
+            constructor() {
+                this.historyData = {
+                    evolutionTimeline: [],
+                    storageStats: {
+                        totalMessages: 0,
+                        lastUpdateDate: new Date().toISOString()
+                    }
+                };
+            }
+            
+            addConversationEvent(conversationEvent) {
+                log(`💾 StorageManager: Adding conversation event (${conversationEvent.sender}, ${conversationEvent.evolutionMetadata?.messageLength || 0} chars)`, 'info');
+                
+                this.historyData.evolutionTimeline.push({
+                    type: 'conversation_event',
+                    timestamp: conversationEvent.timestamp,
+                    data: {
+                        id: conversationEvent.id,
+                        sender: conversationEvent.sender,
+                        messageLength: conversationEvent.evolutionMetadata?.messageLength || 0,
+                        hasThinking: conversationEvent.evolutionMetadata?.hasThinkingProcess || false,
+                        toolCallsCount: conversationEvent.evolutionMetadata?.toolCallsCount || 0,
+                        isError: conversationEvent.isError
+                    }
+                });
+                
+                this.historyData.storageStats.totalMessages++;
+                testStats.totalEvents++;
+                testStats.storageSize = this.getStorageSize();
+                
+                return conversationEvent.id;
+            }
+            
+            getTotalEvents() {
+                return this.historyData.evolutionTimeline.length;
+            }
+            
+            getStorageSize() {
+                return JSON.stringify(this.historyData).length;
+            }
+        }
+
+        // 模拟 ConversationEvolutionManager
+        class MockEvolutionManager {
+            constructor(app, configManager, chatManager) {
+                this.app = app;
+                this.configManager = configManager;
+                this.chatManager = chatManager;
+                this.storageManager = new MockStorageManager();
+                this.evolutionData = {
+                    conversations: [],
+                    missingFunctions: [],
+                    generatedPlugins: [],
+                    evolutionHistory: []
+                };
+            }
+            
+            recordConversationData(message, sender, isError, context = null, timestamp = null) {
+                const eventTimestamp = timestamp || new Date().toISOString();
+                
+                log(`🧬 EvolutionManager: Recording ${sender} message (${message.length} chars, error: ${isError})`, 'info');
+                
+                // 记录对话事件
+                const conversationEvent = {
+                    id: Date.now() + Math.random().toString(36).substr(2, 9),
+                    message,
+                    sender,
+                    isError,
+                    timestamp: eventTimestamp,
+                    context: context || {},
+                    
+                    // 🧬 Additional Evolution-specific analysis data
+                    evolutionMetadata: {
+                        messageLength: message.length,
+                        wordsCount: message.split(/\s+/).length,
+                        hasThinkingProcess: context?.hasThinkingProcess || false,
+                        toolCallsCount: context?.toolCalls?.length || 0,
+                        processingTime: context?.processingTime || 0,
+                        llmProvider: context?.llmProvider || 'unknown',
+                        modelName: context?.modelName || 'unknown'
+                    }
+                };
+                
+                // Store to independent Evolution storage
+                this.storeToEvolutionStorage(conversationEvent);
+                
+                // 如果是错误或失败，进行实时分析
+                if (isError || this.isFailureMessage(message)) {
+                    log(`🔍 EvolutionManager: Analyzing failure...`, 'warning');
+                    this.analyzeFailure(conversationEvent);
+                }
+                
+                // 分析思考过程数据（如果可用）
+                if (context?.hasThinkingProcess) {
+                    log(`🧠 EvolutionManager: Analyzing thinking process...`, 'info');
+                    this.analyzeThinkingProcess(conversationEvent);
+                    testStats.thinkingEvents++;
+                }
+                
+                // 分析工具调用（如果有）
+                if (context?.toolCalls && context.toolCalls.length > 0) {
+                    log(`🔧 EvolutionManager: Analyzing ${context.toolCalls.length} tool calls...`, 'info');
+                    this.analyzeToolCalls(conversationEvent);
+                    testStats.toolCallEvents++;
+                }
+                
+                log(`✅ EvolutionManager: Event processed successfully`, 'success');
+                updateStats();
+            }
+            
+            storeToEvolutionStorage(conversationEvent) {
+                if (this.storageManager) {
+                    this.storageManager.addConversationEvent(conversationEvent);
+                }
+            }
+            
+            isFailureMessage(message) {
+                const failureKeywords = [
+                    'error', 'failed', 'cannot', 'unable', 'not available', 
+                    'not found', 'not supported', 'not implemented'
+                ];
+                const lowerMessage = message.toLowerCase();
+                return failureKeywords.some(keyword => lowerMessage.includes(keyword));
+            }
+            
+            analyzeFailure(conversationEvent) {
+                log(`❌ EvolutionManager: Failure detected - recording missing function`, 'error');
+                this.evolutionData.missingFunctions.push({
+                    id: Date.now() + Math.random().toString(36).substr(2, 9),
+                    type: 'failure_analysis',
+                    description: 'Function failure detected',
+                    timestamp: conversationEvent.timestamp,
+                    confidence: 0.8
+                });
+                testStats.failureEvents++;
+                testStats.missingFunctions++;
+            }
+            
+            analyzeThinkingProcess(conversationEvent) {
+                log(`🧠 EvolutionManager: Analyzing thinking process for evolution signals`, 'info');
+                const message = conversationEvent.message;
+                const thinkingPatterns = [
+                    'I need to implement',
+                    'I cannot do',
+                    'This feature is not available',
+                    'I would need a function',
+                    'This functionality doesn\'t exist'
+                ];
+                
+                const hasEvolutionSignals = thinkingPatterns.some(pattern => 
+                    message.toLowerCase().includes(pattern.toLowerCase())
+                );
+                
+                if (hasEvolutionSignals) {
+                    log(`🧬 EvolutionManager: Evolution signals detected in thinking process`, 'warning');
+                    this.evolutionData.missingFunctions.push({
+                        id: Date.now() + Math.random().toString(36).substr(2, 9),
+                        type: 'thinking_process_analysis',
+                        description: 'Function need identified from thinking process',
+                        timestamp: conversationEvent.timestamp,
+                        confidence: 0.7
+                    });
+                    testStats.missingFunctions++;
+                }
+            }
+            
+            analyzeToolCalls(conversationEvent) {
+                log(`🔧 EvolutionManager: Analyzing tool calls for missing functions`, 'info');
+                const toolCalls = conversationEvent.context.toolCalls;
+                
+                toolCalls.forEach(toolCall => {
+                    if (toolCall.tool && !this.isKnownTool(toolCall.tool)) {
+                        log(`🔧 EvolutionManager: Unknown tool detected: ${toolCall.tool}`, 'warning');
+                        this.evolutionData.missingFunctions.push({
+                            id: Date.now() + Math.random().toString(36).substr(2, 9),
+                            type: 'missing_tool',
+                            functionName: toolCall.tool,
+                            description: `Tool "${toolCall.tool}" was called but not available`,
+                            timestamp: conversationEvent.timestamp,
+                            confidence: 0.9
+                        });
+                        testStats.missingFunctions++;
+                    }
+                });
+            }
+            
+            isKnownTool(toolName) {
+                const knownTools = [
+                    'navigate_to_position', 'search_features', 'get_current_state',
+                    'get_sequence', 'toggle_track', 'blast_search', 'get_genome_info'
+                ];
+                return knownTools.includes(toolName);
+            }
+            
+            getEvolutionStats() {
+                return {
+                    totalConversations: this.evolutionData.conversations.length,
+                    missingFunctions: this.evolutionData.missingFunctions.length,
+                    generatedPlugins: this.evolutionData.generatedPlugins.length,
+                    totalEventsRecorded: this.storageManager ? this.storageManager.getTotalEvents() : 0,
+                    storageSize: this.storageManager ? this.storageManager.getStorageSize() : 0
+                };
+            }
+        }
+
+        // 模拟ChatManager
+        class MockChatManager {
+            constructor(app, configManager) {
+                this.app = app;
+                this.configManager = configManager;
+                this.isProcessing = false;
+                this.lastProcessingTime = 0;
+            }
+            
+            getVisibleTracks() {
+                return ['genes', 'sequence', 'variants'];
+            }
+            
+            addMessageToChat(message, sender, isError = false) {
+                const timestamp = new Date().toISOString();
+                const messageId = this.configManager.addChatMessage(message, sender, timestamp);
+                
+                log(`📝 ChatManager: Added ${sender} message - ${message.substring(0, 50)}...`, 'info');
+                
+                // 🧬 Forward to Conversation Evolution System for analysis
+                this.notifyConversationEvolution(message, sender, isError, timestamp, messageId);
+                
+                return messageId;
+            }
+            
+            notifyConversationEvolution(message, sender, isError, timestamp, messageId) {
+                try {
+                    // Get the global evolution manager
+                    const evolutionManager = mockEvolutionManager;
+                    
+                    if (evolutionManager && evolutionManager.recordConversationData) {
+                        // Create detailed conversation event with all available context
+                        const conversationEvent = {
+                            id: messageId,
+                            message: message,
+                            sender: sender,
+                            isError: isError,
+                            timestamp: timestamp,
+                            
+                            // Include additional context for better analysis
+                            context: {
+                                currentChromosome: this.app?.currentChromosome || null,
+                                currentPosition: this.app?.currentPosition || null,
+                                loadedFiles: this.app?.loadedFiles || [],
+                                visibleTracks: this.getVisibleTracks(),
+                                isProcessing: this.isProcessing,
+                                conversationState: 'active',
+                                
+                                // Include thinking process data if available
+                                hasThinkingProcess: message.includes('<thinking>') || message.includes('thinking...'),
+                                toolCalls: this.extractToolCallsFromMessage(message),
+                                
+                                // Performance and timing data
+                                processingTime: this.lastProcessingTime || 0,
+                                messageLength: message.length,
+                                
+                                // LLM configuration context
+                                llmProvider: 'test-provider',
+                                modelName: 'test-model'
+                            }
+                        };
+                        
+                        // Forward to evolution system for real-time analysis
+                        evolutionManager.recordConversationData(
+                            conversationEvent.message,
+                            conversationEvent.sender,
+                            conversationEvent.isError,
+                            conversationEvent.context,
+                            conversationEvent.timestamp
+                        );
+                        
+                        log(`🧬 ChatManager: Data forwarded to Evolution System (${message.length} chars, thinking: ${conversationEvent.context.hasThinkingProcess}, tools: ${conversationEvent.context.toolCalls.length})`, 'success');
+                        
+                    } else {
+                        log(`🧬 Evolution Manager not available`, 'error');
+                    }
+                } catch (error) {
+                    log(`🧬 Error notifying Evolution System: ${error.message}`, 'error');
+                }
+            }
+            
+            extractToolCallsFromMessage(message) {
+                const toolCalls = [];
+                
+                // Look for tool call patterns in the message
+                const toolCallPatterns = [
+                    /\*\*Tool Call:\*\*\s*(\w+)/gi,
+                    /Calling\s+(\w+)\s*function/gi,
+                    /Executing\s+(\w+)/gi,
+                    /Using\s+(\w+)\s+tool/gi
+                ];
+                
+                toolCallPatterns.forEach(pattern => {
+                    let match;
+                    while ((match = pattern.exec(message)) !== null) {
+                        toolCalls.push({
+                            tool: match[1],
+                            position: match.index,
+                            fullMatch: match[0]
+                        });
+                    }
+                });
+                
+                return toolCalls;
+            }
+        }
+
+        // 测试函数
+        function runBasicIntegrationTest() {
+            log('🔬 Starting Basic Integration Test...', 'info');
+            
+            // 创建模拟组件
+            const mockApp = new MockApp();
+            const mockConfigManager = new MockConfigManager();
+            const mockChatManager = new MockChatManager(mockApp, mockConfigManager);
+            mockEvolutionManager = new MockEvolutionManager(mockApp, mockConfigManager, mockChatManager);
+            
+            // 测试正常对话
+            mockChatManager.addMessageToChat('Hello, can you help me analyze the genome?', 'user');
+            mockChatManager.addMessageToChat('Of course! I can help you analyze the genome data.', 'assistant');
+            
+            log('✅ Basic Integration Test completed', 'success');
+        }
+
+        function runFailureDetectionTest() {
+            log('🔬 Starting Failure Detection Test...', 'info');
+            
+            if (!mockEvolutionManager) {
+                runBasicIntegrationTest(); // 初始化
+            }
+            
+            const mockApp = new MockApp();
+            const mockConfigManager = new MockConfigManager();
+            const mockChatManager = new MockChatManager(mockApp, mockConfigManager);
+            
+            // 测试错误/失败消息
+            mockChatManager.addMessageToChat('Can you perform phylogenetic analysis?', 'user');
+            mockChatManager.addMessageToChat('I cannot perform phylogenetic analysis as this feature is not available.', 'assistant', true);
+            
+            log('✅ Failure Detection Test completed', 'success');
+        }
+
+        function runThinkingProcessTest() {
+            log('🔬 Starting Thinking Process Test...', 'info');
+            
+            if (!mockEvolutionManager) {
+                runBasicIntegrationTest(); // 初始化
+            }
+            
+            const mockApp = new MockApp();
+            const mockConfigManager = new MockConfigManager();
+            const mockChatManager = new MockChatManager(mockApp, mockConfigManager);
+            
+            // 测试思考过程消息
+            mockChatManager.addMessageToChat('Analyze the protein structure for gene ABC', 'user');
+            mockChatManager.addMessageToChat('<thinking>I need to implement a protein structure analysis function to handle this request.</thinking>I would need to implement protein structure analysis functionality.', 'assistant');
+            
+            log('✅ Thinking Process Test completed', 'success');
+        }
+
+        function runToolCallTest() {
+            log('🔬 Starting Tool Call Test...', 'info');
+            
+            if (!mockEvolutionManager) {
+                runBasicIntegrationTest(); // 初始化
+            }
+            
+            const mockApp = new MockApp();
+            const mockConfigManager = new MockConfigManager();
+            const mockChatManager = new MockChatManager(mockApp, mockConfigManager);
+            
+            // 测试工具调用消息
+            mockChatManager.addMessageToChat('Navigate to position chr1:5000-6000', 'user');
+            mockChatManager.addMessageToChat('**Tool Call:** navigate_to_position with parameters {"chromosome": "chr1", "start": 5000, "end": 6000}', 'assistant');
+            mockChatManager.addMessageToChat('Can you use unknown_analysis_tool?', 'user');
+            mockChatManager.addMessageToChat('Using unknown_analysis_tool to analyze the data', 'assistant');
+            
+            log('✅ Tool Call Test completed', 'success');
+        }
+
+        function runCompleteIntegrationTest() {
+            log('🧬 Starting Complete Integration Test...', 'info');
+            
+            // 清零统计
+            testStats = {
+                totalEvents: 0,
+                failureEvents: 0,
+                thinkingEvents: 0,
+                toolCallEvents: 0,
+                storageSize: 0,
+                missingFunctions: 0
+            };
+            
+            // 运行所有测试
+            runBasicIntegrationTest();
+            runFailureDetectionTest();
+            runThinkingProcessTest();
+            runToolCallTest();
+            
+            // 检查结果
+            const stats = mockEvolutionManager.getEvolutionStats();
+            log(`📊 Final Test Results:`, 'info');
+            log(`  - Total events recorded: ${stats.totalEventsRecorded}`, 'info');
+            log(`  - Missing functions identified: ${stats.missingFunctions}`, 'info');
+            log(`  - Storage size: ${stats.storageSize} bytes`, 'info');
+            log(`  - Failure events: ${testStats.failureEvents}`, 'info');
+            log(`  - Thinking events: ${testStats.thinkingEvents}`, 'info');
+            log(`  - Tool call events: ${testStats.toolCallEvents}`, 'info');
+            
+            if (stats.totalEventsRecorded > 0 && stats.missingFunctions > 0) {
+                log('🎉 Complete Integration Test PASSED! Data flow is working correctly.', 'success');
+            } else {
+                log('💥 Complete Integration Test FAILED! Data flow issues detected.', 'error');
+            }
+            
+            updateStats();
+        }
+
+        // 初始化
+        log('🧬 Conversation Evolution Integration Test Ready', 'success');
+        log('Click the buttons above to run specific tests or the complete integration test.', 'info');
+    </script>
+</body>
+</html> 

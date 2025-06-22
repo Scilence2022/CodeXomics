@@ -101,9 +101,10 @@ class ConversationEvolutionManager {
 
     /**
      * 记录对话数据并实时分析
+     * 支持来自ChatManager的丰富上下文数据
      */
-    recordConversationData(message, sender, isError) {
-        const timestamp = new Date().toISOString();
+    recordConversationData(message, sender, isError, context = null, timestamp = null) {
+        const eventTimestamp = timestamp || new Date().toISOString();
         
         // 记录对话事件
         const conversationEvent = {
@@ -111,20 +112,52 @@ class ConversationEvolutionManager {
             message,
             sender,
             isError,
-            timestamp,
-            context: this.getCurrentContext()
+            timestamp: eventTimestamp,
+            context: context || this.getCurrentContext(),
+            
+            // 🧬 Additional Evolution-specific analysis data
+            evolutionMetadata: {
+                messageLength: message.length,
+                wordsCount: message.split(/\s+/).length,
+                hasThinkingProcess: context?.hasThinkingProcess || false,
+                toolCallsCount: context?.toolCalls?.length || 0,
+                processingTime: context?.processingTime || 0,
+                llmProvider: context?.llmProvider || 'unknown',
+                modelName: context?.modelName || 'unknown'
+            }
         };
         
         // 添加到当前对话
         this.addToCurrentConversation(conversationEvent);
+        
+        // Store to independent Evolution storage
+        this.storeToEvolutionStorage(conversationEvent);
         
         // 如果是错误或失败，进行实时分析
         if (isError || this.isFailureMessage(message)) {
             this.analyzeFailure(conversationEvent);
         }
         
+        // 分析思考过程数据（如果可用）
+        if (context?.hasThinkingProcess) {
+            this.analyzeThinkingProcess(conversationEvent);
+        }
+        
+        // 分析工具调用（如果有）
+        if (context?.toolCalls && context.toolCalls.length > 0) {
+            this.analyzeToolCalls(conversationEvent);
+        }
+        
         // 定期保存数据
         this.debouncedSaveEvolutionData();
+        
+        console.log('🧬 Evolution: Recorded conversation event', {
+            sender: sender,
+            length: message.length,
+            hasError: isError,
+            hasThinking: context?.hasThinkingProcess,
+            toolCalls: context?.toolCalls?.length || 0
+        });
     }
 
     /**
@@ -591,6 +624,157 @@ class ConversationEvolutionManager {
     }
 
     /**
+     * 🧬 Store conversation event to independent Evolution storage
+     */
+    storeToEvolutionStorage(conversationEvent) {
+        try {
+            if (this.storageManager) {
+                // Store to the independent conversation-evolution-data.json file
+                this.storageManager.addConversationEvent(conversationEvent);
+                console.log('🧬 Evolution: Stored event to independent storage');
+            } else {
+                console.warn('🧬 Evolution: Storage manager not available');
+            }
+        } catch (error) {
+            console.error('🧬 Evolution: Error storing to independent storage:', error);
+        }
+    }
+
+    /**
+     * 🧬 Analyze thinking process data for evolution insights
+     */
+    analyzeThinkingProcess(conversationEvent) {
+        try {
+            const message = conversationEvent.message;
+            const thinkingPatterns = [
+                'I need to implement',
+                'I cannot do',
+                'This feature is not available',
+                'I would need a function',
+                'This functionality doesn\'t exist'
+            ];
+            
+            const hasEvolutionSignals = thinkingPatterns.some(pattern => 
+                message.toLowerCase().includes(pattern.toLowerCase())
+            );
+            
+            if (hasEvolutionSignals) {
+                console.log('🧬 Evolution: Detected evolution signals in thinking process');
+                // Add to missing functions analysis
+                this.recordMissingFunctionFromThinking(conversationEvent);
+            }
+        } catch (error) {
+            console.error('🧬 Evolution: Error analyzing thinking process:', error);
+        }
+    }
+
+    /**
+     * 🧬 Analyze tool calls for evolution insights
+     */
+    analyzeToolCalls(conversationEvent) {
+        try {
+            const toolCalls = conversationEvent.context.toolCalls;
+            
+            // Check for failed tool calls or missing tools
+            toolCalls.forEach(toolCall => {
+                if (toolCall.tool && !this.isKnownTool(toolCall.tool)) {
+                    console.log('🧬 Evolution: Detected unknown tool call:', toolCall.tool);
+                    this.recordMissingTool(toolCall.tool, conversationEvent);
+                }
+            });
+        } catch (error) {
+            console.error('🧬 Evolution: Error analyzing tool calls:', error);
+        }
+    }
+
+    /**
+     * 🧬 Record missing function from thinking process
+     */
+    recordMissingFunctionFromThinking(conversationEvent) {
+        const missingFunction = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            type: 'thinking_process_analysis',
+            description: 'Function identified from AI thinking process',
+            source: 'thinking_analysis',
+            timestamp: conversationEvent.timestamp,
+            conversationId: conversationEvent.id,
+            confidence: 0.7,
+            context: conversationEvent.context,
+            analysisData: {
+                originalMessage: conversationEvent.message,
+                extractedNeed: this.extractFunctionNeed(conversationEvent.message)
+            }
+        };
+        
+        this.evolutionData.missingFunctions.push(missingFunction);
+        console.log('🧬 Evolution: Recorded missing function from thinking process');
+    }
+
+    /**
+     * 🧬 Check if a tool is known in the system
+     */
+    isKnownTool(toolName) {
+        // Get available tools from app context
+        if (this.app && this.app.getAllToolNames) {
+            const availableTools = this.app.getAllToolNames();
+            return availableTools.includes(toolName);
+        }
+        
+        // Fallback: check against common tools
+        const knownTools = [
+            'navigate_to_position', 'search_features', 'get_current_state',
+            'get_sequence', 'toggle_track', 'blast_search', 'get_genome_info'
+        ];
+        return knownTools.includes(toolName);
+    }
+
+    /**
+     * 🧬 Record missing tool
+     */
+    recordMissingTool(toolName, conversationEvent) {
+        const missingFunction = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            type: 'missing_tool',
+            functionName: toolName,
+            description: `Tool "${toolName}" was called but not available`,
+            source: 'tool_call_analysis',
+            timestamp: conversationEvent.timestamp,
+            conversationId: conversationEvent.id,
+            confidence: 0.9,
+            context: conversationEvent.context,
+            analysisData: {
+                originalMessage: conversationEvent.message,
+                toolCall: toolName
+            }
+        };
+        
+        this.evolutionData.missingFunctions.push(missingFunction);
+        console.log('🧬 Evolution: Recorded missing tool:', toolName);
+    }
+
+    /**
+     * 🧬 Extract function need from thinking process text
+     */
+    extractFunctionNeed(message) {
+        const patterns = [
+            /I need to implement (\w+)/gi,
+            /I would need a (\w+) function/gi,
+            /This would require (\w+)/gi,
+            /I cannot (\w+)/gi
+        ];
+        
+        const matches = [];
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(message)) !== null) {
+                matches.push(match[1]);
+            }
+        });
+        
+        return matches;
+    }
+
+    /**
      * 获取进化统计
      */
     getEvolutionStats() {
@@ -602,7 +786,13 @@ class ConversationEvolutionManager {
             successfulPlugins: this.evolutionData.generatedPlugins.filter(p => p.status === 'tested').length,
             lastEvolutionDate: this.evolutionData.evolutionHistory.length > 0 
                 ? this.evolutionData.evolutionHistory[this.evolutionData.evolutionHistory.length - 1].timestamp 
-                : null
+                : null,
+            
+            // 🧬 Enhanced statistics
+            thinkingProcessAnalysis: this.evolutionData.missingFunctions.filter(f => f.source === 'thinking_analysis').length,
+            toolCallAnalysis: this.evolutionData.missingFunctions.filter(f => f.source === 'tool_call_analysis').length,
+            totalEventsRecorded: this.storageManager ? this.storageManager.getTotalEvents() : 0,
+            storageSize: this.storageManager ? this.storageManager.getStorageSize() : 0
         };
     }
 
