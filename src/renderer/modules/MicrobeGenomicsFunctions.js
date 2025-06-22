@@ -41,8 +41,21 @@ class MicrobeGenomicsFunctions {
     static navigateTo(chromosome, start, end) {
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
+        
+        // Set the position first
         gb.currentPosition = { start, end };
-        gb.selectChromosome(chromosome);
+        gb.currentChromosome = chromosome;
+        
+        // Update chromosome select if different
+        const chrSelect = document.getElementById('chromosomeSelect');
+        if (chrSelect && chrSelect.value !== chromosome) {
+            chrSelect.value = chromosome;
+        }
+        
+        // Trigger view refresh to show the new position
+        if (gb.currentSequence && gb.currentSequence[chromosome]) {
+            gb.displayGenomeView(chromosome, gb.currentSequence[chromosome]);
+        }
     }
 
     /**
