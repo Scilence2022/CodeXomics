@@ -18,6 +18,21 @@ class ChatManager {
         this.activeRequests = new Map();
         this.pendingMessages = [];
         
+        // 对话状态管理
+        this.conversationState = {
+            isProcessing: false,
+            currentRequestId: null,
+            abortController: null,
+            startTime: null,
+            processSteps: [],
+            currentStep: 0
+        };
+        
+        // 思考过程和工具调用显示
+        this.showThinkingProcess = true;
+        this.showToolCalls = true;
+        this.detailedLogging = true;
+        
         // Initialize LLM configuration manager with config integration
         this.llmConfigManager = new LLMConfigManager(this.configManager);
         
@@ -1191,9 +1206,14 @@ class ChatManager {
                         <textarea id="chatInput" 
                                 placeholder="Ask me anything about your genome data..." 
                                 rows="1"></textarea>
-                        <button id="sendChatBtn" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                        <div class="chat-send-controls">
+                            <button id="sendChatBtn" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                            <button id="abortChatBtn" class="btn btn-secondary chat-abort-btn" style="display: none;">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="chat-actions">
                         <button id="newChatBtn" class="btn btn-sm btn-primary">
@@ -1362,6 +1382,12 @@ class ChatManager {
             sendBtn.addEventListener('click', () => this.sendMessage());
         }
 
+        // Chat abort button
+        const abortBtn = document.getElementById('abortChatBtn');
+        if (abortBtn) {
+            abortBtn.addEventListener('click', () => this.abortCurrentConversation());
+        }
+
         // Chat controls
         document.getElementById('minimizeChatBtn')?.addEventListener('click', () => {
             this.toggleChatMinimize();
@@ -1473,13 +1499,23 @@ class ChatManager {
         const message = chatInput.value.trim();
         
         if (!message) return;
+        
+        // 检查是否正在处理中
+        if (this.conversationState.isProcessing) {
+            this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
+            return;
+        }
 
+        // 初始化对话状态
+        this.startConversation();
+        
         // Add user message to chat
         this.addMessageToChat(message, 'user');
         chatInput.value = '';
         chatInput.style.height = 'auto';
 
-        // Show typing indicator
+        // Show typing indicator and thinking process
+        this.showThinkingProcess && this.addThinkingMessage('Analyzing your question...');
         this.showTypingIndicator();
 
         try {
@@ -1489,8 +1525,15 @@ class ChatManager {
             this.addMessageToChat(response, 'assistant');
         } catch (error) {
             this.removeTypingIndicator();
-            this.addMessageToChat('Sorry, I encountered an error. Please try again.', 'assistant', true);
-            console.error('Chat error:', error);
+            if (error.name === 'AbortError') {
+                this.addMessageToChat('Conversation aborted by user.', 'assistant', false, 'warning');
+            } else {
+                this.addMessageToChat('Sorry, I encountered an error. Please try again.', 'assistant', true);
+                console.error('Chat error:', error);
+            }
+        } finally {
+            // 结束对话状态
+            this.endConversation();
         }
     }
 
@@ -1502,6 +1545,9 @@ class ChatManager {
 
         console.log('=== ChatManager.sendToLLM DEBUG START ===');
         console.log('User message:', message);
+        
+        // 设置AbortController
+        this.conversationState.abortController = new AbortController();
 
         try {
             // Get maximum function call rounds from configuration
@@ -1509,6 +1555,9 @@ class ChatManager {
             const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
             console.log('Maximum function call rounds:', maxRounds);
             console.log('Early completion enabled:', enableEarlyCompletion);
+            
+            // 显示思考过程
+            this.showThinkingProcess && this.addThinkingMessage(`🔄 Starting request processing (max rounds: ${maxRounds})`);
 
             // Get current studio context
             const context = this.getCurrentContext();
@@ -1524,18 +1573,34 @@ class ChatManager {
             
             // Iterative function calling loop
             while (currentRound < maxRounds && !taskCompleted) {
+                // 检查是否被中止
+                if (this.conversationState.abortController.signal.aborted) {
+                    throw new Error('AbortError');
+                }
+                
                 currentRound++;
                 console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
+                
+                // 更新思考过程
+                this.showThinkingProcess && this.updateThinkingMessage(`🤖 Round ${currentRound}/${maxRounds} thinking...`);
                 
                 // Send conversation history to configured LLM
                 console.log('Sending to LLM...');
                 const response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context);
+                
+                // 检查响应是否被中止
+                if (this.conversationState.abortController.signal.aborted) {
+                    throw new Error('AbortError');
+                }
                 
                 console.log('=== LLM Raw Response ===');
                 console.log('Response type:', typeof response);
                 console.log('Response length:', response ? response.length : 'null');
                 console.log('Full response:', response);
                 console.log('========================');
+                
+                // 显示LLM的思考过程（如果响应包含思考标签）
+                this.showThinkingProcess && this.displayLLMThinking(response);
                 
                 // Check for task completion signals if early completion is enabled
                 if (enableEarlyCompletion) {
@@ -1570,8 +1635,16 @@ class ChatManager {
                     console.log('Tools to execute:', toolsToExecute.map(t => t.tool_name));
                     console.log('==========================');
                     
+                    // 显示工具调用信息
+                    this.showToolCalls && this.addToolCallMessage(toolsToExecute);
+                    
                     try {
                         console.log('Executing tool(s)...');
+                        
+                        // 检查是否被中止
+                        if (this.conversationState.abortController.signal.aborted) {
+                            throw new Error('AbortError');
+                        }
                         
                         let toolResults;
                         
@@ -1665,6 +1738,9 @@ class ChatManager {
                         }
                         
                         console.log('Tool execution completed. Results:', toolResults);
+                        
+                        // 显示工具执行结果
+                        this.showToolCalls && this.addToolResultMessage(toolResults);
                         
                         // Add the tool calls and results to conversation history for next round
                         conversationHistory.push({
@@ -7580,5 +7656,220 @@ ${this.getPluginSystemInfo()}`;
             console.error('Tools validation failed:', error);
             return report;
         }
+    }
+
+    /**
+     * 开始对话状态管理
+     */
+    startConversation() {
+        this.conversationState.isProcessing = true;
+        this.conversationState.currentRequestId = Date.now().toString();
+        this.conversationState.startTime = Date.now();
+        this.conversationState.processSteps = [];
+        this.conversationState.currentStep = 0;
+        
+        // 更新UI状态
+        this.updateUIState();
+    }
+
+    /**
+     * 结束对话状态管理
+     */
+    endConversation() {
+        this.conversationState.isProcessing = false;
+        this.conversationState.currentRequestId = null;
+        this.conversationState.abortController = null;
+        this.conversationState.startTime = null;
+        this.conversationState.processSteps = [];
+        this.conversationState.currentStep = 0;
+        
+        // 更新UI状态
+        this.updateUIState();
+        
+        // 移除思考过程消息
+        this.removeThinkingMessages();
+    }
+
+    /**
+     * 中止当前对话
+     */
+    abortCurrentConversation() {
+        if (this.conversationState.isProcessing && this.conversationState.abortController) {
+            this.conversationState.abortController.abort();
+            this.showNotification('Conversation aborted', 'warning');
+            
+            // 移除输入指示器
+            this.removeTypingIndicator();
+            
+            // 结束对话状态
+            this.endConversation();
+        }
+    }
+
+    /**
+     * 更新UI状态
+     */
+    updateUIState() {
+        const sendBtn = document.getElementById('sendChatBtn');
+        const abortBtn = document.getElementById('abortChatBtn');
+        const chatInput = document.getElementById('chatInput');
+        
+        if (this.conversationState.isProcessing) {
+            // Conversation in progress - disable send button, show abort button
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                sendBtn.classList.add('processing');
+            }
+            if (abortBtn) {
+                abortBtn.style.display = 'block';
+            }
+            if (chatInput) {
+                chatInput.disabled = true;
+                chatInput.placeholder = 'Conversation in progress, please wait...';
+            }
+        } else {
+            // Conversation ended - restore normal state
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                sendBtn.classList.remove('processing');
+            }
+            if (abortBtn) {
+                abortBtn.style.display = 'none';
+            }
+            if (chatInput) {
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Ask me anything about your genome data...';
+            }
+        }
+    }
+
+    /**
+     * 添加思考过程消息
+     */
+    addThinkingMessage(message) {
+        // 首先移除之前的思考过程消息
+        this.removeThinkingMessages();
+        
+        const messagesContainer = document.getElementById('chatMessages');
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.className = 'message assistant-message thinking-process';
+        thinkingDiv.id = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+        thinkingDiv.innerHTML = `
+            <div class="message-content">
+                <div class="message-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="message-text thinking-text">
+                    <div class="thinking-header">
+                        <i class="fas fa-cog fa-spin"></i>
+                        <span>AI Thinking Process</span>
+                    </div>
+                    <div class="thinking-content">${message}</div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(thinkingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    /**
+     * 更新思考过程消息
+     */
+    updateThinkingMessage(message) {
+        // 查找当前请求的思考过程消息
+        const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+        let thinkingDiv = document.getElementById(thinkingId);
+        
+        // 如果没有找到，查找任何思考过程消息
+        if (!thinkingDiv) {
+            thinkingDiv = document.querySelector('.thinking-process');
+        }
+        
+        if (thinkingDiv) {
+            const thinkingContent = thinkingDiv.querySelector('.thinking-content');
+            if (thinkingContent) {
+                thinkingContent.innerHTML += '<br>' + message;
+            }
+        } else {
+            this.addThinkingMessage(message);
+        }
+        
+        // 自动滚动到底部
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    /**
+     * 显示LLM的思考过程
+     */
+    displayLLMThinking(response) {
+        // 检查响应中是否包含思考标签
+        const thinkingMatch = response.match(/<think>([\s\S]*?)<\/think>/);
+        if (thinkingMatch) {
+            const thinkingContent = thinkingMatch[1].trim();
+            this.updateThinkingMessage(`💭 Model thinking: ${thinkingContent}`);
+        }
+        
+        // 检查是否有工具调用分析
+        if (response.includes('tool_name') || response.includes('function_name')) {
+            this.updateThinkingMessage('🔧 Analyzing required tool calls...');
+        }
+    }
+
+    /**
+     * 添加工具调用消息
+     */
+    addToolCallMessage(toolsToExecute) {
+        const toolList = toolsToExecute.map(tool => 
+            `• ${tool.tool_name}(${JSON.stringify(tool.parameters)})`
+        ).join('<br>');
+        
+        this.updateThinkingMessage(`⚡ Executing tool calls:<br>${toolList}`);
+    }
+
+    /**
+     * 移除思考过程消息
+     */
+    removeThinkingMessages() {
+        // 移除所有思考过程消息
+        const thinkingDivs = document.querySelectorAll('.thinking-process');
+        thinkingDivs.forEach(thinkingDiv => {
+            // 添加淡出动画
+            thinkingDiv.style.transition = 'opacity 0.5s ease-out';
+            thinkingDiv.style.opacity = '0';
+            
+            setTimeout(() => {
+                if (thinkingDiv.parentNode) {
+                    thinkingDiv.parentNode.removeChild(thinkingDiv);
+                }
+            }, 500);
+        });
+    }
+
+    /**
+     * 添加工具执行结果显示
+     */
+    addToolResultMessage(toolResults) {
+        if (!this.showToolCalls) return;
+        
+        const successCount = toolResults.filter(r => r.success).length;
+        const failCount = toolResults.filter(r => !r.success).length;
+        
+        let resultMessage = `✅ Tool execution completed: ${successCount} succeeded`;
+        if (failCount > 0) {
+            resultMessage += `, ${failCount} failed`;
+        }
+        
+        // 显示详细结果
+        const detailsHtml = toolResults.map(result => {
+            const icon = result.success ? '✅' : '❌';
+            const status = result.success ? 'succeeded' : `failed: ${result.error}`;
+            return `${icon} ${result.tool}: ${status}`;
+        }).join('<br>');
+        
+        this.updateThinkingMessage(`${resultMessage}<br><details><summary>Detailed results</summary>${detailsHtml}</details>`);
     }
 } 

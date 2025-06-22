@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thinking Process Fix Test</title>
+    <link rel="stylesheet" href="src/renderer/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .test-btn:hover {
+            background: #5a67d8;
+        }
+        .test-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 16px 0;
+            padding: 12px;
+            border-radius: 6px;
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="controls">
+            <h1>🧪 Thinking Process Fix Test</h1>
+            <p>This test verifies that:</p>
+            <ul>
+                <li>✅ All text is in English (no Chinese characters)</li>
+                <li>✅ Each new thinking process replaces the previous one</li>
+                <li>✅ Thinking processes don't overlap or stack</li>
+                <li>✅ State management works correctly</li>
+            </ul>
+            
+            <div class="status" id="testStatus">
+                Ready to test. Click any button below to start.
+            </div>
+            
+            <div>
+                <button class="test-btn" onclick="testSequentialThinking()">
+                    Test Sequential Thinking
+                </button>
+                <button class="test-btn" onclick="testRapidFire()">
+                    Test Rapid Fire (5 quick messages)
+                </button>
+                <button class="test-btn" onclick="testAbortScenario()">
+                    Test Abort Scenario
+                </button>
+                <button class="test-btn" onclick="clearAll()">
+                    Clear All Messages
+                </button>
+            </div>
+        </div>
+
+        <div id="app"></div>
+    </div>
+
+    <!-- Mock dependencies -->
+    <script>
+        class MockConfigManager {
+            constructor() {
+                this.config = {};
+                this.chatHistory = [];
+            }
+            
+            get(key, defaultValue) {
+                return this.config[key] || defaultValue;
+            }
+            
+            set(key, value) {
+                this.config[key] = value;
+            }
+            
+            addChatMessage(message, sender, timestamp) {
+                const messageId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+                this.chatHistory.push({ message, sender, timestamp, id: messageId });
+                return messageId;
+            }
+            
+            getChatHistory() {
+                return this.chatHistory;
+            }
+            
+            clearChatHistory() {
+                this.chatHistory = [];
+            }
+        }
+
+        class MockLLMConfigManager {
+            isConfigured() {
+                return true;
+            }
+            
+            async sendMessageWithHistory(history, context) {
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+                
+                const responses = [
+                    'I need to analyze this genome data step by step.',
+                    '{"tool_name": "get_sequence", "parameters": {"start": 1000, "end": 2000}}',
+                    '<think>The user is asking for a complex analysis. I should break this down into steps: 1) Get the sequence, 2) Calculate GC content, 3) Find features.</think>Starting comprehensive analysis...',
+                    'Let me search for the requested features in the genome.',
+                ];
+                
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+        }
+
+        class MockApp {
+            constructor() {
+                this.genomeBrowser = {
+                    currentChromosome: 'chr1',
+                    currentPosition: { start: 1000, end: 2000 },
+                    loadedFiles: ['genome.fasta'],
+                    availableTools: ['navigate_to_position', 'search_features', 'get_sequence'],
+                    toolSources: { local: 10, plugins: 5, mcp: 3 }
+                };
+            }
+        }
+
+        // Initialize mock environment
+        const mockApp = new MockApp();
+        const mockConfigManager = new MockConfigManager();
+        
+        window.LLMConfigManager = MockLLMConfigManager;
+        window.MCPServerManager = class { constructor() {} on() {} };
+        window.PluginManager = class { constructor() {} on() {} };
+        window.PluginFunctionCallsIntegrator = class { constructor() {} };
+        window.SmartExecutor = class { constructor() {} };
+        window.FunctionCallsOrganizer = class { constructor() {} };
+    </script>
+
+    <script src="src/renderer/modules/ChatManager.js"></script>
+
+    <script>
+        const chatManager = new ChatManager(mockApp, mockConfigManager);
+        let testCounter = 0;
+
+        function updateStatus(message) {
+            document.getElementById('testStatus').textContent = message;
+        }
+
+        function testSequentialThinking() {
+            updateStatus('Testing sequential thinking processes...');
+            
+            // Start first conversation
+            chatManager.startConversation();
+            chatManager.addThinkingMessage('🔄 First conversation: Starting genome analysis...');
+            
+            setTimeout(() => {
+                chatManager.updateThinkingMessage('🧬 Analyzing sequence features...');
+            }, 1000);
+            
+            setTimeout(() => {
+                chatManager.endConversation();
+                updateStatus('First conversation ended. Starting second...');
+                
+                // Start second conversation
+                chatManager.startConversation();
+                chatManager.addThinkingMessage('🔄 Second conversation: Different analysis approach...');
+                
+                setTimeout(() => {
+                    chatManager.updateThinkingMessage('📊 Computing statistics...');
+                }, 1000);
+                
+                setTimeout(() => {
+                    chatManager.endConversation();
+                    updateStatus('✅ Sequential test completed. Check that only one thinking process shows at a time.');
+                }, 2000);
+            }, 3000);
+        }
+
+        function testRapidFire() {
+            updateStatus('Testing rapid-fire conversations...');
+            
+            for (let i = 1; i <= 5; i++) {
+                setTimeout(() => {
+                    chatManager.startConversation();
+                    chatManager.addThinkingMessage(`🚀 Rapid conversation #${i}: Processing request...`);
+                    
+                    setTimeout(() => {
+                        chatManager.updateThinkingMessage(`⚡ Step ${i} analysis complete`);
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        chatManager.endConversation();
+                        if (i === 5) {
+                            updateStatus('✅ Rapid-fire test completed. Check that processes replaced each other cleanly.');
+                        }
+                    }, 1000);
+                }, i * 1500);
+            }
+        }
+
+        function testAbortScenario() {
+            updateStatus('Testing abort scenario...');
+            
+            chatManager.startConversation();
+            chatManager.addThinkingMessage('🔄 Long-running analysis starting...');
+            
+            setTimeout(() => {
+                chatManager.updateThinkingMessage('📊 Processing large dataset...');
+            }, 1000);
+            
+            setTimeout(() => {
+                chatManager.updateThinkingMessage('⏳ This will take a while...');
+                updateStatus('Now testing abort functionality...');
+            }, 2000);
+            
+            setTimeout(() => {
+                chatManager.abortCurrentConversation();
+                updateStatus('✅ Abort test completed. Check that conversation was properly terminated.');
+            }, 3000);
+        }
+
+        function clearAll() {
+            chatManager.clearChat();
+            chatManager.removeThinkingMessages();
+            updateStatus('🧹 All messages cleared.');
+        }
+
+        // Auto-start test
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                chatManager.addMessageToChat(
+                    '🧪 Thinking Process Fix Test Environment Loaded\n\n' +
+                    '✨ Features being tested:\n' +
+                    '• English-only interface text\n' +
+                    '• Proper thinking process isolation\n' +
+                    '• Clean state transitions\n' +
+                    '• Abort functionality\n\n' +
+                    'Use the buttons above to run different test scenarios.', 
+                    'assistant'
+                );
+                updateStatus('✅ Test environment ready. All text should be in English.');
+            }, 500);
+        });
+
+        // Validation function to check for Chinese characters
+        function validateEnglishOnly() {
+            const allText = document.body.textContent;
+            const chineseRegex = /[\u4e00-\u9fff]/;
+            
+            if (chineseRegex.test(allText)) {
+                console.warn('⚠️ Chinese characters detected in UI!');
+                return false;
+            } else {
+                console.log('✅ All text is in English');
+                return true;
+            }
+        }
+
+        // Run validation periodically
+        setInterval(() => {
+            validateEnglishOnly();
+        }, 2000);
+    </script>
+</body>
+</html> 
