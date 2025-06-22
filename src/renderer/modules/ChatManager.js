@@ -7808,4 +7808,50 @@ Please help the user with genome analysis tasks, visualization, and tool usage.
             return 'unknown';
         }
     }
+
+    /**
+     * Update UI state based on conversation status
+     */
+    updateUIState() {
+        try {
+            const sendButton = document.getElementById('sendChatBtn');
+            const messageInput = document.getElementById('chatInput');
+            const abortButton = document.getElementById('abortChatBtn');
+            
+            if (sendButton) {
+                if (this.conversationState.isProcessing) {
+                    sendButton.disabled = true;
+                    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    sendButton.classList.add('processing');
+                } else {
+                    sendButton.disabled = false;
+                    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                    sendButton.classList.remove('processing');
+                }
+            }
+            
+            if (messageInput) {
+                messageInput.disabled = this.conversationState.isProcessing;
+                if (this.conversationState.isProcessing) {
+                    messageInput.placeholder = 'Processing request...';
+                } else {
+                    messageInput.placeholder = 'Ask me anything about your genome data...';
+                }
+            }
+            
+            // Show/hide abort button based on processing state
+            if (abortButton) {
+                if (this.conversationState.isProcessing) {
+                    abortButton.style.display = 'inline-block';
+                } else {
+                    abortButton.style.display = 'none';
+                }
+            }
+            
+            console.log('UI state updated - processing:', this.conversationState.isProcessing);
+            
+        } catch (error) {
+            console.warn('Failed to update UI state:', error);
+        }
+    }
 }
