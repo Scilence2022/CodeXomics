@@ -755,10 +755,10 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             this.genomeBrowser.updateStatus('Initializing BAM file reader...');
             
             // Create BAM reader instance
-            const bamReader = new BamReader(this.currentFile.path);
+            const bamReader = new BamReader();
             
-            // Initialize the BAM reader
-            await bamReader.initialize();
+            // Initialize the BAM reader with file path
+            await bamReader.initialize(this.currentFile.path);
             
             // Store BAM reader for later use
             this.genomeBrowser.bamReader = bamReader;

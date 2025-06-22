@@ -29,7 +29,8 @@ class BamReader {
             }
 
             // Call main process to initialize BAM file
-            const result = await window.electronAPI.invoke('bam-initialize', filePath);
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('bam-initialize', filePath);
             
             if (!result.success) {
                 throw new Error(result.error);
@@ -103,7 +104,8 @@ class BamReader {
             console.log(`BamReader: Reading region ${chromosome}:${start}-${end}`);
 
             // Call main process to get reads
-            const result = await window.electronAPI.invoke('bam-get-reads', {
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('bam-get-reads', {
                 filePath: this.filePath,
                 chromosome: chromosome,
                 start: start,
@@ -123,6 +125,14 @@ class BamReader {
             console.error('BamReader: Failed to get reads for region:', error);
             throw new Error(`Failed to read BAM region: ${error.message}`);
         }
+    }
+
+    /**
+     * Get BAM file header
+     * @returns {Object} BAM file header
+     */
+    getHeader() {
+        return this.header;
     }
 
     /**
