@@ -2888,6 +2888,34 @@ ${examples.map(example =>
     `Task: ${example.task}\nSteps:\n${example.steps.map(step => `  ${step}`).join('\n')}`
 ).join('\n\n')}
 `;
+            } catch (error) {
+                console.error('Error generating microbe genomics info:', error);
+                microbeGenomicsInfo = 'Microbe Genomics Functions available but could not load details.';
+            }
+        }
+
+        // Return the base system message
+        return `
+You are a helpful AI assistant for a genome visualization and analysis platform called GenomeExplorer.
+
+${mcpServersInfo}
+
+${microbeGenomicsInfo}
+
+${this.getPluginSystemInfo()}
+
+Current System State:
+- Genome: ${this.getGenomeInfoSummary()}
+- Files: ${this.getLoadedFilesSummary()}
+- Tracks: ${this.getVisibleTracksSummary()}
+- MCP: ${this.getMCPServersSummary()}
+- Plugins: ${this.getPluginFunctionsSummary()}
+
+Current Context:
+${JSON.stringify(context, null, 2)}
+
+Please help the user with genome analysis tasks, visualization, and tool usage.
+`;
     }
 
     /**
