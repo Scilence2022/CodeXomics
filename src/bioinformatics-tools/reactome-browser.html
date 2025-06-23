@@ -407,6 +407,7 @@
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         // Global variables
         let currentPathways = [];
@@ -501,9 +502,15 @@
             }
         ];
 
+        // Initialize menu handler
+        let menuHandler;
+
         // Initialize the application
         function initializeApp() {
             console.log('Reactome Pathway Browser initialized');
+            
+            // Initialize menu handler
+            menuHandler = new ToolMenuHandler('Reactome Pathway Browser');
             
             // Add event listeners
             document.getElementById('searchQuery').addEventListener('keypress', function(e) {

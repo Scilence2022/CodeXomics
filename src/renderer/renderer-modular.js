@@ -4057,6 +4057,12 @@ class GenomeBrowser {
      */
     handleMenuCopy() {
         try {
+            // Check if this window is focused - avoid executing if tool window is active
+            if (!document.hasFocus()) {
+                console.log('Main window not focused, skipping copy operation');
+                return;
+            }
+
             // Get the currently focused element
             const activeElement = document.activeElement;
             
@@ -4118,6 +4124,12 @@ class GenomeBrowser {
      */
     handleMenuPaste() {
         try {
+            // Check if this window is focused - avoid executing if tool window is active
+            if (!document.hasFocus()) {
+                console.log('Main window not focused, skipping paste operation');
+                return;
+            }
+
             const activeElement = document.activeElement;
             
             // If focused on an input field or textarea

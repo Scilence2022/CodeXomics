@@ -5871,6 +5871,12 @@ ${this.getPluginSystemInfo()}`;
      */
     copySelectedText() {
         try {
+            // Check if this window is focused - avoid executing if tool window is active
+            if (!document.hasFocus()) {
+                console.log('Chat window not focused, skipping copy operation');
+                return;
+            }
+
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             
@@ -5917,6 +5923,12 @@ ${this.getPluginSystemInfo()}`;
      */
     async pasteFromClipboard() {
         try {
+            // Check if this window is focused - avoid executing if tool window is active
+            if (!document.hasFocus()) {
+                console.log('Chat window not focused, skipping paste operation');
+                return;
+            }
+
             const chatInput = document.getElementById('chatInput');
             if (!chatInput) {
                 this.showNotification('❌ Chat input not found', 'error');
@@ -5953,21 +5965,14 @@ ${this.getPluginSystemInfo()}`;
         } catch (error) {
             console.error('Error pasting from clipboard:', error);
             
-            // Fallback: prompt user for manual paste
-            const manualText = prompt('Unable to access clipboard automatically. Please paste your text here:');
-            if (manualText) {
-                const chatInput = document.getElementById('chatInput');
-                if (chatInput) {
-                    const start = chatInput.selectionStart;
-                    const end = chatInput.selectionEnd;
-                    const currentValue = chatInput.value;
-                    const newValue = currentValue.substring(0, start) + manualText + currentValue.substring(end);
-                    chatInput.value = newValue;
-                    chatInput.focus();
-                    chatInput.dispatchEvent(new Event('input'));
-                    this.showNotification(`✅ Pasted text manually`, 'success');
-                }
+            // Check if the document is focused before attempting clipboard access
+            if (!document.hasFocus()) {
+                console.log('Document not focused, cannot access clipboard');
+                return;
             }
+            
+            // Show error notification without using prompt() which is not supported in Electron
+            this.showNotification('❌ Unable to access clipboard. Please use Ctrl+V to paste manually.', 'error');
         }
     }
 

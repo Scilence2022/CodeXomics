@@ -7,6 +7,258 @@ let mainWindow;
 let mcpServer = null;
 let mcpServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
+// 为生物信息学工具窗口创建独立菜单
+function createToolWindowMenu(toolWindow, toolName) {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Analysis',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'new-analysis');
+          }
+        },
+        {
+          label: 'Open Data File',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(toolWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'Text Files', extensions: ['txt', 'tsv', 'csv'] },
+                { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'XML Files', extensions: ['xml'] },
+                { name: 'All Files', extensions: ['*'] }
+              ]
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              toolWindow.webContents.send('tool-menu-action', 'open-file', result.filePaths[0]);
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Save Results',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'save-results');
+          }
+        },
+        {
+          label: 'Export Data',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'export-data');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Close',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            toolWindow.close();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'copy');
+          }
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'paste');
+          }
+        },
+        {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'cut');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'select-all');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Find',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'find');
+          }
+        },
+        {
+          label: 'Find Next',
+          accelerator: 'F3',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'find-next');
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        {
+          label: 'Refresh Data',
+          accelerator: 'F5',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'refresh-data');
+          }
+        },
+        {
+          label: 'Clear Results',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'clear-results');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Analysis',
+      submenu: [
+        {
+          label: 'Run Analysis',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'run-analysis');
+          }
+        },
+        {
+          label: 'Stop Analysis',
+          accelerator: 'Escape',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'stop-analysis');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Load Sample Data',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'load-sample');
+          }
+        },
+        {
+          label: 'Reset Parameters',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'reset-parameters');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Options',
+      submenu: [
+        {
+          label: 'Preferences',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Analysis Settings',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'analysis-settings');
+          }
+        },
+        {
+          label: 'Output Format',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'output-format');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Advanced Options',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'advanced-options');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: `About ${toolName}`,
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+          }
+        },
+        {
+          label: 'User Guide',
+          accelerator: 'F1',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'user-guide');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Tool Documentation',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'documentation');
+          }
+        },
+        {
+          label: 'Online Resources',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'online-resources');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Report Issue',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/issues');
+          }
+        },
+        {
+          label: 'Contact Support',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'contact-support');
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  toolWindow.setMenu(menu);
+}
+
 function createWindow() {
   // Create the browser window
   mainWindow = new BrowserWindow({
@@ -1594,6 +1846,8 @@ function createKEGGWindow() {
 
     keggWindow.once('ready-to-show', () => {
       keggWindow.show();
+      // 为KEGG工具窗口设置独立菜单
+      createToolWindowMenu(keggWindow, 'KEGG Pathway Analysis');
     });
 
     keggWindow.webContents.openDevTools();
@@ -1630,6 +1884,8 @@ function createGOWindow() {
 
     goWindow.once('ready-to-show', () => {
       goWindow.show();
+      // 为GO工具窗口设置独立菜单
+      createToolWindowMenu(goWindow, 'Gene Ontology Analyzer');
     });
 
     goWindow.webContents.openDevTools();
@@ -1666,6 +1922,8 @@ function createUniProtWindow() {
 
     uniprotWindow.once('ready-to-show', () => {
       uniprotWindow.show();
+      // 为UniProt工具窗口设置独立菜单
+      createToolWindowMenu(uniprotWindow, 'UniProt Database Search');
     });
 
     uniprotWindow.webContents.openDevTools();
@@ -1702,6 +1960,8 @@ function createInterProWindow() {
 
     interproWindow.once('ready-to-show', () => {
       interproWindow.show();
+      // 为InterPro工具窗口设置独立菜单
+      createToolWindowMenu(interproWindow, 'InterPro Domain Analysis');
     });
 
     interproWindow.webContents.openDevTools();
@@ -1738,6 +1998,8 @@ function createNCBIWindow() {
 
     ncbiWindow.once('ready-to-show', () => {
       ncbiWindow.show();
+      // 为NCBI工具窗口设置独立菜单
+      createToolWindowMenu(ncbiWindow, 'NCBI Database Browser');
     });
 
     ncbiWindow.webContents.openDevTools();
@@ -1774,6 +2036,8 @@ function createEnsemblWindow() {
 
     ensemblWindow.once('ready-to-show', () => {
       ensemblWindow.show();
+      // 为Ensembl工具窗口设置独立菜单
+      createToolWindowMenu(ensemblWindow, 'Ensembl Genome Browser');
     });
 
     ensemblWindow.webContents.openDevTools();
@@ -1812,6 +2076,8 @@ function createSTRINGWindow() {
 
     stringWindow.once('ready-to-show', () => {
       stringWindow.show();
+      // 为STRING工具窗口设置独立菜单
+      createToolWindowMenu(stringWindow, 'STRING Protein Networks');
     });
 
     stringWindow.webContents.openDevTools();
@@ -1848,6 +2114,8 @@ function createDAVIDWindow() {
 
     davidWindow.once('ready-to-show', () => {
       davidWindow.show();
+      // 为DAVID工具窗口设置独立菜单
+      createToolWindowMenu(davidWindow, 'DAVID Functional Analysis');
     });
 
     davidWindow.webContents.openDevTools();
@@ -1884,6 +2152,8 @@ function createReactomeWindow() {
 
     reactomeWindow.once('ready-to-show', () => {
       reactomeWindow.show();
+      // 为Reactome工具窗口设置独立菜单
+      createToolWindowMenu(reactomeWindow, 'Reactome Pathway Browser');
     });
 
     reactomeWindow.webContents.openDevTools();
@@ -1920,6 +2190,8 @@ function createPDBWindow() {
 
     pdbWindow.once('ready-to-show', () => {
       pdbWindow.show();
+      // 为PDB工具窗口设置独立菜单
+      createToolWindowMenu(pdbWindow, 'PDB Structure Viewer');
     });
 
     pdbWindow.webContents.openDevTools();

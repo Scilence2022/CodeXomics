@@ -333,6 +333,7 @@ MYC" rows="8"></textarea>
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         class KEGGAnalyzer {
             constructor() {
@@ -346,9 +347,61 @@ MYC" rows="8"></textarea>
             }
 
             loadExample() {
+                // Show organism selection dialog
+                const sampleOptions = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3>Select Sample Dataset</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                            <button class="btn btn-primary" onclick="this.loadHumanSample()" style="padding: 15px;">
+                                <i class="fas fa-user"></i><br>
+                                Human Cancer Genes<br>
+                                <small>(TP53, EGFR, BRCA1...)</small>
+                            </button>
+                            <button class="btn btn-success" onclick="this.loadEcoliSample()" style="padding: 15px;">
+                                <i class="fas fa-bacteria"></i><br>
+                                E. coli K12 Genes<br>
+                                <small>(lacZ, trpA, recA...)</small>
+                            </button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="this.closeSampleDialog()" style="width: 100px;">Cancel</button>
+                    </div>
+                `;
+                
+                const dialog = document.createElement('div');
+                dialog.id = 'sampleDialog';
+                dialog.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+                    align-items: center; justify-content: center;
+                `;
+                dialog.innerHTML = `<div style="background: white; border-radius: 10px; max-width: 500px; width: 90%;">${sampleOptions}</div>`;
+                document.body.appendChild(dialog);
+                
+                // Add event listeners to buttons
+                dialog.querySelector('button:nth-of-type(1)').onclick = () => this.loadHumanSample();
+                dialog.querySelector('button:nth-of-type(2)').onclick = () => this.loadEcoliSample();
+                dialog.querySelector('button:nth-of-type(3)').onclick = () => this.closeSampleDialog();
+            }
+
+            loadHumanSample() {
                 document.getElementById('geneInput').value = `TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nCDKN2A`;
                 document.getElementById('organism').value = 'hsa';
-                this.showStatus('Example data loaded successfully!', 'success');
+                this.closeSampleDialog();
+                this.showStatus('Human cancer genes sample loaded successfully!', 'success');
+            }
+
+            loadEcoliSample() {
+                document.getElementById('geneInput').value = `lacZ\nlacY\nlacA\ntrpA\ntrpB\ntrpC\ntrpD\ntrpE\nrecA\nrecB\nrecC\nlexA\nrpoB\nrpoD\nftsZ\ndnaA\ndnaB\ndnaC\ngyrA\ngyrB\ntopA\nssb\npolA\nligA\ndam\nseqA\nftsA\nftsQ\nftsW\nftsI\nmurE\nmurF\nacrA\nacrB\ntolC\nompF\nompC\nmalE\nmalF\nmalG\nmalK\nglpF\nglpK\nglpD\nfadA\nfadB\naceA\naceB\ngltA\nacnA\nacnB\nicdA\nsucA\nsucB\nsucC\nsucD\nsdhA\nsdhB\nsdhC\nsdhD\nfumA\nfumB\nfumC\nmdh\npykA\npykF\neno\npgk\ngapA\nfbaA\ntpiA\npfkA\npfkB\nglk\npgi\nfbp\ngnd\nzwf\nrpe\nrpiA\ntkfA\ntkfB\ntktA\ntktB\ntalA\ntalB`;
+                document.getElementById('organism').value = 'eco';
+                this.closeSampleDialog();
+                this.showStatus('E. coli K12 metabolic genes sample loaded successfully!', 'success');
+            }
+
+            closeSampleDialog() {
+                const dialog = document.getElementById('sampleDialog');
+                if (dialog) {
+                    dialog.remove();
+                }
             }
 
             clearResults() {
@@ -390,13 +443,98 @@ MYC" rows="8"></textarea>
             }
 
             async simulateKEGGAnalysis(genes, organism, pValueThreshold, minGeneCount) {
-                const pathwayDatabase = [
-                    { id: 'hsa05200', name: 'Pathways in cancer', category: 'Human Diseases', geneCount: Math.floor(Math.random() * 6) + 3 },
-                    { id: 'hsa04110', name: 'Cell cycle', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 },
-                    { id: 'hsa04115', name: 'p53 signaling pathway', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 4) + 2 },
-                    { id: 'hsa04151', name: 'PI3K-Akt signaling pathway', category: 'Signal Transduction', geneCount: Math.floor(Math.random() * 7) + 3 },
-                    { id: 'hsa04210', name: 'Apoptosis', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 }
-                ];
+                let pathwayDatabase = [];
+                
+                if (organism === 'eco') {
+                    // E. coli K12 specific pathways
+                    pathwayDatabase = [
+                        { id: 'eco00010', name: 'Glycolysis / Gluconeogenesis', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 8) + 5 },
+                        { id: 'eco00020', name: 'Citrate cycle (TCA cycle)', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco00030', name: 'Pentose phosphate pathway', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00040', name: 'Pentose and glucuronate interconversions', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00051', name: 'Fructose and mannose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00052', name: 'Galactose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00053', name: 'Ascorbate and aldarate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00061', name: 'Fatty acid biosynthesis', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
+                        { id: 'eco00071', name: 'Fatty acid degradation', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00240', name: 'Pyrimidine metabolism', category: 'Nucleotide Metabolism', geneCount: Math.floor(Math.random() * 7) + 4 },
+                        { id: 'eco00230', name: 'Purine metabolism', category: 'Nucleotide Metabolism', geneCount: Math.floor(Math.random() * 8) + 5 },
+                        { id: 'eco00260', name: 'Glycine, serine and threonine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
+                        { id: 'eco00270', name: 'Cysteine and methionine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00280', name: 'Valine, leucine and isoleucine degradation', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00290', name: 'Valine, leucine and isoleucine biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00300', name: 'Lysine biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00310', name: 'Lysine degradation', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00350', name: 'Tyrosine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00360', name: 'Phenylalanine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00380', name: 'Tryptophan metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00400', name: 'Phenylalanine, tyrosine and tryptophan biosynthesis', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco00410', name: 'beta-Alanine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00430', name: 'Taurine and hypotaurine metabolism', category: 'Amino Acid Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00440', name: 'Phosphonate and phosphinate metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00450', name: 'Selenocompound metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00460', name: 'Cyanoamino acid metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00471', name: 'D-Glutamine and D-glutamate metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00473', name: 'D-Alanine metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00480', name: 'Glutathione metabolism', category: 'Metabolism of Other Amino Acids', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00500', name: 'Starch and sucrose metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00520', name: 'Amino sugar and nucleotide sugar metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco00540', name: 'Lipopolysaccharide biosynthesis', category: 'Glycan Biosynthesis and Metabolism', geneCount: Math.floor(Math.random() * 7) + 4 },
+                        { id: 'eco00550', name: 'Peptidoglycan biosynthesis', category: 'Glycan Biosynthesis and Metabolism', geneCount: Math.floor(Math.random() * 6) + 3 },
+                        { id: 'eco00564', name: 'Glycerophospholipid metabolism', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00620', name: 'Pyruvate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco00630', name: 'Glyoxylate and dicarboxylate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00640', name: 'Propanoate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00650', name: 'Butanoate metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00660', name: 'C5-Branched dibasic acid metabolism', category: 'Carbohydrate Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00670', name: 'One carbon pool by folate', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00680', name: 'Methane metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00710', name: 'Carbon fixation in photosynthetic organisms', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00720', name: 'Carbon fixation pathways in prokaryotes', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00730', name: 'Thiamine metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00740', name: 'Riboflavin metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00750', name: 'Vitamin B6 metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00760', name: 'Nicotinate and nicotinamide metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'eco00770', name: 'Pantothenate and CoA biosynthesis', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00780', name: 'Biotin metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00785', name: 'Lipoic acid metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 3) + 2 },
+                        { id: 'eco00790', name: 'Folate biosynthesis', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00860', name: 'Porphyrin and chlorophyll metabolism', category: 'Metabolism of Cofactors and Vitamins', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00900', name: 'Terpenoid backbone biosynthesis', category: 'Metabolism of Terpenoids and Polyketides', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco00910', name: 'Nitrogen metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco00920', name: 'Sulfur metabolism', category: 'Energy Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco01040', name: 'Biosynthesis of unsaturated fatty acids', category: 'Lipid Metabolism', geneCount: Math.floor(Math.random() * 4) + 3 },
+                        { id: 'eco01100', name: 'Metabolic pathways', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 15) + 10 },
+                        { id: 'eco01110', name: 'Biosynthesis of secondary metabolites', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 12) + 8 },
+                        { id: 'eco01120', name: 'Microbial metabolism in diverse environments', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 10) + 6 },
+                        { id: 'eco01200', name: 'Carbon metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 12) + 8 },
+                        { id: 'eco01210', name: '2-Oxocarboxylic acid metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco01212', name: 'Fatty acid metabolism', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 8) + 5 },
+                        { id: 'eco01230', name: 'Biosynthesis of amino acids', category: 'Global and Overview Maps', geneCount: Math.floor(Math.random() * 10) + 7 },
+                        { id: 'eco02010', name: 'ABC transporters', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 12) + 8 },
+                        { id: 'eco02020', name: 'Two-component system', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 8) + 5 },
+                        { id: 'eco02030', name: 'Bacterial chemotaxis', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco02040', name: 'Flagellar assembly', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 7) + 4 },
+                        { id: 'eco03010', name: 'Ribosome', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 15) + 10 },
+                        { id: 'eco03020', name: 'RNA polymerase', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco03030', name: 'DNA replication', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 8) + 5 },
+                        { id: 'eco03060', name: 'Protein export', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco03070', name: 'Bacterial secretion system', category: 'Environmental Information Processing', geneCount: Math.floor(Math.random() * 7) + 4 },
+                        { id: 'eco03410', name: 'Base excision repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco03420', name: 'Nucleotide excision repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 6) + 4 },
+                        { id: 'eco03430', name: 'Mismatch repair', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 5) + 3 },
+                        { id: 'eco03440', name: 'Homologous recombination', category: 'Genetic Information Processing', geneCount: Math.floor(Math.random() * 7) + 4 }
+                    ];
+                } else {
+                    // Human pathways (default)
+                    pathwayDatabase = [
+                        { id: 'hsa05200', name: 'Pathways in cancer', category: 'Human Diseases', geneCount: Math.floor(Math.random() * 6) + 3 },
+                        { id: 'hsa04110', name: 'Cell cycle', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 },
+                        { id: 'hsa04115', name: 'p53 signaling pathway', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 4) + 2 },
+                        { id: 'hsa04151', name: 'PI3K-Akt signaling pathway', category: 'Signal Transduction', geneCount: Math.floor(Math.random() * 7) + 3 },
+                        { id: 'hsa04210', name: 'Apoptosis', category: 'Cellular Processes', geneCount: Math.floor(Math.random() * 5) + 2 }
+                    ];
+                }
 
                 const enrichedPathways = pathwayDatabase.map(pathway => ({
                     ...pathway,
@@ -496,8 +634,321 @@ MYC" rows="8"></textarea>
             }
         }
 
+        // 工具窗口菜单事件处理器
+        class ToolMenuHandler {
+            constructor() {
+                this.setupMenuEventListeners();
+                this.setupKeyboardShortcuts();
+            }
+
+            setupMenuEventListeners() {
+                // 监听主进程发送的菜单事件
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    
+                    ipcRenderer.on('tool-menu-action', (event, action, data) => {
+                        this.handleMenuAction(action, data);
+                    });
+                }
+            }
+
+            setupKeyboardShortcuts() {
+                // 设置快捷键处理
+                document.addEventListener('keydown', (event) => {
+                    // Copy: Ctrl+C / Cmd+C
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+                        if (!event.target.matches('input, textarea')) {
+                            event.preventDefault();
+                            this.handleMenuAction('copy');
+                        }
+                    }
+                    
+                    // Paste: Ctrl+V / Cmd+V
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+                        if (event.target.matches('input, textarea')) {
+                            // 让默认粘贴行为发生
+                            return;
+                        }
+                        event.preventDefault();
+                        this.handleMenuAction('paste');
+                    }
+                    
+                    // Cut: Ctrl+X / Cmd+X
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'x') {
+                        if (!event.target.matches('input, textarea')) {
+                            event.preventDefault();
+                            this.handleMenuAction('cut');
+                        }
+                    }
+                    
+                    // Select All: Ctrl+A / Cmd+A
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+                        if (!event.target.matches('input, textarea')) {
+                            event.preventDefault();
+                            this.handleMenuAction('select-all');
+                        }
+                    }
+                    
+                    // Find: Ctrl+F / Cmd+F
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+                        event.preventDefault();
+                        this.handleMenuAction('find');
+                    }
+                });
+            }
+
+            handleMenuAction(action, data) {
+                switch (action) {
+                    case 'copy':
+                        this.copySelectedText();
+                        break;
+                    case 'paste':
+                        this.pasteFromClipboard();
+                        break;
+                    case 'cut':
+                        this.cutSelectedText();
+                        break;
+                    case 'select-all':
+                        this.selectAllText();
+                        break;
+                    case 'find':
+                        this.showFindDialog();
+                        break;
+                    case 'new-analysis':
+                        this.newAnalysis();
+                        break;
+                    case 'save-results':
+                        this.saveResults();
+                        break;
+                    case 'export-data':
+                        this.exportData();
+                        break;
+                    case 'load-sample':
+                        if (window.keggAnalyzer) {
+                            window.keggAnalyzer.loadExample();
+                        }
+                        break;
+                    case 'run-analysis':
+                        if (window.keggAnalyzer) {
+                            window.keggAnalyzer.analyzePathways();
+                        }
+                        break;
+                    case 'clear-results':
+                        if (window.keggAnalyzer) {
+                            window.keggAnalyzer.clearResults();
+                        }
+                        break;
+                    case 'preferences':
+                        this.showPreferences();
+                        break;
+                    case 'about':
+                        this.showAbout(data);
+                        break;
+                    case 'user-guide':
+                        this.showUserGuide();
+                        break;
+                    case 'open-file':
+                        this.openFile(data);
+                        break;
+                    default:
+                        console.log('未处理的菜单动作:', action);
+                }
+            }
+
+            copySelectedText() {
+                const selection = window.getSelection();
+                if (selection.toString()) {
+                    // 复制选中文本
+                    if (typeof require !== 'undefined') {
+                        const { clipboard } = require('electron');
+                        clipboard.writeText(selection.toString());
+                        this.showToast('文本已复制到剪贴板');
+                    }
+                } else {
+                    // 如果没有选中文本，复制结果区域的内容
+                    const resultsContent = document.getElementById('keggResults');
+                    if (resultsContent) {
+                        const textContent = resultsContent.innerText || resultsContent.textContent;
+                        if (typeof require !== 'undefined') {
+                            const { clipboard } = require('electron');
+                            clipboard.writeText(textContent);
+                            this.showToast('分析结果已复制到剪贴板');
+                        }
+                    }
+                }
+            }
+
+            pasteFromClipboard() {
+                if (typeof require !== 'undefined') {
+                    const { clipboard } = require('electron');
+                    const clipboardText = clipboard.readText();
+                    
+                    // 尝试粘贴到基因输入框
+                    const geneInput = document.getElementById('geneInput');
+                    if (geneInput && document.activeElement !== geneInput) {
+                        geneInput.value = clipboardText;
+                        geneInput.focus();
+                        this.showToast('数据已粘贴到基因输入框');
+                    }
+                }
+            }
+
+            cutSelectedText() {
+                const selection = window.getSelection();
+                if (selection.toString()) {
+                    if (typeof require !== 'undefined') {
+                        const { clipboard } = require('electron');
+                        clipboard.writeText(selection.toString());
+                        
+                        // 如果是在可编辑元素中，删除选中的文本
+                        if (document.activeElement.matches('input, textarea')) {
+                            document.execCommand('delete');
+                        }
+                        this.showToast('文本已剪切到剪贴板');
+                    }
+                }
+            }
+
+            selectAllText() {
+                if (document.activeElement.matches('input, textarea')) {
+                    document.activeElement.select();
+                } else {
+                    // 选择结果区域的所有内容
+                    const resultsContent = document.getElementById('keggResults');
+                    if (resultsContent) {
+                        const range = document.createRange();
+                        range.selectNodeContents(resultsContent);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            }
+
+            showFindDialog() {
+                // 简单的查找对话框
+                const searchTerm = prompt('请输入要查找的文本:');
+                if (searchTerm) {
+                    this.findTextInPage(searchTerm);
+                }
+            }
+
+            findTextInPage(searchTerm) {
+                if (window.find && window.find(searchTerm)) {
+                    this.showToast(`找到: "${searchTerm}"`);
+                } else {
+                    this.showToast(`未找到: "${searchTerm}"`);
+                }
+            }
+
+            newAnalysis() {
+                if (confirm('确定要开始新的分析吗？这将清除当前的输入和结果。')) {
+                    document.getElementById('geneInput').value = '';
+                    if (window.keggAnalyzer) {
+                        window.keggAnalyzer.clearResults();
+                    }
+                    this.showToast('已准备新的分析');
+                }
+            }
+
+            saveResults() {
+                const resultsContent = document.getElementById('keggResults').innerText;
+                if (resultsContent && typeof require !== 'undefined') {
+                    const { dialog } = require('electron').remote || require('@electron/remote');
+                    const fs = require('fs');
+                    
+                    dialog.showSaveDialog({
+                        filters: [
+                            { name: '文本文件', extensions: ['txt'] },
+                            { name: '所有文件', extensions: ['*'] }
+                        ]
+                    }).then(result => {
+                        if (!result.canceled) {
+                            fs.writeFileSync(result.filePath, resultsContent);
+                            this.showToast('结果已保存');
+                        }
+                    });
+                }
+            }
+
+            exportData() {
+                // 导出当前结果为JSON格式
+                if (window.keggAnalyzer && window.keggAnalyzer.currentPathways) {
+                    const data = JSON.stringify(window.keggAnalyzer.currentPathways, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'kegg-analysis-results.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    this.showToast('数据已导出');
+                }
+            }
+
+            showPreferences() {
+                alert('偏好设置功能正在开发中...');
+            }
+
+            showAbout(toolName) {
+                alert(`关于 ${toolName || 'KEGG Pathway Analysis'}\n\n这是一个用于KEGG通路富集分析的生物信息学工具。\n\n版本: 1.0.0\n开发者: GenomeExplorer Team`);
+            }
+
+            showUserGuide() {
+                const helpText = `KEGG Pathway Analysis 用户指南:
+
+1. 输入基因列表 (每行一个基因名)
+2. 选择目标生物体
+3. 设置分析参数
+4. 点击"分析通路"按钮
+5. 查看和分析结果
+
+快捷键:
+- Ctrl/Cmd+C: 复制
+- Ctrl/Cmd+V: 粘贴
+- Ctrl/Cmd+F: 查找
+- Ctrl/Cmd+L: 加载示例数据
+- Ctrl/Cmd+R: 运行分析`;
+
+                alert(helpText);
+            }
+
+            openFile(filePath) {
+                if (filePath && typeof require !== 'undefined') {
+                    const fs = require('fs');
+                    try {
+                        const content = fs.readFileSync(filePath, 'utf8');
+                        document.getElementById('geneInput').value = content;
+                        this.showToast('文件已加载');
+                    } catch (error) {
+                        this.showToast('文件加载失败: ' + error.message);
+                    }
+                }
+            }
+
+            showToast(message) {
+                // 创建一个简单的提示消息
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; 
+                    background: #333; color: white; padding: 10px 20px; 
+                    border-radius: 5px; z-index: 10000; font-size: 14px;
+                    opacity: 0; transition: opacity 0.3s;
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => toast.style.opacity = '1', 10);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => document.body.removeChild(toast), 300);
+                }, 2000);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            new KEGGAnalyzer();
+            window.keggAnalyzer = new KEGGAnalyzer();
+            window.toolMenuHandler = new ToolMenuHandler();
         });
     </script>
 </body>

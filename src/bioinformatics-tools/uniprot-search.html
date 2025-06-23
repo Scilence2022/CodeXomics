@@ -466,11 +466,18 @@
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         class UniProtSearcher {
             constructor() {
                 this.currentResults = [];
                 this.init();
+                this.initMenuHandler();
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('UniProt Database Search', this);
             }
 
             init() {

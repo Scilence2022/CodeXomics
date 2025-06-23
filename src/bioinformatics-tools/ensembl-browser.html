@@ -80,10 +80,17 @@
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         class EnsemblBrowser {
             constructor() {
                 this.init();
+                this.initMenuHandler();
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('Ensembl Genome Browser', this);
             }
 
             init() {

@@ -80,10 +80,17 @@
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         class NCBIBrowser {
             constructor() {
                 this.init();
+                this.initMenuHandler();
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('NCBI Database Browser', this);
             }
 
             init() {

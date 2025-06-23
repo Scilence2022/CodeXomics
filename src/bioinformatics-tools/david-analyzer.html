@@ -81,10 +81,17 @@ MYC" rows="8"></textarea>
         </div>
     </div>
 
+        <script src="tool-menu-handler.js"></script>
     <script>
         class DAVIDAnalyzer {
             constructor() {
                 this.init();
+                            this.initMenuHandler();
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('DAVID Functional Analysis', this);
             }
 
             init() {

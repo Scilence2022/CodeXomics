@@ -527,16 +527,23 @@ KRAS" rows="6"></textarea>
         </div>
     </div>
 
+    <script src="tool-menu-handler.js"></script>
     <script>
         class STRINGNetworkAnalyzer {
             constructor() {
                 this.cy = null;
                 this.currentNetwork = null;
                 this.init();
+                this.initMenuHandler();
             }
 
             init() {
                 this.setupEventListeners();
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('STRING Protein Networks', this);
             }
 
             setupEventListeners() {
