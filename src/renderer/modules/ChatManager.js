@@ -385,7 +385,7 @@ class ChatManager {
     }
 
     // Legacy single MCP connection (kept for backward compatibility)
-    async setupMCPConnection() {
+    async setupMCPConnection(manualConnection = false) {
         const defaultSettings = {
             autoConnect: false,
             serverUrl: 'ws://localhost:3001',
@@ -428,13 +428,15 @@ class ChatManager {
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
                 
-                // Only attempt to reconnect if auto-activation and auto-connect are both enabled
-                const currentSettings = this.configManager ? 
-                    this.configManager.get('mcpSettings', defaultSettings) : 
-                    defaultSettings;
-                    
-                if (currentSettings.allowAutoActivation && currentSettings.autoConnect) {
-                    setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
+                // Only attempt to reconnect if this is not a manual connection and auto-activation is enabled
+                if (!manualConnection) {
+                    const currentSettings = this.configManager ? 
+                        this.configManager.get('mcpSettings', defaultSettings) : 
+                        defaultSettings;
+                        
+                    if (currentSettings.allowAutoActivation && currentSettings.autoConnect) {
+                        setTimeout(() => this.setupMCPConnection(), mcpSettings.reconnectDelay * 1000);
+                    }
                 }
             };
 
@@ -528,19 +530,11 @@ class ChatManager {
                 
                 this.showNotification('Disconnected from MCP servers', 'info');
             } else {
-                // Connect to MCP servers
-                const defaultSettings = { allowAutoActivation: false };
-                const mcpSettings = this.configManager ? 
-                    this.configManager.get('mcpSettings', defaultSettings) : 
-                    defaultSettings;
-                
-                if (!mcpSettings.allowAutoActivation) {
-                    this.showNotification('MCP auto-activation is disabled. Enable it in settings to connect.', 'warning');
-                    return;
-                }
+                // Connect to MCP servers (manual connection - bypass auto-activation check)
+                console.log('Manual MCP connection requested');
 
                 if (this.mcpServerManager) {
-                    // Try to connect to enabled servers
+                    // Try to connect to enabled servers first
                     const servers = this.mcpServerManager.getServerStatus();
                     const enabledServers = servers.filter(server => server.enabled);
                     
@@ -552,7 +546,13 @@ class ChatManager {
                         } catch (error) {
                             console.warn('Failed to connect to built-in server, trying legacy connection:', error);
                             // Fallback to legacy connection
-                            await this.setupMCPConnection();
+                            try {
+                                await this.setupMCPConnection(true); // Mark as manual connection
+                                this.showNotification('Connected to MCP server (legacy mode)', 'success');
+                            } catch (legacyError) {
+                                console.error('Failed to connect via legacy mode:', legacyError);
+                                this.showNotification('Failed to connect to MCP server. Please check server status.', 'error');
+                            }
                         }
                     } else {
                         // Connect to enabled servers
@@ -569,12 +569,30 @@ class ChatManager {
                         if (connectedCount > 0) {
                             this.showNotification(`Connected to ${connectedCount} MCP server(s)`, 'success');
                         } else {
-                            this.showNotification('Failed to connect to any MCP servers', 'error');
+                            // If all enabled servers failed, try built-in server as fallback
+                            try {
+                                await this.mcpServerManager.connectToServer('genome-studio');
+                                this.showNotification('Connected to built-in MCP server (fallback)', 'success');
+                            } catch (error) {
+                                // Final fallback to legacy connection
+                                try {
+                                    await this.setupMCPConnection(true); // Mark as manual connection
+                                    this.showNotification('Connected to MCP server (legacy fallback)', 'success');
+                                } catch (legacyError) {
+                                    this.showNotification('Failed to connect to any MCP servers', 'error');
+                                }
+                            }
                         }
                     }
                 } else {
-                    // Fallback to legacy connection
-                    await this.setupMCPConnection();
+                    // Fallback to legacy connection if no modern manager
+                    try {
+                        await this.setupMCPConnection(true); // Mark as manual connection
+                        this.showNotification('Connected to MCP server (legacy mode)', 'success');
+                    } catch (error) {
+                        console.error('Failed to connect via legacy mode:', error);
+                        this.showNotification('Failed to connect to MCP server. Please check server status.', 'error');
+                    }
                 }
             }
         } catch (error) {

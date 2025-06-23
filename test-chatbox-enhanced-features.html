@@ -1,1 +1,29 @@
- 
+        function simulateMCPConnect() {
+            mcpConnected = true;
+            serverCount = 1;
+            updateMCPToggleButton();
+            updateStatus('mcpConnectionStatus', 'Connected');
+            updateStatus('serverCount', serverCount.toString());
+            showNotification('MCP Server connected (manual connection)!', 'success');
+        }
+
+        function simulateMCPDisconnect() {
+            mcpConnected = false;
+            serverCount = 0;
+            updateMCPToggleButton();
+            updateStatus('mcpConnectionStatus', 'Disconnected');
+            updateStatus('serverCount', serverCount.toString());
+            showNotification('MCP Server disconnected!', 'info');
+        }
+
+        function testMCPToggle() {
+            if (mcpConnected) {
+                simulateMCPDisconnect();
+            } else {
+                // Test manual connection without auto-activation requirement
+                showNotification('Testing manual MCP connection (bypassing auto-activation check)...', 'info');
+                setTimeout(() => {
+                    simulateMCPConnect();
+                }, 1000);
+            }
+        } 
