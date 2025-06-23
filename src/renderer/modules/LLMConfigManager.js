@@ -48,6 +48,19 @@ class LLMConfigManager {
                 baseUrl: 'http://localhost:11434/v1',
                 streamingSupport: true,
                 enabled: false
+            },
+            custom: {
+                name: 'Custom Provider',
+                providerName: 'My Custom Provider',
+                apiKey: '',
+                model: '',
+                baseUrl: '',
+                apiFormat: 'openai',
+                customHeaders: {},
+                maxTokens: 4096,
+                temperature: 0.7,
+                streamingSupport: false,
+                enabled: false
             }
         };
         
@@ -199,7 +212,8 @@ class LLMConfigManager {
             { btnId: 'pasteGoogleApiKeyBtn', inputId: 'googleApiKey' },
             { btnId: 'pasteDeepseekApiKeyBtn', inputId: 'deepseekApiKey' },
             { btnId: 'pasteSiliconflowApiKeyBtn', inputId: 'siliconflowApiKey' },
-            { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' }
+            { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' },
+            { btnId: 'pasteCustomApiKeyBtn', inputId: 'customApiKey' }
         ];
 
         pasteButtonConfigs.forEach(config => {
@@ -241,6 +255,15 @@ class LLMConfigManager {
         if (completionThresholdSlider && completionThresholdValue) {
             completionThresholdSlider.addEventListener('input', (e) => {
                 completionThresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
+            });
+        }
+
+        // Custom temperature slider handler
+        const customTemperatureSlider = document.getElementById('customTemperature');
+        const customTemperatureValue = document.getElementById('customTemperatureValue');
+        if (customTemperatureSlider && customTemperatureValue) {
+            customTemperatureSlider.addEventListener('input', (e) => {
+                customTemperatureValue.textContent = parseFloat(e.target.value).toFixed(1);
             });
         }
     }
@@ -360,6 +383,26 @@ class LLMConfigManager {
                     }
                     provider.baseUrl = document.getElementById('localEndpoint').value;
                     provider.streamingSupport = document.getElementById('localStreamingSupport').checked;
+                } else if (providerKey === 'custom') {
+                    provider.providerName = document.getElementById('customProviderName').value || 'My Custom Provider';
+                    provider.model = document.getElementById('customModel').value;
+                    provider.baseUrl = document.getElementById('customBaseUrl').value;
+                    provider.apiFormat = document.getElementById('customApiFormat').value;
+                    provider.maxTokens = parseInt(document.getElementById('customMaxTokens').value) || 4096;
+                    provider.temperature = parseFloat(document.getElementById('customTemperature').value) || 0.7;
+                    provider.streamingSupport = document.getElementById('customStreamingSupport').checked;
+                    
+                    // Parse custom headers
+                    try {
+                        const headersText = document.getElementById('customHeaders').value.trim();
+                        provider.customHeaders = headersText ? JSON.parse(headersText) : {};
+                    } catch (error) {
+                        console.error('Invalid custom headers JSON:', error);
+                        provider.customHeaders = {};
+                    }
+                    
+                    // Update the display name
+                    provider.name = provider.providerName;
                 } else {
                     const modelField = document.getElementById(`${prefix}Model`);
                     if (modelField) {
@@ -372,7 +415,7 @@ class LLMConfigManager {
                 }
                 
                 // Set as enabled if it has required fields
-                provider.enabled = !!(provider.apiKey || providerKey === 'local') && provider.model;
+                provider.enabled = !!(provider.apiKey || providerKey === 'local' || providerKey === 'custom') && provider.model;
             });
 
             // Set current provider to the active tab if it's enabled
@@ -482,6 +525,30 @@ class LLMConfigManager {
                     localModelOtherGroup.style.display = (localModelSelect && localModelSelect.value === 'other') ? 'block' : 'none';
                 }
 
+            } else if (providerKey === 'custom') {
+                // Handle custom provider UI loading
+                const customProviderNameField = document.getElementById('customProviderName');
+                const customModelField = document.getElementById('customModel');
+                const customBaseUrlField = document.getElementById('customBaseUrl');
+                const customApiFormatField = document.getElementById('customApiFormat');
+                const customHeadersField = document.getElementById('customHeaders');
+                const customMaxTokensField = document.getElementById('customMaxTokens');
+                const customTemperatureField = document.getElementById('customTemperature');
+                const customTemperatureValueField = document.getElementById('customTemperatureValue');
+                const customStreamingField = document.getElementById('customStreamingSupport');
+
+                if (customProviderNameField) customProviderNameField.value = provider.providerName || 'My Custom Provider';
+                if (customModelField) customModelField.value = provider.model || '';
+                if (customBaseUrlField) customBaseUrlField.value = provider.baseUrl || '';
+                if (customApiFormatField) customApiFormatField.value = provider.apiFormat || 'openai';
+                if (customHeadersField) {
+                    const headersText = provider.customHeaders ? JSON.stringify(provider.customHeaders, null, 2) : '';
+                    customHeadersField.value = headersText;
+                }
+                if (customMaxTokensField) customMaxTokensField.value = provider.maxTokens || 4096;
+                if (customTemperatureField) customTemperatureField.value = provider.temperature || 0.7;
+                if (customTemperatureValueField) customTemperatureValueField.textContent = (provider.temperature || 0.7).toFixed(1);
+                if (customStreamingField) customStreamingField.checked = provider.streamingSupport || false;
             } else {
                 if (modelField) modelField.value = provider.model || '';
                 if (baseUrlField) baseUrlField.value = provider.baseUrl || '';
@@ -553,9 +620,22 @@ class LLMConfigManager {
             const prefix = activeTab === 'local' ? 'local' : activeTab;
             
             provider.apiKey = document.getElementById(`${prefix}ApiKey`).value;
-            provider.model = document.getElementById(`${prefix}Model`).value;
-            provider.baseUrl = document.getElementById(`${prefix}BaseUrl`)?.value || 
-                             document.getElementById('localEndpoint')?.value;
+            
+            if (activeTab === 'custom') {
+                provider.model = document.getElementById('customModel').value;
+                provider.baseUrl = document.getElementById('customBaseUrl').value;
+                provider.apiFormat = document.getElementById('customApiFormat').value;
+                try {
+                    const headersText = document.getElementById('customHeaders').value.trim();
+                    provider.customHeaders = headersText ? JSON.parse(headersText) : {};
+                } catch (error) {
+                    provider.customHeaders = {};
+                }
+            } else {
+                provider.model = document.getElementById(`${prefix}Model`).value;
+                provider.baseUrl = document.getElementById(`${prefix}BaseUrl`)?.value || 
+                                 document.getElementById('localEndpoint')?.value;
+            }
             
             // Test the connection
             const result = await this.makeTestRequest(activeTab, provider);
@@ -593,10 +673,12 @@ class LLMConfigManager {
                     return await this.testGoogle(config);
                             case 'deepseek':
                 return await this.testDeepSeek(config);
-            case 'siliconflow':
-                return await this.testSiliconFlow(config);
-            case 'local':
-                return await this.testLocal(config);
+                            case 'siliconflow':
+                    return await this.testSiliconFlow(config);
+                case 'local':
+                    return await this.testLocal(config);
+                case 'custom':
+                    return await this.testCustom(config);
                 default:
                     throw new Error('Unknown provider type');
             }
@@ -711,6 +793,60 @@ class LLMConfigManager {
         return { success: true };
     }
 
+    async testCustom(config) {
+        try {
+            let testEndpoint;
+            let testMethod = 'POST';
+            let testHeaders = {
+                'Content-Type': 'application/json',
+                ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` }),
+                ...config.customHeaders
+            };
+            let testBody;
+
+            // Based on API format, determine how to test
+            switch (config.apiFormat) {
+                case 'openai':
+                    testEndpoint = `${config.baseUrl}/models`;
+                    testMethod = 'GET';
+                    break;
+                case 'anthropic':
+                    testEndpoint = `${config.baseUrl}/v1/messages`;
+                    testBody = JSON.stringify({
+                        model: config.model,
+                        max_tokens: 10,
+                        messages: [{ role: 'user', content: 'test' }]
+                    });
+                    break;
+                case 'google':
+                    testEndpoint = `${config.baseUrl}/v1beta/models/${config.model}:generateContent`;
+                    testBody = JSON.stringify({
+                        contents: [{ parts: [{ text: 'test' }] }],
+                        generationConfig: { maxOutputTokens: 10 }
+                    });
+                    break;
+                default:
+                    // For custom format, try a simple GET to /models or base URL
+                    testEndpoint = config.baseUrl.includes('/models') ? config.baseUrl : `${config.baseUrl}/models`;
+                    testMethod = 'GET';
+            }
+
+            const response = await fetch(testEndpoint, {
+                method: testMethod,
+                headers: testHeaders,
+                ...(testBody && { body: testBody })
+            });
+
+            if (response.ok || response.status === 400) { // 400 might be expected for test requests
+                return { success: true };
+            } else {
+                return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+            }
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
     async sendMessage(message, context = null) {
         if (!this.currentProvider || !this.providers[this.currentProvider].enabled) {
             throw new Error('No LLM provider configured');
@@ -732,6 +868,8 @@ class LLMConfigManager {
                     return await this.sendSiliconFlowMessage(provider, message, context);
                 case 'local':
                     return await this.sendLocalMessage(provider, message, context);
+                case 'custom':
+                    return await this.sendCustomMessage(provider, message, context);
                 default:
                     throw new Error('Unknown provider type');
             }
@@ -762,6 +900,8 @@ class LLMConfigManager {
                     return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
                 case 'local':
                     return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
+                case 'custom':
+                    return await this.sendCustomMessageWithHistory(provider, conversationHistory, context);
                 default:
                     throw new Error('Unknown provider type');
             }
@@ -1201,6 +1341,169 @@ class LLMConfigManager {
             console.error('Unexpected response structure from Local LLM:', data);
             throw new Error('Unexpected response structure from Local LLM. Check console for details.');
         }
+    }
+
+    async sendCustomMessage(provider, message, context) {
+        const messages = this.buildMessages(message, context, provider.apiFormat);
+        
+        // Build request based on API format
+        return await this.sendCustomRequest(provider, messages, false);
+    }
+
+    async sendCustomMessageWithHistory(provider, conversationHistory, context) {
+        // Use the conversation history directly
+        return await this.sendCustomRequest(provider, conversationHistory, true);
+    }
+
+    async sendCustomRequest(provider, messages, isHistory) {
+        console.log(`Sending custom LLM request to: ${provider.baseUrl} with model: ${provider.model}`);
+        console.log('Custom provider config:', {
+            apiFormat: provider.apiFormat,
+            maxTokens: provider.maxTokens,
+            temperature: provider.temperature,
+            streamingSupport: provider.streamingSupport
+        });
+        
+        let endpoint, requestBody, requestHeaders;
+        
+        // Build request based on API format
+        switch (provider.apiFormat) {
+            case 'openai':
+                endpoint = `${provider.baseUrl}/chat/completions`;
+                requestHeaders = {
+                    'Authorization': `Bearer ${provider.apiKey}`,
+                    'Content-Type': 'application/json',
+                    ...provider.customHeaders
+                };
+                requestBody = {
+                    model: provider.model,
+                    messages: messages,
+                    max_tokens: provider.maxTokens || 2000,
+                    temperature: provider.temperature || 0.7
+                };
+                break;
+                
+            case 'anthropic':
+                endpoint = `${provider.baseUrl}/v1/messages`;
+                requestHeaders = {
+                    'x-api-key': provider.apiKey,
+                    'Content-Type': 'application/json',
+                    'anthropic-version': '2023-06-01',
+                    ...provider.customHeaders
+                };
+                
+                // Anthropic requires separate system message
+                const systemMessage = messages.find(msg => msg.role === 'system');
+                const messagesWithoutSystem = messages.filter(msg => msg.role !== 'system');
+                
+                requestBody = {
+                    model: provider.model,
+                    max_tokens: provider.maxTokens || 2000,
+                    messages: messagesWithoutSystem
+                };
+                
+                if (systemMessage) {
+                    requestBody.system = systemMessage.content;
+                }
+                break;
+                
+            case 'google':
+                endpoint = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent`;
+                requestHeaders = {
+                    'Content-Type': 'application/json',
+                    ...provider.customHeaders
+                };
+                
+                // Add API key to URL for Google
+                if (provider.apiKey) {
+                    endpoint += `?key=${provider.apiKey}`;
+                }
+                
+                // Convert messages to Google format
+                const contents = messages.filter(msg => msg.role !== 'system').map(msg => ({
+                    parts: [{ text: msg.content }],
+                    role: msg.role === 'assistant' ? 'model' : 'user'
+                }));
+                
+                requestBody = {
+                    contents: contents,
+                    generationConfig: {
+                        maxOutputTokens: provider.maxTokens || 2000,
+                        temperature: provider.temperature || 0.7
+                    }
+                };
+                break;
+                
+            default:
+                // Custom format - assume OpenAI-like structure
+                endpoint = `${provider.baseUrl}/chat/completions`;
+                requestHeaders = {
+                    'Authorization': `Bearer ${provider.apiKey}`,
+                    'Content-Type': 'application/json',
+                    ...provider.customHeaders
+                };
+                requestBody = {
+                    model: provider.model,
+                    messages: messages,
+                    max_tokens: provider.maxTokens || 2000,
+                    temperature: provider.temperature || 0.7
+                };
+        }
+        
+        console.log('Sending to Custom Provider - Request Payload:', JSON.stringify(requestBody, null, 2));
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: requestHeaders,
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Custom LLM API Error (${response.status}): ${errorBody}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
+        }
+
+        const data = await response.json();
+        console.log('Full raw response from Custom Provider:', JSON.stringify(data, null, 2));
+
+        // Parse response based on API format
+        switch (provider.apiFormat) {
+            case 'openai':
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    if (data.choices[0].message.tool_calls) {
+                        return data.choices[0].message;
+                    } else {
+                        return data.choices[0].message.content;
+                    }
+                }
+                break;
+                
+            case 'anthropic':
+                if (data.content && data.content[0]) {
+                    return data.content[0].text;
+                }
+                break;
+                
+            case 'google':
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    return data.candidates[0].content.parts[0].text;
+                }
+                break;
+                
+            default:
+                // Try OpenAI format first, then fallback
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    return data.choices[0].message.content;
+                } else if (data.content) {
+                    return data.content;
+                } else if (data.response) {
+                    return data.response;
+                }
+        }
+        
+        console.error('Unexpected response structure from Custom Provider:', data);
+        throw new Error('Unexpected response structure from Custom Provider. Check console for details.');
     }
 
     buildMessages(userMessage, context, providerType = 'openai') {

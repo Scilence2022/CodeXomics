@@ -221,6 +221,19 @@ class ConfigManager {
                         enabled: false,
                         maxTokens: 4096,
                         temperature: 0.7
+                    },
+                    custom: {
+                        name: 'Custom Provider',
+                        providerName: 'My Custom Provider',
+                        apiKey: '',
+                        model: '',
+                        baseUrl: '',
+                        apiFormat: 'openai',
+                        customHeaders: {},
+                        maxTokens: 4096,
+                        temperature: 0.7,
+                        streamingSupport: false,
+                        enabled: false
                     }
                 },
                 currentProvider: null,
