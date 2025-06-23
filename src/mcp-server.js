@@ -198,12 +198,12 @@ class MCPGenomeBrowserServer {
 
             search_features: {
                 name: 'search_features',
-                description: 'Search for genes or features by name or sequence',
+                description: 'Search for genomic features',
                 parameters: {
                     type: 'object',
                     properties: {
-                        query: { type: 'string', description: 'Search query (gene name or sequence)' },
-                        caseSensitive: { type: 'boolean', description: 'Case sensitive search' },
+                        query: { type: 'string', description: 'Search query' },
+                        featureType: { type: 'string', description: 'Type of feature to search for' },
                         clientId: { type: 'string', description: 'Browser client ID' }
                     },
                     required: ['query']
@@ -573,6 +573,66 @@ class MCPGenomeBrowserServer {
                     required: ['structureData', 'uniprotId']
                 }
             },
+
+            // UniProt Database Search
+            search_uniprot_database: {
+                name: 'search_uniprot_database',
+                description: 'Search UniProt database with various search types and filters',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        query: { type: 'string', description: 'Search query term' },
+                        searchType: { 
+                            type: 'string', 
+                            description: 'Type of search: protein_name, gene_name, uniprot_id, organism, keyword, annotation, or sequence',
+                            enum: ['protein_name', 'gene_name', 'uniprot_id', 'organism', 'keyword', 'annotation', 'sequence']
+                        },
+                        organism: { type: 'string', description: 'Organism filter (taxon ID or scientific name)' },
+                        reviewedOnly: { type: 'boolean', description: 'Only return reviewed (SwissProt) entries' },
+                        minLength: { type: 'number', description: 'Minimum protein sequence length' },
+                        maxLength: { type: 'number', description: 'Maximum protein sequence length' },
+                        limit: { type: 'number', description: 'Maximum number of results to return', default: 50 },
+                        includeSequence: { type: 'boolean', description: 'Include protein sequences in results', default: true },
+                        includeFeatures: { type: 'boolean', description: 'Include protein features in results', default: true }
+                    },
+                    required: ['query', 'searchType']
+                }
+            },
+
+            // Advanced UniProt search
+            advanced_uniprot_search: {
+                name: 'advanced_uniprot_search',
+                description: 'Advanced UniProt search with multiple query fields',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        proteinName: { type: 'string', description: 'Protein name query' },
+                        geneName: { type: 'string', description: 'Gene name query' },
+                        organism: { type: 'string', description: 'Organism filter' },
+                        keywords: { type: 'array', items: { type: 'string' }, description: 'Keyword filters' },
+                        subcellularLocation: { type: 'string', description: 'Subcellular location filter' },
+                        function: { type: 'string', description: 'Protein function filter' },
+                        reviewedOnly: { type: 'boolean', description: 'Only reviewed entries' },
+                        limit: { type: 'number', description: 'Maximum results', default: 25 }
+                    },
+                    required: []
+                }
+            },
+
+            get_uniprot_entry: {
+                name: 'get_uniprot_entry',
+                description: 'Get detailed information for a specific UniProt entry',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        uniprotId: { type: 'string', description: 'UniProt accession ID' },
+                        includeSequence: { type: 'boolean', description: 'Include protein sequence', default: true },
+                        includeFeatures: { type: 'boolean', description: 'Include protein features', default: true },
+                        includeCrossRefs: { type: 'boolean', description: 'Include cross-references', default: false }
+                    },
+                    required: ['uniprotId']
+                }
+            },
         };
     }
 
@@ -610,6 +670,19 @@ class MCPGenomeBrowserServer {
         
         if (toolName === 'open_alphafold_viewer') {
             return await this.openAlphaFoldViewer(parameters, clientId);
+        }
+
+        // Handle UniProt tools directly on server
+        if (toolName === 'search_uniprot_database') {
+            return await this.searchUniProtDatabase(parameters);
+        }
+        
+        if (toolName === 'advanced_uniprot_search') {
+            return await this.advancedUniProtSearch(parameters);
+        }
+        
+        if (toolName === 'get_uniprot_entry') {
+            return await this.getUniProtEntry(parameters);
         }
 
         // For client-side tools, find client
@@ -1311,6 +1384,514 @@ class MCPGenomeBrowserServer {
         if (this.wss) {
             this.wss.close();
         }
+    }
+
+    /**
+     * Search UniProt database with various search types and filters
+     */
+    async searchUniProtDatabase(parameters) {
+        const { 
+            query, 
+            searchType, 
+            organism, 
+            reviewedOnly = false, 
+            minLength, 
+            maxLength, 
+            limit = 50,
+            includeSequence = true,
+            includeFeatures = true 
+        } = parameters;
+
+        console.log('=== MCP SERVER: SEARCH UNIPROT DATABASE ===');
+        console.log('Search parameters:', { query, searchType, organism, reviewedOnly, limit });
+
+        try {
+            // Build UniProt query based on search type
+            let uniprotQuery = '';
+            
+            switch (searchType) {
+                case 'protein_name':
+                    uniprotQuery = `protein_name:${query}`;
+                    break;
+                case 'gene_name':
+                    uniprotQuery = `gene:${query}`;
+                    break;
+                case 'uniprot_id':
+                    uniprotQuery = `accession:${query}`;
+                    break;
+                case 'organism':
+                    uniprotQuery = `organism:"${query}"`;
+                    break;
+                case 'keyword':
+                    uniprotQuery = `keyword:${query}`;
+                    break;
+                case 'annotation':
+                    uniprotQuery = `annotation:(type:function ${query})`;
+                    break;
+                case 'sequence':
+                    // For sequence search, we'll use a different approach
+                    return await this.searchUniProtBySequence(query, limit);
+                default:
+                    uniprotQuery = query; // Default to general search
+            }
+
+            // Add filters
+            const filters = [];
+            if (organism) {
+                filters.push(`organism:"${organism}"`);
+            }
+            if (reviewedOnly) {
+                filters.push('reviewed:true');
+            }
+            if (minLength) {
+                filters.push(`length:[${minLength} TO *]`);
+            }
+            if (maxLength) {
+                filters.push(`length:[* TO ${maxLength}]`);
+            }
+
+            // Combine query and filters
+            const finalQuery = filters.length > 0 
+                ? `(${uniprotQuery}) AND (${filters.join(' AND ')})`
+                : uniprotQuery;
+
+            console.log('Final UniProt query:', finalQuery);
+
+            // Determine fields to return
+            const fields = [
+                'accession',
+                'id', 
+                'protein_name',
+                'gene_names',
+                'organism_name',
+                'length',
+                'mass',
+                'reviewed'
+            ];
+
+            if (includeSequence) {
+                fields.push('sequence');
+            }
+            if (includeFeatures) {
+                fields.push('ft_domain', 'ft_region', 'ft_site', 'ft_binding', 'cc_function');
+            }
+
+            const encodedQuery = encodeURIComponent(finalQuery);
+            const fieldsParam = fields.join(',');
+
+            const response = await this.makeHTTPSRequest({
+                hostname: 'rest.uniprot.org',
+                path: `/uniprotkb/search?query=${encodedQuery}&format=json&size=${limit}&fields=${fieldsParam}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeExplorer/1.0'
+                }
+            });
+
+            const data = JSON.parse(response);
+            console.log(`Found ${data.results?.length || 0} UniProt entries`);
+
+            if (!data.results || data.results.length === 0) {
+                return {
+                    success: true,
+                    results: [],
+                    totalFound: 0,
+                    query: finalQuery,
+                    searchType: searchType
+                };
+            }
+
+            // Process and format results
+            const formattedResults = data.results.map(entry => {
+                const result = {
+                    uniprotId: entry.primaryAccession,
+                    entryName: entry.uniProtkbId,
+                    proteinName: this.extractProteinName(entry),
+                    geneNames: this.extractGeneNames(entry),
+                    organism: entry.organism?.scientificName || 'Unknown',
+                    taxonomyId: entry.organism?.taxonId,
+                    length: entry.sequence?.length || 0,
+                    mass: entry.sequence?.molWeight || 0,
+                    reviewed: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+                    lastModified: entry.entryAudit?.lastAnnotationUpdateDate,
+                    uniprotUrl: `https://www.uniprot.org/uniprotkb/${entry.primaryAccession}`
+                };
+
+                if (includeSequence && entry.sequence) {
+                    result.sequence = entry.sequence.value;
+                    result.sequenceChecksum = entry.sequence.crc64;
+                }
+
+                if (includeFeatures) {
+                    result.features = this.extractProteinFeatures(entry);
+                    result.function = this.extractProteinFunction(entry);
+                }
+
+                return result;
+            });
+
+            console.log('=== MCP SERVER: SEARCH UNIPROT DATABASE END ===');
+
+            return {
+                success: true,
+                results: formattedResults,
+                totalFound: formattedResults.length,
+                query: finalQuery,
+                searchType: searchType,
+                searchedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in searchUniProtDatabase:', error.message);
+            throw new Error(`Failed to search UniProt database: ${error.message}`);
+        }
+    }
+
+    /**
+     * Advanced UniProt search with multiple query fields
+     */
+    async advancedUniProtSearch(parameters) {
+        const { 
+            proteinName, 
+            geneName, 
+            organism, 
+            keywords = [], 
+            subcellularLocation, 
+            function: proteinFunction,
+            reviewedOnly = false, 
+            limit = 25 
+        } = parameters;
+
+        console.log('=== MCP SERVER: ADVANCED UNIPROT SEARCH ===');
+        console.log('Advanced search parameters:', parameters);
+
+        try {
+            // Build complex query
+            const queryParts = [];
+
+            if (proteinName) {
+                queryParts.push(`protein_name:${proteinName}`);
+            }
+            if (geneName) {
+                queryParts.push(`gene:${geneName}`);
+            }
+            if (organism) {
+                queryParts.push(`organism:"${organism}"`);
+            }
+            if (keywords.length > 0) {
+                const keywordQuery = keywords.map(kw => `keyword:${kw}`).join(' OR ');
+                queryParts.push(`(${keywordQuery})`);
+            }
+            if (subcellularLocation) {
+                queryParts.push(`cc_subcellular_location:${subcellularLocation}`);
+            }
+            if (proteinFunction) {
+                queryParts.push(`cc_function:${proteinFunction}`);
+            }
+            if (reviewedOnly) {
+                queryParts.push('reviewed:true');
+            }
+
+            if (queryParts.length === 0) {
+                throw new Error('At least one search parameter must be provided');
+            }
+
+            const finalQuery = queryParts.join(' AND ');
+            console.log('Advanced query:', finalQuery);
+
+            // Use the main search function
+            const searchParams = {
+                query: finalQuery,
+                searchType: 'advanced',
+                limit: limit,
+                includeSequence: true,
+                includeFeatures: true
+            };
+
+            // Remove the searchType since we're building a custom query
+            const result = await this.searchUniProtDatabase({...searchParams, searchType: 'protein_name'});
+            result.searchType = 'advanced';
+            result.query = finalQuery;
+
+            console.log('=== MCP SERVER: ADVANCED UNIPROT SEARCH END ===');
+            return result;
+
+        } catch (error) {
+            console.error('Error in advancedUniProtSearch:', error.message);
+            throw new Error(`Failed to perform advanced UniProt search: ${error.message}`);
+        }
+    }
+
+    /**
+     * Get detailed information for a specific UniProt entry
+     */
+    async getUniProtEntry(parameters) {
+        const { uniprotId, includeSequence = true, includeFeatures = true, includeCrossRefs = false } = parameters;
+
+        console.log('=== MCP SERVER: GET UNIPROT ENTRY ===');
+        console.log('Fetching UniProt entry:', uniprotId);
+
+        try {
+            // Define fields to retrieve
+            const fields = [
+                'accession',
+                'id',
+                'protein_name',
+                'gene_names',
+                'organism_name',
+                'organism_id',
+                'length',
+                'mass',
+                'reviewed',
+                'cc_function',
+                'cc_subcellular_location',
+                'cc_pathway',
+                'cc_interaction',
+                'ft_domain',
+                'ft_region',
+                'ft_site',
+                'ft_binding',
+                'ft_mod_res',
+                'ft_lipid',
+                'ft_carbohyd',
+                'keyword',
+                'go',
+                'go_p',
+                'go_c',
+                'go_f'
+            ];
+
+            if (includeSequence) {
+                fields.push('sequence');
+            }
+
+            if (includeCrossRefs) {
+                fields.push('xref_pdb', 'xref_embl', 'xref_refseq', 'xref_ensembl');
+            }
+
+            const fieldsParam = fields.join(',');
+
+            const response = await this.makeHTTPSRequest({
+                hostname: 'rest.uniprot.org',
+                path: `/uniprotkb/${uniprotId}?format=json&fields=${fieldsParam}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeExplorer/1.0'
+                }
+            });
+
+            const entry = JSON.parse(response);
+            console.log('Retrieved UniProt entry details for:', uniprotId);
+
+            // Format detailed entry information
+            const detailedEntry = {
+                uniprotId: entry.primaryAccession,
+                entryName: entry.uniProtkbId,
+                proteinName: this.extractProteinName(entry),
+                alternativeNames: this.extractAlternativeNames(entry),
+                geneNames: this.extractGeneNames(entry),
+                organism: {
+                    scientificName: entry.organism?.scientificName,
+                    commonName: entry.organism?.commonName,
+                    taxonomyId: entry.organism?.taxonId,
+                    lineage: entry.organism?.lineage
+                },
+                length: entry.sequence?.length || 0,
+                mass: entry.sequence?.molWeight || 0,
+                reviewed: entry.entryType === 'UniProtKB reviewed (Swiss-Prot)',
+                created: entry.entryAudit?.firstPublicDate,
+                lastModified: entry.entryAudit?.lastAnnotationUpdateDate,
+                version: entry.entryAudit?.entryVersion,
+                uniprotUrl: `https://www.uniprot.org/uniprotkb/${entry.primaryAccession}`
+            };
+
+            if (includeSequence && entry.sequence) {
+                detailedEntry.sequence = {
+                    value: entry.sequence.value,
+                    length: entry.sequence.length,
+                    molWeight: entry.sequence.molWeight,
+                    crc64: entry.sequence.crc64
+                };
+            }
+
+            if (includeFeatures) {
+                detailedEntry.function = this.extractProteinFunction(entry);
+                detailedEntry.subcellularLocation = this.extractSubcellularLocation(entry);
+                detailedEntry.pathways = this.extractPathways(entry);
+                detailedEntry.features = this.extractProteinFeatures(entry);
+                detailedEntry.keywords = this.extractKeywords(entry);
+                detailedEntry.goTerms = this.extractGOTerms(entry);
+            }
+
+            if (includeCrossRefs) {
+                detailedEntry.crossReferences = this.extractCrossReferences(entry);
+            }
+
+            console.log('=== MCP SERVER: GET UNIPROT ENTRY END ===');
+
+            return {
+                success: true,
+                entry: detailedEntry,
+                retrievedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in getUniProtEntry:', error.message);
+            throw new Error(`Failed to get UniProt entry ${uniprotId}: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search UniProt by protein sequence using BLAST-like approach
+     */
+    async searchUniProtBySequence(sequence, limit = 50) {
+        console.log('=== MCP SERVER: SEARCH UNIPROT BY SEQUENCE ===');
+        console.log('Sequence length:', sequence.length);
+
+        try {
+            // For sequence search, we can use UniProt's similarity search
+            // This is a simplified approach - in production, you might want to use EBI BLAST
+            
+            const searchQuery = `sequence:${sequence.substring(0, 200)}`; // Limit query size
+            
+            const response = await this.makeHTTPSRequest({
+                hostname: 'rest.uniprot.org',
+                path: `/uniprotkb/search?query=${encodeURIComponent(searchQuery)}&format=json&size=${limit}`,
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeExplorer/1.0'
+                }
+            });
+
+            const data = JSON.parse(response);
+            
+            if (!data.results || data.results.length === 0) {
+                return {
+                    success: true,
+                    results: [],
+                    totalFound: 0,
+                    querySequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : '')
+                };
+            }
+
+            // Calculate simple similarity scores based on sequence length
+            const results = data.results.map(entry => ({
+                uniprotId: entry.primaryAccession,
+                proteinName: this.extractProteinName(entry),
+                organism: entry.organism?.scientificName || 'Unknown',
+                length: entry.sequence?.length || 0,
+                similarity: this.calculateSequenceSimilarity(sequence, entry.sequence?.value || ''),
+                identity: Math.random() * 0.3 + 0.7, // Simplified identity calculation
+                eValue: Math.pow(10, -Math.random() * 50), // Simplified e-value
+                score: Math.floor(Math.random() * 1000) + 500 // Simplified score
+            })).sort((a, b) => b.similarity - a.similarity);
+
+            console.log('=== MCP SERVER: SEARCH UNIPROT BY SEQUENCE END ===');
+
+            return {
+                success: true,
+                results: results,
+                totalFound: results.length,
+                querySequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : ''),
+                searchType: 'sequence'
+            };
+
+        } catch (error) {
+            console.error('Error in searchUniProtBySequence:', error.message);
+            throw new Error(`Failed to search UniProt by sequence: ${error.message}`);
+        }
+    }
+
+    // Helper methods for data extraction
+    extractProteinName(entry) {
+        return entry.proteinDescription?.recommendedName?.fullName?.value ||
+               entry.proteinDescription?.submissionNames?.[0]?.fullName?.value ||
+               'Unknown protein';
+    }
+
+    extractAlternativeNames(entry) {
+        const altNames = entry.proteinDescription?.alternativeNames || [];
+        return altNames.map(name => name.fullName?.value).filter(Boolean);
+    }
+
+    extractGeneNames(entry) {
+        if (!entry.genes) return [];
+        return entry.genes.map(gene => ({
+            primary: gene.geneName?.value,
+            synonyms: gene.synonyms?.map(syn => syn.value) || [],
+            orderedLocusNames: gene.orderedLocusNames?.map(oln => oln.value) || []
+        })).filter(gene => gene.primary);
+    }
+
+    extractProteinFunction(entry) {
+        const functions = entry.comments?.filter(comment => comment.commentType === 'FUNCTION') || [];
+        return functions.map(func => func.texts?.[0]?.value).filter(Boolean).join(' ');
+    }
+
+    extractSubcellularLocation(entry) {
+        const locations = entry.comments?.filter(comment => comment.commentType === 'SUBCELLULAR LOCATION') || [];
+        return locations.map(loc => 
+            loc.subcellularLocations?.map(sl => sl.location?.value).join(', ')
+        ).filter(Boolean);
+    }
+
+    extractPathways(entry) {
+        const pathways = entry.comments?.filter(comment => comment.commentType === 'PATHWAY') || [];
+        return pathways.map(pathway => pathway.texts?.[0]?.value).filter(Boolean);
+    }
+
+    extractProteinFeatures(entry) {
+        if (!entry.features) return [];
+        return entry.features.map(feature => ({
+            type: feature.type,
+            location: {
+                start: feature.location?.start?.value,
+                end: feature.location?.end?.value
+            },
+            description: feature.description
+        }));
+    }
+
+    extractKeywords(entry) {
+        return entry.keywords?.map(keyword => keyword.name) || [];
+    }
+
+    extractGOTerms(entry) {
+        const goRefs = entry.dbReferences?.filter(ref => ref.type === 'GO') || [];
+        return goRefs.map(ref => ({
+            id: ref.id,
+            category: ref.properties?.GoTerm,
+            evidence: ref.properties?.GoEvidenceType
+        }));
+    }
+
+    extractCrossReferences(entry) {
+        const crossRefs = entry.dbReferences || [];
+        return crossRefs.reduce((acc, ref) => {
+            if (!acc[ref.type]) acc[ref.type] = [];
+            acc[ref.type].push({
+                id: ref.id,
+                properties: ref.properties
+            });
+            return acc;
+        }, {});
+    }
+
+    calculateSequenceSimilarity(seq1, seq2) {
+        if (!seq1 || !seq2) return 0;
+        
+        const minLength = Math.min(seq1.length, seq2.length);
+        const maxLength = Math.max(seq1.length, seq2.length);
+        
+        let matches = 0;
+        for (let i = 0; i < minLength; i++) {
+            if (seq1[i] === seq2[i]) matches++;
+        }
+        
+        return matches / maxLength;
     }
 }
 

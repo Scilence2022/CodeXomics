@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniProt API Integration Test - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #42a5f5;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #ddd;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .test-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+
+        .test-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .status-area {
+            background: #f8f9fa;
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .results-area {
+            background: #f8f9fa;
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
+        .connected {
+            background: var(--success-color);
+        }
+
+        .disconnected {
+            background: var(--danger-color);
+        }
+
+        .protein-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .protein-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .protein-id {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-database"></i> UniProt API Integration Test</h1>
+        <p>Testing real UniProt database access via MCP Server</p>
+    </div>
+
+    <div class="connection-status" id="connectionStatus">
+        <i class="fas fa-circle"></i> Connecting...
+    </div>
+
+    <div class="container">
+        <div class="test-grid">
+            <!-- Connection Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-plug"></i> MCP Server Connection</h3>
+                <button class="btn btn-primary" onclick="testConnection()">
+                    <i class="fas fa-link"></i> Test Connection
+                </button>
+                <button class="btn btn-warning" onclick="reconnect()">
+                    <i class="fas fa-redo"></i> Reconnect
+                </button>
+                <div class="status-area" id="connectionTest">
+                    Click "Test Connection" to verify MCP Server connectivity.
+                </div>
+            </div>
+
+            <!-- Basic Search Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-search"></i> Basic Search Test</h3>
+                <div class="form-group">
+                    <label class="form-label">Search Query:</label>
+                    <input type="text" class="form-control" id="basicQuery" value="TP53" placeholder="Enter protein/gene name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Search Type:</label>
+                    <select class="form-control" id="basicSearchType">
+                        <option value="gene_name">Gene Name</option>
+                        <option value="protein_name">Protein Name</option>
+                        <option value="uniprot_id">UniProt ID</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="testBasicSearch()">
+                    <i class="fas fa-search"></i> Search UniProt
+                </button>
+                <div class="status-area" id="basicSearchStatus">
+                    Ready to test basic search functionality.
+                </div>
+                <div class="results-area" id="basicSearchResults"></div>
+            </div>
+
+            <!-- Advanced Search Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-filter"></i> Advanced Search Test</h3>
+                <div class="form-group">
+                    <label class="form-label">Protein Name:</label>
+                    <input type="text" class="form-control" id="advProteinName" value="insulin" placeholder="Protein name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Organism:</label>
+                    <input type="text" class="form-control" id="advOrganism" value="Homo sapiens" placeholder="Species name">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="advReviewed" checked> Reviewed entries only
+                    </label>
+                </div>
+                <button class="btn btn-success" onclick="testAdvancedSearch()">
+                    <i class="fas fa-filter"></i> Advanced Search
+                </button>
+                <div class="status-area" id="advancedSearchStatus">
+                    Ready to test advanced search with filters.
+                </div>
+                <div class="results-area" id="advancedSearchResults"></div>
+            </div>
+
+            <!-- Entry Details Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-info-circle"></i> Entry Details Test</h3>
+                <div class="form-group">
+                    <label class="form-label">UniProt ID:</label>
+                    <input type="text" class="form-control" id="entryId" value="P04637" placeholder="e.g., P04637">
+                </div>
+                <button class="btn btn-primary" onclick="testGetEntry()">
+                    <i class="fas fa-info"></i> Get Entry Details
+                </button>
+                <div class="status-area" id="entryDetailsStatus">
+                    Ready to fetch detailed entry information.
+                </div>
+                <div class="results-area" id="entryDetailsResults"></div>
+            </div>
+
+            <!-- Sequence Search Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-dna"></i> Sequence Search Test</h3>
+                <div class="form-group">
+                    <label class="form-label">Protein Sequence:</label>
+                    <textarea class="form-control" id="sequenceQuery" rows="4" placeholder="Enter protein sequence...">MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD</textarea>
+                </div>
+                <button class="btn btn-warning" onclick="testSequenceSearch()">
+                    <i class="fas fa-dna"></i> Search by Sequence
+                </button>
+                <div class="status-area" id="sequenceSearchStatus">
+                    Ready to test sequence similarity search.
+                </div>
+                <div class="results-area" id="sequenceSearchResults"></div>
+            </div>
+
+            <!-- Performance Test -->
+            <div class="test-section">
+                <h3><i class="fas fa-stopwatch"></i> Performance Test</h3>
+                <button class="btn btn-success" onclick="runPerformanceTest()">
+                    <i class="fas fa-rocket"></i> Run Performance Test
+                </button>
+                <button class="btn btn-warning" onclick="runStressTest()">
+                    <i class="fas fa-weight-hanging"></i> Stress Test (10 searches)
+                </button>
+                <div class="status-area" id="performanceStatus">
+                    Ready to test API performance and reliability.
+                </div>
+                <div class="results-area" id="performanceResults"></div>
+            </div>
+        </div>
+
+        <!-- Real-time Results Display -->
+        <div class="test-section">
+            <h3><i class="fas fa-list"></i> Live Results Display</h3>
+            <div id="liveResults">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                    <h4>No Results</h4>
+                    <p>Run a search test to see live results here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class UniProtAPITester {
+            constructor() {
+                this.mcpClient = null;
+                this.isConnected = false;
+                this.pendingRequests = new Map();
+                this.testResults = {};
+                this.init();
+            }
+
+            init() {
+                this.connectToMCP();
+                this.updateConnectionStatus();
+            }
+
+            connectToMCP() {
+                try {
+                    this.mcpClient = new WebSocket('ws://localhost:3001');
+                    
+                    this.mcpClient.onopen = () => {
+                        this.isConnected = true;
+                        this.updateConnectionStatus();
+                        this.log('connectionTest', 'Connected to MCP Server successfully!', 'success');
+                    };
+                    
+                    this.mcpClient.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleMCPResponse(data);
+                    };
+                    
+                    this.mcpClient.onclose = () => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus();
+                        this.log('connectionTest', 'Connection to MCP Server lost.', 'error');
+                    };
+                    
+                    this.mcpClient.onerror = (error) => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus();
+                        this.log('connectionTest', 'Failed to connect to MCP Server. Make sure it is running on port 3001.', 'error');
+                    };
+                    
+                } catch (error) {
+                    this.isConnected = false;
+                    this.updateConnectionStatus();
+                    this.log('connectionTest', `Connection error: ${error.message}`, 'error');
+                }
+            }
+
+            updateConnectionStatus() {
+                const statusEl = document.getElementById('connectionStatus');
+                if (this.isConnected) {
+                    statusEl.className = 'connection-status connected';
+                    statusEl.innerHTML = '<i class="fas fa-circle"></i> Connected to MCP Server';
+                } else {
+                    statusEl.className = 'connection-status disconnected';
+                    statusEl.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
+                }
+            }
+
+            handleMCPResponse(data) {
+                if (data.type === 'tool-response' && data.requestId) {
+                    const requestInfo = this.pendingRequests.get(data.requestId);
+                    if (requestInfo) {
+                        const { testType, startTime } = requestInfo;
+                        const duration = Date.now() - startTime;
+                        
+                        if (data.success) {
+                            this.handleSuccessResponse(testType, data.result, duration);
+                        } else {
+                            this.handleErrorResponse(testType, data.error, duration);
+                        }
+                        
+                        this.pendingRequests.delete(data.requestId);
+                    }
+                }
+            }
+
+            handleSuccessResponse(testType, result, duration) {
+                const results = result.results || [];
+                const message = `Search completed in ${duration}ms. Found ${results.length} results.`;
+                
+                this.log(`${testType}Status`, message, 'success');
+                this.displayResults(`${testType}Results`, result);
+                this.displayLiveResults(results);
+                
+                // Store test results
+                this.testResults[testType] = {
+                    success: true,
+                    duration: duration,
+                    resultCount: results.length,
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            handleErrorResponse(testType, error, duration) {
+                const message = `Search failed after ${duration}ms: ${error}`;
+                this.log(`${testType}Status`, message, 'error');
+                this.displayResults(`${testType}Results`, { error: error });
+                
+                // Store test results
+                this.testResults[testType] = {
+                    success: false,
+                    duration: duration,
+                    error: error,
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            sendMCPRequest(toolName, parameters, testType) {
+                if (!this.isConnected) {
+                    this.log(`${testType}Status`, 'Not connected to MCP Server. Please connect first.', 'error');
+                    return;
+                }
+
+                const requestId = `${testType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const startTime = Date.now();
+                
+                this.pendingRequests.set(requestId, { testType, startTime });
+                
+                this.mcpClient.send(JSON.stringify({
+                    type: 'execute-tool',
+                    requestId: requestId,
+                    toolName: toolName,
+                    parameters: parameters
+                }));
+                
+                this.log(`${testType}Status`, `Sending ${toolName} request...`, 'info');
+            }
+
+            log(elementId, message, type = 'info') {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    element.innerHTML = `
+                        <div class="log-entry log-${type}">
+                            <strong>[${timestamp}]</strong> ${message}
+                        </div>
+                    `;
+                }
+            }
+
+            displayResults(elementId, data) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            }
+
+            displayLiveResults(results) {
+                const container = document.getElementById('liveResults');
+                
+                if (!results || results.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                            <h4>No Results Found</h4>
+                            <p>The search returned no results.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const proteinCards = results.slice(0, 5).map(protein => `
+                    <div class="protein-card">
+                        <div class="protein-header">
+                            <div class="protein-id">${protein.uniprotId || protein.id || 'Unknown'}</div>
+                            <div>${protein.length || 0} AA</div>
+                        </div>
+                        <div><strong>${protein.proteinName || protein.name || 'Unknown protein'}</strong></div>
+                        <div style="color: #666;">${protein.organism || 'Unknown organism'}</div>
+                        <div style="margin-top: 10px; font-size: 12px;">
+                            ${protein.function ? protein.function.substring(0, 100) + '...' : 'No function description'}
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <h4>Found ${results.length} results (showing first 5)</h4>
+                    </div>
+                    ${proteinCards}
+                `;
+            }
+
+            // Test Functions
+            testConnection() {
+                if (this.isConnected) {
+                    this.log('connectionTest', 'Already connected to MCP Server!', 'success');
+                } else {
+                    this.log('connectionTest', 'Attempting to connect...', 'info');
+                    this.connectToMCP();
+                }
+            }
+
+            reconnect() {
+                if (this.mcpClient) {
+                    this.mcpClient.close();
+                }
+                this.log('connectionTest', 'Reconnecting to MCP Server...', 'info');
+                setTimeout(() => this.connectToMCP(), 1000);
+            }
+
+            testBasicSearch() {
+                const query = document.getElementById('basicQuery').value.trim();
+                const searchType = document.getElementById('basicSearchType').value;
+                
+                if (!query) {
+                    this.log('basicSearchStatus', 'Please enter a search query.', 'error');
+                    return;
+                }
+
+                const parameters = {
+                    query: query,
+                    searchType: searchType,
+                    limit: 10,
+                    includeSequence: true,
+                    includeFeatures: true
+                };
+
+                this.sendMCPRequest('search_uniprot_database', parameters, 'basicSearch');
+            }
+
+            testAdvancedSearch() {
+                const proteinName = document.getElementById('advProteinName').value.trim();
+                const organism = document.getElementById('advOrganism').value.trim();
+                const reviewedOnly = document.getElementById('advReviewed').checked;
+
+                const parameters = {
+                    proteinName: proteinName || undefined,
+                    organism: organism || undefined,
+                    reviewedOnly: reviewedOnly,
+                    limit: 15
+                };
+
+                this.sendMCPRequest('advanced_uniprot_search', parameters, 'advancedSearch');
+            }
+
+            testGetEntry() {
+                const uniprotId = document.getElementById('entryId').value.trim();
+                
+                if (!uniprotId) {
+                    this.log('entryDetailsStatus', 'Please enter a UniProt ID.', 'error');
+                    return;
+                }
+
+                const parameters = {
+                    uniprotId: uniprotId,
+                    includeSequence: true,
+                    includeFeatures: true,
+                    includeCrossRefs: true
+                };
+
+                this.sendMCPRequest('get_uniprot_entry', parameters, 'entryDetails');
+            }
+
+            testSequenceSearch() {
+                const sequence = document.getElementById('sequenceQuery').value.trim();
+                
+                if (!sequence) {
+                    this.log('sequenceSearchStatus', 'Please enter a protein sequence.', 'error');
+                    return;
+                }
+
+                const parameters = {
+                    query: sequence,
+                    searchType: 'sequence',
+                    limit: 20
+                };
+
+                this.sendMCPRequest('search_uniprot_database', parameters, 'sequenceSearch');
+            }
+
+            async runPerformanceTest() {
+                this.log('performanceStatus', 'Starting performance test...', 'info');
+                
+                const testQueries = [
+                    { query: 'TP53', searchType: 'gene_name' },
+                    { query: 'insulin', searchType: 'protein_name' },
+                    { query: 'P04637', searchType: 'uniprot_id' }
+                ];
+
+                let totalDuration = 0;
+                let successCount = 0;
+                const startTime = Date.now();
+
+                for (const [index, testQuery] of testQueries.entries()) {
+                    this.log('performanceStatus', `Running test ${index + 1}/${testQueries.length}: ${testQuery.query}`, 'info');
+                    
+                    try {
+                        await new Promise((resolve) => {
+                            const requestId = `perf_${Date.now()}_${index}`;
+                            const testStartTime = Date.now();
+                            
+                            this.pendingRequests.set(requestId, {
+                                testType: 'performance',
+                                startTime: testStartTime,
+                                resolve: resolve
+                            });
+                            
+                            this.mcpClient.send(JSON.stringify({
+                                type: 'execute-tool',
+                                requestId: requestId,
+                                toolName: 'search_uniprot_database',
+                                parameters: { ...testQuery, limit: 5 }
+                            }));
+                        });
+                        
+                        successCount++;
+                    } catch (error) {
+                        console.error('Performance test error:', error);
+                    }
+                }
+
+                totalDuration = Date.now() - startTime;
+                
+                const results = {
+                    totalTests: testQueries.length,
+                    successCount: successCount,
+                    totalDuration: totalDuration,
+                    averageDuration: totalDuration / testQueries.length,
+                    successRate: (successCount / testQueries.length * 100).toFixed(1)
+                };
+
+                this.log('performanceStatus', 
+                    `Performance test completed: ${successCount}/${testQueries.length} successful (${results.successRate}%). Average: ${results.averageDuration.toFixed(0)}ms`, 
+                    'success'
+                );
+                
+                this.displayResults('performanceResults', results);
+            }
+
+            async runStressTest() {
+                this.log('performanceStatus', 'Starting stress test with 10 concurrent searches...', 'info');
+                
+                const stressQueries = [
+                    'TP53', 'BRCA1', 'EGFR', 'MYC', 'RAS', 'P53', 'insulin', 'hemoglobin', 'actin', 'tubulin'
+                ];
+
+                const startTime = Date.now();
+                const promises = stressQueries.map((query, index) => {
+                    return new Promise((resolve) => {
+                        const requestId = `stress_${Date.now()}_${index}`;
+                        
+                        this.pendingRequests.set(requestId, {
+                            testType: 'stress',
+                            startTime: Date.now(),
+                            resolve: resolve
+                        });
+                        
+                        this.mcpClient.send(JSON.stringify({
+                            type: 'execute-tool',
+                            requestId: requestId,
+                            toolName: 'search_uniprot_database',
+                            parameters: {
+                                query: query,
+                                searchType: 'gene_name',
+                                limit: 3
+                            }
+                        }));
+                    });
+                });
+
+                try {
+                    await Promise.all(promises);
+                    const totalDuration = Date.now() - startTime;
+                    
+                    this.log('performanceStatus', 
+                        `Stress test completed: 10 concurrent searches in ${totalDuration}ms`, 
+                        'success'
+                    );
+                    
+                    this.displayResults('performanceResults', {
+                        testType: 'stress',
+                        concurrentRequests: 10,
+                        totalDuration: totalDuration,
+                        averageDuration: totalDuration / 10
+                    });
+                } catch (error) {
+                    this.log('performanceStatus', `Stress test failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Global functions for button onclick
+        let apiTester;
+
+        function testConnection() {
+            apiTester.testConnection();
+        }
+
+        function reconnect() {
+            apiTester.reconnect();
+        }
+
+        function testBasicSearch() {
+            apiTester.testBasicSearch();
+        }
+
+        function testAdvancedSearch() {
+            apiTester.testAdvancedSearch();
+        }
+
+        function testGetEntry() {
+            apiTester.testGetEntry();
+        }
+
+        function testSequenceSearch() {
+            apiTester.testSequenceSearch();
+        }
+
+        function runPerformanceTest() {
+            apiTester.runPerformanceTest();
+        }
+
+        function runStressTest() {
+            apiTester.runStressTest();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            apiTester = new UniProtAPITester();
+        });
+    </script>
+</body>
+</html> 
