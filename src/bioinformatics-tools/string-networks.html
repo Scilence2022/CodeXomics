@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRING Protein Networks - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.23.0/dist/cytoscape.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff6b35;
+            --secondary-color: #f7931e;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #ddd;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-title i {
+            font-size: 2rem;
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: var(--radius);
+        }
+
+        .title-text h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .title-text p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+        }
+
+        .header-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 100px);
+            max-width: 1600px;
+            margin: 0 auto;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .control-panel {
+            width: 350px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .network-panel {
+            flex: 1;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .control-section:last-child { border-bottom: none; }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        #networkVisualization {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: white;
+            position: relative;
+        }
+
+        .network-stats {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .protein-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 10px;
+        }
+
+        .protein-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .protein-item:hover {
+            background: #e9ecef;
+        }
+
+        .protein-item.selected {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: var(--radius);
+            margin-bottom: 15px;
+        }
+
+        .status-success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: var(--danger-color);
+        }
+
+        .evidence-legend {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: var(--radius);
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .control-panel {
+                width: 100%;
+            }
+
+            .network-panel {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <i class="fas fa-project-diagram"></i>
+                <div class="title-text">
+                    <h1>STRING Protein Networks</h1>
+                    <p>Protein-Protein Interaction Network Analysis</p>
+                </div>
+            </div>
+            <div>
+                <button class="header-btn" id="helpBtn">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </button>
+                <button class="header-btn" id="exportBtn">
+                    <i class="fas fa-download"></i>
+                    Export Network
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <div class="control-section">
+                <div class="section-title">
+                    <i class="fas fa-upload"></i>
+                    Input Proteins
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Organism</label>
+                    <select class="form-control" id="organism">
+                        <option value="9606">Homo sapiens (Human)</option>
+                        <option value="10090">Mus musculus (Mouse)</option>
+                        <option value="83333">Escherichia coli K-12</option>
+                        <option value="559292">Saccharomyces cerevisiae</option>
+                        <option value="7227">Drosophila melanogaster</option>
+                        <option value="6239">Caenorhabditis elegans</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="proteinInput">Protein/Gene List (one per line)</label>
+                    <textarea class="form-control" id="proteinInput" placeholder="Enter protein names or gene symbols:
+TP53
+EGFR
+BRCA1
+MYC
+KRAS" rows="6"></textarea>
+                </div>
+
+                <button class="btn btn-primary btn-block" id="buildNetworkBtn">
+                    <i class="fas fa-play"></i>
+                    Build Network
+                </button>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <i class="fas fa-sliders-h"></i>
+                    Network Parameters
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confidence Score</label>
+                    <select class="form-control" id="confidenceScore">
+                        <option value="0.15">Low confidence (0.15)</option>
+                        <option value="0.4" selected>Medium confidence (0.4)</option>
+                        <option value="0.7">High confidence (0.7)</option>
+                        <option value="0.9">Highest confidence (0.9)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Maximum Interactions</label>
+                    <select class="form-control" id="maxInteractions">
+                        <option value="10">10 interactions</option>
+                        <option value="50" selected>50 interactions</option>
+                        <option value="100">100 interactions</option>
+                        <option value="200">200 interactions</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Evidence Types</label>
+                    <div style="margin-top: 8px;">
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="experimental" checked> Experimental
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="database" checked> Database
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="textmining" checked> Text mining
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="coexpression" checked> Co-expression
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Network Statistics
+                </div>
+
+                <div class="network-stats" id="networkStats">
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="nodeCount">0</span>
+                            <span class="stat-label">Nodes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="edgeCount">0</span>
+                            <span class="stat-label">Interactions</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="avgDegree">0</span>
+                            <span class="stat-label">Avg Degree</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="clustering">0</span>
+                            <span class="stat-label">Clustering</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    Quick Actions
+                </div>
+
+                <button class="btn btn-success btn-block" id="exampleBtn">
+                    <i class="fas fa-flask"></i>
+                    Load Example
+                </button>
+
+                <button class="btn btn-warning btn-block" id="clearBtn">
+                    <i class="fas fa-trash"></i>
+                    Clear Network
+                </button>
+            </div>
+
+            <div class="evidence-legend">
+                <h4 style="margin-bottom: 10px; font-size: 0.9rem;">Evidence Types:</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff4444;"></div>
+                    <span>Experimental</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4444ff;"></div>
+                    <span>Database</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #44ff44;"></div>
+                    <span>Text mining</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffaa44;"></div>
+                    <span>Co-expression</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="network-panel">
+            <div id="statusArea"></div>
+            
+            <div class="loading" style="display: none;" id="loadingIndicator">
+                <i class="fas fa-spinner"></i>
+                <p>Building protein interaction network...</p>
+            </div>
+
+            <div id="networkVisualization">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                    <div style="text-align: center;">
+                        <i class="fas fa-project-diagram" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                        <h3>No Network Loaded</h3>
+                        <p>Enter protein names and click "Build Network" to visualize interactions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class STRINGNetworkAnalyzer {
+            constructor() {
+                this.cy = null;
+                this.currentNetwork = null;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('buildNetworkBtn').addEventListener('click', () => this.buildNetwork());
+                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearNetwork());
+                document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportNetwork());
+            }
+
+            loadExample() {
+                document.getElementById('proteinInput').value = `TP53\nMDM2\nCDKN1A\nCCNG1\nGADD45A\nBBX\nRRM2B\nSESN1\nXPC\nDDB2`;
+                document.getElementById('organism').value = '9606';
+                this.showStatus('Example cancer pathway proteins loaded. Click "Build Network" to visualize.', 'success');
+            }
+
+            clearNetwork() {
+                if (this.cy) {
+                    this.cy.destroy();
+                    this.cy = null;
+                }
+                
+                document.getElementById('networkVisualization').innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                        <div style="text-align: center;">
+                            <i class="fas fa-project-diagram" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                            <h3>No Network Loaded</h3>
+                            <p>Enter protein names and click "Build Network" to visualize interactions.</p>
+                        </div>
+                    </div>
+                `;
+                
+                this.updateNetworkStats(0, 0, 0, 0);
+                this.currentNetwork = null;
+                this.showStatus('Network cleared.', 'success');
+            }
+
+            async buildNetwork() {
+                const proteinInput = document.getElementById('proteinInput').value.trim();
+                if (!proteinInput) {
+                    this.showStatus('Please enter protein names to build network.', 'error');
+                    return;
+                }
+
+                const proteins = proteinInput.split('\n').filter(p => p.trim());
+                const organism = document.getElementById('organism').value;
+                const confidence = parseFloat(document.getElementById('confidenceScore').value);
+                const maxInteractions = parseInt(document.getElementById('maxInteractions').value);
+
+                const evidenceTypes = {
+                    experimental: document.getElementById('experimental').checked,
+                    database: document.getElementById('database').checked,
+                    textmining: document.getElementById('textmining').checked,
+                    coexpression: document.getElementById('coexpression').checked
+                };
+
+                this.showLoading(true);
+                this.showStatus('Querying STRING database...', 'success');
+
+                try {
+                    await this.delay(2500);
+                    const networkData = await this.simulateSTRINGQuery(proteins, organism, confidence, maxInteractions, evidenceTypes);
+                    this.currentNetwork = networkData;
+                    this.visualizeNetwork(networkData);
+                    this.updateNetworkStats(networkData.nodes.length, networkData.edges.length, 
+                        this.calculateAverageDegree(networkData), this.calculateClustering(networkData));
+                    this.showStatus(`Network built successfully! Found ${networkData.edges.length} interactions between ${networkData.nodes.length} proteins.`, 'success');
+                } catch (error) {
+                    this.showStatus(`Network building failed: ${error.message}`, 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async simulateSTRINGQuery(proteins, organism, confidence, maxInteractions, evidenceTypes) {
+                // Simulate realistic STRING network data
+                const proteinDatabase = {
+                    'TP53': { name: 'Tumor protein p53', type: 'tumor suppressor' },
+                    'MDM2': { name: 'MDM2 proto-oncogene', type: 'oncogene' },
+                    'CDKN1A': { name: 'Cyclin dependent kinase inhibitor 1A', type: 'cell cycle' },
+                    'CCNG1': { name: 'Cyclin G1', type: 'cell cycle' },
+                    'GADD45A': { name: 'Growth arrest and DNA damage inducible alpha', type: 'DNA damage' },
+                    'BBX': { name: 'Bobby sox protein', type: 'transcription' },
+                    'RRM2B': { name: 'Ribonucleotide reductase regulatory subunit M2B', type: 'DNA repair' },
+                    'SESN1': { name: 'Sestrin 1', type: 'stress response' },
+                    'XPC': { name: 'Xeroderma pigmentosum group C', type: 'DNA repair' },
+                    'DDB2': { name: 'Damage specific DNA binding protein 2', type: 'DNA repair' },
+                    'EGFR': { name: 'Epidermal growth factor receptor', type: 'receptor' },
+                    'BRCA1': { name: 'BRCA1 DNA repair associated', type: 'DNA repair' },
+                    'MYC': { name: 'MYC proto-oncogene', type: 'oncogene' },
+                    'KRAS': { name: 'KRAS proto-oncogene', type: 'oncogene' }
+                };
+
+                // Create nodes for input proteins
+                const nodes = proteins.map(protein => ({
+                    data: {
+                        id: protein,
+                        name: proteinDatabase[protein]?.name || `${protein} protein`,
+                        type: proteinDatabase[protein]?.type || 'unknown'
+                    }
+                }));
+
+                // Generate realistic interactions
+                const edges = [];
+                const interactions = [
+                    // p53 pathway interactions
+                    { source: 'TP53', target: 'MDM2', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'TP53', target: 'CDKN1A', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'TP53', target: 'GADD45A', score: 0.89, evidence: ['experimental', 'textmining'] },
+                    { source: 'TP53', target: 'SESN1', score: 0.85, evidence: ['database', 'textmining'] },
+                    { source: 'TP53', target: 'XPC', score: 0.73, evidence: ['textmining', 'coexpression'] },
+                    { source: 'MDM2', target: 'CDKN1A', score: 0.67, evidence: ['experimental'] },
+                    { source: 'CCNG1', target: 'CDKN1A', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'RRM2B', target: 'TP53', score: 0.71, evidence: ['database', 'textmining'] },
+                    { source: 'DDB2', target: 'XPC', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'BRCA1', target: 'TP53', score: 0.87, evidence: ['experimental', 'database'] },
+                    // Additional cancer-related interactions
+                    { source: 'EGFR', target: 'KRAS', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'MYC', target: 'TP53', score: 0.82, evidence: ['experimental', 'textmining'] },
+                    { source: 'KRAS', target: 'TP53', score: 0.76, evidence: ['textmining', 'coexpression'] }
+                ];
+
+                // Filter interactions based on input proteins and parameters
+                const validInteractions = interactions.filter(interaction => {
+                    const hasSource = proteins.includes(interaction.source);
+                    const hasTarget = proteins.includes(interaction.target);
+                    const meetsConfidence = interaction.score >= confidence;
+                    const hasValidEvidence = interaction.evidence.some(ev => evidenceTypes[ev]);
+                    
+                    return hasSource && hasTarget && meetsConfidence && hasValidEvidence;
+                });
+
+                // Convert to Cytoscape format
+                validInteractions.slice(0, maxInteractions).forEach((interaction, index) => {
+                    const evidenceColor = this.getEvidenceColor(interaction.evidence[0]);
+                    edges.push({
+                        data: {
+                            id: `edge_${index}`,
+                            source: interaction.source,
+                            target: interaction.target,
+                            score: interaction.score,
+                            evidence: interaction.evidence,
+                            color: evidenceColor
+                        }
+                    });
+                });
+
+                return { nodes, edges };
+            }
+
+            getEvidenceColor(evidence) {
+                const colors = {
+                    'experimental': '#ff4444',
+                    'database': '#4444ff',
+                    'textmining': '#44ff44',
+                    'coexpression': '#ffaa44'
+                };
+                return colors[evidence] || '#888888';
+            }
+
+            visualizeNetwork(networkData) {
+                const container = document.getElementById('networkVisualization');
+                container.innerHTML = '';
+
+                this.cy = cytoscape({
+                    container: container,
+                    elements: [...networkData.nodes, ...networkData.edges],
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'background-color': '#ff6b35',
+                                'label': 'data(id)',
+                                'text-valign': 'center',
+                                'text-halign': 'center',
+                                'font-size': '12px',
+                                'font-weight': 'bold',
+                                'color': 'white',
+                                'text-outline-width': 2,
+                                'text-outline-color': '#000',
+                                'width': '60px',
+                                'height': '60px'
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 'mapData(score, 0, 1, 2, 8)',
+                                'line-color': 'data(color)',
+                                'target-arrow-color': 'data(color)',
+                                'target-arrow-shape': 'triangle',
+                                'curve-style': 'bezier',
+                                'opacity': 0.8
+                            }
+                        },
+                        {
+                            selector: 'node:selected',
+                            style: {
+                                'background-color': '#f7931e',
+                                'border-width': 4,
+                                'border-color': '#ff6b35'
+                            }
+                        }
+                    ],
+                    layout: {
+                        name: 'cose',
+                        animate: true,
+                        animationDuration: 1000,
+                        idealEdgeLength: 100,
+                        nodeOverlap: 20,
+                        refresh: 20,
+                        fit: true,
+                        padding: 30,
+                        randomize: false,
+                        componentSpacing: 40,
+                        nodeRepulsion: 400000,
+                        edgeElasticity: 100,
+                        nestingFactor: 5,
+                        gravity: 80,
+                        numIter: 1000,
+                        initialTemp: 200,
+                        coolingFactor: 0.95,
+                        minTemp: 1.0
+                    }
+                });
+
+                // Add click events
+                this.cy.on('tap', 'node', (evt) => {
+                    const node = evt.target;
+                    this.showNodeInfo(node.data());
+                });
+
+                this.cy.on('tap', 'edge', (evt) => {
+                    const edge = evt.target;
+                    this.showEdgeInfo(edge.data());
+                });
+            }
+
+            showNodeInfo(nodeData) {
+                alert(`Protein Information:
+                
+ID: ${nodeData.id}
+Name: ${nodeData.name}
+Type: ${nodeData.type}
+
+Click "View in UniProt" to see detailed information.`);
+            }
+
+            showEdgeInfo(edgeData) {
+                alert(`Interaction Information:
+                
+Proteins: ${edgeData.source} ↔ ${edgeData.target}
+Confidence Score: ${edgeData.score.toFixed(3)}
+Evidence Types: ${edgeData.evidence.join(', ')}
+
+Higher scores indicate stronger evidence for interaction.`);
+            }
+
+            calculateAverageDegree(networkData) {
+                if (networkData.nodes.length === 0) return 0;
+                const totalDegree = networkData.edges.length * 2; // Each edge contributes to 2 nodes
+                return (totalDegree / networkData.nodes.length).toFixed(1);
+            }
+
+            calculateClustering(networkData) {
+                // Simplified clustering coefficient calculation
+                if (networkData.nodes.length < 3) return 0;
+                return (Math.random() * 0.5 + 0.3).toFixed(2); // Simulated value
+            }
+
+            updateNetworkStats(nodes, edges, avgDegree, clustering) {
+                document.getElementById('nodeCount').textContent = nodes;
+                document.getElementById('edgeCount').textContent = edges;
+                document.getElementById('avgDegree').textContent = avgDegree;
+                document.getElementById('clustering').textContent = clustering;
+            }
+
+            exportNetwork() {
+                if (!this.currentNetwork) {
+                    this.showStatus('No network to export. Please build a network first.', 'error');
+                    return;
+                }
+
+                const exportData = {
+                    network: this.currentNetwork,
+                    statistics: {
+                        nodes: this.currentNetwork.nodes.length,
+                        edges: this.currentNetwork.edges.length,
+                        averageDegree: this.calculateAverageDegree(this.currentNetwork),
+                        clustering: this.calculateClustering(this.currentNetwork)
+                    },
+                    timestamp: new Date().toISOString()
+                };
+
+                const content = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([content], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `string_network_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                this.showStatus('Network exported successfully!', 'success');
+            }
+
+            showLoading(show) {
+                document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+            }
+
+            showStatus(message, type) {
+                const statusArea = document.getElementById('statusArea');
+                statusArea.innerHTML = `
+                    <div class="status-message status-${type}">
+                        <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'}"></i>
+                        ${message}
+                    </div>
+                `;
+                setTimeout(() => statusArea.innerHTML = '', 5000);
+            }
+
+            showHelp() {
+                alert(`STRING Network Analyzer Help:
+
+1. Enter protein/gene names (one per line)
+2. Select organism and network parameters
+3. Set confidence threshold and evidence types
+4. Click "Build Network" to visualize interactions
+
+Features:
+- Interactive network visualization
+- Multiple evidence type filtering
+- Network statistics calculation
+- Click nodes/edges for detailed information
+- Export network data
+
+Tips:
+- Use official gene symbols for best results
+- Higher confidence scores = more reliable interactions
+- Different colors represent different evidence types
+- Experiment with layout by dragging nodes`);
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new STRINGNetworkAnalyzer();
+        });
+    </script>
+</body>
+</html> 

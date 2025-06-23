@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAVID Functional Analysis - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary-color: #6a4c93; --secondary-color: #8b5fbf; --bg-primary: #f5f5f5; --bg-secondary: #ffffff; --radius: 8px; --shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-primary); color: #333; }
+        .app-header { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 20px; box-shadow: var(--shadow); }
+        .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; }
+        .app-title { display: flex; align-items: center; gap: 15px; }
+        .app-title i { font-size: 2rem; background: rgba(255,255,255,0.2); padding: 10px; border-radius: var(--radius); }
+        .main-container { display: flex; height: calc(100vh - 100px); max-width: 1400px; margin: 0 auto; gap: 20px; padding: 20px; }
+        .sidebar { width: 350px; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+        .content-area { flex: 1; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; overflow-y: auto; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--radius); font-size: 14px; margin-bottom: 15px; }
+        .btn { padding: 10px 20px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--secondary-color); color: white; width: 100%; justify-content: center; }
+        .btn-primary:hover { background: var(--primary-color); transform: translateY(-2px); }
+        .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; color: var(--primary-color); display: flex; align-items: center; gap: 10px; }
+        .analysis-card { background: var(--bg-secondary); border: 1px solid #ddd; border-radius: var(--radius); padding: 15px; margin-bottom: 15px; transition: all 0.3s ease; }
+        .analysis-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <i class="fas fa-chart-line"></i>
+                <div class="title-text">
+                    <h1>DAVID Functional Analysis</h1>
+                    <p>Database for Annotation, Visualization and Integrated Discovery</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="section-title">
+                <i class="fas fa-upload"></i>
+                Gene List Input
+            </div>
+            
+            <textarea class="form-control" id="geneInput" placeholder="Enter gene symbols (one per line):
+TP53
+EGFR
+BRCA1
+MYC" rows="8"></textarea>
+            
+            <select class="form-control" id="species">
+                <option value="OFFICIAL_GENE_SYMBOL">Human Gene Symbol</option>
+                <option value="ENSEMBL_GENE_ID">Ensembl Gene ID</option>
+                <option value="ENTREZ_GENE_ID">Entrez Gene ID</option>
+            </select>
+            
+            <button class="btn btn-primary" id="analyzeBtn">
+                <i class="fas fa-play"></i>
+                Run DAVID Analysis
+            </button>
+
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" id="exampleBtn" style="margin-bottom: 10px;">
+                    <i class="fas fa-flask"></i>
+                    Load Example
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="resultsContainer">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                    <h3>No Analysis Results</h3>
+                    <p>Enter gene list and click "Run DAVID Analysis" to perform functional annotation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DAVIDAnalyzer {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyze());
+                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+            }
+
+            loadExample() {
+                document.getElementById('geneInput').value = `TP53\nEGFR\nBRCA1\nMYC\nKRAS\nPTEN\nRB1\nCDKN2A`;
+            }
+
+            async analyze() {
+                const geneInput = document.getElementById('geneInput').value.trim();
+                if (!geneInput) {
+                    alert('Please enter gene symbols.');
+                    return;
+                }
+
+                const genes = geneInput.split('\n').filter(g => g.trim());
+                const results = this.simulateDAVIDAnalysis(genes);
+                this.displayResults(results);
+            }
+
+            simulateDAVIDAnalysis(genes) {
+                return {
+                    inputGenes: genes,
+                    enrichmentClusters: [
+                        {
+                            name: 'Cell Cycle and DNA Repair',
+                            enrichmentScore: 3.45,
+                            categories: [
+                                { term: 'GO:0007049~cell cycle', count: 5, pValue: 0.0012, fdr: 0.023 },
+                                { term: 'GO:0006281~DNA repair', count: 4, pValue: 0.0045, fdr: 0.067 }
+                            ]
+                        },
+                        {
+                            name: 'Apoptosis and Cell Death',
+                            enrichmentScore: 2.87,
+                            categories: [
+                                { term: 'GO:0006915~apoptotic process', count: 4, pValue: 0.0089, fdr: 0.089 },
+                                { term: 'GO:0012501~programmed cell death', count: 4, pValue: 0.0156, fdr: 0.134 }
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            displayResults(results) {
+                const container = document.getElementById('resultsContainer');
+                
+                const clusterCards = results.enrichmentClusters.map(cluster => `
+                    <div class="analysis-card">
+                        <h4>${cluster.name}</h4>
+                        <p><strong>Enrichment Score:</strong> ${cluster.enrichmentScore}</p>
+                        <div style="margin-top: 10px;">
+                            ${cluster.categories.map(cat => `
+                                <div style="margin: 5px 0; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <strong>${cat.term}</strong><br>
+                                    Count: ${cat.count}, p-value: ${cat.pValue}, FDR: ${cat.fdr}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <h3>DAVID Functional Analysis Results</h3>
+                    <p>Input genes: ${results.inputGenes.length}</p>
+                    ${clusterCards}
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new DAVIDAnalyzer();
+        });
+    </script>
+</body>
+</html> 

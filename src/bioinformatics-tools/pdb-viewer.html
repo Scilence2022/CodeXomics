@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDB Structure Viewer - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary-color: #e74c3c; --secondary-color: #ec7063; --bg-primary: #f5f5f5; --bg-secondary: #ffffff; --radius: 8px; --shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-primary); color: #333; }
+        .app-header { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 20px; box-shadow: var(--shadow); }
+        .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; }
+        .app-title { display: flex; align-items: center; gap: 15px; }
+        .app-title i { font-size: 2rem; background: rgba(255,255,255,0.2); padding: 10px; border-radius: var(--radius); }
+        .main-container { display: flex; height: calc(100vh - 100px); max-width: 1400px; margin: 0 auto; gap: 20px; padding: 20px; }
+        .sidebar { width: 350px; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+        .content-area { flex: 1; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; overflow-y: auto; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--radius); font-size: 14px; margin-bottom: 15px; }
+        .btn { padding: 10px 20px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--secondary-color); color: white; width: 100%; justify-content: center; }
+        .btn-primary:hover { background: var(--primary-color); transform: translateY(-2px); }
+        .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; color: var(--primary-color); display: flex; align-items: center; gap: 10px; }
+        .structure-card { background: var(--bg-secondary); border: 1px solid #ddd; border-radius: var(--radius); padding: 15px; margin-bottom: 15px; transition: all 0.3s ease; }
+        .structure-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+        .pdb-id { font-weight: 600; color: var(--primary-color); font-size: 1.2rem; margin-bottom: 8px; }
+        .viewer-container { height: 400px; border: 1px solid #ddd; border-radius: var(--radius); background: #f8f9fa; display: flex; align-items: center; justify-content: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <i class="fas fa-cube"></i>
+                <div class="title-text">
+                    <h1>PDB Structure Viewer</h1>
+                    <p>Protein Data Bank Structure Analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="section-title">
+                <i class="fas fa-search"></i>
+                Structure Search
+            </div>
+            
+            <input type="text" class="form-control" id="pdbQuery" placeholder="Enter PDB ID or protein name...">
+            
+            <select class="form-control" id="searchType">
+                <option value="pdb_id">PDB ID</option>
+                <option value="protein_name">Protein Name</option>
+                <option value="molecule_name">Molecule Name</option>
+                <option value="author">Author</option>
+            </select>
+            
+            <button class="btn btn-primary" id="searchBtn">
+                <i class="fas fa-search"></i>
+                Search PDB
+            </button>
+
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" id="exampleBtn" style="margin-bottom: 10px;">
+                    <i class="fas fa-flask"></i>
+                    Load Example
+                </button>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <div class="section-title">
+                    <i class="fas fa-cog"></i>
+                    Viewer Options
+                </div>
+                
+                <select class="form-control" id="representation">
+                    <option value="cartoon">Cartoon</option>
+                    <option value="surface">Surface</option>
+                    <option value="ribbon">Ribbon</option>
+                    <option value="spacefill">Space Fill</option>
+                </select>
+                
+                <select class="form-control" id="colorScheme">
+                    <option value="chain">By Chain</option>
+                    <option value="structure">By Structure</option>
+                    <option value="rainbow">Rainbow</option>
+                    <option value="hydrophobicity">Hydrophobicity</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="resultsContainer">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-cube" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                    <h3>No Structure Results</h3>
+                    <p>Search for PDB structures to view protein 3D models.</p>
+                </div>
+            </div>
+            
+            <div class="viewer-container" id="structureViewer" style="display: none;">
+                <div style="text-align: center; color: #666;">
+                    <i class="fas fa-cube" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <p>3D Structure Viewer</p>
+                    <p><small>Real PDB viewer would be integrated here (e.g., Mol* or NGL Viewer)</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PDBViewer {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                document.getElementById('searchBtn').addEventListener('click', () => this.search());
+                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('representation').addEventListener('change', () => this.updateViewer());
+                document.getElementById('colorScheme').addEventListener('change', () => this.updateViewer());
+            }
+
+            loadExample() {
+                document.getElementById('searchType').value = 'pdb_id';
+                document.getElementById('pdbQuery').value = '1TUP';
+            }
+
+            async search() {
+                const searchType = document.getElementById('searchType').value;
+                const query = document.getElementById('pdbQuery').value.trim();
+                
+                if (!query) {
+                    alert('Please enter search terms.');
+                    return;
+                }
+
+                const results = this.simulatePDBSearch(query);
+                this.displayResults(results);
+            }
+
+            simulatePDBSearch(query) {
+                return [
+                    {
+                        id: '1TUP',
+                        title: 'TUMOR SUPPRESSOR P53 COMPLEXED WITH DNA',
+                        resolution: '2.20 Å',
+                        method: 'X-RAY DIFFRACTION',
+                        organism: 'Homo sapiens',
+                        chains: 4,
+                        depositionDate: '1994-06-15',
+                        authors: 'Cho, Y., Gorina, S., Jeffrey, P.D., Pavletich, N.P.'
+                    },
+                    {
+                        id: '1HSG',
+                        title: 'HIV-1 PROTEASE IN COMPLEX WITH CGP 53820',
+                        resolution: '1.80 Å',
+                        method: 'X-RAY DIFFRACTION',
+                        organism: 'Human immunodeficiency virus 1',
+                        chains: 2,
+                        depositionDate: '1995-01-31',
+                        authors: 'Tong, L., Pav, S., White, D.M., Rogers, S.'
+                    }
+                ];
+            }
+
+            displayResults(results) {
+                const container = document.getElementById('resultsContainer');
+                
+                if (!results.length) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <h3>No Structures Found</h3>
+                            <p>Try different search terms or PDB IDs.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const structureCards = results.map(structure => `
+                    <div class="structure-card" onclick="this.selectStructure('${structure.id}')">
+                        <div class="pdb-id">${structure.id}</div>
+                        <h4>${structure.title}</h4>
+                        <p><strong>Resolution:</strong> ${structure.resolution}</p>
+                        <p><strong>Method:</strong> ${structure.method}</p>
+                        <p><strong>Organism:</strong> ${structure.organism}</p>
+                        <p><strong>Chains:</strong> ${structure.chains}</p>
+                        <p><strong>Deposited:</strong> ${structure.depositionDate}</p>
+                        <p><strong>Authors:</strong> ${structure.authors}</p>
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-primary" onclick="this.loadStructure('${structure.id}')" style="margin-right: 10px; width: auto;">
+                                <i class="fas fa-eye"></i> View 3D
+                            </button>
+                            <button class="btn btn-primary" onclick="window.open('https://www.rcsb.org/structure/${structure.id}', '_blank')" style="width: auto;">
+                                <i class="fas fa-external-link-alt"></i> PDB Entry
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <h3>PDB Search Results (${results.length} found)</h3>
+                    ${structureCards}
+                `;
+            }
+
+            loadStructure(pdbId) {
+                document.getElementById('structureViewer').style.display = 'block';
+                document.getElementById('structureViewer').innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 40px;">
+                        <i class="fas fa-cube" style="font-size: 4rem; margin-bottom: 20px; color: var(--primary-color);"></i>
+                        <h4>Loading Structure: ${pdbId}</h4>
+                        <p>3D molecular viewer would display here</p>
+                        <p><small>Integration with Mol*, NGL Viewer, or ChimeraX would show the actual 3D structure</small></p>
+                        <div style="margin-top: 20px;">
+                            <p><strong>Current Settings:</strong></p>
+                            <p>Representation: ${document.getElementById('representation').value}</p>
+                            <p>Color Scheme: ${document.getElementById('colorScheme').value}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            updateViewer() {
+                const viewer = document.getElementById('structureViewer');
+                if (viewer.style.display !== 'none') {
+                    // Update viewer with new representation and color scheme
+                    console.log('Updating viewer representation and colors...');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.pdbViewer = new PDBViewer();
+        });
+
+        // Global functions for onclick handlers
+        function selectStructure(pdbId) {
+            console.log('Selected structure:', pdbId);
+        }
+
+        function loadStructure(pdbId) {
+            window.pdbViewer.loadStructure(pdbId);
+        }
+    </script>
+</body>
+</html> 

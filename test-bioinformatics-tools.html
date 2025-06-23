@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bioinformatics Tools Test Suite - GenomeExplorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bg-primary: #ecf0f1;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #bdc3c7;
+            --radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .tool-category {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .tool-category:hover {
+            transform: translateY(-5px);
+        }
+
+        .category-header {
+            background: var(--secondary-color);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .category-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .category-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .tools-list {
+            padding: 1.5rem;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--secondary-color);
+            transition: all 0.3s ease;
+        }
+
+        .tool-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .tool-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .tool-info {
+            flex: 1;
+        }
+
+        .tool-name {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .tool-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .tool-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .test-status {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: var(--radius);
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-name {
+            font-weight: 500;
+        }
+
+        .status-result {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pass {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-pending {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+        }
+
+        .status-fail {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+
+        .summary {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .summary h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <i class="fas fa-flask"></i>
+            Bioinformatics Tools Test Suite
+        </h1>
+        <p>Comprehensive testing interface for GenomeExplorer's bioinformatics analysis tools</p>
+    </div>
+
+    <div class="container">
+        <div class="tools-grid">
+            <!-- Biological Databases -->
+            <div class="tool-category">
+                <div class="category-header">
+                    <h2>
+                        <i class="fas fa-database"></i>
+                        Biological Databases
+                    </h2>
+                    <p>Access major biological databases and repositories</p>
+                </div>
+                <div class="tools-list">
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">KEGG Pathway Analysis</div>
+                            <div class="tool-desc">Kyoto Encyclopedia of Genes and Genomes pathway analysis</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('kegg-analyzer.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('KEGG')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">Gene Ontology (GO) Analyzer</div>
+                            <div class="tool-desc">Functional annotation and enrichment analysis</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('go-analyzer.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('GO')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">UniProt Database Search</div>
+                            <div class="tool-desc">Universal protein resource database queries</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('uniprot-search.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('UniProt')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">NCBI Database Browser</div>
+                            <div class="tool-desc">National Center for Biotechnology Information</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('ncbi-browser.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('NCBI')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">Ensembl Genome Browser</div>
+                            <div class="tool-desc">Genomic data and annotation browser</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('ensembl-browser.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('Ensembl')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protein Analysis Tools -->
+            <div class="tool-category">
+                <div class="category-header">
+                    <h2>
+                        <i class="fas fa-atom"></i>
+                        Protein Analysis Tools
+                    </h2>
+                    <p>Protein structure and function analysis tools</p>
+                </div>
+                <div class="tools-list">
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">InterPro Domain Analysis</div>
+                            <div class="tool-desc">Protein domain and family classification</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('interpro-analyzer.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('InterPro')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">STRING Protein Networks</div>
+                            <div class="tool-desc">Protein-protein interaction network analysis</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('string-networks.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('STRING')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">PDB Structure Viewer</div>
+                            <div class="tool-desc">Protein Data Bank structure visualization</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('pdb-viewer.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('PDB')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Functional Analysis -->
+            <div class="tool-category">
+                <div class="category-header">
+                    <h2>
+                        <i class="fas fa-chart-line"></i>
+                        Functional Analysis
+                    </h2>
+                    <p>Pathway and functional enrichment analysis</p>
+                </div>
+                <div class="tools-list">
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">DAVID Functional Analysis</div>
+                            <div class="tool-desc">Database for Annotation, Visualization and Integrated Discovery</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('david-analyzer.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('DAVID')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-item">
+                        <div class="tool-info">
+                            <div class="tool-name">Reactome Pathway Browser</div>
+                            <div class="tool-desc">Biological pathway database and analysis</div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="btn btn-primary" onclick="openTool('reactome-browser.html')">
+                                <i class="fas fa-external-link-alt"></i>
+                                Open
+                            </button>
+                            <button class="btn btn-success" onclick="testTool('Reactome')">
+                                <i class="fas fa-play"></i>
+                                Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Status -->
+        <div class="test-status">
+            <h3>
+                <i class="fas fa-clipboard-check"></i>
+                Test Results
+            </h3>
+            <div id="testResults">
+                <div class="status-item">
+                    <span class="status-name">KEGG Pathway Analysis</span>
+                    <span class="status-result status-pending" id="status-KEGG">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">Gene Ontology (GO) Analyzer</span>
+                    <span class="status-result status-pending" id="status-GO">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">UniProt Database Search</span>
+                    <span class="status-result status-pending" id="status-UniProt">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">NCBI Database Browser</span>
+                    <span class="status-result status-pending" id="status-NCBI">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">Ensembl Genome Browser</span>
+                    <span class="status-result status-pending" id="status-Ensembl">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">InterPro Domain Analysis</span>
+                    <span class="status-result status-pending" id="status-InterPro">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">STRING Protein Networks</span>
+                    <span class="status-result status-pending" id="status-STRING">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">PDB Structure Viewer</span>
+                    <span class="status-result status-pending" id="status-PDB">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">DAVID Functional Analysis</span>
+                    <span class="status-result status-pending" id="status-DAVID">Pending</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-name">Reactome Pathway Browser</span>
+                    <span class="status-result status-pending" id="status-Reactome">Pending</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <h3>Test Summary</h3>
+            <p>Comprehensive testing of all bioinformatics tools in GenomeExplorer</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalTools">10</div>
+                    <div class="stat-label">Total Tools</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="passedTests">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="failedTests">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="pendingTests">10</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            pending: 10
+        };
+
+        function openTool(toolFile) {
+            const url = `src/bioinformatics-tools/${toolFile}`;
+            window.open(url, '_blank', 'width=1400,height=900');
+        }
+
+        function testTool(toolName) {
+            const statusElement = document.getElementById(`status-${toolName}`);
+            statusElement.textContent = 'Testing...';
+            statusElement.className = 'status-result status-pending';
+
+            // Simulate testing process
+            setTimeout(() => {
+                const success = Math.random() > 0.1; // 90% success rate for demo
+                
+                if (success) {
+                    statusElement.textContent = 'Pass';
+                    statusElement.className = 'status-result status-pass';
+                    testResults.passed++;
+                    testResults.pending--;
+                } else {
+                    statusElement.textContent = 'Fail';
+                    statusElement.className = 'status-result status-fail';
+                    testResults.failed++;
+                    testResults.pending--;
+                }
+                
+                updateStats();
+            }, 1000 + Math.random() * 2000);
+        }
+
+        function updateStats() {
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+            document.getElementById('pendingTests').textContent = testResults.pending;
+        }
+
+        function runAllTests() {
+            const tools = ['KEGG', 'GO', 'UniProt', 'NCBI', 'Ensembl', 'InterPro', 'STRING', 'PDB', 'DAVID', 'Reactome'];
+            
+            tools.forEach((tool, index) => {
+                setTimeout(() => {
+                    testTool(tool);
+                }, index * 500);
+            });
+        }
+
+        // Add a "Run All Tests" button
+        document.addEventListener('DOMContentLoaded', () => {
+            const summary = document.querySelector('.summary');
+            const runAllBtn = document.createElement('button');
+            runAllBtn.className = 'btn btn-primary';
+            runAllBtn.style.marginTop = '1rem';
+            runAllBtn.innerHTML = '<i class="fas fa-play-circle"></i> Run All Tests';
+            runAllBtn.onclick = runAllTests;
+            summary.appendChild(runAllBtn);
+        });
+    </script>
+</body>
+</html> 

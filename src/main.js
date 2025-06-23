@@ -258,6 +258,88 @@ function createMenu() {
               }
             }
           ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Biological Databases',
+          submenu: [
+            {
+              label: 'KEGG Pathway Analysis',
+              accelerator: 'CmdOrCtrl+Shift+K',
+              click: () => {
+                createKEGGWindow();
+              }
+            },
+            {
+              label: 'Gene Ontology (GO) Analyzer',
+              accelerator: 'CmdOrCtrl+Shift+O',
+              click: () => {
+                createGOWindow();
+              }
+            },
+            {
+              label: 'UniProt Database Search',
+              accelerator: 'CmdOrCtrl+Shift+U',
+              click: () => {
+                createUniProtWindow();
+              }
+            },
+            {
+              label: 'InterPro Domain Analysis',
+              accelerator: 'CmdOrCtrl+Shift+I',
+              click: () => {
+                createInterProWindow();
+              }
+            },
+            {
+              label: 'NCBI Database Browser',
+              accelerator: 'CmdOrCtrl+Shift+N',
+              click: () => {
+                createNCBIWindow();
+              }
+            },
+            {
+              label: 'Ensembl Genome Browser',
+              accelerator: 'CmdOrCtrl+Shift+B',
+              click: () => {
+                createEnsemblWindow();
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Analysis Tools',
+          submenu: [
+            {
+              label: 'STRING Protein Networks',
+              accelerator: 'CmdOrCtrl+Shift+S',
+              click: () => {
+                createSTRINGWindow();
+              }
+            },
+            {
+              label: 'DAVID Functional Analysis',
+              accelerator: 'CmdOrCtrl+Shift+D',
+              click: () => {
+                createDAVIDWindow();
+              }
+            },
+            {
+              label: 'Reactome Pathway Browser',
+              accelerator: 'CmdOrCtrl+Shift+R',
+              click: () => {
+                createReactomeWindow();
+              }
+            },
+            {
+              label: 'PDB Structure Viewer',
+              accelerator: 'CmdOrCtrl+Shift+P',
+              click: () => {
+                createPDBWindow();
+              }
+            }
+          ]
         }
       ]
     },
@@ -1485,4 +1567,368 @@ ipcMain.handle('get-region-sequence', async (event, chromosome, start, end) => {
     console.error('Error getting region sequence:', error);
     return null;
   }
-}); 
+});
+
+// ========== BIOLOGICAL DATABASES TOOLS ==========
+
+// Create KEGG Pathway Analysis Window
+function createKEGGWindow() {
+  try {
+    const keggWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'KEGG Pathway Analysis - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    keggWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/kegg-analyzer.html'));
+
+    keggWindow.once('ready-to-show', () => {
+      keggWindow.show();
+    });
+
+    keggWindow.webContents.openDevTools();
+
+    keggWindow.on('closed', () => {
+      console.log('KEGG Pathway Analysis window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open KEGG Pathway Analysis:', error);
+  }
+}
+
+// Create Gene Ontology (GO) Analysis Window
+function createGOWindow() {
+  try {
+    const goWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Gene Ontology (GO) Analyzer - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    goWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/go-analyzer.html'));
+
+    goWindow.once('ready-to-show', () => {
+      goWindow.show();
+    });
+
+    goWindow.webContents.openDevTools();
+
+    goWindow.on('closed', () => {
+      console.log('GO Analyzer window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open GO Analyzer:', error);
+  }
+}
+
+// Create UniProt Database Search Window
+function createUniProtWindow() {
+  try {
+    const uniprotWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'UniProt Database Search - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    uniprotWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/uniprot-search.html'));
+
+    uniprotWindow.once('ready-to-show', () => {
+      uniprotWindow.show();
+    });
+
+    uniprotWindow.webContents.openDevTools();
+
+    uniprotWindow.on('closed', () => {
+      console.log('UniProt Search window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open UniProt Search:', error);
+  }
+}
+
+// Create InterPro Domain Analysis Window
+function createInterProWindow() {
+  try {
+    const interproWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'InterPro Domain Analysis - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    interproWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/interpro-analyzer.html'));
+
+    interproWindow.once('ready-to-show', () => {
+      interproWindow.show();
+    });
+
+    interproWindow.webContents.openDevTools();
+
+    interproWindow.on('closed', () => {
+      console.log('InterPro Analyzer window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open InterPro Analyzer:', error);
+  }
+}
+
+// Create NCBI Database Browser Window
+function createNCBIWindow() {
+  try {
+    const ncbiWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'NCBI Database Browser - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    ncbiWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/ncbi-browser.html'));
+
+    ncbiWindow.once('ready-to-show', () => {
+      ncbiWindow.show();
+    });
+
+    ncbiWindow.webContents.openDevTools();
+
+    ncbiWindow.on('closed', () => {
+      console.log('NCBI Browser window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open NCBI Browser:', error);
+  }
+}
+
+// Create Ensembl Genome Browser Window
+function createEnsemblWindow() {
+  try {
+    const ensemblWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Ensembl Genome Browser - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    ensemblWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/ensembl-browser.html'));
+
+    ensemblWindow.once('ready-to-show', () => {
+      ensemblWindow.show();
+    });
+
+    ensemblWindow.webContents.openDevTools();
+
+    ensemblWindow.on('closed', () => {
+      console.log('Ensembl Browser window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open Ensembl Browser:', error);
+  }
+}
+
+// ========== ANALYSIS TOOLS ==========
+
+// Create STRING Protein Networks Window
+function createSTRINGWindow() {
+  try {
+    const stringWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'STRING Protein Networks - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    stringWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/string-networks.html'));
+
+    stringWindow.once('ready-to-show', () => {
+      stringWindow.show();
+    });
+
+    stringWindow.webContents.openDevTools();
+
+    stringWindow.on('closed', () => {
+      console.log('STRING Networks window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open STRING Networks:', error);
+  }
+}
+
+// Create DAVID Functional Analysis Window
+function createDAVIDWindow() {
+  try {
+    const davidWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 1000,
+      minHeight: 700,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'DAVID Functional Analysis - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    davidWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/david-analyzer.html'));
+
+    davidWindow.once('ready-to-show', () => {
+      davidWindow.show();
+    });
+
+    davidWindow.webContents.openDevTools();
+
+    davidWindow.on('closed', () => {
+      console.log('DAVID Analyzer window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open DAVID Analyzer:', error);
+  }
+}
+
+// Create Reactome Pathway Browser Window
+function createReactomeWindow() {
+  try {
+    const reactomeWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'Reactome Pathway Browser - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    reactomeWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/reactome-browser.html'));
+
+    reactomeWindow.once('ready-to-show', () => {
+      reactomeWindow.show();
+    });
+
+    reactomeWindow.webContents.openDevTools();
+
+    reactomeWindow.on('closed', () => {
+      console.log('Reactome Browser window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open Reactome Browser:', error);
+  }
+}
+
+// Create PDB Structure Viewer Window
+function createPDBWindow() {
+  try {
+    const pdbWindow = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'PDB Structure Viewer - GenomeExplorer',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    pdbWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/pdb-viewer.html'));
+
+    pdbWindow.once('ready-to-show', () => {
+      pdbWindow.show();
+    });
+
+    pdbWindow.webContents.openDevTools();
+
+    pdbWindow.on('closed', () => {
+      console.log('PDB Structure Viewer window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open PDB Structure Viewer:', error);
+  }
+} 
