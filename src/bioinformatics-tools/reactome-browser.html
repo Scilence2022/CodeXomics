@@ -1,1 +1,758 @@
- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactome Pathway Browser</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #FFC107;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --dark-color: #333;
+            --light-color: #f5f5f5;
+            --border-color: #ddd;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), #1976D2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            padding: 30px;
+            min-height: 600px;
+        }
+
+        .search-panel {
+            background: var(--light-color);
+            border-radius: 10px;
+            padding: 25px;
+            height: fit-content;
+        }
+
+        .results-panel {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--dark-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: var(--dark-color);
+        }
+
+        .btn-secondary:hover {
+            background: #FFB300;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #388E3C;
+        }
+
+        .results-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .results-content {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .pathway-item {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+
+        .pathway-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .pathway-header {
+            background: #f8f9fa;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pathway-title {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .pathway-id {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+
+        .pathway-details {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .pathway-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .pathway-description {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .pathway-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pathway-link {
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .pathway-link:hover {
+            background: #1976D2;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .hierarchy-tree {
+            margin: 15px 0;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .tree-node {
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .tree-node:hover {
+            background: rgba(33, 150, 243, 0.1);
+        }
+
+        .tree-indent-1 { margin-left: 20px; }
+        .tree-indent-2 { margin-left: 40px; }
+        .tree-indent-3 { margin-left: 60px; }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .pathway-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Reactome Pathway Browser</h1>
+            <p>Explore biological pathways and biochemical reactions</p>
+        </div>
+
+        <div class="main-content">
+            <div class="search-panel">
+                <div class="form-group">
+                    <label for="organism">Organism</label>
+                    <select id="organism" class="form-control">
+                        <option value="9606">Homo sapiens (Human)</option>
+                        <option value="10090">Mus musculus (Mouse)</option>
+                        <option value="10116">Rattus norvegicus (Rat)</option>
+                        <option value="7955">Danio rerio (Zebrafish)</option>
+                        <option value="7227">Drosophila melanogaster</option>
+                        <option value="6239">Caenorhabditis elegans</option>
+                        <option value="3702">Arabidopsis thaliana</option>
+                        <option value="4932">Saccharomyces cerevisiae</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="searchType">Search Type</label>
+                    <select id="searchType" class="form-control">
+                        <option value="pathway">Pathway Name</option>
+                        <option value="gene">Gene Symbol</option>
+                        <option value="protein">Protein Name</option>
+                        <option value="compound">Small Molecule</option>
+                        <option value="reaction">Reaction</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="searchQuery">Search Term</label>
+                    <input type="text" id="searchQuery" class="form-control" 
+                           placeholder="Enter pathway name, gene, or protein...">
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Pathway Category</label>
+                    <select id="category" class="form-control">
+                        <option value="all">All Categories</option>
+                        <option value="metabolism">Metabolism</option>
+                        <option value="signaling">Signal Transduction</option>
+                        <option value="transport">Transport</option>
+                        <option value="dna_repair">DNA Repair</option>
+                        <option value="immune">Immune System</option>
+                        <option value="development">Development</option>
+                        <option value="disease">Disease</option>
+                        <option value="apoptosis">Apoptosis</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="searchPathways()">
+                    <span id="searchIcon">🔍</span> Search Pathways
+                </button>
+                <button class="btn btn-secondary" onclick="loadSampleData()">
+                    📊 Load Sample Data
+                </button>
+                <button class="btn btn-success" onclick="browseTopLevelPathways()">
+                    🌳 Browse Hierarchy
+                </button>
+            </div>
+
+            <div class="results-panel">
+                <div class="results-header">
+                    <span id="resultsTitle">Reactome Pathway Search Results</span>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <div class="status-message">
+                        Enter search terms or load sample data to explore Reactome pathways
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPathways = [];
+        let searchInProgress = false;
+
+        // Sample pathway data
+        const samplePathways = [
+            {
+                id: "R-HSA-162582",
+                name: "Signal Transduction",
+                description: "Signal transduction is the process by which a chemical or physical signal is transmitted through a cell as a series of molecular events.",
+                category: "signaling",
+                organism: "Homo sapiens",
+                reactions: 1247,
+                participants: 3421,
+                subpathways: 67,
+                hierarchy: ["Signal Transduction"],
+                children: [
+                    "GPCR downstream signalling",
+                    "Signaling by Receptor Tyrosine Kinases",
+                    "Immune System",
+                    "Developmental Biology"
+                ]
+            },
+            {
+                id: "R-HSA-1430728",
+                name: "Metabolism",
+                description: "Metabolic processes in human cells including carbohydrate, lipid, amino acid, and nucleotide metabolism.",
+                category: "metabolism",
+                organism: "Homo sapiens",
+                reactions: 892,
+                participants: 2156,
+                subpathways: 45,
+                hierarchy: ["Metabolism"],
+                children: [
+                    "Carbohydrate metabolism",
+                    "Lipid metabolism",
+                    "Amino acid metabolism",
+                    "Nucleotide metabolism"
+                ]
+            },
+            {
+                id: "R-HSA-168256",
+                name: "Immune System",
+                description: "Biological processes that protect the organism from foreign substances, cells, and tissues.",
+                category: "immune",
+                organism: "Homo sapiens",
+                reactions: 567,
+                participants: 1834,
+                subpathways: 32,
+                hierarchy: ["Signal Transduction", "Immune System"],
+                children: [
+                    "Innate Immune System",
+                    "Adaptive Immune System",
+                    "Cytokine Signaling",
+                    "Complement and Coagulation"
+                ]
+            },
+            {
+                id: "R-HSA-392499",
+                name: "Metabolism of proteins",
+                description: "Protein synthesis, modification, folding, and degradation pathways.",
+                category: "metabolism",
+                organism: "Homo sapiens",
+                reactions: 234,
+                participants: 687,
+                subpathways: 18,
+                hierarchy: ["Metabolism", "Metabolism of proteins"],
+                children: [
+                    "Translation",
+                    "Post-translational modification",
+                    "Protein folding",
+                    "Protein degradation"
+                ]
+            },
+            {
+                id: "R-HSA-73857",
+                name: "RNA Polymerase II Transcription",
+                description: "The process of RNA synthesis by RNA polymerase II, including initiation, elongation, and termination.",
+                category: "dna_repair",
+                organism: "Homo sapiens",
+                reactions: 156,
+                participants: 423,
+                subpathways: 12,
+                hierarchy: ["Gene expression (Transcription)", "RNA Polymerase II Transcription"],
+                children: [
+                    "Transcription Initiation",
+                    "Transcription Elongation",
+                    "Transcription Termination",
+                    "mRNA Processing"
+                ]
+            }
+        ];
+
+        // Initialize the application
+        function initializeApp() {
+            console.log('Reactome Pathway Browser initialized');
+            
+            // Add event listeners
+            document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchPathways();
+                }
+            });
+
+            // Load initial statistics
+            updateStatistics();
+        }
+
+        // Search pathways function
+        function searchPathways() {
+            if (searchInProgress) return;
+            
+            const organism = document.getElementById('organism').value;
+            const searchType = document.getElementById('searchType').value;
+            const query = document.getElementById('searchQuery').value.trim();
+            const category = document.getElementById('category').value;
+
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+
+            searchInProgress = true;
+            updateSearchButton(true);
+
+            // Simulate API call delay
+            setTimeout(() => {
+                let filteredPathways = samplePathways;
+
+                // Filter by category
+                if (category !== 'all') {
+                    filteredPathways = filteredPathways.filter(p => p.category === category);
+                }
+
+                // Filter by search query
+                if (query) {
+                    filteredPathways = filteredPathways.filter(p => 
+                        p.name.toLowerCase().includes(query.toLowerCase()) ||
+                        p.description.toLowerCase().includes(query.toLowerCase())
+                    );
+                }
+
+                currentPathways = filteredPathways;
+                displayResults(filteredPathways, `Search Results for "${query}"`);
+                
+                searchInProgress = false;
+                updateSearchButton(false);
+            }, 1500);
+        }
+
+        // Load sample data
+        function loadSampleData() {
+            currentPathways = samplePathways;
+            displayResults(samplePathways, "Sample Reactome Pathways");
+        }
+
+        // Browse top-level pathways
+        function browseTopLevelPathways() {
+            const topLevel = samplePathways.filter(p => p.hierarchy.length === 1);
+            currentPathways = topLevel;
+            displayResults(topLevel, "Top-Level Pathway Categories");
+        }
+
+        // Display search results
+        function displayResults(pathways, title) {
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsContent = document.getElementById('resultsContent');
+
+            resultsTitle.textContent = title + ` (${pathways.length} pathways)`;
+
+            if (pathways.length === 0) {
+                resultsContent.innerHTML = `
+                    <div class="status-message">
+                        No pathways found matching your search criteria.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            // Add statistics
+            html += generateStatistics(pathways);
+
+            // Add pathway results
+            pathways.forEach(pathway => {
+                html += `
+                    <div class="pathway-item">
+                        <div class="pathway-header" onclick="togglePathwayDetails('${pathway.id}')">
+                            <div class="pathway-title">${pathway.name}</div>
+                            <div class="pathway-id">${pathway.id}</div>
+                        </div>
+                        <div class="pathway-details" id="details-${pathway.id}" style="display: none;">
+                            <div class="pathway-info">
+                                <div class="info-item">
+                                    <div class="info-label">Category</div>
+                                    <div class="info-value">${pathway.category.charAt(0).toUpperCase() + pathway.category.slice(1)}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Organism</div>
+                                    <div class="info-value">${pathway.organism}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Reactions</div>
+                                    <div class="info-value">${pathway.reactions}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Participants</div>
+                                    <div class="info-value">${pathway.participants}</div>
+                                </div>
+                            </div>
+                            <div class="pathway-description">
+                                ${pathway.description}
+                            </div>
+                            ${generateHierarchyTree(pathway)}
+                            ${generateSubpathways(pathway)}
+                            <div class="pathway-links">
+                                <a href="#" class="pathway-link" onclick="viewPathwayDiagram('${pathway.id}')">🔬 View Diagram</a>
+                                <a href="#" class="pathway-link" onclick="exportPathwayData('${pathway.id}')">💾 Export Data</a>
+                                <a href="#" class="pathway-link" onclick="openInReactome('${pathway.id}')">🌐 Open in Reactome</a>
+                                <a href="#" class="pathway-link" onclick="analyzeEnrichment('${pathway.id}')">📊 Enrichment Analysis</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsContent.innerHTML = html;
+        }
+
+        // Generate statistics
+        function generateStatistics(pathways) {
+            const totalReactions = pathways.reduce((sum, p) => sum + p.reactions, 0);
+            const totalParticipants = pathways.reduce((sum, p) => sum + p.participants, 0);
+            const avgReactions = Math.round(totalReactions / pathways.length);
+
+            return `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${pathways.length}</div>
+                        <div class="stat-label">Pathways</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${totalReactions}</div>
+                        <div class="stat-label">Total Reactions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${totalParticipants}</div>
+                        <div class="stat-label">Total Participants</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${avgReactions}</div>
+                        <div class="stat-label">Avg Reactions/Pathway</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Generate hierarchy tree
+        function generateHierarchyTree(pathway) {
+            let html = '<div class="hierarchy-tree"><strong>Pathway Hierarchy:</strong><br>';
+            
+            pathway.hierarchy.forEach((level, index) => {
+                const indent = index > 0 ? `tree-indent-${Math.min(index, 3)}` : '';
+                const prefix = '├── '.repeat(index) + (index > 0 ? '└── ' : '');
+                html += `<div class="tree-node ${indent}">${prefix}${level}</div>`;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        // Generate subpathways
+        function generateSubpathways(pathway) {
+            if (!pathway.children || pathway.children.length === 0) return '';
+            
+            let html = '<div class="hierarchy-tree"><strong>Sub-pathways:</strong><br>';
+            pathway.children.forEach(child => {
+                html += `<div class="tree-node tree-indent-1" onclick="searchSubpathway('${child}')">├── ${child}</div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // Toggle pathway details
+        function togglePathwayDetails(pathwayId) {
+            const details = document.getElementById(`details-${pathwayId}`);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Update search button
+        function updateSearchButton(isLoading) {
+            const button = document.querySelector('.btn');
+            const icon = document.getElementById('searchIcon');
+            
+            if (isLoading) {
+                button.innerHTML = '<div class="loading"></div> Searching...';
+                button.disabled = true;
+            } else {
+                button.innerHTML = '<span id="searchIcon">🔍</span> Search Pathways';
+                button.disabled = false;
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            // This would update general statistics about Reactome
+            console.log('Statistics updated');
+        }
+
+        // Action functions
+        function viewPathwayDiagram(pathwayId) {
+            alert(`Opening pathway diagram for ${pathwayId}\n\nThis would display an interactive pathway diagram with reactions, participants, and regulatory interactions.`);
+        }
+
+        function exportPathwayData(pathwayId) {
+            const pathway = currentPathways.find(p => p.id === pathwayId);
+            if (pathway) {
+                const data = JSON.stringify(pathway, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reactome-pathway-${pathwayId}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function openInReactome(pathwayId) {
+            const url = `https://reactome.org/content/detail/${pathwayId}`;
+            alert(`This would open the pathway in Reactome website:\n${url}`);
+        }
+
+        function analyzeEnrichment(pathwayId) {
+            alert(`Starting enrichment analysis for pathway ${pathwayId}\n\nThis would perform statistical enrichment analysis and show over-represented biological processes.`);
+        }
+
+        function searchSubpathway(subpathway) {
+            document.getElementById('searchQuery').value = subpathway;
+            searchPathways();
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html> 
