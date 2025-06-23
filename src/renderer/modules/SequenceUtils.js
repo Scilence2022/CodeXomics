@@ -830,20 +830,43 @@ class SequenceUtils {
         // Gene body shape
         indicator += this.createGeneBodyShape(gene, startX, width, barHeight, geneColor, geneType, settings);
         
-        // Start marker (vertical line) - only if gene actually starts in this line and enabled
-        if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
-            const markerWidth = settings.startMarkerWidth || 3;
-            const markerHeightPercent = settings.startMarkerHeight || 85;
-            const markerHeight = (barHeight * markerHeightPercent / 100);
-            const markerOffset = (barHeight - markerHeight) / 2;
-            indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
-                               stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
-                               ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
-        }
-        
-        // End marker (arrow) - only if gene actually ends in this line and enabled
-        if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
-            indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene, settings);
+        // For forward genes: start marker at left, end arrow at right
+        // For reverse genes: start marker at right, end arrow at left
+        if (isForward) {
+            // Start marker (vertical line) - only if gene actually starts in this line and enabled
+            if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+                const markerWidth = settings.startMarkerWidth || 6;
+                const markerHeightPercent = settings.startMarkerHeight || 200;
+                const markerHeight = (barHeight * markerHeightPercent / 100);
+                const markerOffset = (barHeight - markerHeight) / 2;
+                indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
+                                   stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
+                                   ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
+            }
+            
+            // End marker (arrow) - only if gene actually ends in this line and enabled
+            if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+                indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene, settings);
+            }
+        } else {
+            // For reverse genes: start marker at right (gene's actual start), end arrow at left (transcription direction)
+            // Start marker (vertical line) - only if gene actually starts in this line and enabled
+            if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+                const markerWidth = settings.startMarkerWidth || 6;
+                const markerHeightPercent = settings.startMarkerHeight || 200;
+                const markerHeight = (barHeight * markerHeightPercent / 100);
+                const markerOffset = (barHeight - markerHeight) / 2;
+                // For reverse genes, the start marker should be at the RIGHT end (where gene actually starts)
+                indicator += `<line x1="${endX}" y1="${markerOffset}" x2="${endX}" y2="${markerOffset + markerHeight}" 
+                                   stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
+                                   ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
+            }
+            
+            // End marker (arrow) - only if gene actually ends in this line and enabled
+            if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+                // For reverse genes, the end arrow should be at the LEFT end (transcription direction)
+                indicator += this.createGeneEndArrow(startX, barHeight, geneColor, isForward, gene, settings);
+            }
         }
         
         return indicator;
@@ -895,8 +918,8 @@ class SequenceUtils {
      * Create end arrow marker to show gene direction and termination
      */
     createGeneEndArrow(x, height, color, isForward, gene, settings = {}) {
-        const arrowSize = settings.arrowSize || 6; // Use settings or default
-        const arrowHeightPercent = settings.arrowHeight || 85;
+        const arrowSize = settings.arrowSize || 12; // Use settings or default
+        const arrowHeightPercent = settings.arrowHeight || 200;
         const arrowHeight = (height * arrowHeightPercent / 100);
         const arrowOffset = (height - arrowHeight) / 2;
         const darkColor = this.darkenHexColor(color, 40);
@@ -983,10 +1006,10 @@ class SequenceUtils {
             indicatorOpacity: 0.7,
             showStartMarkers: true,
             showEndArrows: true,
-            startMarkerWidth: 3,
-            startMarkerHeight: 85,
-            arrowSize: 6,
-            arrowHeight: 85,
+            startMarkerWidth: 6,
+            startMarkerHeight: 200,
+            arrowSize: 12,
+            arrowHeight: 200,
             showCDS: true,
             showRNA: true,
             showPromoter: true,

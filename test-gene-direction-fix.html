@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Direction Fix Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .sequence-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .sequence-line {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 5px 0;
+        }
+        
+        .gene-indicator-svg {
+            display: block;
+            margin: 2px 0 8px 0;
+        }
+        
+        .gene-indicator-hover:hover {
+            opacity: 0.8;
+            cursor: pointer;
+        }
+        
+        .legend {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .gene-info {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gene Direction Fix Test</h1>
+    <p>Testing the fix for reverse gene indicator positions (start marker and arrow placement)</p>
+    
+    <div class="test-container">
+        <div class="test-title">Test 1: Forward Gene (strand +1)</div>
+        <div class="gene-info">Gene: CDS, positions 5-25, strand: +1 (forward)</div>
+        <div class="gene-info">Expected: Start marker at LEFT (position 5), arrow at RIGHT (position 25)</div>
+        
+        <div class="sequence-display">
+            <div class="sequence-line">ATGCGATCGAATGCCGAGTCAATGC</div>
+            <div id="forward-gene-indicator"></div>
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-title">Test 2: Reverse Gene (strand -1)</div>
+        <div class="gene-info">Gene: CDS, positions 5-25, strand: -1 (reverse)</div>
+        <div class="gene-info">Expected: Start marker at RIGHT (position 25), arrow at LEFT (position 5)</div>
+        
+        <div class="sequence-display">
+            <div class="sequence-line">ATGCGATCGAATGCCGAGTCAATGC</div>
+            <div id="reverse-gene-indicator"></div>
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-title">Test 3: Multiple Genes (Mixed Directions)</div>
+        <div class="gene-info">Forward gene: positions 5-15, Reverse gene: positions 18-28</div>
+        
+        <div class="sequence-display">
+            <div class="sequence-line">ATGCGATCGAATGCCGAGTCAATGCGTAA</div>
+            <div id="mixed-genes-indicator"></div>
+        </div>
+    </div>
+    
+    <div class="legend">
+        <strong>Legend:</strong><br>
+        <span style="color: #2e7d32;">Green vertical line</span> = Start marker (gene transcription start)<br>
+        <span style="color: #1976d2;">Blue triangle</span> = End arrow (transcription direction)<br>
+        <span style="background: rgba(76, 175, 80, 0.7); padding: 2px;">Green background</span> = Gene body (CDS)
+    </div>
+
+    <script>
+        // Mock gene data for testing
+        const testGenes = {
+            forward: {
+                start: 5,
+                end: 25,
+                strand: 1,
+                type: 'CDS',
+                qualifiers: { gene: 'forwardGene' }
+            },
+            reverse: {
+                start: 5,
+                end: 25,
+                strand: -1,
+                type: 'CDS',
+                qualifiers: { gene: 'reverseGene' }
+            },
+            forwardMixed: {
+                start: 5,
+                end: 15,
+                strand: 1,
+                type: 'CDS',
+                qualifiers: { gene: 'gene1' }
+            },
+            reverseMixed: {
+                start: 18,
+                end: 28,
+                strand: -1,
+                type: 'CDS',
+                qualifiers: { gene: 'gene2' }
+            }
+        };
+
+        // Mock SequenceUtils methods for testing
+        const testUtils = {
+            darkenHexColor: function(hex, percent) {
+                // Simple color darkening
+                const color = hex.replace('#', '');
+                const num = parseInt(color, 16);
+                const amt = Math.round(2.55 * percent);
+                const R = (num >> 16) - amt;
+                const G = (num >> 8 & 0x00FF) - amt;
+                const B = (num & 0x0000FF) - amt;
+                return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+            },
+
+            getFeatureTypeColor: function(type) {
+                const colors = {
+                    'CDS': '#4CAF50',
+                    'promoter': '#FF9800',
+                    'terminator': '#F44336',
+                    'trna': '#9C27B0',
+                    'rrna': '#9C27B0',
+                    'mrna': '#9C27B0'
+                };
+                return colors[type.toLowerCase()] || '#666666';
+            },
+
+            createGeneIndicator: function(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons, settings = {}) {
+                const geneColor = this.getFeatureTypeColor(gene.type);
+                
+                // Calculate positions relative to the sequence line
+                const geneStartInLine = Math.max(gene.start, lineStartAbs + 1) - lineStartAbs - 1;
+                const geneEndInLine = Math.min(gene.end, lineEndAbs) - lineStartAbs - 1;
+                
+                // Convert to pixel positions
+                const startX = geneStartInLine * charWidth;
+                const endX = (geneEndInLine + 1) * charWidth;
+                const width = endX - startX;
+                
+                if (width <= 0) return '';
+                
+                const isForward = gene.strand !== -1;
+                let indicator = '';
+                
+                // Gene body shape
+                indicator += `<rect x="${startX}" y="3" width="${width}" height="${barHeight - 6}" 
+                                   fill="${geneColor}" opacity="0.7" 
+                                   title="${gene.qualifiers?.gene || gene.type}"/>`;
+                
+                // Default settings with user-specified values
+                const markerWidth = settings.startMarkerWidth || 6;
+                const markerHeightPercent = settings.startMarkerHeight || 200;
+                const arrowSize = settings.arrowSize || 12;
+                const arrowHeightPercent = settings.arrowHeight || 200;
+                
+                // For forward genes: start marker at left, end arrow at right
+                // For reverse genes: start marker at right, end arrow at left
+                if (isForward) {
+                    // Start marker (vertical line) at left
+                    if (gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+                        const markerHeight = (barHeight * markerHeightPercent / 100);
+                        const markerOffset = (barHeight - markerHeight) / 2;
+                        indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
+                                           stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
+                                           title="Gene start: ${gene.qualifiers?.gene || gene.type}"/>`;
+                    }
+                    
+                    // End arrow at right
+                    if (gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+                        const arrowHeight = (barHeight * arrowHeightPercent / 100);
+                        const arrowOffset = (barHeight - arrowHeight) / 2;
+                        const darkColor = this.darkenHexColor(geneColor, 40);
+                        const arrowTop = arrowOffset;
+                        const arrowMiddle = barHeight / 2;
+                        const arrowBottom = arrowOffset + arrowHeight;
+                        
+                        // Right-pointing arrow
+                        indicator += `<path d="M ${endX-arrowSize} ${arrowTop} L ${endX} ${arrowMiddle} L ${endX-arrowSize} ${arrowBottom} Z" 
+                                           fill="${darkColor}" opacity="1" 
+                                           title="Gene end (${gene.qualifiers?.gene || gene.type}) →"/>`;
+                    }
+                } else {
+                    // For reverse genes: start marker at right (gene's actual start), end arrow at left (transcription direction)
+                    // Start marker at right
+                    if (gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+                        const markerHeight = (barHeight * markerHeightPercent / 100);
+                        const markerOffset = (barHeight - markerHeight) / 2;
+                        // For reverse genes, the start marker should be at the RIGHT end (where gene actually starts)
+                        indicator += `<line x1="${endX}" y1="${markerOffset}" x2="${endX}" y2="${markerOffset + markerHeight}" 
+                                           stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
+                                           title="Gene start: ${gene.qualifiers?.gene || gene.type}"/>`;
+                    }
+                    
+                    // End arrow at left
+                    if (gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+                        const arrowHeight = (barHeight * arrowHeightPercent / 100);
+                        const arrowOffset = (barHeight - arrowHeight) / 2;
+                        const darkColor = this.darkenHexColor(geneColor, 40);
+                        const arrowTop = arrowOffset;
+                        const arrowMiddle = barHeight / 2;
+                        const arrowBottom = arrowOffset + arrowHeight;
+                        
+                        // Left-pointing arrow at start position
+                        indicator += `<path d="M ${startX+arrowSize} ${arrowTop} L ${startX} ${arrowMiddle} L ${startX+arrowSize} ${arrowBottom} Z" 
+                                           fill="${darkColor}" opacity="1" 
+                                           title="Gene end (${gene.qualifiers?.gene || gene.type}) ←"/>`;
+                    }
+                }
+                
+                return indicator;
+            }
+        };
+
+        // Create test indicators
+        function createTestIndicator(containerId, genes, sequenceLength) {
+            const charWidth = 12;
+            const barHeight = 12;
+            const lineStartAbs = 0;
+            const lineEndAbs = sequenceLength;
+            
+            let svg = `<svg class="gene-indicator-svg" style="width: ${sequenceLength * charWidth}px; height: ${barHeight}px;">`;
+            
+            genes.forEach(gene => {
+                svg += testUtils.createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, []);
+            });
+            
+            svg += '</svg>';
+            document.getElementById(containerId).innerHTML = svg;
+        }
+
+        // Run tests
+        createTestIndicator('forward-gene-indicator', [testGenes.forward], 25);
+        createTestIndicator('reverse-gene-indicator', [testGenes.reverse], 25);
+        createTestIndicator('mixed-genes-indicator', [testGenes.forwardMixed, testGenes.reverseMixed], 29);
+
+        console.log('Gene direction fix test completed');
+    </script>
+</body>
+</html> 
