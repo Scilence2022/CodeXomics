@@ -228,19 +228,19 @@ class ChatBoxSettingsManager {
     createSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'chatboxSettingsModal';
-        modal.className = 'modal-overlay';
+        modal.className = 'modal';
         
         modal.innerHTML = `
-            <div class="modal-container chatbox-settings-modal">
+            <div class="modal-content llm-config-modal">
                 <div class="modal-header">
-                    <h2><i class="fas fa-comments"></i> ChatBox Settings</h2>
-                    <button class="modal-close-btn" onclick="this.closest('.modal-overlay').style.display='none'">
-                        <i class="fas fa-times"></i>
+                    <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'">
+                        &times;
                     </button>
                 </div>
                 
-                <div class="modal-content">
-                    <div class="settings-tabs">
+                <div class="modal-body">
+                    <div class="llm-provider-tabs">
                         <button class="tab-button active" data-tab="display">
                             <i class="fas fa-eye"></i> Display
                         </button>
@@ -252,178 +252,186 @@ class ChatBoxSettingsManager {
                         </button>
                     </div>
                     
-                    <div class="settings-content">
+                    <div class="llm-provider-config">
                         <!-- Display Tab -->
-                        <div class="tab-panel active" data-panel="display">
-                            <div class="settings-group">
-                                <h3>Thinking Process</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                        <div class="provider-config active" data-panel="display">
+                            <div class="form-section">
+                                <h4>Thinking Process</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="showThinkingProcess" class="setting-checkbox">
-                                        <span class="setting-text">Show AI thinking process</span>
+                                        Show AI thinking process
                                     </label>
-                                    <p class="setting-description">Display the AI's reasoning and analysis steps</p>
+                                    <small class="help-text">Display the AI's reasoning and analysis steps</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="hideThinkingAfterConversation" class="setting-checkbox">
-                                        <span class="setting-text">Hide thinking process after conversation ends</span>
+                                        Hide thinking process after conversation ends
                                     </label>
-                                    <p class="setting-description">Automatically remove thinking process when conversation completes</p>
+                                    <small class="help-text">Automatically remove thinking process when conversation completes</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
-                                        <input type="checkbox" id="showToolCalls" class="setting-checkbox">
-                                        <span class="setting-text">Show tool calls</span>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="preserveThinkingHistory" class="setting-checkbox">
+                                        Preserve thinking history
                                     </label>
-                                    <p class="setting-description">Display detailed information about tool execution</p>
+                                    <small class="help-text">Keep thinking process history in chat records</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="showToolCalls" class="setting-checkbox">
+                                        Show tool calls
+                                    </label>
+                                    <small class="help-text">Display detailed information about tool execution</small>
                                 </div>
                             </div>
                             
-                            <div class="settings-group">
-                                <h3>Interface</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                            <div class="form-section">
+                                <h4>Interface</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="showTimestamps" class="setting-checkbox">
-                                        <span class="setting-text">Show message timestamps</span>
+                                        Show message timestamps
                                     </label>
-                                    <p class="setting-description">Display when each message was sent</p>
+                                    <small class="help-text">Display when each message was sent</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
-                                        <span class="setting-text">Font size</span>
-                                        <select id="fontSize" class="setting-select">
-                                            <option value="small">Small</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="large">Large</option>
-                                        </select>
-                                    </label>
+                                <div class="form-group">
+                                    <label for="fontSize">Font size:</label>
+                                    <select id="fontSize" class="select">
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                    </select>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
-                                        <span class="setting-text">Theme</span>
-                                        <select id="theme" class="setting-select">
-                                            <option value="auto">Auto</option>
-                                            <option value="light">Light</option>
-                                            <option value="dark">Dark</option>
-                                        </select>
-                                    </label>
+                                <div class="form-group">
+                                    <label for="theme">Theme:</label>
+                                    <select id="theme" class="select">
+                                        <option value="auto">Auto</option>
+                                        <option value="light">Light</option>
+                                        <option value="dark">Dark</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Behavior Tab -->
-                        <div class="tab-panel" data-panel="behavior">
-                            <div class="settings-group">
-                                <h3>Interaction</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                        <div class="provider-config" data-panel="behavior">
+                            <div class="form-section">
+                                <h4>Interaction</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="autoScrollToBottom" class="setting-checkbox">
-                                        <span class="setting-text">Auto-scroll to bottom</span>
+                                        Auto-scroll to bottom
                                     </label>
-                                    <p class="setting-description">Automatically scroll to show new messages</p>
+                                    <small class="help-text">Automatically scroll to show new messages</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="enableAbortButton" class="setting-checkbox">
-                                        <span class="setting-text">Enable abort button</span>
+                                        Enable abort button
                                     </label>
-                                    <p class="setting-description">Show button to stop ongoing conversations</p>
+                                    <small class="help-text">Show button to stop ongoing conversations</small>
                                 </div>
                             </div>
                             
-                            <div class="settings-group">
-                                <h3>History</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
-                                        <span class="setting-text">Max history messages</span>
-                                        <input type="number" id="maxHistoryMessages" class="setting-input" min="10" max="10000" step="10">
-                                    </label>
-                                    <p class="setting-description">Maximum number of messages to keep in history</p>
+                            <div class="form-section">
+                                <h4>History</h4>
+                                <div class="form-group">
+                                    <label for="maxHistoryMessages">Max history messages:</label>
+                                    <input type="number" id="maxHistoryMessages" class="input-full" min="10" max="10000" step="10">
+                                    <small class="help-text">Maximum number of messages to keep in history</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="enableHistorySearch" class="setting-checkbox">
-                                        <span class="setting-text">Enable history search</span>
+                                        Enable history search
                                     </label>
-                                    <p class="setting-description">Allow searching through chat history</p>
+                                    <small class="help-text">Allow searching through chat history</small>
                                 </div>
                             </div>
                             
-                            <div class="settings-group">
-                                <h3>Performance</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
-                                        <span class="setting-text">Response timeout (seconds)</span>
-                                        <input type="number" id="responseTimeout" class="setting-input" min="5" max="300" step="5">
-                                    </label>
-                                    <p class="setting-description">How long to wait for LLM responses</p>
+                            <div class="form-section">
+                                <h4>Performance</h4>
+                                <div class="form-group">
+                                    <label for="responseTimeout">Response timeout (seconds):</label>
+                                    <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
+                                    <small class="help-text">How long to wait for LLM responses</small>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Advanced Tab -->
-                        <div class="tab-panel" data-panel="advanced">
-                            <div class="settings-group">
-                                <h3>Animation & Effects</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                        <div class="provider-config" data-panel="advanced">
+                            <div class="form-section">
+                                <h4>Animation & Effects</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="animateThinking" class="setting-checkbox">
-                                        <span class="setting-text">Animate thinking process</span>
+                                        Animate thinking process
                                     </label>
-                                    <p class="setting-description">Show animations for thinking process updates</p>
+                                    <small class="help-text">Show animations for thinking process updates</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="compactMode" class="setting-checkbox">
-                                        <span class="setting-text">Compact mode</span>
+                                        Compact mode
                                     </label>
-                                    <p class="setting-description">Use more compact message layout</p>
+                                    <small class="help-text">Use more compact message layout</small>
                                 </div>
                             </div>
                             
-                            <div class="settings-group">
-                                <h3>Window Management</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                            <div class="form-section">
+                                <h4>Window Management</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="rememberPosition" class="setting-checkbox">
-                                        <span class="setting-text">Remember window position</span>
+                                        Remember window position
                                     </label>
-                                    <p class="setting-description">Save and restore chat window position</p>
+                                    <small class="help-text">Save and restore chat window position</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="rememberSize" class="setting-checkbox">
-                                        <span class="setting-text">Remember window size</span>
+                                        Remember window size
                                     </label>
-                                    <p class="setting-description">Save and restore chat window size</p>
+                                    <small class="help-text">Save and restore chat window size</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="startMinimized" class="setting-checkbox">
+                                        Start minimized
+                                    </label>
+                                    <small class="help-text">Start chat window in minimized state</small>
                                 </div>
                             </div>
                             
-                            <div class="settings-group">
-                                <h3>Debug</h3>
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                            <div class="form-section">
+                                <h4>Debug</h4>
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="debugMode" class="setting-checkbox">
-                                        <span class="setting-text">Debug mode</span>
+                                        Debug mode
                                     </label>
-                                    <p class="setting-description">Show detailed debug information in console</p>
+                                    <small class="help-text">Show detailed debug information in console</small>
                                 </div>
                                 
-                                <div class="setting-item">
-                                    <label class="setting-label">
+                                <div class="form-group">
+                                    <label>
                                         <input type="checkbox" id="logToolCalls" class="setting-checkbox">
-                                        <span class="setting-text">Log tool calls</span>
+                                        Log tool calls
                                     </label>
-                                    <p class="setting-description">Log all tool calls to console for debugging</p>
+                                    <small class="help-text">Log all tool calls to console for debugging</small>
                                 </div>
                             </div>
                         </div>
@@ -431,14 +439,14 @@ class ChatBoxSettingsManager {
                 </div>
                 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="window.chatBoxSettingsManager.resetToDefaults(); window.chatBoxSettingsManager.populateSettingsForm(this.closest('.modal-overlay'));">
+                    <button class="btn btn-secondary" onclick="window.chatBoxSettingsManager.resetToDefaults(); window.chatBoxSettingsManager.populateSettingsForm(this.closest('.modal'));">
                         <i class="fas fa-undo"></i> Reset to Defaults
                     </button>
-                    <div class="modal-actions">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="window.chatBoxSettingsManager.saveSettingsFromForm(this.closest('.modal-overlay'))">
+                        <button class="btn btn-primary" onclick="window.chatBoxSettingsManager.saveSettingsFromForm(this.closest('.modal'))">
                             <i class="fas fa-save"></i> Save Settings
                         </button>
                     </div>
@@ -446,31 +454,29 @@ class ChatBoxSettingsManager {
             </div>
         `;
         
-        // Add tab switching functionality
-        modal.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-button')) {
-                const tabName = e.target.dataset.tab;
-                this.switchTab(modal, tabName);
-            }
+        // Add event listeners for tabs
+        const tabButtons = modal.querySelectorAll('.tab-button');
+        const tabPanels = modal.querySelectorAll('.provider-config');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+                
+                // Update active tab button
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update active tab panel
+                tabPanels.forEach(panel => {
+                    panel.classList.remove('active');
+                    if (panel.dataset.panel === targetTab) {
+                        panel.classList.add('active');
+                    }
+                });
+            });
         });
         
         return modal;
-    }
-
-    /**
-     * Switch between tabs in settings modal
-     */
-    switchTab(modal, tabName) {
-        // Remove active class from all tabs and panels
-        modal.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        modal.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
-        
-        // Add active class to selected tab and panel
-        const activeTab = modal.querySelector(`[data-tab="${tabName}"]`);
-        const activePanel = modal.querySelector(`[data-panel="${tabName}"]`);
-        
-        if (activeTab) activeTab.classList.add('active');
-        if (activePanel) activePanel.classList.add('active');
     }
 
     /**
