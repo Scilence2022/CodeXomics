@@ -8,8 +8,55 @@ let mcpServer = null;
 let mcpServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
 // 为生物信息学工具窗口创建独立菜单
+// 存储各个工具窗口的菜单模板
+let toolMenuTemplates = new Map();
+let currentActiveWindow = null;
+
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
+    // 添加 GenomeExplorer 品牌菜单项（仅在 macOS 上）
+    ...(process.platform === 'darwin' ? [{
+      label: 'GenomeExplorer',
+      submenu: [
+        {
+          label: `About ${toolName}`,
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            toolWindow.webContents.send('tool-menu-action', 'preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide GenomeExplorer',
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit GenomeExplorer',
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
     {
       label: 'File',
       submenu: [
@@ -56,13 +103,23 @@ function createToolWindowMenu(toolWindow, toolName) {
           }
         },
         { type: 'separator' },
-        {
-          label: 'Close',
-          accelerator: 'CmdOrCtrl+W',
-          click: () => {
-            toolWindow.close();
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              app.quit();
+            }
           }
-        }
+        ] : [
+          {
+            label: 'Close Window',
+            accelerator: 'Cmd+W',
+            click: () => {
+              toolWindow.close();
+            }
+          }
+        ])
       ]
     },
     {
@@ -125,7 +182,11 @@ function createToolWindowMenu(toolWindow, toolName) {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen' },
+        ...(process.platform === 'darwin' ? [
+          { role: 'togglefullscreen' }
+        ] : [
+          { role: 'togglefullscreen' }
+        ]),
         { type: 'separator' },
         {
           label: 'Refresh Data',
@@ -180,14 +241,16 @@ function createToolWindowMenu(toolWindow, toolName) {
     {
       label: 'Options',
       submenu: [
-        {
-          label: 'Preferences',
-          accelerator: 'CmdOrCtrl+,',
-          click: () => {
-            toolWindow.webContents.send('tool-menu-action', 'preferences');
-          }
-        },
-        { type: 'separator' },
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'Preferences',
+            accelerator: 'Ctrl+,',
+            click: () => {
+              toolWindow.webContents.send('tool-menu-action', 'preferences');
+            }
+          },
+          { type: 'separator' }
+        ] : []),
         {
           label: 'Analysis Settings',
           click: () => {
@@ -210,14 +273,44 @@ function createToolWindowMenu(toolWindow, toolName) {
       ]
     },
     {
-      label: 'Help',
+      label: 'Window',
       submenu: [
         {
-          label: `About ${toolName}`,
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          role: 'minimize'
+        },
+        {
+          label: 'Close',
+          accelerator: 'CmdOrCtrl+W',
           click: () => {
-            toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+            toolWindow.close();
           }
         },
+        { type: 'separator' },
+        {
+          label: 'Return to Main Window',
+          accelerator: 'CmdOrCtrl+Shift+M',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.focus();
+            }
+          }
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: `About ${toolName}`,
+            click: () => {
+              toolWindow.webContents.send('tool-menu-action', 'about', toolName);
+            }
+          },
+          { type: 'separator' }
+        ] : []),
         {
           label: 'User Guide',
           accelerator: 'F1',
@@ -225,7 +318,6 @@ function createToolWindowMenu(toolWindow, toolName) {
             toolWindow.webContents.send('tool-menu-action', 'user-guide');
           }
         },
-        { type: 'separator' },
         {
           label: 'Tool Documentation',
           click: () => {
@@ -255,8 +347,37 @@ function createToolWindowMenu(toolWindow, toolName) {
     }
   ];
 
+  // 存储工具窗口的菜单模板
+  toolMenuTemplates.set(toolWindow.id, { template, toolName });
+
+  // 创建菜单并设置为应用菜单（这会替换当前的应用菜单）
   const menu = Menu.buildFromTemplate(template);
-  toolWindow.setMenu(menu);
+  
+  // 设置窗口聚焦时切换菜单
+  toolWindow.on('focus', () => {
+    currentActiveWindow = toolWindow;
+    Menu.setApplicationMenu(menu);
+    console.log(`Switched to ${toolName} menu`);
+  });
+
+  // 当窗口关闭时清理
+  toolWindow.on('closed', () => {
+    toolMenuTemplates.delete(toolWindow.id);
+    if (currentActiveWindow === toolWindow) {
+      currentActiveWindow = null;
+      // 恢复到主窗口菜单
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        createMenu(); // 重新创建主窗口菜单
+      }
+    }
+  });
+
+  // 如果这是当前活动窗口，立即设置菜单
+  if (toolWindow.isFocused()) {
+    currentActiveWindow = toolWindow;
+    Menu.setApplicationMenu(menu);
+    console.log(`Initial menu set for ${toolName}`);
+  }
 }
 
 function createWindow() {
@@ -297,15 +418,68 @@ function createWindow() {
   // Open DevTools to debug UI issues (temporarily enabled for debugging)
   mainWindow.webContents.openDevTools();
 
+  // 主窗口获得焦点时切换回主菜单
+  mainWindow.on('focus', () => {
+    if (currentActiveWindow !== mainWindow) {
+      currentActiveWindow = mainWindow;
+      createMenu(); // 重新创建并设置主窗口菜单
+      console.log('Switched to main window menu');
+    }
+  });
+
   // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
+    currentActiveWindow = null;
   });
 }
 
 // Create menu
 function createMenu() {
   const template = [
+    // 添加 GenomeExplorer 品牌菜单项（仅在 macOS 上）
+    ...(process.platform === 'darwin' ? [{
+      label: 'GenomeExplorer',
+      submenu: [
+        {
+          label: 'About GenomeExplorer',
+          click: () => {
+            mainWindow.webContents.send('show-about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            mainWindow.webContents.send('general-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide GenomeExplorer',
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit GenomeExplorer',
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
     {
       label: 'File',
       submenu: [
@@ -331,14 +505,16 @@ function createMenu() {
             }
           }
         },
-        { type: 'separator' },
-        {
-          label: 'Exit',
-          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
-          click: () => {
-            app.quit();
+        ...(process.platform !== 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              app.quit();
+            }
           }
-        }
+        ] : [])
       ]
     },
     {
@@ -653,17 +829,66 @@ function createMenu() {
       ]
     },
     {
-      label: 'Help',
+      label: 'Window',
       submenu: [
         {
-          label: 'About',
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          role: 'minimize'
+        },
+        {
+          label: 'Close',
+          accelerator: 'CmdOrCtrl+W',
           click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'About Genome AI Studio',
-              message: 'Genome AI Studio v1.0 beta',
-              detail: 'A modern AI-powered genome analysis studio built with Electron'
-            });
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.close();
+            }
+          }
+        },
+        ...(process.platform === 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Bring All to Front',
+            role: 'front'
+          }
+        ] : [])
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'About GenomeExplorer',
+            click: () => {
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'About GenomeExplorer',
+                message: 'GenomeExplorer v1.0 beta',
+                detail: 'A modern AI-powered genome analysis studio built with Electron'
+              });
+            }
+          },
+          { type: 'separator' }
+        ] : []),
+        {
+          label: 'User Guide',
+          accelerator: 'F1',
+          click: () => {
+            mainWindow.webContents.send('show-user-guide');
+          }
+        },
+        {
+          label: 'Documentation',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/docs');
+          }
+        },
+        {
+          label: 'Report Issue',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/issues');
           }
         }
       ]
@@ -2203,4 +2428,66 @@ function createPDBWindow() {
   } catch (error) {
     console.error('Failed to open PDB Structure Viewer:', error);
   }
-} 
+}
+
+// ========== IPC EVENT HANDLERS FOR TOOL WINDOWS ==========
+
+// IPC handlers for opening tool windows (for testing and external access)
+ipcMain.on('open-interpro-window', () => {
+  console.log('IPC: Opening InterPro window...');
+  createInterProWindow();
+});
+
+ipcMain.on('open-kegg-window', () => {
+  console.log('IPC: Opening KEGG window...');
+  createKEGGWindow();
+});
+
+ipcMain.on('open-go-window', () => {
+  console.log('IPC: Opening GO window...');
+  createGOWindow();
+});
+
+ipcMain.on('open-uniprot-window', () => {
+  console.log('IPC: Opening UniProt window...');
+  createUniProtWindow();
+});
+
+ipcMain.on('open-ncbi-window', () => {
+  console.log('IPC: Opening NCBI window...');
+  createNCBIWindow();
+});
+
+ipcMain.on('open-ensembl-window', () => {
+  console.log('IPC: Opening Ensembl window...');
+  createEnsemblWindow();
+});
+
+ipcMain.on('open-string-window', () => {
+  console.log('IPC: Opening STRING window...');
+  createSTRINGWindow();
+});
+
+ipcMain.on('open-david-window', () => {
+  console.log('IPC: Opening DAVID window...');
+  createDAVIDWindow();
+});
+
+ipcMain.on('open-reactome-window', () => {
+  console.log('IPC: Opening Reactome window...');
+  createReactomeWindow();
+});
+
+ipcMain.on('open-pdb-window', () => {
+  console.log('IPC: Opening PDB window...');
+  createPDBWindow();
+});
+
+// IPC handler for focusing main window
+ipcMain.on('focus-main-window', () => {
+  console.log('IPC: Focusing main window...');
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus();
+    mainWindow.show();
+  }
+}); 
