@@ -1,0 +1,258 @@
+/* ===== CHATBOX SETTINGS MODAL DRAGGABLE STYLES ===== */
+
+/* ChatBox Settings Modal - enhanced with draggable functionality */
+#chatboxSettingsModal .llm-config-modal {
+    max-width: 600px;
+    width: 95%;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Draggable modal styles */
+.draggable-modal {
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.draggable-modal.dragging {
+    z-index: 10001;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+}
+
+.draggable-header {
+    cursor: move;
+    user-select: none;
+}
+
+.draggable-header:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b7db8 100%);
+}
+
+#chatboxSettingsModal .modal-body {
+    padding: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
+    min-height: 0;
+}
+
+#chatboxSettingsModal .modal-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Form Groups */
+#chatboxSettingsModal .form-group {
+    margin-bottom: 16px;
+}
+
+#chatboxSettingsModal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#chatboxSettingsModal .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#chatboxSettingsModal .form-group label input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.1);
+}
+
+#chatboxSettingsModal .help-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* Form Controls */
+#chatboxSettingsModal .input-full,
+#chatboxSettingsModal .select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+#chatboxSettingsModal .input-full:focus,
+#chatboxSettingsModal .select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Checkbox Styling */
+#chatboxSettingsModal .setting-checkbox {
+    appearance: none;
+    width: 44px;
+    height: 24px;
+    background: #e5e7eb;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+#chatboxSettingsModal .setting-checkbox:checked {
+    background: #667eea;
+}
+
+#chatboxSettingsModal .setting-checkbox::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#chatboxSettingsModal .setting-checkbox:checked::before {
+    transform: translateX(20px);
+}
+
+/* Buttons */
+#chatboxSettingsModal .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#chatboxSettingsModal .btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+#chatboxSettingsModal .btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+#chatboxSettingsModal .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+#chatboxSettingsModal .btn-secondary:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+/* MCP Toggle Button Styles */
+.mcp-toggle-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.mcp-toggle-btn.connected {
+    background: rgba(16, 185, 129, 0.8) !important;
+    border-color: rgba(16, 185, 129, 0.9) !important;
+    color: white !important;
+}
+
+.mcp-toggle-btn.connected:hover {
+    background: rgba(16, 185, 129, 0.9) !important;
+    border-color: rgba(16, 185, 129, 1) !important;
+    transform: scale(1.05);
+}
+
+.mcp-toggle-btn.disconnected {
+    background: rgba(239, 68, 68, 0.8) !important;
+    border-color: rgba(239, 68, 68, 0.9) !important;
+    color: white !important;
+}
+
+.mcp-toggle-btn.disconnected:hover {
+    background: rgba(239, 68, 68, 0.9) !important;
+    border-color: rgba(239, 68, 68, 1) !important;
+    transform: scale(1.05);
+}
+
+/* ChatBox Settings Button */
+#chatBoxSettingsBtn {
+    transition: all 0.2s ease;
+}
+
+#chatBoxSettingsBtn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: scale(1.05);
+}
+
+/* Success notification for settings */
+.settings-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateX(100%); }
+} 

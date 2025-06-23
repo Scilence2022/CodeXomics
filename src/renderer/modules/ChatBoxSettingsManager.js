@@ -231,8 +231,8 @@ class ChatBoxSettingsManager {
         modal.className = 'modal';
         
         modal.innerHTML = `
-            <div class="modal-content llm-config-modal">
-                <div class="modal-header">
+            <div class="modal-content llm-config-modal draggable-modal">
+                <div class="modal-header draggable-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
                     <button class="modal-close" onclick="this.closest('.modal').style.display='none'">
                         &times;
@@ -476,7 +476,94 @@ class ChatBoxSettingsManager {
             });
         });
         
+        // Setup dragging functionality
+        this.setupModalDragging(modal);
+        
         return modal;
+    }
+
+    /**
+     * Setup dragging functionality for the settings modal
+     */
+    setupModalDragging(modal) {
+        const modalContent = modal.querySelector('.modal-content');
+        const header = modal.querySelector('.draggable-header');
+        let isDragging = false;
+        let currentX = 0;
+        let currentY = 0;
+        let initialX = 0;
+        let initialY = 0;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        // Make header cursor indicate draggable
+        if (header) {
+            header.style.cursor = 'move';
+        }
+
+        // Mouse events
+        header.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+
+        // Touch events for mobile support
+        header.addEventListener('touchstart', dragStart);
+        document.addEventListener('touchmove', dragMove);
+        document.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            // Don't drag if clicking on buttons
+            if (e.target.closest('button')) return;
+
+            if (e.type === 'touchstart') {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            if (e.target === header || header.contains(e.target)) {
+                isDragging = true;
+                modalContent.classList.add('dragging');
+                document.body.style.userSelect = 'none';
+            }
+        }
+
+        function dragMove(e) {
+            if (isDragging) {
+                e.preventDefault();
+
+                if (e.type === 'touchmove') {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                // Constrain to viewport
+                const rect = modalContent.getBoundingClientRect();
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+
+                xOffset = Math.max(-rect.width + 100, Math.min(xOffset, maxX - 100));
+                yOffset = Math.max(0, Math.min(yOffset, maxY));
+
+                modalContent.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+            }
+        }
+
+        function dragEnd() {
+            if (isDragging) {
+                isDragging = false;
+                modalContent.classList.remove('dragging');
+                document.body.style.userSelect = '';
+            }
+        }
     }
 
     /**

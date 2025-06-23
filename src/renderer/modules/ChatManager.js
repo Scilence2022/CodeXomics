@@ -352,6 +352,9 @@ class ChatManager {
             if (this.mcpServerManager.getConnectedServersCount() === 0) {
                 this.updateConnectionStatus(false);
                 this.updateMCPStatus('disconnected');
+            } else {
+                // Update button state even if some servers are still connected
+                this.updateMCPToggleButton();
             }
         });
 
@@ -492,6 +495,131 @@ class ChatManager {
                     if (disconnectBtn) disconnectBtn.disabled = true;
                     break;
             }
+        }
+        
+        // Also update the toggle button in chat header
+        this.updateMCPToggleButton();
+    }
+
+    /**
+     * Toggle MCP connection
+     */
+    async toggleMCPConnection() {
+        const toggleBtn = document.getElementById('mcpToggleBtn');
+        if (!toggleBtn) return;
+
+        const isConnected = toggleBtn.dataset.connected === 'true';
+        
+        try {
+            if (isConnected) {
+                // Disconnect from MCP servers
+                if (this.mcpServerManager) {
+                    // Disconnect from all active servers
+                    const activeServers = Array.from(this.mcpServerManager.activeServers);
+                    for (const serverId of activeServers) {
+                        await this.mcpServerManager.disconnectFromServer(serverId);
+                    }
+                }
+                
+                // Also disconnect from legacy MCP if connected
+                if (this.isConnected) {
+                    this.disconnectMCP();
+                }
+                
+                this.showNotification('Disconnected from MCP servers', 'info');
+            } else {
+                // Connect to MCP servers
+                const defaultSettings = { allowAutoActivation: false };
+                const mcpSettings = this.configManager ? 
+                    this.configManager.get('mcpSettings', defaultSettings) : 
+                    defaultSettings;
+                
+                if (!mcpSettings.allowAutoActivation) {
+                    this.showNotification('MCP auto-activation is disabled. Enable it in settings to connect.', 'warning');
+                    return;
+                }
+
+                if (this.mcpServerManager) {
+                    // Try to connect to enabled servers
+                    const servers = this.mcpServerManager.getServerStatus();
+                    const enabledServers = servers.filter(server => server.enabled);
+                    
+                    if (enabledServers.length === 0) {
+                        // Try to connect to the built-in genome-studio server
+                        try {
+                            await this.mcpServerManager.connectToServer('genome-studio');
+                            this.showNotification('Connected to built-in MCP server', 'success');
+                        } catch (error) {
+                            console.warn('Failed to connect to built-in server, trying legacy connection:', error);
+                            // Fallback to legacy connection
+                            await this.setupMCPConnection();
+                        }
+                    } else {
+                        // Connect to enabled servers
+                        let connectedCount = 0;
+                        for (const server of enabledServers) {
+                            try {
+                                await this.mcpServerManager.connectToServer(server.id);
+                                connectedCount++;
+                            } catch (error) {
+                                console.warn(`Failed to connect to server ${server.name}:`, error);
+                            }
+                        }
+                        
+                        if (connectedCount > 0) {
+                            this.showNotification(`Connected to ${connectedCount} MCP server(s)`, 'success');
+                        } else {
+                            this.showNotification('Failed to connect to any MCP servers', 'error');
+                        }
+                    }
+                } else {
+                    // Fallback to legacy connection
+                    await this.setupMCPConnection();
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling MCP connection:', error);
+            this.showNotification(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Update MCP toggle button state
+     */
+    updateMCPToggleButton() {
+        const toggleBtn = document.getElementById('mcpToggleBtn');
+        if (!toggleBtn) return;
+
+        // Check connection status
+        let isConnected = false;
+        let connectedCount = 0;
+
+        // Check modern MCP server manager connections
+        if (this.mcpServerManager) {
+            connectedCount = this.mcpServerManager.getConnectedServersCount();
+            isConnected = connectedCount > 0;
+        }
+
+        // Also check legacy connection
+        if (!isConnected && this.isConnected) {
+            isConnected = true;
+            connectedCount = 1;
+        }
+
+        // Update button state
+        toggleBtn.dataset.connected = isConnected.toString();
+        
+        const icon = toggleBtn.querySelector('i');
+        if (isConnected) {
+            toggleBtn.classList.add('connected');
+            toggleBtn.classList.remove('disconnected');
+            icon.className = 'fas fa-unlink';
+            toggleBtn.title = `Disconnect from MCP (${connectedCount} connection${connectedCount !== 1 ? 's' : ''})`;
+        } else {
+            toggleBtn.classList.add('disconnected');
+            toggleBtn.classList.remove('connected');
+            icon.className = 'fas fa-plug';
+            toggleBtn.title = 'Connect to MCP Server';
         }
     }
 
@@ -1261,6 +1389,12 @@ class ChatManager {
                             <i class="fas fa-circle"></i>
                             <span>Connecting...</span>
                         </div>
+                        <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button id="mcpToggleBtn" class="btn btn-sm chat-btn mcp-toggle-btn" title="Toggle MCP Connection" data-connected="false">
+                            <i class="fas fa-plug"></i>
+                        </button>
                         <button id="resetChatPositionBtn" class="btn btn-sm chat-btn" title="Reset position and size">
                             <i class="fas fa-home"></i>
                         </button>
@@ -1598,6 +1732,20 @@ class ChatManager {
             } else {
                 console.warn('ChatBoxSettingsManager not initialized');
             }
+        });
+
+        // ChatBox Settings button event handler
+        document.getElementById('chatBoxSettingsBtn')?.addEventListener('click', () => {
+            if (this.chatBoxSettingsManager) {
+                this.chatBoxSettingsManager.showSettingsModal();
+            } else {
+                console.warn('ChatBoxSettingsManager not initialized');
+            }
+        });
+
+        // MCP Toggle button event handler
+        document.getElementById('mcpToggleBtn')?.addEventListener('click', () => {
+            this.toggleMCPConnection();
         });
     }
 
