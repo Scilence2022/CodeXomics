@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Parsing & Cloning Fix Test</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+        .error-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 2px solid #e74c3c; 
+            border-radius: 10px;
+            background: #fdf2f2;
+        }
+        .fix-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 2px solid #27ae60; 
+            border-radius: 10px;
+            background: #f1f9f4;
+        }
+        .success { color: #27ae60; font-weight: bold; }
+        .error { color: #e74c3c; font-weight: bold; }
+        .info { color: #3498db; font-weight: bold; }
+        .warning { color: #f39c12; font-weight: bold; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        h2 { color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        code { 
+            background: #f8f9fa; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+        }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .problem-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #fff5f5;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+        }
+        .solution-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f0fff4;
+            border-left: 4px solid #27ae60;
+            border-radius: 4px;
+        }
+        .step-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .step-list ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .step-list li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 XML Parsing & Object Cloning Fix</h1>
+        
+        <div class="error-section">
+            <h2>🚨 遇到的错误</h2>
+            
+            <div class="problem-item">
+                <strong>错误 1:</strong> <code>Error: An object could not be cloned.</code>
+                <br><small>位置: project-manager.html:1487</small>
+                <br><em>原因: IPC通信时传递了不可序列化的对象</em>
+            </div>
+            
+            <div class="problem-item">
+                <strong>错误 2:</strong> <code>TypeError: this.projectManager.xmlHandler.parseXML is not a function</code>
+                <br><small>位置: project-manager.html:1501</small>
+                <br><em>原因: XML处理器没有正确初始化或方法名错误</em>
+            </div>
+        </div>
+        
+        <div class="fix-section">
+            <h2>✅ 实施的修复</h2>
+            
+            <div class="solution-item">
+                <strong>修复 1: 初始化XML处理器</strong>
+                <pre><code>// 在ProjectManagerWindow.initialize()中添加
+if (typeof ProjectXMLHandler !== 'undefined') {
+    this.xmlHandler = new ProjectXMLHandler();
+    console.log('✅ XML Handler initialized');
+} else {
+    console.warn('⚠️ ProjectXMLHandler not available');
+}</code></pre>
+            </div>
+            
+            <div class="solution-item">
+                <strong>修复 2: 修正XML解析方法调用</strong>
+                <pre><code>// 修改前
+if (this.projectManager && this.projectManager.xmlHandler) {
+    project = this.projectManager.xmlHandler.parseXML(content);
+}
+
+// 修改后
+if (this.xmlHandler && this.xmlHandler.xmlToProject) {
+    project = this.xmlHandler.xmlToProject(content);
+}</code></pre>
+            </div>
+            
+            <div class="solution-item">
+                <strong>修复 3: 清理不可序列化的对象属性</strong>
+                <pre><code>// 在saveProjects()中添加数据清理
+const cleanProject = {
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    location: project.location,
+    projectFilePath: project.projectFilePath,
+    dataFolderPath: project.dataFolderPath,
+    created: project.created,
+    modified: project.modified,
+    files: project.files || [],
+    folders: project.folders || [],
+    metadata: project.metadata || {},
+    isCurrentlyOpen: project.isCurrentlyOpen || false,
+    hasUnsavedChanges: project.hasUnsavedChanges || false
+};</code></pre>
+            </div>
+        </div>
+        
+        <div class="step-list">
+            <h2>🧪 测试步骤</h2>
+            <ol>
+                <li>启动应用程序: <code>npm start</code></li>
+                <li>创建一个测试项目或使用现有项目</li>
+                <li>保存项目为XML格式 (.prj.GAI)</li>
+                <li>点击 <strong>File → Open Project</strong></li>
+                <li>选择刚才保存的XML项目文件</li>
+                <li>验证没有以下错误：
+                    <ul>
+                        <li>❌ "An object could not be cloned"</li>
+                        <li>❌ "parseXML is not a function"</li>
+                        <li>❌ "XML parser not available"</li>
+                    </ul>
+                </li>
+                <li>确认项目成功加载到界面中</li>
+            </ol>
+        </div>
+        
+        <div class="fix-section">
+            <h2>🎯 预期结果</h2>
+            <div class="success">
+                ✅ XML项目文件应该成功加载<br>
+                ✅ 项目管理器应该正确显示项目内容<br>
+                ✅ 控制台应该显示"✅ XML Handler initialized"<br>
+                ✅ 不应该出现cloning或parseXML错误<br>
+                ✅ 项目数据应该正确保存到localStorage
+            </div>
+        </div>
+        
+        <div class="step-list">
+            <h2>🔍 技术分析</h2>
+            
+            <h3>问题根源:</h3>
+            <ul>
+                <li><strong>XML处理器缺失:</strong> ProjectManagerWindow没有自己的xmlHandler实例</li>
+                <li><strong>方法名错误:</strong> 调用了不存在的parseXML方法，应该是xmlToProject</li>
+                <li><strong>对象序列化:</strong> 项目对象包含了不可序列化的复杂属性</li>
+            </ul>
+            
+            <h3>解决方案:</h3>
+            <ul>
+                <li><strong>独立初始化:</strong> 为ProjectManagerWindow创建独立的xmlHandler实例</li>
+                <li><strong>正确API:</strong> 使用正确的xmlToProject方法名</li>
+                <li><strong>数据清理:</strong> 在保存前清理不可序列化的属性</li>
+            </ul>
+        </div>
+        
+        <div class="step-list">
+            <h2>📁 修改的文件</h2>
+            <ul>
+                <li><code>src/project-manager.html</code>
+                    <ul>
+                        <li>在initialize()中添加XML处理器初始化</li>
+                        <li>修正loadProjectFromText()中的XML解析调用</li>
+                        <li>改进saveProjects()的数据清理逻辑</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="step-list">
+            <h2>🔄 完整的XML文件加载流程</h2>
+            <ol>
+                <li>用户选择File → Open Project</li>
+                <li>选择XML格式的项目文件 (.prj.GAI)</li>
+                <li>main.js通过read-file IPC处理器读取文件</li>
+                <li>project-manager.html接收文件内容</li>
+                <li>loadProjectFromText()检测到XML格式</li>
+                <li>使用this.xmlHandler.xmlToProject()解析XML</li>
+                <li>成功创建项目对象</li>
+                <li>通过清理后的saveProjects()保存到localStorage</li>
+                <li>更新UI显示加载的项目</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // 简单的状态检查
+        function checkSystems() {
+            console.log('🔍 Checking XML parsing system status...');
+            
+            // 检查是否在Electron环境中
+            if (window.electronAPI) {
+                console.log('✅ Electron API available');
+            } else {
+                console.log('❌ Electron API not available (browser mode)');
+            }
+            
+            // 检查XML处理器
+            if (typeof ProjectXMLHandler !== 'undefined') {
+                console.log('✅ ProjectXMLHandler class available');
+            } else {
+                console.log('❌ ProjectXMLHandler class not available');
+            }
+        }
+        
+        // 页面加载时检查
+        window.addEventListener('DOMContentLoaded', checkSystems);
+    </script>
+</body>
+</html> 

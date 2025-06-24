@@ -580,6 +580,15 @@
 
             async initialize() {
                 console.log('Initializing Project Manager Window...');
+                
+                // 初始化XML处理器
+                if (typeof ProjectXMLHandler !== 'undefined') {
+                    this.xmlHandler = new ProjectXMLHandler();
+                    console.log('✅ XML Handler initialized');
+                } else {
+                    console.warn('⚠️ ProjectXMLHandler not available');
+                }
+                
                 await this.loadProjects();
                 this.setupEventListeners();
                 this.renderProjectTree();
@@ -1497,8 +1506,8 @@
                     // 检测文件格式
                     if (content.trim().startsWith('<')) {
                         // XML格式
-                        if (this.projectManager && this.projectManager.xmlHandler) {
-                            project = this.projectManager.xmlHandler.parseXML(content);
+                        if (this.xmlHandler && this.xmlHandler.xmlToProject) {
+                            project = this.xmlHandler.xmlToProject(content);
                         } else {
                             throw new Error('XML parser not available');
                         }
@@ -1808,8 +1817,29 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
 
             async saveProjects() {
                 try {
+                    // 清理项目数据，移除不可序列化的属性
+                    const cleanProjects = new Map();
+                    for (const [id, project] of this.projects) {
+                        const cleanProject = {
+                            id: project.id,
+                            name: project.name,
+                            description: project.description,
+                            location: project.location,
+                            projectFilePath: project.projectFilePath,
+                            dataFolderPath: project.dataFolderPath,
+                            created: project.created,
+                            modified: project.modified,
+                            files: project.files || [],
+                            folders: project.folders || [],
+                            metadata: project.metadata || {},
+                            isCurrentlyOpen: project.isCurrentlyOpen || false,
+                            hasUnsavedChanges: project.hasUnsavedChanges || false
+                        };
+                        cleanProjects.set(id, cleanProject);
+                    }
+                    
                     const projectsData = {
-                        projects: Object.fromEntries(this.projects),
+                        projects: Object.fromEntries(cleanProjects),
                         lastSaved: new Date().toISOString()
                     };
                     
