@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Manager - GenomeExplorer</title>
+            <title>Project Manager - Genome AI Studio</title>
     <style>
         * {
             margin: 0;
@@ -2659,8 +2659,8 @@ Folders: ${project.folders ? project.folders.length : 0}
                     return normalizedPath.substring(newIndex + newStructurePattern.length);
                 }
                 
-                // 兼容旧的GenomeExplorer Projects结构
-                const oldDataPattern = `GenomeExplorer Projects/${projectName}/data/`;
+                // 兼容旧的Genome AI Studio Projects结构
+                const oldDataPattern = `Genome AI Studio Projects/${projectName}/data/`;
                 const oldDataIndex = normalizedPath.indexOf(oldDataPattern);
                 
                 if (oldDataIndex !== -1) {
@@ -2871,7 +2871,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                             const result = await window.electronAPI.openFileInMainWindow(file.path);
                             console.log('📥 Result from main window:', result);
                             if (result.success) {
-                                this.showNotification(`✅ Opened "${file.name}" in GenomeExplorer`, 'success');
+                                this.showNotification(`✅ Opened "${file.name}" in Genome AI Studio`, 'success');
                             } else {
                                 throw new Error(result.error);
                             }
@@ -3095,12 +3095,12 @@ GCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTA`;
                         // 创建演示 GFF 内容
                         demoContent = `##gff-version 3
 ##sequence-region Demo_Genome_Chr1 1 600
-Demo_Genome_Chr1\tGenomeExplorer\tgene\t1\t180\t.\t+\t.\tID=gene001;Name=demoA;description=Demo gene A
-Demo_Genome_Chr1\tGenomeExplorer\tCDS\t1\t180\t.\t+\t0\tID=cds001;Parent=gene001;Name=demoA
-Demo_Genome_Chr1\tGenomeExplorer\tgene\t200\t360\t.\t-\t.\tID=gene002;Name=demoB;description=Demo gene B
-Demo_Genome_Chr1\tGenomeExplorer\tCDS\t200\t360\t.\t-\t0\tID=cds002;Parent=gene002;Name=demoB
-Demo_Genome_Chr1\tGenomeExplorer\tgene\t400\t600\t.\t+\t.\tID=gene003;Name=demoC;description=Demo gene C
-Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene003;Name=demoC`;
+Demo_Genome_Chr1\tGenome_AI_Studio\tgene\t1\t180\t.\t+\t.\tID=gene001;Name=demoA;description=Demo gene A
+Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t1\t180\t.\t+\t0\tID=cds001;Parent=gene001;Name=demoA
+Demo_Genome_Chr1\tGenome_AI_Studio\tgene\t200\t360\t.\t-\t.\tID=gene002;Name=demoB;description=Demo gene B
+Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t200\t360\t.\t-\t0\tID=cds002;Parent=gene002;Name=demoB
+Demo_Genome_Chr1\tGenome_AI_Studio\tgene\t400\t600\t.\t+\t.\tID=gene003;Name=demoC;description=Demo gene C
+Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene003;Name=demoC`;
                         demoFilePath = 'demo_annotations.gff';
                     } else {
                         // 其他文件类型的默认内容
@@ -3115,7 +3115,7 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                             // 使用临时文件路径打开文件
                             const openResult = await window.electronAPI.openFileInMainWindow(result.filePath);
                             if (openResult.success) {
-                                this.showNotification(`✅ Opened demo file "${file.name}" in GenomeExplorer`, 'success');
+                                this.showNotification(`✅ Opened demo file "${file.name}" in Genome AI Studio`, 'success');
                             } else {
                                 throw new Error(openResult.error);
                             }
@@ -3415,7 +3415,7 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                         lastSaved: new Date().toISOString()
                     };
                     
-                    localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
+                    localStorage.setItem('genomeAIStudio_projects', JSON.stringify(projectsData));
                     console.log('Projects saved to localStorage');
                 } catch (error) {
                     console.error('Error saving projects:', error);
@@ -3424,7 +3424,7 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
 
             async loadProjects() {
                 try {
-                    const data = localStorage.getItem('genomeExplorer_projects');
+                    const data = localStorage.getItem('genomeAIStudio_projects');
                     if (data) {
                         const projectsData = JSON.parse(data);
                         if (projectsData.projects) {
@@ -3656,7 +3656,7 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                     // 如果没有项目文件路径，自动生成一个
                     if (!this.currentProject.projectFilePath) {
                         const documentsPath = window.electronAPI ? await window.electronAPI.getDocumentsPath() : 'Documents';
-                        const projectsDir = `${documentsPath}/GenomeExplorer Projects`;
+                        const projectsDir = `${documentsPath}/Genome AI Studio Projects`;
                         this.currentProject.projectFilePath = `${projectsDir}/${this.currentProject.name}.prj.GAI`;
                         this.currentProject.location = projectsDir;
                         console.log(`📁 Auto-generated project file path: ${this.currentProject.projectFilePath}`);

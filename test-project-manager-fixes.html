@@ -193,7 +193,7 @@ if (!this.currentProject.projectFilePath) {
                         <div class="code-block">
 if (!this.currentProject.projectFilePath) {
     const documentsPath = await window.electronAPI.getDocumentsPath();
-    const projectsDir = `${documentsPath}/GenomeExplorer Projects`;
+    const projectsDir = `${documentsPath}/Genome AI Studio Projects`;
     this.currentProject.projectFilePath = `${projectsDir}/${this.currentProject.name}.prj.GAI`;
 }
                         </div>
@@ -220,7 +220,7 @@ if (!this.currentProject.projectFilePath) {
                     <div class="before">
                         <h4>修复前 (错误结构)</h4>
                         <div class="path-example">
-GenomeExplorer Projects/
+Genome AI Studio Projects/
 ├── ProjectName.prj.GAI
 ├── ProjectName/
 │   ├── Genomes/ (空)
@@ -234,7 +234,7 @@ GenomeExplorer Projects/
                     <div class="after">
                         <h4>修复后 (正确结构)</h4>
                         <div class="path-example">
-GenomeExplorer Projects/
+Genome AI Studio Projects/
 ├── ProjectName.prj.GAI
 └── ProjectName/
     ├── Genomes/ (实际文件)

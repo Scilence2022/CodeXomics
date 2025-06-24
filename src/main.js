@@ -14,9 +14,9 @@ let currentActiveWindow = null;
 
 function createToolWindowMenu(toolWindow, toolName) {
   const template = [
-    // 添加 GenomeExplorer 品牌菜单项（仅在 macOS 上）
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
-      label: 'GenomeExplorer',
+      label: 'Genome AI Studio',
       submenu: [
         {
           label: `About ${toolName}`,
@@ -34,7 +34,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         },
         { type: 'separator' },
         {
-          label: 'Hide GenomeExplorer',
+          label: 'Hide Genome AI Studio',
           accelerator: 'Cmd+H',
           role: 'hide'
         },
@@ -49,7 +49,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         },
         { type: 'separator' },
         {
-          label: 'Quit GenomeExplorer',
+          label: 'Quit Genome AI Studio',
           accelerator: 'Cmd+Q',
           click: () => {
             app.quit();
@@ -334,7 +334,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         {
           label: 'Report Issue',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/issues');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
           }
         },
         {
@@ -437,12 +437,12 @@ function createWindow() {
 // Create menu
 function createMenu() {
   const template = [
-    // 添加 GenomeExplorer 品牌菜单项（仅在 macOS 上）
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
     ...(process.platform === 'darwin' ? [{
-      label: 'GenomeExplorer',
+      label: 'Genome AI Studio',
       submenu: [
         {
-          label: 'About GenomeExplorer',
+          label: 'About Genome AI Studio',
           click: () => {
             mainWindow.webContents.send('show-about');
           }
@@ -457,7 +457,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Hide GenomeExplorer',
+          label: 'Hide Genome AI Studio',
           accelerator: 'Cmd+H',
           role: 'hide'
         },
@@ -472,7 +472,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Quit GenomeExplorer',
+          label: 'Quit Genome AI Studio',
           accelerator: 'Cmd+Q',
           click: () => {
             app.quit();
@@ -543,7 +543,7 @@ function createMenu() {
               const result = await dialog.showOpenDialog(null, {
                 properties: ['openFile'],
                 filters: [
-                  { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
+                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] }
@@ -1038,12 +1038,12 @@ function createMenu() {
       submenu: [
         ...(process.platform !== 'darwin' ? [
           {
-            label: 'About GenomeExplorer',
-            click: () => {
-              dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'About GenomeExplorer',
-                message: 'GenomeExplorer v1.0 beta',
+                      label: 'About Genome AI Studio',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About Genome AI Studio',
+              message: 'Genome AI Studio v0.2 beta',
                 detail: 'A modern AI-powered genome analysis studio built with Electron'
               });
             }
@@ -1060,14 +1060,59 @@ function createMenu() {
         {
           label: 'Documentation',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/docs');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/docs');
           }
         },
         {
           label: 'Report Issue',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/your-repo/GenomeExplorer/issues');
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
           }
+        }
+      ]
+    },
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    {
+      label: 'Genome AI Studio',
+      submenu: [
+        {
+          label: 'About Genome AI Studio',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About Genome AI Studio',
+              message: 'Genome AI Studio v0.2 beta',
+              detail: 'An intelligent genome analysis platform with AI-powered features.',
+              buttons: ['OK']
+            });
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Services',
+          role: 'services',
+          submenu: []
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide Genome AI Studio',
+          accelerator: 'Command+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Command+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit Genome AI Studio',
+          accelerator: 'Command+Q',
+          click: () => app.quit()
         }
       ]
     }
@@ -1545,7 +1590,7 @@ ipcMain.on('open-smart-execution-demo', (event) => {
         contextIsolation: true,
         enableRemoteModule: false
       },
-      title: 'Smart Execution Demo - GenomeExplorer',
+      title: 'Smart Execution Demo - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false // Don't show until ready
     });
@@ -1596,7 +1641,7 @@ ipcMain.on('open-resource-manager', (event) => {
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js')
       },
-      title: 'Resource Manager - GenomeExplorer',
+      title: 'Resource Manager - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
@@ -1756,7 +1801,7 @@ function createCircosWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Circos Genome Plotter - GenomeExplorer',
+      title: 'Circos Genome Plotter - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false
     });
@@ -2070,7 +2115,7 @@ ipcMain.on('open-plugin-function-calling-test', (event) => {
         contextIsolation: true,
         enableRemoteModule: false
       },
-      title: 'Plugin Function Calling Test - GenomeExplorer',
+      title: 'Plugin Function Calling Test - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false
     });
@@ -2240,7 +2285,7 @@ function createKEGGWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'KEGG Pathway Analysis - GenomeExplorer',
+      title: 'KEGG Pathway Analysis - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2278,7 +2323,7 @@ function createGOWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Gene Ontology (GO) Analyzer - GenomeExplorer',
+      title: 'Gene Ontology (GO) Analyzer - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2316,7 +2361,7 @@ function createUniProtWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'UniProt Database Search - GenomeExplorer',
+      title: 'UniProt Database Search - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2354,7 +2399,7 @@ function createInterProWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'InterPro Domain Analysis - GenomeExplorer',
+      title: 'InterPro Domain Analysis - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2392,7 +2437,7 @@ function createNCBIWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'NCBI Database Browser - GenomeExplorer',
+      title: 'NCBI Database Browser - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2430,7 +2475,7 @@ function createEnsemblWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Ensembl Genome Browser - GenomeExplorer',
+      title: 'Ensembl Genome Browser - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2470,7 +2515,7 @@ function createSTRINGWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'STRING Protein Networks - GenomeExplorer',
+      title: 'STRING Protein Networks - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2508,7 +2553,7 @@ function createDAVIDWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'DAVID Functional Analysis - GenomeExplorer',
+      title: 'DAVID Functional Analysis - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2546,7 +2591,7 @@ function createReactomeWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'Reactome Pathway Browser - GenomeExplorer',
+      title: 'Reactome Pathway Browser - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2584,7 +2629,7 @@ function createPDBWindow() {
         enableRemoteModule: true,
         webSecurity: false
       },
-      title: 'PDB Structure Viewer - GenomeExplorer',
+      title: 'PDB Structure Viewer - Genome AI Studio',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
@@ -2686,7 +2731,7 @@ function createProjectManagerWindow() {
         enableRemoteModule: false,
         preload: path.join(__dirname, 'preload.js')
       },
-      title: 'Project Manager - GenomeExplorer',
+      title: 'Project Manager - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       resizable: true,
       minimizable: true,
@@ -2749,7 +2794,7 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
-        { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
+        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
@@ -2868,7 +2913,7 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
 
     // 修正：构建目标路径，不使用额外的data目录
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
     const targetDir = path.join(projectsDir, projectName, targetFolderPath);
     
     // 确保目标目录存在
@@ -2910,7 +2955,7 @@ ipcMain.handle('lockProjectFile', async (event, filePath) => {
     if (projectFileLocks.has(filePath)) {
       return { 
         success: false, 
-        error: 'File is already locked by another instance of GenomeExplorer' 
+        error: 'File is already locked by another instance of Genome AI Studio' 
       };
     }
     
@@ -3205,7 +3250,7 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
     const result = await dialog.showSaveDialog(null, {
       defaultPath: defaultFileName,
       filters: [
-        { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
+        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj'] },
         { name: 'All Files', extensions: ['*'] }
@@ -3230,7 +3275,7 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
 ipcMain.handle('createTempFile', async (event, fileName, content) => {
   try {
     const tempDir = app.getPath('temp');
-    const tempFilePath = path.join(tempDir, 'genomeexplorer_temp_' + Date.now() + '_' + fileName);
+    const tempFilePath = path.join(tempDir, 'genomeaistudio_temp_' + Date.now() + '_' + fileName);
     
     fs.writeFileSync(tempFilePath, content, 'utf8');
     
@@ -3331,7 +3376,7 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     
     // 修正：直接使用项目目录结构，不要额外的data子目录
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
     const projectDir = path.join(projectsDir, projectName);
     const targetFolderDir = path.join(projectDir, folderPath);
     
@@ -4163,4 +4208,4 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
       });
     }
   });
-});
+}); 

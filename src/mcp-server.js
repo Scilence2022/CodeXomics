@@ -1560,7 +1560,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             });
 
@@ -1753,7 +1753,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             });
 
@@ -1837,7 +1837,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             });
 
@@ -2053,7 +2053,7 @@ class MCPGenomeBrowserServer {
         try {
             // InterPro API uses form-encoded data, not JSON
             const params = new URLSearchParams();
-            params.append('email', 'genomeexplorer@research.com');
+            params.append('email', 'genomeaistudio@research.com');
             params.append('sequence', sequence);
             params.append('goterms', 'true');
             params.append('pathways', 'true');
@@ -2093,7 +2093,7 @@ class MCPGenomeBrowserServer {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Content-Length': Buffer.byteLength(postData),
                     'Accept': 'text/plain',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             }, postData);
 
@@ -2126,7 +2126,7 @@ class MCPGenomeBrowserServer {
                     method: 'GET',
                     headers: {
                         'Accept': 'text/plain',
-                        'User-Agent': 'GenomeExplorer/1.0'
+                        'User-Agent': 'Genome AI Studio/0.2'
                     }
                 });
 
@@ -2142,7 +2142,7 @@ class MCPGenomeBrowserServer {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'User-Agent': 'GenomeExplorer/1.0'
+                            'User-Agent': 'Genome AI Studio/0.2'
                         }
                     });
 
@@ -2391,7 +2391,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             });
 
@@ -2442,7 +2442,7 @@ class MCPGenomeBrowserServer {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'GenomeExplorer/1.0'
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             });
 
@@ -2458,7 +2458,7 @@ class MCPGenomeBrowserServer {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'User-Agent': 'GenomeExplorer/1.0'
+                            'User-Agent': 'Genome AI Studio/0.2'
                         }
                     });
                     

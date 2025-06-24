@@ -1,4 +1,4 @@
-# Genome AI Studio V1.0 beta
+# Genome AI Studio v0.2 beta
 
 A modern, cross-platform genome analysis studio built with Electron, featuring an user-friendly interface for exploring genomic data with AI-powered natural language interaction.
 

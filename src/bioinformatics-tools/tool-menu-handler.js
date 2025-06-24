@@ -467,7 +467,7 @@ class ToolMenuHandler {
 
     showAbout(toolName) {
         const name = toolName || this.toolName;
-        alert(`关于 ${name}\n\n这是GenomeExplorer生物信息学工具套件的一部分。\n\n版本: 1.0.0\n开发者: GenomeExplorer Team\n\n${name}提供专业的生物信息学分析功能，帮助研究人员进行基因组数据分析。`);
+        alert(`关于 ${name}\n\n这是Genome AI Studio生物信息学工具套件的一部分。\n\n版本: 0.2.0\n开发者: Genome AI Studio Team\n\n${name}提供专业的生物信息学分析功能，帮助研究人员进行基因组数据分析。`);
     }
 
     showUserGuide() {
@@ -505,14 +505,14 @@ class ToolMenuHandler {
     showOnlineResources() {
         if (typeof require !== 'undefined') {
             const { shell } = require('electron');
-            shell.openExternal('https://github.com/your-repo/GenomeExplorer');
+            shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio');
         } else {
             alert('在线资源:\n\n- GitHub项目页面\n- 用户手册\n- 示例数据\n- 视频教程\n\n请访问项目官网获取更多资源。');
         }
     }
 
     showContactSupport() {
-        alert(`联系 ${this.toolName} 技术支持\n\n支持方式:\n- 邮箱: support@genomeexplorer.com\n- GitHub Issues\n- 用户论坛\n\n请描述您遇到的问题，我们将尽快回复。`);
+        alert(`联系 ${this.toolName} 技术支持\n\n支持方式:\n- 邮箱: support@genomeaistudio.com\n- GitHub Issues\n- 用户论坛\n\n请描述您遇到的问题，我们将尽快回复。`);
     }
 
     // === 辅助方法 ===
