@@ -247,6 +247,13 @@
                     <p>Protein Domain and Family Classification</p>
                 </div>
             </div>
+            <div id="connectionStatus" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
+                <div id="statusIndicator" style="width: 12px; height: 12px; border-radius: 50%; background: #ffa500;"></div>
+                <div style="color: white; font-size: 0.9rem;">
+                    <div id="statusText">Connecting to MCP Server...</div>
+                    <div id="statusDetails" style="font-size: 0.8rem; opacity: 0.8;">InterPro API Integration</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -349,35 +356,13 @@
     <script>
         class InterProAnalyzer {
             constructor() {
+                this.currentResults = [];
+                this.mcpClient = null;
+                this.isConnected = false;
                 this.domainDatabase = this.initializeDomainDatabase();
                 this.init();
                 this.initMenuHandler();
-            }
-
-            init() {
-                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeDomains());
-                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
-                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
-                document.getElementById('pasteBtn').addEventListener('click', () => this.pasteFromClipboard());
-            }
-
-            initMenuHandler() {
-                // Initialize menu handler with tool-specific actions
-                this.menuHandler = new ToolMenuHandler('InterPro Domain Analysis', this);
-            }
-
-            async pasteFromClipboard() {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (text.trim()) {
-                        document.getElementById('sequenceInput').value = text;
-                        this.showToast('✅ Sequence pasted from clipboard', 'success');
-                    } else {
-                        this.showToast('⚠️ Clipboard is empty', 'warning');
-                    }
-                } catch (err) {
-                    this.showToast('❌ Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
-                }
+                this.initializeMCPConnection();
             }
 
             initializeDomainDatabase() {
@@ -436,6 +421,111 @@
                 };
             }
 
+            init() {
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeDomains());
+                document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+                document.getElementById('pasteBtn').addEventListener('click', () => this.pasteFromClipboard());
+            }
+
+            initMenuHandler() {
+                // Initialize menu handler with tool-specific actions
+                this.menuHandler = new ToolMenuHandler('InterPro Domain Analysis', this);
+            }
+
+            async initializeMCPConnection() {
+                try {
+                    this.updateConnectionStatus('connecting', 'Connecting to MCP Server...', 'Attempting InterPro API connection');
+                    
+                    // Connect to MCP WebSocket server
+                    this.mcpClient = new WebSocket('ws://localhost:3001');
+                    
+                    this.mcpClient.onopen = () => {
+                        this.isConnected = true;
+                        this.updateConnectionStatus('connected', 'Connected to MCP Server', 'Real InterPro API access enabled');
+                        this.showToast('Connected to MCP Server. Real InterPro API access enabled.', 'success');
+                    };
+                    
+                    this.mcpClient.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'tool-response') {
+                            this.handleMCPResponse(data);
+                        }
+                    };
+                    
+                    this.mcpClient.onclose = () => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected', 'Offline Mode', 'Using local domain patterns');
+                        this.showToast('Disconnected from MCP Server. Using offline mode.', 'warning');
+                    };
+                    
+                    this.mcpClient.onerror = (error) => {
+                        this.isConnected = false;
+                        this.updateConnectionStatus('error', 'Connection Failed', 'Using offline mode');
+                        this.showToast('MCP Server connection failed. Using offline mode.', 'warning');
+                    };
+                    
+                } catch (error) {
+                    this.isConnected = false;
+                    this.updateConnectionStatus('error', 'Connection Failed', 'Using offline mode');
+                    this.showToast('Failed to connect to MCP Server. Using offline mode.', 'warning');
+                }
+            }
+
+            updateConnectionStatus(status, text, details) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                const statusDetails = document.getElementById('statusDetails');
+                
+                const colors = {
+                    connecting: '#ffa500',  // orange
+                    connected: '#4caf50',   // green
+                    disconnected: '#ff9800', // amber
+                    error: '#f44336'        // red
+                };
+                
+                if (indicator) indicator.style.background = colors[status] || '#666';
+                if (statusText) statusText.textContent = text;
+                if (statusDetails) statusDetails.textContent = details;
+            }
+
+            handleMCPResponse(data) {
+                if (data.success && data.result) {
+                    const results = data.result.results || [];
+                    const summary = data.result.summary || {};
+                    const sequence = data.result.sequence || '';
+                    
+                    // Add visual properties to results
+                    const processedResults = results.map(domain => ({
+                        ...domain,
+                        color: this.getDomainColor(domain.type)
+                    }));
+                    
+                    this.currentResults = processedResults;
+                    this.displayResults(processedResults, sequence, summary, data.result.simulated);
+                    
+                    const sourceNote = data.result.simulated ? ' (simulated analysis)' : ' from InterPro database';
+                    this.showToast(`Found ${results.length} domain(s)${sourceNote}`, 'success');
+                } else {
+                    this.showToast(`Analysis failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+                this.showLoading(false);
+            }
+
+            async pasteFromClipboard() {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text.trim()) {
+                        document.getElementById('sequenceInput').value = text;
+                        this.showToast('✅ Sequence pasted from clipboard', 'success');
+                    } else {
+                        this.showToast('⚠️ Clipboard is empty', 'warning');
+                    }
+                } catch (err) {
+                    this.showToast('❌ Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
+                }
+            }
+
             loadExample() {
                 document.getElementById('sequenceInput').value = `>P04637|TP53_HUMAN Cellular tumor antigen p53
 MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD`;
@@ -458,60 +548,104 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                     return;
                 }
 
+                // Clean and validate sequence
+                const cleanSeq = this.cleanSequence(sequence);
+                if (!this.validateSequence(cleanSeq)) {
+                    this.showToast('Invalid protein sequence. Please check for non-amino acid characters.', 'error');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.updateProgress('Initializing domain analysis...');
+
+                try {
+                    if (this.isConnected && this.mcpClient) {
+                        // Use real MCP Server API
+                        await this.analyzeDomainsViaAPI(cleanSeq);
+                    } else {
+                        // Fallback to simulation
+                        this.updateProgress('Using offline domain detection...');
+                        await this.analyzeDomainsOffline(cleanSeq);
+                    }
+                } catch (error) {
+                    console.error('Domain analysis error:', error);
+                    this.showToast(`Analysis failed: ${error.message}`, 'error');
+                    this.clearResults();
+                    this.showLoading(false);
+                }
+            }
+
+            async analyzeDomainsViaAPI(sequence) {
+                const requestId = 'analyze_' + Date.now();
+                
+                // Get analysis parameters
+                const includeSignalPeptide = document.getElementById('includeSignalPeptide').checked;
+                const includeTransmembrane = document.getElementById('includeTransmembrane').checked;
+                
+                // Build applications list
+                const applications = ['Pfam', 'SMART', 'PROSITE', 'PANTHER'];
+                if (includeSignalPeptide) applications.push('SignalP');
+                if (includeTransmembrane) applications.push('TMHMM');
+
+                const analysisParams = {
+                    sequence: sequence,
+                    applications: applications,
+                    goterms: true,
+                    pathways: true,
+                    includeMatchSequence: true
+                };
+
+                this.updateProgress('Submitting sequence to InterPro database...');
+
+                // Send analysis request to MCP Server
+                this.mcpClient.send(JSON.stringify({
+                    type: 'execute-tool',
+                    requestId: requestId,
+                    toolName: 'analyze_interpro_domains',
+                    parameters: analysisParams
+                }));
+            }
+
+            async analyzeDomainsOffline(cleanSeq) {
                 const evalueThreshold = parseFloat(document.getElementById('evalueThreshold').value);
                 const minDomainLength = parseInt(document.getElementById('minDomainLength').value);
                 const includeSignalPeptide = document.getElementById('includeSignalPeptide').checked;
                 const includeTransmembrane = document.getElementById('includeTransmembrane').checked;
 
-                this.showLoading(true);
-                
-                try {
-                    // Clean and validate sequence
-                    const cleanSeq = this.cleanSequence(sequence);
-                    if (!this.validateSequence(cleanSeq)) {
-                        throw new Error('Invalid protein sequence. Please check for non-amino acid characters.');
-                    }
+                // Perform comprehensive domain analysis
+                this.updateProgress('Analyzing sequence composition...');
+                await this.delay(500);
 
-                    // Perform comprehensive domain analysis
-                    this.updateProgress('Analyzing sequence composition...');
-                    await this.delay(500);
+                this.updateProgress('Searching for conserved domains...');
+                const domains = await this.findConservedDomains(cleanSeq, evalueThreshold, minDomainLength);
+                await this.delay(800);
 
-                    this.updateProgress('Searching for conserved domains...');
-                    const domains = await this.findConservedDomains(cleanSeq, evalueThreshold, minDomainLength);
-                    await this.delay(800);
+                this.updateProgress('Predicting structural features...');
+                const structuralFeatures = await this.predictStructuralFeatures(cleanSeq);
+                await this.delay(600);
 
-                    this.updateProgress('Predicting structural features...');
-                    const structuralFeatures = await this.predictStructuralFeatures(cleanSeq);
-                    await this.delay(600);
-
-                    let additionalFeatures = [];
-                    if (includeSignalPeptide) {
-                        this.updateProgress('Analyzing signal peptides...');
-                        const signalPeptides = await this.predictSignalPeptide(cleanSeq);
-                        additionalFeatures = additionalFeatures.concat(signalPeptides);
-                        await this.delay(400);
-                    }
-
-                    if (includeTransmembrane) {
-                        this.updateProgress('Predicting transmembrane regions...');
-                        const tmRegions = await this.predictTransmembrane(cleanSeq);
-                        additionalFeatures = additionalFeatures.concat(tmRegions);
-                        await this.delay(400);
-                    }
-
-                    this.updateProgress('Generating results...');
-                    await this.delay(300);
-
-                    const allFeatures = [...domains, ...structuralFeatures, ...additionalFeatures];
-                    this.displayResults(allFeatures, cleanSeq);
-                    
-                } catch (error) {
-                    console.error('Domain analysis error:', error);
-                    this.showToast(`Analysis failed: ${error.message}`, 'error');
-                    this.clearResults();
-                } finally {
-                    this.showLoading(false);
+                let additionalFeatures = [];
+                if (includeSignalPeptide) {
+                    this.updateProgress('Analyzing signal peptides...');
+                    const signalPeptides = await this.predictSignalPeptide(cleanSeq);
+                    additionalFeatures = additionalFeatures.concat(signalPeptides);
+                    await this.delay(400);
                 }
+
+                if (includeTransmembrane) {
+                    this.updateProgress('Predicting transmembrane regions...');
+                    const tmRegions = await this.predictTransmembrane(cleanSeq);
+                    additionalFeatures = additionalFeatures.concat(tmRegions);
+                    await this.delay(400);
+                }
+
+                this.updateProgress('Generating results...');
+                await this.delay(300);
+
+                const allFeatures = [...domains, ...structuralFeatures, ...additionalFeatures];
+                this.displayResults(allFeatures, cleanSeq, {}, true);
+                this.showToast(`Analysis complete (offline mode)! Found ${allFeatures.length} features.`, 'warning');
+                this.showLoading(false);
             }
 
             cleanSequence(sequence) {
@@ -800,15 +934,17 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 return colors[domainType] || '#757575';
             }
 
-            displayResults(results, sequence) {
+            displayResults(results, sequence, summary, simulated) {
                 const container = document.getElementById('resultsContainer');
                 
                 if (!results.length) {
+                    const noResultsSource = simulated ? '(offline mode)' : 'from InterPro database';
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #666;">
                             <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
                             <h3>No Domains Found</h3>
-                            <p>No significant protein domains were detected with the current parameters.</p>
+                            <p>No significant protein domains were detected ${noResultsSource}.</p>
+                            <p style="margin-top: 10px;">Try adjusting your search parameters or check sequence quality.</p>
                         </div>
                     `;
                     return;
@@ -818,40 +954,66 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 const visualization = this.generateDomainVisualization(results, sequence);
                 
                 // Generate statistics
-                const stats = this.generateStatistics(results, sequence);
+                const stats = this.generateStatistics(results, sequence, summary, simulated);
                 
                 // Generate domain cards
-                const domainCards = results.map(domain => `
-                    <div class="domain-card">
-                        <div class="domain-id">${domain.id} - ${domain.name}</div>
-                        <div style="margin: 8px 0;">
-                            <span style="display: inline-block; width: 16px; height: 16px; background: ${domain.color}; border-radius: 3px; margin-right: 8px;"></span>
-                            <strong>Type:</strong> ${domain.type} | 
-                            <strong>Position:</strong> ${domain.start}-${domain.end} (${domain.length} AA)
+                const domainCards = results.map(domain => {
+                    const displayFeatures = domain.features ? 
+                        (Array.isArray(domain.features) ? domain.features.join(', ') : domain.features) : 'N/A';
+                    
+                    return `
+                        <div class="domain-card">
+                            <div class="domain-id">${domain.id} - ${domain.name}</div>
+                            <div style="margin: 8px 0;">
+                                <span style="display: inline-block; width: 16px; height: 16px; background: ${domain.color}; border-radius: 3px; margin-right: 8px;"></span>
+                                <strong>Type:</strong> ${domain.type} | 
+                                <strong>Position:</strong> ${domain.start}-${domain.end} (${domain.length} AA)
+                            </div>
+                            <div class="domain-info">
+                                <div><strong>E-value:</strong> ${domain.evalue || 'N/A'}</div>
+                                <div><strong>Score:</strong> ${Math.round(domain.score || 0)}</div>
+                                <div><strong>Database:</strong> ${domain.database}</div>
+                                <div><strong>Features:</strong> ${displayFeatures}</div>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                                ${domain.description}
+                            </div>
+                            ${domain.matchSequence || domain.sequence ? `
+                                <div style="margin-top: 8px; font-family: monospace; background: #f5f5f5; padding: 5px; border-radius: 3px; font-size: 0.8rem;">
+                                    ${domain.matchSequence || domain.sequence}
+                                </div>
+                            ` : ''}
+                            ${domain.interproId ? `
+                                <div style="margin-top: 8px; font-size: 0.8rem;">
+                                    <strong>InterPro:</strong> <a href="https://www.ebi.ac.uk/interpro/entry/InterPro/${domain.interproId}/" target="_blank">${domain.interproId}</a>
+                                    ${domain.interproName ? ` - ${domain.interproName}` : ''}
+                                </div>
+                            ` : ''}
+                            ${domain.goTerms && domain.goTerms.length > 0 ? `
+                                <div style="margin-top: 8px; font-size: 0.8rem;">
+                                    <strong>GO Terms:</strong> ${domain.goTerms.slice(0, 3).map(go => go.name || go).join(', ')}
+                                    ${domain.goTerms.length > 3 ? '...' : ''}
+                                </div>
+                            ` : ''}
                         </div>
-                        <div class="domain-info">
-                            <div><strong>E-value:</strong> ${domain.evalue}</div>
-                            <div><strong>Score:</strong> ${Math.round(domain.score)}</div>
-                            <div><strong>Database:</strong> ${domain.database}</div>
-                            <div><strong>Features:</strong> ${domain.features ? domain.features.join(', ') : 'N/A'}</div>
-                        </div>
-                        <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
-                            ${domain.description}
-                        </div>
-                        ${domain.sequence ? `<div style="margin-top: 8px; font-family: monospace; background: #f5f5f5; padding: 5px; border-radius: 3px; font-size: 0.8rem;">${domain.sequence}</div>` : ''}
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
+
+                const sourceInfo = simulated ? 
+                    '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; margin-bottom: 15px;"><strong>Note:</strong> Results generated using offline pattern matching. Connect to MCP Server for real InterPro analysis.</div>' : 
+                    '<div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px; padding: 10px; margin-bottom: 15px;"><strong>Source:</strong> Real-time analysis from InterPro database via EBI API.</div>';
 
                 container.innerHTML = `
                     <div style="margin-bottom: 20px;">
-                        <h3>Domain Analysis Results</h3>
+                        <h3>InterPro Domain Analysis Results</h3>
+                        ${sourceInfo}
                         ${stats}
                     </div>
                     
                     ${visualization}
                     
                     <div style="margin-top: 20px;">
-                        <h4>Detected Domains and Features</h4>
+                        <h4>Detected Domains and Features (${results.length})</h4>
                         ${domainCards}
                     </div>
                 `;
@@ -907,13 +1069,21 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                 `;
             }
 
-            generateStatistics(results, sequence) {
+            generateStatistics(results, sequence, summary, simulated) {
                 const totalDomains = results.length;
                 const coverage = results.reduce((sum, domain) => sum + domain.length, 0);
-                const coveragePercent = ((coverage / sequence.length) * 100).toFixed(1);
+                const coveragePercent = summary && summary.coverage ? 
+                    summary.coverage : 
+                    ((coverage / sequence.length) * 100).toFixed(1);
                 
                 const domainTypes = [...new Set(results.map(d => d.type))];
-                const avgScore = (results.reduce((sum, d) => sum + d.score, 0) / totalDomains).toFixed(1);
+                const avgScore = summary && summary.averageScore ? 
+                    summary.averageScore.toFixed(1) : 
+                    totalDomains > 0 ? (results.reduce((sum, d) => sum + (d.score || 0), 0) / totalDomains).toFixed(1) : '0';
+
+                const databasesUsed = summary && summary.databases ? 
+                    summary.databases : 
+                    [...new Set(results.map(d => d.database))];
                 
                 return `
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0;">
@@ -933,6 +1103,13 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
                             <div style="font-size: 1.5rem; font-weight: bold; color: #dc3545;">${avgScore}</div>
                             <div style="font-size: 0.9rem; color: #666;">Avg Score</div>
                         </div>
+                        ${databasesUsed.length > 0 ? `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #6f42c1;">${databasesUsed.length}</div>
+                            <div style="font-size: 0.9rem; color: #666;">Databases</div>
+                            <div style="font-size: 0.7rem; color: #999; margin-top: 5px;">${databasesUsed.slice(0, 2).join(', ')}${databasesUsed.length > 2 ? '...' : ''}</div>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
             }

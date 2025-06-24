@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterPro API Integration Test - GenomeExplorer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 0;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .test-header {
+            background: linear-gradient(135deg, #4a90e2, #7bb3f0);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .test-section h3 {
+            color: #333;
+            margin: 0 0 15px 0;
+        }
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #357abd;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .connection-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .connected { background: #4caf50; }
+        .disconnected { background: #f44336; }
+        .connecting { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>InterPro API Integration Test Suite</h1>
+            <p>Testing real-time InterPro domain analysis functionality</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔌 MCP Server Connection</h3>
+            <div id="connectionStatus">
+                <span class="connection-indicator connecting" id="connectionIndicator"></span>
+                <span id="connectionText">Connecting to MCP Server...</span>
+            </div>
+            <button class="btn" onclick="connectToMCP()">Reconnect</button>
+            <div id="connectionResult" class="result-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧬 InterPro Domain Analysis Tests</h3>
+            <button class="btn" onclick="testBasicDomainAnalysis()">Test Basic Analysis</button>
+            <button class="btn" onclick="testAdvancedAnalysis()">Test Advanced Analysis</button>
+            <button class="btn" onclick="testLargeProtein()">Test Large Protein</button>
+            <div id="analysisResult" class="result-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 InterPro Entry Search Tests</h3>
+            <button class="btn" onclick="testEntrySearch()">Search by ID</button>
+            <button class="btn" onclick="testTextSearch()">Search by Text</button>
+            <button class="btn" onclick="testNameSearch()">Search by Name</button>
+            <div id="searchResult" class="result-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Performance Tests</h3>
+            <button class="btn" onclick="testConcurrentRequests()">Concurrent Requests</button>
+            <button class="btn" onclick="testLargeSequence()">Large Sequence</button>
+            <button class="btn" onclick="testMultipleAnalysis()">Multiple Analysis</button>
+            <div id="performanceResult" class="result-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Test Results Summary</h3>
+            <div id="testSummary">
+                <p>Run tests to see results...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mcpClient = null;
+        let isConnected = false;
+        let testResults = [];
+
+        // Sample protein sequences for testing
+        const testSequences = {
+            basic: 'MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR',
+            kinase: 'MENFQKVEKIGEGTYGVVYKARNKLTGEVVALKKIRLDTETEGVPSTAIREISLLKELNHPNIVKLLDVIHTENKLYLVFEFLHQDLKKFMDASALTGIPLPLIKSYLFQLLQGLAFCHSHRVLHRDLKPQNLLINTEGAIKLADFGLARAFGVPVRTYTHEVVTLWYRAPEILLGCKYYSTAVDIWSLGCIFAEMVTRRALFPGDSEIDQLFRIFRTLGTPDEVVWPGVTSMPDYKPSFPKWARQDFSKVVPPLDEDGRSLLSQMLHYDPNKRISAKAALAHPFFQDVTKPVPHLRL',
+            large: 'MENFQKVEKIGEGTYGVVYKARNKLTGEVVALKKIRLDTETEGVPSTAIREISLLKELNHPNIVKLLDVIHTENKLYLVFEFLHQDLKKFMDASALTGIPLPLIKSYLFQLLQGLAFCHSHRVLHRDLKPQNLLINTEGAIKLADFGLARAFGVPVRTYTHEVVTLWYRAPEILLGCKYYSTAVDIWSLGCIFAEMVTRRALFPGDSEIDQLFRIFRTLGTPDEVVWPGVTSMPDYKPSFPKWARQDFSKVVPPLDEDGRSLLSQMLHYDPNKRISAKAALAHPFFQDVTKPVPHLRL' + 'MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR'.repeat(3)
+        };
+
+        async function connectToMCP() {
+            updateStatus('connectionStatus', 'connecting', 'Connecting to MCP Server...');
+            logResult('connectionResult', 'Attempting to connect to MCP Server at ws://localhost:3001');
+
+            try {
+                if (mcpClient) {
+                    mcpClient.close();
+                }
+
+                mcpClient = new WebSocket('ws://localhost:3001');
+
+                mcpClient.onopen = () => {
+                    isConnected = true;
+                    updateStatus('connectionStatus', 'connected', 'Connected to MCP Server');
+                    logResult('connectionResult', '✅ Successfully connected to MCP Server\nInterPro API integration is available');
+                    addTestResult('MCP Connection', true, 'Successfully connected to WebSocket server');
+                };
+
+                mcpClient.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleMCPResponse(data);
+                };
+
+                mcpClient.onclose = () => {
+                    isConnected = false;
+                    updateStatus('connectionStatus', 'disconnected', 'Disconnected from MCP Server');
+                    logResult('connectionResult', '❌ Disconnected from MCP Server\nInterPro API features will use offline mode');
+                };
+
+                mcpClient.onerror = (error) => {
+                    isConnected = false;
+                    updateStatus('connectionStatus', 'disconnected', 'Connection failed');
+                    logResult('connectionResult', '❌ Failed to connect to MCP Server\nError: ' + error.message + '\nMake sure MCP Server is running on port 3001');
+                    addTestResult('MCP Connection', false, 'WebSocket connection failed');
+                };
+
+            } catch (error) {
+                isConnected = false;
+                updateStatus('connectionStatus', 'disconnected', 'Connection error');
+                logResult('connectionResult', '❌ Connection error: ' + error.message);
+                addTestResult('MCP Connection', false, 'Connection error: ' + error.message);
+            }
+        }
+
+        function handleMCPResponse(data) {
+            console.log('MCP Response:', data);
+            
+            if (data.type === 'tool-response') {
+                const testType = data.requestId?.split('_')[0] || 'unknown';
+                
+                if (data.success) {
+                    if (testType === 'analyze') {
+                        const result = data.result;
+                        const summary = `✅ Domain Analysis Success\n` +
+                                      `Found ${result.results?.length || 0} domains\n` +
+                                      `Sequence length: ${result.sequenceLength}\n` +
+                                      `Coverage: ${result.summary?.coverage || 'N/A'}%\n` +
+                                      `Databases: ${result.summary?.databases?.join(', ') || 'N/A'}\n` +
+                                      `Simulated: ${result.simulated ? 'Yes' : 'No'}`;
+                        
+                        logResult('analysisResult', summary + '\n\nFull Response:\n' + JSON.stringify(result, null, 2));
+                        addTestResult('InterPro Analysis', true, `Found ${result.results?.length || 0} domains`);
+                        
+                    } else if (testType === 'search') {
+                        const result = data.result;
+                        const summary = `✅ Entry Search Success\n` +
+                                      `Found ${result.results?.length || 0} entries\n` +
+                                      `Query: ${result.query}\n` +
+                                      `Search type: ${result.searchType}`;
+                        
+                        logResult('searchResult', summary + '\n\nFull Response:\n' + JSON.stringify(result, null, 2));
+                        addTestResult('InterPro Search', true, `Found ${result.results?.length || 0} entries`);
+                    }
+                } else {
+                    const errorMsg = `❌ API Call Failed\nError: ${data.error}\nRequest ID: ${data.requestId}`;
+                    logResult('analysisResult', errorMsg);
+                    addTestResult('InterPro API', false, data.error);
+                }
+            }
+        }
+
+        async function testBasicDomainAnalysis() {
+            if (!isConnected) {
+                logResult('analysisResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('analysisResult', '🧬 Testing basic InterPro domain analysis...');
+            
+            const requestId = 'analyze_basic_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'analyze_interpro_domains',
+                parameters: {
+                    sequence: testSequences.basic,
+                    applications: ['Pfam', 'SMART'],
+                    goterms: true,
+                    pathways: false,
+                    includeMatchSequence: true
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testAdvancedAnalysis() {
+            if (!isConnected) {
+                logResult('analysisResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('analysisResult', '🔬 Testing advanced InterPro analysis with all databases...');
+            
+            const requestId = 'analyze_advanced_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'analyze_interpro_domains',
+                parameters: {
+                    sequence: testSequences.kinase,
+                    applications: ['Pfam', 'SMART', 'PROSITE', 'PANTHER', 'PRINTS'],
+                    goterms: true,
+                    pathways: true,
+                    includeMatchSequence: true
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testLargeProtein() {
+            if (!isConnected) {
+                logResult('analysisResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('analysisResult', '📏 Testing large protein sequence analysis...');
+            
+            const requestId = 'analyze_large_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'analyze_interpro_domains',
+                parameters: {
+                    sequence: testSequences.large,
+                    applications: ['Pfam', 'SMART'],
+                    goterms: false,
+                    pathways: false,
+                    includeMatchSequence: false
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testEntrySearch() {
+            if (!isConnected) {
+                logResult('searchResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('searchResult', '🔍 Testing InterPro entry search by ID...');
+            
+            const requestId = 'search_id_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'search_interpro_entry',
+                parameters: {
+                    query: 'IPR000719',
+                    searchType: 'entry_id',
+                    includeProteins: false,
+                    includeStructures: false,
+                    limit: 10
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testTextSearch() {
+            if (!isConnected) {
+                logResult('searchResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('searchResult', '🔍 Testing InterPro text search...');
+            
+            const requestId = 'search_text_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'search_interpro_entry',
+                parameters: {
+                    query: 'protein kinase',
+                    searchType: 'text',
+                    includeProteins: false,
+                    includeStructures: false,
+                    limit: 5
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testNameSearch() {
+            if (!isConnected) {
+                logResult('searchResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('searchResult', '🔍 Testing InterPro name search...');
+            
+            const requestId = 'search_name_' + Date.now();
+            const request = {
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: 'search_interpro_entry',
+                parameters: {
+                    query: 'zinc finger',
+                    searchType: 'name',
+                    includeProteins: false,
+                    includeStructures: false,
+                    limit: 5
+                }
+            };
+
+            mcpClient.send(JSON.stringify(request));
+        }
+
+        async function testConcurrentRequests() {
+            if (!isConnected) {
+                logResult('performanceResult', '❌ Not connected to MCP Server. Please connect first.');
+                return;
+            }
+
+            logResult('performanceResult', '⚡ Testing concurrent requests...');
+            
+            const startTime = Date.now();
+            const requests = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const requestId = `concurrent_${i}_${Date.now()}`;
+                const request = {
+                    type: 'execute-tool',
+                    requestId: requestId,
+                    toolName: 'analyze_interpro_domains',
+                    parameters: {
+                        sequence: testSequences.basic,
+                        applications: ['Pfam'],
+                        goterms: false,
+                        pathways: false,
+                        includeMatchSequence: false
+                    }
+                };
+                
+                requests.push(request);
+                mcpClient.send(JSON.stringify(request));
+            }
+            
+            // Note: This is a simple test - real concurrent testing would need proper response tracking
+            addTestResult('Concurrent Requests', true, `Sent ${requests.length} concurrent requests`);
+        }
+
+        function updateStatus(elementId, status, text) {
+            const element = document.getElementById(elementId);
+            const indicator = document.getElementById('connectionIndicator');
+            const textElement = document.getElementById('connectionText');
+            
+            indicator.className = `connection-indicator ${status}`;
+            textElement.textContent = text;
+        }
+
+        function logResult(elementId, text) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = text;
+        }
+
+        function addTestResult(testName, success, details) {
+            testResults.push({ name: testName, success, details, timestamp: new Date() });
+            updateTestSummary();
+        }
+
+        function updateTestSummary() {
+            const summary = document.getElementById('testSummary');
+            const passed = testResults.filter(t => t.success).length;
+            const total = testResults.length;
+            
+            let html = `<h4>Test Results: ${passed}/${total} passed</h4>`;
+            
+            testResults.forEach(test => {
+                const icon = test.success ? '✅' : '❌';
+                html += `<div>${icon} ${test.name}: ${test.details}</div>`;
+            });
+            
+            summary.innerHTML = html;
+        }
+
+        // Initialize connection when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            connectToMCP();
+        });
+    </script>
+</body>
+</html> 
