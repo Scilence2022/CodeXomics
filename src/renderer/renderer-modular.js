@@ -1327,8 +1327,12 @@ class GenomeBrowser {
 
         // Handle file loading from Project Manager
         ipcRenderer.on('load-file', (event, filePath) => {
+            console.log('🎯 Main window received load-file event with path:', filePath);
             if (this.fileManager) {
+                console.log('📂 Calling fileManager.loadFile with path:', filePath);
                 this.fileManager.loadFile(filePath);
+            } else {
+                console.error('❌ FileManager not available in main window');
             }
         });
 

@@ -81,7 +81,7 @@ class ProteinStructureViewer {
         dialog.className = 'protein-search-dialog';
         dialog.innerHTML = `
             <div class="dialog-content">
-                <div class="dialog-header">
+                <div class="dialog-header draggable-header" data-dialog-id="protein-search">
                     <h3>Load Protein Structure</h3>
                     <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
                 </div>
@@ -129,6 +129,8 @@ class ProteinStructureViewer {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    cursor: move;
+                    user-select: none;
                 }
 
                 .protein-search-dialog .dialog-header h3 {
@@ -224,6 +226,8 @@ class ProteinStructureViewer {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    cursor: move;
+                    user-select: none;
                 }
 
                 .alphafold-search-dialog .dialog-header h3 {
@@ -381,9 +385,27 @@ class ProteinStructureViewer {
                     padding: 20px;
                     color: #666;
                 }
+
+                /* Draggable functionality */
+                .draggable-header {
+                    cursor: move !important;
+                }
+
+                .dragging {
+                    position: fixed !important;
+                    z-index: 9999 !important;
+                    pointer-events: none !important;
+                }
+
+                .dragging .dialog-content {
+                    pointer-events: auto !important;
+                }
             `;
             document.head.appendChild(style);
         }
+
+        // Add draggable functionality
+        this.makeDraggable(dialog);
 
         return dialog;
     }
@@ -917,7 +939,7 @@ class ProteinStructureViewer {
         dialog.className = 'alphafold-search-dialog';
         dialog.innerHTML = `
             <div class="dialog-content">
-                <div class="dialog-header">
+                <div class="dialog-header draggable-header" data-dialog-id="alphafold-search">
                     <h3>Search AlphaFold Database</h3>
                     <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
                 </div>
@@ -946,6 +968,10 @@ class ProteinStructureViewer {
                 </div>
             </div>
         `;
+
+        // Add draggable functionality
+        this.makeDraggable(dialog);
+
         return dialog;
     }
 
@@ -1038,6 +1064,124 @@ class ProteinStructureViewer {
             console.error('Error loading AlphaFold structure:', error);
             alert(`Failed to load AlphaFold structure: ${error.message}`);
         }
+    }
+
+    /**
+     * Make a dialog draggable by its header
+     */
+    makeDraggable(dialog) {
+        const header = dialog.querySelector('.draggable-header');
+        if (!header) return;
+
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        const startDrag = (e) => {
+            // Only start drag if clicked on header (not on close button)
+            if (e.target.classList.contains('close-btn')) return;
+            
+            isDragging = true;
+            dialog.classList.add('dragging');
+            
+            const rect = dialog.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            // Prevent text selection during drag
+            e.preventDefault();
+            
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+        };
+
+        const doDrag = (e) => {
+            if (!isDragging) return;
+            
+            const x = e.clientX - dragOffset.x;
+            const y = e.clientY - dragOffset.y;
+            
+            // Keep dialog within viewport bounds
+            const maxX = window.innerWidth - dialog.offsetWidth;
+            const maxY = window.innerHeight - dialog.offsetHeight;
+            
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            dialog.style.left = constrainedX + 'px';
+            dialog.style.top = constrainedY + 'px';
+            dialog.style.margin = '0';
+        };
+
+        const stopDrag = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            dialog.classList.remove('dragging');
+            
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        };
+
+        // Touch support for mobile devices
+        const startTouch = (e) => {
+            if (e.target.classList.contains('close-btn')) return;
+            
+            isDragging = true;
+            dialog.classList.add('dragging');
+            
+            const touch = e.touches[0];
+            const rect = dialog.getBoundingClientRect();
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+            
+            e.preventDefault();
+            
+            document.addEventListener('touchmove', doTouchDrag);
+            document.addEventListener('touchend', stopTouchDrag);
+        };
+
+        const doTouchDrag = (e) => {
+            if (!isDragging) return;
+            
+            const touch = e.touches[0];
+            const x = touch.clientX - dragOffset.x;
+            const y = touch.clientY - dragOffset.y;
+            
+            const maxX = window.innerWidth - dialog.offsetWidth;
+            const maxY = window.innerHeight - dialog.offsetHeight;
+            
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            dialog.style.left = constrainedX + 'px';
+            dialog.style.top = constrainedY + 'px';
+            dialog.style.margin = '0';
+        };
+
+        const stopTouchDrag = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            dialog.classList.remove('dragging');
+            
+            document.removeEventListener('touchmove', doTouchDrag);
+            document.removeEventListener('touchend', stopTouchDrag);
+        };
+
+        // Add event listeners for mouse events
+        header.addEventListener('mousedown', startDrag);
+        
+        // Add event listeners for touch events
+        header.addEventListener('touchstart', startTouch);
+        
+        // Reset position when dialog is opened
+        dialog.addEventListener('show', () => {
+            dialog.style.left = '';
+            dialog.style.top = '';
+            dialog.style.margin = '';
+        });
+
+        console.log('✅ Dialog made draggable');
     }
 }
 

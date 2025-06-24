@@ -414,6 +414,58 @@
             z-index: 1000;
             pointer-events: none;
         }
+
+        /* 可拖拽分隔条样式 */
+        .sidebar-splitter {
+            width: 6px;
+            background: linear-gradient(to right, #e1e5e9, #ced4da, #e1e5e9);
+            cursor: col-resize;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            border-right: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .sidebar-splitter:hover {
+            background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+            width: 8px;
+        }
+
+        .sidebar-splitter.active {
+            background: linear-gradient(to right, #667eea, #764ba2, #667eea);
+            width: 8px;
+        }
+
+        .splitter-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 40px;
+            background: rgba(102, 126, 234, 0.6);
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-splitter:hover .splitter-handle,
+        .sidebar-splitter.active .splitter-handle {
+            opacity: 1;
+        }
+
+        .splitter-handle::before {
+            content: '';
+            width: 2px;
+            height: 16px;
+            background: white;
+            border-radius: 1px;
+            box-shadow: 4px 0 0 white, -4px 0 0 white;
+        }
         
         .tree-icon {
             width: 16px;
@@ -798,6 +850,11 @@
             </div>
         </div>
 
+        <!-- 添加可拖拽的分隔条 -->
+        <div class="sidebar-splitter" id="sidebarSplitter">
+            <div class="splitter-handle"></div>
+        </div>
+
         <div class="content-area">
             <div class="content-header">
                 <div class="content-title" id="contentTitle">Welcome to Project Manager</div>
@@ -1030,6 +1087,7 @@
                 
                 await this.loadProjects();
                 this.setupEventListeners();
+                this.initializeSidebarSplitter(); // 初始化分隔条拖拽功能
                 this.renderProjectTree();
                 this.updateStatusBar('Ready');
                 console.log('Project Manager Window initialized successfully');
@@ -1616,6 +1674,14 @@ Folders: ${project.folders ? project.folders.length : 0}
                     // 刷新界面并选择项目
                     this.renderProjectTree();
                     this.selectProject(project.id);
+                    
+                    // 修复：项目加载后立即刷新左侧项目树，确保显示Genomes、Annotations等文件夹
+                    setTimeout(() => {
+                        this.renderProjectTree();
+                        if (this.currentProject) {
+                            this.selectProject(this.currentProject.id);
+                        }
+                    }, 100);
                     
                     // 显示成功消息
                     const fileType = fileName.toLowerCase().endsWith('.prj.gai') ? 'XML (.prj.GAI)' : fileExtension.toUpperCase();
@@ -2515,6 +2581,9 @@ Folders: ${project.folders ? project.folders.length : 0}
                     this.currentProject.metadata.totalFiles = this.currentProject.files.length;
                     this.currentProject.metadata.totalSize = this.currentProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
                     
+                    // 更新文件类型统计
+                    this.updateProjectFileTypeStats();
+                    
                     await this.saveProjects();
                     
                     // 缓冲更改，不立即保存XML文件
@@ -2764,6 +2833,9 @@ Folders: ${project.folders ? project.folders.length : 0}
                 
                 const file = this.findFileById(fileId);
                 console.log('📁 Found file:', file);
+                console.log('📁 File path:', file?.path);
+                console.log('📁 File type:', file?.type);
+                console.log('📁 File name:', file?.name);
                 if (!file) {
                     console.error('❌ File not found with ID:', fileId);
                     this.showNotification('File not found', 'error');
@@ -2801,7 +2873,9 @@ Folders: ${project.folders ? project.folders.length : 0}
                             }
                         } else {
                             // 主窗口没有文件，在当前主窗口打开
+                            console.log('📤 Sending to main window via IPC, file path:', file.path);
                             const result = await window.electronAPI.openFileInMainWindow(file.path);
+                            console.log('📥 Result from main window:', result);
                             if (result.success) {
                                 this.showNotification(`✅ Opened "${file.name}" in GenomeExplorer`, 'success');
                             } else {
@@ -3099,6 +3173,141 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
+            }
+
+            // 初始化侧边栏分隔条拖拽功能
+            initializeSidebarSplitter() {
+                const splitter = document.getElementById('sidebarSplitter');
+                const sidebar = document.querySelector('.sidebar');
+                const contentArea = document.querySelector('.content-area');
+                
+                if (!splitter || !sidebar || !contentArea) {
+                    console.warn('Sidebar splitter elements not found');
+                    return;
+                }
+                
+                let isResizing = false;
+                let startX = 0;
+                let startSidebarWidth = 0;
+                
+                const startResize = (e) => {
+                    isResizing = true;
+                    startX = e.clientX;
+                    startSidebarWidth = sidebar.offsetWidth;
+                    
+                    splitter.classList.add('active');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    
+                    e.preventDefault();
+                };
+                
+                const doResize = (e) => {
+                    if (!isResizing) return;
+                    
+                    const deltaX = e.clientX - startX;
+                    const newSidebarWidth = startSidebarWidth + deltaX;
+                    
+                    // 设置最小和最大宽度
+                    const minWidth = 200;
+                    const maxWidth = window.innerWidth * 0.6; // 最大60%屏幕宽度
+                    
+                    if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
+                        sidebar.style.width = `${newSidebarWidth}px`;
+                    }
+                    
+                    e.preventDefault();
+                };
+                
+                const stopResize = () => {
+                    if (!isResizing) return;
+                    
+                    isResizing = false;
+                    splitter.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    
+                    // 保存宽度设置到localStorage
+                    const currentWidth = sidebar.offsetWidth;
+                    localStorage.setItem('projectManagerSidebarWidth', currentWidth);
+                };
+                
+                // 事件监听器
+                splitter.addEventListener('mousedown', startResize);
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+                
+                // 键盘支持
+                splitter.setAttribute('tabindex', '0');
+                splitter.setAttribute('aria-label', 'Resize sidebar');
+                
+                splitter.addEventListener('keydown', (e) => {
+                    const step = 20;
+                    let deltaX = 0;
+                    
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                            deltaX = -step;
+                            break;
+                        case 'ArrowRight':
+                            deltaX = step;
+                            break;
+                        case 'Home':
+                            sidebar.style.width = '320px'; // 重置为默认宽度
+                            localStorage.setItem('projectManagerSidebarWidth', 320);
+                            e.preventDefault();
+                            return;
+                        default:
+                            return;
+                    }
+                    
+                    e.preventDefault();
+                    
+                    const currentWidth = sidebar.offsetWidth;
+                    const newWidth = currentWidth + deltaX;
+                    const minWidth = 200;
+                    const maxWidth = window.innerWidth * 0.6;
+                    
+                    if (newWidth >= minWidth && newWidth <= maxWidth) {
+                        sidebar.style.width = `${newWidth}px`;
+                        localStorage.setItem('projectManagerSidebarWidth', newWidth);
+                    }
+                });
+                
+                // 双击重置到默认宽度
+                splitter.addEventListener('dblclick', () => {
+                    sidebar.style.width = '320px';
+                    localStorage.setItem('projectManagerSidebarWidth', 320);
+                });
+                
+                // 从localStorage恢复宽度设置
+                const savedWidth = localStorage.getItem('projectManagerSidebarWidth');
+                if (savedWidth) {
+                    const width = parseInt(savedWidth);
+                    if (width >= 200 && width <= window.innerWidth * 0.6) {
+                        sidebar.style.width = `${width}px`;
+                    }
+                }
+                
+                console.log('✅ Sidebar splitter initialized');
+            }
+
+            // 更新项目文件类型统计信息
+            updateProjectFileTypeStats() {
+                if (!this.currentProject || !this.currentProject.files) return;
+                
+                const stats = {};
+                this.currentProject.files.forEach(file => {
+                    const type = file.type || 'unknown';
+                    stats[type] = (stats[type] || 0) + 1;
+                });
+                
+                if (!this.currentProject.metadata) {
+                    this.currentProject.metadata = {};
+                }
+                this.currentProject.metadata.fileTypeStats = stats;
+                
+                console.log('📊 Updated file type statistics:', stats);
             }
 
             // 工具方法

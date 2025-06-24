@@ -65,12 +65,15 @@ class FileManager {
     }
 
     async loadFile(filePath) {
+        console.log('🔍 FileManager.loadFile() called with path:', filePath);
         this.genomeBrowser.showLoading(true);
         this.genomeBrowser.updateStatus('Loading file...');
 
         try {
             // Get file info
+            console.log('📋 Getting file info for:', filePath);
             const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
+            console.log('📋 File info result:', fileInfo);
             if (!fileInfo.success) {
                 throw new Error(fileInfo.error);
             }
@@ -317,16 +320,19 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     async parseFile() {
         const extension = this.currentFile.info.extension.toLowerCase();
+        console.log('🔍 parseFile() called with extension:', extension);
         
         switch (extension) {
             case '.fasta':
             case '.fa':
+                console.log('📂 Parsing as FASTA file');
                 await this.parseFasta();
                 break;
             case '.gb':
             case '.gbk':
             case '.gbff':
             case '.genbank':
+                console.log('📂 Parsing as GenBank file');
                 await this.parseGenBank();
                 break;
             case '.gff':
@@ -395,9 +401,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async parseGenBank() {
-        console.log('Starting GenBank parsing...');
+        console.log('🔬 Starting GenBank parsing...');
+        console.log('📄 Current file data length:', this.currentFile?.data?.length || 'No data');
+        if (!this.currentFile?.data) {
+            throw new Error('No file data available for GenBank parsing');
+        }
         const lines = this.currentFile.data.split('\n');
-        console.log(`Total lines to parse: ${lines.length}`);
+        console.log(`📄 Total lines to parse: ${lines.length}`);
         
         const sequences = {};
         const annotations = {};

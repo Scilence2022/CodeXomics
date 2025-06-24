@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager 功能增强测试 - GenomeExplorer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .test-section h2 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.5em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .feature-item {
+            background: #f8f9ff;
+            border: 1px solid #e0e6ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .feature-item h3 {
+            color: #4a5568;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status.fixed { background: #c6f6d5; color: #22543d; }
+        .status.enhanced { background: #bee3f8; color: #2a4365; }
+        .status.new { background: #fed7d7; color: #742a2a; }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .highlight {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .demo-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .before-after {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 15px 0;
+        }
+
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .before {
+            background: #fed7d7;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .after {
+            background: #c6f6d5;
+            border-left: 4px solid #38a169;
+        }
+
+        .test-instructions {
+            background: #fff5cd;
+            border: 1px solid #fbd38d;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .keyboard-shortcut {
+            background: #4a5568;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        ul li {
+            margin-bottom: 8px;
+        }
+
+        .api-info {
+            background: #e6fffa;
+            border: 1px solid #4fd1c7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Project Manager 功能增强测试指南</h1>
+        
+        <div class="test-section">
+            <h2>🎯 本次修复和增强概览</h2>
+            <p>本测试涵盖了Project Manager的最新修复和功能增强，包括文件双击打开、分隔条拖拽、项目刷新、文件记录，以及主窗口模态框拖拽功能。</p>
+            
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <span class="icon">🖱️</span>
+                    <h3>文件双击打开修复</h3>
+                    <span class="status fixed">已修复</span>
+                    <p>Project Manager中的文件现在可以通过双击在主窗口中打开</p>
+                </div>
+                
+                <div class="demo-card">
+                    <span class="icon">↔️</span>
+                    <h3>分隔条拖拽功能</h3>
+                    <span class="status new">新功能</span>
+                    <p>左侧窗口和右侧窗口之间的分隔条现在支持拖拽调整宽度</p>
+                </div>
+                
+                <div class="demo-card">
+                    <span class="icon">🔄</span>
+                    <h3>项目刷新优化</h3>
+                    <span class="status enhanced">已优化</span>
+                    <p>打开项目后自动刷新左侧树形结构，确保显示所有文件夹</p>
+                </div>
+                
+                <div class="demo-card">
+                    <span class="icon">🗂️</span>
+                    <h3>文件记录完善</h3>
+                    <span class="status enhanced">已优化</span>
+                    <p>所有文件变更都会记录到项目数据文件(.prj.GAI)中</p>
+                </div>
+                
+                <div class="demo-card">
+                    <span class="icon">🖱️</span>
+                    <h3>主窗口拖拽功能</h3>
+                    <span class="status new">新功能</span>
+                    <p>Load Protein Structure和Search AlphaFold模态框现在支持拖拽</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🛠️ 问题 1: 文件双击打开修复</h2>
+            
+            <div class="feature-item">
+                <h3>问题描述 <span class="status fixed">已修复</span></h3>
+                <p>之前双击Project Manager中的文件无法在主窗口中打开该文件。</p>
+                
+                <div class="before-after">
+                    <div class="before">
+                        <h4>修复前</h4>
+                        <ul>
+                            <li>双击文件没有反应</li>
+                            <li>缺少IPC通信处理</li>
+                            <li>错误处理不完善</li>
+                        </ul>
+                    </div>
+                    <div class="after">
+                        <h4>修复后</h4>
+                        <ul>
+                            <li>双击文件在主窗口打开</li>
+                            <li>支持新窗口和当前窗口打开</li>
+                            <li>完善的错误处理和用户反馈</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="test-instructions">
+                    <h4>🧪 测试步骤</h4>
+                    <ol>
+                        <li>打开Project Manager</li>
+                        <li>加载一个包含文件的项目（或创建测试项目）</li>
+                        <li>双击任何文件（.fasta, .gff等）</li>
+                        <li>验证文件在GenomeExplorer主窗口中打开</li>
+                        <li>测试不同文件类型的打开</li>
+                    </ol>
+                </div>
+                
+                <div class="api-info">
+                    <h4>🔧 技术实现</h4>
+                    <div class="code-block">
+// 修复的openFileInMainWindow函数
+async openFileInMainWindow(fileId) {
+    const file = this.findFileById(fileId);
+    if (!file) {
+        this.showNotification('File not found', 'error');
+        return;
+    }
+
+    // 检查主窗口状态并打开文件
+    const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
+    if (mainWindowStatus.hasOpenFile) {
+        // 创建新窗口
+        const result = await window.electronAPI.createNewMainWindow(file.path);
+    } else {
+        // 在当前主窗口打开
+        const result = await window.electronAPI.openFileInMainWindow(file.path);
+    }
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>↔️ 问题 2: 分隔条拖拽功能</h2>
+            
+            <div class="feature-item">
+                <h3>新增功能 <span class="status new">新功能</span></h3>
+                <p>在Project Manager的左侧窗口和右侧窗口之间添加了可拖拽的分隔条。</p>
+                
+                <div class="test-instructions">
+                    <h4>🧪 测试步骤</h4>
+                    <ol>
+                        <li>打开Project Manager</li>
+                        <li>找到左侧项目树和右侧内容区之间的分隔条</li>
+                        <li>将鼠标悬停在分隔条上（光标变为 <code>col-resize</code>）</li>
+                        <li>拖拽分隔条左右移动，调整窗口宽度</li>
+                        <li>测试最小宽度限制（200px）和最大宽度限制（60%屏幕宽度）</li>
+                        <li>双击分隔条重置为默认宽度（320px）</li>
+                        <li>测试键盘控制：<span class="keyboard-shortcut">←</span> <span class="keyboard-shortcut">→</span> <span class="keyboard-shortcut">Home</span></li>
+                    </ol>
+                </div>
+                
+                <div class="api-info">
+                    <h4>🔧 技术特性</h4>
+                    <ul>
+                        <li><strong>鼠标拖拽：</strong>mousedown/mousemove/mouseup事件处理</li>
+                        <li><strong>键盘支持：</strong>方向键步进调整，Home键重置</li>
+                        <li><strong>边界限制：</strong>最小200px，最大60%屏幕宽度</li>
+                        <li><strong>状态持久化：</strong>宽度设置保存到localStorage</li>
+                        <li><strong>视觉反馈：</strong>拖拽时的活跃状态样式</li>
+                    </ul>
+                </div>
+                
+                <div class="code-block">
+// 分隔条HTML结构
+&lt;div class="sidebar-splitter" id="sidebarSplitter"&gt;
+    &lt;div class="splitter-handle"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+// CSS样式
+.sidebar-splitter {
+    width: 4px;
+    background: linear-gradient(to bottom, #e0e6ff, #c6d4ff);
+    cursor: col-resize;
+    position: relative;
+    transition: background 0.2s ease;
+}</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 问题 3: 项目刷新优化</h2>
+            
+            <div class="feature-item">
+                <h3>刷新机制优化 <span class="status enhanced">已优化</span></h3>
+                <p>修复了打开项目后需要手动刷新才能看到左侧窗口中的Genomes、Annotations等文件夹的问题。</p>
+                
+                <div class="before-after">
+                    <div class="before">
+                        <h4>优化前</h4>
+                        <ul>
+                            <li>项目加载后左侧树不显示文件夹</li>
+                            <li>需要手动点击刷新按钮</li>
+                            <li>用户体验不佳</li>
+                        </ul>
+                    </div>
+                    <div class="after">
+                        <h4>优化后</h4>
+                        <ul>
+                            <li>项目加载后自动刷新树形结构</li>
+                            <li>延时确保DOM更新完成</li>
+                            <li>无缝的用户体验</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="test-instructions">
+                    <h4>🧪 测试步骤</h4>
+                    <ol>
+                        <li>打开Project Manager</li>
+                        <li>加载一个现有项目文件(.prj.GAI)</li>
+                        <li>验证左侧项目树立即显示所有文件夹（Genomes、Annotations等）</li>
+                        <li>测试不同项目文件的加载</li>
+                        <li>确认不需要手动刷新</li>
+                    </ol>
+                </div>
+                
+                <div class="code-block">
+// 优化的项目加载代码
+// 刷新界面并选择项目
+this.renderProjectTree();
+this.selectProject(project.id);
+
+// 修复：项目加载后立即刷新左侧项目树，确保显示Genomes、Annotations等文件夹
+setTimeout(() => {
+    this.renderProjectTree();
+    if (this.currentProject) {
+        this.selectProject(this.currentProject.id);
+    }
+}, 100);</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🗂️ 问题 4: 文件记录完善</h2>
+            
+            <div class="feature-item">
+                <h3>项目文件记录机制 <span class="status enhanced">已优化</span></h3>
+                <p>确保所有已知的文件都被正确记录到项目的数据文件(*.prj.GAI)中，包括文件类型统计和元数据。</p>
+                
+                <div class="test-instructions">
+                    <h4>🧪 测试步骤</h4>
+                    <ol>
+                        <li>打开Project Manager并创建新项目</li>
+                        <li>添加不同类型的文件（.fasta, .gff, .vcf等）</li>
+                        <li>保存项目</li>
+                        <li>检查生成的.prj.GAI文件是否包含所有文件信息</li>
+                        <li>验证文件类型统计是否正确</li>
+                        <li>重新加载项目确认文件列表完整</li>
+                    </ol>
+                </div>
+                
+                <div class="api-info">
+                    <h4>🔧 数据记录增强</h4>
+                    <ul>
+                        <li><strong>文件类型统计：</strong>自动计算各类型文件数量</li>
+                        <li><strong>元数据更新：</strong>总文件数、总大小、最后修改时间</li>
+                        <li><strong>项目相对路径：</strong>智能路径处理和存储</li>
+                        <li><strong>文件状态跟踪：</strong>区分复制文件和引用文件</li>
+                    </ul>
+                </div>
+                
+                <div class="code-block">
+// 新增的文件类型统计函数
+updateProjectFileTypeStats() {
+    if (!this.currentProject || !this.currentProject.files) return;
+    
+    const stats = {};
+    this.currentProject.files.forEach(file => {
+        const type = file.type || 'unknown';
+        stats[type] = (stats[type] || 0) + 1;
+    });
+    
+    if (!this.currentProject.metadata) {
+        this.currentProject.metadata = {};
+    }
+    this.currentProject.metadata.fileTypeStats = stats;
+}</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🖱️ 问题 5: 主窗口模态框拖拽功能</h2>
+            
+            <div class="feature-item">
+                <h3>模态框拖拽增强 <span class="status new">新功能</span></h3>
+                <p>为Load Protein Structure和Search AlphaFold Database界面添加了拖拽功能。</p>
+                
+                <div class="test-instructions">
+                    <h4>🧪 测试步骤</h4>
+                    <ol>
+                        <li>打开GenomeExplorer主窗口</li>
+                        <li>点击<span class="highlight">3D Proteins</span>按钮打开"Load Protein Structure"对话框</li>
+                        <li>拖拽对话框标题栏移动窗口位置</li>
+                        <li>测试边界限制（不能拖出屏幕）</li>
+                        <li>关闭对话框，打开<span class="highlight">AlphaFold</span>按钮</li>
+                        <li>测试AlphaFold搜索对话框的拖拽功能</li>
+                        <li>验证触摸设备的拖拽支持</li>
+                    </ol>
+                </div>
+                
+                <div class="api-info">
+                    <h4>🔧 拖拽特性</h4>
+                    <ul>
+                        <li><strong>鼠标支持：</strong>标题栏拖拽，排除关闭按钮区域</li>
+                        <li><strong>触摸支持：</strong>移动设备的触摸拖拽</li>
+                        <li><strong>边界约束：</strong>防止拖拽到屏幕外</li>
+                        <li><strong>视觉反馈：</strong>拖拽状态的CSS类变化</li>
+                        <li><strong>位置重置：</strong>重新打开时回到默认位置</li>
+                    </ul>
+                </div>
+                
+                <div class="code-block">
+// 拖拽功能实现
+makeDraggable(dialog) {
+    const header = dialog.querySelector('.draggable-header');
+    if (!header) return;
+
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+
+    const startDrag = (e) => {
+        if (e.target.classList.contains('close-btn')) return;
+        
+        isDragging = true;
+        dialog.classList.add('dragging');
+        
+        const rect = dialog.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+        
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+    };
+}</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 综合测试检查清单</h2>
+            
+            <div class="feature-item">
+                <h3>完整功能验证 <span class="status new">测试清单</span></h3>
+                
+                <div class="test-instructions">
+                    <h4>✅ 必须验证的功能点</h4>
+                    <ol>
+                        <li><strong>文件双击打开：</strong>
+                            <ul>
+                                <li>□ FASTA文件双击可以在主窗口打开</li>
+                                <li>□ GFF文件双击可以在主窗口打开</li>
+                                <li>□ 测试文件和真实文件都能正常打开</li>
+                                <li>□ 错误处理和用户反馈正常</li>
+                            </ul>
+                        </li>
+                        
+                        <li><strong>分隔条拖拽：</strong>
+                            <ul>
+                                <li>□ 鼠标拖拽调整窗口宽度</li>
+                                <li>□ 键盘方向键调整</li>
+                                <li>□ 双击重置到默认宽度</li>
+                                <li>□ 宽度设置持久化保存</li>
+                            </ul>
+                        </li>
+                        
+                        <li><strong>项目刷新：</strong>
+                            <ul>
+                                <li>□ 项目加载后自动显示文件夹结构</li>
+                                <li>□ 不需要手动刷新</li>
+                                <li>□ 多个项目切换正常</li>
+                            </ul>
+                        </li>
+                        
+                        <li><strong>文件记录：</strong>
+                            <ul>
+                                <li>□ 添加文件后项目文件被正确更新</li>
+                                <li>□ 文件类型统计准确</li>
+                                <li>□ 元数据信息完整</li>
+                                <li>□ 项目保存和加载一致</li>
+                            </ul>
+                        </li>
+                        
+                        <li><strong>模态框拖拽：</strong>
+                            <ul>
+                                <li>□ Load Protein Structure对话框可以拖拽</li>
+                                <li>□ Search AlphaFold对话框可以拖拽</li>
+                                <li>□ 边界限制正常工作</li>
+                                <li>□ 关闭按钮不触发拖拽</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+                
+                <div class="api-info">
+                    <h4>🚀 性能和兼容性</h4>
+                    <ul>
+                        <li><strong>浏览器兼容性：</strong>Chrome, Firefox, Safari, Edge</li>
+                        <li><strong>操作系统：</strong>Windows, macOS, Linux</li>
+                        <li><strong>响应式设计：</strong>不同屏幕尺寸的适配</li>
+                        <li><strong>性能优化：</strong>事件节流和内存管理</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🐛 已知问题和注意事项</h2>
+            
+            <div class="feature-item">
+                <h3>注意事项</h3>
+                <ul>
+                    <li><strong>文件路径：</strong>确保项目文件夹结构正确，避免路径冲突</li>
+                    <li><strong>权限问题：</strong>某些操作系统可能需要文件系统访问权限</li>
+                    <li><strong>内存使用：</strong>大文件操作时注意内存占用</li>
+                    <li><strong>网络依赖：</strong>AlphaFold搜索需要网络连接</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 测试报告模板</h2>
+            
+            <div class="code-block">
+测试环境：
+- 操作系统：[Windows/macOS/Linux]
+- 浏览器：[Chrome/Firefox/Safari/Edge] 版本
+- GenomeExplorer 版本：[版本号]
+
+测试结果：
+✅ 文件双击打开：[通过/失败] - [备注]
+✅ 分隔条拖拽：[通过/失败] - [备注]  
+✅ 项目刷新：[通过/失败] - [备注]
+✅ 文件记录：[通过/失败] - [备注]
+✅ 模态框拖拽：[通过/失败] - [备注]
+
+发现的问题：
+1. [问题描述]
+2. [问题描述]
+
+建议改进：
+1. [改进建议]
+2. [改进建议]
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
