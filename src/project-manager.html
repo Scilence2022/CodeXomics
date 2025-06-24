@@ -433,8 +433,11 @@
                         <div class="empty-state-icon">📂</div>
                         <h3>No Project Selected</h3>
                         <p>Create a new project or select an existing one to get started.</p>
-                        <button class="btn btn-primary" onclick="projectManager.createNewProject()">
+                        <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
                             Create New Project
+                        </button>
+                        <button class="btn btn-warning" onclick="projectManagerWindow.createTestProject()" style="margin-top: 10px; background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);">
+                            🧪 Create Test Project
                         </button>
                     </div>
                 </div>
@@ -671,7 +674,7 @@
                         const isActive = this.currentProject && this.currentProject.id === projectId;
                         html += `
                             <div class="tree-item project ${isActive ? 'active' : ''}" 
-                                 onclick="projectManager.selectProject('${projectId}')"
+                                 onclick="projectManagerWindow.selectProject('${projectId}')"
                                  data-project-id="${projectId}">
                                 <div class="tree-icon">📂</div>
                                 <span title="${project.description || project.name}">${project.name}</span>
@@ -683,7 +686,7 @@
                                 const isCurrentPath = this.arraysEqual(this.currentPath, folder.path);
                                 html += `
                                     <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
-                                         onclick="projectManager.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
+                                         onclick="projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
                                          style="margin-left: 20px;">
                                         <div class="tree-icon">${folder.icon}</div>
                                         <span>${folder.name}</span>
@@ -767,8 +770,8 @@
 
                     html += `
                         <div class="file-card" 
-                             onclick="projectManager.selectFile('${file.id}')"
-                             ondblclick="projectManager.openFileInMainWindow('${file.id}')"
+                             onclick="projectManagerWindow.selectFile('${file.id}')"
+                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
                              data-file-id="${file.id}">
                             <div class="file-icon ${fileType}" 
                                  style="background-color: ${typeConfig.color}">
@@ -866,9 +869,24 @@
             }
 
             async openFileInMainWindow(fileId) {
+                console.log('🎯 Opening file in main window - fileId:', fileId);
+                console.log('🔧 ProjectManager available:', !!this.projectManager);
+                
+                // 委托给 ProjectManager 的实现
+                if (this.projectManager) {
+                    console.log('✅ Using ProjectManager core logic for file opening');
+                    return await this.projectManager.openFileInMainWindow(fileId);
+                }
+                
                 const file = this.findFileById(fileId);
-                if (!file) return;
+                console.log('📁 Found file:', file);
+                if (!file) {
+                    console.error('❌ File not found with ID:', fileId);
+                    return;
+                }
 
+                // 如果没有 ProjectManager，显示通知
+                console.log('⚠️ Fallback: No ProjectManager, showing notification only');
                 this.showNotification(`Would open "${file.name}" in main window`, 'info');
             }
 
@@ -880,6 +898,87 @@
 
             showSettings() {
                 this.showNotification('Settings feature coming soon', 'info');
+            }
+
+            // 创建测试项目，用于测试文件打开功能
+            createTestProject() {
+                console.log('📋 Creating test project...');
+                
+                const testProject = {
+                    id: 'test_project_' + Date.now(),
+                    name: 'Test Genomics Project',
+                    description: 'A test project with sample files for testing Project Manager functionality',
+                    location: '/test/project/location',
+                    created: new Date().toISOString(),
+                    modified: new Date().toISOString(),
+                    files: [
+                        {
+                            id: 'test_file_1',
+                            name: 'sample_genome.fasta',
+                            path: '/test/project/location/genomes/sample_genome.fasta',
+                            type: 'fasta',
+                            size: 1234567,
+                            added: new Date().toISOString(),
+                            modified: new Date().toISOString(),
+                            folder: ['genomes'],
+                            metadata: {
+                                organism: 'Escherichia coli',
+                                description: 'Sample genome file for testing'
+                            },
+                            tags: ['test', 'sample']
+                        },
+                        {
+                            id: 'test_file_2', 
+                            name: 'sample_annotations.gff',
+                            path: '/test/project/location/annotations/sample_annotations.gff',
+                            type: 'gff',
+                            size: 987654,
+                            added: new Date().toISOString(),
+                            folder: ['annotations'],
+                            metadata: {
+                                version: 'GFF3',
+                                description: 'Sample annotation file for testing'
+                            }
+                        }
+                    ],
+                    folders: [
+                        { name: 'Genomes', icon: '🧬', path: ['genomes'] },
+                        { name: 'Annotations', icon: '📋', path: ['annotations'] },
+                        { name: 'Variants', icon: '🔄', path: ['variants'] },
+                        { name: 'Reads', icon: '📊', path: ['reads'] },
+                        { name: 'Analysis', icon: '📈', path: ['analysis'] }
+                    ],
+                    settings: {
+                        fileFilters: [],
+                        customAnnotations: []
+                    },
+                    metadata: {
+                        totalFiles: 2,
+                        totalSize: 2222221,
+                        lastOpened: new Date().toISOString(),
+                        fileTypeStats: { fasta: 1, gff: 1 }
+                    },
+                    history: [{
+                        timestamp: new Date().toISOString(),
+                        action: 'created',
+                        description: 'Test project created for functionality testing'
+                    }]
+                };
+
+                // 添加到项目列表
+                this.projects.set(testProject.id, testProject);
+                
+                // 如果有 ProjectManager，也添加到那里
+                if (this.projectManager) {
+                    this.projectManager.projects.set(testProject.id, testProject);
+                }
+
+                // 更新UI
+                this.renderProjectTree();
+                this.selectProject(testProject.id);
+                
+                this.showNotification('✅ Test project created with sample files! Try double-clicking a file.', 'success');
+                console.log('✅ Test project created:', testProject);
             }
 
             closeModal(modalId) {
@@ -1053,15 +1152,37 @@
 
         // 全局项目管理器实例
         let projectManager = null;
+        let projectManagerWindow = null;
         
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded, initializing Project Manager...');
-            projectManager = new ProjectManagerWindow();
+            
+            // 创建 ProjectManagerWindow UI 实例
+            projectManagerWindow = new ProjectManagerWindow();
+            
+            // 创建 ProjectManager 核心逻辑实例并集成
+            if (typeof ProjectManager !== 'undefined') {
+                projectManager = new ProjectManager();
+                // 将 ProjectManager 集成到 ProjectManagerWindow
+                projectManagerWindow.projectManager = projectManager;
+                
+                // 共享数据和状态
+                projectManagerWindow.projects = projectManager.projects;
+                projectManagerWindow.currentProject = projectManager.currentProject;
+                projectManagerWindow.currentPath = projectManager.currentPath;
+                
+                console.log('✅ ProjectManager core logic integrated');
+                console.log('ProjectManager instance:', projectManager);
+                console.log('ProjectManagerWindow instance:', projectManagerWindow);
+            } else {
+                console.warn('⚠️ ProjectManager not available, using fallback UI only');
+            }
         });
     </script>
     
-    <!-- XML处理器 -->
+    <!-- 依赖脚本 -->
     <script src="renderer/modules/ProjectXMLHandler.js"></script>
+    <script src="renderer/modules/ProjectManager.js"></script>
 </body>
 </html> 
