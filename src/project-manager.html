@@ -1475,7 +1475,8 @@
                     if (window.electronAPI && window.electronAPI.readFile) {
                         const result = await window.electronAPI.readFile(filePath);
                         if (result.success) {
-                            await this.loadProjectFromText(result.content, filePath);
+                            // main.js的read-file handler返回的是data字段，不是content字段
+                            await this.loadProjectFromText(result.data, filePath);
                         } else {
                             throw new Error(result.error || 'Failed to read file');
                         }

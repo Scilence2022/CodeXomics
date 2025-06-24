@@ -102,7 +102,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window close handling
   onBeforeWindowClose: (callback) => {
     ipcRenderer.on('before-window-close', callback);
-  }
+  },
+  
+  // File reading API for project manager
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)
 });
 
 // Provide access to node process information (for development)

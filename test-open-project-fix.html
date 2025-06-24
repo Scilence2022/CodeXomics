@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Project Fix Test</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .success { color: #27ae60; font-weight: bold; }
+        .error { color: #e74c3c; font-weight: bold; }
+        .info { color: #3498db; font-weight: bold; }
+        .warning { color: #f39c12; font-weight: bold; }
+        h1 { color: #2c3e50; text-align: center; }
+        h2 { color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        code { 
+            background: #f8f9fa; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .fix-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #27ae60;
+            border-radius: 4px;
+        }
+        .issue-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff5f5;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Open Project Fix Verification</h1>
+        
+        <div class="test-section">
+            <h2>问题分析与解决方案</h2>
+            <div class="issue-item">
+                <strong>原始错误:</strong> <code>Error: File system access not available</code>
+                <br><small>位置: project-manager.html:1483</small>
+            </div>
+            
+            <div class="fix-item">
+                <strong>根本原因:</strong> 
+                <ul>
+                    <li>preload.js中缺少 <code>readFile</code> API暴露</li>
+                    <li>项目管理器期望 <code>result.content</code>，但main.js返回 <code>result.data</code></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>实施的修复</h2>
+            
+            <div class="fix-item">
+                <strong>1. 在preload.js中添加readFile API:</strong>
+                <pre><code>// 添加到preload.js
+readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)</code></pre>
+            </div>
+            
+            <div class="fix-item">
+                <strong>2. 修正project-manager.html中的数据字段引用:</strong>
+                <pre><code>// 从 result.content 改为 result.data
+await this.loadProjectFromText(result.data, filePath);</code></pre>
+            </div>
+            
+            <div class="fix-item">
+                <strong>3. 确保IPC处理器正常工作:</strong>
+                <ul>
+                    <li>✅ main.js中已有 <code>ipcMain.handle('read-file', ...)</code></li>
+                    <li>✅ 返回格式: <code>{ success: true, data: fileContent }</code></li>
+                    <li>✅ 支持大文件检查和错误处理</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>测试步骤</h2>
+            <ol>
+                <li>启动应用程序: <code>npm start</code></li>
+                <li>点击 <strong>File → Open Project</strong></li>
+                <li>选择一个项目文件 (.prj.GAI, .xml, .json)</li>
+                <li>验证没有"File system access not available"错误</li>
+                <li>确认项目管理器窗口正常打开</li>
+                <li>确认项目成功加载到界面中</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>预期结果</h2>
+            <div class="success">
+                ✅ File → Open Project 应该无错误地工作<br>
+                ✅ 项目管理器窗口应该成功打开<br>
+                ✅ 项目文件应该正确加载和显示<br>
+                ✅ 控制台应该没有"File system access not available"错误<br>
+                ✅ 支持多种项目文件格式 (XML .prj.GAI, JSON .genomeproj)
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>技术细节</h2>
+            <p><strong>文件读取流程:</strong></p>
+            <ol>
+                <li>用户选择 File → Open Project</li>
+                <li>main.js 创建文件选择对话框</li>
+                <li>选中文件后，触发 <code>onLoadProjectFromMenu</code> 事件</li>
+                <li>project-manager.html 调用 <code>loadProjectFromFile(filePath)</code></li>
+                <li>通过 <code>window.electronAPI.readFile(filePath)</code> 读取文件</li>
+                <li>preload.js 将请求转发给 main.js 的 <code>'read-file'</code> 处理器</li>
+                <li>main.js 读取文件并返回 <code>{ success: true, data: content }</code></li>
+                <li>项目管理器解析内容并加载项目</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>相关文件</h2>
+            <ul>
+                <li><code>src/preload.js</code> - 新增readFile API</li>
+                <li><code>src/project-manager.html</code> - 修正data字段引用</li>
+                <li><code>src/main.js</code> - 现有的read-file IPC处理器</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 简单的状态检查
+        function checkAPIAvailability() {
+            const status = document.getElementById('apiStatus');
+            if (window.electronAPI && window.electronAPI.readFile) {
+                console.log('✅ readFile API available');
+            } else {
+                console.log('❌ readFile API not available');
+            }
+        }
+        
+        // 页面加载时检查
+        window.addEventListener('DOMContentLoaded', checkAPIAvailability);
+    </script>
+</body>
+</html> 
