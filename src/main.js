@@ -3387,6 +3387,9 @@ function createGenomicDownloadWindow(downloadType) {
         // Create new project
         createProjectManagerWindow();
         setTimeout(() => {
+          const projectManagerWindow = BrowserWindow.getAllWindows().find(
+            win => win.getTitle().includes('Project Manager')
+          );
           if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
             projectManagerWindow.webContents.send('create-new-project');
           }
