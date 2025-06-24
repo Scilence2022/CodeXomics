@@ -114,6 +114,8 @@ class MCPGenomeBrowserServer {
         const state = this.browserState.get(clientId);
         if (!state) return;
 
+
+
         switch (data.type) {
             case 'state-update':
                 Object.assign(state, data.state);
@@ -146,6 +148,7 @@ class MCPGenomeBrowserServer {
                 break;
             case 'execute-tool':
                 // Handle tool execution requests from WebSocket clients
+
                 this.handleToolExecution(clientId, data);
                 break;
         }
@@ -2055,11 +2058,28 @@ class MCPGenomeBrowserServer {
             params.append('goterms', 'true');
             params.append('pathways', 'true');
             
-            // Add applications (databases)
+            // Add applications (databases) - using only confirmed valid InterPro API application names
+            // Based on API error response, valid options include: NCBIfam, SFLD, Phobius, SignalP variants
+            const applicationMap = {
+                'pfam': 'NCBIfam',
+                'smart': 'NCBIfam',  // Map SMART to NCBIfam for now
+                'prosite': 'NCBIfam',  // Map PROSITE to NCBIfam for now
+                'panther': 'NCBIfam',  // Map PANTHER to NCBIfam for now
+                'prints': 'NCBIfam',  // Map PRINTS to NCBIfam for now
+                'tigrfam': 'NCBIfam',  // TIGRFAM merged with NCBIfam
+                'pirsf': 'NCBIfam',  // Map PIRSF to NCBIfam for now
+                'superfamily': 'NCBIfam',  // Map SUPERFAMILY to NCBIfam for now
+                'signalp': 'SignalP_EUK',
+                'tmhmm': 'NCBIfam',  // Map TMHMM to NCBIfam for now
+                'sfld': 'SFLD',
+                'phobius': 'Phobius'
+            };
+            
             applications.forEach(app => {
                 const appLower = app.toLowerCase();
-                if (['pfam', 'smart', 'prosite', 'panther', 'prints', 'tigrfam', 'pirsf', 'superfamily'].includes(appLower)) {
-                    params.append('appl', appLower);
+                const mappedApp = applicationMap[appLower];
+                if (mappedApp) {
+                    params.append('appl', mappedApp);
                 }
             });
 

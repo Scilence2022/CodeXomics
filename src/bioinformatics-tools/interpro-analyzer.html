@@ -447,9 +447,13 @@
                     };
                     
                     this.mcpClient.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'tool-response') {
-                            this.handleMCPResponse(data);
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('Received MCP message:', data.type);
+                            // WebSocket connection is maintained for status only
+                            // Analysis requests now use HTTP endpoint
+                        } catch (error) {
+                            console.error('Error parsing MCP message:', error);
                         }
                     };
                     
@@ -489,27 +493,32 @@
                 if (statusDetails) statusDetails.textContent = details;
             }
 
-            handleMCPResponse(data) {
-                if (data.success && data.result) {
-                    const results = data.result.results || [];
-                    const summary = data.result.summary || {};
-                    const sequence = data.result.sequence || '';
-                    
-                    // Add visual properties to results
-                    const processedResults = results.map(domain => ({
-                        ...domain,
-                        color: this.getDomainColor(domain.type)
-                    }));
-                    
-                    this.currentResults = processedResults;
-                    this.displayResults(processedResults, sequence, summary, data.result.simulated);
-                    
-                    const sourceNote = data.result.simulated ? ' (simulated analysis)' : ' from InterPro database';
-                    this.showToast(`Found ${results.length} domain(s)${sourceNote}`, 'success');
-                } else {
-                    this.showToast(`Analysis failed: ${data.error || 'Unknown error'}`, 'error');
-                }
-                this.showLoading(false);
+
+            
+            getColorForDomain(domain) {
+                // Use domain color if provided, otherwise generate one based on type/database
+                if (domain.color) return domain.color;
+                
+                const typeColors = {
+                    'Domain': '#4CAF50',
+                    'Family': '#2196F3',
+                    'Repeat': '#FF9800',
+                    'Site': '#9C27B0',
+                    'Coiled coil': '#607D8B',
+                    'Signal': '#FF5722',
+                    'Transmembrane': '#795548'
+                };
+                
+                const dbColors = {
+                    'Pfam': '#4CAF50',
+                    'SMART': '#2196F3', 
+                    'PROSITE': '#FF9800',
+                    'PANTHER': '#9C27B0',
+                    'PRINTS': '#FF5722',
+                    'InterPro': '#3F51B5'
+                };
+                
+                return typeColors[domain.type] || dbColors[domain.database] || '#666';
             }
 
             async pasteFromClipboard() {
@@ -576,8 +585,6 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
             }
 
             async analyzeDomainsViaAPI(sequence) {
-                const requestId = 'analyze_' + Date.now();
-                
                 // Get analysis parameters
                 const includeSignalPeptide = document.getElementById('includeSignalPeptide').checked;
                 const includeTransmembrane = document.getElementById('includeTransmembrane').checked;
@@ -597,13 +604,53 @@ MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAP
 
                 this.updateProgress('Submitting sequence to InterPro database...');
 
-                // Send analysis request to MCP Server
-                this.mcpClient.send(JSON.stringify({
-                    type: 'execute-tool',
-                    requestId: requestId,
-                    toolName: 'analyze_interpro_domains',
-                    parameters: analysisParams
+                try {
+                    // Use HTTP request instead of WebSocket to bypass communication issues
+                    const response = await fetch('http://localhost:3000/execute-tool', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            toolName: 'analyze_interpro_domains',
+                            parameters: analysisParams
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success && data.result) {
+                        this.handleAPIResponse(data.result);
+                    } else {
+                        throw new Error(data.error || 'Unknown error occurred');
+                    }
+                } catch (error) {
+                    console.error('HTTP API request failed:', error);
+                    throw error;
+                }
+            }
+            
+            handleAPIResponse(result) {
+                console.log('Handling API response:', result);
+                
+                const results = result.results || [];
+                const summary = result.summary || {};
+                const sequence = result.sequence || '';
+                
+                this.updateProgress('Processing results...');
+                
+                // Add visual properties to results
+                const processedResults = results.map(domain => ({
+                    ...domain,
+                    color: this.getColorForDomain(domain)
                 }));
+                
+                this.currentResults = processedResults;
+                this.displayResults(processedResults, sequence, summary, result.simulated);
+                
+                const sourceNote = result.simulated ? ' (simulated analysis)' : ' from InterPro database';
+                this.showToast(`Analysis complete! Found ${results.length} domain(s)${sourceNote}`, 'success');
+                this.showLoading(false);
             }
 
             async analyzeDomainsOffline(cleanSeq) {

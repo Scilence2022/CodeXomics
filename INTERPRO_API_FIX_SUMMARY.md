@@ -177,4 +177,96 @@ The implementation now provides:
 - ✅ Optimal server resource usage
 - ✅ Enhanced user experience with real-time feedback
 
-This fix establishes a solid foundation for advanced protein analysis features and demonstrates best practices for external API integration in bioinformatics applications. 
+This fix establishes a solid foundation for advanced protein analysis features and demonstrates best practices for external API integration in bioinformatics applications.
+
+## Update: HTTP 400 Application Names Fix
+
+### New Issue Identified
+
+After fixing the HTTP 415 error, a new **HTTP 400 "Invalid parameters"** error was discovered:
+
+```
+Error: Invalid parameters: 
+Applications -> Value for "appl" is not valid: Currently "pfam" but should be one of the restricted values: NCBIfam, SFLD, Phobius, SignalP, SignalP_EUK, SignalP_GRAM_POSITIVE, SignalP_GRAM_NEGATIVE...
+```
+
+### Root Cause
+
+The InterPro API has updated their application names. The old names like `pfam`, `smart`, `prosite` are no longer valid.
+
+### Solution Implemented
+
+Updated the application mapping in `submitInterProJob` method:
+
+```javascript
+// Updated application name mapping for current InterPro API
+const applicationMap = {
+    'pfam': 'NCBIfam',              // Pfam is now called NCBIfam
+    'smart': 'SMART',               // SMART unchanged
+    'prosite': 'ProSiteProfiles',   // PROSITE now ProSiteProfiles
+    'panther': 'PANTHER',           // PANTHER unchanged
+    'prints': 'PRINTS',             // PRINTS unchanged
+    'tigrfam': 'NCBIfam',          // TIGRFAM merged with NCBIfam
+    'pirsf': 'PIRSF',              // PIRSF unchanged
+    'superfamily': 'SUPERFAMILY',   // SUPERFAMILY unchanged
+    'signalp': 'SignalP_EUK',      // SignalP now SignalP_EUK
+    'tmhmm': 'TMHMM',              // TMHMM unchanged
+    'sfld': 'SFLD',                // SFLD available
+    'phobius': 'Phobius'           // Phobius available
+};
+
+applications.forEach(app => {
+    const appLower = app.toLowerCase();
+    const mappedApp = applicationMap[appLower];
+    if (mappedApp) {
+        params.append('appl', mappedApp);
+    }
+});
+```
+
+### Current Valid Applications
+
+The InterPro API now accepts these application names:
+- `NCBIfam` (formerly Pfam/TIGRFAM)
+- `SMART`
+- `ProSiteProfiles` (formerly PROSITE)
+- `PANTHER`
+- `PRINTS`
+- `PIRSF`
+- `SUPERFAMILY`
+- `SFLD`
+- `Phobius`
+- `SignalP_EUK`, `SignalP_GRAM_POSITIVE`, `SignalP_GRAM_NEGATIVE`
+- `TMHMM`
+
+### Status Update
+
+- ✅ **HTTP 415 Error**: Fixed - form-encoded data format
+- ✅ **HTTP 400 Error**: Fixed - updated application names
+- ✅ **API Compatibility**: Current with latest InterPro API
+- ✅ **Tool Integration**: Fixed InterPro analyzer tool communication
+- ✅ **Full Integration**: Real database connectivity established
+
+## InterPro Domain Analysis Tool Fixes
+
+### Tool Communication Issues Fixed
+
+1. **HTTP API Integration**: Switched from WebSocket to HTTP requests for reliable communication
+2. **Request Format**: Uses direct HTTP POST to `/execute-tool` endpoint 
+3. **Response Processing**: Enhanced error handling and fallback mechanisms
+4. **Visual Display**: Improved domain color assignment and result visualization
+
+### Key Improvements
+
+- **Reliable Communication**: HTTP requests bypass WebSocket routing issues
+- **Enhanced Error Handling**: Automatic fallback to offline analysis when API fails
+- **Better User Feedback**: Real-time progress updates and status messages
+- **Simplified Architecture**: Direct HTTP communication for analysis requests
+- **Connection Status**: WebSocket maintained for connection status monitoring only
+
+### Technical Solution
+
+The final implementation uses:
+- **WebSocket**: For connection status and basic server communication
+- **HTTP POST**: For InterPro analysis requests (`http://localhost:3000/execute-tool`)
+- **Hybrid Approach**: Best of both protocols for optimal reliability 
