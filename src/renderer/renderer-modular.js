@@ -2862,14 +2862,11 @@ class GenomeBrowser {
         const gene = this.selectedGene.gene;
         let translation;
         
-        // Use existing translation if available, otherwise translate the DNA
-        if (gene.qualifiers && gene.qualifiers.translation) {
-            translation = gene.qualifiers.translation;
-        } else {
-            const sequence = this.currentSequence[currentChr];
-            const geneSequence = sequence.substring(gene.start - 1, gene.end);
-            translation = this.translateDNA(geneSequence, gene.strand);
-        }
+        // Always translate from DNA to ensure we get the complete sequence
+        // The gene.qualifiers.translation might be truncated during GenBank parsing for memory efficiency
+        const sequence = this.currentSequence[currentChr];
+        const geneSequence = sequence.substring(gene.start - 1, gene.end);
+        translation = this.translateDNA(geneSequence, gene.strand);
         
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const fastaHeader = `>${geneName}_TRANSLATION ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
