@@ -820,8 +820,8 @@
                     <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.addFiles()">
                         📄 Add Files
                     </button>
-                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.createFolder()">
-                        📁 New Folder
+                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.createFolder()" title="Create new data type folder">
+                        🗂️ New Data Folder
                     </button>
                     <button class="btn btn-sm btn-primary" onclick="projectManagerWindow.saveCurrentProject()" title="Save current project (Ctrl/Cmd+S)">
                         💾 Save
@@ -1428,11 +1428,11 @@ Folders: ${project.folders ? project.folders.length : 0}
                             modified: new Date().toISOString(),
                             files: [],
                             folders: [
-                                { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
-                                { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
-                                { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
-                                { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
-                                { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
+                                { name: 'Genomes', icon: '🧬', path: ['Genomes'], files: [] },
+                                { name: 'Annotations', icon: '📋', path: ['Annotations'], files: [] },
+                                { name: 'Variants', icon: '🔄', path: ['Variants'], files: [] },
+                                { name: 'Reads', icon: '📊', path: ['Reads'], files: [] },
+                                { name: 'Analysis', icon: '📈', path: ['Analysis'], files: [] }
                             ],
                             metadata: {
                                 totalFiles: 0,
@@ -2614,23 +2614,141 @@ Folders: ${project.folders ? project.folders.length : 0}
                     return;
                 }
 
-                const folderName = prompt('Enter folder name:');
-                if (!folderName || !folderName.trim()) return;
-
-                const newPath = [...this.currentPath, folderName.trim().toLowerCase()];
-                const folder = {
-                    name: folderName.trim(),
-                    icon: '📁',
-                    path: newPath,
-                    files: []
-                };
-
-                this.currentProject.folders.push(folder);
-                this.currentProject.modified = new Date().toISOString();
+                this.showCreateFolderModal();
+            }
+            
+            showCreateFolderModal() {
+                // 创建模态对话框
+                const modalHtml = `
+                    <div id="createFolderModal" class="modal" style="display: block;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>🗂️ Create New Data Folder</h3>
+                                <span class="close" onclick="projectManagerWindow.closeModal('createFolderModal')">&times;</span>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="newFolderName">Folder Name:</label>
+                                    <input type="text" id="newFolderName" placeholder="e.g., Proteomics, Metabolomics..." />
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="newFolderIcon">Icon:</label>
+                                    <select id="newFolderIcon">
+                                        <option value="📁">📁 Default Folder</option>
+                                        <option value="🧬">🧬 Genomes</option>
+                                        <option value="📋">📋 Annotations</option>
+                                        <option value="🔄">🔄 Variants</option>
+                                        <option value="📊">📊 Reads/Data</option>
+                                        <option value="📈">📈 Analysis</option>
+                                        <option value="🧪">🧪 Experiments</option>
+                                        <option value="⚡">⚡ Results</option>
+                                        <option value="🎯">🎯 Targets</option>
+                                        <option value="🔬">🔬 Microscopy</option>
+                                        <option value="🌟">🌟 Important</option>
+                                        <option value="📦">📦 Resources</option>
+                                        <option value="🎨">🎨 Visualizations</option>
+                                        <option value="📚">📚 References</option>
+                                        <option value="🧮">🧮 Statistics</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="newFolderDescription">Description (optional):</label>
+                                    <input type="text" id="newFolderDescription" placeholder="Brief description of folder purpose..." />
+                                </div>
+                                
+                                <div class="modal-note">
+                                    <strong>Note:</strong> This will create a new data type folder at the project root level.
+                                    You can organize your files by dragging them into this folder.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" onclick="projectManagerWindow.closeModal('createFolderModal')">Cancel</button>
+                                <button class="btn btn-primary" onclick="projectManagerWindow.createCustomFolder()">Create Folder</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 
-                this.saveProjects();
-                this.renderProjectTree();
-                this.showNotification(`Folder "${folderName}" created`, 'success');
+                // 添加模态对话框到页面
+                const existingModal = document.getElementById('createFolderModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // 聚焦到输入框
+                setTimeout(() => {
+                    document.getElementById('newFolderName').focus();
+                }, 100);
+            }
+            
+            async createCustomFolder() {
+                const folderName = document.getElementById('newFolderName').value.trim();
+                const folderIcon = document.getElementById('newFolderIcon').value;
+                const folderDescription = document.getElementById('newFolderDescription').value.trim();
+                
+                if (!folderName) {
+                    this.showNotification('Please enter a folder name', 'warning');
+                    return;
+                }
+                
+                // 检查是否已存在同名文件夹
+                const existingFolder = this.currentProject.folders.find(f => 
+                    f.name.toLowerCase() === folderName.toLowerCase()
+                );
+                
+                if (existingFolder) {
+                    this.showNotification(`Folder "${folderName}" already exists`, 'warning');
+                    return;
+                }
+                
+                try {
+                    // 在文件系统中创建文件夹
+                    if (window.electronAPI && window.electronAPI.createProjectFolder) {
+                        const result = await window.electronAPI.createProjectFolder(
+                            this.currentProject.name,
+                            folderName
+                        );
+                        
+                        if (!result.success) {
+                            throw new Error(result.error || 'Failed to create folder');
+                        }
+                    }
+                    
+                    // 添加到项目配置
+                    const newFolder = {
+                        name: folderName,
+                        icon: folderIcon,
+                        path: [folderName.toLowerCase()],
+                        files: [],
+                        description: folderDescription || null,
+                        custom: true, // 标记为用户自定义文件夹
+                        created: new Date().toISOString()
+                    };
+                    
+                    this.currentProject.folders.push(newFolder);
+                    this.currentProject.modified = new Date().toISOString();
+                    
+                    // 标记项目为已修改
+                    this.markProjectAsModified();
+                    
+                    // 保存和刷新界面
+                    await this.saveProjects();
+                    this.renderProjectTree();
+                    this.updateSaveButtonState();
+                    
+                    this.closeModal('createFolderModal');
+                    this.showNotification(`✅ Folder "${folderName}" created successfully`, 'success');
+                    
+                    console.log(`📁 Created custom folder: ${folderName} (${folderIcon})`);
+                    
+                } catch (error) {
+                    console.error('Error creating custom folder:', error);
+                    this.showNotification(`Failed to create folder: ${error.message}`, 'error');
+                }
             }
 
             selectFile(fileId) {
@@ -3331,12 +3449,16 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                     return;
                 }
 
-                if (!this.currentProject.projectFilePath) {
-                    // 如果没有项目文件路径，提示另存为
-                    return await this.saveProjectAs();
-                }
-
                 try {
+                    // 如果没有项目文件路径，自动生成一个
+                    if (!this.currentProject.projectFilePath) {
+                        const documentsPath = window.electronAPI ? await window.electronAPI.getDocumentsPath() : 'Documents';
+                        const projectsDir = `${documentsPath}/GenomeExplorer Projects`;
+                        this.currentProject.projectFilePath = `${projectsDir}/${this.currentProject.name}.prj.GAI`;
+                        this.currentProject.location = projectsDir;
+                        console.log(`📁 Auto-generated project file path: ${this.currentProject.projectFilePath}`);
+                    }
+
                     await this.saveProjectToFile(this.currentProject);
                     
                     // 标记为已保存状态
@@ -3346,7 +3468,15 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                     
                 } catch (error) {
                     console.error('Error saving current project:', error);
-                    this.showNotification(`Failed to save project: ${error.message}`, 'error');
+                    
+                    // 如果保存失败，尝试另存为
+                    if (error.message.includes('path') || error.message.includes('directory')) {
+                        console.log('🔄 Save failed, attempting Save As...');
+                        this.showNotification('Save failed, please choose a location', 'warning');
+                        return await this.saveProjectAs();
+                    } else {
+                        this.showNotification(`Failed to save project: ${error.message}`, 'error');
+                    }
                 }
             }
 

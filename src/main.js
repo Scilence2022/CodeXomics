@@ -2866,10 +2866,10 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
       return { success: false, error: 'Source file does not exist' };
     }
 
-    // 构建目标路径
+    // 修正：构建目标路径，不使用额外的data目录
     const documentsPath = app.getPath('documents');
     const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
-    const targetDir = path.join(projectsDir, projectName, 'data', targetFolderPath);
+    const targetDir = path.join(projectsDir, projectName, targetFolderPath);
     
     // 确保目标目录存在
     if (!fs.existsSync(targetDir)) {
@@ -2988,6 +2988,44 @@ ipcMain.handle('unlockProjectFile', async (event, filePath, lockId) => {
 app.on('before-quit', () => {
   console.log('🔓 Cleaning up all file locks before quit...');
   projectFileLocks.clear();
+});
+
+// Handle getting documents path
+ipcMain.handle('getDocumentsPath', async () => {
+  try {
+    return app.getPath('documents');
+  } catch (error) {
+    console.error('Error getting documents path:', error);
+    return null;
+  }
+});
+
+// Handle creating project folder
+ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => {
+  try {
+    const documentsPath = app.getPath('documents');
+    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const projectDir = path.join(projectsDir, projectName);
+    const folderPath = path.join(projectDir, folderName);
+    
+    // 确保项目目录存在
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true });
+    }
+    
+    // 创建新文件夹
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+      console.log(`✅ Created project folder: ${folderPath}`);
+      return { success: true, folderPath: folderPath };
+    } else {
+      return { success: false, error: 'Folder already exists' };
+    }
+    
+  } catch (error) {
+    console.error('Error creating project folder:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Handle projects data saving
@@ -3291,12 +3329,11 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
   try {
     const os = require('os');
     
-    // 创建项目数据目录结构
+    // 修正：直接使用项目目录结构，不要额外的data子目录
     const documentsPath = app.getPath('documents');
     const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
     const projectDir = path.join(projectsDir, projectName);
-    const dataDir = path.join(projectDir, 'data');
-    const targetFolderDir = path.join(dataDir, folderPath);
+    const targetFolderDir = path.join(projectDir, folderPath);
     
     // 确保目录存在
     if (!fs.existsSync(projectsDir)) {
@@ -3304,9 +3341,6 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     }
     if (!fs.existsSync(projectDir)) {
       fs.mkdirSync(projectDir, { recursive: true });
-    }
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
     }
     if (!fs.existsSync(targetFolderDir)) {
       fs.mkdirSync(targetFolderDir, { recursive: true });
@@ -3330,7 +3364,6 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
       success: true,
       newPath: targetPath,
       projectDir: projectDir,
-      dataDir: dataDir,
       targetFolder: targetFolderDir
     };
     
@@ -3355,8 +3388,8 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
       fs.mkdirSync(dataFolderPath, { recursive: true });
     }
     
-    // 创建子文件夹结构
-    const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
+    // 修正：创建子文件夹结构，使用大写首字母以匹配UI显示
+    const subFolders = ['Genomes', 'Annotations', 'Variants', 'Reads', 'Analysis'];
     subFolders.forEach(folderName => {
       const subFolderPath = path.join(dataFolderPath, folderName);
       if (!fs.existsSync(subFolderPath)) {
