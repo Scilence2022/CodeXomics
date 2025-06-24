@@ -2850,13 +2850,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                         return;
                     }
 
-                    // 委托给 ProjectManager 的实现
-                    if (this.projectManager) {
-                        console.log('✅ Using ProjectManager core logic for file opening');
-                        return await this.projectManager.openFileInMainWindow(fileId);
-                    }
-
-                    // 尝试直接使用 IPC 打开文件
+                    // 直接使用 IPC 打开文件
                     if (window.electronAPI) {
                         console.log('📤 Attempting to open file directly via IPC');
                         
