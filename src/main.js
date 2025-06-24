@@ -484,6 +484,20 @@ function createMenu() {
       label: 'File',
       submenu: [
         {
+          label: 'New Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            // Create Project Manager window and trigger new project creation
+            createProjectManagerWindow();
+            // Send event to trigger new project modal after window is ready
+            setTimeout(() => {
+              if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
+                projectManagerWindow.webContents.send('create-new-project');
+              }
+            }, 500);
+          }
+        },
+        {
           label: 'Open File',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {

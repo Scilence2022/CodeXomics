@@ -1630,6 +1630,16 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
             } else {
                 console.warn('⚠️ ProjectManager not available, using fallback UI only');
             }
+
+            // 设置IPC事件监听器
+            if (window.electronAPI && window.electronAPI.onCreateNewProject) {
+                window.electronAPI.onCreateNewProject(() => {
+                    console.log('📝 Create new project requested from main menu');
+                    if (projectManagerWindow) {
+                        projectManagerWindow.createNewProject();
+                    }
+                });
+            }
         });
     </script>
     

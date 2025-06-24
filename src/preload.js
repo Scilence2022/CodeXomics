@@ -55,6 +55,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onResourceAdded: (callback) => {
     ipcRenderer.on('resource-added', callback);
   },
+
+  // Project Manager specific event listeners
+  onCreateNewProject: (callback) => {
+    ipcRenderer.on('create-new-project', callback);
+  },
   
   // Remove listeners
   removeAllListeners: (channel) => {
