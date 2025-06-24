@@ -2668,7 +2668,7 @@ ipcMain.on('focus-main-window', () => {
     mainWindow.focus();
     mainWindow.show();
   }
-});
+}); 
 
 // ========== PROJECT MANAGER WINDOW ==========
 
@@ -2857,6 +2857,137 @@ ipcMain.handle('openFolderInExplorer', async (event, folderPath) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// Handle moving file within project
+ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targetFolderPath) => {
+  try {
+    if (!fs.existsSync(currentPath)) {
+      return { success: false, error: 'Source file does not exist' };
+    }
+
+    // 构建目标路径
+    const documentsPath = app.getPath('documents');
+    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const targetDir = path.join(projectsDir, projectName, 'data', targetFolderPath);
+    
+    // 确保目标目录存在
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+    
+    const fileName = path.basename(currentPath);
+    const targetPath = path.join(targetDir, fileName);
+    
+    // 如果目标文件已存在，生成新的文件名
+    let finalTargetPath = targetPath;
+    let counter = 1;
+    while (fs.existsSync(finalTargetPath)) {
+      const nameWithoutExt = path.parse(fileName).name;
+      const extension = path.parse(fileName).ext;
+      finalTargetPath = path.join(targetDir, `${nameWithoutExt}_${counter}${extension}`);
+      counter++;
+    }
+    
+    // 移动文件
+    fs.renameSync(currentPath, finalTargetPath);
+    
+    console.log(`✅ File moved from ${currentPath} to ${finalTargetPath}`);
+    return { success: true, newPath: finalTargetPath, message: 'File moved successfully' };
+  } catch (error) {
+    console.error('Error moving file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// File locking management
+const projectFileLocks = new Map();
+
+// Handle project file locking
+ipcMain.handle('lockProjectFile', async (event, filePath) => {
+  try {
+    // 检查文件是否已被锁定
+    if (projectFileLocks.has(filePath)) {
+      return { 
+        success: false, 
+        error: 'File is already locked by another instance of GenomeExplorer' 
+      };
+    }
+    
+    // 尝试以独占方式打开文件进行测试
+    try {
+      const lockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // 使用fs.open检查文件是否可以独占访问
+      const fd = fs.openSync(filePath, 'r+');
+      fs.closeSync(fd);
+      
+      // 创建锁定记录
+      projectFileLocks.set(filePath, {
+        lockId: lockId,
+        lockedAt: new Date().toISOString(),
+        processId: process.pid
+      });
+      
+      console.log(`🔒 Project file locked: ${filePath} (ID: ${lockId})`);
+      return { success: true, lockId: lockId };
+      
+    } catch (fileError) {
+      if (fileError.code === 'EBUSY' || fileError.code === 'EACCES') {
+        return { 
+          success: false, 
+          error: 'File is currently being used by another application' 
+        };
+      }
+      throw fileError;
+    }
+    
+  } catch (error) {
+    console.error('Error locking project file:', error);
+    return { 
+      success: false, 
+      error: `Failed to lock file: ${error.message}` 
+    };
+  }
+});
+
+// Handle project file unlocking
+ipcMain.handle('unlockProjectFile', async (event, filePath, lockId) => {
+  try {
+    const lockInfo = projectFileLocks.get(filePath);
+    
+    if (!lockInfo) {
+      console.warn(`No lock found for file: ${filePath}`);
+      return { success: true }; // 文件未锁定，视为成功
+    }
+    
+    if (lockInfo.lockId !== lockId) {
+      console.warn(`Lock ID mismatch for file: ${filePath}`);
+      return { 
+        success: false, 
+        error: 'Invalid lock ID' 
+      };
+    }
+    
+    // 移除锁定记录
+    projectFileLocks.delete(filePath);
+    console.log(`🔓 Project file unlocked: ${filePath} (ID: ${lockId})`);
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error unlocking project file:', error);
+    return { 
+      success: false, 
+      error: `Failed to unlock file: ${error.message}` 
+    };
+  }
+});
+
+// 应用关闭时清理所有锁定
+app.on('before-quit', () => {
+  console.log('🔓 Cleaning up all file locks before quit...');
+  projectFileLocks.clear();
 });
 
 // Handle projects data saving

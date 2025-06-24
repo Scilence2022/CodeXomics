@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadProjectFile: (filePath) => ipcRenderer.invoke('loadProjectFile', filePath),
   openFileInMainWindow: (filePath) => ipcRenderer.invoke('openFileInMainWindow', filePath),
   openFolderInExplorer: (folderPath) => ipcRenderer.invoke('openFolderInExplorer', folderPath),
+  moveFileInProject: (currentPath, projectName, targetFolderPath) => ipcRenderer.invoke('moveFileInProject', currentPath, projectName, targetFolderPath),
+  
+  // Project file locking APIs
+  lockProjectFile: (filePath) => ipcRenderer.invoke('lockProjectFile', filePath),
+  unlockProjectFile: (filePath, lockId) => ipcRenderer.invoke('unlockProjectFile', filePath, lockId),
   saveProjectsData: (projectsData) => ipcRenderer.invoke('saveProjectsData', projectsData),
   loadProjectsData: () => ipcRenderer.invoke('loadProjectsData'),
   saveProjectSettings: (settings) => ipcRenderer.invoke('saveProjectSettings', settings),
