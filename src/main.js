@@ -2850,4 +2850,49 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// Handle creating temporary file
+ipcMain.handle('createTempFile', async (event, fileName, content) => {
+  try {
+    const tempDir = app.getPath('temp');
+    const tempFilePath = path.join(tempDir, 'genomeexplorer_temp_' + Date.now() + '_' + fileName);
+    
+    fs.writeFileSync(tempFilePath, content, 'utf8');
+    
+    // Schedule file deletion after 5 minutes
+    setTimeout(() => {
+      try {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+          console.log('Cleaned up temp file:', tempFilePath);
+        }
+      } catch (err) {
+        console.error('Error cleaning up temp file:', err);
+      }
+    }, 5 * 60 * 1000);
+    
+    return { success: true, filePath: tempFilePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle getting file information
+ipcMain.handle('getFileInfo', async (event, filePath) => {
+  try {
+    const stats = fs.statSync(filePath);
+    const fileName = path.basename(filePath);
+    
+    return {
+      success: true,
+      info: {
+        size: stats.size,
+        mtime: stats.mtime.toISOString(),
+        name: fileName
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }); 

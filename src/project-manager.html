@@ -386,13 +386,13 @@
             <span style="opacity: 0.8; font-size: 13px;">Organize and manage your genomic data projects</span>
         </div>
         <div class="header-actions">
-            <button class="btn btn-primary" onclick="projectManager.createNewProject()">
+            <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
                 📂 New Project
             </button>
-            <button class="btn btn-primary" onclick="projectManager.openProject()">
+            <button class="btn btn-primary" onclick="projectManagerWindow.openProject()">
                 📖 Open Project
             </button>
-            <button class="btn btn-primary" onclick="projectManager.showSettings()">
+            <button class="btn btn-primary" onclick="projectManagerWindow.showSettings()">
                 ⚙️ Settings
             </button>
         </div>
@@ -402,7 +402,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>Projects & Workspaces</h3>
-                <button class="btn btn-sm btn-secondary" onclick="projectManager.refreshProjects()">
+                <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.refreshProjects()">
                     🔄
                 </button>
             </div>
@@ -418,10 +418,10 @@
                 <div class="content-title" id="contentTitle">Welcome to Project Manager</div>
                 <div class="toolbar">
                     <input type="text" class="search-box" placeholder="Search files..." id="searchBox">
-                    <button class="btn btn-sm btn-secondary" onclick="projectManager.addFiles()">
+                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.addFiles()">
                         📄 Add Files
                     </button>
-                    <button class="btn btn-sm btn-secondary" onclick="projectManager.createFolder()">
+                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.createFolder()">
                         📁 New Folder
                     </button>
                 </div>
@@ -460,7 +460,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Create New Project</h3>
-                <button class="modal-close" onclick="projectManager.closeModal('newProjectModal')">&times;</button>
+                <button class="modal-close" onclick="projectManagerWindow.closeModal('newProjectModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -474,14 +474,14 @@
                 <div class="form-group">
                     <label class="form-label">Location</label>
                     <input type="text" class="form-input" id="projectLocation" placeholder="Select project location" readonly>
-                    <button class="btn btn-secondary btn-sm" onclick="projectManager.selectProjectLocation()" style="margin-top: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="projectManagerWindow.selectProjectLocation()" style="margin-top: 8px;">
                         📁 Browse...
                     </button>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="projectManager.closeModal('newProjectModal')">Cancel</button>
-                <button class="btn btn-success" onclick="projectManager.createProject()">Create Project</button>
+                <button class="btn btn-secondary" onclick="projectManagerWindow.closeModal('newProjectModal')">Cancel</button>
+                <button class="btn btn-success" onclick="projectManagerWindow.createProject()">Create Project</button>
             </div>
         </div>
     </div>
@@ -754,9 +754,9 @@
                                 <div class="empty-state-icon">📄</div>
                                 <h3>No files found</h3>
                                 <p>Add some files to this folder to get started.</p>
-                                <button class="btn btn-primary" onclick="projectManager.addFiles()">
-                                    Add Files
-                                </button>
+                                                        <button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">
+                            Add Files
+                        </button>
                             </div>
                         </div>
                     `;
@@ -791,30 +791,114 @@
             }
 
             async addFiles() {
+                console.log('📁 Add Files button clicked');
+                
                 if (!this.currentProject) {
                     this.showNotification('Please select a project first', 'warning');
                     return;
                 }
 
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.multiple = true;
-                input.accept = '.fasta,.fa,.gff,.gtf,.vcf,.bam,.sam,.wig,.bed,.gb,.gbk';
-                input.onchange = (e) => {
-                    const files = Array.from(e.target.files);
-                    this.processFileObjects(files);
-                };
-                input.click();
+                // 优先使用ProjectManager的addFiles方法
+                if (this.projectManager) {
+                    console.log('✅ Using ProjectManager core logic for adding files');
+                    return await this.projectManager.addFiles();
+                }
+
+                // 如果在Electron环境中，使用文件选择API
+                if (window.electronAPI && window.electronAPI.selectMultipleFiles) {
+                    console.log('🔧 Using Electron API for file selection');
+                    try {
+                        const result = await window.electronAPI.selectMultipleFiles();
+                        if (result.success && !result.canceled && result.filePaths) {
+                            await this.processSelectedFiles(result.filePaths);
+                        }
+                    } catch (error) {
+                        console.error('Error selecting files:', error);
+                        this.showNotification('Failed to select files: ' + error.message, 'error');
+                    }
+                } else {
+                    // 浏览器环境下的文件选择
+                    console.log('🌐 Using browser file selection');
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = '.fasta,.fa,.gff,.gtf,.vcf,.bam,.sam,.wig,.bed,.gb,.gbk';
+                    input.onchange = (e) => {
+                        const files = Array.from(e.target.files);
+                        this.processFileObjects(files);
+                    };
+                    input.click();
+                }
             }
 
+            // 处理文件路径（Electron环境）
+            async processSelectedFiles(filePaths) {
+                console.log('📂 Processing selected files:', filePaths);
+                let addedCount = 0;
+                
+                for (const filePath of filePaths) {
+                    try {
+                        // 获取文件名和统计信息
+                        const fileName = filePath.split(/[/\\]/).pop();
+                        let fileSize = 0;
+                        let lastModified = new Date().toISOString();
+
+                        // 尝试获取文件信息
+                        if (window.electronAPI && window.electronAPI.getFileInfo) {
+                            try {
+                                const fileInfo = await window.electronAPI.getFileInfo(filePath);
+                                if (fileInfo.success) {
+                                    fileSize = fileInfo.info.size;
+                                    lastModified = fileInfo.info.mtime;
+                                }
+                            } catch (error) {
+                                console.warn('Could not get file info for:', fileName);
+                            }
+                        }
+
+                        const fileObj = {
+                            id: this.generateId(),
+                            name: fileName,
+                            path: filePath,
+                            size: fileSize,
+                            type: this.detectFileType(fileName),
+                            folder: [...this.currentPath],
+                            added: new Date().toISOString(),
+                            modified: lastModified
+                        };
+                        
+                        this.currentProject.files.push(fileObj);
+                        addedCount++;
+                        console.log('✅ Added file:', fileName);
+                    } catch (error) {
+                        console.error('Error processing file:', filePath, error);
+                    }
+                }
+                
+                if (addedCount > 0) {
+                    this.currentProject.modified = new Date().toISOString();
+                    this.currentProject.metadata.totalFiles = this.currentProject.files.length;
+                    this.currentProject.metadata.totalSize = this.currentProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
+                    
+                    await this.saveProjects();
+                    this.renderProjectContent();
+                    this.showNotification(`✅ Added ${addedCount} file(s) to project`, 'success');
+                    console.log(`📊 Project updated: ${this.currentProject.metadata.totalFiles} total files`);
+                } else {
+                    this.showNotification('No files were added', 'warning');
+                }
+            }
+
+            // 处理文件对象（浏览器环境）
             async processFileObjects(files) {
+                console.log('🌐 Processing file objects from browser:', files.length);
                 let addedCount = 0;
                 
                 for (const file of files) {
                     const fileObj = {
                         id: this.generateId(),
                         name: file.name,
-                        path: file.name,
+                        path: file.name, // 浏览器环境下只能获取文件名
                         size: file.size,
                         type: this.detectFileType(file.name),
                         folder: [...this.currentPath],
@@ -829,10 +913,11 @@
                 if (addedCount > 0) {
                     this.currentProject.modified = new Date().toISOString();
                     this.currentProject.metadata.totalFiles = this.currentProject.files.length;
+                    this.currentProject.metadata.totalSize = this.currentProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
                     
                     await this.saveProjects();
                     this.renderProjectContent();
-                    this.showNotification(`Added ${addedCount} file(s) to project`, 'success');
+                    this.showNotification(`✅ Added ${addedCount} file(s) to project`, 'success');
                 }
             }
 
@@ -872,22 +957,141 @@
                 console.log('🎯 Opening file in main window - fileId:', fileId);
                 console.log('🔧 ProjectManager available:', !!this.projectManager);
                 
-                // 委托给 ProjectManager 的实现
-                if (this.projectManager) {
-                    console.log('✅ Using ProjectManager core logic for file opening');
-                    return await this.projectManager.openFileInMainWindow(fileId);
-                }
-                
                 const file = this.findFileById(fileId);
                 console.log('📁 Found file:', file);
                 if (!file) {
                     console.error('❌ File not found with ID:', fileId);
+                    this.showNotification('File not found', 'error');
                     return;
                 }
 
-                // 如果没有 ProjectManager，显示通知
-                console.log('⚠️ Fallback: No ProjectManager, showing notification only');
-                this.showNotification(`Would open "${file.name}" in main window`, 'info');
+                try {
+                    // 检查文件路径是否为测试/虚拟路径
+                    if (file.path && file.path.startsWith('/test/')) {
+                        console.log('⚠️ Test file detected, creating demo content');
+                        await this.openTestFile(file);
+                        return;
+                    }
+
+                    // 委托给 ProjectManager 的实现
+                    if (this.projectManager) {
+                        console.log('✅ Using ProjectManager core logic for file opening');
+                        return await this.projectManager.openFileInMainWindow(fileId);
+                    }
+
+                    // 尝试直接使用 IPC 打开文件
+                    if (window.electronAPI) {
+                        console.log('📤 Attempting to open file directly via IPC');
+                        
+                        // 检查主窗口状态
+                        const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
+                        
+                        if (mainWindowStatus.hasOpenFile) {
+                            // 主窗口已有文件，创建新窗口
+                            const result = await window.electronAPI.createNewMainWindow(file.path);
+                            if (result.success) {
+                                this.showNotification(`✅ Opened "${file.name}" in new window`, 'success');
+                            } else {
+                                throw new Error(result.error);
+                            }
+                        } else {
+                            // 主窗口没有文件，在当前主窗口打开
+                            const result = await window.electronAPI.openFileInMainWindow(file.path);
+                            if (result.success) {
+                                this.showNotification(`✅ Opened "${file.name}" in GenomeExplorer`, 'success');
+                            } else {
+                                throw new Error(result.error);
+                            }
+                        }
+                    } else {
+                        // 如果没有 Electron API，显示通知
+                        console.log('⚠️ No Electron API available');
+                        this.showNotification(`Cannot open "${file.name}" - Electron API not available`, 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error opening file:', error);
+                    this.showNotification(`Failed to open "${file.name}": ${error.message}`, 'error');
+                }
+            }
+
+            // 打开项目文件
+            async openProject() {
+                try {
+                    if (window.electronAPI && window.electronAPI.selectProjectFile) {
+                        const result = await window.electronAPI.selectProjectFile();
+                        if (result.success && !result.canceled && result.filePath) {
+                            await this.loadProjectFromFile(result.filePath);
+                        }
+                    } else {
+                        // 浏览器环境下使用文件输入
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.xml,.json,.genproj';
+                        input.onchange = async (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const text = await file.text();
+                                await this.loadProjectFromText(text, file.name);
+                            }
+                        };
+                        input.click();
+                    }
+                } catch (error) {
+                    console.error('Error opening project:', error);
+                    this.showNotification('Failed to open project: ' + error.message, 'error');
+                }
+            }
+
+            // 从文件加载项目
+            async loadProjectFromFile(filePath) {
+                try {
+                    if (window.electronAPI && window.electronAPI.readFile) {
+                        const result = await window.electronAPI.readFile(filePath);
+                        if (result.success) {
+                            await this.loadProjectFromText(result.content, filePath);
+                        } else {
+                            throw new Error(result.error || 'Failed to read file');
+                        }
+                    } else {
+                        throw new Error('File system access not available');
+                    }
+                } catch (error) {
+                    console.error('Error loading project from file:', error);
+                    this.showNotification('Failed to load project: ' + error.message, 'error');
+                }
+            }
+
+            // 从文本内容加载项目
+            async loadProjectFromText(content, fileName) {
+                try {
+                    let project;
+                    
+                    // 检测文件格式
+                    if (content.trim().startsWith('<')) {
+                        // XML格式
+                        if (this.projectManager && this.projectManager.xmlHandler) {
+                            project = this.projectManager.xmlHandler.parseXML(content);
+                        } else {
+                            throw new Error('XML parser not available');
+                        }
+                    } else {
+                        // JSON格式
+                        project = JSON.parse(content);
+                    }
+
+                    if (project && project.id) {
+                        this.projects.set(project.id, project);
+                        await this.saveProjects();
+                        this.renderProjectTree();
+                        this.selectProject(project.id);
+                        this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
+                    } else {
+                        throw new Error('Invalid project format');
+                    }
+                } catch (error) {
+                    console.error('Error parsing project:', error);
+                    this.showNotification('Failed to parse project file: ' + error.message, 'error');
+                }
             }
 
             refreshProjects() {
@@ -984,6 +1188,111 @@
             closeModal(modalId) {
                 const modal = document.getElementById(modalId);
                 if (modal) modal.style.display = 'none';
+            }
+
+            // 打开测试文件（创建演示内容）
+            async openTestFile(file) {
+                console.log('🧪 Opening test file with demo content:', file.name);
+                
+                try {
+                    // 根据文件类型创建不同的演示内容
+                    let demoContent = '';
+                    let demoFilePath = '';
+                    
+                    if (file.type === 'fasta') {
+                        // 创建演示 FASTA 内容
+                        demoContent = `>Demo_Genome_Chr1 Escherichia coli demonstration sequence
+ATGGCAGAACGACGCGTAATCGTCGTATCGAAGGTCGTAATGCCGCTGCGCTGGCTGCGG
+CTGAAGTTCAACATCGTCTGCGTATTCTGGAAAGCGAACTGGAAGATCTGCTGGCGAAAG
+CGAAAGAAGCGGGTAAAAAAGCGGGCGAAACCATTGATGTTGCAGTGATGTGGGTTAACC
+CGCAGCAGATGGTGATTGGTGAAGGCAAAGTGATTCGCGTTTTTGATGCGCTGCGCATTC
+TGGATGAAACCGGCGTAAAAGGGATTCTGACCGCGTTTGTTGAAGCGCGTAACGTACTGC
+CGGAAGAAACCATTATGGGTAACGCAGGTCGTCTGGCAAAACTGGGCGACAAAATCAAAG
+GCGCAGGTGAAGTGATGGACGAAGTGATGGAGTTTGTTCAGAAAGCGGTGCGCGAAGACG
+GTATCGATGTTGTGCGTACCCATGCGGCACATCGTCTGCCGATGACCGGTGAACAGCTGC
+CGCTGGATGAAACCGAAGTGTTTACCGATATTGATCTGGTTTTTGCCGACTTCCGTGAAG
+ATCTGCACGATCTGATTTGCCAGAAATTTAACGAGCCGGATGCAAACGCGATTGCCTATA
+>Demo_Genome_Chr2 Synthetic sequence for testing
+CGTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTA
+GCATGCATGCTAGCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTAGCATGCATGCTA
+GCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTAGCATGCATGCTAGCTAGCTAGCTA`;
+                        demoFilePath = 'demo_genome.fasta';
+                    } else if (file.type === 'gff') {
+                        // 创建演示 GFF 内容
+                        demoContent = `##gff-version 3
+##sequence-region Demo_Genome_Chr1 1 600
+Demo_Genome_Chr1\tGenomeExplorer\tgene\t1\t180\t.\t+\t.\tID=gene001;Name=demoA;description=Demo gene A
+Demo_Genome_Chr1\tGenomeExplorer\tCDS\t1\t180\t.\t+\t0\tID=cds001;Parent=gene001;Name=demoA
+Demo_Genome_Chr1\tGenomeExplorer\tgene\t200\t360\t.\t-\t.\tID=gene002;Name=demoB;description=Demo gene B
+Demo_Genome_Chr1\tGenomeExplorer\tCDS\t200\t360\t.\t-\t0\tID=cds002;Parent=gene002;Name=demoB
+Demo_Genome_Chr1\tGenomeExplorer\tgene\t400\t600\t.\t+\t.\tID=gene003;Name=demoC;description=Demo gene C
+Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene003;Name=demoC`;
+                        demoFilePath = 'demo_annotations.gff';
+                    } else {
+                        // 其他文件类型的默认内容
+                        demoContent = `# Demo file content for ${file.name}\n# File type: ${file.type}\n# This is a demonstration file.`;
+                        demoFilePath = file.name;
+                    }
+
+                    // 创建临时文件
+                    if (window.electronAPI && window.electronAPI.createTempFile) {
+                        const result = await window.electronAPI.createTempFile(demoFilePath, demoContent);
+                        if (result.success) {
+                            // 使用临时文件路径打开文件
+                            const openResult = await window.electronAPI.openFileInMainWindow(result.filePath);
+                            if (openResult.success) {
+                                this.showNotification(`✅ Opened demo file "${file.name}" in GenomeExplorer`, 'success');
+                            } else {
+                                throw new Error(openResult.error);
+                            }
+                        } else {
+                            throw new Error(result.error || 'Failed to create temp file');
+                        }
+                    } else {
+                        // 如果没有创建临时文件的API，至少显示内容预览
+                        this.showDemoContentPreview(file, demoContent);
+                    }
+                } catch (error) {
+                    console.error('Error opening test file:', error);
+                    this.showNotification(`Test file "${file.name}" contains demo data. Add real files to work with actual genomic data.`, 'info');
+                }
+            }
+
+            // 显示演示内容预览
+            showDemoContentPreview(file, content) {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'block';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3>Demo Content Preview: ${file.name}</h3>
+                            <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p style="margin-bottom: 15px;">This is a test file with demonstration content. To work with real genomic data, please add actual files to your project.</p>
+                            <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; font-family: 'Courier New', monospace; font-size: 12px;">${this.escapeHtml(content)}</pre>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+
+            // HTML转义
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
 
             // 工具方法

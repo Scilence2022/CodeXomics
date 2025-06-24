@@ -32,7 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // File Save APIs
   saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
-  saveProjectFile: (defaultPath, content) => ipcRenderer.invoke('saveProjectFile', defaultPath, content),
+      saveProjectFile: (defaultPath, content) => ipcRenderer.invoke('saveProjectFile', defaultPath, content),
+    createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
+    getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
   
   // Communication with main window
   sendToMainWindow: (channel, data) => ipcRenderer.invoke('send-to-main-window', channel, data),
