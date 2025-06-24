@@ -66,6 +66,41 @@
             opacity: 0.9;
         }
 
+        .mcp-connect-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .mcp-connect-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-1px);
+        }
+
+        .mcp-connect-btn.connected {
+            background: rgba(76,175,80,0.8);
+            border-color: rgba(76,175,80,1);
+        }
+
+        .mcp-connect-btn.connecting {
+            background: rgba(255,165,0,0.8);
+            border-color: rgba(255,165,0,1);
+        }
+
+        .mcp-connect-btn.disconnected {
+            background: rgba(244,67,54,0.8);
+            border-color: rgba(244,67,54,1);
+        }
+
         .main-container {
             display: flex;
             height: calc(100vh - 100px);
@@ -247,11 +282,17 @@
                     <p>Protein Domain and Family Classification</p>
                 </div>
             </div>
-            <div id="connectionStatus" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
-                <div id="statusIndicator" style="width: 12px; height: 12px; border-radius: 50%; background: #ffa500;"></div>
-                <div style="color: white; font-size: 0.9rem;">
-                    <div id="statusText">Connecting to MCP Server...</div>
-                    <div id="statusDetails" style="font-size: 0.8rem; opacity: 0.8;">InterPro API Integration</div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="mcpConnectBtn" class="mcp-connect-btn">
+                    <i class="fas fa-plug"></i>
+                    <span>Connect MCP</span>
+                </button>
+                <div id="connectionStatus" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
+                    <div id="statusIndicator" style="width: 12px; height: 12px; border-radius: 50%; background: #ffa500;"></div>
+                    <div style="color: white; font-size: 0.9rem;">
+                        <div id="statusText">Connecting to MCP Server...</div>
+                        <div id="statusDetails" style="font-size: 0.8rem; opacity: 0.8;">InterPro API Integration</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -426,11 +467,54 @@
                 document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
                 document.getElementById('pasteBtn').addEventListener('click', () => this.pasteFromClipboard());
+                document.getElementById('mcpConnectBtn').addEventListener('click', () => this.toggleMCPConnection());
             }
 
             initMenuHandler() {
                 // Initialize menu handler with tool-specific actions
                 this.menuHandler = new ToolMenuHandler('InterPro Domain Analysis', this);
+            }
+
+            toggleMCPConnection() {
+                const btn = document.getElementById('mcpConnectBtn');
+                const icon = btn.querySelector('i');
+                const text = btn.querySelector('span');
+
+                if (this.isConnected) {
+                    // Disconnect
+                    this.disconnectMCP();
+                    btn.className = 'mcp-connect-btn disconnected';
+                    icon.className = 'fas fa-plug';
+                    text.textContent = 'Connect MCP';
+                } else {
+                    // Connect
+                    btn.className = 'mcp-connect-btn connecting';
+                    icon.className = 'fas fa-spinner fa-spin';
+                    text.textContent = 'Connecting...';
+                    this.initializeMCPConnection();
+                }
+            }
+
+            disconnectMCP() {
+                this.isConnected = false;
+                this.mcpClient = null;
+                this.updateConnectionStatus('disconnected', 'Disconnected from MCP Server', 'Click Connect MCP to reconnect');
+            }
+
+            updateMCPButtonState(connected) {
+                const btn = document.getElementById('mcpConnectBtn');
+                const icon = btn.querySelector('i');
+                const text = btn.querySelector('span');
+
+                if (connected) {
+                    btn.className = 'mcp-connect-btn connected';
+                    icon.className = 'fas fa-check-circle';
+                    text.textContent = 'MCP Connected';
+                } else {
+                    btn.className = 'mcp-connect-btn disconnected';
+                    icon.className = 'fas fa-plug';
+                    text.textContent = 'Connect MCP';
+                }
             }
 
             async initializeMCPConnection() {
@@ -491,6 +575,12 @@
                 if (indicator) indicator.style.background = colors[status] || '#666';
                 if (statusText) statusText.textContent = text;
                 if (statusDetails) statusDetails.textContent = details;
+                
+                // Update MCP button state based on connection status
+                this.updateMCPButtonState(status === 'connected');
+                
+                // Update isConnected flag
+                this.isConnected = (status === 'connected');
             }
 
 
