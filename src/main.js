@@ -3028,4 +3028,61 @@ ipcMain.handle('updateRecentProjects', async (event, recentProjects) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// Handle copying files to project directory
+ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folderPath) => {
+  try {
+    const os = require('os');
+    
+    // 创建项目数据目录结构
+    const documentsPath = app.getPath('documents');
+    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const projectDir = path.join(projectsDir, projectName);
+    const dataDir = path.join(projectDir, 'data');
+    const targetFolderDir = path.join(dataDir, folderPath);
+    
+    // 确保目录存在
+    if (!fs.existsSync(projectsDir)) {
+      fs.mkdirSync(projectsDir, { recursive: true });
+    }
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true });
+    }
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    if (!fs.existsSync(targetFolderDir)) {
+      fs.mkdirSync(targetFolderDir, { recursive: true });
+    }
+    
+    // 获取源文件名
+    const fileName = path.basename(sourcePath);
+    const targetPath = path.join(targetFolderDir, fileName);
+    
+    // 检查源文件是否存在
+    if (!fs.existsSync(sourcePath)) {
+      throw new Error(`Source file does not exist: ${sourcePath}`);
+    }
+    
+    // 复制文件
+    fs.copyFileSync(sourcePath, targetPath);
+    
+    console.log(`✅ File copied from ${sourcePath} to ${targetPath}`);
+    
+    return {
+      success: true,
+      newPath: targetPath,
+      projectDir: projectDir,
+      dataDir: dataDir,
+      targetFolder: targetFolderDir
+    };
+    
+  } catch (error) {
+    console.error('Error copying file to project:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
 }); 

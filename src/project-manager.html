@@ -296,6 +296,23 @@
             cursor: pointer;
             color: #6c757d;
         }
+
+        .radio-option {
+            padding: 10px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+
+        .radio-option:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .radio-option input[type="radio"]:checked + strong {
+            color: #007bff;
+        }
         
         .modal-body {
             padding: 25px;
@@ -485,6 +502,49 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="projectManagerWindow.closeModal('newProjectModal')">Cancel</button>
                 <button class="btn btn-success" onclick="projectManagerWindow.createProject()">Create Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Files Options Modal -->
+    <div id="addFilesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Files to Project</h3>
+                <button class="modal-close" onclick="projectManagerWindow.closeModal('addFilesModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">File Management Options</label>
+                    <div style="margin: 15px 0;">
+                        <label class="radio-option" style="display: block; margin: 10px 0; cursor: pointer;">
+                            <input type="radio" name="fileHandling" value="copy" checked style="margin-right: 8px;">
+                            <strong>Copy files to project data folder</strong> (Recommended)
+                            <div style="margin-left: 24px; font-size: 0.9em; color: #666; margin-top: 4px;">
+                                Files will be copied to: <code>[Project]/data/[folder]/</code><br>
+                                This ensures files are always available with the project.
+                            </div>
+                        </label>
+                        <label class="radio-option" style="display: block; margin: 10px 0; cursor: pointer;">
+                            <input type="radio" name="fileHandling" value="reference" style="margin-right: 8px;">
+                            <strong>Reference files at original location</strong>
+                            <div style="margin-left: 24px; font-size: 0.9em; color: #666; margin-top: 4px;">
+                                Files will remain at their current location.<br>
+                                Project will reference the original file paths.
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Selected Files</label>
+                    <div id="selectedFilesList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f9f9f9;">
+                        <!-- Selected files will be listed here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="projectManagerWindow.closeModal('addFilesModal')">Cancel</button>
+                <button class="btn btn-success" onclick="projectManagerWindow.processFilesWithOptions()">Add Files</button>
             </div>
         </div>
     </div>
@@ -804,6 +864,10 @@
                     return;
                 }
 
+                // 初始化临时文件存储
+                this.tempSelectedFiles = null;
+                this.tempFileSource = null;
+
                 // 优先使用ProjectManager的addFiles方法
                 if (this.projectManager) {
                     console.log('✅ Using ProjectManager core logic for adding files');
@@ -816,7 +880,10 @@
                     try {
                         const result = await window.electronAPI.selectMultipleFiles();
                         if (result.success && !result.canceled && result.filePaths) {
-                            await this.processSelectedFiles(result.filePaths);
+                            // 存储选择的文件路径并显示选项对话框
+                            this.tempSelectedFiles = result.filePaths;
+                            this.tempFileSource = 'electron';
+                            this.showAddFilesModal();
                         }
                     } catch (error) {
                         console.error('Error selecting files:', error);
@@ -831,15 +898,115 @@
                     input.accept = '.fasta,.fa,.gff,.gtf,.vcf,.bam,.sam,.wig,.bed,.gb,.gbk';
                     input.onchange = (e) => {
                         const files = Array.from(e.target.files);
-                        this.processFileObjects(files);
+                        // 存储选择的文件对象并显示选项对话框
+                        this.tempSelectedFiles = files;
+                        this.tempFileSource = 'browser';
+                        this.showAddFilesModal();
                     };
                     input.click();
                 }
             }
 
+            showAddFilesModal() {
+                // 显示选择的文件列表
+                this.populateSelectedFilesList();
+                
+                // 显示模态框
+                const modal = document.getElementById('addFilesModal');
+                if (modal) {
+                    modal.style.display = 'block';
+                }
+            }
+
+            populateSelectedFilesList() {
+                const listContainer = document.getElementById('selectedFilesList');
+                if (!listContainer || !this.tempSelectedFiles) return;
+
+                let html = '';
+                const files = this.tempSelectedFiles;
+                
+                if (this.tempFileSource === 'electron') {
+                    // 处理文件路径
+                    files.forEach((filePath, index) => {
+                        const fileName = filePath.split(/[/\\]/).pop();
+                        const fileType = this.detectFileType(fileName);
+                        const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+                        
+                        html += `
+                            <div style="display: flex; align-items: center; margin: 5px 0; padding: 8px; border: 1px solid #e1e8ed; border-radius: 4px; background: white;">
+                                <div style="width: 20px; height: 20px; background: ${typeConfig.color}; color: white; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; margin-right: 10px;">
+                                    ${typeConfig.icon}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">${fileName}</div>
+                                    <div style="font-size: 0.8em; color: #666;">${filePath}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    // 处理文件对象（浏览器）
+                    files.forEach((file, index) => {
+                        const fileType = this.detectFileType(file.name);
+                        const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+                        
+                        html += `
+                            <div style="display: flex; align-items: center; margin: 5px 0; padding: 8px; border: 1px solid #e1e8ed; border-radius: 4px; background: white;">
+                                <div style="width: 20px; height: 20px; background: ${typeConfig.color}; color: white; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; margin-right: 10px;">
+                                    ${typeConfig.icon}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">${file.name}</div>
+                                    <div style="font-size: 0.8em; color: #666;">${this.formatFileSize(file.size)} • ${new Date(file.lastModified).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (html === '') {
+                    html = '<div style="text-align: center; color: #666; padding: 20px;">No files selected</div>';
+                }
+
+                listContainer.innerHTML = html;
+            }
+
+            async processFilesWithOptions() {
+                if (!this.tempSelectedFiles) {
+                    this.showNotification('No files selected', 'warning');
+                    return;
+                }
+
+                // 获取选择的处理选项
+                const fileHandling = document.querySelector('input[name="fileHandling"]:checked').value;
+                const copyFiles = fileHandling === 'copy';
+
+                console.log(`📁 Processing files with option: ${copyFiles ? 'Copy to project' : 'Reference original location'}`);
+
+                try {
+                    if (this.tempFileSource === 'electron') {
+                        await this.processSelectedFiles(this.tempSelectedFiles, copyFiles);
+                    } else {
+                        await this.processFileObjects(this.tempSelectedFiles, copyFiles);
+                    }
+
+                    // 关闭模态框
+                    this.closeModal('addFilesModal');
+                    
+                    // 清理临时数据
+                    this.tempSelectedFiles = null;
+                    this.tempFileSource = null;
+
+                } catch (error) {
+                    console.error('Error processing files:', error);
+                    this.showNotification('Failed to process files: ' + error.message, 'error');
+                }
+            }
+
             // 处理文件路径（Electron环境）
-            async processSelectedFiles(filePaths) {
+            async processSelectedFiles(filePaths, copyFiles = true) {
                 console.log('📂 Processing selected files:', filePaths);
+                console.log('📋 Copy files to project:', copyFiles);
                 let addedCount = 0;
                 
                 for (const filePath of filePaths) {
@@ -848,6 +1015,7 @@
                         const fileName = filePath.split(/[/\\]/).pop();
                         let fileSize = 0;
                         let lastModified = new Date().toISOString();
+                        let finalPath = filePath;
 
                         // 尝试获取文件信息
                         if (window.electronAPI && window.electronAPI.getFileInfo) {
@@ -862,20 +1030,43 @@
                             }
                         }
 
+                        // 如果选择复制文件，则复制到项目数据文件夹
+                        if (copyFiles && window.electronAPI && window.electronAPI.copyFileToProject) {
+                            try {
+                                const copyResult = await window.electronAPI.copyFileToProject(
+                                    filePath, 
+                                    this.currentProject.name, 
+                                    this.currentPath.length > 0 ? this.currentPath.join('/') : 'files'
+                                );
+                                
+                                if (copyResult.success) {
+                                    finalPath = copyResult.newPath;
+                                    console.log(`✅ File copied to: ${finalPath}`);
+                                } else {
+                                    console.warn(`Failed to copy file ${fileName}, using original path`);
+                                }
+                            } catch (error) {
+                                console.warn(`Error copying file ${fileName}:`, error);
+                            }
+                        }
+
                         const fileObj = {
                             id: this.generateId(),
                             name: fileName,
-                            path: filePath,
+                            path: finalPath,
+                            originalPath: copyFiles ? filePath : null, // 保存原始路径用于引用
                             size: fileSize,
                             type: this.detectFileType(fileName),
                             folder: [...this.currentPath],
                             added: new Date().toISOString(),
-                            modified: lastModified
+                            modified: lastModified,
+                            copied: copyFiles, // 标记文件是否被复制
+                            projectRelativePath: copyFiles ? this.getProjectRelativePath(finalPath) : null
                         };
                         
                         this.currentProject.files.push(fileObj);
                         addedCount++;
-                        console.log('✅ Added file:', fileName);
+                        console.log(`✅ Added file: ${fileName} (${copyFiles ? 'copied' : 'referenced'})`);
                     } catch (error) {
                         console.error('Error processing file:', filePath, error);
                     }
@@ -888,7 +1079,9 @@
                     
                     await this.saveProjects();
                     this.renderProjectContent();
-                    this.showNotification(`✅ Added ${addedCount} file(s) to project`, 'success');
+                    
+                    const action = copyFiles ? 'copied to' : 'referenced in';
+                    this.showNotification(`✅ Added ${addedCount} file(s) ${action} project`, 'success');
                     console.log(`📊 Project updated: ${this.currentProject.metadata.totalFiles} total files`);
                 } else {
                     this.showNotification('No files were added', 'warning');
@@ -896,11 +1089,13 @@
             }
 
             // 处理文件对象（浏览器环境）
-            async processFileObjects(files) {
+            async processFileObjects(files, copyFiles = true) {
                 console.log('🌐 Processing file objects from browser:', files.length);
+                console.log('📋 Copy files to project:', copyFiles);
                 let addedCount = 0;
                 
                 for (const file of files) {
+                    // 在浏览器环境中，文件总是"引用"的，不能真正复制到项目文件夹
                     const fileObj = {
                         id: this.generateId(),
                         name: file.name,
@@ -909,7 +1104,9 @@
                         type: this.detectFileType(file.name),
                         folder: [...this.currentPath],
                         added: new Date().toISOString(),
-                        modified: new Date(file.lastModified).toISOString()
+                        modified: new Date(file.lastModified).toISOString(),
+                        copied: false, // 浏览器环境下总是false
+                        browserFile: true // 标记为浏览器文件
                     };
                     
                     this.currentProject.files.push(fileObj);
@@ -923,8 +1120,23 @@
                     
                     await this.saveProjects();
                     this.renderProjectContent();
-                    this.showNotification(`✅ Added ${addedCount} file(s) to project`, 'success');
+                    this.showNotification(`✅ Added ${addedCount} file(s) to project (browser mode)`, 'success');
                 }
+            }
+
+            // 获取项目相对路径
+            getProjectRelativePath(absolutePath) {
+                if (!absolutePath) return null;
+                
+                // 尝试提取项目相对路径
+                const projectName = this.currentProject.name;
+                const dataIndex = absolutePath.indexOf(`/${projectName}/data/`);
+                
+                if (dataIndex !== -1) {
+                    return absolutePath.substring(dataIndex + `/${projectName}/data/`.length);
+                }
+                
+                return absolutePath;
             }
 
             createFolder() {
