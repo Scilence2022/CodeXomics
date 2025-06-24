@@ -78,6 +78,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
+  },
+  
+  // Genomic Data Download APIs
+  selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
+  downloadFile: (url, outputPath, projectInfo) => ipcRenderer.invoke('downloadFile', url, outputPath, projectInfo),
+  getCurrentProject: () => ipcRenderer.invoke('getCurrentProject'),
+  setActiveProject: (projectInfo) => ipcRenderer.invoke('setActiveProject', projectInfo),
+  
+  // Event listeners for genomic downloader
+  onSetDownloadType: (callback) => {
+    ipcRenderer.on('set-download-type', (event, downloadType) => {
+      callback(downloadType);
+    });
+  },
+  
+  onSetActiveProject: (callback) => {
+    ipcRenderer.on('set-active-project', (event, projectInfo) => {
+      callback(projectInfo);
+    });
+  },
+  
+  // Window close handling
+  onBeforeWindowClose: (callback) => {
+    ipcRenderer.on('before-window-close', callback);
   }
 });
 

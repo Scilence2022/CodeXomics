@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Project Manager Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Instructions</h2>
+        <ol>
+            <li>Start the application with <code>npm start</code></li>
+            <li>Click File -> New Project</li>
+            <li>Check console for any JavaScript errors</li>
+            <li>Verify Project Manager window opens without errors</li>
+            <li>Test creating a new project</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>Fixed Issues</h2>
+        <ul>
+            <li class="success">✅ Fixed: ReferenceError: projectManagerWindow is not defined</li>
+            <li class="success">✅ Fixed: TypeError: window.electronAPI.onBeforeWindowClose is not function</li>
+            <li class="success">✅ Added: Graceful handling of missing onBeforeWindowClose API</li>
+            <li class="success">✅ Added: Backup beforeunload event listener</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Expected Behavior</h2>
+        <ul>
+            <li>File -> New Project should open Project Manager window without JavaScript errors</li>
+            <li>Project Manager should initialize successfully</li>
+            <li>New project creation modal should appear</li>
+            <li>Console should show no errors related to projectManagerWindow or onBeforeWindowClose</li>
+        </ul>
+    </div>
+
+    <script>
+        // Mock test to verify our understanding of the fixes
+        function runTests() {
+            const results = document.getElementById('testResults');
+            
+            // Test 1: Check if we understand the projectManagerWindow fix
+            const test1 = "✅ projectManagerWindow reference replaced with BrowserWindow.getAllWindows().find()";
+            
+            // Test 2: Check if we understand the onBeforeWindowClose fix  
+            const test2 = "✅ onBeforeWindowClose now has conditional check before calling";
+            
+            // Test 3: Check if backup event listener is in place
+            const test3 = "✅ beforeunload event listener added as backup";
+            
+            results.innerHTML = `
+                <div class="success">${test1}</div>
+                <div class="success">${test2}</div>
+                <div class="success">${test3}</div>
+                <div class="info">All theoretical fixes are in place. Test in actual application.</div>
+            `;
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html> 

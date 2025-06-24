@@ -491,6 +491,9 @@ function createMenu() {
             createProjectManagerWindow();
             // Send event to trigger new project modal after window is ready
             setTimeout(() => {
+              const projectManagerWindow = BrowserWindow.getAllWindows().find(
+                win => win.getTitle().includes('Project Manager')
+              );
               if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
                 projectManagerWindow.webContents.send('create-new-project');
               }
@@ -579,6 +582,95 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('export-project-xml');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Download Genomic Data',
+          submenu: [
+            {
+              label: 'NCBI Databases',
+              submenu: [
+                {
+                  label: 'GenBank Sequences',
+                  click: () => {
+                    createGenomicDownloadWindow('ncbi-genbank');
+                  }
+                },
+                {
+                  label: 'RefSeq Genomes',
+                  click: () => {
+                    createGenomicDownloadWindow('ncbi-refseq');
+                  }
+                },
+                {
+                  label: 'SRA Sequencing Data',
+                  click: () => {
+                    createGenomicDownloadWindow('ncbi-sra');
+                  }
+                },
+                {
+                  label: 'Assembly Data',
+                  click: () => {
+                    createGenomicDownloadWindow('ncbi-assembly');
+                  }
+                }
+              ]
+            },
+            {
+              label: 'EMBL-EBI Databases',
+              submenu: [
+                {
+                  label: 'EMBL Sequences',
+                  click: () => {
+                    createGenomicDownloadWindow('embl-sequences');
+                  }
+                },
+                {
+                  label: 'Ensembl Genomes',
+                  click: () => {
+                    createGenomicDownloadWindow('ensembl-genomes');
+                  }
+                },
+                {
+                  label: 'ENA Archive',
+                  click: () => {
+                    createGenomicDownloadWindow('ena-archive');
+                  }
+                }
+              ]
+            },
+            {
+              label: 'Other Databases',
+              submenu: [
+                {
+                  label: 'DDBJ Sequences',
+                  click: () => {
+                    createGenomicDownloadWindow('ddbj-sequences');
+                  }
+                },
+                {
+                  label: 'UniProt Proteins',
+                  click: () => {
+                    createGenomicDownloadWindow('uniprot-proteins');
+                  }
+                },
+                {
+                  label: 'KEGG Pathways',
+                  click: () => {
+                    createGenomicDownloadWindow('kegg-pathways');
+                  }
+                }
+              ]
+            },
+            { type: 'separator' },
+            {
+              label: 'Bulk Download Manager',
+              accelerator: 'CmdOrCtrl+Shift+D',
+              click: () => {
+                createGenomicDownloadWindow('bulk-manager');
+              }
+            }
+          ]
         },
         { type: 'separator' },
         {
@@ -3271,3 +3363,619 @@ async function copyDirectoryRecursive(source, target) {
     }
   }
 }
+
+// Create Genomic Download Window
+function createGenomicDownloadWindow(downloadType) {
+  try {
+    console.log(`Creating Genomic Download window for: ${downloadType}`);
+    
+    // Check if there's an active project
+    const hasActiveProject = checkActiveProject();
+    if (!hasActiveProject) {
+      // Show project requirement dialog
+      const choice = dialog.showMessageBoxSync(null, {
+        type: 'info',
+        title: 'Project Required',
+        message: 'Please open or create a project first',
+        detail: 'Genomic data downloads require an active project to organize downloaded files.',
+        buttons: ['Create New Project', 'Open Existing Project', 'Cancel'],
+        defaultId: 0,
+        cancelId: 2
+      });
+      
+      if (choice === 0) {
+        // Create new project
+        createProjectManagerWindow();
+        setTimeout(() => {
+          if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
+            projectManagerWindow.webContents.send('create-new-project');
+          }
+        }, 500);
+        return;
+      } else if (choice === 1) {
+        // Open existing project
+        createProjectManagerWindow();
+        return;
+      } else {
+        // Cancel
+        return;
+      }
+    }
+    
+    const downloadWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 900,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      icon: path.join(__dirname, '../assets/icon.png'),
+      title: `Download Genomic Data - ${downloadType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+      show: false
+    });
+
+    // Set menu for the download window - fix the menu creation
+    createToolWindowMenu(downloadWindow, 'Genomic Data Download');
+
+    // Create the genomic download HTML file path
+    const downloadHtmlPath = path.join(__dirname, 'genomic-data-download.html');
+    
+    // Check if the file exists, if not create it
+    if (!fs.existsSync(downloadHtmlPath)) {
+      console.log('Creating genomic-data-download.html file...');
+      createGenomicDownloadHTML(downloadHtmlPath);
+    }
+
+    downloadWindow.loadFile(downloadHtmlPath);
+
+    downloadWindow.once('ready-to-show', () => {
+      downloadWindow.show();
+      // Send download type and current project info
+      downloadWindow.webContents.send('set-download-type', downloadType);
+      downloadWindow.webContents.send('set-active-project', getCurrentProjectInfo());
+    });
+
+    downloadWindow.on('closed', () => {
+      console.log('Genomic Download window closed');
+    });
+
+    console.log('Genomic Download window created successfully');
+    return downloadWindow;
+    
+  } catch (error) {
+    console.error('Failed to create Genomic Download window:', error);
+  }
+}
+
+// Create the HTML file for genomic data download
+function createGenomicDownloadHTML(htmlPath) {
+  const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genomic Data Download</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .panel h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.5em;
+            font-weight: 500;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+        
+        .results-panel {
+            grid-column: 1 / -1;
+            min-height: 300px;
+        }
+        
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .result-item {
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .result-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .result-details {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .result-actions {
+            text-align: right;
+        }
+        
+        .download-progress {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .download-progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #cce7ff;
+            color: #0c5460;
+            border: 1px solid #b8daff;
+        }
+        
+        .help-text {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .database-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .database-info h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        
+        .database-info p {
+            margin: 0;
+            color: #424242;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="downloadTitle">🧬 Genomic Data Download</h1>
+            <p id="downloadDescription">Download genomic data from public databases</p>
+        </div>
+        
+        <div id="databaseInfo" class="database-info">
+            <!-- Database-specific information will be loaded here -->
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2>🔍 Search Parameters</h2>
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label class="form-label">Search Term</label>
+                        <input type="text" id="searchTerm" class="form-input" placeholder="e.g., Escherichia coli, NC_000913">
+                        <div class="help-text">Enter organism name, accession number, or keywords</div>
+                    </div>
+                    
+                    <div class="form-group" id="databaseSpecificOptions">
+                        <!-- Database-specific options will be loaded here -->
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Results Limit</label>
+                        <select id="resultsLimit" class="form-select">
+                            <option value="10">10 results</option>
+                            <option value="25" selected>25 results</option>
+                            <option value="50">50 results</option>
+                            <option value="100">100 results</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">🔍 Search Database</button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary">🗑️ Clear</button>
+                </form>
+            </div>
+            
+            <div class="panel">
+                <h2>📁 Download Options</h2>
+                <div class="form-group">
+                    <label class="form-label">Output Directory</label>
+                    <input type="text" id="outputDir" class="form-input" readonly placeholder="Click to select directory">
+                    <button type="button" id="selectDirBtn" class="btn" style="margin-top: 10px;">📂 Select Directory</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">File Format</label>
+                    <select id="fileFormat" class="form-select">
+                        <option value="fasta">FASTA (.fasta)</option>
+                        <option value="genbank">GenBank (.gb)</option>
+                        <option value="gff">GFF (.gff)</option>
+                        <option value="embl">EMBL (.embl)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Additional Options</label>
+                    <textarea id="additionalOptions" class="form-textarea" placeholder="Additional download parameters..."></textarea>
+                </div>
+                
+                <button type="button" id="downloadSelectedBtn" class="btn btn-success" disabled>📥 Download Selected</button>
+                <button type="button" id="downloadAllBtn" class="btn btn-warning" disabled>📥 Download All Results</button>
+            </div>
+        </div>
+        
+        <div class="panel results-panel">
+            <h2>📊 Search Results</h2>
+            <div id="statusMessages"></div>
+            <div id="downloadProgress" style="display: none;">
+                <div class="download-progress">
+                    <div id="progressBar" class="download-progress-bar"></div>
+                </div>
+                <p id="progressText">Preparing download...</p>
+            </div>
+            <div id="searchResults" class="search-results">
+                <p style="text-align: center; color: #6c757d; padding: 50px;">
+                    🔍 Enter search terms and click "Search Database" to find genomic data
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer/modules/GenomicDataDownloader.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.genomicDownloader = new GenomicDataDownloader();
+        });
+    </script>
+</body>
+</html>`;
+
+  fs.writeFileSync(htmlPath, htmlContent, 'utf8');
+  console.log('✅ Created genomic-data-download.html');
+}
+
+// IPC handlers for genomic data download
+ipcMain.handle('selectDirectory', async () => {
+  try {
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openDirectory'],
+      title: 'Select Output Directory'
+    });
+    
+    return {
+      success: true,
+      canceled: result.canceled,
+      filePath: result.canceled ? null : result.filePaths[0]
+    };
+  } catch (error) {
+    console.error('Error selecting directory:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+// Project management functions for genomic data download
+let currentActiveProject = null;
+
+function checkActiveProject() {
+  // Check if there's an active project loaded
+  return currentActiveProject !== null;
+}
+
+function getCurrentProjectInfo() {
+  return currentActiveProject;
+}
+
+function setActiveProject(projectInfo) {
+  currentActiveProject = projectInfo;
+  console.log('Active project set:', projectInfo);
+}
+
+// IPC handler to get current project info
+ipcMain.handle('getCurrentProject', async () => {
+  return getCurrentProjectInfo();
+});
+
+// IPC handler to set active project
+ipcMain.handle('setActiveProject', async (event, projectInfo) => {
+  setActiveProject(projectInfo);
+  return { success: true };
+});
+
+ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
+  return new Promise((resolve) => {
+    try {
+      const https = require('https');
+      const http = require('http');
+      const fs = require('fs');
+      const path = require('path');
+      
+      // If project info is provided, download to project directory
+      let finalOutputPath = outputPath;
+      if (projectInfo && projectInfo.dataFolderPath) {
+        // Create genomes subfolder in project data directory
+        const genomesDir = path.join(projectInfo.dataFolderPath, 'genomes');
+        if (!fs.existsSync(genomesDir)) {
+          fs.mkdirSync(genomesDir, { recursive: true });
+        }
+        finalOutputPath = path.join(genomesDir, path.basename(outputPath));
+      }
+      
+      // 确保输出目录存在
+      const outputDir = path.dirname(finalOutputPath);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      // 选择适当的协议
+      const client = url.startsWith('https:') ? https : http;
+      
+      const file = fs.createWriteStream(finalOutputPath);
+      
+      const request = client.get(url, (response) => {
+        // 处理重定向
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          const redirectUrl = response.headers.location;
+          console.log(`Redirecting to: ${redirectUrl}`);
+          
+          // 递归处理重定向
+          const redirectClient = redirectUrl.startsWith('https:') ? https : http;
+          const redirectRequest = redirectClient.get(redirectUrl, (redirectResponse) => {
+            if (redirectResponse.statusCode === 200) {
+              redirectResponse.pipe(file);
+              
+              file.on('finish', () => {
+                file.close();
+                console.log(`✅ Downloaded: ${finalOutputPath}`);
+                resolve({
+                  success: true,
+                  filePath: finalOutputPath
+                });
+              });
+            } else {
+              file.close();
+              fs.unlinkSync(finalOutputPath); // 删除空文件
+              resolve({
+                success: false,
+                error: `HTTP ${redirectResponse.statusCode}: ${redirectResponse.statusMessage}`
+              });
+            }
+          });
+          
+          redirectRequest.on('error', (error) => {
+            file.close();
+            fs.unlinkSync(finalOutputPath);
+            resolve({
+              success: false,
+              error: error.message
+            });
+          });
+          
+        } else if (response.statusCode === 200) {
+          response.pipe(file);
+          
+          file.on('finish', () => {
+            file.close();
+            console.log(`✅ Downloaded: ${finalOutputPath}`);
+            resolve({
+              success: true,
+              filePath: finalOutputPath
+            });
+          });
+        } else {
+          file.close();
+          fs.unlinkSync(finalOutputPath); // 删除空文件
+          resolve({
+            success: false,
+            error: `HTTP ${response.statusCode}: ${response.statusMessage}`
+          });
+        }
+      });
+      
+      request.on('error', (error) => {
+        file.close();
+        if (fs.existsSync(finalOutputPath)) {
+          fs.unlinkSync(finalOutputPath);
+        }
+        resolve({
+          success: false,
+          error: error.message
+        });
+      });
+      
+      file.on('error', (error) => {
+        file.close();
+        if (fs.existsSync(finalOutputPath)) {
+          fs.unlinkSync(finalOutputPath);
+        }
+        resolve({
+          success: false,
+          error: error.message
+        });
+      });
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      resolve({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+});

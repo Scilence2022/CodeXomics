@@ -79,12 +79,18 @@ class ProjectManager {
         });
 
         // 窗口关闭事件
-        if (window.electronAPI) {
+        if (window.electronAPI && window.electronAPI.onBeforeWindowClose) {
             window.electronAPI.onBeforeWindowClose(() => {
                 this.saveProjects();
                 this.saveSettings();
             });
         }
+        
+        // 使用标准的beforeunload事件作为备用
+        window.addEventListener('beforeunload', () => {
+            this.saveProjects();
+            this.saveSettings();
+        });
     }
 
     /**
@@ -277,6 +283,31 @@ class ProjectManager {
             document.getElementById('projectContent').style.display = 'block';
             
             this.updateStatusBar(`Opened project: ${this.currentProject.name}`);
+            
+            // 通知全局项目状态更新
+            this.notifyProjectChange(this.currentProject);
+        }
+    }
+    
+    /**
+     * 通知项目状态变化
+     */
+    async notifyProjectChange(project) {
+        if (window.electronAPI && window.electronAPI.setActiveProject) {
+            try {
+                const projectInfo = {
+                    id: project.id,
+                    name: project.name,
+                    location: project.location,
+                    dataFolderPath: project.location ? `${project.location}/data` : null,
+                    projectFilePath: project.filePath || null
+                };
+                
+                await window.electronAPI.setActiveProject(projectInfo);
+                console.log('🗂️ Project change notified:', projectInfo);
+            } catch (error) {
+                console.error('Error notifying project change:', error);
+            }
         }
     }
 
