@@ -697,7 +697,130 @@
             }
 
             async openProject() {
-                this.showNotification('Open project feature coming soon', 'info');
+                console.log('📂 Opening project file...');
+                
+                try {
+                    // 使用Electron API选择项目文件
+                    if (window.electronAPI && window.electronAPI.selectProjectFile) {
+                        const result = await window.electronAPI.selectProjectFile();
+                        
+                        if (result.success && !result.canceled && result.filePath) {
+                            await this.loadProjectFromFile(result.filePath);
+                        }
+                    } else {
+                        // 浏览器环境下的文件选择
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.prj.GAI,.xml,.json,.genomeproj';
+                        input.onchange = async (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = async (event) => {
+                                    try {
+                                        await this.loadProjectFromFileContent(event.target.result, file.name);
+                                    } catch (error) {
+                                        console.error('Error loading project from file:', error);
+                                        this.showNotification('Failed to load project file', 'error');
+                                    }
+                                };
+                                reader.readAsText(file);
+                            }
+                        };
+                        input.click();
+                    }
+                } catch (error) {
+                    console.error('Error opening project:', error);
+                    this.showNotification('Failed to open project file', 'error');
+                }
+            }
+
+            async loadProjectFromFile(filePath) {
+                console.log('📁 Loading project from file:', filePath);
+                
+                try {
+                    // 读取文件内容
+                    if (window.electronAPI && window.electronAPI.loadProjectFile) {
+                        const result = await window.electronAPI.loadProjectFile(filePath);
+                        
+                        if (result.success) {
+                            await this.loadProjectFromFileContent(result.content, result.fileName);
+                        } else {
+                            throw new Error(result.error || 'Failed to read project file');
+                        }
+                    } else {
+                        throw new Error('File reading API not available');
+                    }
+                } catch (error) {
+                    console.error('Error loading project from file:', error);
+                    this.showNotification(`Failed to load project: ${error.message}`, 'error');
+                }
+            }
+
+            async loadProjectFromFileContent(content, fileName) {
+                console.log('📄 Processing project file content:', fileName);
+                
+                try {
+                    let project = null;
+                    const fileExtension = fileName.toLowerCase().split('.').pop();
+                    
+                    if (fileName.toLowerCase().endsWith('.prj.gai') || fileExtension === 'xml') {
+                        // 处理XML格式项目文件
+                        if (!this.xmlHandler) {
+                            this.xmlHandler = new ProjectXMLHandler();
+                        }
+                        
+                        // 验证XML格式
+                        if (!this.xmlHandler.validateProjectXML(content)) {
+                            throw new Error('Invalid project XML format');
+                        }
+                        
+                        project = this.xmlHandler.xmlToProject(content);
+                        console.log('✅ Loaded XML project:', project.name);
+                        
+                    } else if (fileExtension === 'json' || fileExtension === 'genomeproj') {
+                        // 处理JSON格式项目文件
+                        project = JSON.parse(content);
+                        console.log('✅ Loaded JSON project:', project.name);
+                        
+                    } else {
+                        throw new Error(`Unsupported file format: ${fileName}`);
+                    }
+                    
+                    // 验证项目数据结构
+                    if (!project || !project.id || !project.name) {
+                        throw new Error('Invalid project data structure');
+                    }
+                    
+                    // 设置加载的项目信息
+                    project.xmlFileName = fileName;
+                    project.loadedFromFile = true;
+                    project.lastOpened = new Date().toISOString();
+                    
+                    // 添加到项目列表
+                    this.projects.set(project.id, project);
+                    await this.saveProjects();
+                    
+                    // 刷新界面并选择项目
+                    this.renderProjectTree();
+                    this.selectProject(project.id);
+                    
+                    // 显示成功消息
+                    const fileType = fileName.toLowerCase().endsWith('.prj.gai') ? 'XML (.prj.GAI)' : fileExtension.toUpperCase();
+                    this.showNotification(`✅ Project "${project.name}" loaded from ${fileType} file`, 'success');
+                    
+                    console.log('📊 Project loaded successfully:', {
+                        id: project.id,
+                        name: project.name,
+                        files: project.files?.length || 0,
+                        folders: project.folders?.length || 0
+                    });
+                    
+                } catch (error) {
+                    console.error('Error processing project file content:', error);
+                    this.showNotification(`Failed to load project: ${error.message}`, 'error');
+                    throw error;
+                }
             }
 
             selectProject(projectId) {
@@ -1130,10 +1253,21 @@
                 
                 // 尝试提取项目相对路径
                 const projectName = this.currentProject.name;
-                const dataIndex = absolutePath.indexOf(`/${projectName}/data/`);
+                
+                // 处理不同平台的路径分隔符
+                const normalizedPath = absolutePath.replace(/\\/g, '/');
+                const dataPattern = `GenomeExplorer Projects/${projectName}/data/`;
+                const dataIndex = normalizedPath.indexOf(dataPattern);
                 
                 if (dataIndex !== -1) {
-                    return absolutePath.substring(dataIndex + `/${projectName}/data/`.length);
+                    return normalizedPath.substring(dataIndex + dataPattern.length);
+                }
+                
+                // 如果没有找到标准路径，尝试其他模式
+                const altPattern = `/${projectName}/data/`;
+                const altIndex = normalizedPath.indexOf(altPattern);
+                if (altIndex !== -1) {
+                    return normalizedPath.substring(altIndex + altPattern.length);
                 }
                 
                 return absolutePath;
@@ -1849,6 +1983,16 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                     console.log('📝 Create new project requested from main menu');
                     if (projectManagerWindow) {
                         projectManagerWindow.createNewProject();
+                    }
+                });
+            }
+
+            // 监听从菜单加载项目的事件
+            if (window.electronAPI && window.electronAPI.onLoadProjectFromMenu) {
+                window.electronAPI.onLoadProjectFromMenu((filePath) => {
+                    console.log('📁 Load project requested from main menu:', filePath);
+                    if (projectManagerWindow) {
+                        projectManagerWindow.loadProjectFromFile(filePath);
                     }
                 });
             }

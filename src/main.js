@@ -532,20 +532,32 @@ function createMenu() {
           label: 'Open Project',
           accelerator: 'CmdOrCtrl+Shift+O',
           click: async () => {
-            const result = await dialog.showOpenDialog(mainWindow, {
-              properties: ['openFile'],
-              filters: [
-                { name: 'Project Files', extensions: ['xml', 'genomeproj', 'json'] },
-                { name: 'XML Files', extensions: ['xml'] },
-                { name: 'JSON Files', extensions: ['json'] },
-                { name: 'All Files', extensions: ['*'] }
-              ],
-              title: 'Open Project'
-            });
+            // Create or focus Project Manager window first
+            createProjectManagerWindow();
             
-            if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow.webContents.send('open-project-file', result.filePaths[0]);
-            }
+            // Small delay to ensure window is ready
+            setTimeout(async () => {
+              const result = await dialog.showOpenDialog(null, {
+                properties: ['openFile'],
+                filters: [
+                  { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
+                  { name: 'XML Files', extensions: ['xml'] },
+                  { name: 'Project Files', extensions: ['genomeproj', 'json'] },
+                  { name: 'All Files', extensions: ['*'] }
+                ],
+                title: 'Open Project'
+              });
+              
+              if (!result.canceled && result.filePaths.length > 0) {
+                // Send the file path to the Project Manager window
+                const projectManagerWindow = BrowserWindow.getAllWindows().find(
+                  win => win.getTitle().includes('Project Manager')
+                );
+                if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
+                  projectManagerWindow.webContents.send('load-project-from-menu', result.filePaths[0]);
+                }
+              }
+            }, 100);
           }
         },
         {
@@ -2645,6 +2657,8 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
+        { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
+        { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
       ],
@@ -2713,7 +2727,8 @@ ipcMain.handle('createProjectDirectory', async (event, location, projectName) =>
 ipcMain.handle('loadProjectFile', async (event, filePath) => {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    return { success: true, content: content };
+    const fileName = path.basename(filePath);
+    return { success: true, content: content, fileName: fileName };
   } catch (error) {
     return { success: false, error: error.message };
   }

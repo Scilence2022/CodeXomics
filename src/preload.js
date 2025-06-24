@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('create-new-project', callback);
   },
   
+  onLoadProjectFromMenu: (callback) => {
+    ipcRenderer.on('load-project-from-menu', callback);
+  },
+  
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
