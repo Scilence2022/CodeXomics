@@ -2827,7 +2827,8 @@ class GenomeBrowser {
                 
             case 'translation':
                 const dnaSeq = fullSequence.substring(start - 1, end);
-                sequence = this.translateDNA(dnaSeq, parseInt(strand));
+                let rawTranslation = this.translateDNA(dnaSeq, parseInt(strand));
+                sequence = rawTranslation.replace(/\*/g, ''); // Remove stop codons
                 header = `>${geneName}_TRANSLATION ${chromosome}:${start}-${end} (${strand === '-1' ? '-' : '+'} strand)`;
                 description = 'protein translation';
                 break;
@@ -2868,12 +2869,15 @@ class GenomeBrowser {
         const geneSequence = sequence.substring(gene.start - 1, gene.end);
         translation = this.translateDNA(geneSequence, gene.strand);
         
+        // Remove stop codons (*) from the translation
+        const cleanTranslation = translation.replace(/\*/g, '');
+        
         const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type;
         const fastaHeader = `>${geneName}_TRANSLATION ${currentChr}:${gene.start}-${gene.end} (${gene.strand === -1 ? '-' : '+'} strand)`;
-        const fastaContent = `${fastaHeader}\n${translation}`;
+        const fastaContent = `${fastaHeader}\n${cleanTranslation}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            alert(`Copied ${geneName} translation (${translation.replace(/\*/g, '').length} aa) to clipboard`);
+            alert(`Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`);
         }).catch(err => {
             console.error('Failed to copy: ', err);
             alert('Failed to copy to clipboard');
