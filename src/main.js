@@ -2841,6 +2841,24 @@ ipcMain.handle('openFileInMainWindow', async (event, filePath) => {
   }
 });
 
+// Handle opening folder in file explorer
+ipcMain.handle('openFolderInExplorer', async (event, folderPath) => {
+  try {
+    const { shell } = require('electron');
+    
+    // 检查文件夹是否存在
+    if (!fs.existsSync(folderPath)) {
+      return { success: false, error: 'Folder does not exist' };
+    }
+    
+    // 在资源管理器中打开文件夹
+    await shell.openPath(folderPath);
+    return { success: true, message: 'Folder opened in explorer' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle projects data saving
 ipcMain.handle('saveProjectsData', async (event, projectsData) => {
   try {

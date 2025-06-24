@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createProjectDirectory: (location, projectName) => ipcRenderer.invoke('createProjectDirectory', location, projectName),
   loadProjectFile: (filePath) => ipcRenderer.invoke('loadProjectFile', filePath),
   openFileInMainWindow: (filePath) => ipcRenderer.invoke('openFileInMainWindow', filePath),
+  openFolderInExplorer: (folderPath) => ipcRenderer.invoke('openFolderInExplorer', folderPath),
   saveProjectsData: (projectsData) => ipcRenderer.invoke('saveProjectsData', projectsData),
   loadProjectsData: () => ipcRenderer.invoke('loadProjectsData'),
   saveProjectSettings: (settings) => ipcRenderer.invoke('saveProjectSettings', settings),

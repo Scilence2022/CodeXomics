@@ -141,6 +141,76 @@
         .tree-item.project {
             font-weight: 600;
             border-left: 3px solid #007bff;
+            position: relative;
+        }
+
+        .tree-actions {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .tree-item:hover .tree-actions {
+            opacity: 1;
+        }
+
+        .tree-action-btn {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .tree-action-btn:hover {
+            background: #ddd;
+            color: #333;
+        }
+
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            display: none;
+        }
+
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .context-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .context-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .context-menu-item.danger:hover {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .context-menu-item .menu-icon {
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
         }
         
         .tree-icon {
@@ -509,6 +579,53 @@
         </div>
     </div>
 
+    <!-- Context Menus -->
+    <div id="projectContextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="projectManagerWindow.renameProject()">
+            <span class="menu-icon">✏️</span>
+            Rename Project
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.duplicateProject()">
+            <span class="menu-icon">📋</span>
+            Duplicate Project
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.exportProjectAs()">
+            <span class="menu-icon">📤</span>
+            Export Project
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.showProjectProperties()">
+            <span class="menu-icon">ℹ️</span>
+            Properties
+        </div>
+        <div class="context-menu-item danger" onclick="projectManagerWindow.deleteProject()">
+            <span class="menu-icon">🗑️</span>
+            Delete Project
+        </div>
+    </div>
+
+    <div id="folderContextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="projectManagerWindow.addFilesToFolder()">
+            <span class="menu-icon">📁</span>
+            Add Files
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.createSubfolder()">
+            <span class="menu-icon">📂</span>
+            New Subfolder
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.renameFolder()">
+            <span class="menu-icon">✏️</span>
+            Rename Folder
+        </div>
+        <div class="context-menu-item" onclick="projectManagerWindow.openFolderInExplorer()">
+            <span class="menu-icon">🔍</span>
+            Open in Explorer
+        </div>
+        <div class="context-menu-item danger" onclick="projectManagerWindow.deleteFolder()">
+            <span class="menu-icon">🗑️</span>
+            Delete Folder
+        </div>
+    </div>
+
     <!-- Add Files Options Modal -->
     <div id="addFilesModal" class="modal">
         <div class="modal-content">
@@ -596,6 +713,291 @@
                 console.log('Project Manager Window initialized successfully');
             }
 
+            // 上下文菜单相关变量
+            currentContextProjectId = null;
+            currentContextFolderPath = null;
+
+            // 显示项目右键菜单
+            showProjectContextMenu(event, projectId) {
+                event.preventDefault();
+                this.currentContextProjectId = projectId;
+                const menu = document.getElementById('projectContextMenu');
+                this.showContextMenu(menu, event);
+            }
+
+            // 显示文件夹右键菜单
+            showFolderContextMenu(event, folderPath) {
+                event.preventDefault();
+                this.currentContextFolderPath = folderPath;
+                const menu = document.getElementById('folderContextMenu');
+                this.showContextMenu(menu, event);
+            }
+
+            // 显示项目操作菜单
+            showProjectActions(projectId) {
+                this.currentContextProjectId = projectId;
+                const menu = document.getElementById('projectContextMenu');
+                this.showContextMenu(menu, { clientX: 0, clientY: 0 });
+            }
+
+            // 显示文件夹操作菜单
+            showFolderActions(folderPath) {
+                this.currentContextFolderPath = folderPath;
+                const menu = document.getElementById('folderContextMenu');
+                this.showContextMenu(menu, { clientX: 0, clientY: 0 });
+            }
+
+            // 通用显示上下文菜单方法
+            showContextMenu(menu, event) {
+                // 隐藏所有上下文菜单
+                document.querySelectorAll('.context-menu').forEach(m => m.style.display = 'none');
+                
+                // 显示指定菜单
+                menu.style.display = 'block';
+                menu.style.left = (event.clientX + 10) + 'px';
+                menu.style.top = (event.clientY + 10) + 'px';
+
+                // 确保菜单在视窗内
+                const rect = menu.getBoundingClientRect();
+                if (rect.right > window.innerWidth) {
+                    menu.style.left = (event.clientX - rect.width) + 'px';
+                }
+                if (rect.bottom > window.innerHeight) {
+                    menu.style.top = (event.clientY - rect.height) + 'px';
+                }
+            }
+
+            // 隐藏所有上下文菜单
+            hideContextMenus() {
+                document.querySelectorAll('.context-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+
+            // ================================
+            // 项目操作方法
+            // ================================
+            
+            renameProject() {
+                this.hideContextMenus();
+                if (!this.currentContextProjectId) return;
+                
+                const project = this.projects.get(this.currentContextProjectId);
+                if (!project) return;
+                
+                const newName = prompt('Enter new project name:', project.name);
+                if (newName && newName.trim() && newName.trim() !== project.name) {
+                    project.name = newName.trim();
+                    project.modified = new Date().toISOString();
+                    this.projects.set(this.currentContextProjectId, project);
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.showNotification(`Project renamed to "${newName}"`, 'success');
+                }
+            }
+
+            duplicateProject() {
+                this.hideContextMenus();
+                if (!this.currentContextProjectId) return;
+                
+                const project = this.projects.get(this.currentContextProjectId);
+                if (!project) return;
+                
+                const newName = prompt('Enter name for duplicated project:', project.name + ' Copy');
+                if (newName && newName.trim()) {
+                    const newProject = {
+                        ...project,
+                        id: this.generateId(),
+                        name: newName.trim(),
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString(),
+                        isCurrentlyOpen: false
+                    };
+                    
+                    this.projects.set(newProject.id, newProject);
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.showNotification(`Project duplicated as "${newName}"`, 'success');
+                }
+            }
+
+            exportProjectAs() {
+                this.hideContextMenus();
+                if (!this.currentContextProjectId) return;
+                
+                const project = this.projects.get(this.currentContextProjectId);
+                if (!project) return;
+                
+                try {
+                    if (!this.xmlHandler) {
+                        this.xmlHandler = new ProjectXMLHandler();
+                    }
+                    
+                    const xmlContent = this.xmlHandler.projectToXML(project);
+                    this.downloadXMLFile(xmlContent, `${project.name}.prj.GAI`);
+                    this.showNotification(`Project "${project.name}" exported successfully`, 'success');
+                } catch (error) {
+                    console.error('Error exporting project:', error);
+                    this.showNotification('Failed to export project', 'error');
+                }
+            }
+
+            showProjectProperties() {
+                this.hideContextMenus();
+                if (!this.currentContextProjectId) return;
+                
+                const project = this.projects.get(this.currentContextProjectId);
+                if (!project) return;
+                
+                const properties = `
+Project: ${project.name}
+Description: ${project.description || 'N/A'}
+Location: ${project.location || 'N/A'}
+Created: ${this.formatDate(project.created)}
+Modified: ${this.formatDate(project.modified)}
+Files: ${project.files ? project.files.length : 0}
+Folders: ${project.folders ? project.folders.length : 0}
+                `.trim();
+                
+                alert(properties);
+            }
+
+            deleteProject() {
+                this.hideContextMenus();
+                if (!this.currentContextProjectId) return;
+                
+                const project = this.projects.get(this.currentContextProjectId);
+                if (!project) return;
+                
+                const confirm = window.confirm(`Are you sure you want to delete the project "${project.name}"?\n\nThis action cannot be undone.`);
+                if (confirm) {
+                    this.projects.delete(this.currentContextProjectId);
+                    if (this.currentProject && this.currentProject.id === this.currentContextProjectId) {
+                        this.currentProject = null;
+                    }
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.renderProjectContent();
+                    this.showNotification(`Project "${project.name}" deleted`, 'success');
+                }
+            }
+
+            // ================================
+            // 文件夹操作方法
+            // ================================
+            
+            addFilesToFolder() {
+                this.hideContextMenus();
+                if (!this.currentContextFolderPath) return;
+                
+                // 设置当前路径为目标文件夹
+                this.currentPath = this.currentContextFolderPath;
+                this.renderProjectContent();
+                
+                // 触发添加文件
+                this.addFiles();
+            }
+
+            createSubfolder() {
+                this.hideContextMenus();
+                if (!this.currentContextFolderPath || !this.currentProject) return;
+                
+                const folderName = prompt('Enter new subfolder name:');
+                if (folderName && folderName.trim()) {
+                    const newFolderPath = [...this.currentContextFolderPath, folderName.trim()];
+                    const newFolder = {
+                        name: folderName.trim(),
+                        icon: '📁',
+                        path: newFolderPath,
+                        files: []
+                    };
+                    
+                    this.currentProject.folders.push(newFolder);
+                    this.currentProject.modified = new Date().toISOString();
+                    this.projects.set(this.currentProject.id, this.currentProject);
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.showNotification(`Subfolder "${folderName}" created`, 'success');
+                }
+            }
+
+            renameFolder() {
+                this.hideContextMenus();
+                if (!this.currentContextFolderPath || !this.currentProject) return;
+                
+                const folder = this.currentProject.folders.find(f => 
+                    this.arraysEqual(f.path, this.currentContextFolderPath)
+                );
+                if (!folder) return;
+                
+                const newName = prompt('Enter new folder name:', folder.name);
+                if (newName && newName.trim() && newName.trim() !== folder.name) {
+                    folder.name = newName.trim();
+                    this.currentProject.modified = new Date().toISOString();
+                    this.projects.set(this.currentProject.id, this.currentProject);
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.showNotification(`Folder renamed to "${newName}"`, 'success');
+                }
+            }
+
+            openFolderInExplorer() {
+                this.hideContextMenus();
+                if (!this.currentContextFolderPath || !this.currentProject) return;
+                
+                if (window.electronAPI && window.electronAPI.openFolderInExplorer) {
+                    const folderPath = this.currentProject.dataFolderPath + '/' + this.currentContextFolderPath.join('/');
+                    window.electronAPI.openFolderInExplorer(folderPath);
+                } else {
+                    this.showNotification('This feature requires Electron environment', 'warning');
+                }
+            }
+
+            deleteFolder() {
+                this.hideContextMenus();
+                if (!this.currentContextFolderPath || !this.currentProject) return;
+                
+                const folder = this.currentProject.folders.find(f => 
+                    this.arraysEqual(f.path, this.currentContextFolderPath)
+                );
+                if (!folder) return;
+                
+                const filesInFolder = this.currentProject.files.filter(file => 
+                    file.folder && this.arraysEqual(file.folder, this.currentContextFolderPath)
+                );
+                
+                let confirmMessage = `Are you sure you want to delete the folder "${folder.name}"?`;
+                if (filesInFolder.length > 0) {
+                    confirmMessage += `\n\nThis will also delete ${filesInFolder.length} file(s) in this folder.`;
+                }
+                confirmMessage += '\n\nThis action cannot be undone.';
+                
+                const confirm = window.confirm(confirmMessage);
+                if (confirm) {
+                    // 删除文件夹中的所有文件
+                    this.currentProject.files = this.currentProject.files.filter(file => 
+                        !file.folder || !this.arraysEqual(file.folder, this.currentContextFolderPath)
+                    );
+                    
+                    // 删除文件夹
+                    this.currentProject.folders = this.currentProject.folders.filter(f => 
+                        !this.arraysEqual(f.path, this.currentContextFolderPath)
+                    );
+                    
+                    // 如果当前在被删除的文件夹中，回到根目录
+                    if (this.arraysEqual(this.currentPath, this.currentContextFolderPath)) {
+                        this.currentPath = [];
+                    }
+                    
+                    this.currentProject.modified = new Date().toISOString();
+                    this.projects.set(this.currentProject.id, this.currentProject);
+                    this.saveProjects();
+                    this.renderProjectTree();
+                    this.renderProjectContent();
+                    this.showNotification(`Folder "${folder.name}" deleted`, 'success');
+                }
+            }
+
             setupEventListeners() {
                 const searchBox = document.getElementById('searchBox');
                 if (searchBox) {
@@ -635,6 +1037,11 @@
                             modal.style.display = 'none';
                         }
                     });
+                    
+                    // 隐藏上下文菜单
+                    if (!e.target.closest('.context-menu') && !e.target.closest('.tree-action-btn')) {
+                        this.hideContextMenus();
+                    }
                 });
             }
 
@@ -936,9 +1343,13 @@
                         html += `
                             <div class="tree-item project ${isActive ? 'active' : ''}" 
                                  onclick="projectManagerWindow.selectProject('${projectId}')"
+                                 oncontextmenu="projectManagerWindow.showProjectContextMenu(event, '${projectId}')"
                                  data-project-id="${projectId}">
                                 <div class="tree-icon">📂</div>
                                 <span title="${project.description || project.name}">${project.name}</span>
+                                <div class="tree-actions">
+                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showProjectActions('${projectId}')" title="More options">⋯</button>
+                                </div>
                             </div>
                         `;
                         
@@ -948,9 +1359,14 @@
                                 html += `
                                     <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
                                          onclick="projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
-                                         style="margin-left: 20px;">
+                                         oncontextmenu="projectManagerWindow.showFolderContextMenu(event, ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
+                                         style="margin-left: 20px;"
+                                         data-folder-path="${JSON.stringify(folder.path).replace(/"/g, '&quot;')}">
                                         <div class="tree-icon">${folder.icon}</div>
                                         <span>${folder.name}</span>
+                                        <div class="tree-actions">
+                                            <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFolderActions(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})" title="More options">⋯</button>
+                                        </div>
                                     </div>
                                 `;
                             });
@@ -1063,11 +1479,11 @@
                 this.tempSelectedFiles = null;
                 this.tempFileSource = null;
 
-                // 优先使用ProjectManager的addFiles方法
-                if (this.projectManager) {
-                    console.log('✅ Using ProjectManager core logic for adding files');
-                    return await this.projectManager.addFiles();
-                }
+                // 注释掉ProjectManager的直接调用，始终显示复制选项
+                // if (this.projectManager) {
+                //     console.log('✅ Using ProjectManager core logic for adding files');
+                //     return await this.projectManager.addFiles();
+                // }
 
                 // 如果在Electron环境中，使用文件选择API
                 if (window.electronAPI && window.electronAPI.selectMultipleFiles) {

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Context Menu Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .feature-list li:before {
+            content: "✅ ";
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🧬 GenomeExplorer Project Manager Context Menu Test</h1>
+    
+    <div class="test-section">
+        <h2 class="test-title">📋 修复内容总结</h2>
+        <h3>1. Add Files 复制选项修复</h3>
+        <ul class="feature-list">
+            <li>修复了Add Files按钮直接跳过复制选项对话框的问题</li>
+            <li>现在点击Add Files总是显示复制/引用选项模态框</li>
+            <li>用户可以选择"复制文件到项目数据文件夹"或"引用原始位置文件"</li>
+            <li>复制选项默认选中，确保项目文件完整性</li>
+        </ul>
+
+        <h3>2. 左侧项目列表增强功能</h3>
+        <ul class="feature-list">
+            <li>项目右键菜单：重命名、复制、导出、属性、删除</li>
+            <li>文件夹右键菜单：添加文件、新建子文件夹、重命名、在资源管理器中打开、删除</li>
+            <li>鼠标悬停显示操作按钮（⋯）</li>
+            <li>右键菜单智能定位，确保在视窗内显示</li>
+            <li>点击其他区域自动隐藏菜单</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">🎯 新增项目功能</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <h4>📂 项目操作</h4>
+                <ul class="feature-list">
+                    <li>重命名项目</li>
+                    <li>复制项目（创建副本）</li>
+                    <li>导出项目为XML (.prj.GAI)</li>
+                    <li>查看项目属性</li>
+                    <li>删除项目（带确认对话框）</li>
+                </ul>
+            </div>
+            <div>
+                <h4>📁 文件夹操作</h4>
+                <ul class="feature-list">
+                    <li>向文件夹添加文件</li>
+                    <li>创建子文件夹</li>
+                    <li>重命名文件夹</li>
+                    <li>在资源管理器中打开</li>
+                    <li>删除文件夹（删除所有内容）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">🔧 技术实现特点</h2>
+        <ul class="feature-list">
+            <li>CSS hover效果显示操作按钮</li>
+            <li>右键菜单动态定位，避免超出视窗</li>
+            <li>操作按钮事件传播控制（stopPropagation）</li>
+            <li>全局点击事件监听自动隐藏菜单</li>
+            <li>所有操作都有成功/错误通知反馈</li>
+            <li>删除操作有确认对话框保护</li>
+            <li>文件复制时保持项目文件完整性</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">🧪 测试指南</h2>
+        
+        <button class="test-button" onclick="openProjectManager()">
+            🚀 打开 Project Manager 测试
+        </button>
+
+        <div class="status warning">
+            <strong>测试步骤：</strong><br>
+            1. 点击上方按钮打开Project Manager<br>
+            2. 创建或选择一个项目<br>
+            3. 测试Add Files按钮 - 应该显示复制选项对话框<br>
+            4. 右键点击项目名称 - 查看项目操作菜单<br>
+            5. 右键点击文件夹 - 查看文件夹操作菜单<br>
+            6. 悬停在项目/文件夹上 - 查看操作按钮（⋯）<br>
+            7. 测试各项功能：重命名、删除、创建等
+        </div>
+
+        <div id="testResults" class="status" style="display: none;">
+            <strong>测试结果：</strong><br>
+            <span id="testMessage"></span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">📝 主要修改文件</h2>
+        <ul class="feature-list">
+            <li><code>src/project-manager.html</code> - 添加了右键菜单HTML、CSS样式和JavaScript功能</li>
+            <li>新增了30+个方法支持项目和文件夹的完整操作</li>
+            <li>修复了Add Files复制选项被跳过的问题</li>
+            <li>增强了用户交互体验和操作反馈</li>
+        </ul>
+    </div>
+
+    <script>
+        function openProjectManager() {
+            if (window.electronAPI && window.electronAPI.createProjectManagerWindow) {
+                window.electronAPI.createProjectManagerWindow()
+                    .then(() => {
+                        showTestResult('✅ Project Manager 窗口已打开，请测试新功能！', 'success');
+                    })
+                    .catch(error => {
+                        showTestResult('❌ 无法打开 Project Manager: ' + error.message, 'error');
+                    });
+            } else {
+                showTestResult('⚠️ 此测试需要在Electron环境中运行', 'warning');
+            }
+        }
+
+        function showTestResult(message, type) {
+            const results = document.getElementById('testResults');
+            const messageElement = document.getElementById('testMessage');
+            
+            results.style.display = 'block';
+            results.className = `status ${type}`;
+            messageElement.innerHTML = message;
+        }
+
+        // 检查环境
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                showTestResult('✅ Electron环境检测成功，可以进行测试', 'success');
+            } else {
+                showTestResult('⚠️ 请在Electron环境中运行此测试', 'warning');
+            }
+        });
+    </script>
+</body>
+</html> 
