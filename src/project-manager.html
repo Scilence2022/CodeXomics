@@ -424,6 +424,9 @@
                     <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.createFolder()">
                         📁 New Folder
                     </button>
+                    <button class="btn btn-sm btn-primary" onclick="projectManagerWindow.saveCurrentProjectAsXML()" title="Save current project as XML (.prj.GAI)">
+                        💾 Save as XML
+                    </button>
                 </div>
             </div>
             
@@ -618,11 +621,14 @@
                     this.projects.set(projectId, project);
                     await this.saveProjects();
                     
+                    // 创建项目XML文件
+                    await this.createProjectXMLFile(project);
+                    
                     this.renderProjectTree();
                     this.selectProject(projectId);
                     this.closeModal('newProjectModal');
                     
-                    this.showNotification(`Project "${name}" created successfully`, 'success');
+                    this.showNotification(`Project "${name}" created successfully with XML file`, 'success');
                     
                 } catch (error) {
                     console.error('Error creating project:', error);
@@ -1456,6 +1462,143 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                         notification.parentNode.removeChild(notification);
                     }
                 }, 3000);
+            }
+
+            // XML项目文件管理方法
+            async createProjectXMLFile(project) {
+                try {
+                    // 初始化XML处理器
+                    if (!this.xmlHandler) {
+                        this.xmlHandler = new ProjectXMLHandler();
+                    }
+
+                    // 生成XML文件名
+                    const xmlFileName = `${project.name}.prj.GAI`;
+                    
+                    // 转换项目为XML
+                    const xmlContent = this.xmlHandler.projectToXML(project);
+                    
+                    // 在Electron环境中保存文件
+                    if (window.electronAPI && window.electronAPI.saveProjectFile) {
+                        try {
+                            const result = await window.electronAPI.saveProjectFile(xmlFileName, xmlContent);
+                            if (result.success) {
+                                // 将XML文件路径保存到项目中
+                                project.xmlFilePath = result.filePath;
+                                project.xmlFileName = xmlFileName;
+                                
+                                // 更新项目
+                                this.projects.set(project.id, project);
+                                await this.saveProjects();
+                                
+                                console.log(`✅ Created XML project file: ${result.filePath}`);
+                                return result.filePath;
+                            } else {
+                                throw new Error(result.error || 'Failed to save XML file');
+                            }
+                        } catch (error) {
+                            console.error('Error saving XML file via Electron:', error);
+                            throw error;
+                        }
+                    } else {
+                        // 浏览器环境中创建下载
+                        this.downloadXMLFile(xmlContent, xmlFileName);
+                        console.log(`✅ Created XML project file for download: ${xmlFileName}`);
+                        return xmlFileName;
+                    }
+                } catch (error) {
+                    console.error('Error creating project XML file:', error);
+                    throw error;
+                }
+            }
+
+            async saveCurrentProjectAsXML() {
+                if (!this.currentProject) {
+                    this.showNotification('No project selected to save', 'warning');
+                    return;
+                }
+
+                try {
+                    // 更新项目修改时间
+                    this.currentProject.modified = new Date().toISOString();
+                    
+                    // 保存为XML
+                    const result = await this.createProjectXMLFile(this.currentProject);
+                    
+                    this.showNotification(`Project saved as XML: ${this.currentProject.xmlFileName || this.currentProject.name + '.prj.GAI'}`, 'success');
+                    return result;
+                } catch (error) {
+                    console.error('Error saving project as XML:', error);
+                    this.showNotification('Failed to save project as XML', 'error');
+                    throw error;
+                }
+            }
+
+            async saveProjectAsXML(projectId = null) {
+                const project = projectId ? this.projects.get(projectId) : this.currentProject;
+                
+                if (!project) {
+                    this.showNotification('No project found to save', 'warning');
+                    return;
+                }
+
+                try {
+                    // 更新项目修改时间
+                    project.modified = new Date().toISOString();
+                    
+                    // 保存为XML
+                    const result = await this.createProjectXMLFile(project);
+                    
+                    this.showNotification(`Project "${project.name}" saved as XML`, 'success');
+                    return result;
+                } catch (error) {
+                    console.error('Error saving project as XML:', error);
+                    this.showNotification('Failed to save project as XML', 'error');
+                    throw error;
+                }
+            }
+
+            downloadXMLFile(xmlContent, fileName) {
+                const blob = new Blob([xmlContent], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            // 从XML文件加载项目
+            async loadProjectFromXML(xmlContent, fileName = null) {
+                try {
+                    if (!this.xmlHandler) {
+                        this.xmlHandler = new ProjectXMLHandler();
+                    }
+
+                    const project = this.xmlHandler.xmlToProject(xmlContent);
+                    
+                    // 更新文件信息
+                    if (fileName) {
+                        project.xmlFileName = fileName;
+                    }
+                    
+                    // 添加到项目列表
+                    this.projects.set(project.id, project);
+                    await this.saveProjects();
+                    
+                    // 刷新界面
+                    this.renderProjectTree();
+                    this.selectProject(project.id);
+                    
+                    this.showNotification(`Project "${project.name}" loaded from XML`, 'success');
+                    return project;
+                } catch (error) {
+                    console.error('Error loading project from XML:', error);
+                    this.showNotification('Failed to load project from XML', 'error');
+                    throw error;
+                }
             }
         }
 

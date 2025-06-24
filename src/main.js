@@ -2883,23 +2883,37 @@ ipcMain.handle('saveFile', async (event, fileName, content) => {
 ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
   try {
     const { dialog } = require('electron');
+    
+    // 确保默认文件名包含.prj.GAI扩展名
+    let defaultFileName = defaultPath;
+    if (!defaultFileName.endsWith('.prj.GAI')) {
+      if (defaultFileName.endsWith('.xml')) {
+        defaultFileName = defaultFileName.replace('.xml', '.prj.GAI');
+      } else {
+        defaultFileName += '.prj.GAI';
+      }
+    }
+    
     const result = await dialog.showSaveDialog(null, {
-      defaultPath: defaultPath,
+      defaultPath: defaultFileName,
       filters: [
-        { name: 'Project Files', extensions: ['xml', 'genomeproj'] },
+        { name: 'GenomeExplorer Project Files', extensions: ['prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
+        { name: 'Project Files', extensions: ['genomeproj'] },
         { name: 'All Files', extensions: ['*'] }
       ],
-      title: 'Save Project'
+      title: 'Save Project as XML'
     });
     
     if (!result.canceled && result.filePath) {
       fs.writeFileSync(result.filePath, content, 'utf8');
+      console.log(`✅ Project saved as XML: ${result.filePath}`);
       return { success: true, filePath: result.filePath };
     }
     
     return { success: false, canceled: true };
   } catch (error) {
+    console.error('Error saving project file:', error);
     return { success: false, error: error.message };
   }
 });

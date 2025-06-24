@@ -31,8 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createNewMainWindow: (filePath) => ipcRenderer.invoke('createNewMainWindow', filePath),
   
   // File Save APIs
-  saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
-      saveProjectFile: (defaultPath, content) => ipcRenderer.invoke('saveProjectFile', defaultPath, content),
+                  saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
+        saveProjectFile: (fileName, content) => ipcRenderer.invoke('saveProjectFile', fileName, content),
     createTempFile: (fileName, content) => ipcRenderer.invoke('createTempFile', fileName, content),
     getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
     updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
