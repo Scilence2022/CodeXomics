@@ -2048,21 +2048,32 @@ class MCPGenomeBrowserServer {
      */
     async submitInterProJob(sequence, applications) {
         try {
-            // InterPro API endpoint for sequence analysis
-            const postData = JSON.stringify({
-                sequence: sequence,
-                applications: applications.join(',').toLowerCase(),
-                email: 'genomeexplorer@research.com' // Required for job submission
+            // InterPro API uses form-encoded data, not JSON
+            const params = new URLSearchParams();
+            params.append('email', 'genomeexplorer@research.com');
+            params.append('sequence', sequence);
+            params.append('goterms', 'true');
+            params.append('pathways', 'true');
+            
+            // Add applications (databases)
+            applications.forEach(app => {
+                const appLower = app.toLowerCase();
+                if (['pfam', 'smart', 'prosite', 'panther', 'prints', 'tigrfam', 'pirsf', 'superfamily'].includes(appLower)) {
+                    params.append('appl', appLower);
+                }
             });
+
+            const postData = params.toString();
 
             const response = await this.makeHTTPSRequest({
                 hostname: 'www.ebi.ac.uk',
                 path: '/Tools/services/rest/iprscan5/run',
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                     'Content-Length': Buffer.byteLength(postData),
-                    'Accept': 'text/plain'
+                    'Accept': 'text/plain',
+                    'User-Agent': 'GenomeExplorer/1.0'
                 }
             }, postData);
 
@@ -2084,7 +2095,7 @@ class MCPGenomeBrowserServer {
      */
     async waitForInterProResults(jobId, maxWaitTime = 300000) { // 5 minutes max wait
         const startTime = Date.now();
-        const pollInterval = 5000; // 5 seconds
+        const pollInterval = 10000; // 10 seconds - be more respectful to EBI servers
 
         while (Date.now() - startTime < maxWaitTime) {
             try {
@@ -2094,26 +2105,34 @@ class MCPGenomeBrowserServer {
                     path: `/Tools/services/rest/iprscan5/status/${jobId}`,
                     method: 'GET',
                     headers: {
-                        'Accept': 'text/plain'
+                        'Accept': 'text/plain',
+                        'User-Agent': 'GenomeExplorer/1.0'
                     }
                 });
 
-                console.log('InterPro job status:', status.trim());
+                const statusValue = status.trim();
+                console.log('InterPro job status:', statusValue);
 
-                if (status.trim() === 'FINISHED') {
-                    // Get results
+                if (statusValue === 'FINISHED') {
+                    console.log('InterPro job finished, retrieving results...');
+                    // Get results in JSON format
                     const results = await this.makeHTTPSRequest({
                         hostname: 'www.ebi.ac.uk',
                         path: `/Tools/services/rest/iprscan5/result/${jobId}/json`,
                         method: 'GET',
                         headers: {
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            'User-Agent': 'GenomeExplorer/1.0'
                         }
                     });
 
                     return JSON.parse(results);
-                } else if (status.trim() === 'ERROR' || status.trim() === 'FAILURE') {
-                    throw new Error('InterPro analysis failed');
+                } else if (statusValue === 'ERROR' || statusValue === 'FAILURE' || statusValue === 'FAILED') {
+                    throw new Error(`InterPro analysis failed with status: ${statusValue}`);
+                } else if (statusValue === 'RUNNING') {
+                    console.log('InterPro job still running, waiting...');
+                } else {
+                    console.log(`InterPro job status: ${statusValue}, continuing to wait...`);
                 }
 
                 // Wait before next poll
@@ -2121,11 +2140,15 @@ class MCPGenomeBrowserServer {
 
             } catch (error) {
                 console.warn('Error polling InterPro job:', error.message);
-                break;
+                // Don't break immediately - try a few more times
+                if (Date.now() - startTime > maxWaitTime * 0.8) {
+                    break; // Only break if we're near the timeout
+                }
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
             }
         }
 
-        throw new Error('InterPro analysis timed out');
+        throw new Error('InterPro analysis timed out or failed');
     }
 
     /**
