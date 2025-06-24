@@ -14,6 +14,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectAndLoadFile: () => ipcRenderer.invoke('select-and-load-file'),
   getFileInfo: (filePath) => ipcRenderer.invoke('get-file-info', filePath),
   
+  // Project Manager APIs
+  selectProjectDirectory: () => ipcRenderer.invoke('selectProjectDirectory'),
+  selectProjectFile: () => ipcRenderer.invoke('selectProjectFile'),
+  selectMultipleFiles: () => ipcRenderer.invoke('selectMultipleFiles'),
+  createProjectDirectory: (location, projectName) => ipcRenderer.invoke('createProjectDirectory', location, projectName),
+  loadProjectFile: (filePath) => ipcRenderer.invoke('loadProjectFile', filePath),
+  openFileInMainWindow: (filePath) => ipcRenderer.invoke('openFileInMainWindow', filePath),
+  saveProjectsData: (projectsData) => ipcRenderer.invoke('saveProjectsData', projectsData),
+  loadProjectsData: () => ipcRenderer.invoke('loadProjectsData'),
+  saveProjectSettings: (settings) => ipcRenderer.invoke('saveProjectSettings', settings),
+  loadProjectSettings: () => ipcRenderer.invoke('loadProjectSettings'),
+  
+  // Enhanced File Opening APIs
+  checkMainWindowStatus: () => ipcRenderer.invoke('checkMainWindowStatus'),
+  createNewMainWindow: (filePath) => ipcRenderer.invoke('createNewMainWindow', filePath),
+  
+  // File Save APIs
+  saveFile: (fileName, content) => ipcRenderer.invoke('saveFile', fileName, content),
+  saveProjectFile: (defaultPath, content) => ipcRenderer.invoke('saveProjectFile', defaultPath, content),
+  
   // Communication with main window
   sendToMainWindow: (channel, data) => ipcRenderer.invoke('send-to-main-window', channel, data),
   

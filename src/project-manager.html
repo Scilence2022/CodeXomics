@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager - GenomeExplorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            color: #2c3e50;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .btn-primary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #e1e8ed;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin: 2px 0;
+            transition: all 0.2s ease;
+        }
+        
+        .tree-item:hover {
+            background: #f0f2f5;
+        }
+        
+        .tree-item.active {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .tree-item.project {
+            font-weight: 600;
+            border-left: 3px solid #007bff;
+        }
+        
+        .tree-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        
+        .content-header {
+            padding: 15px 25px;
+            border-bottom: 1px solid #e1e8ed;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .content-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            width: 250px;
+        }
+        
+        .content-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .file-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+        
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .file-icon.fasta { background: #28a745; }
+        .file-icon.gff { background: #17a2b8; }
+        .file-icon.vcf { background: #ffc107; color: #000; }
+        .file-icon.bam { background: #6f42c1; }
+        .file-icon.folder { background: #6c757d; }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+        
+        .modal-body {
+            padding: 25px;
+        }
+        
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8f9fa;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            height: 80px;
+            resize: vertical;
+        }
+        
+        .status-bar {
+            padding: 8px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .project-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px 20px;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>📁 Project Manager</h1>
+            <span style="opacity: 0.8; font-size: 13px;">Organize and manage your genomic data projects</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="projectManager.createNewProject()">
+                📂 New Project
+            </button>
+            <button class="btn btn-primary" onclick="projectManager.openProject()">
+                📖 Open Project
+            </button>
+            <button class="btn btn-primary" onclick="projectManager.showSettings()">
+                ⚙️ Settings
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Projects & Workspaces</h3>
+                <button class="btn btn-sm btn-secondary" onclick="projectManager.refreshProjects()">
+                    🔄
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div id="projectTree">
+                    <!-- Project tree will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="content-header">
+                <div class="content-title" id="contentTitle">Welcome to Project Manager</div>
+                <div class="toolbar">
+                    <input type="text" class="search-box" placeholder="Search files..." id="searchBox">
+                    <button class="btn btn-sm btn-secondary" onclick="projectManager.addFiles()">
+                        📄 Add Files
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="projectManager.createFolder()">
+                        📁 New Folder
+                    </button>
+                </div>
+            </div>
+            
+            <div class="content-body">
+                <div id="projectOverview">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📂</div>
+                        <h3>No Project Selected</h3>
+                        <p>Create a new project or select an existing one to get started.</p>
+                        <button class="btn btn-primary" onclick="projectManager.createNewProject()">
+                            Create New Project
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="projectContent" style="display: none;">
+                    <div class="project-stats" id="projectStats"></div>
+                    <div class="file-grid" id="fileGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="statusText">Ready</span>
+        <span id="fileCount">0 items</span>
+    </div>
+
+    <!-- New Project Modal -->
+    <div id="newProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Project</h3>
+                <button class="modal-close" onclick="projectManager.closeModal('newProjectModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Project Name</label>
+                    <input type="text" class="form-input" id="projectName" placeholder="Enter project name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="projectDescription" placeholder="Enter project description (optional)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="projectLocation" placeholder="Select project location" readonly>
+                    <button class="btn btn-secondary btn-sm" onclick="projectManager.selectProjectLocation()" style="margin-top: 8px;">
+                        📁 Browse...
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="projectManager.closeModal('newProjectModal')">Cancel</button>
+                <button class="btn btn-success" onclick="projectManager.createProject()">Create Project</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ProjectManagerWindow - 项目管理器窗口核心类
+         */
+        class ProjectManagerWindow {
+            constructor() {
+                this.projects = new Map();
+                this.currentProject = null;
+                this.currentPath = [];
+                this.selectedFiles = new Set();
+                this.searchTerm = '';
+                
+                // 文件类型配置
+                this.fileTypes = {
+                    'fasta': { icon: 'FA', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
+                    'gff': { icon: 'GFF', color: '#17a2b8', extensions: ['.gff', '.gff3', '.gtf'] },
+                    'vcf': { icon: 'VCF', color: '#ffc107', extensions: ['.vcf'] },
+                    'bam': { icon: 'BAM', color: '#6f42c1', extensions: ['.bam', '.sam'] },
+                    'wig': { icon: 'WIG', color: '#fd7e14', extensions: ['.wig', '.bw', '.bigwig'] },
+                    'bed': { icon: 'BED', color: '#dc3545', extensions: ['.bed'] },
+                    'genbank': { icon: 'GB', color: '#20c997', extensions: ['.gb', '.gbk', '.gbff'] }
+                };
+                
+                this.initialize();
+            }
+
+            async initialize() {
+                console.log('Initializing Project Manager Window...');
+                await this.loadProjects();
+                this.setupEventListeners();
+                this.renderProjectTree();
+                this.updateStatusBar('Ready');
+                console.log('Project Manager Window initialized successfully');
+            }
+
+            setupEventListeners() {
+                const searchBox = document.getElementById('searchBox');
+                if (searchBox) {
+                    searchBox.addEventListener('input', (e) => {
+                        this.searchTerm = e.target.value.toLowerCase();
+                        this.renderProjectContent();
+                    });
+                }
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 'n':
+                                e.preventDefault();
+                                this.createNewProject();
+                                break;
+                            case 'o':
+                                e.preventDefault();
+                                this.openProject();
+                                break;
+                        }
+                    }
+                });
+
+                window.addEventListener('click', (e) => {
+                    const modals = document.querySelectorAll('.modal');
+                    modals.forEach(modal => {
+                        if (e.target === modal) {
+                            modal.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            createNewProject() {
+                const modal = document.getElementById('newProjectModal');
+                if (modal) {
+                    document.getElementById('projectName').value = '';
+                    document.getElementById('projectDescription').value = '';
+                    document.getElementById('projectLocation').value = '';
+                    modal.style.display = 'block';
+                }
+            }
+
+            async selectProjectLocation() {
+                try {
+                    if (window.electronAPI && window.electronAPI.selectProjectDirectory) {
+                        const result = await window.electronAPI.selectProjectDirectory();
+                        if (result.success && !result.canceled) {
+                            document.getElementById('projectLocation').value = result.filePath;
+                        }
+                    } else {
+                        this.showNotification('Directory selection requires Electron API', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error selecting project location:', error);
+                    this.showNotification('Failed to select project location', 'error');
+                }
+            }
+
+            async createProject() {
+                const name = document.getElementById('projectName').value.trim();
+                const description = document.getElementById('projectDescription').value.trim();
+                const location = document.getElementById('projectLocation').value.trim();
+
+                if (!name) {
+                    this.showNotification('Project name is required', 'warning');
+                    return;
+                }
+
+                try {
+                    const projectId = this.generateId();
+                    const project = {
+                        id: projectId,
+                        name: name,
+                        description: description,
+                        location: location || 'Default',
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString(),
+                        files: [],
+                        folders: [
+                            { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
+                            { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
+                            { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
+                            { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
+                            { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
+                        ],
+                        metadata: {
+                            totalFiles: 0,
+                            totalSize: 0,
+                            lastOpened: new Date().toISOString()
+                        }
+                    };
+
+                    this.projects.set(projectId, project);
+                    await this.saveProjects();
+                    
+                    this.renderProjectTree();
+                    this.selectProject(projectId);
+                    this.closeModal('newProjectModal');
+                    
+                    this.showNotification(`Project "${name}" created successfully`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error creating project:', error);
+                    this.showNotification('Failed to create project', 'error');
+                }
+            }
+
+            async openProject() {
+                this.showNotification('Open project feature coming soon', 'info');
+            }
+
+            selectProject(projectId) {
+                this.currentProject = this.projects.get(projectId);
+                this.currentPath = [];
+                
+                if (this.currentProject) {
+                    this.currentProject.metadata.lastOpened = new Date().toISOString();
+                    
+                    this.renderProjectContent();
+                    this.updateActiveTreeItem(projectId);
+                    this.updateContentTitle();
+                    
+                    document.getElementById('projectOverview').style.display = 'none';
+                    document.getElementById('projectContent').style.display = 'block';
+                    
+                    this.updateStatusBar(`Opened: ${this.currentProject.name}`);
+                    this.saveProjects();
+                }
+            }
+
+            renderProjectTree() {
+                const projectTree = document.getElementById('projectTree');
+                if (!projectTree) return;
+
+                let html = '';
+                
+                if (this.projects.size === 0) {
+                    html = `
+                        <div style="padding: 20px; text-align: center; color: #6c757d;">
+                            <div style="font-size: 2em; margin-bottom: 10px;">📂</div>
+                            <div style="margin-bottom: 10px;">No projects found</div>
+                            <button class="btn btn-primary" onclick="projectManager.createNewProject()" style="font-size: 12px; padding: 6px 12px;">
+                                Create Project
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    this.projects.forEach((project, projectId) => {
+                        const isActive = this.currentProject && this.currentProject.id === projectId;
+                        html += `
+                            <div class="tree-item project ${isActive ? 'active' : ''}" 
+                                 onclick="projectManager.selectProject('${projectId}')"
+                                 data-project-id="${projectId}">
+                                <div class="tree-icon">📂</div>
+                                <span title="${project.description || project.name}">${project.name}</span>
+                            </div>
+                        `;
+                        
+                        if (isActive && project.folders) {
+                            project.folders.forEach(folder => {
+                                const isCurrentPath = this.arraysEqual(this.currentPath, folder.path);
+                                html += `
+                                    <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
+                                         onclick="projectManager.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
+                                         style="margin-left: 20px;">
+                                        <div class="tree-icon">${folder.icon}</div>
+                                        <span>${folder.name}</span>
+                                    </div>
+                                `;
+                            });
+                        }
+                    });
+                }
+                
+                projectTree.innerHTML = html;
+            }
+
+            navigateToFolder(path) {
+                this.currentPath = path;
+                this.renderProjectContent();
+                this.updateContentTitle();
+            }
+
+            renderProjectContent() {
+                if (!this.currentProject) return;
+
+                this.renderProjectStats();
+                this.renderFileGrid();
+            }
+
+            renderProjectStats() {
+                const statsElement = document.getElementById('projectStats');
+                if (!statsElement || !this.currentProject) return;
+
+                const currentFiles = this.getCurrentFolderFiles();
+                const totalSize = this.currentProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
+
+                statsElement.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${currentFiles.length}</div>
+                        <div class="stat-label">Files in Folder</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${this.currentProject.files.length}</div>
+                        <div class="stat-label">Total Files</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${this.formatFileSize(totalSize)}</div>
+                        <div class="stat-label">Total Size</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${this.currentProject.folders.length}</div>
+                        <div class="stat-label">Folders</div>
+                    </div>
+                `;
+            }
+
+            renderFileGrid() {
+                const fileGrid = document.getElementById('fileGrid');
+                if (!fileGrid) return;
+
+                const currentFiles = this.getCurrentFolderFiles();
+                const filteredFiles = this.filterFiles(currentFiles);
+
+                if (filteredFiles.length === 0) {
+                    fileGrid.innerHTML = `
+                        <div style="grid-column: 1 / -1;">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📄</div>
+                                <h3>No files found</h3>
+                                <p>Add some files to this folder to get started.</p>
+                                <button class="btn btn-primary" onclick="projectManager.addFiles()">
+                                    Add Files
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                filteredFiles.forEach(file => {
+                    const fileType = this.detectFileType(file.name);
+                    const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+
+                    html += `
+                        <div class="file-card" 
+                             onclick="projectManager.selectFile('${file.id}')"
+                             ondblclick="projectManager.openFileInMainWindow('${file.id}')"
+                             data-file-id="${file.id}">
+                            <div class="file-icon ${fileType}" 
+                                 style="background-color: ${typeConfig.color}">
+                                ${typeConfig.icon}
+                            </div>
+                            <div class="file-name" title="${file.name}">${file.name}</div>
+                            <div class="file-info">
+                                ${this.formatFileSize(file.size || 0)}
+                                ${file.modified ? `• ${this.formatDate(file.modified)}` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                fileGrid.innerHTML = html;
+                this.updateFileCountDisplay(filteredFiles.length);
+            }
+
+            async addFiles() {
+                if (!this.currentProject) {
+                    this.showNotification('Please select a project first', 'warning');
+                    return;
+                }
+
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.accept = '.fasta,.fa,.gff,.gtf,.vcf,.bam,.sam,.wig,.bed,.gb,.gbk';
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    this.processFileObjects(files);
+                };
+                input.click();
+            }
+
+            async processFileObjects(files) {
+                let addedCount = 0;
+                
+                for (const file of files) {
+                    const fileObj = {
+                        id: this.generateId(),
+                        name: file.name,
+                        path: file.name,
+                        size: file.size,
+                        type: this.detectFileType(file.name),
+                        folder: [...this.currentPath],
+                        added: new Date().toISOString(),
+                        modified: new Date(file.lastModified).toISOString()
+                    };
+                    
+                    this.currentProject.files.push(fileObj);
+                    addedCount++;
+                }
+                
+                if (addedCount > 0) {
+                    this.currentProject.modified = new Date().toISOString();
+                    this.currentProject.metadata.totalFiles = this.currentProject.files.length;
+                    
+                    await this.saveProjects();
+                    this.renderProjectContent();
+                    this.showNotification(`Added ${addedCount} file(s) to project`, 'success');
+                }
+            }
+
+            createFolder() {
+                if (!this.currentProject) {
+                    this.showNotification('Please select a project first', 'warning');
+                    return;
+                }
+
+                const folderName = prompt('Enter folder name:');
+                if (!folderName || !folderName.trim()) return;
+
+                const newPath = [...this.currentPath, folderName.trim().toLowerCase()];
+                const folder = {
+                    name: folderName.trim(),
+                    icon: '📁',
+                    path: newPath,
+                    files: []
+                };
+
+                this.currentProject.folders.push(folder);
+                this.currentProject.modified = new Date().toISOString();
+                
+                this.saveProjects();
+                this.renderProjectTree();
+                this.showNotification(`Folder "${folderName}" created`, 'success');
+            }
+
+            selectFile(fileId) {
+                this.selectedFiles.clear();
+                this.selectedFiles.add(fileId);
+                this.updateFileCardSelection();
+                this.updateStatusBar();
+            }
+
+            async openFileInMainWindow(fileId) {
+                const file = this.findFileById(fileId);
+                if (!file) return;
+
+                this.showNotification(`Would open "${file.name}" in main window`, 'info');
+            }
+
+            refreshProjects() {
+                this.loadProjects();
+                this.renderProjectTree();
+                this.showNotification('Projects refreshed', 'success');
+            }
+
+            showSettings() {
+                this.showNotification('Settings feature coming soon', 'info');
+            }
+
+            closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'none';
+            }
+
+            // 工具方法
+            getCurrentFolderFiles() {
+                if (!this.currentProject) return [];
+                return this.currentProject.files.filter(file => {
+                    if (this.currentPath.length === 0) {
+                        return !file.folder || file.folder.length === 0;
+                    }
+                    return file.folder && this.arraysEqual(file.folder, this.currentPath);
+                });
+            }
+
+            filterFiles(files) {
+                if (!this.searchTerm) return files;
+                return files.filter(file => file.name.toLowerCase().includes(this.searchTerm));
+            }
+
+            updateFileCardSelection() {
+                const fileCards = document.querySelectorAll('.file-card');
+                fileCards.forEach(card => {
+                    const fileId = card.dataset.fileId;
+                    if (this.selectedFiles.has(fileId)) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                });
+            }
+
+            updateContentTitle() {
+                const titleElement = document.getElementById('contentTitle');
+                if (!titleElement || !this.currentProject) return;
+
+                let title = this.currentProject.name;
+                if (this.currentPath.length > 0) {
+                    title += ' / ' + this.currentPath.join(' / ');
+                }
+                titleElement.textContent = title;
+            }
+
+            updateActiveTreeItem(projectId = null) {
+                const treeItems = document.querySelectorAll('.tree-item');
+                treeItems.forEach(item => item.classList.remove('active'));
+
+                if (projectId) {
+                    const activeItem = document.querySelector(`[data-project-id="${projectId}"]`);
+                    if (activeItem) activeItem.classList.add('active');
+                }
+            }
+
+            updateStatusBar(message = 'Ready') {
+                const statusText = document.getElementById('statusText');
+                if (statusText) statusText.textContent = message;
+                this.updateFileCountDisplay();
+            }
+
+            updateFileCountDisplay(count = null) {
+                const fileCountElement = document.getElementById('fileCount');
+                if (!fileCountElement) return;
+
+                if (count === null && this.currentProject) {
+                    count = this.getCurrentFolderFiles().length;
+                }
+                
+                let text = `${count || 0} items`;
+                if (this.selectedFiles.size > 0) {
+                    text += ` (${this.selectedFiles.size} selected)`;
+                }
+                
+                fileCountElement.textContent = text;
+            }
+
+            async saveProjects() {
+                try {
+                    const projectsData = {
+                        projects: Object.fromEntries(this.projects),
+                        lastSaved: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem('genomeExplorer_projects', JSON.stringify(projectsData));
+                    console.log('Projects saved to localStorage');
+                } catch (error) {
+                    console.error('Error saving projects:', error);
+                }
+            }
+
+            async loadProjects() {
+                try {
+                    const data = localStorage.getItem('genomeExplorer_projects');
+                    if (data) {
+                        const projectsData = JSON.parse(data);
+                        if (projectsData.projects) {
+                            this.projects = new Map(Object.entries(projectsData.projects));
+                        }
+                    }
+                    console.log(`Loaded ${this.projects.size} projects`);
+                } catch (error) {
+                    console.error('Error loading projects:', error);
+                    this.projects = new Map();
+                }
+            }
+
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            detectFileType(fileName) {
+                const ext = '.' + fileName.toLowerCase().split('.').pop();
+                for (const [type, config] of Object.entries(this.fileTypes)) {
+                    if (config.extensions.includes(ext)) {
+                        return type;
+                    }
+                }
+                return 'unknown';
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return Math.round(bytes / Math.pow(1024, i) * 10) / 10 + ' ' + sizes[i];
+            }
+
+            formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString();
+            }
+
+            arraysEqual(a, b) {
+                return a.length === b.length && a.every((val, i) => val === b[i]);
+            }
+
+            findFileById(fileId) {
+                if (!this.currentProject) return null;
+                return this.currentProject.files.find(f => f.id === fileId);
+            }
+
+            showNotification(message, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+                    color: white;
+                    border-radius: 6px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    font-size: 14px;
+                    max-width: 300px;
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+        }
+
+        // 全局项目管理器实例
+        let projectManager = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing Project Manager...');
+            projectManager = new ProjectManagerWindow();
+        });
+    </script>
+    
+    <!-- XML处理器 -->
+    <script src="renderer/modules/ProjectXMLHandler.js"></script>
+</body>
+</html> 

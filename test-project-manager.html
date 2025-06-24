@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Project Manager - GenomeExplorer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f6fa;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+        }
+        .test-button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-result {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .warning { border-left-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧬 GenomeExplorer Project Manager Test</h1>
+        <p>This page tests the Project Manager functionality to ensure everything works correctly.</p>
+
+        <div class="test-section">
+            <h3>📂 Basic Project Manager Test</h3>
+            <p>Test opening the project manager window:</p>
+            <button class="test-button" onclick="testOpenProjectManager()">
+                Open Project Manager
+            </button>
+            <div id="projectManagerResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 API Availability Test</h3>
+            <p>Test if the Electron APIs are available:</p>
+            <button class="test-button" onclick="testAPIs()">
+                Test APIs
+            </button>
+            <div id="apiResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>💾 Data Persistence Test</h3>
+            <p>Test saving and loading project data:</p>
+            <button class="test-button" onclick="testDataPersistence()">
+                Test Data Save/Load
+            </button>
+            <div id="dataResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📁 File Dialog Test</h3>
+            <p>Test file and directory selection dialogs:</p>
+            <button class="test-button" onclick="testFileDialogs()">
+                Test File Dialogs
+            </button>
+            <div id="fileDialogResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 Main Window Communication Test</h3>
+            <p>Test communication with the main window:</p>
+            <button class="test-button" onclick="testMainWindowComm()">
+                Test Communication
+            </button>
+            <div id="commResult" class="test-result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test opening the project manager
+        function testOpenProjectManager() {
+            const resultDiv = document.getElementById('projectManagerResult');
+            resultDiv.style.display = 'block';
+            
+            try {
+                if (window.electronAPI) {
+                    // In a real Electron environment, this would open the project manager
+                    resultDiv.innerHTML = '✅ <strong>Success:</strong> Electron API is available. Project Manager window would open.';
+                    resultDiv.className = 'test-result success';
+                } else {
+                    // Simulate opening in browser environment
+                    window.open('./src/project-manager.html', '_blank', 'width=1200,height=800');
+                    resultDiv.innerHTML = '✅ <strong>Success:</strong> Project Manager opened in new window (browser mode).';
+                    resultDiv.className = 'test-result success';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Test API availability
+        function testAPIs() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.style.display = 'block';
+            
+            const apis = [
+                'selectProjectDirectory',
+                'selectProjectFile', 
+                'selectMultipleFiles',
+                'createProjectDirectory',
+                'loadProjectFile',
+                'openFileInMainWindow',
+                'saveProjectsData',
+                'loadProjectsData'
+            ];
+            
+            let results = [];
+            
+            if (window.electronAPI) {
+                apis.forEach(api => {
+                    if (typeof window.electronAPI[api] === 'function') {
+                        results.push(`✅ ${api}`);
+                    } else {
+                        results.push(`❌ ${api}`);
+                    }
+                });
+                
+                resultDiv.innerHTML = `<strong>Electron API Status:</strong><br>${results.join('<br>')}`;
+                resultDiv.className = 'test-result success';
+            } else {
+                resultDiv.innerHTML = '⚠️ <strong>Warning:</strong> Electron API not available (browser mode). LocalStorage will be used for data persistence.';
+                resultDiv.className = 'test-result warning';
+            }
+        }
+
+        // Test data persistence
+        async function testDataPersistence() {
+            const resultDiv = document.getElementById('dataResult');
+            resultDiv.style.display = 'block';
+            
+            try {
+                const testData = {
+                    projects: {
+                        'test-project-1': {
+                            id: 'test-project-1',
+                            name: 'Test Project',
+                            description: 'A test project for validation',
+                            created: new Date().toISOString(),
+                            files: []
+                        }
+                    },
+                    lastSaved: new Date().toISOString()
+                };
+                
+                if (window.electronAPI && window.electronAPI.saveProjectsData) {
+                    // Test Electron file system
+                    const saveResult = await window.electronAPI.saveProjectsData(testData);
+                    if (saveResult.success) {
+                        const loadResult = await window.electronAPI.loadProjectsData();
+                        if (loadResult.success) {
+                            resultDiv.innerHTML = '✅ <strong>Success:</strong> Data saved and loaded successfully via Electron API.';
+                            resultDiv.className = 'test-result success';
+                        } else {
+                            throw new Error('Failed to load data');
+                        }
+                    } else {
+                        throw new Error('Failed to save data');
+                    }
+                } else {
+                    // Test localStorage
+                    localStorage.setItem('genomeExplorer_projects_test', JSON.stringify(testData));
+                    const loaded = JSON.parse(localStorage.getItem('genomeExplorer_projects_test'));
+                    
+                    if (loaded && loaded.projects['test-project-1']) {
+                        resultDiv.innerHTML = '✅ <strong>Success:</strong> Data saved and loaded successfully via localStorage.';
+                        resultDiv.className = 'test-result success';
+                        localStorage.removeItem('genomeExplorer_projects_test');
+                    } else {
+                        throw new Error('Data persistence test failed');
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Test file dialogs
+        async function testFileDialogs() {
+            const resultDiv = document.getElementById('fileDialogResult');
+            resultDiv.style.display = 'block';
+            
+            if (window.electronAPI && window.electronAPI.selectProjectDirectory) {
+                try {
+                    resultDiv.innerHTML = '🔄 <strong>Testing:</strong> Opening directory selection dialog...';
+                    resultDiv.className = 'test-result';
+                    
+                    const result = await window.electronAPI.selectProjectDirectory();
+                    if (result.canceled) {
+                        resultDiv.innerHTML = '⚠️ <strong>Cancelled:</strong> Directory selection was cancelled by user.';
+                        resultDiv.className = 'test-result warning';
+                    } else if (result.success) {
+                        resultDiv.innerHTML = `✅ <strong>Success:</strong> Selected directory: ${result.filePath}`;
+                        resultDiv.className = 'test-result success';
+                    } else {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+                    resultDiv.className = 'test-result error';
+                }
+            } else {
+                resultDiv.innerHTML = '⚠️ <strong>Warning:</strong> File dialogs require Electron API. Feature not available in browser mode.';
+                resultDiv.className = 'test-result warning';
+            }
+        }
+
+        // Test main window communication
+        async function testMainWindowComm() {
+            const resultDiv = document.getElementById('commResult');
+            resultDiv.style.display = 'block';
+            
+            if (window.electronAPI && window.electronAPI.openFileInMainWindow) {
+                try {
+                    const testFilePath = '/path/to/test/file.fasta';
+                    const result = await window.electronAPI.openFileInMainWindow(testFilePath);
+                    
+                    if (result.success) {
+                        resultDiv.innerHTML = '✅ <strong>Success:</strong> Communication with main window successful.';
+                        resultDiv.className = 'test-result success';
+                    } else {
+                        resultDiv.innerHTML = `⚠️ <strong>Warning:</strong> ${result.error}`;
+                        resultDiv.className = 'test-result warning';
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+                    resultDiv.className = 'test-result error';
+                }
+            } else {
+                resultDiv.innerHTML = '⚠️ <strong>Warning:</strong> Main window communication requires Electron API.';
+                resultDiv.className = 'test-result warning';
+            }
+        }
+
+        // Initialize tests
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Project Manager Test Page loaded');
+            
+            // Auto-run API test
+            setTimeout(() => {
+                testAPIs();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

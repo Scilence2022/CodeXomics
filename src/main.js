@@ -607,6 +607,14 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('open-resource-manager');
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Project Manager',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            createProjectManagerWindow();
+          }
         }
       ]
     },
@@ -2489,5 +2497,357 @@ ipcMain.on('focus-main-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.focus();
     mainWindow.show();
+  }
+});
+
+// ========== PROJECT MANAGER WINDOW ==========
+
+// Create Project Manager Window
+function createProjectManagerWindow() {
+  try {
+    const projectManagerWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 1000,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      title: 'Project Manager - GenomeExplorer',
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      show: false
+    });
+    
+    // Load the project manager HTML
+    const projectManagerPath = path.join(__dirname, 'project-manager.html');
+    
+    if (fs.existsSync(projectManagerPath)) {
+      projectManagerWindow.loadFile(projectManagerPath);
+    } else {
+      console.error('Project manager file not found:', projectManagerPath);
+      return;
+    }
+    
+    // Show window when ready
+    projectManagerWindow.once('ready-to-show', () => {
+      projectManagerWindow.show();
+    });
+    
+    // Handle window closed
+    projectManagerWindow.on('closed', () => {
+      console.log('Project Manager window closed');
+    });
+    
+    console.log('Project Manager window created successfully');
+    
+  } catch (error) {
+    console.error('Failed to open Project Manager:', error);
+  }
+}
+
+// ========== PROJECT MANAGER IPC HANDLERS ==========
+
+// Handle project directory selection
+ipcMain.handle('selectProjectDirectory', async () => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Select Project Location'
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { success: true, filePath: result.filePaths[0] };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project file selection
+ipcMain.handle('selectProjectFile', async () => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Project Files', extensions: ['genomeproj', 'json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      title: 'Open Project File'
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { success: true, filePath: result.filePaths[0] };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle multiple file selection
+ipcMain.handle('selectMultipleFiles', async () => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      title: 'Select Files to Add'
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { success: true, filePaths: result.filePaths };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project creation
+ipcMain.handle('createProjectDirectory', async (event, location, projectName) => {
+  try {
+    const projectPath = path.join(location, projectName);
+    
+    // Create project directory if it doesn't exist
+    if (!fs.existsSync(projectPath)) {
+      fs.mkdirSync(projectPath, { recursive: true });
+    }
+    
+    // Create project subdirectories
+    const subdirs = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
+    subdirs.forEach(subdir => {
+      const subdirPath = path.join(projectPath, subdir);
+      if (!fs.existsSync(subdirPath)) {
+        fs.mkdirSync(subdirPath, { recursive: true });
+      }
+    });
+    
+    return { success: true, projectPath: projectPath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project file loading
+ipcMain.handle('loadProjectFile', async (event, filePath) => {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return { success: true, content: content };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle opening file in main window
+ipcMain.handle('openFileInMainWindow', async (event, filePath) => {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('load-file', filePath);
+      mainWindow.focus();
+      return { success: true, message: 'File opened in main window' };
+    } else {
+      return { success: false, error: 'Main window not available' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle projects data saving
+ipcMain.handle('saveProjectsData', async (event, projectsData) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const projectsFilePath = path.join(userDataPath, 'projects.json');
+    
+    fs.writeFileSync(projectsFilePath, JSON.stringify(projectsData, null, 2));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle projects data loading
+ipcMain.handle('loadProjectsData', async () => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const projectsFilePath = path.join(userDataPath, 'projects.json');
+    
+    if (fs.existsSync(projectsFilePath)) {
+      const data = fs.readFileSync(projectsFilePath, 'utf8');
+      return { success: true, data: data };
+    } else {
+      return { success: true, data: null };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project settings saving
+ipcMain.handle('saveProjectSettings', async (event, settings) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const settingsFilePath = path.join(userDataPath, 'project-settings.json');
+    
+    fs.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project settings loading
+ipcMain.handle('loadProjectSettings', async () => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const settingsFilePath = path.join(userDataPath, 'project-settings.json');
+    
+    if (fs.existsSync(settingsFilePath)) {
+      const data = fs.readFileSync(settingsFilePath, 'utf8');
+      return { success: true, data: data };
+    } else {
+      return { success: true, data: null };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC handler for opening project manager from main window
+ipcMain.on('open-project-manager', () => {
+  console.log('IPC: Opening Project Manager window...');
+  createProjectManagerWindow();
+});
+
+// Handle checking main window status
+ipcMain.handle('checkMainWindowStatus', async () => {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Send request to main window to check if it has a file open
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve({ hasOpenFile: false, error: 'Timeout' });
+        }, 1000);
+
+        mainWindow.webContents.once('main-window-status-response', (event, hasOpenFile) => {
+          clearTimeout(timeout);
+          resolve({ hasOpenFile: hasOpenFile });
+        });
+
+        mainWindow.webContents.send('check-file-status');
+      });
+    } else {
+      return { hasOpenFile: false, error: 'Main window not available' };
+    }
+  } catch (error) {
+    return { hasOpenFile: false, error: error.message };
+  }
+});
+
+// Handle creating new main window with file
+ipcMain.handle('createNewMainWindow', async (event, filePath) => {
+  try {
+    // Create a new main window similar to the original
+    const newMainWindow = new BrowserWindow({
+      width: 1400,
+      height: 900,
+      minWidth: 800,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    // Set up the new window
+    newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+
+    // Set menu for new window
+    createMenu();
+
+    // Show window when ready and load file
+    newMainWindow.once('ready-to-show', () => {
+      newMainWindow.show();
+      // Load the file after window is shown
+      setTimeout(() => {
+        newMainWindow.webContents.send('load-file', filePath);
+      }, 500);
+    });
+
+    // Handle window closed
+    newMainWindow.on('closed', () => {
+      console.log('New main window closed');
+    });
+
+    return { success: true, message: 'New window created with file' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle file save operations
+ipcMain.handle('saveFile', async (event, fileName, content) => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showSaveDialog(null, {
+      defaultPath: fileName,
+      filters: [
+        { name: 'XML Files', extensions: ['xml'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      title: 'Save Project File'
+    });
+    
+    if (!result.canceled && result.filePath) {
+      fs.writeFileSync(result.filePath, content, 'utf8');
+      return { success: true, filePath: result.filePath };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle project file save with path
+ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showSaveDialog(null, {
+      defaultPath: defaultPath,
+      filters: [
+        { name: 'Project Files', extensions: ['xml', 'genomeproj'] },
+        { name: 'XML Files', extensions: ['xml'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      title: 'Save Project'
+    });
+    
+    if (!result.canceled && result.filePath) {
+      fs.writeFileSync(result.filePath, content, 'utf8');
+      return { success: true, filePath: result.filePath };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }); 

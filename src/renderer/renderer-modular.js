@@ -1318,6 +1318,19 @@ class GenomeBrowser {
         ipcRenderer.on('menu-select-all', () => {
             this.handleMenuSelectAll();
         });
+
+        // Handle file status check from Project Manager
+        ipcRenderer.on('check-file-status', () => {
+            const hasOpenFile = this.currentFile !== null || this.loadedFiles.length > 0;
+            ipcRenderer.send('main-window-status-response', hasOpenFile);
+        });
+
+        // Handle file loading from Project Manager
+        ipcRenderer.on('load-file', (event, filePath) => {
+            if (this.fileManager) {
+                this.fileManager.loadFile(filePath);
+            }
+        });
     }
 
     // Core genome display method
