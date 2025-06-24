@@ -1331,6 +1331,44 @@ class GenomeBrowser {
                 this.fileManager.loadFile(filePath);
             }
         });
+
+        // Handle project management from main menu
+        ipcRenderer.on('open-project-file', (event, filePath) => {
+            console.log('📂 Opening project file from main menu:', filePath);
+            this.showNotification(`Opening project: ${filePath}`, 'info');
+            // TODO: 实现项目文件打开逻辑
+            // 这里可以调用 ProjectManager 的方法来加载项目
+        });
+
+        ipcRenderer.on('save-current-project', () => {
+            console.log('💾 Save current project requested');
+            this.showNotification('Save project functionality will be implemented', 'info');
+            // TODO: 实现当前项目保存逻辑
+        });
+
+        ipcRenderer.on('save-project-as', () => {
+            console.log('💾 Save project as requested');
+            this.showNotification('Save project as functionality will be implemented', 'info');
+            // TODO: 实现项目另存为逻辑
+        });
+
+        ipcRenderer.on('export-project-xml', () => {
+            console.log('📤 Export project as XML requested');
+            this.showNotification('Export project as XML functionality will be implemented', 'info');
+            // TODO: 实现项目XML导出逻辑
+        });
+
+        ipcRenderer.on('open-recent-project', (event, project) => {
+            console.log('📂 Opening recent project:', project);
+            this.showNotification(`Opening recent project: ${project.name}`, 'info');
+            // TODO: 实现最近项目打开逻辑
+        });
+
+        ipcRenderer.on('clear-recent-projects', () => {
+            console.log('🗑️ Clear recent projects requested');
+            this.showNotification('Recent projects cleared', 'info');
+            // TODO: 实现清除最近项目逻辑
+        });
     }
 
     // Core genome display method

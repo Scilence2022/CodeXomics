@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const MCPGenomeBrowserServer = require('./mcp-server');
@@ -505,6 +505,66 @@ function createMenu() {
             }
           }
         },
+        { type: 'separator' },
+        {
+          label: 'Project Manager',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            createProjectManagerWindow();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Open Project',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'Project Files', extensions: ['xml', 'genomeproj', 'json'] },
+                { name: 'XML Files', extensions: ['xml'] },
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] }
+              ],
+              title: 'Open Project'
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              mainWindow.webContents.send('open-project-file', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Save Project',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            mainWindow.webContents.send('save-current-project');
+          }
+        },
+        {
+          label: 'Save Project As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            mainWindow.webContents.send('save-project-as');
+          }
+        },
+        {
+          label: 'Export Project as XML',
+          click: () => {
+            mainWindow.webContents.send('export-project-xml');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Recent Projects',
+          id: 'recent-projects',
+          submenu: [
+            {
+              label: 'No recent projects',
+              enabled: false
+            }
+          ]
+        },
         ...(process.platform !== 'darwin' ? [
           { type: 'separator' },
           {
@@ -580,7 +640,7 @@ function createMenu() {
         },
         {
           label: 'Show All Panels',
-          accelerator: 'CmdOrCtrl+Shift+P',
+          accelerator: 'CmdOrCtrl+Shift+A',
           click: () => {
             mainWindow.webContents.send('show-all-panels');
           }
@@ -606,14 +666,6 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+R',
           click: () => {
             mainWindow.webContents.send('open-resource-manager');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Project Manager',
-          accelerator: 'CmdOrCtrl+Shift+P',
-          click: () => {
-            createProjectManagerWindow();
           }
         }
       ]
@@ -708,7 +760,7 @@ function createMenu() {
             },
             {
               label: 'Gene Ontology (GO) Analyzer',
-              accelerator: 'CmdOrCtrl+Shift+O',
+              accelerator: 'CmdOrCtrl+Alt+G',
               click: () => {
                 createGOWindow();
               }
@@ -770,7 +822,7 @@ function createMenu() {
             },
             {
               label: 'PDB Structure Viewer',
-              accelerator: 'CmdOrCtrl+Shift+P',
+              accelerator: 'CmdOrCtrl+Shift+T',
               click: () => {
                 createPDBWindow();
               }
@@ -816,7 +868,7 @@ function createMenu() {
       submenu: [
         {
           label: 'Plugin Management',
-          accelerator: 'CmdOrCtrl+Shift+P',
+          accelerator: 'CmdOrCtrl+Alt+P',
           click: () => {
             mainWindow.webContents.send('show-plugin-management');
           }
@@ -2892,6 +2944,59 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
         name: fileName
       }
     };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Function to update recent projects menu
+function updateRecentProjectsMenu(recentProjects = []) {
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return;
+
+  const recentProjectsMenuItem = menu.getMenuItemById('recent-projects');
+  if (!recentProjectsMenuItem) return;
+
+  // Clear existing submenu
+  recentProjectsMenuItem.submenu.clear();
+
+  if (recentProjects.length === 0) {
+    recentProjectsMenuItem.submenu.append(new MenuItem({
+      label: 'No recent projects',
+      enabled: false
+    }));
+  } else {
+    // Add recent projects
+    recentProjects.slice(0, 10).forEach((project, index) => {
+      recentProjectsMenuItem.submenu.append(new MenuItem({
+        label: `${project.name}`,
+        accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('open-recent-project', project);
+          }
+        }
+      }));
+    });
+
+    // Add separator and clear menu item
+    recentProjectsMenuItem.submenu.append(new MenuItem({ type: 'separator' }));
+    recentProjectsMenuItem.submenu.append(new MenuItem({
+      label: 'Clear Recent Projects',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('clear-recent-projects');
+        }
+      }
+    }));
+  }
+}
+
+// Handle updating recent projects menu
+ipcMain.handle('updateRecentProjects', async (event, recentProjects) => {
+  try {
+    updateRecentProjectsMenu(recentProjects);
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
