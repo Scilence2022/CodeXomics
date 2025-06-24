@@ -441,8 +441,11 @@
                     <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.createFolder()">
                         📁 New Folder
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="projectManagerWindow.saveCurrentProjectAsXML()" title="Save current project as XML (.prj.GAI)">
-                        💾 Save as XML
+                    <button class="btn btn-sm btn-primary" onclick="projectManagerWindow.saveCurrentProject()" title="Save current project (Ctrl/Cmd+S)">
+                        💾 Save
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.saveProjectAs()" title="Save project as... (Ctrl/Cmd+Shift+S)">
+                        💾 Save As...
                     </button>
                 </div>
             </div>
@@ -604,6 +607,14 @@
                                 e.preventDefault();
                                 this.openProject();
                                 break;
+                            case 's':
+                                e.preventDefault();
+                                if (e.shiftKey) {
+                                    this.saveProjectAs();
+                                } else {
+                                    this.saveCurrentProject();
+                                }
+                                break;
                         }
                     }
                 });
@@ -654,45 +665,74 @@
                     return;
                 }
 
-                try {
-                    const projectId = this.generateId();
-                    const project = {
-                        id: projectId,
-                        name: name,
-                        description: description,
-                        location: location || 'Default',
-                        created: new Date().toISOString(),
-                        modified: new Date().toISOString(),
-                        files: [],
-                        folders: [
-                            { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
-                            { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
-                            { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
-                            { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
-                            { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
-                        ],
-                        metadata: {
-                            totalFiles: 0,
-                            totalSize: 0,
-                            lastOpened: new Date().toISOString()
-                        }
-                    };
+                if (!location) {
+                    this.showNotification('Project location is required', 'warning');
+                    return;
+                }
 
-                    this.projects.set(projectId, project);
-                    await this.saveProjects();
-                    
-                    // 创建项目XML文件
-                    await this.createProjectXMLFile(project);
-                    
-                    this.renderProjectTree();
-                    this.selectProject(projectId);
-                    this.closeModal('newProjectModal');
-                    
-                    this.showNotification(`Project "${name}" created successfully with XML file`, 'success');
+                try {
+                    // 创建项目文件和文件夹结构
+                    if (window.electronAPI && window.electronAPI.createNewProjectStructure) {
+                        const result = await window.electronAPI.createNewProjectStructure(location, name);
+                        if (!result.success) {
+                            throw new Error(result.error);
+                        }
+
+                        const projectId = this.generateId();
+                        const project = {
+                            id: projectId,
+                            name: name,
+                            description: description,
+                            location: location,
+                            projectFilePath: result.projectFilePath, // .prj.GAI 文件路径
+                            dataFolderPath: result.dataFolderPath,   // 数据文件夹路径
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString(),
+                            files: [],
+                            folders: [
+                                { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
+                                { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
+                                { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
+                                { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
+                                { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
+                            ],
+                            metadata: {
+                                totalFiles: 0,
+                                totalSize: 0,
+                                lastOpened: new Date().toISOString()
+                            },
+                            isCurrentlyOpen: true, // 标记为当前打开的项目
+                            hasUnsavedChanges: false // 跟踪未保存的更改
+                        };
+
+                        // 保存项目到 .prj.GAI 文件
+                        await this.saveProjectToFile(project);
+
+                        // 更新项目管理器状态
+                        this.projects.set(projectId, project);
+                        this.currentProject = project;
+                        this.openProjectFilePath = project.projectFilePath; // 记录当前打开的项目文件
+
+                        // 保存到本地项目列表（用于最近项目显示）
+                        await this.saveProjects();
+
+                        this.renderProjectTree();
+                        this.selectProject(projectId);
+                        this.closeModal('newProjectModal');
+
+                        this.showNotification(`✅ Project "${name}" created successfully`, 'success');
+                        console.log('✅ Project created successfully:', {
+                            name: project.name,
+                            projectFile: project.projectFilePath,
+                            dataFolder: project.dataFolderPath
+                        });
+                    } else {
+                        throw new Error('Project creation API not available');
+                    }
                     
                 } catch (error) {
                     console.error('Error creating project:', error);
-                    this.showNotification('Failed to create project', 'error');
+                    this.showNotification(`Failed to create project: ${error.message}`, 'error');
                 }
             }
 
@@ -744,7 +784,7 @@
                         const result = await window.electronAPI.loadProjectFile(filePath);
                         
                         if (result.success) {
-                            await this.loadProjectFromFileContent(result.content, result.fileName);
+                            await this.loadProjectFromFileContent(result.content, result.fileName, filePath);
                         } else {
                             throw new Error(result.error || 'Failed to read project file');
                         }
@@ -757,7 +797,7 @@
                 }
             }
 
-            async loadProjectFromFileContent(content, fileName) {
+            async loadProjectFromFileContent(content, fileName, filePath = null) {
                 console.log('📄 Processing project file content:', fileName);
                 
                 try {
@@ -792,10 +832,31 @@
                         throw new Error('Invalid project data structure');
                     }
                     
-                    // 设置加载的项目信息
+                    // 设置项目文件路径信息
+                    if (filePath) {
+                        project.projectFilePath = filePath;
+                        
+                        // 根据项目文件路径推算数据文件夹路径
+                        const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                        project.dataFolderPath = `${projectDir}/${project.name}`;
+                        project.location = projectDir;
+                    }
+                    
+                    // 设置项目状态
                     project.xmlFileName = fileName;
                     project.loadedFromFile = true;
                     project.lastOpened = new Date().toISOString();
+                    project.isCurrentlyOpen = true;
+                    project.hasUnsavedChanges = false;
+                    
+                    // 关闭之前打开的项目
+                    if (this.currentProject) {
+                        this.currentProject.isCurrentlyOpen = false;
+                    }
+                    
+                    // 设置为当前项目
+                    this.currentProject = project;
+                    this.openProjectFilePath = project.projectFilePath;
                     
                     // 添加到项目列表
                     this.projects.set(project.id, project);
@@ -807,13 +868,15 @@
                     
                     // 显示成功消息
                     const fileType = fileName.toLowerCase().endsWith('.prj.gai') ? 'XML (.prj.GAI)' : fileExtension.toUpperCase();
-                    this.showNotification(`✅ Project "${project.name}" loaded from ${fileType} file`, 'success');
+                    this.showNotification(`✅ Project "${project.name}" opened from ${fileType} file`, 'success');
                     
                     console.log('📊 Project loaded successfully:', {
                         id: project.id,
                         name: project.name,
                         files: project.files?.length || 0,
-                        folders: project.folders?.length || 0
+                        folders: project.folders?.length || 0,
+                        projectFile: project.projectFilePath,
+                        dataFolder: project.dataFolderPath
                     });
                     
                 } catch (error) {
@@ -1197,11 +1260,13 @@
                 
                 if (addedCount > 0) {
                     this.currentProject.modified = new Date().toISOString();
+                    this.currentProject.hasUnsavedChanges = true; // 标记为有未保存更改
                     this.currentProject.metadata.totalFiles = this.currentProject.files.length;
                     this.currentProject.metadata.totalSize = this.currentProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
                     
                     await this.saveProjects();
                     this.renderProjectContent();
+                    this.updateProjectTitle(); // 更新标题显示未保存状态
                     
                     const action = copyFiles ? 'copied to' : 'referenced in';
                     this.showNotification(`✅ Added ${addedCount} file(s) ${action} project`, 'success');
@@ -1256,11 +1321,21 @@
                 
                 // 处理不同平台的路径分隔符
                 const normalizedPath = absolutePath.replace(/\\/g, '/');
-                const dataPattern = `GenomeExplorer Projects/${projectName}/data/`;
-                const dataIndex = normalizedPath.indexOf(dataPattern);
                 
-                if (dataIndex !== -1) {
-                    return normalizedPath.substring(dataIndex + dataPattern.length);
+                // 新的项目结构：项目名文件夹直接包含子文件夹
+                const newStructurePattern = `/${projectName}/`;
+                const newIndex = normalizedPath.indexOf(newStructurePattern);
+                
+                if (newIndex !== -1) {
+                    return normalizedPath.substring(newIndex + newStructurePattern.length);
+                }
+                
+                // 兼容旧的GenomeExplorer Projects结构
+                const oldDataPattern = `GenomeExplorer Projects/${projectName}/data/`;
+                const oldDataIndex = normalizedPath.indexOf(oldDataPattern);
+                
+                if (oldDataIndex !== -1) {
+                    return normalizedPath.substring(oldDataIndex + oldDataPattern.length);
                 }
                 
                 // 如果没有找到标准路径，尝试其他模式
@@ -1686,6 +1761,18 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                 titleElement.textContent = title;
             }
 
+            updateProjectTitle() {
+                // 更新窗口标题显示未保存状态
+                const titleElement = document.querySelector('title');
+                if (titleElement && this.currentProject) {
+                    const hasChanges = this.currentProject.hasUnsavedChanges ? ' •' : '';
+                    titleElement.textContent = `${this.currentProject.name}${hasChanges} - Project Manager`;
+                }
+                
+                // 更新项目树中的显示
+                this.renderProjectTree();
+            }
+
             updateActiveTreeItem(projectId = null) {
                 const treeItems = document.querySelectorAll('.tree-item');
                 treeItems.forEach(item => item.classList.remove('active'));
@@ -1914,6 +2001,145 @@ Demo_Genome_Chr1\tGenomeExplorer\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gene0
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+            }
+
+            // 新的项目文件保存逻辑
+            async saveProjectToFile(project) {
+                try {
+                    if (!this.xmlHandler) {
+                        this.xmlHandler = new ProjectXMLHandler();
+                    }
+
+                    // 更新项目修改时间
+                    project.modified = new Date().toISOString();
+                    
+                    // 转换项目为XML
+                    const xmlContent = this.xmlHandler.projectToXML(project);
+                    
+                    if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
+                        // 保存到指定的项目文件路径
+                        const result = await window.electronAPI.saveProjectToSpecificFile(
+                            project.projectFilePath, 
+                            xmlContent
+                        );
+                        
+                        if (result.success) {
+                            project.hasUnsavedChanges = false;
+                            console.log(`✅ Project saved to: ${project.projectFilePath}`);
+                            return result;
+                        } else {
+                            throw new Error(result.error || 'Failed to save project file');
+                        }
+                    } else {
+                        // 浏览器环境下载
+                        this.downloadXMLFile(xmlContent, `${project.name}.prj.GAI`);
+                        project.hasUnsavedChanges = false;
+                        return { success: true };
+                    }
+                    
+                } catch (error) {
+                    console.error('Error saving project to file:', error);
+                    throw error;
+                }
+            }
+
+            async saveCurrentProject() {
+                if (!this.currentProject) {
+                    this.showNotification('No project is currently open', 'warning');
+                    return;
+                }
+
+                if (!this.currentProject.projectFilePath) {
+                    // 如果没有项目文件路径，提示另存为
+                    return await this.saveProjectAs();
+                }
+
+                try {
+                    await this.saveProjectToFile(this.currentProject);
+                    this.showNotification(`✅ Project "${this.currentProject.name}" saved`, 'success');
+                    
+                    // 更新项目列表
+                    this.projects.set(this.currentProject.id, this.currentProject);
+                    await this.saveProjects();
+                    
+                } catch (error) {
+                    console.error('Error saving current project:', error);
+                    this.showNotification(`Failed to save project: ${error.message}`, 'error');
+                }
+            }
+
+            async saveProjectAs() {
+                if (!this.currentProject) {
+                    this.showNotification('No project is currently open', 'warning');
+                    return;
+                }
+
+                try {
+                    if (window.electronAPI && window.electronAPI.saveProjectAs) {
+                        const result = await window.electronAPI.saveProjectAs(this.currentProject.name);
+                        
+                        if (result.success && !result.canceled) {
+                            // 检查目标位置是否已存在同名项目
+                            const targetDir = result.selectedDirectory;
+                            const projectName = this.currentProject.name;
+                            
+                            const checkResult = await window.electronAPI.checkProjectExists(targetDir, projectName);
+                            
+                            if (checkResult.exists) {
+                                const userChoice = confirm(
+                                    `Project "${projectName}" already exists in the selected location.\n\n` +
+                                    `This will overwrite:\n` +
+                                    `• ${projectName}.prj.GAI (project file)\n` +
+                                    `• ${projectName}/ (data folder)\n\n` +
+                                    `Do you want to continue?`
+                                );
+                                
+                                if (!userChoice) {
+                                    this.showNotification('Save operation cancelled', 'info');
+                                    return;
+                                }
+                            }
+
+                            // 检查当前项目是否有未保存的更改
+                            if (this.currentProject.hasUnsavedChanges) {
+                                const saveFirst = confirm(
+                                    `The current project has unsaved changes.\n\n` +
+                                    `Do you want to save the current project before copying?`
+                                );
+                                
+                                if (saveFirst) {
+                                    await this.saveCurrentProject();
+                                }
+                            }
+
+                            // 复制项目到新位置
+                            const copyResult = await window.electronAPI.copyProject(
+                                this.currentProject.projectFilePath,
+                                this.currentProject.dataFolderPath,
+                                targetDir,
+                                projectName
+                            );
+
+                            if (copyResult.success) {
+                                this.showNotification(
+                                    `✅ Project "${projectName}" saved to: ${targetDir}`, 
+                                    'success'
+                                );
+                            } else {
+                                throw new Error(copyResult.error || 'Failed to copy project');
+                            }
+                        }
+                    } else {
+                        // 浏览器环境，只能下载XML文件
+                        const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
+                        this.downloadXMLFile(xmlContent, `${this.currentProject.name}.prj.GAI`);
+                        this.showNotification('Project XML file downloaded', 'success');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error saving project as:', error);
+                    this.showNotification(`Failed to save project: ${error.message}`, 'error');
+                }
             }
 
             // 从XML文件加载项目

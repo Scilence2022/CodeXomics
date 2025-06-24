@@ -3101,3 +3101,173 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     };
   }
 }); 
+
+// Handle creating new project structure
+ipcMain.handle('createNewProjectStructure', async (event, location, projectName) => {
+  try {
+    // 创建项目文件路径和数据文件夹路径
+    const projectFilePath = path.join(location, `${projectName}.prj.GAI`);
+    const dataFolderPath = path.join(location, projectName);
+    
+    // 创建数据文件夹和子文件夹
+    if (!fs.existsSync(dataFolderPath)) {
+      fs.mkdirSync(dataFolderPath, { recursive: true });
+    }
+    
+    // 创建子文件夹结构
+    const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
+    subFolders.forEach(folderName => {
+      const subFolderPath = path.join(dataFolderPath, folderName);
+      if (!fs.existsSync(subFolderPath)) {
+        fs.mkdirSync(subFolderPath, { recursive: true });
+      }
+    });
+    
+    console.log(`✅ Created project structure: ${projectFilePath} and ${dataFolderPath}`);
+    
+    return {
+      success: true,
+      projectFilePath: projectFilePath,
+      dataFolderPath: dataFolderPath
+    };
+    
+  } catch (error) {
+    console.error('Error creating project structure:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Handle saving project to specific file
+ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => {
+  try {
+    // 确保目录存在
+    const dirPath = path.dirname(filePath);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    
+    // 写入文件
+    fs.writeFileSync(filePath, content, 'utf8');
+    console.log(`✅ Project saved to: ${filePath}`);
+    
+    return { success: true, filePath: filePath };
+    
+  } catch (error) {
+    console.error('Error saving project to specific file:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Handle save project as (select directory)
+ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openDirectory'],
+      title: 'Select Directory to Save Project'
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { 
+        success: true, 
+        selectedDirectory: result.filePaths[0] 
+      };
+    }
+    
+    return { success: false, canceled: true };
+    
+  } catch (error) {
+    console.error('Error in save project as dialog:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Handle checking if project exists
+ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
+  try {
+    const projectFilePath = path.join(directory, `${projectName}.prj.GAI`);
+    const dataFolderPath = path.join(directory, projectName);
+    
+    const fileExists = fs.existsSync(projectFilePath);
+    const folderExists = fs.existsSync(dataFolderPath);
+    
+    return {
+      exists: fileExists || folderExists,
+      fileExists: fileExists,
+      folderExists: folderExists,
+      projectFilePath: projectFilePath,
+      dataFolderPath: dataFolderPath
+    };
+    
+  } catch (error) {
+    console.error('Error checking project exists:', error);
+    return { 
+      exists: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Handle copying project to new location
+ipcMain.handle('copyProject', async (event, sourceProjectFile, sourceDataFolder, targetDirectory, projectName) => {
+  try {
+    const targetProjectFile = path.join(targetDirectory, `${projectName}.prj.GAI`);
+    const targetDataFolder = path.join(targetDirectory, projectName);
+    
+    // 复制项目文件
+    if (fs.existsSync(sourceProjectFile)) {
+      fs.copyFileSync(sourceProjectFile, targetProjectFile);
+      console.log(`✅ Copied project file: ${sourceProjectFile} → ${targetProjectFile}`);
+    }
+    
+    // 复制数据文件夹
+    if (fs.existsSync(sourceDataFolder)) {
+      await copyDirectoryRecursive(sourceDataFolder, targetDataFolder);
+      console.log(`✅ Copied data folder: ${sourceDataFolder} → ${targetDataFolder}`);
+    }
+    
+    return {
+      success: true,
+      targetProjectFile: targetProjectFile,
+      targetDataFolder: targetDataFolder
+    };
+    
+  } catch (error) {
+    console.error('Error copying project:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+});
+
+// Helper function to copy directory recursively
+async function copyDirectoryRecursive(source, target) {
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target, { recursive: true });
+  }
+  
+  const items = fs.readdirSync(source);
+  
+  for (const item of items) {
+    const sourcePath = path.join(source, item);
+    const targetPath = path.join(target, item);
+    
+    const stat = fs.statSync(sourcePath);
+    
+    if (stat.isDirectory()) {
+      await copyDirectoryRecursive(sourcePath, targetPath);
+    } else {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
+}

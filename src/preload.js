@@ -37,8 +37,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getFileInfo: (filePath) => ipcRenderer.invoke('getFileInfo', filePath),
     updateRecentProjects: (recentProjects) => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 
-    // File copying APIs
-    copyFileToProject: (sourcePath, projectName, folderPath) => ipcRenderer.invoke('copyFileToProject', sourcePath, projectName, folderPath),
+      // File copying APIs
+  copyFileToProject: (sourcePath, projectName, folderPath) => ipcRenderer.invoke('copyFileToProject', sourcePath, projectName, folderPath),
+  
+  // New project structure APIs
+  createNewProjectStructure: (location, projectName) => ipcRenderer.invoke('createNewProjectStructure', location, projectName),
+  saveProjectToSpecificFile: (filePath, content) => ipcRenderer.invoke('saveProjectToSpecificFile', filePath, content),
+  saveProjectAs: (defaultProjectName) => ipcRenderer.invoke('saveProjectAs', defaultProjectName),
+  checkProjectExists: (directory, projectName) => ipcRenderer.invoke('checkProjectExists', directory, projectName),
+  copyProject: (sourceProjectFile, sourceDataFolder, targetDirectory, projectName) => ipcRenderer.invoke('copyProject', sourceProjectFile, sourceDataFolder, targetDirectory, projectName),
   
   // Communication with main window
   sendToMainWindow: (channel, data) => ipcRenderer.invoke('send-to-main-window', channel, data),
