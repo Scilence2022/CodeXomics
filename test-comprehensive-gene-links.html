@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Gene Link Enhancement Test - Genome AI Studio</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+
+        .demo-note {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .demo-note strong {
+            color: #fff;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .test-category {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .test-category h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .test-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 15px;
+            background: #fff;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .test-result {
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            min-height: 80px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .test-button:hover {
+            background: #2980b9;
+        }
+
+        /* Link styles - copied from main application */
+        .go-term-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e3f2fd;
+            color: #1565c0;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #bbdefb;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .go-term-link:hover {
+            background: #2196f3;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        .pmid-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #f3e5f5;
+            color: #7b1fa2;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #ce93d8;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .pmid-link:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+        }
+
+        .evidence-tag {
+            display: inline-block;
+            padding: 1px 4px;
+            background: #fff3e0;
+            color: #ef6c00;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 2px 2px 2px 0;
+            border: 1px solid #ffcc02;
+        }
+
+        .db-xref-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e8f5e8;
+            color: #2e7d32;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #a5d6a7;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .db-xref-link:hover {
+            background: #4caf50;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            border-top: 3px solid #3498db;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .pattern-list {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .pattern-item {
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            background: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        .pattern-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-link"></i> Comprehensive Gene Link Enhancement Test</h1>
+        
+        <div class="demo-note">
+            <strong>🚀 Enhanced Gene Details:</strong> Genome AI Studio now automatically detects and creates clickable links for 50+ database types including GO terms, PMIDs, EC numbers, accessions, taxonomy IDs, and many more biological databases!
+        </div>
+
+        <div class="test-grid">
+            <!-- GO Terms & Literature -->
+            <div class="test-category">
+                <h3><i class="fas fa-dna"></i> GO Terms & Literature</h3>
+                <textarea class="test-input" data-category="go">homoserine biosynthetic process GO:0009090 [evidence IBA] PMID:21873635
+aspartate kinase activity GO:0004072 [evidence IDA] PMID 12345678
+cytosol GO:0005829 [evidence IEA] PMID:26602691
+bioRxiv:2023.01.15.524123 arXiv:1234.5678 DOI:10.1038/nature12345</textarea>
+                <button class="test-button" onclick="testCategory('go')">Test GO & Literature Links</button>
+                <div class="test-result" data-result="go"></div>
+            </div>
+
+            <!-- Database Cross-References -->
+            <div class="test-category">
+                <h3><i class="fas fa-database"></i> Database Cross-References</h3>
+                <textarea class="test-input" data-category="database">UniProt:P00561 InterPro:IPR005260 Pfam:PF01842 
+KEGG:eco:b0002 COG:COG0527 PROSITE:PS00128
+SMART:SM00382 SUPERFAMILY:SSF52833 PANTHER:PTHR11785
+STRING:511145.b0002 Reactome:R-HSA-70171 CDD:cd00185</textarea>
+                <button class="test-button" onclick="testCategory('database')">Test Database Links</button>
+                <div class="test-result" data-result="database"></div>
+            </div>
+
+            <!-- EC Numbers & Enzymes -->
+            <div class="test-category">
+                <h3><i class="fas fa-flask"></i> EC Numbers & Enzymes</h3>
+                <textarea class="test-input" data-category="enzyme">EC:2.7.2.4 aspartate kinase activity
+EC 1.1.1.3 homoserine dehydrogenase
+ENZYME:1.2.3.4 BRENDA:2.7.2.4 ExPASy:EC1.1.1.3
+ChEBI:CHEBI:15414 PubChem:CID123456 ChEMBL:CHEMBL123</textarea>
+                <button class="test-button" onclick="testCategory('enzyme')">Test Enzyme Links</button>
+                <div class="test-result" data-result="enzyme"></div>
+            </div>
+
+            <!-- GenBank/RefSeq Accessions -->
+            <div class="test-category">
+                <h3><i class="fas fa-file-code"></i> Accessions & IDs</h3>
+                <textarea class="test-input" data-category="accession">protein_id="AAC73113.1" locus_tag="b0002" gene="thrA"
+NC_000913.3 NP_414542.1 XP_123456789.1 YP_987654321.1
+GenBank:U00096.3 RefSeq:NC_000913 EMBL:U00096
+GeneID:945803 OMIM:138180 rs123456789</textarea>
+                <button class="test-button" onclick="testCategory('accession')">Test Accession Links</button>
+                <div class="test-result" data-result="accession"></div>
+            </div>
+
+            <!-- Organism & Taxonomy -->
+            <div class="test-category">
+                <h3><i class="fas fa-sitemap"></i> Taxonomy & Organisms</h3>
+                <textarea class="test-input" data-category="taxonomy">taxon:511145 NCBI:txid83333 
+FlyBase:FBgn0000008 WormBase:WBGene00000001 
+SGD:S000000001 MGI:MGI:88190 RGD:2018 ZFIN:ZDB-GENE-000112-47
+TAIR:AT1G01010 MaizeGDB:GRMZM2G000001</textarea>
+                <button class="test-button" onclick="testCategory('taxonomy')">Test Taxonomy Links</button>
+                <div class="test-result" data-result="taxonomy"></div>
+            </div>
+
+            <!-- Protein Structures -->
+            <div class="test-category">
+                <h3><i class="fas fa-cube"></i> Protein Structures</h3>
+                <textarea class="test-input" data-category="structure">PDB:1ABC PDB:2XYZ PDB:3DEF
+OrthoDB:EOG091G0001 EggNOG:COG0527
+PIR:A12345 HAMAP:MF_00001 TIGRFAM:TIGR00001
+PRINTS:PR00001 DrugBank:DB00001</textarea>
+                <button class="test-button" onclick="testCategory('structure')">Test Structure Links</button>
+                <div class="test-result" data-result="structure"></div>
+            </div>
+
+            <!-- Personal & Publication IDs -->
+            <div class="test-category">
+                <h3><i class="fas fa-user"></i> Authors & Publications</h3>
+                <textarea class="test-input" data-category="author">ORCID:0000-0002-1825-0097 
+ISBN:978-0-123456-78-9 ISBN-10:0123456789
+Author contact: researcher@university.edu
+Funding: NIH Grant R01-GM123456</textarea>
+                <button class="test-button" onclick="testCategory('author')">Test Author Links</button>
+                <div class="test-result" data-result="author"></div>
+            </div>
+
+            <!-- Plant & Agricultural -->
+            <div class="test-category">
+                <h3><i class="fas fa-seedling"></i> Plant Databases</h3>
+                <textarea class="test-input" data-category="plant">Gramene:GRMZM2G000001 PlantGDB:PUT-157a-Glycine_max-40963
+Phytozome:Glyma.01G000100 JGI:scaffold_1
+TAIR:AT1G01010 MaizeGDB:GRMZM2G000001
+Soybase:Glyma.01G000100</textarea>
+                <button class="test-button" onclick="testCategory('plant')">Test Plant DB Links</button>
+                <div class="test-result" data-result="plant"></div>
+            </div>
+        </div>
+
+        <h2><i class="fas fa-chart-bar"></i> Link Statistics</h2>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-box">
+                <div class="stat-number" id="goCount">0</div>
+                <div class="stat-label">GO Terms</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="pmidCount">0</div>
+                <div class="stat-label">PMIDs</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="dbCount">0</div>
+                <div class="stat-label">Database Links</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="evidenceCount">0</div>
+                <div class="stat-label">Evidence Codes</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total Links</div>
+            </div>
+        </div>
+
+        <h2><i class="fas fa-list"></i> Supported Patterns</h2>
+        <div class="pattern-list">
+            <div class="pattern-item">
+                GO:0009090, goid 0009090
+                <div class="pattern-description">Gene Ontology terms → AmiGO database</div>
+            </div>
+            <div class="pattern-item">
+                PMID:21873635, PMID 21873635
+                <div class="pattern-description">PubMed IDs → PubMed abstracts</div>
+            </div>
+            <div class="pattern-item">
+                EC:2.7.2.4, EC 1.1.1.3
+                <div class="pattern-description">Enzyme Commission numbers → ENZYME database</div>
+            </div>
+            <div class="pattern-item">
+                UniProt:P00561, InterPro:IPR005260, Pfam:PF01842
+                <div class="pattern-description">50+ database cross-references</div>
+            </div>
+            <div class="pattern-item">
+                NC_000913.3, NP_414542.1, AAC73113.1
+                <div class="pattern-description">GenBank/RefSeq accessions → NCBI</div>
+            </div>
+            <div class="pattern-item">
+                taxon:511145, NCBI:txid83333
+                <div class="pattern-description">Taxonomy IDs → NCBI Taxonomy</div>
+            </div>
+            <div class="pattern-item">
+                GeneID:945803, OMIM:138180, rs123456789
+                <div class="pattern-description">Gene IDs, OMIM entries, dbSNP variants</div>
+            </div>
+            <div class="pattern-item">
+                ORCID:0000-0002-1825-0097, DOI:10.1038/nature12345
+                <div class="pattern-description">Author ORCIDs and publication DOIs</div>
+            </div>
+        </div>
+
+        <button class="test-button" onclick="testAllCategories()" style="width: 100%; padding: 12px; font-size: 16px; margin-top: 20px;">
+            <i class="fas fa-rocket"></i> Test All Categories
+        </button>
+    </div>
+
+    <script>
+        // Enhanced version of the link enhancement function
+        function enhanceGeneAttributeWithLinks(attributeValue) {
+            if (!attributeValue || typeof attributeValue !== 'string') {
+                return attributeValue;
+            }
+            
+            let enhancedValue = attributeValue;
+            
+            // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
+            const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;
+            enhancedValue = enhancedValue.replace(goTermPattern, (match, fullMatch, goidNumber) => {
+                const goId = goidNumber ? `GO:${goidNumber}` : fullMatch;
+                return `<a href="https://amigo.geneontology.org/amigo/term/${goId}" target="_blank" class="go-term-link" title="View in Gene Ontology database">${goId}</a>`;
+            });
+            
+            // Pattern for PubMed IDs: PMID:XXXXXXX or PMID XXXXXXX
+            const pmidPattern = /\b(PMID:?\s*(\d+))\b/gi;
+            enhancedValue = enhancedValue.replace(pmidPattern, (match, fullMatch, pmidNumber) => {
+                return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidNumber}/" target="_blank" class="pmid-link" title="View in PubMed">PMID:${pmidNumber}</a>`;
+            });
+            
+            // Pattern for evidence codes in brackets: [evidence XXX]
+            const evidencePattern = /\[evidence\s+([A-Z]{2,4})\]/gi;
+            enhancedValue = enhancedValue.replace(evidencePattern, (match, evidenceCode) => {
+                return `<span class="evidence-tag" title="Evidence code: ${evidenceCode}">${evidenceCode}</span>`;
+            });
+            
+            // Pattern for database cross-references - expanded to include many more databases
+            const dbXrefPattern = /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
+            enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
+                let url = '';
+                let title = '';
+                
+                switch (database.toLowerCase()) {
+                    case 'uniprot':
+                    case 'swissprot':
+                    case 'trembl':
+                        url = `https://www.uniprot.org/uniprot/${id}`;
+                        title = 'View in UniProt';
+                        break;
+                    case 'interpro':
+                        url = `https://www.ebi.ac.uk/interpro/entry/${id}`;
+                        title = 'View in InterPro';
+                        break;
+                    case 'pfam':
+                        url = `https://pfam.xfam.org/family/${id}`;
+                        title = 'View in Pfam';
+                        break;
+                    case 'kegg':
+                        url = `https://www.genome.jp/kegg-bin/show_pathway?${id}`;
+                        title = 'View in KEGG';
+                        break;
+                    case 'pdb':
+                        url = `https://www.rcsb.org/structure/${id}`;
+                        title = 'View in Protein Data Bank';
+                        break;
+                    case 'doi':
+                        url = `https://doi.org/${id}`;
+                        title = 'View DOI publication';
+                        break;
+                    // Add more cases as needed for demo
+                    default:
+                        url = `https://www.google.com/search?q=${database}+${id}`;
+                        title = `Search for ${database}:${id}`;
+                }
+                
+                if (url) {
+                    return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${database}:${id}</a>`;
+                }
+                return match;
+            });
+            
+            // Pattern for EC numbers: EC:X.X.X.X or EC X.X.X.X
+            const ecPattern = /\b(EC:?\s*([\d\.-]+))\b/gi;
+            enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
+                return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
+            });
+
+            // Pattern for GenBank/RefSeq accessions
+            const accessionPattern = /\b([A-Z]{1,2}_?[0-9]{6,9}(\.[0-9]+)?|[A-Z]{2}[0-9]{6}(\.[0-9]+)?|NC_[0-9]{6}(\.[0-9]+)?|NP_[0-9]{6}(\.[0-9]+)?|XP_[0-9]{6}(\.[0-9]+)?|YP_[0-9]{6}(\.[0-9]+)?|WP_[0-9]{6}(\.[0-9]+)?)\b/gi;
+            enhancedValue = enhancedValue.replace(accessionPattern, (match) => {
+                let url = `https://www.ncbi.nlm.nih.gov/nuccore/${match}`;
+                let title = 'View in NCBI';
+                
+                if (match.startsWith('NP_') || match.startsWith('XP_') || match.startsWith('YP_') || match.startsWith('WP_')) {
+                    url = `https://www.ncbi.nlm.nih.gov/protein/${match}`;
+                    title = 'View protein in NCBI';
+                }
+                
+                return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${match}</a>`;
+            });
+
+            // Pattern for Taxonomy IDs
+            const taxonPattern = /\b(taxon:(\d+)|NCBI:txid(\d+))\b/gi;
+            enhancedValue = enhancedValue.replace(taxonPattern, (match, fullMatch, taxonId1, taxonId2) => {
+                const taxId = taxonId1 || taxonId2;
+                return `<a href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${taxId}" target="_blank" class="db-xref-link" title="View in NCBI Taxonomy">${match}</a>`;
+            });
+
+            // Pattern for Gene IDs
+            const geneIdPattern = /\bGeneID:(\d+)\b/gi;
+            enhancedValue = enhancedValue.replace(geneIdPattern, (match, geneId) => {
+                return `<a href="https://www.ncbi.nlm.nih.gov/gene/${geneId}" target="_blank" class="db-xref-link" title="View in NCBI Gene">GeneID:${geneId}</a>`;
+            });
+
+            // Pattern for ORCID IDs
+            const orcidPattern = /\b(\d{4}-\d{4}-\d{4}-\d{3}[0-9X])\b/gi;
+            enhancedValue = enhancedValue.replace(orcidPattern, (match) => {
+                return `<a href="https://orcid.org/${match}" target="_blank" class="db-xref-link" title="View ORCID profile">${match}</a>`;
+            });
+
+            // Pattern for bioRxiv DOIs
+            const biorxivPattern = /\bbioRxiv[:\s]+(\d{4}\.\d{2}\.\d{2}\.\d+)\b/gi;
+            enhancedValue = enhancedValue.replace(biorxivPattern, (match, biorxivId) => {
+                return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint">bioRxiv:${biorxivId}</a>`;
+            });
+
+            // Pattern for quoted attributes
+            const quotedAttributePattern = /(protein_id|locus_tag|gene)="([^"]+)"/gi;
+            enhancedValue = enhancedValue.replace(quotedAttributePattern, (match, attrType, attrValue) => {
+                let url = `https://www.ncbi.nlm.nih.gov/gene/?term=${encodeURIComponent(attrValue)}`;
+                let title = `Search ${attrType} in NCBI`;
+                
+                if (attrType === 'protein_id') {
+                    url = `https://www.ncbi.nlm.nih.gov/protein/${attrValue}`;
+                    title = 'View protein in NCBI';
+                }
+                
+                return `${attrType}="<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${attrValue}</a>"`;
+            });
+            
+            return enhancedValue;
+        }
+
+        function testCategory(category) {
+            const input = document.querySelector(`[data-category="${category}"]`).value;
+            const result = document.querySelector(`[data-result="${category}"]`);
+            
+            result.innerHTML = enhanceGeneAttributeWithLinks(input);
+            updateStatistics();
+        }
+
+        function testAllCategories() {
+            const categories = ['go', 'database', 'enzyme', 'accession', 'taxonomy', 'structure', 'author', 'plant'];
+            categories.forEach(testCategory);
+        }
+
+        function updateStatistics() {
+            const goLinks = document.querySelectorAll('.go-term-link');
+            const pmidLinks = document.querySelectorAll('.pmid-link');
+            const dbLinks = document.querySelectorAll('.db-xref-link');
+            const evidenceTags = document.querySelectorAll('.evidence-tag');
+            
+            const goCount = goLinks.length;
+            const pmidCount = pmidLinks.length;
+            const dbCount = dbLinks.length;
+            const evidenceCount = evidenceTags.length;
+            const totalCount = goCount + pmidCount + dbCount + evidenceCount;
+            
+            document.getElementById('goCount').textContent = goCount;
+            document.getElementById('pmidCount').textContent = pmidCount;
+            document.getElementById('dbCount').textContent = dbCount;
+            document.getElementById('evidenceCount').textContent = evidenceCount;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+
+        // Initialize with sample data
+        document.addEventListener('DOMContentLoaded', () => {
+            testAllCategories();
+            
+            // Add click analytics
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('go-term-link')) {
+                    console.log('GO term clicked:', e.target.textContent);
+                } else if (e.target.classList.contains('pmid-link')) {
+                    console.log('PMID clicked:', e.target.textContent);
+                } else if (e.target.classList.contains('db-xref-link')) {
+                    console.log('Database reference clicked:', e.target.textContent);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

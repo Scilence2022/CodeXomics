@@ -4033,6 +4033,68 @@ svg {
     box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
 }
 
+.accession-link {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #fff8e1;
+    color: #f57c00;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #ffcc02;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-family: monospace;
+}
+
+.accession-link:hover {
+    background: #ff9800;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+}
+
+.taxonomy-link {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #fce4ec;
+    color: #c2185b;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #f8bbd9;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.taxonomy-link:hover {
+    background: #e91e63;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(233, 30, 99, 0.3);
+}
+
+.link-separator {
+    color: #999;
+    margin: 0 4px;
+}
+
+/* Responsive link layout */
+@media (max-width: 768px) {
+    .go-term-link,
+    .pmid-link,
+    .db-xref-link,
+    .evidence-tag,
+    .accession-link,
+    .taxonomy-link {
+        margin: 1px 2px;
+        padding: 1px 4px;
+        font-size: 0.8rem;
+    }
+}
+
 .gene-actions {
     display: flex;
     gap: 8px;

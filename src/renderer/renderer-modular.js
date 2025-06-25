@@ -2709,14 +2709,16 @@ class GenomeBrowser {
             return `<span class="evidence-tag" title="Evidence code: ${evidenceCode}">${evidenceCode}</span>`;
         });
         
-        // Pattern for database cross-references like UniProt, InterPro, etc.
-        const dbXrefPattern = /\b(UniProt|InterPro|Pfam|KEGG|COG|KO)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
+        // Pattern for database cross-references - expanded to include many more databases
+        const dbXrefPattern = /\b(UniProt|SwissProt|TrEMBL|InterPro|Pfam|KEGG|COG|KO|PROSITE|SMART|SUPERFAMILY|PRINTS|PANTHER|TIGRFAM|HAMAP|PIR|PDB|RefSeq|GenBank|EMBL|DDBJ|CDD|OrthoDB|EggNOG|STRING|Reactome|BioCyc|MetaCyc|ENZYME|BRENDA|ExPASy|NCBI|ENSEMBL|FlyBase|WormBase|SGD|MGI|RGD|ZFIN|TAIR|MaizeGDB|Gramene|PlantGDB|Phytozome|JGI|DOI|PubChem|ChEBI|ChEMBL|DrugBank)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
         enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
             let url = '';
             let title = '';
             
             switch (database.toLowerCase()) {
                 case 'uniprot':
+                case 'swissprot':
+                case 'trembl':
                     url = `https://www.uniprot.org/uniprot/${id}`;
                     title = 'View in UniProt';
                     break;
@@ -2740,6 +2742,165 @@ class GenomeBrowser {
                     url = `https://www.genome.jp/kegg-bin/show_pathway?ko${id}`;
                     title = 'View in KEGG Orthology';
                     break;
+                case 'prosite':
+                    url = `https://prosite.expasy.org/PS${id}`;
+                    title = 'View in PROSITE';
+                    break;
+                case 'smart':
+                    url = `http://smart.embl-heidelberg.de/smart/do_annotation.pl?DOMAIN=${id}`;
+                    title = 'View in SMART';
+                    break;
+                case 'superfamily':
+                    url = `https://supfam.org/SUPERFAMILY/cgi-bin/scop.cgi?ipid=${id}`;
+                    title = 'View in SUPERFAMILY';
+                    break;
+                case 'prints':
+                    url = `http://www.bioinf.manchester.ac.uk/cgi-bin/dbbrowser/sprint/searchprintss.cgi?prints_accn=${id}`;
+                    title = 'View in PRINTS';
+                    break;
+                case 'panther':
+                    url = `http://www.pantherdb.org/panther/family.do?clsAccession=${id}`;
+                    title = 'View in PANTHER';
+                    break;
+                case 'tigrfam':
+                    url = `https://www.jcvi.org/cgi-bin/tigrfams/HmmReportPage.cgi?acc=${id}`;
+                    title = 'View in TIGRFAMs';
+                    break;
+                case 'hamap':
+                    url = `https://hamap.expasy.org/signature/${id}`;
+                    title = 'View in HAMAP';
+                    break;
+                case 'pir':
+                    url = `https://pir.georgetown.edu/cgi-bin/ipcEntry?id=${id}`;
+                    title = 'View in PIR';
+                    break;
+                case 'pdb':
+                    url = `https://www.rcsb.org/structure/${id}`;
+                    title = 'View in Protein Data Bank';
+                    break;
+                case 'refseq':
+                    url = `https://www.ncbi.nlm.nih.gov/protein/${id}`;
+                    title = 'View in RefSeq';
+                    break;
+                case 'genbank':
+                case 'embl':
+                case 'ddbj':
+                    url = `https://www.ncbi.nlm.nih.gov/nuccore/${id}`;
+                    title = 'View in GenBank/EMBL/DDBJ';
+                    break;
+                case 'cdd':
+                    url = `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${id}`;
+                    title = 'View in Conserved Domain Database';
+                    break;
+                case 'orthodb':
+                    url = `https://www.orthodb.org/?query=${id}`;
+                    title = 'View in OrthoDB';
+                    break;
+                case 'eggnog':
+                    url = `http://eggnog5.embl.de/#/app/results?target_nogs=${id}`;
+                    title = 'View in eggNOG';
+                    break;
+                case 'string':
+                    url = `https://string-db.org/network/${id}`;
+                    title = 'View in STRING';
+                    break;
+                case 'reactome':
+                    url = `https://reactome.org/content/detail/${id}`;
+                    title = 'View in Reactome';
+                    break;
+                case 'biocyc':
+                case 'metacyc':
+                    url = `https://biocyc.org/gene?orgid=META&id=${id}`;
+                    title = 'View in BioCyc/MetaCyc';
+                    break;
+                case 'enzyme':
+                    url = `https://enzyme.expasy.org/EC/${id}`;
+                    title = 'View in ENZYME';
+                    break;
+                case 'brenda':
+                    url = `https://www.brenda-enzymes.org/enzyme.php?ecno=${id}`;
+                    title = 'View in BRENDA';
+                    break;
+                case 'expasy':
+                    url = `https://enzyme.expasy.org/EC/${id}`;
+                    title = 'View in ExPASy';
+                    break;
+                case 'ncbi':
+                    url = `https://www.ncbi.nlm.nih.gov/gene/${id}`;
+                    title = 'View in NCBI Gene';
+                    break;
+                case 'ensembl':
+                    url = `https://www.ensembl.org/id/${id}`;
+                    title = 'View in Ensembl';
+                    break;
+                case 'flybase':
+                    url = `https://flybase.org/reports/${id}`;
+                    title = 'View in FlyBase';
+                    break;
+                case 'wormbase':
+                    url = `https://wormbase.org/species/c_elegans/gene/${id}`;
+                    title = 'View in WormBase';
+                    break;
+                case 'sgd':
+                    url = `https://www.yeastgenome.org/locus/${id}`;
+                    title = 'View in SGD (Yeast)';
+                    break;
+                case 'mgi':
+                    url = `http://www.informatics.jax.org/marker/${id}`;
+                    title = 'View in MGI (Mouse)';
+                    break;
+                case 'rgd':
+                    url = `https://rgd.mcw.edu/rgdweb/report/gene/main.html?id=${id}`;
+                    title = 'View in RGD (Rat)';
+                    break;
+                case 'zfin':
+                    url = `https://zfin.org/${id}`;
+                    title = 'View in ZFIN (Zebrafish)';
+                    break;
+                case 'tair':
+                    url = `https://www.arabidopsis.org/servlets/TairObject?type=locus&name=${id}`;
+                    title = 'View in TAIR (Arabidopsis)';
+                    break;
+                case 'maizegdb':
+                    url = `https://www.maizegdb.org/gene_center/gene/${id}`;
+                    title = 'View in MaizeGDB';
+                    break;
+                case 'gramene':
+                    url = `http://www.gramene.org/genes/${id}`;
+                    title = 'View in Gramene';
+                    break;
+                case 'plantgdb':
+                    url = `http://www.plantgdb.org/cgi-bin/searchdb.cgi?input=${id}`;
+                    title = 'View in PlantGDB';
+                    break;
+                case 'phytozome':
+                    url = `https://phytozome.jgi.doe.gov/pz/portal.html#!gene?search=0&detail=0&method=5450&searchText=${id}`;
+                    title = 'View in Phytozome';
+                    break;
+                case 'jgi':
+                    url = `https://genome.jgi.doe.gov/portal/pages/dynamicOrganismDownload.jsf?organism=${id}`;
+                    title = 'View in JGI';
+                    break;
+                case 'doi':
+                    url = `https://doi.org/${id}`;
+                    title = 'View DOI publication';
+                    break;
+                case 'pubchem':
+                    url = `https://pubchem.ncbi.nlm.nih.gov/compound/${id}`;
+                    title = 'View in PubChem';
+                    break;
+                case 'chebi':
+                    url = `https://www.ebi.ac.uk/chebi/searchId.do?chebiId=${id}`;
+                    title = 'View in ChEBI';
+                    break;
+                case 'chembl':
+                    url = `https://www.ebi.ac.uk/chembl/compound_report_card/${id}`;
+                    title = 'View in ChEMBL';
+                    break;
+                case 'drugbank':
+                    url = `https://go.drugbank.com/drugs/${id}`;
+                    title = 'View in DrugBank';
+                    break;
             }
             
             if (url) {
@@ -2753,7 +2914,99 @@ class GenomeBrowser {
         enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
             return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
         });
-        
+
+        // Pattern for GenBank/RefSeq accessions: Various formats
+        const accessionPattern = /\b([A-Z]{1,2}_?[0-9]{6,9}(\.[0-9]+)?|[A-Z]{2}[0-9]{6}(\.[0-9]+)?|[A-Z]{4}[0-9]{8}(\.[0-9]+)?|NC_[0-9]{6}(\.[0-9]+)?|NP_[0-9]{6}(\.[0-9]+)?|XP_[0-9]{6}(\.[0-9]+)?|YP_[0-9]{6}(\.[0-9]+)?|WP_[0-9]{6}(\.[0-9]+)?)\b/gi;
+        enhancedValue = enhancedValue.replace(accessionPattern, (match) => {
+            let url = '';
+            let title = '';
+            
+            if (match.match(/^(NC_|NP_|XP_|YP_|WP_|[A-Z]{1,2}_)/)) {
+                // RefSeq accessions
+                if (match.startsWith('NP_') || match.startsWith('XP_') || match.startsWith('YP_') || match.startsWith('WP_')) {
+                    url = `https://www.ncbi.nlm.nih.gov/protein/${match}`;
+                    title = 'View protein in NCBI';
+                } else {
+                    url = `https://www.ncbi.nlm.nih.gov/nuccore/${match}`;
+                    title = 'View nucleotide in NCBI';
+                }
+            } else {
+                // GenBank accessions
+                url = `https://www.ncbi.nlm.nih.gov/nuccore/${match}`;
+                title = 'View in GenBank';
+            }
+            
+            return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${match}</a>`;
+        });
+
+        // Pattern for Taxonomy IDs: taxon:12345 or NCBI:txid12345
+        const taxonPattern = /\b(taxon:(\d+)|NCBI:txid(\d+))\b/gi;
+        enhancedValue = enhancedValue.replace(taxonPattern, (match, fullMatch, taxonId1, taxonId2) => {
+            const taxId = taxonId1 || taxonId2;
+            return `<a href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${taxId}" target="_blank" class="db-xref-link" title="View in NCBI Taxonomy">${match}</a>`;
+        });
+
+        // Pattern for Gene IDs: GeneID:12345
+        const geneIdPattern = /\bGeneID:(\d+)\b/gi;
+        enhancedValue = enhancedValue.replace(geneIdPattern, (match, geneId) => {
+            return `<a href="https://www.ncbi.nlm.nih.gov/gene/${geneId}" target="_blank" class="db-xref-link" title="View in NCBI Gene">GeneID:${geneId}</a>`;
+        });
+
+        // Pattern for OMIM IDs: OMIM:123456
+        const omimPattern = /\bOMIM:(\d+)\b/gi;
+        enhancedValue = enhancedValue.replace(omimPattern, (match, omimId) => {
+            return `<a href="https://omim.org/entry/${omimId}" target="_blank" class="db-xref-link" title="View in OMIM">${match}</a>`;
+        });
+
+        // Pattern for dbSNP IDs: rs123456789
+        const dbsnpPattern = /\brs(\d+)\b/gi;
+        enhancedValue = enhancedValue.replace(dbsnpPattern, (match, snpId) => {
+            return `<a href="https://www.ncbi.nlm.nih.gov/snp/rs${snpId}" target="_blank" class="db-xref-link" title="View in dbSNP">${match}</a>`;
+        });
+
+        // Pattern for Protein IDs: protein_id="XXX"
+        const proteinIdPattern = /protein_id="([A-Z]{2,3}[0-9]{5,9}(\.[0-9]+)?)"/gi;
+        enhancedValue = enhancedValue.replace(proteinIdPattern, (match, proteinId) => {
+            return `protein_id="<a href="https://www.ncbi.nlm.nih.gov/protein/${proteinId}" target="_blank" class="db-xref-link" title="View protein in NCBI">${proteinId}</a>"`;
+        });
+
+        // Pattern for locus_tag: locus_tag="XXX"
+        const locusTagPattern = /locus_tag="([^"]+)"/gi;
+        enhancedValue = enhancedValue.replace(locusTagPattern, (match, locusTag) => {
+            return `locus_tag="<a href="https://www.ncbi.nlm.nih.gov/gene/?term=${encodeURIComponent(locusTag)}" target="_blank" class="db-xref-link" title="Search locus tag in NCBI">${locusTag}</a>"`;
+        });
+
+        // Pattern for Gene Symbols: gene="XXX"
+        const geneSymbolPattern = /gene="([^"]+)"/gi;
+        enhancedValue = enhancedValue.replace(geneSymbolPattern, (match, geneSymbol) => {
+            return `gene="<a href="https://www.ncbi.nlm.nih.gov/gene/?term=${encodeURIComponent(geneSymbol)}" target="_blank" class="db-xref-link" title="Search gene symbol in NCBI">${geneSymbol}</a>"`;
+        });
+
+        // Pattern for ORCID IDs: 0000-0000-0000-0000
+        const orcidPattern = /\b(\d{4}-\d{4}-\d{4}-\d{3}[0-9X])\b/gi;
+        enhancedValue = enhancedValue.replace(orcidPattern, (match) => {
+            return `<a href="https://orcid.org/${match}" target="_blank" class="db-xref-link" title="View ORCID profile">${match}</a>`;
+        });
+
+        // Pattern for ArXiv IDs: arXiv:1234.5678
+        const arxivPattern = /\barXiv:(\d{4}\.\d{4,5}(v\d+)?)\b/gi;
+        enhancedValue = enhancedValue.replace(arxivPattern, (match, arxivId) => {
+            return `<a href="https://arxiv.org/abs/${arxivId}" target="_blank" class="pmid-link" title="View on ArXiv">${match}</a>`;
+        });
+
+        // Pattern for bioRxiv DOIs: bioRxiv preprint
+        const biorxivPattern = /\bbioRxiv[:\s]+(\d{4}\.\d{2}\.\d{2}\.\d+)\b/gi;
+        enhancedValue = enhancedValue.replace(biorxivPattern, (match, biorxivId) => {
+            return `<a href="https://www.biorxiv.org/content/10.1101/${biorxivId}" target="_blank" class="pmid-link" title="View bioRxiv preprint">bioRxiv:${biorxivId}</a>`;
+        });
+
+        // Pattern for ISBN: ISBN-13 or ISBN-10
+        const isbnPattern = /\bISBN[:\s-]*(97[89][\d\s-]{10,17}|\d[\d\s-]{8,13}[0-9X])\b/gi;
+        enhancedValue = enhancedValue.replace(isbnPattern, (match) => {
+            const cleanIsbn = match.replace(/[^\d]/g, '');
+            return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat">${match}</a>`;
+        });
+
         return enhancedValue;
     }
     
