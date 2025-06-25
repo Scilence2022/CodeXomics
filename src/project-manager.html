@@ -40,6 +40,315 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        /* 菜单栏样式 */
+        .menu-bar {
+            display: flex;
+            gap: 0;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            padding: 4px;
+        }
+
+        .menu-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-title {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2c3e50;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: block;
+        }
+
+        .menu-title:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            min-width: 220px;
+            padding: 8px 0;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+        }
+
+        .menu-item:hover .menu-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .menu-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .menu-option:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            color: #667eea;
+        }
+
+        .menu-option .menu-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .menu-option .menu-shortcut {
+            margin-left: auto;
+            font-size: 11px;
+            color: #999;
+            font-family: monospace;
+        }
+
+        .menu-option .menu-arrow {
+            margin-left: auto;
+            font-size: 10px;
+            color: #999;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            margin: 6px 16px;
+        }
+
+        /* Toggle Switch 样式 */
+        .toggle-switch-container {
+            display: flex;
+            align-items: center;
+            margin: 0 15px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: relative;
+            width: 44px;
+            height: 22px;
+            background: #ddd;
+            border-radius: 22px;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+        }
+
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .toggle-switch input[type="checkbox"]:checked + .toggle-slider:before {
+            transform: translateX(22px);
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        /* 内容区域两栏布局 */
+        .content-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .content-main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* 详细信息面板 */
+        .details-panel {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .details-header {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .details-header h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .details-close-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .details-close-btn:hover {
+            background: rgba(108, 117, 125, 0.1);
+            color: #495057;
+        }
+
+        .details-content {
+            padding: 20px;
+        }
+
+        .details-section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .details-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .details-section h5 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .detail-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quick-actions .btn {
+            justify-self: stretch;
+            text-align: center;
+        }
+
+        /* 文件类型分布样式 */
+        .file-type-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .file-type-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-type-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .file-type-count {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* 活动记录样式 */
+        .activity-item {
+            padding: 8px 0;
+            font-size: 12px;
+            color: #6c757d;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.05);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-time {
+            font-size: 10px;
+            color: #999;
         }
         
         .header h1 {
@@ -821,6 +1130,174 @@
         <div class="header-left">
             <h1>📁 Project Manager</h1>
             <span style="opacity: 0.8; font-size: 13px;">Organize and manage your genomic data projects</span>
+            
+            <!-- 独立菜单栏 -->
+            <div class="menu-bar">
+                <div class="menu-item">
+                    <span class="menu-title">File</span>
+                    <div class="menu-dropdown">
+                        <div class="menu-option" onclick="projectManagerWindow.createNewProject()">
+                            <span class="menu-icon">📁</span>
+                            <span>New Project</span>
+                            <span class="menu-shortcut">Ctrl+N</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.openProject()">
+                            <span class="menu-icon">📂</span>
+                            <span>Open Project</span>
+                            <span class="menu-shortcut">Ctrl+O</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.openRecentProject()">
+                            <span class="menu-icon">🕒</span>
+                            <span>Open Recent</span>
+                            <span class="menu-arrow">▶</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.saveCurrentProject()">
+                            <span class="menu-icon">💾</span>
+                            <span>Save Project</span>
+                            <span class="menu-shortcut">Ctrl+S</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.saveProjectAs()">
+                            <span class="menu-icon">💾</span>
+                            <span>Save As...</span>
+                            <span class="menu-shortcut">Ctrl+Shift+S</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.importProject()">
+                            <span class="menu-icon">📥</span>
+                            <span>Import Project</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.exportCurrentProject()">
+                            <span class="menu-icon">📤</span>
+                            <span>Export Project</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.closeCurrentProject()">
+                            <span class="menu-icon">✖️</span>
+                            <span>Close Project</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-item">
+                    <span class="menu-title">Edit</span>
+                    <div class="menu-dropdown">
+                        <div class="menu-option" onclick="projectManagerWindow.addFiles()">
+                            <span class="menu-icon">📄</span>
+                            <span>Add Files</span>
+                            <span class="menu-shortcut">Ctrl+A</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.createFolder()">
+                            <span class="menu-icon">🗂️</span>
+                            <span>New Folder</span>
+                            <span class="menu-shortcut">Ctrl+Shift+N</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.selectAllFiles()">
+                            <span class="menu-icon">☑️</span>
+                            <span>Select All</span>
+                            <span class="menu-shortcut">Ctrl+A</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.clearSelection()">
+                            <span class="menu-icon">◻️</span>
+                            <span>Clear Selection</span>
+                            <span class="menu-shortcut">Esc</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.deleteSelectedFiles()">
+                            <span class="menu-icon">🗑️</span>
+                            <span>Delete Selected</span>
+                            <span class="menu-shortcut">Del</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-item">
+                    <span class="menu-title">View</span>
+                    <div class="menu-dropdown">
+                        <div class="menu-option" onclick="projectManagerWindow.manualRefreshProjects()">
+                            <span class="menu-icon">🔄</span>
+                            <span>Refresh</span>
+                            <span class="menu-shortcut">F5</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.setViewMode('grid')">
+                            <span class="menu-icon">⋮⋮⋮</span>
+                            <span>Grid View</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.setViewMode('list')">
+                            <span class="menu-icon">☰</span>
+                            <span>List View</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.setViewMode('details')">
+                            <span class="menu-icon">📋</span>
+                            <span>Details View</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.toggleDetailsPanel()">
+                            <span class="menu-icon">📊</span>
+                            <span>Toggle Details Panel</span>
+                            <span class="menu-shortcut">F9</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.toggleSidebar()">
+                            <span class="menu-icon">📁</span>
+                            <span>Toggle Sidebar</span>
+                            <span class="menu-shortcut">F8</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-item">
+                    <span class="menu-title">Tools</span>
+                    <div class="menu-dropdown">
+                        <div class="menu-option" onclick="projectManagerWindow.analyzeProject()">
+                            <span class="menu-icon">📊</span>
+                            <span>Analyze Project</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.validateFiles()">
+                            <span class="menu-icon">✅</span>
+                            <span>Validate Files</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.findDuplicateFiles()">
+                            <span class="menu-icon">🔍</span>
+                            <span>Find Duplicates</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.openInGenomeViewer()">
+                            <span class="menu-icon">🧬</span>
+                            <span>Open in Genome Viewer</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.runGenomicAnalysis()">
+                            <span class="menu-icon">🔬</span>
+                            <span>Run Genomic Analysis</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-item">
+                    <span class="menu-title">Help</span>
+                    <div class="menu-dropdown">
+                        <div class="menu-option" onclick="projectManagerWindow.showDocumentation()">
+                            <span class="menu-icon">📖</span>
+                            <span>Documentation</span>
+                            <span class="menu-shortcut">F1</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.showKeyboardShortcuts()">
+                            <span class="menu-icon">⌨️</span>
+                            <span>Keyboard Shortcuts</span>
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-option" onclick="projectManagerWindow.reportBug()">
+                            <span class="menu-icon">🐛</span>
+                            <span>Report Bug</span>
+                        </div>
+                        <div class="menu-option" onclick="projectManagerWindow.showAbout()">
+                            <span class="menu-icon">ℹ️</span>
+                            <span>About</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="header-actions">
             <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
@@ -858,8 +1335,17 @@
         <div class="content-area">
             <div class="content-header">
                 <div class="content-title" id="contentTitle">Welcome to Project Manager</div>
-                <div class="toolbar">
+                                    <div class="toolbar">
                     <input type="text" class="search-box" placeholder="Search files..." id="searchBox">
+                    
+                    <!-- Toggle Switch for Details Panel -->
+                    <div class="toggle-switch-container">
+                        <label class="toggle-switch" title="Toggle Details Panel (F9)">
+                            <input type="checkbox" id="detailsPanelToggle" onchange="projectManagerWindow.toggleDetailsPanel()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Details Panel</span>
+                        </label>
+                    </div>
                     
                     <!-- View Mode Selector -->
                     <div class="view-mode-selector">
@@ -890,26 +1376,91 @@
             </div>
             
             <div class="content-body">
-                <div id="projectOverview">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📂</div>
-                        <h3>No Project Selected</h3>
-                        <p>Create a new project or select an existing one to get started.</p>
-                        <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
-                            Create New Project
-                        </button>
-                        <button class="btn btn-warning" onclick="projectManagerWindow.createTestProject()" style="margin-top: 10px; background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);">
-                            🧪 Create Test Project
-                        </button>
+                <div class="content-main">
+                    <div id="projectOverview">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📂</div>
+                            <h3>No Project Selected</h3>
+                            <p>Create a new project or select an existing one to get started.</p>
+                            <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
+                                Create New Project
+                            </button>
+                            <button class="btn btn-warning" onclick="projectManagerWindow.createTestProject()" style="margin-top: 10px; background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);">
+                                🧪 Create Test Project
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="projectContent" style="display: none;">
+                        <div class="project-stats" id="projectStats"></div>
+                        <div class="file-view-container" id="fileViewContainer">
+                            <div class="file-grid" id="fileGrid"></div>
+                            <div class="file-list" id="fileList" style="display: none;"></div>
+                            <div class="file-details" id="fileDetails" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
                 
-                <div id="projectContent" style="display: none;">
-                    <div class="project-stats" id="projectStats"></div>
-                    <div class="file-view-container" id="fileViewContainer">
-                        <div class="file-grid" id="fileGrid"></div>
-                        <div class="file-list" id="fileList" style="display: none;"></div>
-                        <div class="file-details" id="fileDetails" style="display: none;"></div>
+                <!-- 详细信息面板 -->
+                <div class="details-panel" id="detailsPanel" style="display: none;">
+                    <div class="details-header">
+                        <h4>📊 Details Panel</h4>
+                        <button class="details-close-btn" onclick="projectManagerWindow.toggleDetailsPanel()" title="Close Details Panel">×</button>
+                    </div>
+                    <div class="details-content" id="detailsContent">
+                        <div class="details-section">
+                            <h5>📁 Selection Info</h5>
+                            <div id="selectionInfo">
+                                <p>No files selected</p>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h5>📊 Project Statistics</h5>
+                            <div id="projectDetailStats">
+                                <div class="detail-stat">
+                                    <span class="stat-label">Total Files:</span>
+                                    <span class="stat-value" id="totalFilesCount">0</span>
+                                </div>
+                                <div class="detail-stat">
+                                    <span class="stat-label">Total Size:</span>
+                                    <span class="stat-value" id="totalSizeValue">0 B</span>
+                                </div>
+                                <div class="detail-stat">
+                                    <span class="stat-label">File Types:</span>
+                                    <span class="stat-value" id="fileTypesCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h5>🏷️ File Type Distribution</h5>
+                            <div id="fileTypeDistribution">
+                                <p>No data available</p>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h5>📝 Recent Activity</h5>
+                            <div id="recentActivity">
+                                <p>No recent activity</p>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h5>🔧 Quick Actions</h5>
+                            <div class="quick-actions">
+                                <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.selectAllFiles()">
+                                    Select All
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.clearSelection()">
+                                    Clear Selection
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="projectManagerWindow.analyzeProject()">
+                                    Analyze Project
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

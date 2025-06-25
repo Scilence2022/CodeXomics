@@ -208,148 +208,6 @@ class ProteinStructureViewer {
                     opacity: 0.9;
                 }
 
-                /* AlphaFold-specific styles */
-                .alphafold-search-dialog {
-                    border: none;
-                    border-radius: 12px;
-                    box-shadow: 0 6px 30px rgba(0,0,0,0.3);
-                    max-width: 600px;
-                    width: 95%;
-                    max-height: 85vh;
-                    overflow-y: auto;
-                }
-
-                .alphafold-search-dialog .dialog-header {
-                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                    color: white;
-                    padding: 20px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    cursor: move;
-                    user-select: none;
-                }
-
-                .alphafold-search-dialog .dialog-header h3 {
-                    margin: 0;
-                    font-size: 1.3em;
-                }
-
-                .alphafold-search-dialog .close-btn {
-                    background: none;
-                    border: none;
-                    color: white;
-                    font-size: 1.5em;
-                    cursor: pointer;
-                    padding: 0;
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .alphafold-search-dialog .close-btn:hover {
-                    background: rgba(255,255,255,0.2);
-                }
-
-                .alphafold-search-dialog .dialog-body {
-                    padding: 25px;
-                }
-
-                .alphafold-search-dialog .input-group {
-                    margin-bottom: 20px;
-                }
-
-                .alphafold-search-dialog .input-group label {
-                    display: block;
-                    margin-bottom: 8px;
-                    font-weight: 600;
-                    color: #333;
-                }
-
-                .alphafold-search-dialog .input-group input,
-                .alphafold-search-dialog .input-group select {
-                    width: 100%;
-                    padding: 12px 15px;
-                    border: 2px solid #ddd;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    transition: border-color 0.3s ease;
-                }
-
-                .alphafold-search-dialog .input-group input:focus,
-                .alphafold-search-dialog .input-group select:focus {
-                    outline: none;
-                    border-color: #4CAF50;
-                    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-                }
-
-                .alphafold-search-dialog .button-group {
-                    display: flex;
-                    gap: 15px;
-                    margin-top: 25px;
-                }
-
-                .alphafold-search-dialog .btn {
-                    padding: 12px 25px;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: 500;
-                    transition: all 0.3s ease;
-                }
-
-                .alphafold-search-dialog .btn-primary {
-                    background: #4CAF50;
-                    color: white;
-                }
-
-                .alphafold-search-dialog .btn-primary:hover {
-                    background: #45a049;
-                    transform: translateY(-1px);
-                }
-
-                .alphafold-search-dialog .btn-secondary {
-                    background: #6c757d;
-                    color: white;
-                }
-
-                .alphafold-search-dialog .btn-secondary:hover {
-                    background: #5a6268;
-                }
-
-                .alphafold-result-item {
-                    background: #f8fff8;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    padding: 15px;
-                    margin-bottom: 12px;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                }
-
-                .alphafold-result-item:hover {
-                    background: #f0fff0;
-                    border-color: #4CAF50;
-                    transform: translateY(-1px);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-
-                .alphafold-result-title {
-                    font-weight: 600;
-                    color: #2E7D32;
-                    margin-bottom: 5px;
-                }
-
-                .alphafold-result-details {
-                    font-size: 13px;
-                    color: #666;
-                    line-height: 1.4;
-                }
-
                 .search-results {
                     margin-top: 20px;
                     max-height: 300px;
@@ -881,10 +739,19 @@ class ProteinStructureViewer {
             }
         }
         
-        // Try MCPServerManager.executeTool first
-        if (mcpManager && mcpManager.executeTool) {
+        // Try MCPServerManager.executeToolOnServer first
+        if (mcpManager && mcpManager.executeToolOnServer) {
             try {
-                return await mcpManager.executeTool(toolName, parameters);
+                // Find which server has this tool
+                const allTools = mcpManager.getAllAvailableTools();
+                const tool = allTools.find(t => t.name === toolName);
+                
+                if (tool) {
+                    console.log(`Executing tool ${toolName} on server: ${tool.serverName}`);
+                    return await mcpManager.executeToolOnServer(tool.serverId, toolName, parameters);
+                } else {
+                    console.warn(`Tool ${toolName} not found in any connected MCP server`);
+                }
             } catch (error) {
                 console.warn('MCP server manager failed, trying ChatManager fallback:', error.message);
             }
@@ -969,6 +836,188 @@ class ProteinStructureViewer {
             </div>
         `;
 
+        // Add AlphaFold dialog styles if not already added
+        if (!document.getElementById('alphafold-dialog-styles')) {
+            const style = document.createElement('style');
+            style.id = 'alphafold-dialog-styles';
+            style.textContent = `
+                /* AlphaFold-specific styles */
+                .alphafold-search-dialog {
+                    border: none;
+                    border-radius: 12px;
+                    box-shadow: 0 6px 30px rgba(0,0,0,0.3);
+                    max-width: 600px;
+                    width: 95%;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                }
+
+                .alphafold-search-dialog .dialog-content {
+                    padding: 0;
+                }
+
+                .alphafold-search-dialog .dialog-header {
+                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                    color: white;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    cursor: move;
+                    user-select: none;
+                }
+
+                .alphafold-search-dialog .dialog-header h3 {
+                    margin: 0;
+                    font-size: 1.3em;
+                }
+
+                .alphafold-search-dialog .close-btn {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 1.5em;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .alphafold-search-dialog .close-btn:hover {
+                    background: rgba(255,255,255,0.2);
+                }
+
+                .alphafold-search-dialog .dialog-body {
+                    padding: 25px;
+                }
+
+                .alphafold-search-dialog .input-group {
+                    margin-bottom: 20px;
+                }
+
+                .alphafold-search-dialog .input-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .alphafold-search-dialog .input-group input,
+                .alphafold-search-dialog .input-group select {
+                    width: 100%;
+                    padding: 12px 15px;
+                    border: 2px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    transition: border-color 0.3s ease;
+                }
+
+                .alphafold-search-dialog .input-group input:focus,
+                .alphafold-search-dialog .input-group select:focus {
+                    outline: none;
+                    border-color: #4CAF50;
+                    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+                }
+
+                .alphafold-search-dialog .button-group {
+                    display: flex;
+                    gap: 15px;
+                    margin-top: 25px;
+                }
+
+                .alphafold-search-dialog .btn {
+                    padding: 12px 25px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                }
+
+                .alphafold-search-dialog .btn-primary {
+                    background: #4CAF50;
+                    color: white;
+                }
+
+                .alphafold-search-dialog .btn-primary:hover {
+                    background: #45a049;
+                    transform: translateY(-1px);
+                }
+
+                .alphafold-search-dialog .btn-secondary {
+                    background: #6c757d;
+                    color: white;
+                }
+
+                .alphafold-search-dialog .btn-secondary:hover {
+                    background: #5a6268;
+                    transform: translateY(-1px);
+                }
+
+                .alphafold-result-item {
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 10px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .alphafold-result-item:hover {
+                    background: #e9ecef;
+                    border-color: #4CAF50;
+                    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                .alphafold-result-title {
+                    font-weight: 600;
+                    font-size: 1.1em;
+                    color: #333;
+                    margin-bottom: 5px;
+                }
+
+                .alphafold-result-details {
+                    font-size: 0.9em;
+                    color: #666;
+                    line-height: 1.4;
+                }
+
+                .search-results {
+                    margin-top: 20px;
+                }
+
+                .search-results .loading {
+                    text-align: center;
+                    padding: 20px;
+                    color: #666;
+                    font-style: italic;
+                }
+
+                .search-results .no-results {
+                    text-align: center;
+                    padding: 20px;
+                    color: #999;
+                    font-style: italic;
+                }
+
+                .search-results .error {
+                    background: #f8d7da;
+                    color: #721c24;
+                    padding: 15px;
+                    border-radius: 6px;
+                    border: 1px solid #f5c6cb;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         // Add draggable functionality
         this.makeDraggable(dialog);
 
@@ -991,11 +1040,34 @@ class ProteinStructureViewer {
         resultsDiv.innerHTML = '<div class="loading">Searching AlphaFold database...</div>';
         
         try {
+            console.log('Searching AlphaFold for:', geneName, 'in', organism);
+            
+            // Check if MCP server is connected first
+            const chatManager = window.app?.chatManager;
+            if (chatManager && chatManager.mcpServerManager) {
+                const connectedCount = chatManager.mcpServerManager.getConnectedServersCount();
+                console.log(`MCP servers connected: ${connectedCount}`);
+                
+                if (connectedCount === 0) {
+                    console.log('No MCP servers connected, attempting to connect...');
+                    try {
+                        await chatManager.mcpServerManager.connectToServer('genome-studio');
+                        console.log('Successfully connected to MCP server');
+                    } catch (connectError) {
+                        console.warn('Failed to auto-connect to MCP server:', connectError);
+                        resultsDiv.innerHTML = '<div class="error">MCP server not connected. Please connect to MCP server first.</div>';
+                        return;
+                    }
+                }
+            }
+            
             const results = await this.requestMCPTool('search_alphafold_by_gene', {
                 geneName: geneName,
                 organism: organism,
                 maxResults: 10
             });
+            
+            console.log('AlphaFold search result:', results);
             
             this.displayAlphaFoldResults(resultsDiv, results.results || []);
             

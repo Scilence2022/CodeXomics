@@ -1039,9 +1039,12 @@ class MCPGenomeBrowserServer {
         
         try {
             // Step 1: Search UniProt for gene name to get UniProt IDs
+            console.log('Step 1: Searching UniProt...');
             const uniprotResults = await this.searchUniProtByGene(geneName, organism, maxResults);
+            console.log(`UniProt search returned ${uniprotResults.length} results`);
             
             if (uniprotResults.length === 0) {
+                console.log('No UniProt entries found, returning empty results');
                 return {
                     success: true,
                     results: [],
@@ -1050,10 +1053,14 @@ class MCPGenomeBrowserServer {
             }
             
             // Step 2: Check which UniProt IDs have AlphaFold structures
+            console.log('Step 2: Checking AlphaFold structures...');
             const alphaFoldResults = [];
             for (const uniprotEntry of uniprotResults) {
                 try {
+                    console.log(`Checking AlphaFold structure for ${uniprotEntry.uniprotId}...`);
                     const hasStructure = await this.checkAlphaFoldStructureExists(uniprotEntry.uniprotId);
+                    console.log(`${uniprotEntry.uniprotId} has AlphaFold structure: ${hasStructure}`);
+                    
                     if (hasStructure) {
                         alphaFoldResults.push({
                             uniprotId: uniprotEntry.uniprotId,
@@ -1071,6 +1078,7 @@ class MCPGenomeBrowserServer {
             }
             
             console.log(`Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName}`);
+            console.log('AlphaFold results:', alphaFoldResults);
             console.log('=== MCP SERVER: SEARCH ALPHAFOLD BY GENE END ===');
             
             return {
@@ -1081,6 +1089,7 @@ class MCPGenomeBrowserServer {
             
         } catch (error) {
             console.error('Error in searchAlphaFoldByGene:', error.message);
+            console.error('Error stack:', error.stack);
             throw new Error(`Failed to search AlphaFold database: ${error.message}`);
         }
     }
@@ -1090,38 +1099,60 @@ class MCPGenomeBrowserServer {
      */
     async searchUniProtByGene(geneName, organism, maxResults) {
         try {
-            // Build UniProt search query
-            const query = `gene:${geneName} AND organism:"${organism}"`;
+            // Build UniProt search query - use the correct field names
+            let query;
+            if (organism === 'Homo sapiens') {
+                query = `(gene:${geneName}) AND (organism_id:9606)`;
+            } else if (organism === 'Mus musculus') {
+                query = `(gene:${geneName}) AND (organism_id:10090)`;
+            } else if (organism === 'Escherichia coli') {
+                query = `(gene:${geneName}) AND (organism_id:83333)`;
+            } else {
+                // Fallback to organism name search
+                query = `(gene:${geneName}) AND (organism_name:"${organism}")`;
+            }
             const encodedQuery = encodeURIComponent(query);
             
             console.log('UniProt search query:', query);
+            console.log('Full URL:', `https://rest.uniprot.org/uniprotkb/search?query=${encodedQuery}&format=json&size=${maxResults}`);
             
             const response = await this.makeHTTPSRequest({
                 hostname: 'rest.uniprot.org',
                 path: `/uniprotkb/search?query=${encodedQuery}&format=json&size=${maxResults}`,
                 method: 'GET',
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeAIStudio/0.2 (contact: support@genomeaistudio.com)'
                 }
             });
             
+            console.log('UniProt response length:', response.length);
             const data = JSON.parse(response);
+            console.log('UniProt parsed data:', data);
             
             if (!data.results || data.results.length === 0) {
+                console.log('No UniProt results found for query:', query);
                 return [];
             }
             
-            return data.results.map(entry => ({
-                uniprotId: entry.primaryAccession,
-                proteinName: entry.proteinDescription?.recommendedName?.fullName?.value || 
-                           entry.proteinDescription?.submissionNames?.[0]?.fullName?.value || 
-                           'Unknown protein',
-                organism: entry.organism?.scientificName || organism,
-                length: entry.sequence?.length,
-                geneNames: entry.genes?.map(gene => gene.geneName?.value).filter(Boolean) || []
-            }));
+            console.log(`Found ${data.results.length} UniProt entries`);
+            
+            return data.results.map(entry => {
+                const result = {
+                    uniprotId: entry.primaryAccession,
+                    proteinName: entry.proteinDescription?.recommendedName?.fullName?.value || 
+                               entry.proteinDescription?.submissionNames?.[0]?.fullName?.value || 
+                               'Unknown protein',
+                    organism: entry.organism?.scientificName || organism,
+                    length: entry.sequence?.length,
+                    geneNames: entry.genes?.map(gene => gene.geneName?.value).filter(Boolean) || []
+                };
+                console.log('Mapped UniProt result:', result);
+                return result;
+            });
             
         } catch (error) {
+            console.error('UniProt search error:', error);
             throw new Error(`Failed to search UniProt: ${error.message}`);
         }
     }

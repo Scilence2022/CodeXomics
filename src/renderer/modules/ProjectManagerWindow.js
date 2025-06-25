@@ -55,11 +55,58 @@ class ProjectManagerWindow {
                 switch(e.key) {
                     case 'n':
                         e.preventDefault();
-                        this.createNewProject();
+                        if (e.shiftKey) {
+                            this.createFolder(); // Ctrl+Shift+N
+                        } else {
+                            this.createNewProject(); // Ctrl+N
+                        }
                         break;
                     case 'o':
                         e.preventDefault();
-                        this.openProject();
+                        this.openProject(); // Ctrl+O
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            this.saveProjectAs(); // Ctrl+Shift+S
+                        } else {
+                            this.saveCurrentProject(); // Ctrl+S
+                        }
+                        break;
+                    case 'a':
+                        e.preventDefault();
+                        if (this.currentProject) {
+                            this.selectAllFiles(); // Ctrl+A
+                        } else {
+                            this.addFiles(); // Ctrl+A (when no project)
+                        }
+                        break;
+                }
+            } else {
+                switch(e.key) {
+                    case 'F5':
+                        e.preventDefault();
+                        this.manualRefreshProjects();
+                        break;
+                    case 'F8':
+                        e.preventDefault();
+                        this.toggleSidebar();
+                        break;
+                    case 'F9':
+                        e.preventDefault();
+                        this.toggleDetailsPanel();
+                        break;
+                    case 'F1':
+                        e.preventDefault();
+                        this.showDocumentation();
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        this.clearSelection();
+                        break;
+                    case 'Delete':
+                        e.preventDefault();
+                        this.deleteSelectedFiles();
                         break;
                 }
             }
@@ -199,6 +246,12 @@ class ProjectManagerWindow {
             
             this.updateStatusBar(`Opened: ${this.currentProject.name}`);
             this.saveProjects(); // 保存最后打开时间
+            
+            // 更新详细信息面板
+            this.updateDetailsPanel();
+            
+            // 自动刷新Projects & Workspaces显示
+            this.autoRefreshProjectsAndWorkspaces();
         }
     }
 
@@ -495,6 +548,7 @@ class ProjectManagerWindow {
         
         this.updateFileCardSelection();
         this.updateStatusBar();
+        this.updateDetailsPanel();
     }
 
     async openFileInMainWindow(fileId) {
@@ -732,6 +786,494 @@ class ProjectManagerWindow {
                 notification.parentNode.removeChild(notification);
             }
         }, 3000);
+    }
+
+    /**
+     * 自动刷新Projects & Workspaces显示
+     */
+    autoRefreshProjectsAndWorkspaces() {
+        console.log('🔄 Auto-refreshing Projects & Workspaces...');
+        
+        // 刷新项目树视图
+        this.renderProjectTree();
+        
+        // 如果当前有选中的项目，也刷新其内容
+        if (this.currentProject) {
+            this.renderProjectContent();
+        }
+        
+        // 更新状态栏
+        const projectCount = this.projects.size;
+        const activeProjectName = this.currentProject ? this.currentProject.name : 'None';
+        this.updateStatusBar(`Refreshed: ${projectCount} projects | Active: ${activeProjectName}`);
+        
+        // 通知用户刷新完成
+        console.log('✅ Projects & Workspaces refreshed successfully');
+        
+        // 3秒后恢复正常状态栏
+        setTimeout(() => {
+            if (this.currentProject) {
+                this.updateStatusBar(`Opened: ${this.currentProject.name}`);
+            } else {
+                this.updateStatusBar('Ready');
+            }
+        }, 3000);
+    }
+
+    /**
+     * 手动刷新按钮功能
+     */
+    manualRefreshProjects() {
+        this.loadProjects().then(() => {
+            this.autoRefreshProjectsAndWorkspaces();
+            this.showNotification('Projects refreshed manually', 'success');
+        });
+    }
+
+    // ====== 菜单系统功能实现 ======
+
+    /**
+     * File菜单功能
+     */
+    openRecentProject() {
+        this.showNotification('Recent projects feature coming soon', 'info');
+    }
+
+    saveCurrentProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project to save', 'warning');
+            return;
+        }
+        this.saveProjects();
+        this.showNotification(`Project "${this.currentProject.name}" saved`, 'success');
+    }
+
+    saveProjectAs() {
+        if (!this.currentProject) {
+            this.showNotification('No project to save', 'warning');
+            return;
+        }
+        const newName = prompt('Enter new project name:', this.currentProject.name + ' Copy');
+        if (newName && newName.trim()) {
+            const newProject = {
+                ...this.currentProject,
+                id: this.generateId(),
+                name: newName.trim(),
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            this.projects.set(newProject.id, newProject);
+            this.saveProjects();
+            this.renderProjectTree();
+            this.showNotification(`Project saved as "${newName}"`, 'success');
+        }
+    }
+
+    importProject() {
+        this.openProject(); // 重用现有的打开项目功能
+    }
+
+    exportCurrentProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project to export', 'warning');
+            return;
+        }
+        try {
+            const projectData = JSON.stringify(this.currentProject, null, 2);
+            const blob = new Blob([projectData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${this.currentProject.name}.genomeproj`;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.showNotification(`Project "${this.currentProject.name}" exported`, 'success');
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showNotification('Failed to export project', 'error');
+        }
+    }
+
+    closeCurrentProject() {
+        if (this.currentProject) {
+            const projectName = this.currentProject.name;
+            this.currentProject = null;
+            this.currentPath = [];
+            
+            // 隐藏项目内容，显示欢迎页面
+            document.getElementById('projectContent').style.display = 'none';
+            document.getElementById('projectOverview').style.display = 'block';
+            
+            this.renderProjectTree();
+            this.updateStatusBar('Ready');
+            this.showNotification(`Project "${projectName}" closed`, 'info');
+        }
+    }
+
+    /**
+     * Edit菜单功能
+     */
+    selectAllFiles() {
+        if (!this.currentProject) return;
+        
+        const currentFiles = this.getCurrentFolderFiles();
+        this.selectedFiles.clear();
+        currentFiles.forEach(file => this.selectedFiles.add(file.id));
+        
+        this.updateFileCardSelection();
+        this.updateFileCountDisplay();
+        this.updateDetailsPanel();
+        this.showNotification(`Selected ${this.selectedFiles.size} files`, 'info');
+    }
+
+    clearSelection() {
+        this.selectedFiles.clear();
+        this.updateFileCardSelection();
+        this.updateFileCountDisplay();
+        this.updateDetailsPanel();
+        this.showNotification('Selection cleared', 'info');
+    }
+
+    deleteSelectedFiles() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('No files selected', 'warning');
+            return;
+        }
+
+        const count = this.selectedFiles.size;
+        if (confirm(`Delete ${count} selected file(s)?`)) {
+            // 从项目中删除选中的文件
+            this.currentProject.files = this.currentProject.files.filter(
+                file => !this.selectedFiles.has(file.id)
+            );
+            
+            this.selectedFiles.clear();
+            this.saveProjects();
+            this.renderProjectContent();
+            this.updateDetailsPanel();
+            this.showNotification(`Deleted ${count} files`, 'success');
+        }
+    }
+
+    /**
+     * View菜单功能
+     */
+    setViewMode(mode) {
+        this.viewMode = mode;
+        
+        // 更新视图模式按钮状态
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // 重新渲染文件视图
+        this.renderFileGrid();
+        this.showNotification(`View mode: ${mode}`, 'info');
+    }
+
+    /**
+     * Toggle详细信息面板
+     */
+    toggleDetailsPanel() {
+        const panel = document.getElementById('detailsPanel');
+        const toggle = document.getElementById('detailsPanelToggle');
+        
+        if (panel.style.display === 'none' || !panel.style.display) {
+            panel.style.display = 'block';
+            toggle.checked = true;
+            this.updateDetailsPanel();
+            this.showNotification('Details panel opened', 'info');
+        } else {
+            panel.style.display = 'none';
+            toggle.checked = false;
+            this.showNotification('Details panel closed', 'info');
+        }
+    }
+
+    toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar.style.display === 'none') {
+            sidebar.style.display = 'flex';
+            this.showNotification('Sidebar opened', 'info');
+        } else {
+            sidebar.style.display = 'none';
+            this.showNotification('Sidebar closed', 'info');
+        }
+    }
+
+    /**
+     * Tools菜单功能
+     */
+    analyzeProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project to analyze', 'warning');
+            return;
+        }
+
+        const stats = this.calculateProjectStatistics();
+        const analysis = `
+Project Analysis for "${this.currentProject.name}":
+
+📊 File Statistics:
+- Total Files: ${stats.totalFiles}
+- Total Size: ${this.formatFileSize(stats.totalSize)}
+- Average File Size: ${this.formatFileSize(stats.averageSize)}
+
+🏷️ File Types:
+${Object.entries(stats.fileTypes).map(([type, count]) => `- ${type}: ${count} files`).join('\n')}
+
+📁 Folder Distribution:
+${this.currentProject.folders.map(folder => `- ${folder.name}: ${stats.folderFiles[folder.name] || 0} files`).join('\n')}
+        `.trim();
+
+        alert(analysis);
+    }
+
+    calculateProjectStatistics() {
+        if (!this.currentProject) return {};
+        
+        const files = this.currentProject.files || [];
+        const totalFiles = files.length;
+        const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+        const averageSize = totalFiles > 0 ? totalSize / totalFiles : 0;
+        
+        const fileTypes = {};
+        const folderFiles = {};
+        
+        files.forEach(file => {
+            const type = this.detectFileType(file.name);
+            fileTypes[type] = (fileTypes[type] || 0) + 1;
+            
+            const folder = file.folder || 'root';
+            folderFiles[folder] = (folderFiles[folder] || 0) + 1;
+        });
+        
+        return {
+            totalFiles,
+            totalSize,
+            averageSize,
+            fileTypes,
+            folderFiles
+        };
+    }
+
+    validateFiles() {
+        if (!this.currentProject) {
+            this.showNotification('No project to validate', 'warning');
+            return;
+        }
+        
+        const missingFiles = [];
+        const invalidFiles = [];
+        
+        this.currentProject.files.forEach(file => {
+            if (!file.name || !file.id) {
+                invalidFiles.push(file);
+            }
+            // 这里可以添加更多文件验证逻辑
+        });
+        
+        if (missingFiles.length === 0 && invalidFiles.length === 0) {
+            this.showNotification('All files are valid', 'success');
+        } else {
+            const message = `Validation complete:\n- ${invalidFiles.length} invalid files found`;
+            alert(message);
+        }
+    }
+
+    findDuplicateFiles() {
+        if (!this.currentProject) {
+            this.showNotification('No project to check', 'warning');
+            return;
+        }
+        
+        const fileNames = {};
+        const duplicates = [];
+        
+        this.currentProject.files.forEach(file => {
+            if (fileNames[file.name]) {
+                duplicates.push(file.name);
+            } else {
+                fileNames[file.name] = true;
+            }
+        });
+        
+        if (duplicates.length === 0) {
+            this.showNotification('No duplicate files found', 'success');
+        } else {
+            alert(`Found ${duplicates.length} duplicate file names:\n${duplicates.join('\n')}`);
+        }
+    }
+
+    openInGenomeViewer() {
+        this.showNotification('Opening in Genome Viewer...', 'info');
+        // 这里可以添加与主窗口通信的逻辑
+    }
+
+    runGenomicAnalysis() {
+        this.showNotification('Genomic analysis feature coming soon', 'info');
+    }
+
+    /**
+     * Help菜单功能
+     */
+    showDocumentation() {
+        const docContent = `
+📖 Project Manager Documentation
+
+🔧 Basic Operations:
+• Ctrl+N: Create new project
+• Ctrl+O: Open project
+• Ctrl+S: Save project
+• F5: Refresh projects
+• F8: Toggle sidebar
+• F9: Toggle details panel
+
+📁 File Management:
+• Drag & drop files to add them to project
+• Right-click for context menu
+• Use Ctrl+Click for multiple selection
+
+🎯 Tips:
+• Projects are automatically saved to localStorage
+• Use the details panel for quick project statistics
+• Export projects as JSON for backup
+        `.trim();
+        
+        alert(docContent);
+    }
+
+    showKeyboardShortcuts() {
+        const shortcuts = `
+⌨️ Keyboard Shortcuts
+
+File Operations:
+• Ctrl+N - New Project
+• Ctrl+O - Open Project
+• Ctrl+S - Save Project
+• Ctrl+Shift+S - Save As
+• Ctrl+A - Add Files
+• Ctrl+Shift+N - New Folder
+
+View Controls:
+• F5 - Refresh
+• F8 - Toggle Sidebar
+• F9 - Toggle Details Panel
+• Esc - Clear Selection
+• Del - Delete Selected
+
+Selection:
+• Ctrl+A - Select All
+• Ctrl+Click - Multi-select
+• Shift+Click - Range select
+        `.trim();
+        
+        alert(shortcuts);
+    }
+
+    reportBug() {
+        const bugReport = `
+Please send bug reports to: support@genomeaistudio.com
+
+Include the following information:
+• Project Manager version
+• Steps to reproduce the issue
+• Expected vs actual behavior
+• Browser/OS information
+        `.trim();
+        
+        alert(bugReport);
+    }
+
+    showAbout() {
+        const aboutInfo = `
+📁 Project Manager v0.2 Beta
+
+Part of Genome AI Studio
+A comprehensive genomic data management solution
+
+Features:
+• Project organization and management
+• Multi-format file support
+• Advanced file operations
+• Integration with genome viewer
+
+© 2024 Genome AI Studio
+        `.trim();
+        
+        alert(aboutInfo);
+    }
+
+    /**
+     * 更新详细信息面板内容
+     */
+    updateDetailsPanel() {
+        if (!this.currentProject) return;
+        
+        // 更新选择信息
+        const selectionInfo = document.getElementById('selectionInfo');
+        if (selectionInfo) {
+            if (this.selectedFiles.size === 0) {
+                selectionInfo.innerHTML = '<p>No files selected</p>';
+            } else {
+                const selectedFilesList = Array.from(this.selectedFiles)
+                    .map(fileId => this.findFileById(fileId))
+                    .filter(file => file)
+                    .map(file => `<div class="selected-file-item">${file.name}</div>`)
+                    .join('');
+                    
+                selectionInfo.innerHTML = `
+                    <p><strong>${this.selectedFiles.size} files selected</strong></p>
+                    <div class="selected-files-list">${selectedFilesList}</div>
+                `;
+            }
+        }
+        
+        // 更新项目统计
+        const stats = this.calculateProjectStatistics();
+        document.getElementById('totalFilesCount').textContent = stats.totalFiles;
+        document.getElementById('totalSizeValue').textContent = this.formatFileSize(stats.totalSize);
+        document.getElementById('fileTypesCount').textContent = Object.keys(stats.fileTypes).length;
+        
+        // 更新文件类型分布
+        const fileTypeDistribution = document.getElementById('fileTypeDistribution');
+        if (fileTypeDistribution && stats.fileTypes) {
+            const typeItems = Object.entries(stats.fileTypes)
+                .map(([type, count]) => {
+                    const typeConfig = this.fileTypes[type] || this.fileTypes['unknown'];
+                    return `
+                        <div class="file-type-item">
+                            <div class="file-type-name">
+                                <div class="file-type-icon" style="background-color: ${typeConfig.color}">
+                                    ${typeConfig.icon}
+                                </div>
+                                <span>${type}</span>
+                            </div>
+                            <span class="file-type-count">${count}</span>
+                        </div>
+                    `;
+                })
+                .join('');
+                
+            fileTypeDistribution.innerHTML = typeItems || '<p>No data available</p>';
+        }
+        
+        // 更新最近活动
+        const recentActivity = document.getElementById('recentActivity');
+        if (recentActivity) {
+            const activities = [
+                `Project opened: ${this.formatDate(this.currentProject.metadata.lastOpened)}`,
+                `Last modified: ${this.formatDate(this.currentProject.modified)}`,
+                `Created: ${this.formatDate(this.currentProject.created)}`
+            ];
+            
+            recentActivity.innerHTML = activities
+                .map(activity => `<div class="activity-item">${activity}</div>`)
+                .join('');
+        }
     }
 }
 
