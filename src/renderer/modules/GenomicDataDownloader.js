@@ -40,8 +40,8 @@ class GenomicDataDownloader {
             'ncbi-refseq': {
                 name: 'NCBI RefSeq',
                 baseUrl: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/',
-                description: 'Download reference genome sequences from NCBI RefSeq',
-                searchDb: 'genome',
+                description: 'Download reference genome assemblies from NCBI RefSeq',
+                searchDb: 'assembly',
                 retmax: 50
             },
             'ncbi-sra': {
@@ -293,9 +293,9 @@ class GenomicDataDownloader {
                     <label class="form-label">Database Type</label>
                     <select id="ncbiDatabase" class="form-select">
                         <option value="nucleotide">GenBank Nucleotide Sequences</option>
-                        <option value="genome">RefSeq Genomes</option>
+                        <option value="assembly">RefSeq Genomes</option>
                         <option value="sra">SRA Sequencing Data</option>
-                        <option value="assembly">Assembly Data</option>
+                        <option value="genome">Genome Records</option>
                         <option value="protein">Protein Sequences</option>
                         <option value="pubmed">PubMed Articles</option>
                     </select>
@@ -537,11 +537,26 @@ class GenomicDataDownloader {
             query += ` AND ${minLength}:${maxLength}[SLEN]`;
         }
         
+        // Special handling for assembly database (RefSeq genomes)
+        if (config.searchDb === 'assembly') {
+            // Optimize query for assembly database
+            if (!query.includes('[Organism]') && !organism) {
+                // Add organism filter for better assembly results
+                query = `"${searchTerm}"[Organism] OR ${searchTerm}[Infraspecific name] OR ${searchTerm}[Assembly name]`;
+            }
+            // Add RefSeq filter for assembly database
+            query += ' AND ("latest refseq"[Filter] OR "refseq"[Filter])';
+        }
+        
         // NCBI E-utilities搜索
         const searchUrl = `${config.baseUrl}esearch.fcgi?db=${config.searchDb}&term=${encodeURIComponent(query)}&retmax=${resultsLimit}&retmode=json`;
         
+        console.log('NCBI Search URL:', searchUrl); // Debug logging
+        
         const searchResponse = await fetch(searchUrl);
         const searchData = await searchResponse.json();
+        
+        console.log('NCBI Search Response:', searchData); // Debug logging
         
         if (!searchData.esearchresult?.idlist?.length) {
             return [];
@@ -554,24 +569,83 @@ class GenomicDataDownloader {
         const summaryResponse = await fetch(summaryUrl);
         const summaryData = await summaryResponse.json();
         
+        console.log('NCBI Summary Response:', summaryData); // Debug logging
+        
         const results = [];
         for (const id of searchData.esearchresult.idlist) {
             const summary = summaryData.result[id];
             if (summary) {
-                results.push({
-                    id: id,
-                    accession: summary.caption || summary.accessionversion || id,
-                    title: summary.title || 'No title available',
-                    organism: summary.organism || 'Unknown',
-                    length: summary.slen || 0,
-                    description: summary.extra || '',
-                    database: config.searchDb,
-                    downloadUrl: this.getNCBIDownloadUrl(id, config.searchDb)
-                });
+                // Enhanced result processing for different databases
+                const result = this.processNCBIResult(summary, id, config.searchDb);
+                results.push(result);
             }
         }
         
         return results;
+    }
+    
+    processNCBIResult(summary, id, database) {
+        // Base result structure
+        const baseResult = {
+            id: id,
+            accession: summary.caption || summary.accessionversion || id,
+            title: summary.title || 'No title available',
+            organism: summary.organism || 'Unknown',
+            length: summary.slen || 0,
+            description: summary.extra || '',
+            database: database,
+            downloadUrl: this.getNCBIDownloadUrl(id, database)
+        };
+
+        // Database-specific processing
+        switch (database) {
+            case 'assembly':
+                return {
+                    ...baseResult,
+                    accession: summary.assemblyaccession || summary.caption || id,
+                    title: summary.title || summary.assemblydescription || 'No title available',
+                    organism: summary.organism || summary.infraspecificname || 'Unknown',
+                    length: summary.totallength || summary.slen || 0,
+                    description: `Assembly: ${summary.assemblyaccession || 'Unknown'} | Status: ${summary.assemblystatus || 'Unknown'} | Level: ${summary.assemblylevel || 'Unknown'}`,
+                    assemblyLevel: summary.assemblylevel || 'Unknown',
+                    assemblyStatus: summary.assemblystatus || 'Unknown',
+                    submitter: summary.submitterorganization || 'Unknown'
+                };
+                
+            case 'genome':
+                return {
+                    ...baseResult,
+                    organism: summary.organism_name || summary.organism || 'Unknown',
+                    description: `Genome: ${summary.defline || summary.title || 'Unknown'} | Size: ${summary.total_length ? (summary.total_length / 1000000).toFixed(2) + ' Mb' : 'Unknown'}`,
+                    genomeSize: summary.total_length || 0
+                };
+                
+            case 'nucleotide':
+                return {
+                    ...baseResult,
+                    description: `${summary.extra || summary.title || 'No description'} | GI: ${summary.gi || 'N/A'}`,
+                    gi: summary.gi || null
+                };
+                
+            case 'protein':
+                return {
+                    ...baseResult,
+                    description: `${summary.extra || summary.title || 'No description'} | Length: ${summary.slen || 0} aa`,
+                    aaLength: summary.slen || 0
+                };
+                
+            case 'sra':
+                return {
+                    ...baseResult,
+                    title: summary.title || summary.runs || 'No title available',
+                    description: `SRA: ${summary.runs || 'Unknown'} | Experiment: ${summary.expname || 'Unknown'} | Platform: ${summary.platform || 'Unknown'}`,
+                    platform: summary.platform || 'Unknown',
+                    runs: summary.runs || 'Unknown'
+                };
+                
+            default:
+                return baseResult;
+        }
     }
     
     async searchNCBIUnified(searchTerm, database) {
@@ -736,11 +810,19 @@ class GenomicDataDownloader {
         const formatMap = {
             'nucleotide': 'fasta',
             'genome': 'fasta',
-            'assembly': 'fasta',
+            'assembly': 'docsum', // Assembly uses docsum to get FTP links
+            'protein': 'fasta',
             'sra': 'runinfo'
         };
         
         const format = formatMap[database] || 'fasta';
+        
+        // Special handling for assembly database
+        if (database === 'assembly') {
+            // Return assembly summary URL which contains FTP download links
+            return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${id}&retmode=json`;
+        }
+        
         return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${database}&id=${id}&rettype=${format}&retmode=text`;
     }
     
@@ -755,14 +837,44 @@ class GenomicDataDownloader {
         
         let html = '';
         results.forEach((result, index) => {
+            // Format length based on database type
+            let lengthDisplay;
+            if (result.database === 'assembly' && result.length > 1000000) {
+                lengthDisplay = `${(result.length / 1000000).toFixed(2)} Mb`;
+            } else if (result.database === 'protein') {
+                lengthDisplay = `${result.length.toLocaleString()} aa`;
+            } else {
+                lengthDisplay = `${result.length.toLocaleString()} bp`;
+            }
+
+            // Enhanced details based on database type
+            let extraDetails = '';
+            if (result.database === 'assembly') {
+                extraDetails = `
+                    <div class="result-details">
+                        <strong>Assembly Level:</strong> ${result.assemblyLevel || 'Unknown'} | 
+                        <strong>Status:</strong> ${result.assemblyStatus || 'Unknown'}
+                        ${result.submitter ? ` | <strong>Submitter:</strong> ${result.submitter}` : ''}
+                    </div>
+                `;
+            } else if (result.database === 'sra') {
+                extraDetails = `
+                    <div class="result-details">
+                        <strong>Platform:</strong> ${result.platform || 'Unknown'} | 
+                        <strong>Runs:</strong> ${result.runs || 'Unknown'}
+                    </div>
+                `;
+            }
+
             html += `
                 <div class="result-item" data-result-index="${index}">
                     <div class="result-title">${result.title}</div>
                     <div class="result-details">
                         <strong>Accession:</strong> ${result.accession} | 
                         <strong>Organism:</strong> ${result.organism} | 
-                        <strong>Length:</strong> ${result.length.toLocaleString()} bp
+                        <strong>Size:</strong> ${lengthDisplay}
                     </div>
+                    ${extraDetails}
                     <div class="result-details">${result.description}</div>
                     <div class="result-actions">
                         <input type="checkbox" class="result-checkbox" data-index="${index}" 
