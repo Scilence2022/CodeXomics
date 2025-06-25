@@ -1123,6 +1123,297 @@
                 box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
             }
         }
+
+        /* 文件卡片样式增强 */
+        .file-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            height: 200px;
+        }
+
+        .file-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.25);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .file-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-info {
+            flex: 1;
+            width: 100%;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        .file-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            margin-top: auto;
+        }
+
+        .file-card:hover .file-actions {
+            opacity: 1;
+        }
+
+        .file-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-action-btn:hover {
+            background: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 上下文菜单样式 */
+        .context-menu {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            padding: 8px 0;
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .context-menu-item:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            color: #667eea;
+        }
+
+        .context-menu-item.danger {
+            color: #dc3545;
+        }
+
+        .context-menu-item.danger:hover {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: rgba(102, 126, 234, 0.2);
+            margin: 6px 16px;
+        }
+
+        .context-menu .menu-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        /* 文件预览模态框样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(108, 117, 125, 0.1);
+            color: #495057;
+        }
+
+        .modal-body {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .file-info {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        #fileContent {
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        #fileEditor {
+            resize: vertical;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* 空状态样式 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: #6c757d;
+            grid-column: 1 / -1;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .empty-state h3 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        /* 响应式文件网格 */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* 按钮样式增强 */
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -2908,47 +3199,55 @@ Folders: ${project.folders ? project.folders.length : 0}
 
                 if (filteredFiles.length === 0) {
                     fileGrid.innerHTML = `
-                        <div style="grid-column: 1 / -1;">
-                            <div class="empty-state">
-                                <div class="empty-state-icon">📄</div>
-                                <h3>No files found</h3>
-                                <p>Add some files to this folder to get started.</p>
-                                <button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">
-                                    Add Files
-                                </button>
-                            </div>
+                        <div class="empty-state">
+                            <div class="empty-icon">📁</div>
+                            <h3>No files found</h3>
+                            <p>Add files to your project or try a different search term</p>
+                            ${this.currentProject ? '<button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">Add Files</button>' : ''}
                         </div>
                     `;
                     return;
                 }
 
-                let html = '';
-                filteredFiles.forEach(file => {
+                fileGrid.innerHTML = filteredFiles.map(file => {
                     const fileType = this.detectFileType(file.name);
-                    const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+                    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+                    const isSelected = this.selectedFiles.has(file.id);
 
-                    html += `
-                        <div class="file-card" 
+                    return `
+                        <div class="file-card ${isSelected ? 'selected' : ''}" 
+                             data-file-id="${file.id}"
                              draggable="true"
                              ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                              ondragend="projectManagerWindow.handleFileDragEnd(event)"
-                             onclick="projectManagerWindow.selectFile('${file.id}')"
-                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
-                             data-file-id="${file.id}">
-                            <div class="file-icon ${fileType}" 
-                                 style="background-color: ${typeConfig.color}">
+                             onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                             ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                             oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
+                            <div class="file-icon" style="background-color: ${typeConfig.color}">
                                 ${typeConfig.icon}
                             </div>
-                            <div class="file-name" title="${file.name}">${file.name}</div>
                             <div class="file-info">
-                                ${this.formatFileSize(file.size || 0)}
-                                ${file.modified ? `• ${this.formatDate(file.modified)}` : ''}
+                                <div class="file-name" title="${file.name}">${file.name}</div>
+                                <div class="file-details">
+                                    <span class="file-size">${this.formatFileSize(file.size)}</span>
+                                    <span class="file-date">${this.formatDate(file.modified)}</span>
+                                </div>
+                            </div>
+                            <div class="file-actions">
+                                <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">
+                                    👁️
+                                </button>
+                                <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
+                                    ✏️
+                                </button>
+                                <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">
+                                    🗑️
+                                </button>
                             </div>
                         </div>
                     `;
-                });
+                }).join('');
 
-                fileGrid.innerHTML = html;
                 this.updateFileCountDisplay(filteredFiles.length);
             }
 
