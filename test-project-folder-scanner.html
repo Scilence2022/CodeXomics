@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Folder Scanner Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 25px;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            background-color: #fafbfc;
+        }
+        
+        .test-section h3 {
+            color: #34495e;
+            margin-top: 0;
+            font-size: 1.4em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .controls button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
+        }
+        
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .controls button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-area {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #34495e;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 4px solid transparent;
+        }
+        
+        .log-success {
+            background-color: rgba(39, 174, 96, 0.1);
+            border-left-color: #27ae60;
+            color: #2ecc71;
+        }
+        
+        .log-error {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left-color: #e74c3c;
+            color: #e74c3c;
+        }
+        
+        .log-info {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left-color: #3498db;
+            color: #5dade2;
+        }
+        
+        .log-warning {
+            background-color: rgba(241, 196, 15, 0.1);
+            border-left-color: #f1c40f;
+            color: #f39c12;
+        }
+        
+        .project-info {
+            background: linear-gradient(135deg, #e8f6fd, #dbeafe);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #3498db;
+        }
+        
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .file-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .file-card .file-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .file-card .file-details {
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+        
+        .file-card.new-file {
+            border-left: 5px solid #27ae60;
+            background: linear-gradient(135deg, #f8fff8, #eafaf1);
+        }
+        
+        .status {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .status.ready {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid #27ae60;
+        }
+        
+        .status.scanning {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: #856404;
+            border: 1px solid #f39c12;
+        }
+        
+        .status.error {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border: 1px solid #e74c3c;
+        }
+        
+        .config-option {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .config-option label {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .config-option input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e1e8ed;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Project Folder Scanner Test</h1>
+        
+        <div class="status ready" id="statusBar">
+            Ready to test project folder scanning functionality
+        </div>
+        
+        <div class="test-section">
+            <h3>📁 Project Folder Scanning Simulation</h3>
+            <p>This test demonstrates the new refresh functionality that scans project folders and automatically adds files not listed in the project XML file.</p>
+            
+            <div class="controls">
+                <button onclick="createTestProject()">🆕 Create Test Project</button>
+                <button onclick="addTestFilesToFolder()">📄 Add Files to Folder</button>
+                <button onclick="simulateRefreshScan()">🔄 Simulate Refresh Scan</button>
+                <button onclick="showProjectStats()">📊 Show Project Stats</button>
+                <button onclick="clearResults()">🗑️ Clear Results</button>
+            </div>
+            
+            <div class="project-info" id="projectInfo" style="display: none;">
+                <h4>📋 Current Test Project</h4>
+                <div id="projectDetails"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📈 Project Statistics</h3>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalFiles">0</div>
+                    <div class="stat-label">Total Files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="newFiles">0</div>
+                    <div class="stat-label">New Files Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSize">0 MB</div>
+                    <div class="stat-label">Total Size</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="scanCount">0</div>
+                    <div class="stat-label">Scans Performed</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Scanner Configuration</h3>
+            <div class="config-option">
+                <label>
+                    <input type="checkbox" id="includeHiddenFiles" onchange="updateScannerConfig()">
+                    Include hidden files (starting with .)
+                </label>
+            </div>
+            <div class="config-option">
+                <label>
+                    <input type="checkbox" id="includeTempFiles" onchange="updateScannerConfig()">
+                    Include temporary files (.tmp, .temp)
+                </label>
+            </div>
+            <div class="config-option">
+                <label>
+                    <input type="checkbox" id="includeProjectFiles" onchange="updateScannerConfig()">
+                    Include project files (.prj.GAI, .genomeproj)
+                </label>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 Console Output</h3>
+            <div class="result-area" id="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📄 Discovered Files</h3>
+            <div id="discoveredFiles">No files discovered yet. Run a scan to see results.</div>
+        </div>
+    </div>
+
+    <script>
+        // Test state
+        let testProject = null;
+        let scanCount = 0;
+        let totalNewFilesFound = 0;
+        let scannerConfig = {
+            includeHiddenFiles: false,
+            includeTempFiles: false,
+            includeProjectFiles: false
+        };
+
+        // Mock file system representing a typical genomics project
+        const mockFileSystem = {
+            '/Users/user/Documents/Genome AI Studio Projects/TestProject': {
+                'genomes': {
+                    'test_genome.fasta': { size: 1024000, modified: new Date('2024-06-20') },
+                    'reference.fa': { size: 2048000, modified: new Date('2024-06-21') },
+                    'mitochondrial.fasta': { size: 16384, modified: new Date('2024-06-22') },
+                    '.hidden_genome.fasta': { size: 512000, modified: new Date('2024-06-23') }
+                },
+                'annotations': {
+                    'annotations.gff3': { size: 256000, modified: new Date('2024-06-20') },
+                    'features.gtf': { size: 128000, modified: new Date('2024-06-21') },
+                    'gene_models.gff': { size: 384000, modified: new Date('2024-06-22') },
+                    'temp_annotation.tmp': { size: 64000, modified: new Date('2024-06-23') }
+                },
+                'variants': {
+                    'variants.vcf': { size: 512000, modified: new Date('2024-06-20') },
+                    'snps.vcf': { size: 256000, modified: new Date('2024-06-21') },
+                    'indels.vcf': { size: 128000, modified: new Date('2024-06-22') }
+                },
+                'reads': {
+                    'sample1.fastq': { size: 10240000, modified: new Date('2024-06-20') },
+                    'sample2.fq': { size: 8192000, modified: new Date('2024-06-21') },
+                    'sample3.fastq.gz': { size: 3072000, modified: new Date('2024-06-22') },
+                    'alignments.bam': { size: 15360000, modified: new Date('2024-06-23') }
+                },
+                'analysis': {
+                    'results.txt': { size: 16384, modified: new Date('2024-06-20') },
+                    'stats.csv': { size: 8192, modified: new Date('2024-06-21') },
+                    'report.html': { size: 32768, modified: new Date('2024-06-22') },
+                    'plots.pdf': { size: 1024000, modified: new Date('2024-06-23') }
+                },
+                'TestProject.prj.GAI': { size: 4096, modified: new Date('2024-06-20') },
+                'backup.genomeproj': { size: 2048, modified: new Date('2024-06-21') },
+                'README.md': { size: 2048, modified: new Date('2024-06-22') }
+            }
+        };
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(entry);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'ready') {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = `status ${type}`;
+        }
+
+        function updateStats() {
+            const totalFiles = testProject ? testProject.files.length : 0;
+            const totalSize = testProject ? testProject.files.reduce((sum, file) => sum + (file.size || 0), 0) : 0;
+            
+            document.getElementById('totalFiles').textContent = totalFiles;
+            document.getElementById('newFiles').textContent = totalNewFilesFound;
+            document.getElementById('totalSize').textContent = formatFileSize(totalSize);
+            document.getElementById('scanCount').textContent = scanCount;
+        }
+
+        function createTestProject() {
+            testProject = {
+                id: 'test_project_001',
+                name: 'TestProject',
+                location: '/Users/user/Documents/Genome AI Studio Projects',
+                dataFolderPath: '/Users/user/Documents/Genome AI Studio Projects/TestProject',
+                created: new Date().toISOString(),
+                modified: new Date().toISOString(),
+                files: [
+                    {
+                        id: 'file_001',
+                        name: 'existing_genome.fasta',
+                        path: '/Users/user/Documents/Genome AI Studio Projects/TestProject/genomes/existing_genome.fasta',
+                        type: 'fasta',
+                        size: 1536000,
+                        folder: ['genomes'],
+                        added: new Date('2024-06-15').toISOString()
+                    },
+                    {
+                        id: 'file_002',
+                        name: 'existing_annotations.gff3',
+                        path: '/Users/user/Documents/Genome AI Studio Projects/TestProject/annotations/existing_annotations.gff3',
+                        type: 'gff',
+                        size: 384000,
+                        folder: ['annotations'],
+                        added: new Date('2024-06-15').toISOString()
+                    }
+                ],
+                folders: [
+                    { name: 'Genomes', icon: '🧬', path: ['genomes'] },
+                    { name: 'Annotations', icon: '📋', path: ['annotations'] },
+                    { name: 'Variants', icon: '🔄', path: ['variants'] },
+                    { name: 'Reads', icon: '📊', path: ['reads'] },
+                    { name: 'Analysis', icon: '📈', path: ['analysis'] }
+                ],
+                history: []
+            };
+
+            // Reset counters
+            scanCount = 0;
+            totalNewFilesFound = 0;
+
+            // Update UI
+            document.getElementById('projectInfo').style.display = 'block';
+            updateProjectDisplay();
+            updateStats();
+
+            log('✅ Test project created successfully', 'success');
+            log(`📁 Project path: ${testProject.dataFolderPath}`, 'info');
+            log(`📄 Current files in project: ${testProject.files.length}`, 'info');
+            log(`📂 Folder structure: ${testProject.folders.length} folders`, 'info');
+            updateStatus('Test project ready for scanning', 'ready');
+        }
+
+        function updateProjectDisplay() {
+            if (!testProject) return;
+            
+            document.getElementById('projectDetails').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div><strong>📝 Name:</strong> ${testProject.name}</div>
+                    <div><strong>📍 Location:</strong> ${testProject.location}</div>
+                    <div><strong>📄 Total Files:</strong> ${testProject.files.length}</div>
+                    <div><strong>📂 Folders:</strong> ${testProject.folders.length}</div>
+                    <div><strong>🕒 Created:</strong> ${new Date(testProject.created).toLocaleDateString()}</div>
+                    <div><strong>📝 Last Modified:</strong> ${new Date(testProject.modified).toLocaleDateString()}</div>
+                </div>
+            `;
+        }
+
+        function addTestFilesToFolder() {
+            if (!testProject) {
+                log('❌ Please create a test project first', 'error');
+                updateStatus('Error: No project available', 'error');
+                return;
+            }
+
+            log('📁 Simulating addition of new files to project folder...', 'info');
+            log('🔧 In a real scenario, these files would be physically copied to the folder', 'info');
+            log('📝 Files available for discovery:', 'warning');
+
+            // List files that would be discovered
+            const discoveredFiles = simulateFileScan();
+            discoveredFiles.forEach(file => {
+                log(`   📄 ${file.relativePath} (${formatFileSize(file.size)}) - ${file.type}`, 'info');
+            });
+
+            updateStatus(`${discoveredFiles.length} new files available for scanning`, 'scanning');
+        }
+
+        function simulateFileScan() {
+            if (!testProject) return [];
+
+            const existingPaths = testProject.files.map(f => f.path);
+            const newFiles = [];
+
+            function scanMockDirectory(dirPath, mockDir, relativePath = '') {
+                Object.entries(mockDir).forEach(([name, content]) => {
+                    if (typeof content === 'object' && !content.size) {
+                        // It's a directory
+                        const newRelativePath = relativePath ? `${relativePath}/${name}` : name;
+                        scanMockDirectory(`${dirPath}/${name}`, content, newRelativePath);
+                    } else {
+                        // It's a file
+                        const fullPath = `${dirPath}/${name}`;
+                        const relativeFilePath = relativePath ? `${relativePath}/${name}` : name;
+                        
+                        // Apply scanner configuration filters
+                        if (!scannerConfig.includeHiddenFiles && name.startsWith('.')) {
+                            return;
+                        }
+                        if (!scannerConfig.includeTempFiles && (name.includes('.tmp') || name.includes('.temp'))) {
+                            return;
+                        }
+                        if (!scannerConfig.includeProjectFiles && (name.endsWith('.prj.GAI') || name.endsWith('.genomeproj'))) {
+                            return;
+                        }
+
+                        // Check if file already exists in project
+                        const isExisting = existingPaths.some(path => 
+                            path === fullPath || path.endsWith(relativeFilePath)
+                        );
+
+                        if (!isExisting) {
+                            const folderPath = relativePath ? relativePath.split('/') : [];
+                            
+                            newFiles.push({
+                                id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                name: name,
+                                path: fullPath,
+                                relativePath: relativeFilePath,
+                                type: getFileTypeFromName(name),
+                                size: content.size,
+                                added: new Date().toISOString(),
+                                modified: content.modified.toISOString(),
+                                folder: folderPath,
+                                isNewlyScanned: true,
+                                metadata: {
+                                    autoDiscovered: true,
+                                    discoveredDate: new Date().toISOString()
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+
+            const projectMockDir = mockFileSystem[testProject.dataFolderPath];
+            if (projectMockDir) {
+                scanMockDirectory(testProject.dataFolderPath, projectMockDir);
+            }
+
+            return newFiles;
+        }
+
+        function simulateRefreshScan() {
+            if (!testProject) {
+                log('❌ Please create a test project first', 'error');
+                updateStatus('Error: No project available', 'error');
+                return;
+            }
+
+            updateStatus('🔍 Scanning project folder for new files...', 'scanning');
+            log('🔍 Starting comprehensive project folder scan...', 'info');
+            log(`📂 Target directory: ${testProject.dataFolderPath}`, 'info');
+            log(`⚙️ Configuration: Hidden(${scannerConfig.includeHiddenFiles}) Temp(${scannerConfig.includeTempFiles}) Project(${scannerConfig.includeProjectFiles})`, 'info');
+
+            // Simulate realistic scan delay
+            setTimeout(() => {
+                const discoveredFiles = simulateFileScan();
+                scanCount++;
+                
+                if (discoveredFiles.length > 0) {
+                    log(`🎉 Discovery complete! Found ${discoveredFiles.length} new files`, 'success');
+                    
+                    // Add files to project
+                    discoveredFiles.forEach(file => {
+                        testProject.files.push(file);
+                        log(`➕ Added: ${file.name} (${file.type}, ${formatFileSize(file.size)})`, 'success');
+                    });
+
+                    totalNewFilesFound += discoveredFiles.length;
+
+                    // Update project metadata
+                    testProject.modified = new Date().toISOString();
+                    
+                    // Add to history
+                    testProject.history.unshift({
+                        timestamp: new Date().toISOString(),
+                        action: 'auto-scan',
+                        description: `Auto-discovered ${discoveredFiles.length} new file${discoveredFiles.length === 1 ? '' : 's'}`
+                    });
+
+                    log(`✅ Project updated: ${testProject.files.length} total files`, 'success');
+                    updateStatus(`✅ Scan complete: ${discoveredFiles.length} new files added`, 'ready');
+                    
+                    // Update displays
+                    displayDiscoveredFiles(discoveredFiles);
+                    updateProjectDisplay();
+                    updateStats();
+                } else {
+                    log('ℹ️ Scan completed - no new files found', 'info');
+                    updateStatus('✅ Scan complete: No new files found', 'ready');
+                    updateStats();
+                }
+
+            }, 1500); // Realistic delay
+        }
+
+        function displayDiscoveredFiles(files) {
+            const container = document.getElementById('discoveredFiles');
+            
+            if (files.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #7f8c8d; padding: 40px;">No new files discovered in latest scan</div>';
+                return;
+            }
+
+            let html = `<h4>📊 Latest Scan Results (${files.length} files)</h4><div class="file-list">`;
+            files.forEach(file => {
+                const fileTypeIcon = getFileTypeIcon(file.type);
+                html += `
+                    <div class="file-card new-file">
+                        <div class="file-name">${fileTypeIcon} ${file.name}</div>
+                        <div class="file-details">
+                            <strong>Type:</strong> ${file.type.toUpperCase()}<br>
+                            <strong>Size:</strong> ${formatFileSize(file.size)}<br>
+                            <strong>Location:</strong> ${file.folder.join('/') || 'root'}<br>
+                            <strong>Modified:</strong> ${new Date(file.modified).toLocaleDateString()}<br>
+                            <strong>Status:</strong> <span style="color: #27ae60;">Auto-discovered</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            
+            container.innerHTML = html;
+        }
+
+        function showProjectStats() {
+            if (!testProject) {
+                log('❌ No project available to analyze', 'error');
+                return;
+            }
+
+            log('📊 Generating project statistics...', 'info');
+            
+            // Calculate file type distribution
+            const typeStats = {};
+            testProject.files.forEach(file => {
+                typeStats[file.type] = (typeStats[file.type] || 0) + 1;
+            });
+
+            log('📈 File type distribution:', 'info');
+            Object.entries(typeStats).forEach(([type, count]) => {
+                log(`   ${type.toUpperCase()}: ${count} files`, 'info');
+            });
+
+            // Calculate folder distribution
+            const folderStats = {};
+            testProject.files.forEach(file => {
+                const folder = file.folder && file.folder.length > 0 ? file.folder[0] : 'root';
+                folderStats[folder] = (folderStats[folder] || 0) + 1;
+            });
+
+            log('📁 Folder distribution:', 'info');
+            Object.entries(folderStats).forEach(([folder, count]) => {
+                log(`   ${folder}: ${count} files`, 'info');
+            });
+
+            // Calculate total size
+            const totalSize = testProject.files.reduce((sum, file) => sum + (file.size || 0), 0);
+            log(`💾 Total project size: ${formatFileSize(totalSize)}`, 'info');
+
+            // Show auto-discovered files
+            const autoDiscovered = testProject.files.filter(file => file.metadata && file.metadata.autoDiscovered);
+            log(`🔍 Auto-discovered files: ${autoDiscovered.length}`, 'info');
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('discoveredFiles').innerHTML = 'No files discovered yet. Run a scan to see results.';
+            document.getElementById('projectInfo').style.display = 'none';
+            testProject = null;
+            scanCount = 0;
+            totalNewFilesFound = 0;
+            updateStats();
+            updateStatus('Ready to test project folder scanning functionality', 'ready');
+            log('🗑️ Test environment reset', 'info');
+        }
+
+        function updateScannerConfig() {
+            scannerConfig.includeHiddenFiles = document.getElementById('includeHiddenFiles').checked;
+            scannerConfig.includeTempFiles = document.getElementById('includeTempFiles').checked;
+            scannerConfig.includeProjectFiles = document.getElementById('includeProjectFiles').checked;
+            
+            log('⚙️ Scanner configuration updated:', 'info');
+            log(`   • Hidden files: ${scannerConfig.includeHiddenFiles ? 'Include' : 'Exclude'}`, 'info');
+            log(`   • Temp files: ${scannerConfig.includeTempFiles ? 'Include' : 'Exclude'}`, 'info');
+            log(`   • Project files: ${scannerConfig.includeProjectFiles ? 'Include' : 'Exclude'}`, 'info');
+        }
+
+        function getFileTypeFromName(fileName) {
+            const ext = fileName.toLowerCase().split('.').pop();
+            const typeMap = {
+                'fasta': ['fasta', 'fa', 'fas'],
+                'gff': ['gff', 'gff3', 'gtf'],
+                'vcf': ['vcf'],
+                'bam': ['bam', 'sam'],
+                'wig': ['wig', 'bw', 'bigwig'],
+                'bed': ['bed'],
+                'genbank': ['gb', 'gbk', 'gbff'],
+                'fastq': ['fastq', 'fq'],
+                'txt': ['txt', 'text'],
+                'csv': ['csv'],
+                'tsv': ['tsv'],
+                'json': ['json'],
+                'xml': ['xml'],
+                'html': ['html', 'htm'],
+                'pdf': ['pdf'],
+                'md': ['md', 'markdown']
+            };
+
+            for (const [type, extensions] of Object.entries(typeMap)) {
+                if (extensions.includes(ext)) {
+                    return type;
+                }
+            }
+            return 'unknown';
+        }
+
+        function getFileTypeIcon(type) {
+            const icons = {
+                'fasta': '🧬',
+                'gff': '📋',
+                'vcf': '🔄',
+                'bam': '🗂️',
+                'wig': '📊',
+                'bed': '🛏️',
+                'genbank': '🏛️',
+                'fastq': '📈',
+                'txt': '📄',
+                'csv': '📊',
+                'tsv': '📊',
+                'json': '📋',
+                'xml': '📄',
+                'html': '🌐',
+                'pdf': '📋',
+                'md': '📝'
+            };
+            return icons[type] || '📄';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+        }
+
+        // Initialize the test environment
+        log('🚀 Project Folder Scanner Test Environment Initialized', 'success');
+        log('📝 Test Instructions:', 'info');
+        log('   1️⃣ Create Test Project - Sets up a mock project with initial files', 'info');
+        log('   2️⃣ Add Files to Folder - Simulates new files being added to the project directory', 'info');
+        log('   3️⃣ Simulate Refresh Scan - Tests the folder scanning and file discovery process', 'info');
+        log('   4️⃣ Configure scanner options to test different filtering scenarios', 'info');
+        updateStats();
+    </script>
+</body>
+</html> 

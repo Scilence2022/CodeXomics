@@ -3758,6 +3758,120 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
   }
 });
 
+// Handle scanning project folder for new files
+ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) => {
+  try {
+    if (!fs.existsSync(projectPath)) {
+      return { success: false, error: 'Project folder does not exist' };
+    }
+
+    const newFiles = [];
+    const existingIds = new Set(existingFileIds);
+
+    // Helper function to scan directory recursively
+    function scanDirectory(dirPath, relativePath = '') {
+      const items = fs.readdirSync(dirPath);
+      
+      items.forEach(item => {
+        const itemPath = path.join(dirPath, item);
+        const relativeFilePath = relativePath ? path.join(relativePath, item) : item;
+        
+        // Skip hidden files, temp files, and system files
+        if (item.startsWith('.') || item.startsWith('~') || 
+            item.includes('.tmp') || item.includes('.temp') ||
+            item.endsWith('.prj.GAI') || item.endsWith('.genomeproj')) {
+          return;
+        }
+
+        try {
+          const stats = fs.statSync(itemPath);
+          
+          if (stats.isDirectory()) {
+            // Recursively scan subdirectories
+            scanDirectory(itemPath, relativeFilePath);
+          } else if (stats.isFile()) {
+            // Generate a temporary ID for comparison
+            const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Check if this file path already exists (more reliable than ID)
+            const isDuplicate = existingFileIds.some(existingPath => 
+              existingPath === itemPath || existingPath.endsWith(relativeFilePath)
+            );
+            
+            if (!isDuplicate) {
+              // Determine folder path based on directory structure
+              const folderPath = [];
+              if (relativePath) {
+                folderPath.push(...relativePath.split(path.sep));
+              }
+
+              newFiles.push({
+                id: tempId,
+                name: item,
+                path: itemPath,
+                relativePath: relativeFilePath,
+                type: getFileTypeFromExtension(item),
+                size: stats.size,
+                added: new Date().toISOString(),
+                modified: stats.mtime.toISOString(),
+                folder: folderPath,
+                isNewlyScanned: true
+              });
+            }
+          }
+        } catch (fileError) {
+          console.warn(`Error processing ${itemPath}:`, fileError.message);
+        }
+      });
+    }
+
+    // Start scanning from project root
+    scanDirectory(projectPath);
+
+    console.log(`📁 Scanned project folder: ${projectPath}`);
+    console.log(`🆕 Found ${newFiles.length} new files`);
+
+    return { 
+      success: true, 
+      newFiles: newFiles,
+      scannedPath: projectPath,
+      totalNewFiles: newFiles.length
+    };
+
+  } catch (error) {
+    console.error('Error scanning project folder:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Helper function to determine file type from extension
+function getFileTypeFromExtension(fileName) {
+  const ext = fileName.toLowerCase().split('.').pop();
+  const typeMap = {
+    'fasta': ['fasta', 'fa', 'fas'],
+    'gff': ['gff', 'gff3', 'gtf'],
+    'vcf': ['vcf'],
+    'bam': ['bam', 'sam'],
+    'wig': ['wig', 'bw', 'bigwig'],
+    'bed': ['bed'],
+    'genbank': ['gb', 'gbk', 'gbff'],
+    'fastq': ['fastq', 'fq'],
+    'txt': ['txt', 'text'],
+    'csv': ['csv'],
+    'tsv': ['tsv'],
+    'json': ['json'],
+    'xml': ['xml'],
+    'html': ['html', 'htm']
+  };
+
+  for (const [type, extensions] of Object.entries(typeMap)) {
+    if (extensions.includes(ext)) {
+      return type;
+    }
+  }
+  return 'unknown';
+}
+
 // Handle file save operations
 ipcMain.handle('saveFile', async (event, fileName, content) => {
   try {
