@@ -20,7 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectMultipleFiles: () => ipcRenderer.invoke('selectMultipleFiles'),
   createProjectDirectory: (location, projectName) => ipcRenderer.invoke('createProjectDirectory', location, projectName),
   loadProjectFile: (filePath) => ipcRenderer.invoke('loadProjectFile', filePath),
-  loadProjectFromFile: (filePath) => ipcRenderer.invoke('loadProjectFromFile', filePath),
   openFileInMainWindow: (filePath) => ipcRenderer.invoke('openFileInMainWindow', filePath),
   openFolderInExplorer: (folderPath) => ipcRenderer.invoke('openFolderInExplorer', folderPath),
   moveFileInProject: (currentPath, projectName, targetFolderPath) => ipcRenderer.invoke('moveFileInProject', currentPath, projectName, targetFolderPath),
@@ -117,15 +116,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   
   // File reading API for project manager
-  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
-  
-  // Text file management APIs
-  readTextFile: (filePath, encoding) => ipcRenderer.invoke('readTextFile', filePath, encoding),
-  writeTextFile: (filePath, content, encoding) => ipcRenderer.invoke('writeTextFile', filePath, content, encoding),
-  renameFile: (filePath, newName) => ipcRenderer.invoke('renameFile', filePath, newName),
-  duplicateFile: (filePath) => ipcRenderer.invoke('duplicateFile', filePath),
-  showFileInExplorer: (filePath) => ipcRenderer.invoke('showFileInExplorer', filePath),
-  downloadFiles: (filePaths) => ipcRenderer.invoke('downloadFiles', filePaths)
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)
 });
 
 // Provide access to node process information (for development)

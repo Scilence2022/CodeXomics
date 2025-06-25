@@ -991,7 +991,7 @@ function createMenu() {
               const result = await dialog.showOpenDialog(null, {
                 properties: ['openFile'],
                 filters: [
-                  { name: 'Genome AI Studio Project Files (*.prj.GAI)', extensions: ['GAI'] },
+                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] }
@@ -3224,11 +3224,10 @@ function createProjectManagerWindow() {
       minWidth: 1000,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        enableRemoteModule: true,
-        webSecurity: false,
-        cache: false
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        preload: path.join(__dirname, 'preload.js')
       },
       title: 'Project Manager - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -3293,7 +3292,7 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome AI Studio Project Files (*.prj.GAI)', extensions: ['GAI'] },
+        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
@@ -3367,63 +3366,6 @@ ipcMain.handle('loadProjectFile', async (event, filePath) => {
     return { success: true, content: content, fileName: fileName };
   } catch (error) {
     return { success: false, error: error.message };
-  }
-});
-
-// Handle loading project from file and parsing it into the project manager
-ipcMain.handle('loadProjectFromFile', async (event, filePath) => {
-  try {
-    console.log('Loading project from file:', filePath);
-    
-    // Read the project file
-    const content = fs.readFileSync(filePath, 'utf8');
-    let project;
-    
-    // Parse the project based on file format
-    if (filePath.endsWith('.xml') || filePath.endsWith('.prj.GAI') || content.trim().startsWith('<?xml') || content.includes('<GenomeExplorerProject')) {
-      // XML format (.prj.GAI or .xml)
-      const ProjectXMLHandler = require('./renderer/modules/ProjectXMLHandler.js');
-      const xmlHandler = new ProjectXMLHandler();
-      const validation = xmlHandler.validateProjectXML(content);
-      
-      if (!validation.valid) {
-        throw new Error(`Invalid XML project file: ${validation.error}`);
-      }
-      project = validation.project;
-    } else {
-      // JSON format (backward compatibility)
-      project = JSON.parse(content);
-      
-      if (!project.id || !project.name) {
-        throw new Error('Invalid project file format: missing required fields');
-      }
-    }
-    
-    // Update project metadata
-    if (!project.metadata) project.metadata = {};
-    project.metadata.lastOpened = new Date().toISOString();
-    project.filePath = filePath;
-    
-    // Generate new ID if needed to avoid conflicts
-    if (!project.id) {
-      project.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-    
-    console.log('Successfully parsed project:', project.name, 'ID:', project.id);
-    
-    return { 
-      success: true, 
-      project: project, 
-      projectId: project.id,
-      message: `Project "${project.name}" loaded successfully` 
-    };
-    
-  } catch (error) {
-    console.error('Error loading project from file:', error);
-    return { 
-      success: false, 
-      error: `Failed to load project: ${error.message}` 
-    };
   }
 });
 
@@ -4083,157 +4025,6 @@ ipcMain.handle('getFileInfo', async (event, filePath) => {
     };
   } catch (error) {
     return { success: false, error: error.message };
-  }
-});
-
-// Handle reading text files
-ipcMain.handle('readTextFile', async (event, filePath, encoding = 'utf-8') => {
-  try {
-    const content = fs.readFileSync(filePath, encoding);
-    
-    return {
-      success: true,
-      content: content
-    };
-  } catch (error) {
-    console.error('Error reading text file:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
-
-// Handle writing text files
-ipcMain.handle('writeTextFile', async (event, filePath, content, encoding = 'utf-8') => {
-  try {
-    fs.writeFileSync(filePath, content, encoding);
-    
-    return {
-      success: true,
-      filePath: filePath
-    };
-  } catch (error) {
-    console.error('Error writing text file:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
-
-// Handle file renaming
-ipcMain.handle('renameFile', async (event, filePath, newName) => {
-  try {
-    const directory = path.dirname(filePath);
-    const newPath = path.join(directory, newName);
-    
-    fs.renameSync(filePath, newPath);
-    
-    return {
-      success: true,
-      newPath: newPath
-    };
-  } catch (error) {
-    console.error('Error renaming file:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
-
-// Handle file duplication
-ipcMain.handle('duplicateFile', async (event, filePath) => {
-  try {
-    const directory = path.dirname(filePath);
-    const basename = path.basename(filePath, path.extname(filePath));
-    const extension = path.extname(filePath);
-    
-    let counter = 1;
-    let newFileName = `${basename}_copy${extension}`;
-    let newPath = path.join(directory, newFileName);
-    
-    // Find available filename
-    while (fs.existsSync(newPath)) {
-      counter++;
-      newFileName = `${basename}_copy${counter}${extension}`;
-      newPath = path.join(directory, newFileName);
-    }
-    
-    fs.copyFileSync(filePath, newPath);
-    
-    return {
-      success: true,
-      newFileName: newFileName,
-      newPath: newPath
-    };
-  } catch (error) {
-    console.error('Error duplicating file:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
-
-// Handle showing file in explorer
-ipcMain.handle('showFileInExplorer', async (event, filePath) => {
-  try {
-    const { shell } = require('electron');
-    shell.showItemInFolder(filePath);
-    
-    return {
-      success: true
-    };
-  } catch (error) {
-    console.error('Error showing file in explorer:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
-
-// Handle file downloads (copy to user selected location)
-ipcMain.handle('downloadFiles', async (event, filePaths) => {
-  try {
-    const { dialog } = require('electron');
-    
-    const result = await dialog.showOpenDialog(null, {
-      properties: ['openDirectory'],
-      title: 'Select download location'
-    });
-    
-    if (result.canceled) {
-      return { success: false, error: 'User canceled' };
-    }
-    
-    const targetDir = result.filePaths[0];
-    let copiedCount = 0;
-    
-    for (const filePath of filePaths) {
-      try {
-        const fileName = path.basename(filePath);
-        const targetPath = path.join(targetDir, fileName);
-        fs.copyFileSync(filePath, targetPath);
-        copiedCount++;
-      } catch (error) {
-        console.error('Error copying file:', filePath, error);
-      }
-    }
-    
-    return {
-      success: true,
-      copiedCount: copiedCount,
-      targetDir: targetDir
-    };
-  } catch (error) {
-    console.error('Error downloading files:', error);
-    return {
-      success: false,
-      error: error.message
-    };
   }
 });
 
