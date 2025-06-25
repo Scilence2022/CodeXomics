@@ -929,7 +929,7 @@ function createMenu() {
       ]
     }] : []),
     {
-      label: 'File',
+      label: 'Project',
       submenu: [
         {
           label: 'New Project',
@@ -1030,95 +1030,6 @@ function createMenu() {
           click: () => {
             mainWindow.webContents.send('export-project-xml');
           }
-        },
-        { type: 'separator' },
-        {
-          label: 'Download Genomic Data',
-          submenu: [
-            {
-              label: 'NCBI Databases',
-              submenu: [
-                {
-                  label: 'GenBank Sequences',
-                  click: () => {
-                    createGenomicDownloadWindow('ncbi-genbank');
-                  }
-                },
-                {
-                  label: 'RefSeq Genomes',
-                  click: () => {
-                    createGenomicDownloadWindow('ncbi-refseq');
-                  }
-                },
-                {
-                  label: 'SRA Sequencing Data',
-                  click: () => {
-                    createGenomicDownloadWindow('ncbi-sra');
-                  }
-                },
-                {
-                  label: 'Assembly Data',
-                  click: () => {
-                    createGenomicDownloadWindow('ncbi-assembly');
-                  }
-                }
-              ]
-            },
-            {
-              label: 'EMBL-EBI Databases',
-              submenu: [
-                {
-                  label: 'EMBL Sequences',
-                  click: () => {
-                    createGenomicDownloadWindow('embl-sequences');
-                  }
-                },
-                {
-                  label: 'Ensembl Genomes',
-                  click: () => {
-                    createGenomicDownloadWindow('ensembl-genomes');
-                  }
-                },
-                {
-                  label: 'ENA Archive',
-                  click: () => {
-                    createGenomicDownloadWindow('ena-archive');
-                  }
-                }
-              ]
-            },
-            {
-              label: 'Other Databases',
-              submenu: [
-                {
-                  label: 'DDBJ Sequences',
-                  click: () => {
-                    createGenomicDownloadWindow('ddbj-sequences');
-                  }
-                },
-                {
-                  label: 'UniProt Proteins',
-                  click: () => {
-                    createGenomicDownloadWindow('uniprot-proteins');
-                  }
-                },
-                {
-                  label: 'KEGG Pathways',
-                  click: () => {
-                    createGenomicDownloadWindow('kegg-pathways');
-                  }
-                }
-              ]
-            },
-            { type: 'separator' },
-            {
-              label: 'Bulk Download Manager',
-              accelerator: 'CmdOrCtrl+Shift+D',
-              click: () => {
-                createGenomicDownloadWindow('bulk-manager');
-              }
-            }
-          ]
         },
         { type: 'separator' },
         {
@@ -1495,6 +1406,94 @@ function createMenu() {
             role: 'front'
           }
         ] : [])
+      ]
+    },
+    {
+      label: 'Download',
+      submenu: [
+        {
+          label: 'NCBI Databases',
+          submenu: [
+            {
+              label: 'GenBank Sequences',
+              click: () => {
+                createGenomicDownloadWindow('ncbi-genbank');
+              }
+            },
+            {
+              label: 'RefSeq Genomes',
+              click: () => {
+                createGenomicDownloadWindow('ncbi-refseq');
+              }
+            },
+            {
+              label: 'SRA Sequencing Data',
+              click: () => {
+                createGenomicDownloadWindow('ncbi-sra');
+              }
+            },
+            {
+              label: 'Assembly Data',
+              click: () => {
+                createGenomicDownloadWindow('ncbi-assembly');
+              }
+            }
+          ]
+        },
+        {
+          label: 'EMBL-EBI Databases',
+          submenu: [
+            {
+              label: 'EMBL Sequences',
+              click: () => {
+                createGenomicDownloadWindow('embl-sequences');
+              }
+            },
+            {
+              label: 'Ensembl Genomes',
+              click: () => {
+                createGenomicDownloadWindow('ensembl-genomes');
+              }
+            },
+            {
+              label: 'ENA Archive',
+              click: () => {
+                createGenomicDownloadWindow('ena-archive');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Other Databases',
+          submenu: [
+            {
+              label: 'DDBJ Sequences',
+              click: () => {
+                createGenomicDownloadWindow('ddbj-sequences');
+              }
+            },
+            {
+              label: 'UniProt Proteins',
+              click: () => {
+                createGenomicDownloadWindow('uniprot-proteins');
+              }
+            },
+            {
+              label: 'KEGG Pathways',
+              click: () => {
+                createGenomicDownloadWindow('kegg-pathways');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Bulk Download Manager',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => {
+            createGenomicDownloadWindow('bulk-manager');
+          }
+        }
       ]
     },
     {
