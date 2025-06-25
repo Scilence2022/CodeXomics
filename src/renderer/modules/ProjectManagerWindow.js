@@ -717,13 +717,19 @@ class ProjectManagerWindow {
         fileCountElement.textContent = text;
     }
 
-    refreshProjects() {
-        this.loadProjects();
-        this.renderProjectTree();
-        if (this.currentProject) {
+    async refreshProjects() {
+        // 如果有当前项目，扫描其目录并添加新文件/文件夹
+        if (this.currentProject && this.currentProject.location) {
+            await this.scanAndAddNewFiles();
+            this.renderProjectTree();
             this.renderProjectContent();
+            this.showNotification('🔄 Project directory scanned and refreshed', 'success');
+        } else {
+            // 如果没有当前项目，则正常加载项目列表
+            this.loadProjects();
+            this.renderProjectTree();
+            this.showNotification('📂 Projects list refreshed', 'success');
         }
-        this.showNotification('Projects refreshed', 'success');
     }
 
     showSettings() {

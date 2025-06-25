@@ -3519,10 +3519,156 @@ Folders: ${project.folders ? project.folders.length : 0}
                 }
             }
 
-            refreshProjects() {
-                this.loadProjects();
-                this.renderProjectTree();
-                this.showNotification('Projects refreshed', 'success');
+            async refreshProjects() {
+                // 如果有当前项目，扫描其目录并添加新文件/文件夹
+                if (this.currentProject && this.currentProject.location) {
+                    await this.scanAndAddNewFiles();
+                    this.renderProjectTree();
+                    this.renderProjectContent();
+                    this.showNotification('🔄 Project directory scanned and refreshed', 'success');
+                } else {
+                    // 如果没有当前项目，则正常加载项目列表
+                    this.loadProjects();
+                    this.renderProjectTree();
+                    this.showNotification('📂 Projects list refreshed', 'success');
+                }
+            }
+
+            /**
+             * 扫描项目目录并添加新文件和文件夹
+             */
+            async scanAndAddNewFiles() {
+                if (!this.currentProject || !window.electronAPI || !window.electronAPI.scanProjectFolder) {
+                    console.warn('Cannot scan project folder: missing project or API');
+                    return;
+                }
+
+                try {
+                    // Determine project path
+                    let projectPath;
+                    if (this.currentProject.dataFolderPath) {
+                        projectPath = this.currentProject.dataFolderPath;
+                    } else if (this.currentProject.location && this.currentProject.name) {
+                        projectPath = `${this.currentProject.location}/${this.currentProject.name}`;
+                    } else {
+                        console.warn('Cannot determine project path for scanning');
+                        return;
+                    }
+
+                    // Get existing file paths for comparison
+                    const existingFilePaths = (this.currentProject.files || []).map(file => file.path);
+                    
+                    // Get existing folder structure for comparison
+                    const existingFolderStructure = this.currentProject.folders || [];
+                    
+                    console.log(`🔍 Scanning project folder: ${projectPath}`);
+                    console.log(`📋 Existing files: ${existingFilePaths.length}`);
+                    console.log(`📂 Existing folders: ${existingFolderStructure.length}`);
+
+                    // Scan project folder for both files and folders
+                    const scanResult = await window.electronAPI.scanProjectFolder(
+                        projectPath, 
+                        existingFilePaths, 
+                        existingFolderStructure
+                    );
+
+                    if (scanResult.success) {
+                        const newFiles = scanResult.newFiles || [];
+                        const newFolders = scanResult.newFolders || [];
+                        const totalNewItems = newFiles.length + newFolders.length;
+                        
+                        if (totalNewItems > 0) {
+                            console.log(`🆕 Found ${newFiles.length} new files and ${newFolders.length} new folders`);
+                            
+                            // Initialize arrays if they don't exist
+                            if (!this.currentProject.files) {
+                                this.currentProject.files = [];
+                            }
+                            if (!this.currentProject.folders) {
+                                this.currentProject.folders = [];
+                            }
+
+                            // Add new files to the project
+                            newFiles.forEach(file => {
+                                // Generate proper project-unique ID
+                                file.id = this.generateId();
+                                
+                                // Add metadata to indicate it was auto-discovered
+                                if (!file.metadata) {
+                                    file.metadata = {};
+                                }
+                                file.metadata.autoDiscovered = true;
+                                file.metadata.discoveredDate = new Date().toISOString();
+                                
+                                this.currentProject.files.push(file);
+                            });
+
+                            // Add new folders to the project
+                            newFolders.forEach(folder => {
+                                // Ensure folder has proper structure
+                                if (!folder.files) {
+                                    folder.files = [];
+                                }
+                                
+                                this.currentProject.folders.push(folder);
+                            });
+
+                            // Update project metadata
+                            this.currentProject.modified = new Date().toISOString();
+                            this.projects.set(this.currentProject.id, this.currentProject);
+
+                            // Save changes to localStorage
+                            await this.saveProjects();
+
+                            // Create detailed summary message
+                            let summaryMessage = `✅ Auto-scan completed: `;
+                            const parts = [];
+                            if (newFiles.length > 0) {
+                                parts.push(`${newFiles.length} new file${newFiles.length === 1 ? '' : 's'}`);
+                            }
+                            if (newFolders.length > 0) {
+                                parts.push(`${newFolders.length} new folder${newFolders.length === 1 ? '' : 's'}`);
+                            }
+                            summaryMessage += parts.join(' and ') + ' added to project';
+                            
+                            this.showNotification(summaryMessage, 'success');
+                            
+                            // Add to project history
+                            if (!this.currentProject.history) {
+                                this.currentProject.history = [];
+                            }
+                            this.currentProject.history.unshift({
+                                timestamp: new Date().toISOString(),
+                                action: 'auto-scan-enhanced',
+                                description: `Auto-discovered ${totalNewItems} new item${totalNewItems === 1 ? '' : 's'}: ${newFiles.length} files, ${newFolders.length} folders`,
+                                details: {
+                                    files: newFiles.length,
+                                    folders: newFolders.length,
+                                    total: totalNewItems,
+                                    scanPath: projectPath
+                                }
+                            });
+                            
+                            console.log(`📊 Scan Summary:`, {
+                                newFiles: newFiles.length,
+                                newFolders: newFolders.length,
+                                totalAdded: totalNewItems,
+                                projectPath: projectPath
+                            });
+                            
+                        } else {
+                            console.log('✅ No new files or folders found during scan');
+                            this.showNotification('No new files or folders found in project directory', 'info');
+                        }
+                    } else {
+                        console.error('Failed to scan project folder:', scanResult.error);
+                        this.showNotification(`Failed to scan project folder: ${scanResult.error}`, 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error during enhanced project folder scan:', error);
+                    this.showNotification(`Error scanning project folder: ${error.message}`, 'error');
+                }
             }
 
             showSettings() {

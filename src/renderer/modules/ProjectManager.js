@@ -923,18 +923,18 @@ class ProjectManager {
      * 刷新项目
      */
     async refreshProjects() {
-        await this.loadProjects();
-        
-        // If a project is currently open, scan its folder for new files
+        // 如果有当前项目，扫描其目录并添加新文件/文件夹
         if (this.currentProject && this.currentProject.location) {
             await this.scanAndAddNewFiles();
-        }
-        
-        this.renderProjectTree();
-        if (this.currentProject) {
+            this.renderProjectTree();
             this.renderProjectContent();
+            this.showNotification('🔄 Project directory scanned and refreshed', 'success');
+        } else {
+            // 如果没有当前项目，则正常加载项目列表
+            await this.loadProjects();
+            this.renderProjectTree();
+            this.showNotification('📂 Projects list refreshed', 'success');
         }
-        this.showNotification('Projects refreshed', 'success');
     }
 
     /**
