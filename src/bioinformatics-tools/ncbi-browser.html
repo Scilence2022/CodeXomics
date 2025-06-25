@@ -599,6 +599,9 @@
                     <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='Homo sapiens'; document.getElementById('database').value='genome';">
                         Human Genome
                     </button>
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='Escherichia coli str. K-12'; document.getElementById('database').value='genome';">
+                        E. coli K-12
+                    </button>
                     <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='insulin protein'; document.getElementById('database').value='protein';">
                         Insulin Protein
                     </button>
@@ -716,7 +719,7 @@
                     'nucleotide': {query: 'SARS-CoV-2 complete genome', database: 'nucleotide'},
                     'protein': {query: 'human insulin precursor', database: 'protein'},
                     'structure': {query: 'COVID-19 spike protein', database: 'structure'},
-                    'genome': {query: 'Escherichia coli K12', database: 'genome'},
+                    'genome': {query: 'Escherichia coli str. K-12', database: 'genome'},
                     'gene': {query: 'BRCA1 Homo sapiens', database: 'gene'},
                     'taxonomy': {query: 'Homo sapiens', database: 'taxonomy'},
                     'pubchem': {query: 'aspirin', database: 'pubchem'},
@@ -762,12 +765,21 @@
 
             async performNCBISearch(database, query, page, maxResults, sortOrder, yearFrom, yearTo) {
                 const retstart = page * maxResults;
-                let searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=${database}&term=${encodeURIComponent(query)}&retmax=${maxResults}&retstart=${retstart}&retmode=json`;
+                
+                // Improve search term formatting for better results
+                let searchTerm = query.trim();
+                
+                // Special handling for E. coli K12 searches in genome database
+                if (database === 'genome' && (query.toLowerCase().includes('escherichia coli k12') || query.toLowerCase().includes('e. coli k12'))) {
+                    searchTerm = 'Escherichia coli str. K-12';
+                }
+                
+                let searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=${database}&term=${encodeURIComponent(searchTerm)}&retmax=${maxResults}&retstart=${retstart}&retmode=json`;
                 
                 // Add date filters for PubMed
                 if ((yearFrom || yearTo) && database === 'pubmed') {
                     const dateFilter = `${yearFrom || '1950'}:${yearTo || '2025'}[pdat]`;
-                    searchUrl += `&term=${encodeURIComponent(query + ' AND ' + dateFilter)}`;
+                    searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=${database}&term=${encodeURIComponent(searchTerm + ' AND ' + dateFilter)}&retmax=${maxResults}&retstart=${retstart}&retmode=json`;
                 }
 
                 // Add sorting
@@ -780,21 +792,38 @@
                     searchUrl += sortMap[sortOrder] || '';
                 }
 
+                console.log('NCBI Search URL:', searchUrl); // Debug logging
+                
                 const searchResponse = await fetch(searchUrl);
                 if (!searchResponse.ok) {
                     throw new Error(`HTTP ${searchResponse.status}: ${searchResponse.statusText}`);
                 }
                 
                 const searchData = await searchResponse.json();
+                console.log('NCBI Search Response:', searchData); // Debug logging
                 
                 if (searchData.esearchresult.errorlist && searchData.esearchresult.errorlist.phrasesnotfound) {
-                    throw new Error('No results found for the search terms');
+                    console.warn('Phrases not found:', searchData.esearchresult.errorlist.phrasesnotfound);
+                    // Don't throw error immediately, try to get results anyway
                 }
 
-                this.totalResults = parseInt(searchData.esearchresult.count);
-                const idList = searchData.esearchresult.idlist;
+                this.totalResults = parseInt(searchData.esearchresult.count) || 0;
+                const idList = searchData.esearchresult.idlist || [];
 
                 if (idList.length === 0) {
+                    // Try alternative search terms for common cases
+                    if (database === 'genome' && query.toLowerCase().includes('escherichia coli')) {
+                        console.log('Trying alternative E. coli search...');
+                        const altSearchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=${database}&term=${encodeURIComponent('Escherichia coli[organism]')}&retmax=${maxResults}&retstart=${retstart}&retmode=json`;
+                        const altResponse = await fetch(altSearchUrl);
+                        if (altResponse.ok) {
+                            const altData = await altResponse.json();
+                            if (altData.esearchresult.idlist && altData.esearchresult.idlist.length > 0) {
+                                this.totalResults = parseInt(altData.esearchresult.count) || 0;
+                                return { results: await this.fetchDetailedInfo(database, altData.esearchresult.idlist), total: this.totalResults };
+                            }
+                        }
+                    }
                     return { results: [], total: 0 };
                 }
 
@@ -922,12 +951,18 @@
                             <h3>No Results Found</h3>
                             <p>No results found for "${query}" in ${database.toUpperCase()} database.</p>
                             <p style="font-size: 14px; margin-top: 10px;">Try:</p>
-                            <ul style="text-align: left; display: inline-block;">
-                                <li>Different search terms</li>
+                            <ul style="text-align: left; display: inline-block; margin-bottom: 15px;">
+                                <li>Different search terms (e.g., "E. coli" instead of "Escherichia coli K12")</li>
+                                <li>Use proper nomenclature (e.g., "Escherichia coli str. K-12")</li>
                                 <li>Broader search criteria</li>
                                 <li>Another database</li>
                                 <li>Checking spelling</li>
                             </ul>
+                            ${database === 'genome' && query.toLowerCase().includes('escherichia') ? `
+                            <div style="background: #e8f4f8; padding: 10px; border-radius: 5px; font-size: 13px;">
+                                <strong>Tip for E. coli searches:</strong> Try "Escherichia coli str. K-12" or just "Escherichia coli" for better results.
+                            </div>
+                            ` : ''}
                         </div>
                     `;
                     return;
