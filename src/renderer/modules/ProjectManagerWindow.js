@@ -518,20 +518,87 @@ class ProjectManagerWindow {
         const folderName = prompt('Enter folder name:');
         if (!folderName || !folderName.trim()) return;
 
-        const newPath = [...this.currentPath, folderName.trim().toLowerCase()];
+        // Create proper folder path based on current path
+        const newPath = this.currentPath.length > 0 
+            ? [...this.currentPath, folderName.trim().toLowerCase()]
+            : [folderName.trim().toLowerCase()];
+            
         const folder = {
             name: folderName.trim(),
             icon: '📁',
             path: newPath,
-            files: []
+            files: [],  // Ensure files array is present
+            created: new Date().toISOString(),
+            custom: true  // Mark as user-created folder
         };
+
+        // Check if folder already exists
+        const existingFolder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, newPath)
+        );
+        
+        if (existingFolder) {
+            this.showNotification(`Folder "${folderName}" already exists at this location`, 'warning');
+            return;
+        }
 
         this.currentProject.folders.push(folder);
         this.currentProject.modified = new Date().toISOString();
         
+        // Add to project history
+        if (!this.currentProject.history) {
+            this.currentProject.history = [];
+        }
+        this.currentProject.history.unshift({
+            timestamp: new Date().toISOString(),
+            action: 'folder-created',
+            description: `Created folder "${folderName}" at ${newPath.join('/')}`
+        });
+        
         this.saveProjects();
+        
+        // Also save as XML if possible to ensure persistence
+        if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+            this.saveProjectAsXML();
+        }
+        
         this.renderProjectTree();
-        this.showNotification(`Folder "${folderName}" created`, 'success');
+        this.showNotification(`Folder "${folderName}" created successfully`, 'success');
+        
+        console.log(`📁 Created folder: ${folderName} at path: ${newPath.join('/')}`);
+    }
+
+    async saveProjectAsXML() {
+        if (!this.currentProject) return;
+        
+        try {
+            // Initialize XML handler if needed
+            if (!this.xmlHandler) {
+                this.xmlHandler = new ProjectXMLHandler();
+            }
+            
+            // Generate XML content
+            const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
+            
+            if (window.electronAPI && window.electronAPI.saveProjectFile) {
+                // Use existing file path or create new one
+                const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.GAI`;
+                const result = await window.electronAPI.saveProjectFile(fileName, xmlContent);
+                
+                if (result.success) {
+                    this.currentProject.xmlFilePath = result.filePath;
+                    this.currentProject.xmlFileName = fileName;
+                    this.currentProject.modified = new Date().toISOString();
+                    
+                    console.log(`✅ Project XML saved: ${result.filePath}`);
+                    return result.filePath;
+                } else {
+                    console.warn('Failed to save project XML:', result.error);
+                }
+            }
+        } catch (error) {
+            console.error('Error saving project as XML:', error);
+        }
     }
 
     selectFile(fileId, ctrlKey = false) {
@@ -836,7 +903,7 @@ class ProjectManagerWindow {
     }
 
     /**
-     * 扫描项目文件夹并添加新文件
+     * 扫描项目文件夹并添加新文件和文件夹
      */
     async scanAndAddNewFiles() {
         if (!this.currentProject || !window.electronAPI || !window.electronAPI.scanProjectFolder) {
@@ -859,21 +926,34 @@ class ProjectManagerWindow {
             // Get existing file paths for comparison
             const existingFilePaths = (this.currentProject.files || []).map(file => file.path);
             
+            // Get existing folder structure for comparison
+            const existingFolderStructure = this.currentProject.folders || [];
+            
             console.log(`🔍 Scanning project folder: ${projectPath}`);
             console.log(`📋 Existing files: ${existingFilePaths.length}`);
+            console.log(`📂 Existing folders: ${existingFolderStructure.length}`);
 
-            // Scan project folder
-            const scanResult = await window.electronAPI.scanProjectFolder(projectPath, existingFilePaths);
+            // Scan project folder for both files and folders
+            const scanResult = await window.electronAPI.scanProjectFolder(
+                projectPath, 
+                existingFilePaths, 
+                existingFolderStructure
+            );
 
             if (scanResult.success) {
                 const newFiles = scanResult.newFiles || [];
+                const newFolders = scanResult.newFolders || [];
+                const totalNewItems = newFiles.length + newFolders.length;
                 
-                if (newFiles.length > 0) {
-                    console.log(`🆕 Found ${newFiles.length} new files to add`);
+                if (totalNewItems > 0) {
+                    console.log(`🆕 Found ${newFiles.length} new files and ${newFolders.length} new folders`);
                     
-                    // Initialize files array if it doesn't exist
+                    // Initialize arrays if they don't exist
                     if (!this.currentProject.files) {
                         this.currentProject.files = [];
+                    }
+                    if (!this.currentProject.folders) {
+                        this.currentProject.folders = [];
                     }
 
                     // Add new files to the project
@@ -891,23 +971,45 @@ class ProjectManagerWindow {
                         this.currentProject.files.push(file);
                     });
 
+                    // Add new folders to the project
+                    newFolders.forEach(folder => {
+                        // Ensure folder has proper structure
+                        if (!folder.files) {
+                            folder.files = [];
+                        }
+                        
+                        this.currentProject.folders.push(folder);
+                    });
+
                     // Update project metadata
                     this.currentProject.modified = new Date().toISOString();
                     this.projects.set(this.currentProject.id, this.currentProject);
 
-                    // Save changes
+                    // Save changes to both localStorage and XML
                     await this.saveProjects();
+                    
+                    // Auto-save as XML to ensure persistence
+                    if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+                        await this.saveProjectAsXML();
+                    }
 
                     // Update UI
                     this.renderProjectTree();
                     this.renderProjectContent();
                     this.updateDetailsPanel();
 
-                    // Show notification
-                    this.showNotification(
-                        `✅ Found and added ${newFiles.length} new file${newFiles.length === 1 ? '' : 's'} to project`, 
-                        'success'
-                    );
+                    // Create detailed summary message
+                    let summaryMessage = `✅ Auto-scan completed: `;
+                    const parts = [];
+                    if (newFiles.length > 0) {
+                        parts.push(`${newFiles.length} new file${newFiles.length === 1 ? '' : 's'}`);
+                    }
+                    if (newFolders.length > 0) {
+                        parts.push(`${newFolders.length} new folder${newFolders.length === 1 ? '' : 's'}`);
+                    }
+                    summaryMessage += parts.join(' and ') + ' added to project';
+                    
+                    this.showNotification(summaryMessage, 'success');
                     
                     // Add to project history
                     if (!this.currentProject.history) {
@@ -915,13 +1017,26 @@ class ProjectManagerWindow {
                     }
                     this.currentProject.history.unshift({
                         timestamp: new Date().toISOString(),
-                        action: 'auto-scan',
-                        description: `Auto-discovered ${newFiles.length} new file${newFiles.length === 1 ? '' : 's'}`
+                        action: 'auto-scan-enhanced',
+                        description: `Auto-discovered ${totalNewItems} new item${totalNewItems === 1 ? '' : 's'}: ${newFiles.length} files, ${newFolders.length} folders`,
+                        details: {
+                            files: newFiles.length,
+                            folders: newFolders.length,
+                            total: totalNewItems,
+                            scanPath: projectPath
+                        }
+                    });
+                    
+                    console.log(`📊 Scan Summary:`, {
+                        newFiles: newFiles.length,
+                        newFolders: newFolders.length,
+                        totalAdded: totalNewItems,
+                        projectPath: projectPath
                     });
                     
                 } else {
-                    console.log('✅ No new files found during scan');
-                    this.showNotification('No new files found in project folder', 'info');
+                    console.log('✅ No new files or folders found during scan');
+                    this.showNotification('No new files or folders found in project directory', 'info');
                 }
             } else {
                 console.error('Failed to scan project folder:', scanResult.error);
@@ -929,7 +1044,7 @@ class ProjectManagerWindow {
             }
 
         } catch (error) {
-            console.error('Error during project folder scan:', error);
+            console.error('Error during enhanced project folder scan:', error);
             this.showNotification(`Error scanning project folder: ${error.message}`, 'error');
         }
     }

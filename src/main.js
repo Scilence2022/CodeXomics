@@ -3758,18 +3758,27 @@ ipcMain.handle('createNewMainWindow', async (event, filePath) => {
   }
 });
 
-// Handle scanning project folder for new files
-ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) => {
+// Handle scanning project folder for new files and folders
+ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, existingFolderStructure = []) => {
   try {
     if (!fs.existsSync(projectPath)) {
       return { success: false, error: 'Project folder does not exist' };
     }
 
     const newFiles = [];
-    const existingIds = new Set(existingFileIds);
+    const newFolders = [];
+    const discoveredFolderPaths = new Set();
+    const existingFolderPaths = new Set();
+    
+    // Convert existing folder structure to a set of paths for quick lookup
+    existingFolderStructure.forEach(folder => {
+      if (folder.path && Array.isArray(folder.path)) {
+        existingFolderPaths.add(folder.path.join('/'));
+      }
+    });
 
     // Helper function to scan directory recursively
-    function scanDirectory(dirPath, relativePath = '') {
+    function scanDirectory(dirPath, relativePath = '', currentFolderPath = []) {
       const items = fs.readdirSync(dirPath);
       
       items.forEach(item => {
@@ -3787,24 +3796,41 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) 
           const stats = fs.statSync(itemPath);
           
           if (stats.isDirectory()) {
+            // Process folder
+            const newFolderPath = [...currentFolderPath, item.toLowerCase()];
+            const folderPathString = newFolderPath.join('/');
+            
+            // Check if this folder already exists in project
+            if (!existingFolderPaths.has(folderPathString) && !discoveredFolderPaths.has(folderPathString)) {
+              discoveredFolderPaths.add(folderPathString);
+              
+              // Create folder object
+              newFolders.push({
+                name: item,
+                icon: getFolderIcon(item),
+                path: newFolderPath,
+                files: [],
+                created: stats.birthtime ? stats.birthtime.toISOString() : new Date().toISOString(),
+                custom: true,
+                autoDiscovered: true,
+                discoveredDate: new Date().toISOString(),
+                relativePath: relativeFilePath
+              });
+            }
+            
             // Recursively scan subdirectories
-            scanDirectory(itemPath, relativeFilePath);
+            scanDirectory(itemPath, relativeFilePath, newFolderPath);
+            
           } else if (stats.isFile()) {
-            // Generate a temporary ID for comparison
+            // Process file
             const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
-            // Check if this file path already exists (more reliable than ID)
+            // Check if this file path already exists
             const isDuplicate = existingFileIds.some(existingPath => 
               existingPath === itemPath || existingPath.endsWith(relativeFilePath)
             );
             
             if (!isDuplicate) {
-              // Determine folder path based on directory structure
-              const folderPath = [];
-              if (relativePath) {
-                folderPath.push(...relativePath.split(path.sep));
-              }
-
               newFiles.push({
                 id: tempId,
                 name: item,
@@ -3814,8 +3840,21 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) 
                 size: stats.size,
                 added: new Date().toISOString(),
                 modified: stats.mtime.toISOString(),
-                folder: folderPath,
-                isNewlyScanned: true
+                folder: currentFolderPath,
+                isNewlyScanned: true,
+                autoDiscovered: true,
+                discoveredDate: new Date().toISOString(),
+                metadata: {
+                  autoDiscovered: true,
+                  discoveredDate: new Date().toISOString(),
+                  originalPath: itemPath,
+                  fileSystem: {
+                    created: stats.birthtime ? stats.birthtime.toISOString() : null,
+                    modified: stats.mtime.toISOString(),
+                    accessed: stats.atime.toISOString(),
+                    size: stats.size
+                  }
+                }
               });
             }
           }
@@ -3830,12 +3869,20 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) 
 
     console.log(`📁 Scanned project folder: ${projectPath}`);
     console.log(`🆕 Found ${newFiles.length} new files`);
+    console.log(`📂 Found ${newFolders.length} new folders`);
 
     return { 
       success: true, 
       newFiles: newFiles,
+      newFolders: newFolders,
       scannedPath: projectPath,
-      totalNewFiles: newFiles.length
+      totalNewFiles: newFiles.length,
+      totalNewFolders: newFolders.length,
+      summary: {
+        files: newFiles.length,
+        folders: newFolders.length,
+        total: newFiles.length + newFolders.length
+      }
     };
 
   } catch (error) {
@@ -3843,6 +3890,59 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds) 
     return { success: false, error: error.message };
   }
 });
+
+// Helper function to determine appropriate folder icon based on name
+function getFolderIcon(folderName) {
+  const name = folderName.toLowerCase();
+  const iconMap = {
+    'genomes': '🧬',
+    'genome': '🧬',
+    'annotations': '📋',
+    'annotation': '📋',
+    'variants': '🔄',
+    'variant': '🔄',
+    'reads': '📊',
+    'read': '📊',
+    'analysis': '📈',
+    'analyses': '📈',
+    'results': '📈',
+    'output': '📤',
+    'outputs': '📤',
+    'input': '📥',
+    'inputs': '📥',
+    'data': '💾',
+    'database': '🗃️',
+    'databases': '🗃️',
+    'tools': '🔧',
+    'scripts': '📝',
+    'logs': '📄',
+    'temp': '🗂️',
+    'tmp': '🗂️',
+    'backup': '💾',
+    'archive': '📦',
+    'downloads': '⬇️',
+    'upload': '⬆️',
+    'uploads': '⬆️',
+    'config': '⚙️',
+    'configuration': '⚙️',
+    'settings': '⚙️'
+  };
+  
+  // Check for exact matches first
+  if (iconMap[name]) {
+    return iconMap[name];
+  }
+  
+  // Check for partial matches
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (name.includes(key)) {
+      return icon;
+    }
+  }
+  
+  // Default folder icon
+  return '📁';
+}
 
 // Helper function to determine file type from extension
 function getFileTypeFromExtension(fileName) {
