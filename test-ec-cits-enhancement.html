@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC Numbers and CITS Citations Enhancement Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        h2 {
+            color: #34495e;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .test-case {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .test-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .test-input {
+            background: #f1f3f4;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .test-output {
+            border: 1px solid #28a745;
+            border-radius: 4px;
+            padding: 12px;
+            background: #f8fff9;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .stats {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .stats h3 {
+            margin: 0 0 10px 0;
+            color: #1565c0;
+        }
+
+        .stat-item {
+            display: inline-block;
+            background: white;
+            padding: 8px 12px;
+            margin: 4px;
+            border-radius: 4px;
+            border: 1px solid #bbdefb;
+            font-size: 14px;
+        }
+
+        /* Import Gene Details Link Styles */
+        .go-term-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e3f2fd;
+            color: #1565c0;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #bbdefb;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .go-term-link:hover {
+            background: #2196f3;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        .pmid-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #f3e5f5;
+            color: #7b1fa2;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #ce93d8;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .pmid-link:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+        }
+
+        .pmid-link sup {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: inherit;
+        }
+
+        .pmid-link:hover sup {
+            color: white;
+        }
+
+        .db-xref-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #fff3e0;
+            color: #e65100;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #ffcc02;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .db-xref-link:hover {
+            background: #ff9800;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+        }
+
+        .evidence-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e8f5e8;
+            color: #2e7d32;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #c8e6c9;
+            font-size: 0.9rem;
+        }
+
+        .interactive-section {
+            background: #f1f8ff;
+            border: 2px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #495057;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 EC Numbers and CITS Citations Enhancement Test</h1>
+        
+        <h2>📊 Enhancement Overview</h2>
+        <p>This test demonstrates the new capabilities for detecting and linking:</p>
+        <ul>
+            <li><strong>Standalone EC Numbers</strong>: Numbers like <code>3.6.4.10</code> without "EC:" prefix</li>
+            <li><strong>CITS Citations</strong>: PMID lists in brackets converted to superscript numbered links</li>
+        </ul>
+
+        <div class="stats">
+            <h3>🎯 Test Results Summary</h3>
+            <div id="results-summary">
+                <span class="stat-item">EC Numbers: <span id="ec-count">0</span></span>
+                <span class="stat-item">CITS Links: <span id="cits-count">0</span></span>
+                <span class="stat-item">Total Links: <span id="total-count">0</span></span>
+            </div>
+        </div>
+
+        <h2>🧪 Test Cases</h2>
+
+        <!-- Test Case 1: Standalone EC Numbers -->
+        <div class="test-section">
+            <h3>1. Standalone EC Numbers (without EC: prefix)</h3>
+            
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">EC Number: 3.6.4.10 No links yet. Also found: 1.2.3.4 and 2.5.1.15</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test1-output"></div>
+            </div>
+
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">Enzyme activity: 4.1.1.17 (pyruvate decarboxylase) and 1.1.1.1 (alcohol dehydrogenase)</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test2-output"></div>
+            </div>
+        </div>
+
+        <!-- Test Case 2: CITS Citations -->
+        <div class="test-section">
+            <h3>2. CITS Citations with Superscript Links</h3>
+            
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">CITS: [7547 895][8413631][7776367][8947566][9223639][9454592]</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test3-output"></div>
+            </div>
+
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">CITS: [12345678 87654321][11111111][22222222 33333333]</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test4-output"></div>
+            </div>
+        </div>
+
+        <!-- Test Case 3: Combined Cases -->
+        <div class="test-section">
+            <h3>3. Combined EC Numbers and CITS</h3>
+            
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">EC: 3.6.4.10, standalone: 2.7.7.6, function: protein kinase CITS: [7547895][8413631] GO:0004672</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test5-output"></div>
+            </div>
+        </div>
+
+        <!-- Test Case 4: Additional Citation Patterns -->
+        <div class="test-section">
+            <h3>4. Additional Citation and Reference Patterns</h3>
+            
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">Reference [12345678] and DOI:10.1038/nature12345 Smith et al. (2020)</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test6-output"></div>
+            </div>
+
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">EC class EC 3.2.1.- (glycosidases) and specific EC 3.2.1.15</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test7-output"></div>
+            </div>
+        </div>
+
+        <!-- Test Case 5: Edge Cases -->
+        <div class="test-section">
+            <h3>5. Edge Cases and Validation</h3>
+            
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">Version 1.2.3.4 and IP 192.168.1.1 should NOT be linked. But 3.2.1.23 enzyme should be.</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test8-output"></div>
+            </div>
+
+            <div class="test-case">
+                <div class="test-label">Input Text:</div>
+                <div class="test-input">CITS: [123] [456 789] duplicates: [123 456] should create unique sorted links</div>
+                <div class="test-label">Enhanced Output:</div>
+                <div class="test-output" id="test9-output"></div>
+            </div>
+        </div>
+
+        <!-- Interactive Testing -->
+        <div class="interactive-section">
+            <h3>🎛️ Interactive Testing</h3>
+            <p>Test your own gene attribute text with the new enhancement system:</p>
+            
+            <div class="input-group">
+                <label for="test-input">Enter Gene Attribute Text:</label>
+                <textarea id="test-input" placeholder="Enter text with EC numbers, CITS citations, GO terms, PMIDs, etc.">enzyme EC: 1.1.1.1 and standalone 2.3.1.15 CITS: [12345][67890] GO:0008152 PMID:15234567</textarea>
+            </div>
+            
+            <button class="btn" onclick="processTestInput()">🔗 Process Links</button>
+            
+            <div class="input-group">
+                <label>Enhanced Output:</label>
+                <div class="test-output" id="interactive-output" style="min-height: 60px;">
+                    Click "Process Links" to see the enhanced output...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gene attribute enhancement function (simplified version for testing)
+        function enhanceGeneAttributeWithLinks(attributeValue) {
+            if (!attributeValue || typeof attributeValue !== 'string') {
+                return attributeValue;
+            }
+            
+            let enhancedValue = attributeValue;
+            
+            // Pattern for GO terms
+            const goPattern = /\b(GO:(\d{7}))\b/gi;
+            enhancedValue = enhancedValue.replace(goPattern, (match, fullMatch, goId) => {
+                return `<a href="https://amigo.geneontology.org/amigo/term/GO:${goId}" target="_blank" class="go-term-link" title="View in Gene Ontology">${fullMatch}</a>`;
+            });
+
+            // Pattern for PMIDs
+            const pmidPattern = /\b(PMID[:\s]*(\d{8,}))\b/gi;
+            enhancedValue = enhancedValue.replace(pmidPattern, (match, fullMatch, pmidId) => {
+                return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View on PubMed">${fullMatch}</a>`;
+            });
+
+            // Pattern for EC numbers: EC:X.X.X.X or EC X.X.X.X
+            const ecPattern = /\b(EC:?\s*([\d\.-]+))\b/gi;
+            enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
+                return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
+            });
+
+            // Pattern for standalone EC numbers: X.X.X.X (without EC: prefix)
+            const standaloneEcPattern = /\b(\d{1,2}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/gi;
+            enhancedValue = enhancedValue.replace(standaloneEcPattern, (match) => {
+                // Don't replace if it's already part of an EC: link or other context
+                if (enhancedValue.includes(`EC:${match}`) || enhancedValue.includes(`>${match}<`)) {
+                    return match;
+                }
+                return `<a href="https://enzyme.expasy.org/EC/${match}" target="_blank" class="db-xref-link" title="View in ENZYME database">${match}</a>`;
+            });
+
+            // Pattern for CITS format: [PMID1 PMID2][PMID3] -> superscript numbered links
+            const citsPattern = /CITS:\s*(\[[\d\s]+\])+/gi;
+            enhancedValue = enhancedValue.replace(citsPattern, (match) => {
+                // Extract all PMID numbers from the brackets
+                const pmidMatches = match.match(/\[[\d\s]+\]/g);
+                if (!pmidMatches) return match;
+                
+                // Collect all unique PMIDs and sort them
+                const allPmids = [];
+                pmidMatches.forEach(bracket => {
+                    const pmids = bracket.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
+                    allPmids.push(...pmids);
+                });
+                
+                // Create unique sorted list
+                const uniquePmids = [...new Set(allPmids)].sort((a, b) => parseInt(a) - parseInt(b));
+                
+                // Create numbered superscript links
+                let result = 'CITS: ';
+                uniquePmids.forEach((pmid, index) => {
+                    if (index > 0) result += ', ';
+                    result += `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank" class="pmid-link" title="View PubMed article ${pmid}"><sup>${index + 1}</sup></a>`;
+                });
+                
+                return result;
+            });
+
+            // Pattern for generic numeric PMID references in brackets: [1234567]
+            const genericPmidPattern = /\[(\d{7,8})\]/g;
+            enhancedValue = enhancedValue.replace(genericPmidPattern, (match, pmidId) => {
+                // Skip if it's already part of a CITS: pattern or other enhanced content
+                if (enhancedValue.includes(`href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}"`)) {
+                    return match;
+                }
+                return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}">[${pmidId}]</a>`;
+            });
+
+            // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
+            const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
+            enhancedValue = enhancedValue.replace(doiPattern, (match, prefix, doiId) => {
+                return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication">${prefix}:${doiId}</a>`;
+            });
+
+            // Pattern for enzyme class numbers: EC N.N.N.-
+            const ecClassPattern = /\bEC\s+(\d{1,2}\.\d{1,3}\.\d{1,3}\.-)(?!\d)/gi;
+            enhancedValue = enhancedValue.replace(ecClassPattern, (match, ecClass) => {
+                return `<a href="https://enzyme.expasy.org/EC/${ecClass}" target="_blank" class="db-xref-link" title="View EC class in ENZYME database">EC ${ecClass}</a>`;
+            });
+
+            // Pattern for literature references with "et al." format: Author et al. (YYYY)
+            const authorYearPattern = /\b([A-Z][a-z]+(?: [A-Z][a-z]+)?)\s+et\s+al\.\s*\((\d{4})\)/gi;
+            enhancedValue = enhancedValue.replace(authorYearPattern, (match, author, year) => {
+                const searchQuery = encodeURIComponent(`${author} ${year}`);
+                return `<a href="https://pubmed.ncbi.nlm.nih.gov/?term=${searchQuery}" target="_blank" class="pmid-link" title="Search in PubMed">${match}</a>`;
+            });
+
+            return enhancedValue;
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                input: "EC Number: 3.6.4.10 No links yet. Also found: 1.2.3.4 and 2.5.1.15",
+                outputId: "test1-output"
+            },
+            {
+                input: "Enzyme activity: 4.1.1.17 (pyruvate decarboxylase) and 1.1.1.1 (alcohol dehydrogenase)",
+                outputId: "test2-output"
+            },
+            {
+                input: "CITS: [7547 895][8413631][7776367][8947566][9223639][9454592]",
+                outputId: "test3-output"
+            },
+            {
+                input: "CITS: [12345678 87654321][11111111][22222222 33333333]",
+                outputId: "test4-output"
+            },
+            {
+                input: "EC: 3.6.4.10, standalone: 2.7.7.6, function: protein kinase CITS: [7547895][8413631] GO:0004672",
+                outputId: "test5-output"
+            },
+            {
+                input: "Reference [12345678] and DOI:10.1038/nature12345 Smith et al. (2020)",
+                outputId: "test6-output"
+            },
+            {
+                input: "EC class EC 3.2.1.- (glycosidases) and specific EC 3.2.1.15",
+                outputId: "test7-output"
+            },
+            {
+                input: "Version 1.2.3.4 and IP 192.168.1.1 should NOT be linked. But 3.2.1.23 enzyme should be.",
+                outputId: "test8-output"
+            },
+            {
+                input: "CITS: [123] [456 789] duplicates: [123 456] should create unique sorted links",
+                outputId: "test9-output"
+            }
+        ];
+
+        // Process all test cases
+        function runTests() {
+            let totalEcCount = 0;
+            let totalCitsCount = 0;
+            let totalLinkCount = 0;
+
+            testCases.forEach(testCase => {
+                const enhanced = enhanceGeneAttributeWithLinks(testCase.input);
+                document.getElementById(testCase.outputId).innerHTML = enhanced;
+                
+                // Count links
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = enhanced;
+                const ecLinks = tempDiv.querySelectorAll('a[href*="enzyme.expasy.org"]').length;
+                const citsLinks = tempDiv.querySelectorAll('a[href*="pubmed"] sup').length;
+                const allLinks = tempDiv.querySelectorAll('a').length;
+                
+                totalEcCount += ecLinks;
+                totalCitsCount += citsLinks;
+                totalLinkCount += allLinks;
+            });
+
+            // Update stats
+            document.getElementById('ec-count').textContent = totalEcCount;
+            document.getElementById('cits-count').textContent = totalCitsCount;
+            document.getElementById('total-count').textContent = totalLinkCount;
+        }
+
+        // Interactive testing function
+        function processTestInput() {
+            const input = document.getElementById('test-input').value;
+            const enhanced = enhanceGeneAttributeWithLinks(input);
+            document.getElementById('interactive-output').innerHTML = enhanced;
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html> 

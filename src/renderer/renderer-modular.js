@@ -2915,6 +2915,43 @@ class GenomeBrowser {
             return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
         });
 
+        // Pattern for standalone EC numbers: X.X.X.X (without EC: prefix)
+        const standaloneEcPattern = /\b(\d{1,2}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/gi;
+        enhancedValue = enhancedValue.replace(standaloneEcPattern, (match) => {
+            // Don't replace if it's already part of an EC: link or other context
+            if (enhancedValue.includes(`EC:${match}`) || enhancedValue.includes(`>${match}<`)) {
+                return match;
+            }
+            return `<a href="https://enzyme.expasy.org/EC/${match}" target="_blank" class="db-xref-link" title="View in ENZYME database">${match}</a>`;
+        });
+
+        // Pattern for CITS format: [PMID1 PMID2][PMID3] -> superscript numbered links
+        const citsPattern = /CITS:\s*(\[[\d\s]+\])+/gi;
+        enhancedValue = enhancedValue.replace(citsPattern, (match) => {
+            // Extract all PMID numbers from the brackets
+            const pmidMatches = match.match(/\[[\d\s]+\]/g);
+            if (!pmidMatches) return match;
+            
+            // Collect all unique PMIDs and sort them
+            const allPmids = [];
+            pmidMatches.forEach(bracket => {
+                const pmids = bracket.replace(/[\[\]]/g, '').split(/\s+/).filter(p => p.trim());
+                allPmids.push(...pmids);
+            });
+            
+            // Create unique sorted list
+            const uniquePmids = [...new Set(allPmids)].sort((a, b) => parseInt(a) - parseInt(b));
+            
+            // Create numbered superscript links
+            let result = 'CITS: ';
+            uniquePmids.forEach((pmid, index) => {
+                if (index > 0) result += ', ';
+                result += `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank" class="pmid-link" title="View PubMed article ${pmid}"><sup>${index + 1}</sup></a>`;
+            });
+            
+            return result;
+        });
+
         // Pattern for GenBank/RefSeq accessions: Various formats
         const accessionPattern = /\b([A-Z]{1,2}_?[0-9]{6,9}(\.[0-9]+)?|[A-Z]{2}[0-9]{6}(\.[0-9]+)?|[A-Z]{4}[0-9]{8}(\.[0-9]+)?|NC_[0-9]{6}(\.[0-9]+)?|NP_[0-9]{6}(\.[0-9]+)?|XP_[0-9]{6}(\.[0-9]+)?|YP_[0-9]{6}(\.[0-9]+)?|WP_[0-9]{6}(\.[0-9]+)?)\b/gi;
         enhancedValue = enhancedValue.replace(accessionPattern, (match) => {
@@ -3005,6 +3042,35 @@ class GenomeBrowser {
         enhancedValue = enhancedValue.replace(isbnPattern, (match) => {
             const cleanIsbn = match.replace(/[^\d]/g, '');
             return `<a href="https://www.worldcat.org/isbn/${cleanIsbn}" target="_blank" class="pmid-link" title="Search book in WorldCat">${match}</a>`;
+        });
+
+        // Pattern for generic numeric PMID references in brackets: [1234567]
+        const genericPmidPattern = /\[(\d{7,8})\]/g;
+        enhancedValue = enhancedValue.replace(genericPmidPattern, (match, pmidId) => {
+            // Skip if it's already part of a CITS: pattern or other enhanced content
+            if (enhancedValue.includes(`href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}"`)) {
+                return match;
+            }
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}">[${pmidId}]</a>`;
+        });
+
+        // Pattern for DOI references: doi:10.xxxx/xxxx or DOI:10.xxxx/xxxx
+        const doiPattern = /\b(DOI|doi):\s*(10\.\d{4,}\/[^\s]+)/gi;
+        enhancedValue = enhancedValue.replace(doiPattern, (match, prefix, doiId) => {
+            return `<a href="https://doi.org/${doiId}" target="_blank" class="pmid-link" title="View DOI publication">${prefix}:${doiId}</a>`;
+        });
+
+        // Pattern for enzyme class numbers: EC N.N.N.-
+        const ecClassPattern = /\bEC\s+(\d{1,2}\.\d{1,3}\.\d{1,3}\.-)(?!\d)/gi;
+        enhancedValue = enhancedValue.replace(ecClassPattern, (match, ecClass) => {
+            return `<a href="https://enzyme.expasy.org/EC/${ecClass}" target="_blank" class="db-xref-link" title="View EC class in ENZYME database">EC ${ecClass}</a>`;
+        });
+
+        // Pattern for literature references with "et al." format: Author et al. (YYYY)
+        const authorYearPattern = /\b([A-Z][a-z]+(?: [A-Z][a-z]+)?)\s+et\s+al\.\s*\((\d{4})\)/gi;
+        enhancedValue = enhancedValue.replace(authorYearPattern, (match, author, year) => {
+            const searchQuery = encodeURIComponent(`${author} ${year}`);
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/?term=${searchQuery}" target="_blank" class="pmid-link" title="Search in PubMed">${match}</a>`;
         });
 
         return enhancedValue;

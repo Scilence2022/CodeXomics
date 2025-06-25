@@ -4000,6 +4000,17 @@ svg {
     box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
 }
 
+/* Superscript PMID links for CITS */
+.pmid-link sup {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.pmid-link:hover sup {
+    color: white;
+}
+
 .evidence-tag {
     display: inline-block;
     padding: 1px 4px;
