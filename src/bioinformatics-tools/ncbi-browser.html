@@ -504,7 +504,7 @@
                 <label class="form-label" for="database">
                     <i class="fas fa-database"></i> Select Database
                 </label>
-                <select class="form-control" id="database">
+            <select class="form-control" id="database">
                     <option value="pubmed">PubMed - Biomedical Literature</option>
                     <option value="nucleotide">Nucleotide - DNA/RNA Sequences</option>
                     <option value="protein">Protein - Protein Sequences</option>
@@ -515,7 +515,7 @@
                     <option value="pubchem">PubChem - Chemical Compounds</option>
                     <option value="clinvar">ClinVar - Genetic Variants</option>
                     <option value="omia">OMIA - Animal Genetic Disorders</option>
-                </select>
+            </select>
             </div>
 
             <div id="databaseInfo" class="database-info">
@@ -1023,7 +1023,7 @@
                                 </div>
                                 <div class="result-actions">
                                     <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-external-link-alt"></i> View in PubMed
+                                    <i class="fas fa-external-link-alt"></i> View in PubMed
                                     </a>
                                     <button class="btn btn-secondary btn-sm" onclick="ncbiBrowser.showAbstract('${result.id}')">
                                         <i class="fas fa-file-text"></i> Abstract
@@ -1098,7 +1098,7 @@
                                     </button>
                                     <button class="btn btn-info btn-sm" onclick="ncbiBrowser.runBlast('${result.id}')">
                                         <i class="fas fa-search"></i> BLAST
-                                    </button>
+                                </button>
                                 </div>
                             </div>
                         `;
@@ -1127,14 +1127,14 @@
                                 </div>
                                 <div class="result-actions">
                                     <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-external-link-alt"></i> View in NCBI
+                                    <i class="fas fa-external-link-alt"></i> View in NCBI
                                     </a>
                                     <button class="btn btn-success btn-sm" onclick="ncbiBrowser.view3D('${result.pdbid}')">
                                         <i class="fas fa-cube"></i> 3D View
                                     </button>
                                     <button class="btn btn-info btn-sm" onclick="ncbiBrowser.downloadPDB('${result.pdbid}')">
                                         <i class="fas fa-download"></i> PDB File
-                                    </button>
+                                </button>
                                 </div>
                             </div>
                         `;
@@ -1160,7 +1160,7 @@
                                 </div>
                             </div>
                         `;
-                }
+                    }
             }
 
             createPagination(totalResults) {

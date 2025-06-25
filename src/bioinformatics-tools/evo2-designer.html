@@ -384,6 +384,83 @@
             transform: translateY(-1px);
         }
 
+        /* MCP Connection Styles */
+        .mcp-connection-panel {
+            background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+            border: 1px solid #90caf9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mcp-status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .mcp-status-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mcp-status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .mcp-status-connected {
+            background: #4caf50;
+        }
+
+        .mcp-status-disconnected {
+            background: #f44336;
+        }
+
+        .mcp-status-connecting {
+            background: #ff9800;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .mcp-toggle-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+            min-width: 80px;
+        }
+
+        .mcp-toggle-btn:hover {
+            background: #1976d2;
+            transform: translateY(-1px);
+        }
+
+        .mcp-toggle-btn:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .mcp-server-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
         .results-container {
             background: #f8f9fa;
             border-radius: 10px;
@@ -539,6 +616,22 @@
 
         <div class="main-content">
             <div class="sidebar">
+                <!-- MCP Server Connection Panel -->
+                <div class="mcp-connection-panel">
+                    <div class="mcp-status-row">
+                        <div class="mcp-status-info">
+                            <div class="mcp-status-indicator mcp-status-disconnected" id="mcpStatusIndicator"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 13px;" id="mcpStatusText">MCP Disconnected</div>
+                                <div class="mcp-server-info" id="mcpServerInfo">Server: localhost:3000</div>
+                            </div>
+                        </div>
+                        <button class="mcp-toggle-btn" onclick="toggleMCPConnection()" id="mcpToggleBtn">
+                            🔌 Connect
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Compact API Configuration Panel -->
                 <div class="compact-config-panel">
                     <div class="compact-config-status">
@@ -631,7 +724,7 @@
                             </div>
                         </div>
 
-                        <button class="btn" onclick="generateSequence()" id="generateBtn">
+                        <button class="btn" onclick="generateSequenceMain()" id="generateBtn">
                             Generate DNA Sequence
                         </button>
                     </div>
@@ -658,7 +751,7 @@
                             </select>
                         </div>
 
-                        <button class="btn" onclick="predictFunction()" id="predictBtn">
+                        <button class="btn" onclick="predictFunctionMain()" id="predictBtn">
                             Predict Function
                         </button>
                     </div>
@@ -694,7 +787,7 @@
                             </div>
                         </div>
 
-                        <button class="btn" onclick="designCrispr()" id="crisprBtn">
+                        <button class="btn" onclick="designCrisprMain()" id="crisprBtn">
                             Design CRISPR System
                         </button>
                     </div>
@@ -728,7 +821,7 @@
                                    placeholder="e.g., Escherichia coli, Homo sapiens">
                         </div>
 
-                        <button class="btn" onclick="optimizeSequence()" id="optimizeBtn">
+                        <button class="btn" onclick="optimizeSequenceMain()" id="optimizeBtn">
                             Optimize Sequence
                         </button>
                     </div>
@@ -763,7 +856,7 @@
                             </div>
                         </div>
 
-                        <button class="btn" onclick="analyzeEssentiality()" id="essentialityBtn">
+                        <button class="btn" onclick="analyzeEssentialityMain()" id="essentialityBtn">
                             Analyze Essentiality
                         </button>
                     </div>
@@ -788,6 +881,7 @@
             loadApiConfig();
             loadAnalysisHistory();
             setupMenuEventListeners();
+            initializeMCPConnection();
         });
 
         // Setup menu event listeners
@@ -868,23 +962,23 @@
                 // Generation menu actions
                 case 'generate-sequence':
                     switchMode('generate');
-                    generateSequence();
+                    generateSequenceAction();
                     break;
                 case 'predict-function':
                     switchMode('predict');
-                    predictFunction();
+                    predictFunctionAction();
                     break;
                 case 'design-crispr':
                     switchMode('crispr');
-                    designCrispr();
+                    designCrisprAction();
                     break;
                 case 'optimize-sequence':
                     switchMode('optimize');
-                    optimizeSequence();
+                    optimizeSequenceAction();
                     break;
                 case 'analyze-essentiality':
                     switchMode('essentiality');
-                    analyzeEssentiality();
+                    analyzeEssentialityAction();
                     break;
                 case 'stop-generation':
                     stopCurrentGeneration();
@@ -1288,13 +1382,172 @@
             }
         });
 
+        // MCP Connection Management
+        let mcpConnected = false;
+        let mcpConnectionAttempts = 0;
+
+        async function toggleMCPConnection() {
+            const toggleBtn = document.getElementById('mcpToggleBtn');
+            const statusIndicator = document.getElementById('mcpStatusIndicator');
+            const statusText = document.getElementById('mcpStatusText');
+            
+            if (mcpConnected) {
+                // Disconnect MCP
+                mcpConnected = false;
+                updateMCPStatus('disconnected', 'MCP Disconnected', '🔌 Connect');
+                showNotification('Disconnected from MCP Server', 'info');
+            } else {
+                // Attempt to connect to MCP
+                toggleBtn.textContent = '⏳ Connecting...';
+                toggleBtn.disabled = true;
+                statusIndicator.className = 'mcp-status-indicator mcp-status-connecting';
+                statusText.textContent = 'Connecting...';
+                
+                try {
+                    const connected = await attemptMCPConnection();
+                    if (connected) {
+                        mcpConnected = true;
+                        updateMCPStatus('connected', 'MCP Connected', '🔌 Disconnect');
+                        showNotification('Successfully connected to MCP Server', 'success');
+                    } else {
+                        updateMCPStatus('disconnected', 'Connection Failed', '🔌 Retry');
+                        showNotification('Failed to connect to MCP Server', 'error');
+                    }
+                } catch (error) {
+                    updateMCPStatus('disconnected', 'Connection Error', '🔌 Retry');
+                    showNotification(`MCP Connection Error: ${error.message}`, 'error');
+                }
+                
+                toggleBtn.disabled = false;
+            }
+        }
+
+        async function attemptMCPConnection() {
+            try {
+                mcpConnectionAttempts++;
+                
+                // Try different endpoints to check if MCP server is running
+                const endpoints = [
+                    'http://localhost:3000/health',
+                    'http://localhost:3000/',
+                    'http://localhost:3000/execute-tool'
+                ];
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+                        
+                        const response = await fetch(endpoint, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        if (response.ok || response.status === 404) {
+                            // Server is running (even if endpoint doesn't exist)
+                            return true;
+                        }
+                    } catch (fetchError) {
+                        // Continue to next endpoint
+                        continue;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('MCP Connection attempt failed:', error);
+                
+                // If server is not running, show helpful message
+                if (mcpConnectionAttempts === 1) {
+                    showNotification('MCP Server not detected. Please start the server: node src/mcp-server.js', 'warning');
+                }
+                
+                return false;
+            }
+        }
+
+        function updateMCPStatus(status, text, buttonText) {
+            const statusIndicator = document.getElementById('mcpStatusIndicator');
+            const statusText = document.getElementById('mcpStatusText');
+            const toggleBtn = document.getElementById('mcpToggleBtn');
+            const serverInfo = document.getElementById('mcpServerInfo');
+            
+            // Update status indicator
+            statusIndicator.className = `mcp-status-indicator mcp-status-${status}`;
+            
+            // Update status text
+            statusText.textContent = text;
+            
+            // Update button
+            toggleBtn.textContent = buttonText;
+            
+            // Update server info
+            if (status === 'connected') {
+                serverInfo.textContent = `Server: localhost:3000 • Attempt ${mcpConnectionAttempts}`;
+            } else {
+                serverInfo.textContent = 'Server: localhost:3000';
+            }
+        }
+
+        function checkMCPConnection() {
+            if (!mcpConnected) {
+                showNotification('Please connect to MCP Server first', 'warning');
+                
+                // Flash the MCP panel to draw attention
+                const mcpPanel = document.querySelector('.mcp-connection-panel');
+                mcpPanel.style.animation = 'flash 0.5s ease-in-out 2';
+                
+                setTimeout(() => {
+                    mcpPanel.style.animation = '';
+                }, 1000);
+                
+                return false;
+            }
+            return true;
+        }
+
+        // Auto-check MCP connection on page load
+        async function initializeMCPConnection() {
+            try {
+                const connected = await attemptMCPConnection();
+                if (connected) {
+                    mcpConnected = true;
+                    updateMCPStatus('connected', 'MCP Connected', '🔌 Disconnect');
+                } else {
+                    updateMCPStatus('disconnected', 'MCP Disconnected', '🔌 Connect');
+                }
+            } catch (error) {
+                updateMCPStatus('disconnected', 'MCP Disconnected', '🔌 Connect');
+            }
+        }
+
+        // Add flash animation for MCP panel
+        if (!document.querySelector('#mcp-flash-styles')) {
+            const style = document.createElement('style');
+            style.id = 'mcp-flash-styles';
+            style.textContent = `
+                @keyframes flash {
+                    0%, 100% { background: linear-gradient(135deg, #e3f2fd, #f0f8ff); }
+                    50% { background: linear-gradient(135deg, #ffecb3, #fff8e1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         async function testApiConnection() {
             // Legacy function - redirect to modal test
             testModalApiConnection();
         }
 
         // Main analysis functions
-        async function generateSequence() {
+        async function generateSequenceMain() {
+            if (!checkMCPConnection()) return;
+            
             const prompt = document.getElementById('generatePrompt').value;
             const taxonomy = document.getElementById('taxonomy').value;
             const maxTokens = parseInt(document.getElementById('maxTokens').value);
@@ -1310,13 +1563,15 @@
             await executeAnalysis('evo2_generate_sequence', params, 'Generating DNA sequence...');
         }
 
-        async function predictFunction() {
+        async function predictFunctionMain() {
+            if (!checkMCPConnection()) return;
+            
             const sequence = document.getElementById('predictSequence').value;
             const analysisType = document.getElementById('analysisType').value;
             const taxonomy = document.getElementById('taxonomy').value;
             
             if (!sequence) {
-                showMessage('Please enter a DNA sequence for analysis.', 'error');
+                showNotification('Please enter a DNA sequence for analysis.', 'error');
                 return;
             }
             
@@ -1329,13 +1584,15 @@
             await executeAnalysis('evo2_predict_function', params, 'Predicting function...');
         }
 
-        async function designCrispr() {
+        async function designCrisprMain() {
+            if (!checkMCPConnection()) return;
+            
             const targetSequence = document.getElementById('crisprTarget').value;
             const casType = document.getElementById('casType').value;
             const guideLength = parseInt(document.getElementById('guideLength').value);
             
             if (!targetSequence) {
-                showMessage('Please enter a target DNA sequence.', 'error');
+                showNotification('Please enter a target DNA sequence.', 'error');
                 return;
             }
             
@@ -1348,13 +1605,15 @@
             await executeAnalysis('evo2_design_crispr', params, 'Designing CRISPR system...');
         }
 
-        async function optimizeSequence() {
+        async function optimizeSequenceMain() {
+            if (!checkMCPConnection()) return;
+            
             const sequence = document.getElementById('optimizeSequence').value;
             const optimizationGoal = document.getElementById('optimizationGoal').value;
             const targetOrganism = document.getElementById('targetOrganism').value;
             
             if (!sequence) {
-                showMessage('Please enter a DNA sequence to optimize.', 'error');
+                showNotification('Please enter a DNA sequence to optimize.', 'error');
                 return;
             }
             
@@ -1367,13 +1626,15 @@
             await executeAnalysis('evo2_optimize_sequence', params, 'Optimizing sequence...');
         }
 
-        async function analyzeEssentiality() {
+        async function analyzeEssentialityMain() {
+            if (!checkMCPConnection()) return;
+            
             const sequence = document.getElementById('essentialitySequence').value;
             const resolution = document.getElementById('resolution').value;
             const organism = document.getElementById('organism').value;
             
             if (!sequence) {
-                showMessage('Please enter a DNA sequence for analysis.', 'error');
+                showNotification('Please enter a DNA sequence for analysis.', 'error');
                 return;
             }
             
@@ -1848,25 +2109,25 @@
             }
         }
 
-        // Generation menu action functions
-        function generateSequence() {
-            generateSequenceAction();
+        // Generation menu action functions - delegate to actual implementations
+        function generateSequenceAction() {
+            generateSequenceMain();
         }
 
-        function predictFunction() {
-            predictFunctionAction();
+        function predictFunctionAction() {
+            predictFunctionMain();
         }
 
-        function designCrispr() {
-            designCrisprAction();
+        function designCrisprAction() {
+            designCrisprMain();
         }
 
-        function optimizeSequence() {
-            optimizeSequenceAction();
+        function optimizeSequenceAction() {
+            optimizeSequenceMain();
         }
 
-        function analyzeEssentiality() {
-            analyzeEssentialityAction();
+        function analyzeEssentialityAction() {
+            analyzeEssentialityMain();
         }
 
         function stopCurrentGeneration() {
