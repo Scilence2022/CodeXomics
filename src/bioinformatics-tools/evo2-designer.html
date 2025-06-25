@@ -1055,7 +1055,7 @@
             // Load into modal if it exists
             if (document.getElementById('modalApiKey')) {
                 document.getElementById('modalApiKey').value = config.apiKey || '';
-                document.getElementById('modalApiUrl').value = config.apiUrl || 'https://integrate.api.nvidia.com';
+                document.getElementById('modalApiUrl').value = config.apiUrl || 'https://health.api.nvidia.com';
                 document.getElementById('defaultTimeout').value = config.timeout || 60;
                 document.getElementById('maxRetries').value = config.maxRetries || 3;
                 document.getElementById('enableDebugMode').checked = config.debugMode || false;
@@ -1068,7 +1068,7 @@
         function getStoredConfig() {
             return {
                 apiKey: localStorage.getItem('evo2_api_key') || '',
-                apiUrl: localStorage.getItem('evo2_api_url') || 'https://integrate.api.nvidia.com',
+                apiUrl: localStorage.getItem('evo2_api_url') || 'https://health.api.nvidia.com',
                 timeout: parseInt(localStorage.getItem('evo2_timeout')) || 60,
                 maxRetries: parseInt(localStorage.getItem('evo2_max_retries')) || 3,
                 debugMode: localStorage.getItem('evo2_debug_mode') === 'true',
@@ -1270,7 +1270,7 @@
                 
                 // Reset form
                 document.getElementById('modalApiKey').value = '';
-                document.getElementById('modalApiUrl').value = 'https://integrate.api.nvidia.com';
+                document.getElementById('modalApiUrl').value = 'https://health.api.nvidia.com';
                 document.getElementById('defaultTimeout').value = '60';
                 document.getElementById('maxRetries').value = '3';
                 document.getElementById('enableDebugMode').checked = false;
