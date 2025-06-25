@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test NCBI & GO Analyzer Fixes</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        
+        .test-button:hover {
+            background: #0056b3;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .code {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test NCBI & GO Analyzer Fixes</h1>
+    
+    <div class="test-section">
+        <h3>1. NCBI Authors Display Fix Test</h3>
+        <p>This test simulates the authors array processing from NCBI API</p>
+        <button class="test-button" onclick="testAuthorsProcessing()">Test Authors Processing</button>
+        <div id="authorsResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. GO Analyzer Plotly.js Fix Test</h3>
+        <p>Test if the updated Plotly.js loads without warnings</p>
+        <button class="test-button" onclick="testPlotlyLoading()">Test Plotly Loading</button>
+        <div id="plotlyResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Load GO Analyzer Tool</h3>
+        <p>Test the actual GO analyzer with updated Plotly.js</p>
+        <button class="test-button" onclick="loadGOAnalyzer()">Load GO Analyzer</button>
+        <div id="goAnalyzerResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Load NCBI Browser Tool</h3>
+        <p>Test the actual NCBI browser with authors fix</p>
+        <button class="test-button" onclick="loadNCBIBrowser()">Load NCBI Browser</button>
+        <div id="ncbiResult"></div>
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script>
+        // Test 1: Authors processing simulation
+        function testAuthorsProcessing() {
+            const resultDiv = document.getElementById('authorsResult');
+            
+            // Simulate different author data formats from NCBI API
+            const testCases = [
+                {
+                    name: "Array of author objects with 'name' property",
+                    authors: [
+                        { name: "Smith, John A." },
+                        { name: "Doe, Jane B." },
+                        { name: "Johnson, Robert C." }
+                    ]
+                },
+                {
+                    name: "Array of author objects with 'authname' property", 
+                    authors: [
+                        { authname: "Brown, Sarah D." },
+                        { authname: "Wilson, Michael E." }
+                    ]
+                },
+                {
+                    name: "Array of strings",
+                    authors: ["Garcia, Maria F.", "Davis, David G.", "Miller, Susan H."]
+                },
+                {
+                    name: "Single string",
+                    authors: "Anderson, Thomas I., Lee, Linda J., Clark, James K."
+                },
+                {
+                    name: "Mixed array (problematic case)",
+                    authors: [
+                        { name: "Taylor, Jennifer L." },
+                        "Moore, Christopher M.",
+                        { authname: "White, Patricia N." }
+                    ]
+                }
+            ];
+            
+            let html = '<h4>Authors Processing Test Results:</h4>';
+            
+            testCases.forEach((testCase, index) => {
+                // Apply the same logic as in the fixed NCBI browser
+                let authorsText = 'No authors listed';
+                const item = { authors: testCase.authors };
+                
+                if (item.authors) {
+                    if (Array.isArray(item.authors)) {
+                        authorsText = item.authors.map(author => {
+                            if (typeof author === 'object' && author.name) {
+                                return author.name;
+                            } else if (typeof author === 'string') {
+                                return author;
+                            } else if (typeof author === 'object' && author.authname) {
+                                return author.authname;
+                            }
+                            return String(author);
+                        }).filter(name => name && name.trim()).join(', ');
+                    } else if (typeof item.authors === 'string') {
+                        authorsText = item.authors;
+                    } else {
+                        authorsText = String(item.authors);
+                    }
+                }
+                
+                html += `
+                    <div class="result ${authorsText !== '[object Object]' && authorsText !== 'No authors listed' ? 'success' : 'error'}">
+                        <strong>Test ${index + 1}: ${testCase.name}</strong><br>
+                        <div class="code">Input: ${JSON.stringify(testCase.authors)}</div>
+                        <strong>Output:</strong> ${authorsText}
+                    </div>
+                `;
+            });
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        // Test 2: Plotly loading test
+        function testPlotlyLoading() {
+            const resultDiv = document.getElementById('plotlyResult');
+            
+            // Check if Plotly is loaded and what version
+            if (typeof Plotly !== 'undefined') {
+                const version = Plotly.version || 'Unknown version';
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        ✅ <strong>Plotly.js loaded successfully!</strong><br>
+                        Version: ${version}<br>
+                        <small>No deprecation warnings should appear in console</small>
+                    </div>
+                `;
+                
+                // Test basic plotting functionality
+                setTimeout(() => {
+                    try {
+                        const data = [{
+                            x: [1, 2, 3, 4],
+                            y: [10, 11, 12, 13],
+                            type: 'scatter'
+                        }];
+                        
+                        // Create a small test plot
+                        const plotDiv = document.createElement('div');
+                        plotDiv.style.width = '300px';
+                        plotDiv.style.height = '200px';
+                        plotDiv.style.margin = '10px 0';
+                        resultDiv.appendChild(plotDiv);
+                        
+                        Plotly.newPlot(plotDiv, data, {
+                            title: 'Test Plot',
+                            margin: { t: 30, r: 30, b: 30, l: 30 }
+                        }, { responsive: true });
+                        
+                        resultDiv.appendChild(document.createElement('div')).innerHTML = `
+                            <div class="result success">
+                                ✅ <strong>Plotly plotting functionality working!</strong>
+                            </div>
+                        `;
+                    } catch (error) {
+                        resultDiv.appendChild(document.createElement('div')).innerHTML = `
+                            <div class="result error">
+                                ❌ <strong>Plotly plotting failed:</strong> ${error.message}
+                            </div>
+                        `;
+                    }
+                }, 100);
+                
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        ❌ <strong>Plotly.js not loaded</strong><br>
+                        Check network connection or CDN availability
+                    </div>
+                `;
+            }
+        }
+        
+        // Test 3: Load GO Analyzer
+        function loadGOAnalyzer() {
+            const resultDiv = document.getElementById('goAnalyzerResult');
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = 'go-analyzer.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '400px';
+            iframe.style.border = '1px solid #ddd';
+            iframe.style.borderRadius = '6px';
+            
+            iframe.onload = () => {
+                resultDiv.innerHTML = '<div class="result success">✅ GO Analyzer loaded successfully!</div>';
+                resultDiv.appendChild(iframe);
+            };
+            
+            iframe.onerror = () => {
+                resultDiv.innerHTML = '<div class="result error">❌ Failed to load GO Analyzer</div>';
+            };
+            
+            resultDiv.innerHTML = '<div class="result">Loading GO Analyzer...</div>';
+            setTimeout(() => resultDiv.appendChild(iframe), 100);
+        }
+        
+        // Test 4: Load NCBI Browser
+        function loadNCBIBrowser() {
+            const resultDiv = document.getElementById('ncbiResult');
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = 'ncbi-browser.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '400px';
+            iframe.style.border = '1px solid #ddd';
+            iframe.style.borderRadius = '6px';
+            
+            iframe.onload = () => {
+                resultDiv.innerHTML = '<div class="result success">✅ NCBI Browser loaded successfully!</div>';
+                resultDiv.appendChild(iframe);
+            };
+            
+            iframe.onerror = () => {
+                resultDiv.innerHTML = '<div class="result error">❌ Failed to load NCBI Browser</div>';
+            };
+            
+            resultDiv.innerHTML = '<div class="result">Loading NCBI Browser...</div>';
+            setTimeout(() => resultDiv.appendChild(iframe), 100);
+        }
+        
+        // Auto-test Plotly loading on page load
+        setTimeout(() => {
+            testPlotlyLoading();
+        }, 1000);
+    </script>
+</body>
+</html> 

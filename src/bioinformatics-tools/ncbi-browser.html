@@ -876,9 +876,32 @@
 
                 switch (database) {
                     case 'pubmed':
+                        // Process authors array properly
+                        let authorsText = 'No authors listed';
+                        if (item.authors) {
+                            if (Array.isArray(item.authors)) {
+                                // If authors is an array of objects, extract names
+                                authorsText = item.authors.map(author => {
+                                    if (typeof author === 'object' && author.name) {
+                                        return author.name;
+                                    } else if (typeof author === 'string') {
+                                        return author;
+                                    } else if (typeof author === 'object' && author.authname) {
+                                        return author.authname;
+                                    }
+                                    return String(author);
+                                }).filter(name => name && name.trim()).join(', ');
+                            } else if (typeof item.authors === 'string') {
+                                authorsText = item.authors;
+                            } else {
+                                // Fallback for any other format
+                                authorsText = String(item.authors);
+                            }
+                        }
+                        
                         return {
                             ...baseResult,
-                            authors: item.authors || 'No authors listed',
+                            authors: authorsText,
                             journal: item.source || 'Unknown journal',
                             year: item.pubdate ? item.pubdate.split(' ')[0] : 'Unknown',
                             pmid: id,

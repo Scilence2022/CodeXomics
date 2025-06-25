@@ -6,7 +6,7 @@
     <title>Gene Ontology (GO) Analyzer - Genome AI Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
     <style>
         :root {
             --primary-color: #8e44ad;
@@ -965,9 +965,19 @@ Tips:
         // 不需要在此处重复定义
 
         document.addEventListener('DOMContentLoaded', () => {
-            const goAnalyzer = new GOAnalyzer();
-            // 初始化菜单处理器，传入工具名称和实例
-            window.toolMenuHandler = new ToolMenuHandler('Gene Ontology Analyzer', goAnalyzer);
+            // Check if Plotly is loaded before initializing
+            const initializeApp = () => {
+                if (typeof Plotly !== 'undefined') {
+                    const goAnalyzer = new GOAnalyzer();
+                    // 初始化菜单处理器，传入工具名称和实例
+                    window.toolMenuHandler = new ToolMenuHandler('Gene Ontology Analyzer', goAnalyzer);
+                } else {
+                    // If Plotly isn't loaded yet, wait a bit and try again
+                    setTimeout(initializeApp, 100);
+                }
+            };
+            
+            initializeApp();
         });
     </script>
 </body>
