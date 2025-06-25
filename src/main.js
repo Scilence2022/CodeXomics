@@ -1025,12 +1025,6 @@ function createMenu() {
             mainWindow.webContents.send('save-project-as');
           }
         },
-        {
-          label: 'Export Project as XML',
-          click: () => {
-            mainWindow.webContents.send('export-project-xml');
-          }
-        },
         { type: 'separator' },
         {
           label: 'Recent Projects',
