@@ -116,7 +116,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   
   // File reading API for project manager
-  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  
+  // Text file management APIs
+  readTextFile: (filePath, encoding) => ipcRenderer.invoke('readTextFile', filePath, encoding),
+  writeTextFile: (filePath, content, encoding) => ipcRenderer.invoke('writeTextFile', filePath, content, encoding),
+  renameFile: (filePath, newName) => ipcRenderer.invoke('renameFile', filePath, newName),
+  duplicateFile: (filePath) => ipcRenderer.invoke('duplicateFile', filePath),
+  showFileInExplorer: (filePath) => ipcRenderer.invoke('showFileInExplorer', filePath),
+  downloadFiles: (filePaths) => ipcRenderer.invoke('downloadFiles', filePaths)
 });
 
 // Provide access to node process information (for development)

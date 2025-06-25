@@ -28,6 +28,9 @@ class ProjectManagerWindow {
     async initialize() {
         console.log('Initializing Project Manager Window...');
         
+        // 初始化文本文件预览管理器
+        this.textPreviewManager = new TextFilePreviewManager();
+        
         // 加载项目数据
         await this.loadProjects();
         
@@ -377,10 +380,11 @@ class ProjectManagerWindow {
 
             html += `
                 <div class="file-card ${isSelected ? 'selected' : ''}" 
-                     onclick="projectManager.selectFile('${file.id}', event.ctrlKey)"
-                     ondblclick="projectManager.openFileInMainWindow('${file.id}')"
+                     onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey)"
+                     ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                      data-file-id="${file.id}">
-                    <div class="file-icon ${fileType}" 
+                    <div class="file-type-icon ${fileType}" 
                          style="background-color: ${typeConfig.color}">
                         ${typeConfig.icon}
                     </div>
@@ -616,6 +620,7 @@ class ProjectManagerWindow {
         this.updateFileCardSelection();
         this.updateStatusBar();
         this.updateDetailsPanel();
+        this.updateBulkActionsBar();
     }
 
     async openFileInMainWindow(fileId) {
@@ -1156,6 +1161,7 @@ class ProjectManagerWindow {
         this.updateFileCardSelection();
         this.updateFileCountDisplay();
         this.updateDetailsPanel();
+        this.updateBulkActionsBar();
         this.showNotification('Selection cleared', 'info');
     }
 
@@ -1499,6 +1505,515 @@ Features:
                 .map(activity => `<div class="activity-item">${activity}</div>`)
                 .join('');
         }
+    }
+
+    // ====== 文件预览和编辑功能 ======
+
+    /**
+     * 预览选中的文件
+     */
+    async previewSelectedFile() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file to preview', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        if (this.textPreviewManager) {
+            await this.textPreviewManager.previewFile(file);
+        }
+    }
+
+    /**
+     * 编辑选中的文件
+     */
+    async editSelectedFile() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file to edit', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        if (this.textPreviewManager) {
+            await this.textPreviewManager.editFile(file);
+        }
+    }
+
+    /**
+     * 关闭预览面板
+     */
+    closePreviewPanel() {
+        if (this.textPreviewManager) {
+            this.textPreviewManager.closePreviewPanel();
+        }
+    }
+
+    /**
+     * 保存文件更改
+     */
+    async saveFileChanges() {
+        if (this.textPreviewManager) {
+            await this.textPreviewManager.saveFileChanges();
+        }
+    }
+
+    /**
+     * 撤销文件更改
+     */
+    revertFileChanges() {
+        if (this.textPreviewManager) {
+            this.textPreviewManager.revertFileChanges();
+        }
+    }
+
+    // ====== 文件管理功能 ======
+
+    /**
+     * 重命名选中的文件
+     */
+    async renameSelectedFile() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file to rename', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        // 创建重命名输入框
+        this.createRenameInput(file);
+    }
+
+    /**
+     * 创建重命名输入框
+     */
+    createRenameInput(file) {
+        // 查找文件卡片元素
+        const fileCard = document.querySelector(`[data-file-id="${file.id}"]`);
+        if (!fileCard) return;
+
+        const fileNameSpan = fileCard.querySelector('.file-name');
+        if (!fileNameSpan) return;
+
+        // 创建输入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = file.name;
+        input.className = 'file-rename-input';
+        
+        // 设置输入框样式和位置
+        const rect = fileNameSpan.getBoundingClientRect();
+        input.style.position = 'absolute';
+        input.style.left = `${rect.left}px`;
+        input.style.top = `${rect.top}px`;
+        input.style.width = `${Math.max(rect.width, 150)}px`;
+        input.style.zIndex = '1001';
+
+        // 添加到页面
+        document.body.appendChild(input);
+        input.select();
+
+        // 处理输入事件
+        const handleSubmit = async () => {
+            const newName = input.value.trim();
+            if (newName && newName !== file.name) {
+                await this.performFileRename(file, newName);
+            }
+            this.cleanupRenameInput(input);
+        };
+
+        const handleCancel = () => {
+            this.cleanupRenameInput(input);
+        };
+
+        input.addEventListener('blur', handleCancel);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+            }
+        });
+
+        // 点击外部取消
+        const clickOutside = (e) => {
+            if (!input.contains(e.target)) {
+                handleCancel();
+                document.removeEventListener('click', clickOutside);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', clickOutside), 100);
+    }
+
+    /**
+     * 执行文件重命名
+     */
+    async performFileRename(file, newName) {
+        try {
+            if (window.electronAPI && window.electronAPI.renameFile) {
+                const result = await window.electronAPI.renameFile(file.path, newName);
+                
+                if (result.success) {
+                    // 更新文件信息
+                    file.name = newName;
+                    file.path = result.newPath;
+                    file.modified = new Date().toISOString();
+                    
+                    // 更新UI
+                    this.renderProjectContent();
+                    this.showNotification(`File renamed to "${newName}"`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
+            } else {
+                throw new Error('File rename not available in browser environment');
+            }
+        } catch (error) {
+            console.error('Error renaming file:', error);
+            this.showNotification(`Failed to rename file: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 清理重命名输入框
+     */
+    cleanupRenameInput(input) {
+        if (input && input.parentNode) {
+            input.parentNode.removeChild(input);
+        }
+    }
+
+    /**
+     * 复制选中的文件
+     */
+    async duplicateSelectedFile() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file to duplicate', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        try {
+            if (window.electronAPI && window.electronAPI.duplicateFile) {
+                const result = await window.electronAPI.duplicateFile(file.path);
+                
+                if (result.success) {
+                    // 添加新文件到项目
+                    const newFile = {
+                        id: this.generateId(),
+                        name: result.newFileName,
+                        path: result.newPath,
+                        size: file.size,
+                        type: file.type,
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString(),
+                        folder: file.folder
+                    };
+                    
+                    this.currentProject.files.push(newFile);
+                    this.renderProjectContent();
+                    this.showNotification(`File duplicated as "${result.newFileName}"`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
+            } else {
+                throw new Error('File duplicate not available in browser environment');
+            }
+        } catch (error) {
+            console.error('Error duplicating file:', error);
+            this.showNotification(`Failed to duplicate file: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 复制文件路径到剪贴板
+     */
+    async copyFileToClipboard() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        try {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(file.path);
+                this.showNotification('File path copied to clipboard', 'success');
+            } else {
+                // 备用方案
+                const textArea = document.createElement('textarea');
+                textArea.value = file.path;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                this.showNotification('File path copied to clipboard', 'success');
+            }
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            this.showNotification('Failed to copy file path', 'error');
+        }
+    }
+
+    /**
+     * 在文件浏览器中显示文件
+     */
+    async showFileInExplorer() {
+        if (this.selectedFiles.size !== 1) {
+            this.showNotification('Please select exactly one file', 'warning');
+            return;
+        }
+
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (!file) {
+            this.showNotification('File not found', 'error');
+            return;
+        }
+
+        try {
+            if (window.electronAPI && window.electronAPI.showFileInExplorer) {
+                const result = await window.electronAPI.showFileInExplorer(file.path);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+            } else {
+                this.showNotification('Show in explorer not available in browser environment', 'warning');
+            }
+        } catch (error) {
+            console.error('Error showing file in explorer:', error);
+            this.showNotification(`Failed to show file in explorer: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 下载选中的文件
+     */
+    async downloadSelectedFiles() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('Please select files to download', 'warning');
+            return;
+        }
+
+        try {
+            const fileIds = Array.from(this.selectedFiles);
+            const files = fileIds.map(id => this.findFileById(id)).filter(f => f);
+
+            if (window.electronAPI && window.electronAPI.downloadFiles) {
+                const result = await window.electronAPI.downloadFiles(files.map(f => f.path));
+                
+                if (result.success) {
+                    this.showNotification(`${files.length} files downloaded`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
+            } else {
+                this.showNotification('File download not available in browser environment', 'warning');
+            }
+        } catch (error) {
+            console.error('Error downloading files:', error);
+            this.showNotification(`Failed to download files: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 移动选中的文件
+     */
+    async moveSelectedFiles() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('Please select files to move', 'warning');
+            return;
+        }
+
+        // 创建文件夹选择对话框
+        this.showFolderSelectionDialog('move');
+    }
+
+    /**
+     * 显示文件夹选择对话框
+     */
+    showFolderSelectionDialog(action) {
+        if (!this.currentProject) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>${action === 'move' ? 'Move Files' : 'Select Folder'}</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Select destination folder:</p>
+                    <div class="folder-list">
+                        ${this.currentProject.folders.map(folder => `
+                            <div class="folder-option" data-folder="${folder.path.join('/')}">
+                                <span>${folder.icon}</span>
+                                <span>${folder.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary cancel-btn">Cancel</button>
+                    <button class="btn btn-primary confirm-btn" disabled>Confirm</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        let selectedFolder = null;
+
+        // 事件处理
+        modal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-close') || e.target.classList.contains('cancel-btn') || e.target === modal) {
+                document.body.removeChild(modal);
+            } else if (e.target.classList.contains('folder-option') || e.target.parentElement.classList.contains('folder-option')) {
+                const folderOption = e.target.closest('.folder-option');
+                selectedFolder = folderOption.dataset.folder;
+                
+                // 更新选择状态
+                modal.querySelectorAll('.folder-option').forEach(opt => opt.classList.remove('selected'));
+                folderOption.classList.add('selected');
+                modal.querySelector('.confirm-btn').disabled = false;
+            } else if (e.target.classList.contains('confirm-btn') && selectedFolder !== null) {
+                this.performFilesMove(selectedFolder.split('/'));
+                document.body.removeChild(modal);
+            }
+        });
+    }
+
+    /**
+     * 执行文件移动
+     */
+    async performFilesMove(targetFolder) {
+        const fileIds = Array.from(this.selectedFiles);
+        const files = fileIds.map(id => this.findFileById(id)).filter(f => f);
+
+        try {
+            for (const file of files) {
+                file.folder = targetFolder;
+                file.modified = new Date().toISOString();
+            }
+
+            this.renderProjectContent();
+            this.clearSelection();
+            this.showNotification(`${files.length} files moved successfully`, 'success');
+
+        } catch (error) {
+            console.error('Error moving files:', error);
+            this.showNotification(`Failed to move files: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 刷新文件信息
+     */
+    async refreshFileInfo(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        try {
+            if (window.electronAPI && window.electronAPI.getFileInfo) {
+                const result = await window.electronAPI.getFileInfo(file.path);
+                if (result.success) {
+                    file.size = result.size;
+                    file.modified = result.modified;
+                    this.renderProjectContent();
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing file info:', error);
+        }
+    }
+
+    /**
+     * 更新批量操作栏
+     */
+    updateBulkActionsBar() {
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedFilesCount = document.getElementById('selectedFilesCount');
+        
+        if (this.selectedFiles.size > 0) {
+            if (selectedFilesCount) {
+                selectedFilesCount.textContent = this.selectedFiles.size;
+            }
+            if (bulkActionsBar) {
+                bulkActionsBar.style.display = 'flex';
+            }
+        } else {
+            if (bulkActionsBar) {
+                bulkActionsBar.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * 显示文件上下文菜单
+     */
+    showFileContextMenu(event, fileId) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // 如果点击的文件没有被选中，则选中它
+        if (!this.selectedFiles.has(fileId)) {
+            this.selectFile(fileId, false);
+        }
+
+        const contextMenu = document.getElementById('fileContextMenu');
+        if (!contextMenu) return;
+
+        // 设置菜单位置
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = `${event.clientX}px`;
+        contextMenu.style.top = `${event.clientY}px`;
+
+        // 点击外部关闭菜单
+        const closeMenu = (e) => {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 100);
     }
 }
 
