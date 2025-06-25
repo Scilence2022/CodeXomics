@@ -1553,11 +1553,15 @@
             const maxTokens = parseInt(document.getElementById('maxTokens').value);
             const temperature = parseFloat(document.getElementById('temperature').value);
             
+            // Get API configuration
+            const apiConfig = getApiConfig();
+            
             const params = {
                 prompt: prompt,
                 maxTokens: maxTokens,
                 temperature: temperature,
-                taxonomy: taxonomy || null
+                taxonomy: taxonomy || null,
+                apiConfig: apiConfig
             };
             
             await executeAnalysis('evo2_generate_sequence', params, 'Generating DNA sequence...');
@@ -1575,10 +1579,14 @@
                 return;
             }
             
+            // Get API configuration
+            const apiConfig = getApiConfig();
+            
             const params = {
                 sequence: sequence,
                 analysisType: analysisType,
-                taxonomy: taxonomy || null
+                taxonomy: taxonomy || null,
+                apiConfig: apiConfig
             };
             
             await executeAnalysis('evo2_predict_function', params, 'Predicting function...');
@@ -1596,10 +1604,14 @@
                 return;
             }
             
+            // Get API configuration
+            const apiConfig = getApiConfig();
+            
             const params = {
                 targetSequence: targetSequence,
                 casType: casType,
-                guideLength: guideLength
+                guideLength: guideLength,
+                apiConfig: apiConfig
             };
             
             await executeAnalysis('evo2_design_crispr', params, 'Designing CRISPR system...');
@@ -1660,7 +1672,19 @@
                 
             } catch (error) {
                 hideLoading();
-                showMessage(`Analysis failed: ${error.message}`, 'error');
+                console.error(`Analysis failed for ${toolName}:`, error);
+                
+                // Show appropriate error message
+                let errorMessage = `Analysis failed: ${error.message}`;
+                if (error.message.includes('not configured')) {
+                    errorMessage += '\n\nPlease configure your NVIDIA API key first.';
+                    setTimeout(() => {
+                        openConfigModal();
+                    }, 2000);
+                }
+                
+                showNotification(errorMessage, 'error');
+                showMessage(errorMessage, 'error');
             }
         }
 
@@ -1709,6 +1733,13 @@
             html += `<h4>${getToolDisplayName(toolName)}</h4>`;
             html += `<span class="result-type">${toolName.replace('evo2_', '').toUpperCase()}</span>`;
             html += `</div>`;
+            
+            // Show simulation warning if applicable
+            if (result.usingSimulation || result.metadata?.usingSimulation) {
+                html += `<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 12px; margin-bottom: 15px; color: #856404;">
+                    <strong>⚠️ Simulation Mode:</strong> Using simulated response (API not configured or unavailable)
+                </div>`;
+            }
             
             // Main content based on tool type
             if (toolName === 'evo2_generate_sequence') {

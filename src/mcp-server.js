@@ -44,10 +44,22 @@ class MCPGenomeBrowserServer {
         this.app.post('/execute-tool', async (req, res) => {
             try {
                 const { toolName, parameters, clientId } = req.body;
+                console.log(`=== MCP EXECUTE TOOL: ${toolName} ===`);
+                console.log('Client ID:', clientId);
+                console.log('Parameters:', JSON.stringify(parameters, null, 2));
+                
                 const result = await this.executeTool(toolName, parameters, clientId);
+                console.log('Tool execution successful');
+                console.log('=== MCP EXECUTE TOOL END ===');
+                
                 res.json({ success: true, result });
             } catch (error) {
-                res.status(500).json({ success: false, error: error.message });
+                console.error(`=== MCP EXECUTE TOOL ERROR: ${toolName} ===`);
+                console.error('Error:', error.message);
+                console.error('Stack:', error.stack);
+                console.error('=== MCP EXECUTE TOOL ERROR END ===');
+                
+                res.status(500).json({ success: false, error: error.message, stack: error.stack });
             }
         });
     }
@@ -2660,7 +2672,8 @@ class MCPGenomeBrowserServer {
             seed = null, 
             taxonomy = null, 
             stopSequences = [], 
-            stream = false 
+            stream = false,
+            apiConfig = null
         } = parameters;
 
         console.log('=== MCP SERVER: EVO2 GENERATE SEQUENCE ===');
@@ -2689,7 +2702,7 @@ class MCPGenomeBrowserServer {
                 requestBody.stop = stopSequences;
             }
 
-            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
             
             const generatedSequence = result.choices?.[0]?.message?.content || '';
             
@@ -2706,7 +2719,8 @@ class MCPGenomeBrowserServer {
                     temperature: temperature,
                     topP: topP,
                     taxonomy: taxonomy,
-                    usage: result.usage
+                    usage: result.usage,
+                    usingSimulation: !apiConfig?.apiKey
                 },
                 generatedAt: new Date().toISOString()
             };
@@ -2718,7 +2732,7 @@ class MCPGenomeBrowserServer {
     }
 
     async evo2PredictFunction(parameters) {
-        const { sequence, taxonomy = null, analysisType = 'function' } = parameters;
+        const { sequence, taxonomy = null, analysisType = 'function', apiConfig = null } = parameters;
 
         console.log('=== MCP SERVER: EVO2 PREDICT FUNCTION ===');
         console.log('Analysis type:', analysisType, 'Sequence length:', sequence.length);
@@ -2745,7 +2759,7 @@ class MCPGenomeBrowserServer {
                 temperature: 0.3  // Lower temperature for more deterministic function prediction
             };
 
-            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
             const prediction = result.choices?.[0]?.message?.content || '';
 
             console.log('=== MCP SERVER: EVO2 PREDICT FUNCTION END ===');
@@ -2757,6 +2771,7 @@ class MCPGenomeBrowserServer {
                 inputSequence: sequence,
                 taxonomy: taxonomy,
                 confidence: this.estimateConfidence(prediction),
+                usingSimulation: !apiConfig?.apiKey,
                 analyzedAt: new Date().toISOString()
             };
 
@@ -2772,7 +2787,8 @@ class MCPGenomeBrowserServer {
             casType = 'Auto', 
             pamSequence = null, 
             guideLength = 20, 
-            organism = null 
+            organism = null,
+            apiConfig = null
         } = parameters;
 
         console.log('=== MCP SERVER: EVO2 DESIGN CRISPR ===');
@@ -2797,7 +2813,7 @@ class MCPGenomeBrowserServer {
                 temperature: 0.7
             };
 
-            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
             const design = result.choices?.[0]?.message?.content || '';
 
             // Parse the design result to extract components
@@ -2816,6 +2832,7 @@ class MCPGenomeBrowserServer {
                     pamSequence,
                     organism
                 },
+                usingSimulation: !apiConfig?.apiKey,
                 designedAt: new Date().toISOString()
             };
 
@@ -2945,34 +2962,35 @@ class MCPGenomeBrowserServer {
     /**
      * Helper method to call Evo2 API
      */
-    async callEvo2API(endpoint, requestBody) {
-        // This would need to be configured with actual API credentials
-        // For now, return a simulated response
-        
+    async callEvo2API(endpoint, requestBody, apiConfig = null) {
         console.log('Calling Evo2 API endpoint:', endpoint);
         
-        // Check if user has configured API settings
-        const config = this.getEvo2Config();
+        // Use provided config or get from environment
+        const config = apiConfig || this.getEvo2Config();
+        
         if (!config.apiKey || !config.baseUrl) {
-            throw new Error('Evo2 API not configured. Please set API key and base URL in settings.');
+            console.warn('Evo2 API not configured, using simulated response');
+            return this.getSimulatedEvo2Response(requestBody);
         }
 
         try {
+            const url = new URL(config.baseUrl);
             const response = await this.makeHTTPSRequest({
-                hostname: new URL(config.baseUrl).hostname,
+                hostname: url.hostname,
+                port: url.port || (url.protocol === 'https:' ? 443 : 80),
                 path: endpoint,
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${config.apiKey}`,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'User-Agent': 'Genome AI Studio/0.2'
                 }
             }, JSON.stringify(requestBody));
 
             return JSON.parse(response);
         } catch (error) {
-            // Return simulated response for testing
-            console.warn('Using simulated Evo2 response (API not available)');
+            console.warn(`Evo2 API call failed: ${error.message}, using simulated response`);
             return this.getSimulatedEvo2Response(requestBody);
         }
     }

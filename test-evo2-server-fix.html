@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Evo2 Server Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        
+        .test-button:hover {
+            background: #0056b3;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        
+        .config-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 Test Evo2 Server Fix</h1>
+    
+    <div class="test-section">
+        <h3>1. Server Connection Test</h3>
+        <button class="test-button" onclick="testServerConnection()">Test MCP Server</button>
+        <div id="connectionResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. API Configuration Test</h3>
+        <div>
+            <label>API Key (simulation if empty):</label>
+            <input type="text" id="testApiKey" placeholder="nvapi-xxx..." style="width: 300px; margin: 10px;">
+        </div>
+        <div>
+            <label>Base URL:</label>
+            <input type="text" id="testBaseUrl" value="https://integrate.api.nvidia.com" style="width: 300px; margin: 10px;">
+        </div>
+        <div id="configDisplay" class="config-display"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Evo2 Tools Test</h3>
+        <div>
+            <textarea id="testPrompt" rows="3" placeholder="Enter a DNA sequence generation prompt...">Generate a 100bp bacterial promoter sequence</textarea>
+        </div>
+        <button class="test-button" onclick="testSequenceGeneration()">Test Sequence Generation</button>
+        <button class="test-button" onclick="testFunctionPrediction()">Test Function Prediction</button>
+        <div id="toolsResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Error Handling Test</h3>
+        <button class="test-button" onclick="testErrorHandling()">Test Invalid Parameters</button>
+        <div id="errorResult"></div>
+    </div>
+
+    <script>
+        let currentConfig = null;
+        
+        // Update config display
+        function updateConfigDisplay() {
+            const apiKey = document.getElementById('testApiKey').value;
+            const baseUrl = document.getElementById('testBaseUrl').value;
+            
+            currentConfig = {
+                apiKey: apiKey || null,
+                baseUrl: baseUrl || 'https://integrate.api.nvidia.com'
+            };
+            
+            document.getElementById('configDisplay').textContent = JSON.stringify(currentConfig, null, 2);
+        }
+        
+        document.getElementById('testApiKey').addEventListener('input', updateConfigDisplay);
+        document.getElementById('testBaseUrl').addEventListener('input', updateConfigDisplay);
+        
+        // Test server connection
+        async function testServerConnection() {
+            const resultDiv = document.getElementById('connectionResult');
+            resultDiv.innerHTML = '<div class="result">Testing connection...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">✅ Server connected! Status: ${data.status}, Clients: ${data.clients}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Server error: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Connection failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test sequence generation
+        async function testSequenceGeneration() {
+            const resultDiv = document.getElementById('toolsResult');
+            const prompt = document.getElementById('testPrompt').value || 'Generate a 50bp DNA sequence';
+            
+            resultDiv.innerHTML = '<div class="result">Testing sequence generation...</div>';
+            
+            try {
+                updateConfigDisplay();
+                
+                const response = await fetch('http://localhost:3000/execute-tool', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        toolName: 'evo2_generate_sequence',
+                        parameters: {
+                            prompt: prompt,
+                            maxTokens: 500,
+                            temperature: 1.0,
+                            apiConfig: currentConfig
+                        },
+                        clientId: 'test-client'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const result = data.result;
+                    const isSimulated = result.metadata?.usingSimulation;
+                    const className = isSimulated ? 'warning' : 'success';
+                    const icon = isSimulated ? '⚠️' : '✅';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result ${className}">
+                            ${icon} <strong>Sequence Generation ${isSimulated ? '(Simulated)' : '(API)'}:</strong><br>
+                            <strong>Sequence:</strong> ${result.sequence}<br>
+                            <strong>Length:</strong> ${result.sequence.length} bp<br>
+                            <strong>Model:</strong> ${result.metadata.model}<br>
+                            <strong>Temperature:</strong> ${result.metadata.temperature}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Tool failed: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Request failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test function prediction
+        async function testFunctionPrediction() {
+            const resultDiv = document.getElementById('toolsResult');
+            const testSequence = 'ATGAAACGGATCAACCTGCATGCAAAATTCGACGTGGTAAAACTCGACCGTCTGAAATACCTG';
+            
+            resultDiv.innerHTML = '<div class="result">Testing function prediction...</div>';
+            
+            try {
+                updateConfigDisplay();
+                
+                const response = await fetch('http://localhost:3000/execute-tool', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        toolName: 'evo2_predict_function',
+                        parameters: {
+                            sequence: testSequence,
+                            analysisType: 'function',
+                            apiConfig: currentConfig
+                        },
+                        clientId: 'test-client'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const result = data.result;
+                    const isSimulated = result.usingSimulation;
+                    const className = isSimulated ? 'warning' : 'success';
+                    const icon = isSimulated ? '⚠️' : '✅';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result ${className}">
+                            ${icon} <strong>Function Prediction ${isSimulated ? '(Simulated)' : '(API)'}:</strong><br>
+                            <strong>Prediction:</strong> ${result.prediction}<br>
+                            <strong>Confidence:</strong> ${result.confidence}<br>
+                            <strong>Analysis Type:</strong> ${result.analysisType}<br>
+                            <strong>Input Length:</strong> ${result.inputSequence.length} bp
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Tool failed: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Request failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test error handling
+        async function testErrorHandling() {
+            const resultDiv = document.getElementById('errorResult');
+            resultDiv.innerHTML = '<div class="result">Testing error handling...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/execute-tool', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        toolName: 'invalid_tool_name',
+                        parameters: {},
+                        clientId: 'test-client'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    resultDiv.innerHTML = `<div class="result success">✅ Error handling works: ${data.error}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Error handling failed - should have returned error</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Request failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Initialize
+        updateConfigDisplay();
+        
+        // Auto-test connection on load
+        setTimeout(testServerConnection, 1000);
+    </script>
+</body>
+</html> 
