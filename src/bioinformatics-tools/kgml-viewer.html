@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KGML Pathway Viewer - Genome AI Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #7c3aed;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --error-color: #dc2626;
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 100;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--bg-primary);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 320px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-section {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-input:hover {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+
+        .pathway-info {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .info-item {
+            margin-bottom: 0.75rem;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-value {
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+
+        .canvas-toolbar {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .toolbar-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .svg-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        .svg-canvas:active {
+            cursor: grabbing;
+        }
+
+        /* Node styles */
+        .node {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .node:hover {
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        .node-rect {
+            stroke: #374151;
+            stroke-width: 1;
+        }
+
+        .node-circle {
+            stroke: #374151;
+            stroke-width: 1;
+        }
+
+        .node-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            font-weight: 500;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+        }
+
+        .relation-line {
+            stroke: #6b7280;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .node-tooltip {
+            position: absolute;
+            background: var(--text-primary);
+            color: white;
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            font-size: 0.75rem;
+            pointer-events: none;
+            z-index: 20;
+            max-width: 200px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-result-item:hover {
+            background: var(--bg-primary);
+        }
+
+        .legend {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .highlighted {
+            filter: drop-shadow(0 0 8px #fbbf24) !important;
+        }
+
+        .minimap {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            width: 200px;
+            height: 150px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .minimap svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewport-rect {
+            fill: rgba(37, 99, 235, 0.2);
+            stroke: var(--primary-color);
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-title">
+            <i class="fas fa-project-diagram"></i>
+            <h1>KGML Pathway Viewer</h1>
+        </div>
+        <div class="header-controls">
+            <button class="btn" id="fitToScreen">
+                <i class="fas fa-expand-arrows-alt"></i>
+                Fit to Screen
+            </button>
+            <button class="btn" id="exportSVG">
+                <i class="fas fa-download"></i>
+                Export SVG
+            </button>
+            <button class="btn" id="toggleMinimap">
+                <i class="fas fa-map"></i>
+                Minimap
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <h3>Load KGML File</h3>
+                <div class="file-input" id="fileInput">
+                    <i class="fas fa-upload"></i>
+                    <p>Click to select or drag KGML file here</p>
+                    <input type="file" accept=".xml,.kgml" style="display: none;" id="fileInputHidden">
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Search Nodes</h3>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search nodes...">
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Pathway Statistics</h3>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="nodeCount">0</div>
+                        <div class="stat-label">Nodes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="relationCount">0</div>
+                        <div class="stat-label">Relations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="geneCount">0</div>
+                        <div class="stat-label">Genes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="compoundCount">0</div>
+                        <div class="stat-label">Compounds</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section pathway-info">
+                <h3>Pathway Information</h3>
+                <div id="pathwayInfo">
+                    <p class="info-value" style="color: var(--text-secondary);">No pathway loaded</p>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="legend" id="legend">
+                    <h4 style="margin-bottom: 0.75rem; font-size: 0.875rem;">Node Types</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #bef264;"></div>
+                        <span>Gene</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fbbf24;"></div>
+                        <span>Compound</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #a78bfa;"></div>
+                        <span>Enzyme</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fb7185;"></div>
+                        <span>Pathway</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-toolbar">
+                <button class="toolbar-btn" id="zoomIn" title="Zoom In">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="toolbar-btn" id="zoomOut" title="Zoom Out">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="toolbar-btn" id="resetZoom" title="Reset Zoom">
+                    <i class="fas fa-home"></i>
+                </button>
+            </div>
+
+            <svg class="svg-canvas" id="svgCanvas">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                            refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+                    </marker>
+                </defs>
+                <g id="mainGroup"></g>
+            </svg>
+
+            <div class="loading hidden" id="loading">
+                <div class="spinner"></div>
+                <p>Processing KGML file...</p>
+            </div>
+
+            <div class="minimap hidden" id="minimap">
+                <svg id="minimapSvg">
+                    <g id="minimapContent"></g>
+                    <rect class="viewport-rect" id="viewportRect"></rect>
+                </svg>
+            </div>
+
+            <div class="node-tooltip hidden" id="nodeTooltip"></div>
+        </div>
+    </div>
+
+    <script src="tool-menu-handler.js"></script>
+    <script>
+        class KGMLViewer {
+            constructor() {
+                this.pathwayData = null;
+                this.currentZoom = 1;
+                this.currentTranslate = [0, 0];
+                this.nodes = new Map();
+                this.relations = [];
+                this.selectedNodes = new Set();
+                
+                this.initializeEventListeners();
+                this.initMenuHandler();
+                this.setupSVGInteractions();
+            }
+
+            initMenuHandler() {
+                this.menuHandler = new ToolMenuHandler('KGML Pathway Viewer', this);
+            }
+
+            initializeEventListeners() {
+                // File input
+                document.getElementById('fileInput').addEventListener('click', () => {
+                    document.getElementById('fileInputHidden').click();
+                });
+
+                document.getElementById('fileInputHidden').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                });
+
+                // Drag and drop
+                const fileInput = document.getElementById('fileInput');
+                fileInput.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    fileInput.style.borderColor = 'var(--primary-color)';
+                });
+
+                fileInput.addEventListener('dragleave', () => {
+                    fileInput.style.borderColor = 'var(--border-color)';
+                });
+
+                fileInput.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    fileInput.style.borderColor = 'var(--border-color)';
+                    this.handleFileUpload(e.dataTransfer.files[0]);
+                });
+
+                // Toolbar buttons
+                document.getElementById('zoomIn').addEventListener('click', () => this.zoom(1.2));
+                document.getElementById('zoomOut').addEventListener('click', () => this.zoom(0.8));
+                document.getElementById('resetZoom').addEventListener('click', () => this.resetView());
+                document.getElementById('fitToScreen').addEventListener('click', () => this.fitToScreen());
+                document.getElementById('exportSVG').addEventListener('click', () => this.exportSVG());
+                document.getElementById('toggleMinimap').addEventListener('click', () => this.toggleMinimap());
+
+                // Search functionality
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.handleSearch(e.target.value);
+                });
+
+                // Hide search results when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.search-container')) {
+                        document.getElementById('searchResults').style.display = 'none';
+                    }
+                });
+            }
+
+            setupSVGInteractions() {
+                const svg = document.getElementById('svgCanvas');
+                let isDragging = false;
+                let lastMousePos = { x: 0, y: 0 };
+
+                svg.addEventListener('mousedown', (e) => {
+                    if (e.target === svg || e.target.closest('#mainGroup') === e.target) {
+                        isDragging = true;
+                        lastMousePos = { x: e.clientX, y: e.clientY };
+                        svg.style.cursor = 'grabbing';
+                    }
+                });
+
+                svg.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        const dx = e.clientX - lastMousePos.x;
+                        const dy = e.clientY - lastMousePos.y;
+                        
+                        this.currentTranslate[0] += dx;
+                        this.currentTranslate[1] += dy;
+                        
+                        this.updateTransform();
+                        lastMousePos = { x: e.clientX, y: e.clientY };
+                    }
+                });
+
+                svg.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    svg.style.cursor = 'grab';
+                });
+
+                // Zoom with mouse wheel
+                svg.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    this.zoom(zoomFactor, e.clientX, e.clientY);
+                });
+            }
+
+            async handleFileUpload(file) {
+                if (!file) return;
+
+                document.getElementById('loading').classList.remove('hidden');
+
+                try {
+                    const text = await this.readFileAsText(file);
+                    this.parseKGML(text);
+                    this.renderPathway();
+                    this.updateStatistics();
+                    this.updatePathwayInfo();
+                } catch (error) {
+                    console.error('Error processing KGML file:', error);
+                    alert('Error processing KGML file: ' + error.message);
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            }
+
+            readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(new Error('Failed to read file'));
+                    reader.readAsText(file);
+                });
+            }
+
+            parseKGML(xmlText) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('Invalid XML format');
+                }
+
+                const pathway = xmlDoc.getElementsByTagName('pathway')[0];
+                if (!pathway) {
+                    throw new Error('No pathway element found');
+                }
+
+                this.pathwayData = {
+                    name: pathway.getAttribute('name'),
+                    org: pathway.getAttribute('org'),
+                    number: pathway.getAttribute('number'),
+                    title: pathway.getAttribute('title'),
+                    image: pathway.getAttribute('image'),
+                    link: pathway.getAttribute('link'),
+                    entries: [],
+                    relations: [],
+                    reactions: []
+                };
+
+                // Parse entries
+                const entries = xmlDoc.getElementsByTagName('entry');
+                for (let entry of entries) {
+                    const graphics = entry.getElementsByTagName('graphics')[0];
+                    const entryData = {
+                        id: entry.getAttribute('id'),
+                        name: entry.getAttribute('name'),
+                        type: entry.getAttribute('type'),
+                        reaction: entry.getAttribute('reaction'),
+                        link: entry.getAttribute('link'),
+                        graphics: graphics ? {
+                            name: graphics.getAttribute('name'),
+                            fgcolor: graphics.getAttribute('fgcolor'),
+                            bgcolor: graphics.getAttribute('bgcolor'),
+                            type: graphics.getAttribute('type'),
+                            x: parseFloat(graphics.getAttribute('x')),
+                            y: parseFloat(graphics.getAttribute('y')),
+                            width: parseFloat(graphics.getAttribute('width')),
+                            height: parseFloat(graphics.getAttribute('height'))
+                        } : null
+                    };
+                    this.pathwayData.entries.push(entryData);
+                    this.nodes.set(entryData.id, entryData);
+                }
+
+                // Parse relations
+                const relations = xmlDoc.getElementsByTagName('relation');
+                for (let relation of relations) {
+                    const relationData = {
+                        entry1: relation.getAttribute('entry1'),
+                        entry2: relation.getAttribute('entry2'),
+                        type: relation.getAttribute('type'),
+                        subtypes: []
+                    };
+
+                    const subtypes = relation.getElementsByTagName('subtype');
+                    for (let subtype of subtypes) {
+                        relationData.subtypes.push({
+                            name: subtype.getAttribute('name'),
+                            value: subtype.getAttribute('value')
+                        });
+                    }
+
+                    this.pathwayData.relations.push(relationData);
+                    this.relations.push(relationData);
+                }
+
+                // Parse reactions
+                const reactions = xmlDoc.getElementsByTagName('reaction');
+                for (let reaction of reactions) {
+                    const reactionData = {
+                        id: reaction.getAttribute('id'),
+                        name: reaction.getAttribute('name'),
+                        type: reaction.getAttribute('type'),
+                        substrates: [],
+                        products: []
+                    };
+
+                    const substrates = reaction.getElementsByTagName('substrate');
+                    for (let substrate of substrates) {
+                        reactionData.substrates.push({
+                            id: substrate.getAttribute('id'),
+                            name: substrate.getAttribute('name')
+                        });
+                    }
+
+                    const products = reaction.getElementsByTagName('product');
+                    for (let product of products) {
+                        reactionData.products.push({
+                            id: product.getAttribute('id'),
+                            name: product.getAttribute('name')
+                        });
+                    }
+
+                    this.pathwayData.reactions.push(reactionData);
+                }
+            }
+
+            renderPathway() {
+                const mainGroup = document.getElementById('mainGroup');
+                mainGroup.innerHTML = '';
+
+                if (!this.pathwayData) return;
+
+                // Calculate canvas bounds
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+
+                this.pathwayData.entries.forEach(entry => {
+                    if (entry.graphics) {
+                        const { x, y, width, height } = entry.graphics;
+                        minX = Math.min(minX, x - width/2);
+                        minY = Math.min(minY, y - height/2);
+                        maxX = Math.max(maxX, x + width/2);
+                        maxY = Math.max(maxY, y + height/2);
+                    }
+                });
+
+                // Add padding
+                const padding = 50;
+                this.canvasBounds = {
+                    minX: minX - padding,
+                    minY: minY - padding,
+                    maxX: maxX + padding,
+                    maxY: maxY + padding,
+                    width: (maxX - minX) + 2 * padding,
+                    height: (maxY - minY) + 2 * padding
+                };
+
+                // Render relations first (so they appear behind nodes)
+                this.renderRelations(mainGroup);
+                
+                // Render nodes
+                this.renderNodes(mainGroup);
+
+                // Fit to screen initially
+                this.fitToScreen();
+                
+                // Update minimap
+                this.updateMinimap();
+            }
+
+            renderNodes(container) {
+                this.pathwayData.entries.forEach(entry => {
+                    if (!entry.graphics) return;
+
+                    const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    nodeGroup.classList.add('node');
+                    nodeGroup.setAttribute('data-id', entry.id);
+                    nodeGroup.setAttribute('data-type', entry.type);
+
+                    const { x, y, width, height, type, bgcolor, fgcolor, name } = entry.graphics;
+
+                    // Create shape based on type
+                    let shape;
+                    if (type === 'circle') {
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        shape.setAttribute('cx', x);
+                        shape.setAttribute('cy', y);
+                        shape.setAttribute('r', Math.max(width, height) / 2);
+                        shape.classList.add('node-circle');
+                    } else if (type === 'roundrectangle') {
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        shape.setAttribute('x', x - width/2);
+                        shape.setAttribute('y', y - height/2);
+                        shape.setAttribute('width', width);
+                        shape.setAttribute('height', height);
+                        shape.setAttribute('rx', Math.min(width, height) * 0.1);
+                        shape.classList.add('node-rect');
+                    } else { // rectangle or default
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        shape.setAttribute('x', x - width/2);
+                        shape.setAttribute('y', y - height/2);
+                        shape.setAttribute('width', width);
+                        shape.setAttribute('height', height);
+                        shape.classList.add('node-rect');
+                    }
+
+                    // Set colors based on entry type
+                    const nodeColor = this.getNodeColor(entry.type, bgcolor);
+                    shape.setAttribute('fill', nodeColor);
+                    shape.setAttribute('stroke', fgcolor || '#374151');
+
+                    // Add text
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x);
+                    text.setAttribute('y', y);
+                    text.classList.add('node-text');
+                    text.setAttribute('fill', fgcolor || '#000000');
+                    text.textContent = this.truncateText(name || entry.name, width);
+
+                    nodeGroup.appendChild(shape);
+                    nodeGroup.appendChild(text);
+
+                    // Add event listeners
+                    this.addNodeEventListeners(nodeGroup, entry);
+
+                    container.appendChild(nodeGroup);
+                });
+            }
+
+            renderRelations(container) {
+                this.relations.forEach(relation => {
+                    const node1 = this.nodes.get(relation.entry1);
+                    const node2 = this.nodes.get(relation.entry2);
+
+                    if (!node1?.graphics || !node2?.graphics) return;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', node1.graphics.x);
+                    line.setAttribute('y1', node1.graphics.y);
+                    line.setAttribute('x2', node2.graphics.x);
+                    line.setAttribute('y2', node2.graphics.y);
+                    line.classList.add('relation-line');
+
+                    // Set line style based on relation type
+                    if (relation.type === 'ECrel') {
+                        line.setAttribute('stroke', '#059669');
+                    } else if (relation.type === 'maplink') {
+                        line.setAttribute('stroke', '#7c3aed');
+                        line.setAttribute('stroke-dasharray', '5,5');
+                    }
+
+                    container.appendChild(line);
+                });
+            }
+
+            getNodeColor(type, defaultColor) {
+                const typeColors = {
+                    'gene': '#bef264',
+                    'compound': '#fbbf24',
+                    'enzyme': '#a78bfa',
+                    'ortholog': '#60a5fa',
+                    'map': '#fb7185'
+                };
+
+                return typeColors[type] || defaultColor || '#e5e7eb';
+            }
+
+            truncateText(text, maxWidth) {
+                if (!text) return '';
+                const maxChars = Math.floor(maxWidth / 6); // Approximate character width
+                if (text.length <= maxChars) return text;
+                return text.substring(0, maxChars - 3) + '...';
+            }
+
+            addNodeEventListeners(nodeElement, entryData) {
+                // Click handler
+                nodeElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.selectNode(entryData.id);
+                    if (entryData.link) {
+                        window.open(entryData.link, '_blank');
+                    }
+                });
+
+                // Hover handlers
+                nodeElement.addEventListener('mouseenter', (e) => {
+                    this.showTooltip(e, entryData);
+                });
+
+                nodeElement.addEventListener('mouseleave', () => {
+                    this.hideTooltip();
+                });
+            }
+
+            selectNode(nodeId) {
+                // Clear previous selections
+                document.querySelectorAll('.node').forEach(node => {
+                    node.classList.remove('highlighted');
+                });
+
+                // Highlight selected node
+                const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
+                if (nodeElement) {
+                    nodeElement.classList.add('highlighted');
+                }
+
+                this.selectedNodes.clear();
+                this.selectedNodes.add(nodeId);
+            }
+
+            showTooltip(event, entryData) {
+                const tooltip = document.getElementById('nodeTooltip');
+                const tooltipContent = this.generateTooltipContent(entryData);
+                
+                tooltip.innerHTML = tooltipContent;
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+                tooltip.classList.remove('hidden');
+            }
+
+            hideTooltip() {
+                document.getElementById('nodeTooltip').classList.add('hidden');
+            }
+
+            generateTooltipContent(entryData) {
+                return `
+                    <div><strong>ID:</strong> ${entryData.id}</div>
+                    <div><strong>Name:</strong> ${entryData.name}</div>
+                    <div><strong>Type:</strong> ${entryData.type}</div>
+                    ${entryData.reaction ? `<div><strong>Reaction:</strong> ${entryData.reaction}</div>` : ''}
+                    ${entryData.graphics?.name ? `<div><strong>Label:</strong> ${entryData.graphics.name}</div>` : ''}
+                `;
+            }
+
+            handleSearch(query) {
+                const resultsContainer = document.getElementById('searchResults');
+                
+                if (!query.trim()) {
+                    resultsContainer.style.display = 'none';
+                    this.clearHighlights();
+                    return;
+                }
+
+                const matches = this.pathwayData.entries.filter(entry => {
+                    return entry.name.toLowerCase().includes(query.toLowerCase()) ||
+                           entry.id.toLowerCase().includes(query.toLowerCase()) ||
+                           (entry.graphics?.name || '').toLowerCase().includes(query.toLowerCase());
+                });
+
+                if (matches.length > 0) {
+                    resultsContainer.innerHTML = matches.map(match => `
+                        <div class="search-result-item" data-id="${match.id}">
+                            <div style="font-weight: 600;">${match.graphics?.name || match.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">${match.type} - ${match.id}</div>
+                        </div>
+                    `).join('');
+
+                    // Add click handlers to search results
+                    resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const nodeId = item.getAttribute('data-id');
+                            this.selectNode(nodeId);
+                            this.centerOnNode(nodeId);
+                            resultsContainer.style.display = 'none';
+                            document.getElementById('searchInput').value = '';
+                        });
+                    });
+
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.innerHTML = '<div class="search-result-item">No results found</div>';
+                    resultsContainer.style.display = 'block';
+                }
+            }
+
+            centerOnNode(nodeId) {
+                const entry = this.nodes.get(nodeId);
+                if (entry?.graphics) {
+                    const svg = document.getElementById('svgCanvas');
+                    const svgRect = svg.getBoundingClientRect();
+                    
+                    // Calculate the translation needed to center the node
+                    const targetX = svgRect.width / 2 - entry.graphics.x * this.currentZoom;
+                    const targetY = svgRect.height / 2 - entry.graphics.y * this.currentZoom;
+                    
+                    this.currentTranslate = [targetX, targetY];
+                    this.updateTransform();
+                }
+            }
+
+            clearHighlights() {
+                document.querySelectorAll('.node').forEach(node => {
+                    node.classList.remove('highlighted');
+                });
+            }
+
+            zoom(factor, centerX, centerY) {
+                const svg = document.getElementById('svgCanvas');
+                const svgRect = svg.getBoundingClientRect();
+                
+                // Use provided center or use center of viewport
+                const cx = centerX !== undefined ? centerX - svgRect.left : svgRect.width / 2;
+                const cy = centerY !== undefined ? centerY - svgRect.top : svgRect.height / 2;
+
+                // Calculate the point in the current coordinate system
+                const x = (cx - this.currentTranslate[0]) / this.currentZoom;
+                const y = (cy - this.currentTranslate[1]) / this.currentZoom;
+
+                // Update zoom
+                this.currentZoom *= factor;
+                this.currentZoom = Math.max(0.1, Math.min(5, this.currentZoom));
+
+                // Adjust translation to keep the point under the cursor
+                this.currentTranslate[0] = cx - x * this.currentZoom;
+                this.currentTranslate[1] = cy - y * this.currentZoom;
+
+                this.updateTransform();
+                this.updateMinimap();
+            }
+
+            resetView() {
+                this.currentZoom = 1;
+                this.currentTranslate = [0, 0];
+                this.fitToScreen();
+            }
+
+            fitToScreen() {
+                if (!this.canvasBounds) return;
+
+                const svg = document.getElementById('svgCanvas');
+                const svgRect = svg.getBoundingClientRect();
+                
+                const scaleX = svgRect.width / this.canvasBounds.width;
+                const scaleY = svgRect.height / this.canvasBounds.height;
+                this.currentZoom = Math.min(scaleX, scaleY) * 0.9;
+
+                // Center the content
+                const scaledWidth = this.canvasBounds.width * this.currentZoom;
+                const scaledHeight = this.canvasBounds.height * this.currentZoom;
+                
+                this.currentTranslate[0] = (svgRect.width - scaledWidth) / 2 - this.canvasBounds.minX * this.currentZoom;
+                this.currentTranslate[1] = (svgRect.height - scaledHeight) / 2 - this.canvasBounds.minY * this.currentZoom;
+
+                this.updateTransform();
+                this.updateMinimap();
+            }
+
+            updateTransform() {
+                const mainGroup = document.getElementById('mainGroup');
+                mainGroup.setAttribute('transform', 
+                    `translate(${this.currentTranslate[0]}, ${this.currentTranslate[1]}) scale(${this.currentZoom})`
+                );
+            }
+
+            updateStatistics() {
+                if (!this.pathwayData) return;
+
+                const geneCount = this.pathwayData.entries.filter(e => e.type === 'gene').length;
+                const compoundCount = this.pathwayData.entries.filter(e => e.type === 'compound').length;
+
+                document.getElementById('nodeCount').textContent = this.pathwayData.entries.length;
+                document.getElementById('relationCount').textContent = this.pathwayData.relations.length;
+                document.getElementById('geneCount').textContent = geneCount;
+                document.getElementById('compoundCount').textContent = compoundCount;
+            }
+
+            updatePathwayInfo() {
+                if (!this.pathwayData) return;
+
+                const infoContainer = document.getElementById('pathwayInfo');
+                infoContainer.innerHTML = `
+                    <div class="info-item">
+                        <div class="info-label">Title</div>
+                        <div class="info-value">${this.pathwayData.title || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Organism</div>
+                        <div class="info-value">${this.pathwayData.org || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Pathway ID</div>
+                        <div class="info-value">${this.pathwayData.number || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Name</div>
+                        <div class="info-value">${this.pathwayData.name || 'N/A'}</div>
+                    </div>
+                    ${this.pathwayData.link ? `
+                    <div class="info-item">
+                        <div class="info-label">KEGG Link</div>
+                        <div class="info-value">
+                            <a href="${this.pathwayData.link}" target="_blank" style="color: var(--primary-color);">
+                                View on KEGG
+                            </a>
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+            }
+
+            exportSVG() {
+                const svg = document.getElementById('svgCanvas');
+                const serializer = new XMLSerializer();
+                const svgString = serializer.serializeToString(svg);
+                
+                const blob = new Blob([svgString], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${this.pathwayData?.name || 'pathway'}.svg`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            toggleMinimap() {
+                const minimap = document.getElementById('minimap');
+                minimap.classList.toggle('hidden');
+                if (!minimap.classList.contains('hidden')) {
+                    this.updateMinimap();
+                }
+            }
+
+            updateMinimap() {
+                const minimap = document.getElementById('minimap');
+                if (minimap.classList.contains('hidden') || !this.canvasBounds) return;
+
+                const minimapSvg = document.getElementById('minimapSvg');
+                const minimapContent = document.getElementById('minimapContent');
+                
+                // Set minimap viewBox to show entire pathway
+                minimapSvg.setAttribute('viewBox', 
+                    `${this.canvasBounds.minX} ${this.canvasBounds.minY} ${this.canvasBounds.width} ${this.canvasBounds.height}`
+                );
+
+                // Clone and simplify the main content for minimap
+                const mainGroup = document.getElementById('mainGroup');
+                minimapContent.innerHTML = '';
+                
+                if (mainGroup.children.length > 0) {
+                    const clone = mainGroup.cloneNode(true);
+                    // Simplify the clone for performance
+                    clone.querySelectorAll('text').forEach(text => text.remove());
+                    clone.querySelectorAll('.node').forEach(node => {
+                        node.style.opacity = '0.7';
+                    });
+                    minimapContent.appendChild(clone);
+                }
+
+                // Update viewport rectangle
+                this.updateViewportRect();
+            }
+
+            updateViewportRect() {
+                const svg = document.getElementById('svgCanvas');
+                const svgRect = svg.getBoundingClientRect();
+                const viewportRect = document.getElementById('viewportRect');
+
+                if (!this.canvasBounds) return;
+
+                // Calculate visible area in pathway coordinates
+                const visibleMinX = (-this.currentTranslate[0]) / this.currentZoom;
+                const visibleMinY = (-this.currentTranslate[1]) / this.currentZoom;
+                const visibleWidth = svgRect.width / this.currentZoom;
+                const visibleHeight = svgRect.height / this.currentZoom;
+
+                viewportRect.setAttribute('x', visibleMinX);
+                viewportRect.setAttribute('y', visibleMinY);
+                viewportRect.setAttribute('width', visibleWidth);
+                viewportRect.setAttribute('height', visibleHeight);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new KGMLViewer();
+        });
+    </script>
+</body>
+</html> 

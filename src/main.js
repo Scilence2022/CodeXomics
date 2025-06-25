@@ -834,6 +834,14 @@ function createMenu() {
           label: 'Visualization Tools',
           submenu: [
             {
+              label: 'KGML Pathway Viewer',
+              accelerator: 'CmdOrCtrl+Shift+K',
+              click: () => {
+                createKGMLViewerWindow();
+              }
+            },
+            { type: 'separator' },
+            {
               label: 'Network Graph Viewer',
               click: () => {
                 mainWindow.webContents.send('open-visualization-tool', 'network-graph');
@@ -2653,6 +2661,44 @@ function createPDBWindow() {
   }
 }
 
+// Create KGML Pathway Viewer Window
+function createKGMLViewerWindow() {
+  try {
+    const kgmlWindow = new BrowserWindow({
+      width: 1800,
+      height: 1000,
+      minWidth: 1400,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'KGML Pathway Viewer - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    kgmlWindow.loadFile(path.join(__dirname, 'bioinformatics-tools/kgml-viewer.html'));
+
+    kgmlWindow.once('ready-to-show', () => {
+      kgmlWindow.show();
+      // 为KGML工具窗口设置独立菜单
+      createToolWindowMenu(kgmlWindow, 'KGML Pathway Viewer');
+    });
+
+    kgmlWindow.webContents.openDevTools();
+
+    kgmlWindow.on('closed', () => {
+      console.log('KGML Pathway Viewer window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open KGML Pathway Viewer:', error);
+  }
+}
+
 // ========== IPC EVENT HANDLERS FOR TOOL WINDOWS ==========
 
 // IPC handlers for opening tool windows (for testing and external access)
@@ -2704,6 +2750,11 @@ ipcMain.on('open-reactome-window', () => {
 ipcMain.on('open-pdb-window', () => {
   console.log('IPC: Opening PDB window...');
   createPDBWindow();
+});
+
+ipcMain.on('open-kgml-viewer-window', () => {
+  console.log('IPC: Opening KGML Pathway Viewer window...');
+  createKGMLViewerWindow();
 });
 
 // IPC handler for focusing main window

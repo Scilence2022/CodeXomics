@@ -6,7 +6,7 @@
     <title>STRING Protein Networks - Genome AI Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.23.0/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js" onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/npm/cytoscape@3.23.0/dist/cytoscape.min.js'"></script>
     <style>
         :root {
             --primary-color: #ff6b35;
@@ -708,6 +708,11 @@ KRAS" rows="6"></textarea>
                 const container = document.getElementById('networkVisualization');
                 container.innerHTML = '';
 
+                // Check if cytoscape is available
+                if (typeof cytoscape === 'undefined') {
+                    throw new Error('cytoscape is not defined. Please check network connection and reload the page.');
+                }
+
                 this.cy = cytoscape({
                     container: container,
                     elements: [...networkData.nodes, ...networkData.edges],
@@ -892,8 +897,38 @@ Tips:
             }
         }
 
+        // Function to check and initialize when libraries are ready
+        function initializeWhenReady() {
+            if (typeof cytoscape !== 'undefined') {
+                console.log('Cytoscape.js loaded successfully, version:', cytoscape.version);
+                new STRINGNetworkAnalyzer();
+                return;
+            }
+            
+            // If not ready, check again after a short delay
+            setTimeout(initializeWhenReady, 100);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            new STRINGNetworkAnalyzer();
+            // Start checking for library availability
+            initializeWhenReady();
+            
+            // Set a timeout to show error if libraries don't load within 10 seconds
+            setTimeout(() => {
+                if (typeof cytoscape === 'undefined') {
+                    console.error('Cytoscape.js library failed to load within timeout');
+                    const statusArea = document.getElementById('statusArea');
+                    if (statusArea) {
+                        statusArea.innerHTML = `
+                            <div class="status-message status-error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Required libraries failed to load. Please check your internet connection and reload the page.
+                                <br><small>If this problem persists, try clearing your browser cache.</small>
+                            </div>
+                        `;
+                    }
+                }
+            }, 10000);
         });
     </script>
 </body>
