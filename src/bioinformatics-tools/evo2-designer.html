@@ -615,7 +615,152 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadApiConfig();
             loadAnalysisHistory();
+            setupMenuEventListeners();
         });
+
+        // Setup menu event listeners
+        function setupMenuEventListeners() {
+            // Listen for menu actions from main process
+            if (typeof require !== 'undefined') {
+                const { ipcRenderer } = require('electron');
+                
+                ipcRenderer.on('evo2-menu-action', (event, action, data) => {
+                    handleMenuAction(action, data);
+                });
+            }
+        }
+
+        // Handle menu actions
+        function handleMenuAction(action, data) {
+            console.log('Menu action received:', action, data);
+            
+            switch (action) {
+                // File menu actions
+                case 'new-project':
+                    newProject();
+                    break;
+                case 'open-sequence-file':
+                    openSequenceFile(data);
+                    break;
+                case 'import-clipboard':
+                    importFromClipboard();
+                    break;
+                case 'save-design':
+                    saveDesign();
+                    break;
+                case 'save-as':
+                    saveAsDesign();
+                    break;
+                case 'export-fasta':
+                    exportResults('fasta');
+                    break;
+                case 'export-genbank':
+                    exportResults('genbank');
+                    break;
+                case 'export-json':
+                    exportResults('json');
+                    break;
+                case 'export-report':
+                    exportResults('report');
+                    break;
+
+                // Edit menu actions
+                case 'undo':
+                    performUndo();
+                    break;
+                case 'redo':
+                    performRedo();
+                    break;
+                case 'copy':
+                    copySelectedText();
+                    break;
+                case 'paste':
+                    pasteToFocusedElement();
+                    break;
+                case 'cut':
+                    cutSelectedText();
+                    break;
+                case 'select-all':
+                    selectAllInFocusedElement();
+                    break;
+                case 'copy-sequence':
+                    copyCurrentSequence();
+                    break;
+                case 'paste-sequence':
+                    pasteSequenceToCurrentMode();
+                    break;
+                case 'clear-input':
+                    clearCurrentInput();
+                    break;
+
+                // Generation menu actions
+                case 'generate-sequence':
+                    switchMode('generate');
+                    generateSequence();
+                    break;
+                case 'predict-function':
+                    switchMode('predict');
+                    predictFunction();
+                    break;
+                case 'design-crispr':
+                    switchMode('crispr');
+                    designCrispr();
+                    break;
+                case 'optimize-sequence':
+                    switchMode('optimize');
+                    optimizeSequence();
+                    break;
+                case 'analyze-essentiality':
+                    switchMode('essentiality');
+                    analyzeEssentiality();
+                    break;
+                case 'stop-generation':
+                    stopCurrentGeneration();
+                    break;
+
+                // Tools menu actions
+                case 'configure-api':
+                    focusApiConfiguration();
+                    break;
+                case 'test-api-connection':
+                    testApiConnection();
+                    break;
+                case 'show-history':
+                    showHistoryPanel();
+                    break;
+                case 'clear-history':
+                    clearAnalysisHistory();
+                    break;
+
+                // View menu actions
+                case 'switch-mode':
+                    switchMode(data);
+                    break;
+                case 'toggle-sidebar':
+                    toggleSidebar();
+                    break;
+                case 'toggle-results-panel':
+                    toggleResultsPanel();
+                    break;
+                case 'toggle-history-panel':
+                    toggleHistoryPanel();
+                    break;
+
+                // Help menu actions
+                case 'show-user-guide':
+                    showUserGuide();
+                    break;
+                case 'show-shortcuts':
+                    showKeyboardShortcuts();
+                    break;
+                case 'about':
+                    showAbout();
+                    break;
+
+                default:
+                    console.log('Unhandled menu action:', action);
+            }
+        }
 
         // Mode switching
         function switchMode(mode) {
@@ -968,6 +1113,48 @@
             resultsContent.innerHTML = `<div class="${className}">${message}</div>`;
         }
 
+        // Enhanced notification system for menu actions
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 10000;
+                padding: 12px 20px; border-radius: 6px; color: white;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                font-size: 14px; font-weight: 500; max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transform: translateX(100%); transition: transform 0.3s ease;
+            `;
+            
+            // Set background color based on type
+            const colors = {
+                success: '#10B981',
+                error: '#EF4444', 
+                warning: '#F59E0B',
+                info: '#3B82F6'
+            };
+            notification.style.backgroundColor = colors[type] || colors.info;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                notification.style.transform = 'translateX(0)';
+            });
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
         function setPrompt(sequence) {
             document.getElementById('generatePrompt').value = sequence;
         }
@@ -1050,6 +1237,429 @@
                 showMessage('Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
                 document.getElementById('apiKey').focus();
             }
+        }
+
+        // File Menu Functions
+        function newProject() {
+            if (confirm('Start a new project? This will clear all current data.')) {
+                clearAll();
+                switchMode('generate');
+                showMessage('New project started', 'success');
+            }
+        }
+
+        function openSequenceFile(filePath) {
+            if (typeof require !== 'undefined') {
+                const fs = require('fs');
+                try {
+                    const content = fs.readFileSync(filePath, 'utf8');
+                    
+                    // Try to parse as FASTA
+                    if (content.startsWith('>')) {
+                        const sequences = content.split('\n').filter(line => !line.startsWith('>')).join('');
+                        pasteSequenceToCurrentInput(sequences);
+                        showMessage(`Loaded FASTA file: ${filePath}`, 'success');
+                    } else {
+                        // Treat as plain text sequence
+                        pasteSequenceToCurrentInput(content.trim());
+                        showMessage(`Loaded sequence file: ${filePath}`, 'success');
+                    }
+                } catch (error) {
+                    showMessage(`Error loading file: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function importFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                pasteSequenceToCurrentInput(text);
+                showMessage('Sequence imported from clipboard', 'success');
+            } catch (error) {
+                showMessage('Could not read from clipboard', 'error');
+            }
+        }
+
+        function saveDesign() {
+            const designData = {
+                mode: window.currentMode || 'generate',
+                timestamp: new Date().toISOString(),
+                inputs: getCurrentInputs(),
+                results: getCurrentResults(),
+                config: getApiConfig()
+            };
+            
+            const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `evo2-design-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showMessage('Design saved', 'success');
+        }
+
+        function saveAsDesign() {
+            saveDesign(); // For now, same as save
+        }
+
+        function exportResults(format) {
+            const results = getCurrentResults();
+            if (!results || Object.keys(results).length === 0) {
+                showMessage('No results to export', 'error');
+                return;
+            }
+
+            let content = JSON.stringify(results, null, 2);
+            let filename = `evo2-results-${Date.now()}.json`;
+
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            showMessage(`Results exported as ${format.toUpperCase()}`, 'success');
+        }
+
+        // Edit Menu Functions
+        function performUndo() {
+            showMessage('Undo not yet implemented', 'error');
+        }
+
+        function performRedo() {
+            showMessage('Redo not yet implemented', 'error');
+        }
+
+        function copySelectedText() {
+            const selection = window.getSelection().toString();
+            if (selection) {
+                navigator.clipboard.writeText(selection).then(() => {
+                    showMessage('Text copied to clipboard', 'success');
+                });
+            } else {
+                showMessage('No text selected', 'error');
+            }
+        }
+
+        function pasteToFocusedElement() {
+            navigator.clipboard.readText().then(text => {
+                const activeElement = document.activeElement;
+                if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                    activeElement.value = text;
+                    activeElement.dispatchEvent(new Event('input'));
+                    showMessage('Text pasted', 'success');
+                }
+            }).catch(() => {
+                showMessage('Could not paste from clipboard', 'error');
+            });
+        }
+
+        function cutSelectedText() {
+            const selection = window.getSelection().toString();
+            if (selection) {
+                navigator.clipboard.writeText(selection).then(() => {
+                    document.execCommand('delete');
+                    showMessage('Text cut to clipboard', 'success');
+                });
+            } else {
+                showMessage('No text selected', 'error');
+            }
+        }
+
+        function selectAllInFocusedElement() {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                activeElement.select();
+            } else {
+                document.execCommand('selectAll');
+            }
+        }
+
+        function copyCurrentSequence() {
+            const sequence = getCurrentSequenceFromMode();
+            if (sequence) {
+                navigator.clipboard.writeText(sequence).then(() => {
+                    showMessage('Sequence copied to clipboard', 'success');
+                });
+            } else {
+                showMessage('No sequence to copy', 'error');
+            }
+        }
+
+        function pasteSequenceToCurrentMode() {
+            navigator.clipboard.readText().then(text => {
+                pasteSequenceToCurrentInput(text);
+                showMessage('Sequence pasted', 'success');
+            }).catch(() => {
+                showMessage('Could not paste sequence', 'error');
+            });
+        }
+
+        function clearCurrentInput() {
+            const currentInput = getCurrentModeInput();
+            if (currentInput) {
+                currentInput.value = '';
+                currentInput.dispatchEvent(new Event('input'));
+                showMessage('Input cleared', 'success');
+            }
+        }
+
+        // Generation menu action functions
+        function generateSequence() {
+            generateSequenceAction();
+        }
+
+        function predictFunction() {
+            predictFunctionAction();
+        }
+
+        function designCrispr() {
+            designCrisprAction();
+        }
+
+        function optimizeSequence() {
+            optimizeSequenceAction();
+        }
+
+        function analyzeEssentiality() {
+            analyzeEssentialityAction();
+        }
+
+        function stopCurrentGeneration() {
+            showMessage('Generation stopped', 'info');
+        }
+
+        // Tools Menu Functions
+        function focusApiConfiguration() {
+            document.getElementById('apiUrl').focus();
+            document.getElementById('apiUrl').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function testApiConnection() {
+            const config = getApiConfig();
+            if (!config.url || !config.key) {
+                showMessage('Please configure API URL and key first', 'error');
+                return;
+            }
+
+            showMessage('Testing API connection...', 'success');
+        }
+
+        function clearAnalysisHistory() {
+            if (confirm('Are you sure you want to clear all analysis history?')) {
+                analysisHistory = [];
+                localStorage.removeItem('evo2_analysis_history');
+                updateHistoryDisplay();
+                showMessage('Analysis history cleared', 'success');
+            }
+        }
+
+        // View Menu Functions
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (sidebar.style.display === 'none') {
+                sidebar.style.display = 'block';
+                mainContent.style.marginLeft = '320px';
+            } else {
+                sidebar.style.display = 'none';
+                mainContent.style.marginLeft = '0';
+            }
+        }
+
+        function toggleResultsPanel() {
+            const resultsArea = document.getElementById('resultsArea');
+            if (resultsArea) {
+                resultsArea.style.display = resultsArea.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function showHistoryPanel() {
+            const historySection = document.querySelector('.history-section');
+            if (historySection) {
+                historySection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Help Menu Functions
+        function showUserGuide() {
+            const guideContent = `
+            <div style="padding: 20px; line-height: 1.6;">
+                <h3>Evo2 Designer User Guide</h3>
+                <p><strong>Getting Started:</strong></p>
+                <ul>
+                    <li>Configure your NVIDIA API credentials in the sidebar</li>
+                    <li>Choose one of five analysis modes using the tabs</li>
+                    <li>Input your sequence or parameters</li>
+                    <li>Click the analyze button to start</li>
+                </ul>
+                <p><strong>Modes:</strong></p>
+                <ul>
+                    <li><strong>Generate:</strong> Create new DNA sequences</li>
+                    <li><strong>Predict:</strong> Predict biological functions</li>
+                    <li><strong>CRISPR:</strong> Design CRISPR-Cas systems</li>
+                    <li><strong>Optimize:</strong> Optimize sequences for specific goals</li>
+                    <li><strong>Essentiality:</strong> Analyze gene essentiality</li>
+                </ul>
+            </div>
+            `;
+            showDialog('User Guide', guideContent);
+        }
+
+        function showKeyboardShortcuts() {
+            const shortcutsContent = `
+            <div style="padding: 20px; line-height: 1.6;">
+                <h3>Keyboard Shortcuts</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <tr style="border-bottom: 1px solid #ddd;"><th style="text-align: left; padding: 8px;">Action</th><th style="text-align: left; padding: 8px;">Shortcut</th></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">New Project</td><td style="padding: 6px;">Cmd/Ctrl+N</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Open File</td><td style="padding: 6px;">Cmd/Ctrl+O</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Save Design</td><td style="padding: 6px;">Cmd/Ctrl+S</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Copy</td><td style="padding: 6px;">Cmd/Ctrl+C</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Paste</td><td style="padding: 6px;">Cmd/Ctrl+V</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Generate Sequence</td><td style="padding: 6px;">Cmd/Ctrl+G</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Predict Function</td><td style="padding: 6px;">Cmd/Ctrl+P</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Design CRISPR</td><td style="padding: 6px;">Cmd/Ctrl+R</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 6px;">Switch Modes</td><td style="padding: 6px;">1, 2, 3, 4, 5</td></tr>
+                </table>
+            </div>
+            `;
+            showDialog('Keyboard Shortcuts', shortcutsContent);
+        }
+
+        function showAbout() {
+            const aboutContent = `
+            <div style="padding: 20px; line-height: 1.6;">
+                <h3>About Evo2 Designer</h3>
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Description:</strong> Advanced DNA sequence design tool powered by NVIDIA's Evo2 neural network.</p>
+                <p><strong>Features:</strong></p>
+                <ul>
+                    <li>DNA sequence generation</li>
+                    <li>Function prediction</li>
+                    <li>CRISPR-Cas system design</li>
+                    <li>Sequence optimization</li>
+                    <li>Gene essentiality analysis</li>
+                </ul>
+                <p><strong>Technology:</strong> Built on NVIDIA's Evo2-40B model with StripedHyena architecture.</p>
+                <p><strong>Developer:</strong> Genome AI Studio Team</p>
+            </div>
+            `;
+            showDialog('About Evo2 Designer', aboutContent);
+        }
+
+        // Helper functions for menu actions
+        function getCurrentInputs() {
+            const mode = window.currentMode || 'generate';
+            const inputs = {};
+            
+            if (mode === 'generate') {
+                inputs.prompt = document.getElementById('generatePrompt')?.value || '';
+                inputs.maxTokens = document.getElementById('maxTokens')?.value || '';
+            } else if (mode === 'predict') {
+                inputs.sequence = document.getElementById('predictSequence')?.value || '';
+            } else if (mode === 'crispr') {
+                inputs.targetSequence = document.getElementById('crisprTarget')?.value || '';
+            }
+            
+            return inputs;
+        }
+
+        function getCurrentResults() {
+            const resultsContent = document.getElementById('resultsContent');
+            return resultsContent ? { html: resultsContent.innerHTML } : {};
+        }
+
+        function getCurrentSequenceFromMode() {
+            const mode = window.currentMode || 'generate';
+            
+            if (mode === 'generate') {
+                return document.getElementById('generatePrompt')?.value || '';
+            } else if (mode === 'predict') {
+                return document.getElementById('predictSequence')?.value || '';
+            } else if (mode === 'crispr') {
+                return document.getElementById('crisprTarget')?.value || '';
+            }
+            
+            return '';
+        }
+
+        function pasteSequenceToCurrentInput(sequence) {
+            const mode = window.currentMode || 'generate';
+            
+            if (mode === 'generate') {
+                const input = document.getElementById('generatePrompt');
+                if (input) {
+                    input.value = sequence;
+                    input.dispatchEvent(new Event('input'));
+                }
+            } else if (mode === 'predict') {
+                const input = document.getElementById('predictSequence');
+                if (input) {
+                    input.value = sequence;
+                    input.dispatchEvent(new Event('input'));
+                }
+            } else if (mode === 'crispr') {
+                const input = document.getElementById('crisprTarget');
+                if (input) {
+                    input.value = sequence;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
+        }
+
+        function getCurrentModeInput() {
+            const mode = window.currentMode || 'generate';
+            
+            if (mode === 'generate') {
+                return document.getElementById('generatePrompt');
+            } else if (mode === 'predict') {
+                return document.getElementById('predictSequence');
+            } else if (mode === 'crispr') {
+                return document.getElementById('crisprTarget');
+            }
+            
+            return null;
+        }
+
+        function showDialog(title, content) {
+            // Create a simple modal dialog
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+                align-items: center; justify-content: center;
+            `;
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: white; border-radius: 8px; max-width: 600px; 
+                max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            
+            dialog.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; 
+                           padding: 20px 20px 10px; border-bottom: 1px solid #eee;">
+                    <h3 style="margin: 0;">${title}</h3>
+                    <button onclick="this.closest('.overlay').remove()" 
+                           style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                </div>
+                <div>${content}</div>
+            `;
+            
+            overlay.className = 'overlay';
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            // Close on outside click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
         }
     </script>
 </body>

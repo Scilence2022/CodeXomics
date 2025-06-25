@@ -380,6 +380,454 @@ function createToolWindowMenu(toolWindow, toolName) {
   }
 }
 
+// Create specialized menu for Evo2 DNA Designer
+function createEvo2WindowMenu(evo2Window) {
+  const template = [
+    // macOS app menu
+    ...(process.platform === 'darwin' ? [{
+      label: 'Evo2 Designer',
+      submenu: [
+        {
+          label: 'About Evo2 Designer',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide Evo2 Designer',
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit',
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
+    
+    // File Menu
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Design Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'new-project');
+          }
+        },
+        {
+          label: 'Open Sequence File',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(evo2Window, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas'] },
+                { name: 'GenBank Files', extensions: ['gb', 'gbk'] },
+                { name: 'Text Files', extensions: ['txt'] },
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] }
+              ]
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              evo2Window.webContents.send('evo2-menu-action', 'open-sequence-file', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Import from Clipboard',
+          accelerator: 'CmdOrCtrl+Shift+V',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'import-clipboard');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Save Design',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'save-design');
+          }
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'save-as');
+          }
+        },
+        {
+          label: 'Export Results',
+          submenu: [
+            {
+              label: 'Export as FASTA',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'export-fasta');
+              }
+            },
+            {
+              label: 'Export as GenBank',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'export-genbank');
+              }
+            },
+            {
+              label: 'Export as JSON',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'export-json');
+              }
+            },
+            {
+              label: 'Export Analysis Report',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'export-report');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        ...(process.platform !== 'darwin' ? [
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              evo2Window.close();
+            }
+          }
+        ] : [
+          {
+            label: 'Close Window',
+            accelerator: 'Cmd+W',
+            click: () => {
+              evo2Window.close();
+            }
+          }
+        ])
+      ]
+    },
+
+    // Edit Menu  
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'undo');
+          }
+        },
+        {
+          label: 'Redo',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'redo');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'copy');
+          }
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'paste');
+          }
+        },
+        {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'cut');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'select-all');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Copy Sequence',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'copy-sequence');
+          }
+        },
+        {
+          label: 'Paste Sequence',
+          accelerator: 'CmdOrCtrl+Shift+V',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'paste-sequence');
+          }
+        },
+        {
+          label: 'Clear Input',
+          accelerator: 'CmdOrCtrl+Delete',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'clear-input');
+          }
+        }
+      ]
+    },
+
+    // Generation Menu
+    {
+      label: 'Generation',
+      submenu: [
+        {
+          label: 'Generate DNA Sequence',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'generate-sequence');
+          }
+        },
+        {
+          label: 'Predict Function',
+          accelerator: 'CmdOrCtrl+P',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'predict-function');
+          }
+        },
+        {
+          label: 'Design CRISPR System',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'design-crispr');
+          }
+        },
+        {
+          label: 'Optimize Sequence',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'optimize-sequence');
+          }
+        },
+        {
+          label: 'Analyze Essentiality',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'analyze-essentiality');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Stop Generation',
+          accelerator: 'CmdOrCtrl+.',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'stop-generation');
+          }
+        }
+      ]
+    },
+
+    // Tools Menu
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'NVIDIA API Configuration',
+          accelerator: 'CmdOrCtrl+Alt+C',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'configure-api');
+          }
+        },
+        {
+          label: 'Test API Connection',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'test-api-connection');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'History Manager',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'show-history');
+          }
+        },
+        {
+          label: 'Clear History',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'clear-history');
+          }
+        }
+      ]
+    },
+
+    // View Menu
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Switch Mode',
+          submenu: [
+            {
+              label: 'Sequence Generation',
+              accelerator: '1',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'generate');
+              }
+            },
+            {
+              label: 'Function Prediction',
+              accelerator: '2',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'predict');
+              }
+            },
+            {
+              label: 'CRISPR Design',
+              accelerator: '3',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'crispr');
+              }
+            },
+            {
+              label: 'Sequence Optimization',
+              accelerator: '4',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'optimize');
+              }
+            },
+            {
+              label: 'Essentiality Analysis',
+              accelerator: '5',
+              click: () => {
+                evo2Window.webContents.send('evo2-menu-action', 'switch-mode', 'essentiality');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+
+    // Window Menu
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        ...(process.platform === 'darwin' ? [
+          { type: 'separator' },
+          { role: 'front' }
+        ] : [
+          { role: 'close' }
+        ]),
+        { type: 'separator' },
+        {
+          label: 'Open Main Genome AI Studio',
+          click: () => {
+            // Focus main window
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.focus();
+              mainWindow.show();
+            }
+          }
+        }
+      ]
+    },
+
+    // Help Menu
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Evo2 User Guide',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'show-user-guide');
+          }
+        },
+        {
+          label: 'NVIDIA Evo2 Documentation',
+          click: () => {
+            require('electron').shell.openExternal('https://docs.api.nvidia.com/nim/reference/arc-evo2-40b');
+          }
+        },
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'CmdOrCtrl+?',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'show-shortcuts');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'About Evo2 Designer',
+          click: () => {
+            evo2Window.webContents.send('evo2-menu-action', 'about');
+          }
+        }
+      ]
+    }
+  ];
+
+  // Set window focus event to activate this menu
+  evo2Window.on('focus', () => {
+    currentActiveWindow = evo2Window;
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    console.log('Switched to Evo2 Designer menu');
+  });
+
+  // When window closes, restore main menu
+  evo2Window.on('closed', () => {
+    if (currentActiveWindow === evo2Window) {
+      currentActiveWindow = null;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        createMenu(); // Restore main window menu
+      }
+    }
+  });
+
+  // Set initial menu if window is focused
+  if (evo2Window.isFocused()) {
+    currentActiveWindow = evo2Window;
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    console.log('Initial Evo2 Designer menu set');
+  }
+}
+
 function createWindow() {
   // Create the browser window
   mainWindow = new BrowserWindow({
@@ -2730,8 +3178,8 @@ function createEvo2Window() {
 
     evo2Window.once('ready-to-show', () => {
       evo2Window.show();
-      // Set independent menu for Evo2 tool window
-      createToolWindowMenu(evo2Window, 'Evo2 Design');
+      // Set specialized menu for Evo2 tool window
+      createEvo2WindowMenu(evo2Window);
     });
 
     evo2Window.webContents.openDevTools();
