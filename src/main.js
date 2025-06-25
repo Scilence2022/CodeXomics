@@ -952,6 +952,14 @@ function createMenu() {
               click: () => {
                 createPDBWindow();
               }
+            },
+            { type: 'separator' },
+            {
+              label: 'Evo2 Design',
+              accelerator: 'CmdOrCtrl+Shift+E',
+              click: () => {
+                createEvo2Window();
+              }
             }
           ]
         }
@@ -2699,6 +2707,44 @@ function createKGMLViewerWindow() {
   }
 }
 
+// Create Evo2 Design Window
+function createEvo2Window() {
+  try {
+    const evo2Window = new BrowserWindow({
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'NVIDIA Evo2 DNA Designer - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false
+    });
+
+    evo2Window.loadFile(path.join(__dirname, 'bioinformatics-tools/evo2-designer.html'));
+
+    evo2Window.once('ready-to-show', () => {
+      evo2Window.show();
+      // Set independent menu for Evo2 tool window
+      createToolWindowMenu(evo2Window, 'Evo2 Design');
+    });
+
+    evo2Window.webContents.openDevTools();
+
+    evo2Window.on('closed', () => {
+      console.log('Evo2 Design window closed');
+    });
+
+  } catch (error) {
+    console.error('Failed to open Evo2 Design:', error);
+  }
+}
+
 // ========== IPC EVENT HANDLERS FOR TOOL WINDOWS ==========
 
 // IPC handlers for opening tool windows (for testing and external access)
@@ -2755,6 +2801,11 @@ ipcMain.on('open-pdb-window', () => {
 ipcMain.on('open-kgml-viewer-window', () => {
   console.log('IPC: Opening KGML Pathway Viewer window...');
   createKGMLViewerWindow();
+});
+
+ipcMain.on('open-evo2-window', () => {
+  console.log('IPC: Opening Evo2 Design window...');
+  createEvo2Window();
 });
 
 // IPC handler for focusing main window

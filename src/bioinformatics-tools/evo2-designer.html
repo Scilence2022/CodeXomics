@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVIDIA Evo2 DNA Designer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c5530, #4a7c59);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 80vh;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .content-area {
+            padding: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+        }
+
+        .section h3 {
+            margin: 0 0 20px 0;
+            color: #2c5530;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4a7c59;
+            box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4a7c59, #2c5530);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 124, 89, 0.3);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .mode-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .mode-tab.active {
+            background: white;
+            color: #4a7c59;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-configured {
+            background: #28a745;
+        }
+
+        .status-unconfigured {
+            background: #dc3545;
+        }
+
+        .results-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 200px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4a7c59;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4a7c59;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-type {
+            background: #4a7c59;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .sequence-display {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metadata-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .metadata-value {
+            color: #2c5530;
+            font-weight: 600;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin: 20px 0;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin: 20px 0;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .example-btn {
+            background: #e9ecef;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .example-btn:hover {
+            background: #4a7c59;
+            color: white;
+        }
+
+        .range-input {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .range-value {
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-weight: 600;
+            color: #4a7c59;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 NVIDIA Evo2 DNA Designer</h1>
+            <p>Advanced AI-powered genomic sequence design and analysis using NVIDIA's Evo2 foundation model</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- API Configuration -->
+                <div class="section config-section">
+                    <h3>⚙️ API Configuration</h3>
+                    <div class="config-status">
+                        <div class="status-indicator status-unconfigured" id="configStatus"></div>
+                        <span id="configStatusText">Not Configured</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="apiKey">NVIDIA API Key</label>
+                        <input type="password" id="apiKey" class="form-control" 
+                               placeholder="Enter your NVIDIA API key">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="apiUrl">API Base URL</label>
+                        <input type="text" id="apiUrl" class="form-control" 
+                               value="https://integrate.api.nvidia.com"
+                               placeholder="API base URL">
+                    </div>
+                    
+                    <button class="btn" onclick="saveApiConfig()">Save Configuration</button>
+                    <button class="btn btn-secondary" onclick="testApiConnection()">Test Connection</button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="section">
+                    <h3>🚀 Quick Actions</h3>
+                    <button class="btn" onclick="loadExample('generate')">Generate Example</button>
+                    <button class="btn" onclick="loadExample('predict')">Predict Function</button>
+                    <button class="btn" onclick="loadExample('crispr')">Design CRISPR</button>
+                    <button class="btn" onclick="loadExample('optimize')">Optimize Sequence</button>
+                    <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+                </div>
+
+                <!-- Analysis History -->
+                <div class="section">
+                    <h3>📊 Recent Analysis</h3>
+                    <div id="historyList">
+                        <p style="color: #6c757d; font-style: italic;">No recent analysis</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Mode Selection -->
+                <div class="mode-tabs">
+                    <button class="mode-tab active" onclick="switchMode('generate')" id="tab-generate">
+                        Sequence Generation
+                    </button>
+                    <button class="mode-tab" onclick="switchMode('predict')" id="tab-predict">
+                        Function Prediction
+                    </button>
+                    <button class="mode-tab" onclick="switchMode('crispr')" id="tab-crispr">
+                        CRISPR Design
+                    </button>
+                    <button class="mode-tab" onclick="switchMode('optimize')" id="tab-optimize">
+                        Sequence Optimization
+                    </button>
+                    <button class="mode-tab" onclick="switchMode('essentiality')" id="tab-essentiality">
+                        Essentiality Analysis
+                    </button>
+                </div>
+
+                <!-- Sequence Generation Mode -->
+                <div id="mode-generate" class="mode-content">
+                    <div class="section">
+                        <h3>🧬 DNA Sequence Generation</h3>
+                        <p>Generate novel DNA sequences using Evo2's generative capabilities. Can create sequences up to 1M base pairs.</p>
+                        
+                        <div class="form-group">
+                            <label for="generatePrompt">Starting Sequence/Prompt (optional)</label>
+                            <textarea id="generatePrompt" class="form-control" 
+                                    placeholder="Enter a DNA sequence as starting prompt, or leave empty for de novo generation..."></textarea>
+                            <div class="example-buttons">
+                                <span class="example-btn" onclick="setPrompt('ATGAAGTCG')">Gene Start</span>
+                                <span class="example-btn" onclick="setPrompt('TATAAA')">Promoter</span>
+                                <span class="example-btn" onclick="setPrompt('GAATTC')">Restriction Site</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="taxonomy">Organism Taxonomy (optional)</label>
+                            <input type="text" id="taxonomy" class="form-control" 
+                                   placeholder="|k__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;g__Escherichia;s__Escherichia coli|">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label for="maxTokens">Max Length: <span class="range-value" id="maxTokensValue">1000</span></label>
+                                <input type="range" id="maxTokens" class="range-input" min="100" max="10000" value="1000" 
+                                       oninput="document.getElementById('maxTokensValue').textContent = this.value">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="temperature">Temperature: <span class="range-value" id="temperatureValue">1.0</span></label>
+                                <input type="range" id="temperature" class="range-input" min="0" max="2" step="0.1" value="1.0"
+                                       oninput="document.getElementById('temperatureValue').textContent = this.value">
+                            </div>
+                        </div>
+
+                        <button class="btn" onclick="generateSequence()" id="generateBtn">
+                            Generate DNA Sequence
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Function Prediction Mode -->
+                <div id="mode-predict" class="mode-content" style="display: none;">
+                    <div class="section">
+                        <h3>🔬 Function Prediction</h3>
+                        <p>Predict biological function from DNA sequences using Evo2's zero-shot capabilities.</p>
+                        
+                        <div class="form-group">
+                            <label for="predictSequence">DNA Sequence</label>
+                            <textarea id="predictSequence" class="form-control" 
+                                    placeholder="Enter DNA sequence for function prediction..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="analysisType">Analysis Type</label>
+                            <select id="analysisType" class="form-control">
+                                <option value="function">Function Prediction</option>
+                                <option value="essentiality">Essentiality Analysis</option>
+                                <option value="regulation">Regulatory Element Identification</option>
+                            </select>
+                        </div>
+
+                        <button class="btn" onclick="predictFunction()" id="predictBtn">
+                            Predict Function
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CRISPR Design Mode -->
+                <div id="mode-crispr" class="mode-content" style="display: none;">
+                    <div class="section">
+                        <h3>✂️ CRISPR-Cas System Design</h3>
+                        <p>Design CRISPR-Cas molecular complexes for targeted genome editing.</p>
+                        
+                        <div class="form-group">
+                            <label for="crisprTarget">Target DNA Sequence</label>
+                            <textarea id="crisprTarget" class="form-control" 
+                                    placeholder="Enter target DNA sequence for CRISPR design..."></textarea>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label for="casType">Cas System Type</label>
+                                <select id="casType" class="form-control">
+                                    <option value="Auto">Auto-detect</option>
+                                    <option value="Cas9">Cas9</option>
+                                    <option value="Cas12">Cas12</option>
+                                    <option value="Cas13">Cas13</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="guideLength">Guide RNA Length: <span class="range-value" id="guideLengthValue">20</span></label>
+                                <input type="range" id="guideLength" class="range-input" min="15" max="25" value="20"
+                                       oninput="document.getElementById('guideLengthValue').textContent = this.value">
+                            </div>
+                        </div>
+
+                        <button class="btn" onclick="designCrispr()" id="crisprBtn">
+                            Design CRISPR System
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sequence Optimization Mode -->
+                <div id="mode-optimize" class="mode-content" style="display: none;">
+                    <div class="section">
+                        <h3>⚡ Sequence Optimization</h3>
+                        <p>Optimize DNA sequences for specific properties while preserving function.</p>
+                        
+                        <div class="form-group">
+                            <label for="optimizeSequence">DNA Sequence to Optimize</label>
+                            <textarea id="optimizeSequence" class="form-control" 
+                                    placeholder="Enter DNA sequence to optimize..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="optimizationGoal">Optimization Goal</label>
+                            <select id="optimizationGoal" class="form-control">
+                                <option value="expression">Higher Expression</option>
+                                <option value="stability">Improved Stability</option>
+                                <option value="codingDensity">Increased Coding Density</option>
+                                <option value="gc_content">Optimal GC Content</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="targetOrganism">Target Organism (optional)</label>
+                            <input type="text" id="targetOrganism" class="form-control" 
+                                   placeholder="e.g., Escherichia coli, Homo sapiens">
+                        </div>
+
+                        <button class="btn" onclick="optimizeSequence()" id="optimizeBtn">
+                            Optimize Sequence
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Essentiality Analysis Mode -->
+                <div id="mode-essentiality" class="mode-content" style="display: none;">
+                    <div class="section">
+                        <h3>🎯 Gene Essentiality Analysis</h3>
+                        <p>Analyze gene essentiality at nucleotide resolution to identify critical regions.</p>
+                        
+                        <div class="form-group">
+                            <label for="essentialitySequence">DNA Sequence</label>
+                            <textarea id="essentialitySequence" class="form-control" 
+                                    placeholder="Enter DNA sequence for essentiality analysis..."></textarea>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label for="resolution">Analysis Resolution</label>
+                                <select id="resolution" class="form-control">
+                                    <option value="nucleotide">Nucleotide Level</option>
+                                    <option value="codon">Codon Level</option>
+                                    <option value="domain">Domain Level</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="organism">Organism Context</label>
+                                <input type="text" id="organism" class="form-control" 
+                                       placeholder="e.g., Escherichia coli">
+                            </div>
+                        </div>
+
+                        <button class="btn" onclick="analyzeEssentiality()" id="essentialityBtn">
+                            Analyze Essentiality
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Area -->
+                <div id="resultsArea" class="results-container" style="display: none;">
+                    <h3>📋 Analysis Results</h3>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentMode = 'generate';
+        let analysisHistory = [];
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadApiConfig();
+            loadAnalysisHistory();
+        });
+
+        // Mode switching
+        function switchMode(mode) {
+            // Hide all mode contents
+            document.querySelectorAll('.mode-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected mode and activate tab
+            document.getElementById(`mode-${mode}`).style.display = 'block';
+            document.getElementById(`tab-${mode}`).classList.add('active');
+            
+            currentMode = mode;
+        }
+
+        // API Configuration
+        function saveApiConfig() {
+            const apiKey = document.getElementById('apiKey').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            localStorage.setItem('evo2_api_key', apiKey);
+            localStorage.setItem('evo2_api_url', apiUrl);
+            
+            updateConfigStatus();
+            showMessage('Configuration saved successfully!', 'success');
+        }
+
+        function loadApiConfig() {
+            const apiKey = localStorage.getItem('evo2_api_key');
+            const apiUrl = localStorage.getItem('evo2_api_url');
+            
+            if (apiKey) document.getElementById('apiKey').value = apiKey;
+            if (apiUrl) document.getElementById('apiUrl').value = apiUrl;
+            
+            updateConfigStatus();
+        }
+
+        function updateConfigStatus() {
+            const apiKey = localStorage.getItem('evo2_api_key');
+            const statusIndicator = document.getElementById('configStatus');
+            const statusText = document.getElementById('configStatusText');
+            
+            if (apiKey) {
+                statusIndicator.className = 'status-indicator status-configured';
+                statusText.textContent = 'Configured';
+            } else {
+                statusIndicator.className = 'status-indicator status-unconfigured';
+                statusText.textContent = 'Not Configured';
+            }
+        }
+
+        async function testApiConnection() {
+            showLoading('Testing API connection...');
+            
+            try {
+                // Test with a simple request
+                const result = await callMCPTool('evo2_generate_sequence', {
+                    prompt: 'ATGCGTA',
+                    maxTokens: 50
+                });
+                
+                hideLoading();
+                showMessage('API connection successful!', 'success');
+            } catch (error) {
+                hideLoading();
+                showMessage(`API connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Main analysis functions
+        async function generateSequence() {
+            const prompt = document.getElementById('generatePrompt').value;
+            const taxonomy = document.getElementById('taxonomy').value;
+            const maxTokens = parseInt(document.getElementById('maxTokens').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            
+            const params = {
+                prompt: prompt,
+                maxTokens: maxTokens,
+                temperature: temperature,
+                taxonomy: taxonomy || null
+            };
+            
+            await executeAnalysis('evo2_generate_sequence', params, 'Generating DNA sequence...');
+        }
+
+        async function predictFunction() {
+            const sequence = document.getElementById('predictSequence').value;
+            const analysisType = document.getElementById('analysisType').value;
+            const taxonomy = document.getElementById('taxonomy').value;
+            
+            if (!sequence) {
+                showMessage('Please enter a DNA sequence for analysis.', 'error');
+                return;
+            }
+            
+            const params = {
+                sequence: sequence,
+                analysisType: analysisType,
+                taxonomy: taxonomy || null
+            };
+            
+            await executeAnalysis('evo2_predict_function', params, 'Predicting function...');
+        }
+
+        async function designCrispr() {
+            const targetSequence = document.getElementById('crisprTarget').value;
+            const casType = document.getElementById('casType').value;
+            const guideLength = parseInt(document.getElementById('guideLength').value);
+            
+            if (!targetSequence) {
+                showMessage('Please enter a target DNA sequence.', 'error');
+                return;
+            }
+            
+            const params = {
+                targetSequence: targetSequence,
+                casType: casType,
+                guideLength: guideLength
+            };
+            
+            await executeAnalysis('evo2_design_crispr', params, 'Designing CRISPR system...');
+        }
+
+        async function optimizeSequence() {
+            const sequence = document.getElementById('optimizeSequence').value;
+            const optimizationGoal = document.getElementById('optimizationGoal').value;
+            const targetOrganism = document.getElementById('targetOrganism').value;
+            
+            if (!sequence) {
+                showMessage('Please enter a DNA sequence to optimize.', 'error');
+                return;
+            }
+            
+            const params = {
+                sequence: sequence,
+                optimizationGoal: optimizationGoal,
+                targetOrganism: targetOrganism || null
+            };
+            
+            await executeAnalysis('evo2_optimize_sequence', params, 'Optimizing sequence...');
+        }
+
+        async function analyzeEssentiality() {
+            const sequence = document.getElementById('essentialitySequence').value;
+            const resolution = document.getElementById('resolution').value;
+            const organism = document.getElementById('organism').value;
+            
+            if (!sequence) {
+                showMessage('Please enter a DNA sequence for analysis.', 'error');
+                return;
+            }
+            
+            const params = {
+                sequence: sequence,
+                resolution: resolution,
+                organism: organism || null
+            };
+            
+            await executeAnalysis('evo2_analyze_essentiality', params, 'Analyzing essentiality...');
+        }
+
+        // Core analysis execution
+        async function executeAnalysis(toolName, params, loadingMessage) {
+            showLoading(loadingMessage);
+            
+            try {
+                const result = await callMCPTool(toolName, params);
+                
+                hideLoading();
+                displayResults(result, toolName);
+                addToHistory(toolName, params, result);
+                
+            } catch (error) {
+                hideLoading();
+                showMessage(`Analysis failed: ${error.message}`, 'error');
+            }
+        }
+
+        // MCP Tool calling
+        async function callMCPTool(toolName, parameters) {
+            const response = await fetch('http://localhost:3000/execute-tool', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    toolName: toolName,
+                    parameters: parameters,
+                    clientId: 'evo2-designer'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error);
+            }
+            
+            return data.result;
+        }
+
+        // Results display
+        function displayResults(result, toolName) {
+            const resultsArea = document.getElementById('resultsArea');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsArea.style.display = 'block';
+            resultsContent.innerHTML = formatResults(result, toolName);
+            
+            // Scroll to results
+            resultsArea.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function formatResults(result, toolName) {
+            let html = '<div class="result-item">';
+            html += `<div class="result-header">`;
+            html += `<h4>${getToolDisplayName(toolName)}</h4>`;
+            html += `<span class="result-type">${toolName.replace('evo2_', '').toUpperCase()}</span>`;
+            html += `</div>`;
+            
+            // Main content based on tool type
+            if (toolName === 'evo2_generate_sequence') {
+                html += `<div class="sequence-display">${result.sequence}</div>`;
+                html += '<div class="metadata">';
+                html += `<div class="metadata-item"><div class="metadata-label">Length</div><div class="metadata-value">${result.sequence.length} bp</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Temperature</div><div class="metadata-value">${result.metadata.temperature}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Model</div><div class="metadata-value">${result.metadata.model}</div></div>`;
+                html += '</div>';
+            } else if (toolName === 'evo2_predict_function') {
+                html += `<div class="sequence-display">${result.prediction}</div>`;
+                html += '<div class="metadata">';
+                html += `<div class="metadata-item"><div class="metadata-label">Analysis Type</div><div class="metadata-value">${result.analysisType}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Confidence</div><div class="metadata-value">${result.confidence}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Input Length</div><div class="metadata-value">${result.inputSequence.length} bp</div></div>`;
+                html += '</div>';
+            } else if (toolName === 'evo2_design_crispr') {
+                html += `<div class="sequence-display">${result.design}</div>`;
+                html += '<div class="metadata">';
+                html += `<div class="metadata-item"><div class="metadata-label">Cas Type</div><div class="metadata-value">${result.casType}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Guide RNA</div><div class="metadata-value">${result.components.guideRNA}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">PAM Site</div><div class="metadata-value">${result.components.pamSite || 'N/A'}</div></div>`;
+                html += `<div class="metadata-item"><div class="metadata-label">Efficiency</div><div class="metadata-value">${result.components.efficiency}</div></div>`;
+                html += '</div>';
+            }
+            
+            html += `<div style="margin-top: 15px; font-size: 12px; color: #6c757d;">`;
+            html += `Generated on ${new Date(result.generatedAt || result.analyzedAt || Date.now()).toLocaleString()}`;
+            html += `</div>`;
+            html += '</div>';
+            
+            return html;
+        }
+
+        function getToolDisplayName(toolName) {
+            const names = {
+                'evo2_generate_sequence': 'DNA Sequence Generation',
+                'evo2_predict_function': 'Function Prediction',
+                'evo2_design_crispr': 'CRISPR Design',
+                'evo2_optimize_sequence': 'Sequence Optimization',
+                'evo2_analyze_essentiality': 'Essentiality Analysis'
+            };
+            return names[toolName] || toolName;
+        }
+
+        // History management
+        function addToHistory(toolName, params, result) {
+            const historyItem = {
+                toolName: toolName,
+                timestamp: Date.now(),
+                params: params,
+                result: result
+            };
+            
+            analysisHistory.unshift(historyItem);
+            analysisHistory = analysisHistory.slice(0, 10); // Keep last 10
+            
+            localStorage.setItem('evo2_analysis_history', JSON.stringify(analysisHistory));
+            updateHistoryDisplay();
+        }
+
+        function loadAnalysisHistory() {
+            const stored = localStorage.getItem('evo2_analysis_history');
+            if (stored) {
+                analysisHistory = JSON.parse(stored);
+                updateHistoryDisplay();
+            }
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            
+            if (analysisHistory.length === 0) {
+                historyList.innerHTML = '<p style="color: #6c757d; font-style: italic;">No recent analysis</p>';
+                return;
+            }
+            
+            let html = '';
+            analysisHistory.slice(0, 5).forEach(item => {
+                html += `<div style="padding: 8px; border-bottom: 1px solid #e9ecef; cursor: pointer;" 
+                              onclick="loadHistoryItem('${item.timestamp}')">`;
+                html += `<div style="font-weight: 600; font-size: 12px;">${getToolDisplayName(item.toolName)}</div>`;
+                html += `<div style="font-size: 11px; color: #6c757d;">${new Date(item.timestamp).toLocaleString()}</div>`;
+                html += `</div>`;
+            });
+            
+            historyList.innerHTML = html;
+        }
+
+        function loadHistoryItem(timestamp) {
+            const item = analysisHistory.find(h => h.timestamp == timestamp);
+            if (item) {
+                displayResults(item.result, item.toolName);
+            }
+        }
+
+        // Utility functions
+        function showLoading(message) {
+            const resultsArea = document.getElementById('resultsArea');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsArea.style.display = 'block';
+            resultsContent.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function hideLoading() {
+            // Results will be replaced by actual content
+        }
+
+        function showMessage(message, type) {
+            const className = type === 'success' ? 'success-message' : 'error-message';
+            const resultsArea = document.getElementById('resultsArea');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsArea.style.display = 'block';
+            resultsContent.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        function setPrompt(sequence) {
+            document.getElementById('generatePrompt').value = sequence;
+        }
+
+        function loadExample(mode) {
+            switchMode(mode);
+            
+            const examples = {
+                generate: {
+                    prompt: 'ATGAAATCGATC',
+                    maxTokens: 500
+                },
+                predict: {
+                    sequence: 'ATGAAATCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG'
+                },
+                crispr: {
+                    targetSequence: 'ATGAAATCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG'
+                },
+                optimize: {
+                    sequence: 'ATGAAATCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG',
+                    goal: 'expression'
+                }
+            };
+            
+            const example = examples[mode];
+            if (!example) return;
+            
+            if (mode === 'generate') {
+                document.getElementById('generatePrompt').value = example.prompt;
+                document.getElementById('maxTokens').value = example.maxTokens;
+                document.getElementById('maxTokensValue').textContent = example.maxTokens;
+            } else if (mode === 'predict') {
+                document.getElementById('predictSequence').value = example.sequence;
+            } else if (mode === 'crispr') {
+                document.getElementById('crisprTarget').value = example.targetSequence;
+            } else if (mode === 'optimize') {
+                document.getElementById('optimizeSequence').value = example.sequence;
+                document.getElementById('optimizationGoal').value = example.goal;
+            }
+        }
+
+        function clearAll() {
+            // Clear all form fields
+            document.querySelectorAll('input, textarea, select').forEach(element => {
+                if (element.id !== 'apiKey' && element.id !== 'apiUrl') {
+                    if (element.type === 'range') {
+                        element.value = element.defaultValue;
+                        const valueDisplay = document.getElementById(element.id + 'Value');
+                        if (valueDisplay) valueDisplay.textContent = element.defaultValue;
+                    } else {
+                        element.value = '';
+                    }
+                }
+            });
+            
+            // Hide results
+            document.getElementById('resultsArea').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

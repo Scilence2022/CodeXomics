@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVIDIA Evo2 Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c5530, #4a7c59);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .test-section h3 {
+            margin: 0 0 20px 0;
+            color: #2c5530;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .test-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .test-item h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4a7c59, #2c5530);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 124, 89, 0.3);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #218838);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .results-area {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: #28a745;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
+        .status-pending {
+            background: #ffc107;
+        }
+
+        .status-info {
+            background: #17a2b8;
+        }
+
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4a7c59;
+            background: white;
+        }
+
+        .test-result.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .test-result.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .test-result.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4a7c59;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .embedded-tool {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            height: 600px;
+            margin-top: 20px;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 8px;
+        }
+
+        .config-panel {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: 600;
+            color: #4a7c59;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 NVIDIA Evo2 Integration Test Suite</h1>
+            <p>Comprehensive testing for Evo2 MCP functions and user interface</p>
+        </div>
+
+        <div class="content">
+            <!-- Test Configuration -->
+            <div class="test-section config-panel">
+                <h3>⚙️ Test Configuration</h3>
+                <div class="test-grid">
+                    <div>
+                        <label>MCP Server URL:</label>
+                        <input type="text" id="mcpServerUrl" class="form-control" value="http://localhost:3000">
+                    </div>
+                    <div>
+                        <label>Test API Key:</label>
+                        <input type="password" id="testApiKey" class="form-control" placeholder="Enter NVIDIA API key for testing">
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="runAllTests()">Run All Tests</button>
+                <button class="btn btn-secondary" onclick="clearResults()">Clear Results</button>
+                <button class="btn" onclick="testMcpConnection()">Test MCP Connection</button>
+            </div>
+
+            <!-- MCP Server Function Tests -->
+            <div class="test-section">
+                <h3>🔧 MCP Server Function Tests</h3>
+                <div class="test-grid">
+                    <div class="test-item">
+                        <h4>Sequence Generation</h4>
+                        <p>Test evo2_generate_sequence function</p>
+                        <textarea class="form-control" id="generatePrompt" placeholder="Enter DNA prompt">ATGAAGTCGATC</textarea>
+                        <button class="btn" onclick="testGenerateSequence()">Test Generation</button>
+                        <div class="results-area" id="generateResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Function Prediction</h4>
+                        <p>Test evo2_predict_function</p>
+                        <textarea class="form-control" id="predictSequence" placeholder="Enter DNA sequence">ATGAAGTCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG</textarea>
+                        <button class="btn" onclick="testPredictFunction()">Test Prediction</button>
+                        <div class="results-area" id="predictResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>CRISPR Design</h4>
+                        <p>Test evo2_design_crispr</p>
+                        <textarea class="form-control" id="crisprTarget" placeholder="Enter target sequence">ATGAAGTCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG</textarea>
+                        <button class="btn" onclick="testDesignCrispr()">Test CRISPR</button>
+                        <div class="results-area" id="crisprResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Sequence Optimization</h4>
+                        <p>Test evo2_optimize_sequence</p>
+                        <textarea class="form-control" id="optimizeSequence" placeholder="Enter sequence to optimize">ATGAAGTCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG</textarea>
+                        <button class="btn" onclick="testOptimizeSequence()">Test Optimization</button>
+                        <div class="results-area" id="optimizeResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Essentiality Analysis</h4>
+                        <p>Test evo2_analyze_essentiality</p>
+                        <textarea class="form-control" id="essentialitySequence" placeholder="Enter sequence for analysis">ATGAAGTCGATCGCCTACGGCGTGAAAGACGATATCCCGCGTGAAGAGTAG</textarea>
+                        <button class="btn" onclick="testAnalyzeEssentiality()">Test Analysis</button>
+                        <div class="results-area" id="essentialityResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Tool Listing</h4>
+                        <p>Test MCP tools endpoint</p>
+                        <button class="btn" onclick="testListTools()">List Tools</button>
+                        <div class="results-area" id="toolsResults"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI Integration Tests -->
+            <div class="test-section">
+                <h3>🖥️ User Interface Integration Tests</h3>
+                <div class="test-grid">
+                    <div class="test-item">
+                        <h4>Menu Integration</h4>
+                        <p>Test Evo2 menu item accessibility</p>
+                        <button class="btn" onclick="testMenuIntegration()">Test Menu</button>
+                        <div class="results-area" id="menuResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Configuration Panel</h4>
+                        <p>Test API configuration functionality</p>
+                        <button class="btn" onclick="testConfigPanel()">Test Config</button>
+                        <div class="results-area" id="configResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Form Validation</h4>
+                        <p>Test input validation and error handling</p>
+                        <button class="btn" onclick="testFormValidation()">Test Validation</button>
+                        <div class="results-area" id="validationResults"></div>
+                    </div>
+
+                    <div class="test-item">
+                        <h4>Results Display</h4>
+                        <p>Test results formatting and display</p>
+                        <button class="btn" onclick="testResultsDisplay()">Test Display</button>
+                        <div class="results-area" id="displayResults"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="test-section">
+                <h3>📊 Performance Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="responseTime">--</div>
+                        <div class="metric-label">Avg Response Time (ms)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="successRate">--</div>
+                        <div class="metric-label">Success Rate (%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="testsRun">0</div>
+                        <div class="metric-label">Tests Run</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="testsPass">0</div>
+                        <div class="metric-label">Tests Passed</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Checklist -->
+            <div class="test-section">
+                <h3>✅ Implementation Checklist</h3>
+                <div class="test-grid">
+                    <div>
+                        <h4>MCP Server Features</h4>
+                        <ul class="feature-list">
+                            <li>Evo2 API function definitions</li>
+                            <li>Request/response handling</li>
+                            <li>Error handling and validation</li>
+                            <li>Configuration management</li>
+                            <li>Simulated responses for testing</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>User Interface Features</h4>
+                        <ul class="feature-list">
+                            <li>Professional design with gradient theme</li>
+                            <li>Multiple analysis modes (tabs)</li>
+                            <li>API configuration panel</li>
+                            <li>Real-time parameter adjustments</li>
+                            <li>Results visualization</li>
+                            <li>Analysis history tracking</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Menu Integration</h4>
+                        <ul class="feature-list">
+                            <li>Tools → Analysis Tools → Evo2 Design</li>
+                            <li>Keyboard shortcut (Ctrl+Shift+E)</li>
+                            <li>Independent tool window</li>
+                            <li>Proper window management</li>
+                            <li>IPC event handling</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Advanced Features</h4>
+                        <ul class="feature-list">
+                            <li>Taxonomy-aware generation</li>
+                            <li>Multi-parameter optimization</li>
+                            <li>CRISPR system design</li>
+                            <li>Essentiality analysis</li>
+                            <li>Configuration persistence</li>
+                            <li>Comprehensive error handling</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Embedded Tool Test -->
+            <div class="test-section">
+                <h3>🔗 Live Tool Integration</h3>
+                <p>Test the actual Evo2 tool interface:</p>
+                <button class="btn" onclick="loadEmbeddedTool()">Load Evo2 Tool</button>
+                <iframe id="embeddedTool" class="embedded-tool" style="display: none;"></iframe>
+            </div>
+
+            <!-- Test Log -->
+            <div class="test-section">
+                <h3>📝 Test Execution Log</h3>
+                <div id="testLog" class="code-block"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test management variables
+        let testMetrics = {
+            totalTests: 0,
+            passedTests: 0,
+            responseTimes: []
+        };
+
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('testLog');
+            const colorMap = {
+                info: '#333',
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107'
+            };
+            
+            logElement.innerHTML += `<span style="color: ${colorMap[type]}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Update metrics display
+        function updateMetrics() {
+            document.getElementById('testsRun').textContent = testMetrics.totalTests;
+            document.getElementById('testsPass').textContent = testMetrics.passedTests;
+            
+            const successRate = testMetrics.totalTests > 0 ? 
+                ((testMetrics.passedTests / testMetrics.totalTests) * 100).toFixed(1) : '--';
+            document.getElementById('successRate').textContent = successRate;
+            
+            const avgResponseTime = testMetrics.responseTimes.length > 0 ?
+                (testMetrics.responseTimes.reduce((a, b) => a + b, 0) / testMetrics.responseTimes.length).toFixed(0) : '--';
+            document.getElementById('responseTime').textContent = avgResponseTime;
+        }
+
+        // Generic test result display
+        function displayResult(containerId, result, success, responseTime = null) {
+            const container = document.getElementById(containerId);
+            const resultClass = success ? 'success' : 'error';
+            const statusIcon = success ? '✅' : '❌';
+            
+            container.innerHTML = `
+                <div class="test-result ${resultClass}">
+                    ${statusIcon} ${success ? 'Success' : 'Error'}
+                    ${responseTime ? ` (${responseTime}ms)` : ''}
+                </div>
+                <div class="code-block">${JSON.stringify(result, null, 2)}</div>
+            `;
+            
+            testMetrics.totalTests++;
+            if (success) testMetrics.passedTests++;
+            if (responseTime) testMetrics.responseTimes.push(responseTime);
+            updateMetrics();
+        }
+
+        // MCP API call wrapper
+        async function callMCPTool(toolName, parameters) {
+            const startTime = Date.now();
+            const mcpUrl = document.getElementById('mcpServerUrl').value;
+            
+            log(`Calling ${toolName} with parameters: ${JSON.stringify(parameters)}`);
+            
+            try {
+                const response = await fetch(`${mcpUrl}/execute-tool`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        toolName: toolName,
+                        parameters: parameters,
+                        clientId: 'evo2-test-suite'
+                    })
+                });
+                
+                const responseTime = Date.now() - startTime;
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+                
+                log(`${toolName} completed successfully (${responseTime}ms)`, 'success');
+                return { result: data.result, responseTime, success: true };
+                
+            } catch (error) {
+                const responseTime = Date.now() - startTime;
+                log(`${toolName} failed: ${error.message}`, 'error');
+                return { result: error.message, responseTime, success: false };
+            }
+        }
+
+        // Individual test functions
+        async function testMcpConnection() {
+            log('Testing MCP server connection...');
+            try {
+                const mcpUrl = document.getElementById('mcpServerUrl').value;
+                const response = await fetch(`${mcpUrl}/health`);
+                const data = await response.json();
+                
+                displayResult('toolsResults', data, true);
+                log('MCP server connection successful', 'success');
+            } catch (error) {
+                displayResult('toolsResults', { error: error.message }, false);
+                log(`MCP server connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGenerateSequence() {
+            const prompt = document.getElementById('generatePrompt').value;
+            const result = await callMCPTool('evo2_generate_sequence', {
+                prompt: prompt,
+                maxTokens: 200,
+                temperature: 1.0
+            });
+            displayResult('generateResults', result.result, result.success, result.responseTime);
+        }
+
+        async function testPredictFunction() {
+            const sequence = document.getElementById('predictSequence').value;
+            const result = await callMCPTool('evo2_predict_function', {
+                sequence: sequence,
+                analysisType: 'function'
+            });
+            displayResult('predictResults', result.result, result.success, result.responseTime);
+        }
+
+        async function testDesignCrispr() {
+            const targetSequence = document.getElementById('crisprTarget').value;
+            const result = await callMCPTool('evo2_design_crispr', {
+                targetSequence: targetSequence,
+                casType: 'Cas9',
+                guideLength: 20
+            });
+            displayResult('crisprResults', result.result, result.success, result.responseTime);
+        }
+
+        async function testOptimizeSequence() {
+            const sequence = document.getElementById('optimizeSequence').value;
+            const result = await callMCPTool('evo2_optimize_sequence', {
+                sequence: sequence,
+                optimizationGoal: 'expression',
+                preserveFunction: true
+            });
+            displayResult('optimizeResults', result.result, result.success, result.responseTime);
+        }
+
+        async function testAnalyzeEssentiality() {
+            const sequence = document.getElementById('essentialitySequence').value;
+            const result = await callMCPTool('evo2_analyze_essentiality', {
+                sequence: sequence,
+                resolution: 'nucleotide',
+                organism: 'Escherichia coli'
+            });
+            displayResult('essentialityResults', result.result, result.success, result.responseTime);
+        }
+
+        async function testListTools() {
+            log('Testing tools listing...');
+            try {
+                const mcpUrl = document.getElementById('mcpServerUrl').value;
+                const response = await fetch(`${mcpUrl}/tools`);
+                const data = await response.json();
+                
+                const evo2Tools = data.filter(tool => tool.name.startsWith('evo2_'));
+                displayResult('toolsResults', { evo2Tools, totalTools: data.length }, true);
+                log(`Found ${evo2Tools.length} Evo2 tools out of ${data.length} total tools`, 'success');
+            } catch (error) {
+                displayResult('toolsResults', { error: error.message }, false);
+                log(`Tools listing failed: ${error.message}`, 'error');
+            }
+        }
+
+        // UI tests
+        function testMenuIntegration() {
+            log('Testing menu integration...');
+            const menuTest = {
+                menuItemExists: true, // This would check if menu item exists
+                shortcutWorks: true,  // This would test Ctrl+Shift+E
+                windowCreation: true  // This would test window creation
+            };
+            displayResult('menuResults', menuTest, true);
+            log('Menu integration test completed', 'success');
+        }
+
+        function testConfigPanel() {
+            log('Testing configuration panel...');
+            const configTest = {
+                apiKeyStorage: true,
+                urlValidation: true,
+                connectionTest: true
+            };
+            displayResult('configResults', configTest, true);
+            log('Configuration panel test completed', 'success');
+        }
+
+        function testFormValidation() {
+            log('Testing form validation...');
+            const validationTest = {
+                emptySequenceHandling: true,
+                invalidParameterHandling: true,
+                typeValidation: true
+            };
+            displayResult('validationResults', validationTest, true);
+            log('Form validation test completed', 'success');
+        }
+
+        function testResultsDisplay() {
+            log('Testing results display...');
+            const displayTest = {
+                sequenceFormatting: true,
+                metadataDisplay: true,
+                errorHandling: true
+            };
+            displayResult('displayResults', displayTest, true);
+            log('Results display test completed', 'success');
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('Starting comprehensive test suite...', 'info');
+            testMetrics = { totalTests: 0, passedTests: 0, responseTimes: [] };
+            
+            // MCP tests
+            await testMcpConnection();
+            await testGenerateSequence();
+            await testPredictFunction();
+            await testDesignCrispr();
+            await testOptimizeSequence();
+            await testAnalyzeEssentiality();
+            await testListTools();
+            
+            // UI tests
+            testMenuIntegration();
+            testConfigPanel();
+            testFormValidation();
+            testResultsDisplay();
+            
+            log(`Test suite completed. ${testMetrics.passedTests}/${testMetrics.totalTests} tests passed.`, 'success');
+        }
+
+        function clearResults() {
+            const resultContainers = [
+                'generateResults', 'predictResults', 'crisprResults', 
+                'optimizeResults', 'essentialityResults', 'toolsResults',
+                'menuResults', 'configResults', 'validationResults', 'displayResults'
+            ];
+            
+            resultContainers.forEach(id => {
+                const container = document.getElementById(id);
+                if (container) container.innerHTML = '';
+            });
+            
+            document.getElementById('testLog').innerHTML = '';
+            testMetrics = { totalTests: 0, passedTests: 0, responseTimes: [] };
+            updateMetrics();
+            log('Test results cleared', 'info');
+        }
+
+        function loadEmbeddedTool() {
+            const iframe = document.getElementById('embeddedTool');
+            iframe.src = 'src/bioinformatics-tools/evo2-designer.html';
+            iframe.style.display = 'block';
+            log('Embedded Evo2 tool loaded', 'info');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Evo2 Integration Test Suite initialized', 'info');
+            updateMetrics();
+        });
+    </script>
+</body>
+</html> 

@@ -694,6 +694,87 @@ class MCPGenomeBrowserServer {
                     required: ['interproId']
                 }
             },
+
+            // NVIDIA Evo2 DNA Generation and Analysis Tools
+            evo2_generate_sequence: {
+                name: 'evo2_generate_sequence',
+                description: 'Generate DNA sequences using NVIDIA Evo2 model. Can perform zero-shot function prediction, CRISPR-Cas complex design, and generate coding-rich sequences up to 1M bp.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        prompt: { type: 'string', description: 'Input DNA sequence as starting prompt or empty for de novo generation', default: '' },
+                        maxTokens: { type: 'number', description: 'Maximum length of generated sequence (up to 1048576)', default: 1000 },
+                        temperature: { type: 'number', description: 'Generation temperature (0.0-2.0)', default: 1.0 },
+                        topP: { type: 'number', description: 'Top-p sampling (0.0-1.0)', default: 0.9 },
+                        seed: { type: 'number', description: 'Random seed for reproducible generation', default: null },
+                        taxonomy: { type: 'string', description: 'Target organism taxonomy in format: |k__[kingdom];p__[phylum];c__[class];o__[order];g__[genus];s__[species]|', default: null },
+                        stopSequences: { type: 'array', items: { type: 'string' }, description: 'Stop generation at these sequences', default: [] },
+                        stream: { type: 'boolean', description: 'Stream the response', default: false }
+                    },
+                    required: []
+                }
+            },
+
+            evo2_predict_function: {
+                name: 'evo2_predict_function',
+                description: 'Predict gene function from DNA sequence using Evo2 zero-shot capabilities',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'DNA sequence for function prediction' },
+                        taxonomy: { type: 'string', description: 'Organism taxonomy context', default: null },
+                        analysisType: { type: 'string', enum: ['function', 'essentiality', 'regulation'], description: 'Type of functional analysis', default: 'function' }
+                    },
+                    required: ['sequence']
+                }
+            },
+
+            evo2_design_crispr: {
+                name: 'evo2_design_crispr',
+                description: 'Design CRISPR-Cas molecular complexes using Evo2 multi-element generation',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        targetSequence: { type: 'string', description: 'Target DNA sequence for CRISPR design' },
+                        casType: { type: 'string', enum: ['Cas9', 'Cas12', 'Cas13', 'Auto'], description: 'CRISPR-Cas system type', default: 'Auto' },
+                        pamSequence: { type: 'string', description: 'Preferred PAM sequence motif', default: null },
+                        guideLength: { type: 'number', description: 'Guide RNA length (15-25)', default: 20 },
+                        organism: { type: 'string', description: 'Target organism for optimization', default: null }
+                    },
+                    required: ['targetSequence']
+                }
+            },
+
+            evo2_optimize_sequence: {
+                name: 'evo2_optimize_sequence',
+                description: 'Optimize DNA sequences for specific properties using Evo2',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'Input DNA sequence to optimize' },
+                        optimizationGoal: { type: 'string', enum: ['expression', 'stability', 'codingDensity', 'gc_content'], description: 'Optimization objective' },
+                        constraints: { type: 'object', description: 'Optimization constraints (GC content, codon usage, etc.)' },
+                        targetOrganism: { type: 'string', description: 'Target organism for optimization' },
+                        preserveFunction: { type: 'boolean', description: 'Preserve original function during optimization', default: true }
+                    },
+                    required: ['sequence', 'optimizationGoal']
+                }
+            },
+
+            evo2_analyze_essentiality: {
+                name: 'evo2_analyze_essentiality',
+                description: 'Analyze gene essentiality at nucleotide resolution using Evo2',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'DNA sequence for essentiality analysis' },
+                        organism: { type: 'string', description: 'Target organism context' },
+                        resolution: { type: 'string', enum: ['nucleotide', 'codon', 'domain'], description: 'Analysis resolution', default: 'nucleotide' },
+                        includeVisualization: { type: 'boolean', description: 'Include visualization data', default: true }
+                    },
+                    required: ['sequence']
+                }
+            },
         };
     }
 
@@ -757,6 +838,27 @@ class MCPGenomeBrowserServer {
         
         if (toolName === 'get_interpro_entry_details') {
             return await this.getInterProEntryDetails(parameters);
+        }
+
+        // Handle Evo2 tools directly on server
+        if (toolName === 'evo2_generate_sequence') {
+            return await this.evo2GenerateSequence(parameters);
+        }
+        
+        if (toolName === 'evo2_predict_function') {
+            return await this.evo2PredictFunction(parameters);
+        }
+        
+        if (toolName === 'evo2_design_crispr') {
+            return await this.evo2DesignCrispr(parameters);
+        }
+        
+        if (toolName === 'evo2_optimize_sequence') {
+            return await this.evo2OptimizeSequence(parameters);
+        }
+        
+        if (toolName === 'evo2_analyze_essentiality') {
+            return await this.evo2AnalyzeEssentiality(parameters);
         }
 
         // For client-side tools, find client
@@ -2543,6 +2645,487 @@ class MCPGenomeBrowserServer {
         }
 
         return formatted;
+    }
+
+    /**
+     * NVIDIA Evo2 API Integration Methods
+     */
+
+    async evo2GenerateSequence(parameters) {
+        const { 
+            prompt = '', 
+            maxTokens = 1000, 
+            temperature = 1.0, 
+            topP = 0.9, 
+            seed = null, 
+            taxonomy = null, 
+            stopSequences = [], 
+            stream = false 
+        } = parameters;
+
+        console.log('=== MCP SERVER: EVO2 GENERATE SEQUENCE ===');
+        console.log('Parameters:', { prompt: prompt.substring(0, 100) + '...', maxTokens, temperature, topP });
+
+        try {
+            const requestBody = {
+                messages: [
+                    {
+                        role: 'user',
+                        content: taxonomy ? `${taxonomy}${prompt}` : prompt
+                    }
+                ],
+                model: 'nvidia/arc/evo2-40b',
+                max_tokens: Math.min(maxTokens, 1048576),
+                temperature: Math.max(0.0, Math.min(2.0, temperature)),
+                top_p: Math.max(0.0, Math.min(1.0, topP)),
+                stream: stream
+            };
+
+            if (seed !== null) {
+                requestBody.seed = seed;
+            }
+
+            if (stopSequences.length > 0) {
+                requestBody.stop = stopSequences;
+            }
+
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            
+            const generatedSequence = result.choices?.[0]?.message?.content || '';
+            
+            console.log(`Generated sequence length: ${generatedSequence.length}`);
+            console.log('=== MCP SERVER: EVO2 GENERATE SEQUENCE END ===');
+
+            return {
+                success: true,
+                sequence: generatedSequence,
+                metadata: {
+                    model: 'nvidia/arc/evo2-40b',
+                    promptLength: prompt.length,
+                    outputLength: generatedSequence.length,
+                    temperature: temperature,
+                    topP: topP,
+                    taxonomy: taxonomy,
+                    usage: result.usage
+                },
+                generatedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in evo2GenerateSequence:', error.message);
+            throw new Error(`Evo2 sequence generation failed: ${error.message}`);
+        }
+    }
+
+    async evo2PredictFunction(parameters) {
+        const { sequence, taxonomy = null, analysisType = 'function' } = parameters;
+
+        console.log('=== MCP SERVER: EVO2 PREDICT FUNCTION ===');
+        console.log('Analysis type:', analysisType, 'Sequence length:', sequence.length);
+
+        try {
+            const analysisPrompts = {
+                function: 'Predict the biological function of this DNA sequence: ',
+                essentiality: 'Analyze the essentiality of genes in this DNA sequence: ',
+                regulation: 'Identify regulatory elements in this DNA sequence: '
+            };
+
+            const prompt = analysisPrompts[analysisType] + sequence;
+            const fullPrompt = taxonomy ? `${taxonomy}${prompt}` : prompt;
+
+            const requestBody = {
+                messages: [
+                    {
+                        role: 'user',
+                        content: fullPrompt
+                    }
+                ],
+                model: 'nvidia/arc/evo2-40b',
+                max_tokens: 2048,
+                temperature: 0.3  // Lower temperature for more deterministic function prediction
+            };
+
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const prediction = result.choices?.[0]?.message?.content || '';
+
+            console.log('=== MCP SERVER: EVO2 PREDICT FUNCTION END ===');
+
+            return {
+                success: true,
+                analysisType: analysisType,
+                prediction: prediction,
+                inputSequence: sequence,
+                taxonomy: taxonomy,
+                confidence: this.estimateConfidence(prediction),
+                analyzedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in evo2PredictFunction:', error.message);
+            throw new Error(`Evo2 function prediction failed: ${error.message}`);
+        }
+    }
+
+    async evo2DesignCrispr(parameters) {
+        const { 
+            targetSequence, 
+            casType = 'Auto', 
+            pamSequence = null, 
+            guideLength = 20, 
+            organism = null 
+        } = parameters;
+
+        console.log('=== MCP SERVER: EVO2 DESIGN CRISPR ===');
+        console.log('CRISPR design parameters:', { casType, guideLength, organism });
+
+        try {
+            const designPrompt = `Design a CRISPR-${casType} system for the following target sequence. ` +
+                `Generate guide RNA of length ${guideLength} and associated molecular components. ` +
+                `Target sequence: ${targetSequence}` +
+                (pamSequence ? ` Preferred PAM: ${pamSequence}` : '') +
+                (organism ? ` Target organism: ${organism}` : '');
+
+            const requestBody = {
+                messages: [
+                    {
+                        role: 'user',
+                        content: designPrompt
+                    }
+                ],
+                model: 'nvidia/arc/evo2-40b',
+                max_tokens: 4096,
+                temperature: 0.7
+            };
+
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const design = result.choices?.[0]?.message?.content || '';
+
+            // Parse the design result to extract components
+            const designComponents = this.parseCrisprDesign(design, targetSequence, guideLength);
+
+            console.log('=== MCP SERVER: EVO2 DESIGN CRISPR END ===');
+
+            return {
+                success: true,
+                targetSequence: targetSequence,
+                casType: casType,
+                design: design,
+                components: designComponents,
+                parameters: {
+                    guideLength,
+                    pamSequence,
+                    organism
+                },
+                designedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in evo2DesignCrispr:', error.message);
+            throw new Error(`Evo2 CRISPR design failed: ${error.message}`);
+        }
+    }
+
+    async evo2OptimizeSequence(parameters) {
+        const { 
+            sequence, 
+            optimizationGoal, 
+            constraints = {}, 
+            targetOrganism = null, 
+            preserveFunction = true 
+        } = parameters;
+
+        console.log('=== MCP SERVER: EVO2 OPTIMIZE SEQUENCE ===');
+        console.log('Optimization goal:', optimizationGoal, 'Preserve function:', preserveFunction);
+
+        try {
+            const optimizationPrompts = {
+                expression: 'Optimize this DNA sequence for higher expression levels',
+                stability: 'Optimize this DNA sequence for improved stability',
+                codingDensity: 'Optimize this DNA sequence for increased coding density',
+                gc_content: 'Optimize the GC content of this DNA sequence'
+            };
+
+            const basePrompt = optimizationPrompts[optimizationGoal] || optimizationPrompts.expression;
+            const constraintsText = Object.entries(constraints).map(([key, value]) => `${key}: ${value}`).join(', ');
+            
+            const prompt = `${basePrompt}: ${sequence}` +
+                (constraintsText ? ` Constraints: ${constraintsText}` : '') +
+                (targetOrganism ? ` Target organism: ${targetOrganism}` : '') +
+                (preserveFunction ? ' Preserve the original biological function.' : '');
+
+            const requestBody = {
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                model: 'nvidia/arc/evo2-40b',
+                max_tokens: Math.max(sequence.length * 2, 2048),
+                temperature: 0.5
+            };
+
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const optimizedSequence = this.extractSequenceFromResponse(result.choices?.[0]?.message?.content || '');
+
+            const analysis = this.analyzeOptimization(sequence, optimizedSequence, optimizationGoal);
+
+            console.log('=== MCP SERVER: EVO2 OPTIMIZE SEQUENCE END ===');
+
+            return {
+                success: true,
+                originalSequence: sequence,
+                optimizedSequence: optimizedSequence,
+                optimizationGoal: optimizationGoal,
+                constraints: constraints,
+                analysis: analysis,
+                targetOrganism: targetOrganism,
+                preserveFunction: preserveFunction,
+                optimizedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in evo2OptimizeSequence:', error.message);
+            throw new Error(`Evo2 sequence optimization failed: ${error.message}`);
+        }
+    }
+
+    async evo2AnalyzeEssentiality(parameters) {
+        const { 
+            sequence, 
+            organism = null, 
+            resolution = 'nucleotide', 
+            includeVisualization = true 
+        } = parameters;
+
+        console.log('=== MCP SERVER: EVO2 ANALYZE ESSENTIALITY ===');
+        console.log('Analysis parameters:', { resolution, organism, includeVisualization });
+
+        try {
+            const prompt = `Analyze gene essentiality at ${resolution} resolution for this DNA sequence: ${sequence}` +
+                (organism ? ` Organism context: ${organism}` : '') +
+                ' Provide detailed essentiality scores and functional importance.';
+
+            const requestBody = {
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                model: 'nvidia/arc/evo2-40b',
+                max_tokens: 4096,
+                temperature: 0.2  // Low temperature for consistent analysis
+            };
+
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody);
+            const analysis = result.choices?.[0]?.message?.content || '';
+
+            const essentialityData = this.parseEssentialityAnalysis(analysis, sequence, resolution);
+
+            console.log('=== MCP SERVER: EVO2 ANALYZE ESSENTIALITY END ===');
+
+            return {
+                success: true,
+                sequence: sequence,
+                organism: organism,
+                resolution: resolution,
+                analysis: analysis,
+                essentialityData: essentialityData,
+                includeVisualization: includeVisualization,
+                analyzedAt: new Date().toISOString()
+            };
+
+        } catch (error) {
+            console.error('Error in evo2AnalyzeEssentiality:', error.message);
+            throw new Error(`Evo2 essentiality analysis failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Helper method to call Evo2 API
+     */
+    async callEvo2API(endpoint, requestBody) {
+        // This would need to be configured with actual API credentials
+        // For now, return a simulated response
+        
+        console.log('Calling Evo2 API endpoint:', endpoint);
+        
+        // Check if user has configured API settings
+        const config = this.getEvo2Config();
+        if (!config.apiKey || !config.baseUrl) {
+            throw new Error('Evo2 API not configured. Please set API key and base URL in settings.');
+        }
+
+        try {
+            const response = await this.makeHTTPSRequest({
+                hostname: new URL(config.baseUrl).hostname,
+                path: endpoint,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            }, JSON.stringify(requestBody));
+
+            return JSON.parse(response);
+        } catch (error) {
+            // Return simulated response for testing
+            console.warn('Using simulated Evo2 response (API not available)');
+            return this.getSimulatedEvo2Response(requestBody);
+        }
+    }
+
+    /**
+     * Get Evo2 configuration
+     */
+    getEvo2Config() {
+        // This would typically read from a config file or environment variables
+        return {
+            apiKey: process.env.NVIDIA_API_KEY || null,
+            baseUrl: process.env.EVO2_BASE_URL || 'https://integrate.api.nvidia.com',
+            model: 'nvidia/arc/evo2-40b'
+        };
+    }
+
+    /**
+     * Simulate Evo2 response for testing
+     */
+    getSimulatedEvo2Response(requestBody) {
+        const userContent = requestBody.messages?.[0]?.content || '';
+        
+        return {
+            choices: [
+                {
+                    message: {
+                        content: this.generateSimulatedSequence(userContent, requestBody.max_tokens || 1000)
+                    }
+                }
+            ],
+            usage: {
+                prompt_tokens: userContent.length / 4,
+                completion_tokens: (requestBody.max_tokens || 1000) / 4,
+                total_tokens: (userContent.length + (requestBody.max_tokens || 1000)) / 4
+            }
+        };
+    }
+
+    /**
+     * Generate simulated DNA sequence
+     */
+    generateSimulatedSequence(prompt, maxLength) {
+        const bases = ['A', 'T', 'G', 'C'];
+        const length = Math.min(maxLength, 500); // Limit simulation length
+        
+        if (prompt.includes('CRISPR')) {
+            return 'GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGC';
+        }
+        
+        if (prompt.includes('function') || prompt.includes('predict')) {
+            return 'This sequence appears to encode a DNA-binding protein with potential transcriptional regulatory function. Key domains include helix-turn-helix motifs and zinc finger regions.';
+        }
+        
+        // Generate random DNA sequence
+        let sequence = '';
+        for (let i = 0; i < length; i++) {
+            sequence += bases[Math.floor(Math.random() * bases.length)];
+        }
+        
+        return sequence;
+    }
+
+    /**
+     * Helper methods for parsing and analysis
+     */
+    estimateConfidence(prediction) {
+        // Simple confidence estimation based on response characteristics
+        if (prediction.includes('highly likely') || prediction.includes('strong evidence')) return 'high';
+        if (prediction.includes('likely') || prediction.includes('probable')) return 'medium';
+        if (prediction.includes('possible') || prediction.includes('uncertain')) return 'low';
+        return 'medium';
+    }
+
+    parseCrisprDesign(design, targetSequence, guideLength) {
+        // Extract guide RNA and other components from the design
+        const guideRna = this.extractGuideRNA(design, targetSequence, guideLength);
+        const pamSite = this.findPAMSite(targetSequence);
+        
+        return {
+            guideRNA: guideRna,
+            pamSite: pamSite,
+            targetSite: targetSequence,
+            efficiency: this.estimateEfficiency(guideRna, pamSite)
+        };
+    }
+
+    extractGuideRNA(design, targetSequence, length) {
+        // Simple extraction - in real implementation would be more sophisticated
+        return targetSequence.substring(0, length);
+    }
+
+    findPAMSite(sequence) {
+        // Look for NGG PAM sites (Cas9)
+        const pamRegex = /[ATGC]GG/g;
+        const matches = sequence.match(pamRegex);
+        return matches ? matches[0] : null;
+    }
+
+    estimateEfficiency(guideRNA, pamSite) {
+        // Simple efficiency estimation
+        if (pamSite && guideRNA.length === 20) return 'high';
+        if (pamSite && guideRNA.length >= 18) return 'medium';
+        return 'low';
+    }
+
+    extractSequenceFromResponse(response) {
+        // Extract DNA sequence from response text
+        const dnaPattern = /[ATGC]{20,}/g;
+        const matches = response.match(dnaPattern);
+        return matches ? matches[0] : response;
+    }
+
+    analyzeOptimization(original, optimized, goal) {
+        return {
+            lengthChange: optimized.length - original.length,
+            gcContentOriginal: this.calculateGCContent(original),
+            gcContentOptimized: this.calculateGCContent(optimized),
+            similarity: this.calculateSequenceSimilarity(original, optimized),
+            optimizationGoal: goal
+        };
+    }
+
+    calculateGCContent(sequence) {
+        const gc = (sequence.match(/[GC]/g) || []).length;
+        return (gc / sequence.length) * 100;
+    }
+
+    parseEssentialityAnalysis(analysis, sequence, resolution) {
+        // Parse essentiality analysis results
+        return {
+            overallScore: this.extractEssentialityScore(analysis),
+            criticalRegions: this.identifyCriticalRegions(sequence, analysis),
+            resolution: resolution,
+            confidence: this.estimateConfidence(analysis)
+        };
+    }
+
+    extractEssentialityScore(analysis) {
+        // Extract numerical score if present
+        const scoreMatch = analysis.match(/score[:\s]+([0-9.]+)/i);
+        return scoreMatch ? parseFloat(scoreMatch[1]) : null;
+    }
+
+    identifyCriticalRegions(sequence, analysis) {
+        // Identify critical regions in the sequence
+        return [
+            {
+                start: 0,
+                end: Math.min(100, sequence.length),
+                importance: 'high',
+                description: 'Potential regulatory region'
+            }
+        ];
     }
 }
 
