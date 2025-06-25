@@ -137,6 +137,13 @@ class GenomicDataDownloader {
             
             // 获取当前项目信息
             this.getCurrentProject();
+            
+            // If no project is available after a short delay, show no project info
+            setTimeout(() => {
+                if (!this.currentProject) {
+                    this.setActiveProject(null);
+                }
+            }, 1000);
         }
     }
     
@@ -157,7 +164,7 @@ class GenomicDataDownloader {
         this.currentProject = projectInfo;
         console.log('🗂️ Active project set:', projectInfo);
         
-        // Update default output directory to project folder
+        // Update default output directory to project folder or show default options
         if (projectInfo && projectInfo.dataFolderPath) {
             const genomesDir = `${projectInfo.dataFolderPath}/genomes`;
             this.outputDirectory = genomesDir;
@@ -169,6 +176,16 @@ class GenomicDataDownloader {
             
             // Show project info in UI
             this.showProjectInfo(projectInfo);
+        } else {
+            // No active project - set default output directory options
+            const outputDirElement = document.getElementById('outputDir');
+            if (outputDirElement) {
+                outputDirElement.value = '';
+                outputDirElement.placeholder = 'Click "Select Directory" to choose download location';
+            }
+            
+            // Show no project info
+            this.showNoProjectInfo();
         }
     }
     
@@ -187,6 +204,23 @@ class GenomicDataDownloader {
             
             // Insert project info before existing database info
             databaseInfo.innerHTML = projectInfoHtml + databaseInfo.innerHTML;
+        }
+    }
+    
+    showNoProjectInfo() {
+        const databaseInfo = document.getElementById('databaseInfo');
+        if (databaseInfo) {
+            // Add no project info to the database info panel
+            const noProjectInfoHtml = `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #856404;">📂 No Active Project</h4>
+                    <p style="margin: 0; color: #856404;">You can download files without a project.</p>
+                    <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">Select a download directory manually using the "Select Directory" button below.</p>
+                </div>
+            `;
+            
+            // Insert no project info before existing database info
+            databaseInfo.innerHTML = noProjectInfoHtml + databaseInfo.innerHTML;
         }
     }
     

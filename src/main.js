@@ -4146,42 +4146,6 @@ function createGenomicDownloadWindow(downloadType) {
   try {
     console.log(`Creating Genomic Download window for: ${downloadType}`);
     
-    // Check if there's an active project
-    const hasActiveProject = checkActiveProject();
-    if (!hasActiveProject) {
-      // Show project requirement dialog
-      const choice = dialog.showMessageBoxSync(null, {
-        type: 'info',
-        title: 'Project Required',
-        message: 'Please open or create a project first',
-        detail: 'Genomic data downloads require an active project to organize downloaded files.',
-        buttons: ['Create New Project', 'Open Existing Project', 'Cancel'],
-        defaultId: 0,
-        cancelId: 2
-      });
-      
-      if (choice === 0) {
-        // Create new project
-        createProjectManagerWindow();
-        setTimeout(() => {
-          const projectManagerWindow = BrowserWindow.getAllWindows().find(
-            win => win.getTitle().includes('Project Manager')
-          );
-          if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
-            projectManagerWindow.webContents.send('create-new-project');
-          }
-        }, 500);
-        return;
-      } else if (choice === 1) {
-        // Open existing project
-        createProjectManagerWindow();
-        return;
-      } else {
-        // Cancel
-        return;
-      }
-    }
-    
     const downloadWindow = new BrowserWindow({
       width: 1200,
       height: 800,
