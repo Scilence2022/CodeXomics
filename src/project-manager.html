@@ -2632,20 +2632,48 @@ Folders: ${project.folders ? project.folders.length : 0}
                     const oldFolder = file.folder ? file.folder.slice() : [];
                     file.folder = targetFolderPath.slice();
                     
-                    // 如果文件被复制到项目中，需要物理移动文件
-                    if (file.originalPath && window.electronAPI && window.electronAPI.moveFileInProject) {
-                        const moveResult = await window.electronAPI.moveFileInProject(
-                            file.path,
-                            this.currentProject.name,
-                            targetFolderPath.join('/')
-                        );
+                    // 尝试物理移动文件
+                    let physicalMoveAttempted = false;
+                    let physicalMoveSuccess = false;
+                    
+                    if (window.electronAPI && window.electronAPI.moveFileInProject && file.path) {
+                        // 检查文件是否存在于文件系统中
+                        console.log(`🔄 Attempting to physically move file: ${file.path}`);
                         
-                        if (moveResult.success) {
-                            file.path = moveResult.newPath;
-                            console.log(`✅ File physically moved to: ${file.path}`);
-                        } else {
-                            console.warn('Failed to physically move file, but metadata updated');
+                        try {
+                            // 构建项目相对路径 - 使用项目的dataFolderPath或location来确定基础路径
+                            let projectBasePath;
+                            if (this.currentProject.dataFolderPath) {
+                                projectBasePath = this.currentProject.dataFolderPath;
+                            } else if (this.currentProject.location && this.currentProject.name) {
+                                // 从Documents/Genome AI Studio Projects/ProjectName推算
+                                const documentsPath = await window.electronAPI.getDocumentsPath();
+                                projectBasePath = `${documentsPath}/Genome AI Studio Projects/${this.currentProject.name}`;
+                            }
+                            
+                            if (projectBasePath) {
+                                physicalMoveAttempted = true;
+                                const moveResult = await window.electronAPI.moveFileInProject(
+                                    file.path,
+                                    this.currentProject.name,
+                                    targetFolderPath.join('/')
+                                );
+                                
+                                if (moveResult.success) {
+                                    file.path = moveResult.newPath;
+                                    physicalMoveSuccess = true;
+                                    console.log(`✅ File physically moved to: ${file.path}`);
+                                } else {
+                                    console.warn(`⚠️ Failed to physically move file: ${moveResult.error || 'Unknown error'}`);
+                                }
+                            } else {
+                                console.warn('⚠️ Cannot determine project base path for physical file movement');
+                            }
+                        } catch (moveError) {
+                            console.error(`❌ Error during physical file move: ${moveError.message}`);
                         }
+                    } else {
+                        console.log('📝 Only updating metadata (no physical file move - Electron API not available or no file path)');
                     }
 
                     // 更新项目修改时间
@@ -2660,8 +2688,22 @@ Folders: ${project.folders ? project.folders.length : 0}
                     this.renderFiles();
                     this.updateSaveButtonState(); // 更新保存按钮状态
 
+                    // 提供详细的移动结果通知
                     const targetFolderName = this.getFolderName(targetFolderPath);
-                    this.showNotification(`File "${file.name}" moved to "${targetFolderName}" (changes buffered)`, 'success');
+                    let notificationMessage;
+                    let notificationType = 'success';
+                    
+                    if (physicalMoveAttempted && physicalMoveSuccess) {
+                        notificationMessage = `✅ File "${file.name}" physically moved to "${targetFolderName}" and metadata updated`;
+                    } else if (physicalMoveAttempted && !physicalMoveSuccess) {
+                        notificationMessage = `⚠️ File "${file.name}" metadata moved to "${targetFolderName}" but physical file move failed`;
+                        notificationType = 'warning';
+                    } else {
+                        notificationMessage = `📝 File "${file.name}" metadata moved to "${targetFolderName}" (metadata-only update)`;
+                        notificationType = 'info';
+                    }
+                    
+                    this.showNotification(notificationMessage, notificationType);
 
                 } catch (error) {
                     console.error('Error moving file:', error);
