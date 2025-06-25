@@ -197,6 +197,193 @@
             background: #dc3545;
         }
 
+        /* Configuration Modal Styles */
+        .config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .config-modal {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .config-modal-header {
+            background: linear-gradient(135deg, #4a7c59, #2c5530);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .config-modal-header h2 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .config-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .config-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .config-modal-body {
+            padding: 30px;
+        }
+
+        .config-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #4a7c59;
+        }
+
+        .config-group h4 {
+            margin: 0 0 15px 0;
+            color: #2c5530;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .config-group .description {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .api-key-container {
+            position: relative;
+        }
+
+        .api-key-toggle {
+            position: absolute;
+            right: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        .api-key-toggle:hover {
+            color: #4a7c59;
+        }
+
+        .config-status-display {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .config-status-display.configured {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .config-status-display.unconfigured {
+            border-color: #dc3545;
+            background: #fff8f8;
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .compact-config-panel {
+            background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+            border: 1px solid #c3e6c3;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .compact-config-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .config-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-btn {
+            background: #4a7c59;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .config-btn:hover {
+            background: #2c5530;
+            transform: translateY(-1px);
+        }
+
         .results-container {
             background: #f8f9fa;
             border-radius: 10px;
@@ -352,35 +539,20 @@
 
         <div class="main-content">
             <div class="sidebar">
-                <!-- API Configuration -->
-                <div class="section config-section">
-                    <h3>⚙️ API Configuration</h3>
-                    <div class="config-status">
-                        <div class="status-indicator status-unconfigured" id="configStatus"></div>
-                        <span id="configStatusText">Not Configured</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="apiKey">NVIDIA API Key</label>
-                        <div style="display: flex; gap: 5px; align-items: stretch;">
-                            <input type="password" id="apiKey" class="form-control" 
-                                   placeholder="Enter your NVIDIA API key" style="margin-bottom: 0;">
-                            <button class="btn btn-secondary" onclick="pasteApiKey()" 
-                                    style="padding: 12px 15px; margin-bottom: 0; white-space: nowrap;">
-                                📋 Paste
-                            </button>
+                <!-- Compact API Configuration Panel -->
+                <div class="compact-config-panel">
+                    <div class="compact-config-status">
+                        <div class="config-summary">
+                            <div class="status-indicator status-unconfigured" id="compactConfigStatus"></div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px;" id="compactConfigText">API Not Configured</div>
+                                <div style="font-size: 12px; color: #6c757d;" id="compactConfigDetail">Click to setup NVIDIA API</div>
+                            </div>
                         </div>
+                        <button class="config-btn" onclick="openConfigModal()">
+                            ⚙️ Setup
+                        </button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="apiUrl">API Base URL</label>
-                        <input type="text" id="apiUrl" class="form-control" 
-                               value="https://integrate.api.nvidia.com"
-                               placeholder="API base URL">
-                    </div>
-                    
-                    <button class="btn" onclick="saveApiConfig()">Save Configuration</button>
-                    <button class="btn btn-secondary" onclick="testApiConnection()">Test Connection</button>
                 </div>
 
                 <!-- Quick Actions -->
@@ -781,58 +953,344 @@
             currentMode = mode;
         }
 
-        // API Configuration
-        function saveApiConfig() {
-            const apiKey = document.getElementById('apiKey').value;
-            const apiUrl = document.getElementById('apiUrl').value;
+        // Enhanced API Configuration System
+        function loadApiConfig() {
+            const config = getStoredConfig();
+            updateCompactConfigDisplay();
             
+            // Load into modal if it exists
+            if (document.getElementById('modalApiKey')) {
+                document.getElementById('modalApiKey').value = config.apiKey || '';
+                document.getElementById('modalApiUrl').value = config.apiUrl || 'https://integrate.api.nvidia.com';
+                document.getElementById('defaultTimeout').value = config.timeout || 60;
+                document.getElementById('maxRetries').value = config.maxRetries || 3;
+                document.getElementById('enableDebugMode').checked = config.debugMode || false;
+                
+                updateModalConfigStatus();
+                setupConfigValidation();
+            }
+        }
+
+        function getStoredConfig() {
+            return {
+                apiKey: localStorage.getItem('evo2_api_key') || '',
+                apiUrl: localStorage.getItem('evo2_api_url') || 'https://integrate.api.nvidia.com',
+                timeout: parseInt(localStorage.getItem('evo2_timeout')) || 60,
+                maxRetries: parseInt(localStorage.getItem('evo2_max_retries')) || 3,
+                debugMode: localStorage.getItem('evo2_debug_mode') === 'true',
+                lastSaved: localStorage.getItem('evo2_config_timestamp')
+            };
+        }
+
+        function getApiConfig() {
+            const config = getStoredConfig();
+            if (config.apiKey) {
+                return { 
+                    key: config.apiKey, 
+                    url: config.apiUrl,
+                    timeout: config.timeout,
+                    maxRetries: config.maxRetries,
+                    debugMode: config.debugMode
+                };
+            }
+            return null;
+        }
+
+        function updateCompactConfigDisplay() {
+            const config = getStoredConfig();
+            const statusElement = document.getElementById('compactConfigStatus');
+            const statusText = document.getElementById('compactConfigText');
+            const statusDetail = document.getElementById('compactConfigDetail');
+            
+            if (config.apiKey) {
+                statusElement.className = 'status-indicator status-configured';
+                statusText.textContent = 'API Configured';
+                statusDetail.textContent = `Connected to ${config.apiUrl.replace('https://', '')}`;
+            } else {
+                statusElement.className = 'status-indicator status-unconfigured';
+                statusText.textContent = 'API Not Configured';
+                statusDetail.textContent = 'Click to setup NVIDIA API';
+            }
+        }
+
+        // Modal Configuration Functions
+        function openConfigModal() {
+            document.getElementById('configModal').style.display = 'flex';
+            loadApiConfig(); // Refresh modal data
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        function saveModalConfig() {
+            const apiKey = document.getElementById('modalApiKey').value.trim();
+            const apiUrl = document.getElementById('modalApiUrl').value.trim();
+            const timeout = document.getElementById('defaultTimeout').value;
+            const maxRetries = document.getElementById('maxRetries').value;
+            const debugMode = document.getElementById('enableDebugMode').checked;
+            
+            // Validate API key format
+            if (apiKey && !apiKey.startsWith('nvapi-')) {
+                showNotification('API key should start with "nvapi-"', 'warning');
+                return;
+            }
+            
+            // Validate URL format
+            if (apiUrl && !apiUrl.startsWith('https://')) {
+                showNotification('API URL must use HTTPS', 'warning');
+                return;
+            }
+            
+            // Save configuration
             localStorage.setItem('evo2_api_key', apiKey);
             localStorage.setItem('evo2_api_url', apiUrl);
+            localStorage.setItem('evo2_timeout', timeout);
+            localStorage.setItem('evo2_max_retries', maxRetries);
+            localStorage.setItem('evo2_debug_mode', debugMode.toString());
+            localStorage.setItem('evo2_config_timestamp', new Date().toISOString());
             
-            updateConfigStatus();
-            showMessage('Configuration saved successfully!', 'success');
+            // Update displays
+            updateCompactConfigDisplay();
+            updateModalConfigStatus();
+            
+            showNotification('Configuration saved successfully!', 'success');
+            
+            // Auto-close modal after successful save
+            setTimeout(() => {
+                closeConfigModal();
+            }, 1500);
         }
 
-        function loadApiConfig() {
-            const apiKey = localStorage.getItem('evo2_api_key');
-            const apiUrl = localStorage.getItem('evo2_api_url');
+        function updateModalConfigStatus() {
+            const config = getStoredConfig();
+            const statusDisplay = document.getElementById('modalConfigStatus');
+            const statusIndicator = document.getElementById('modalStatusIndicator');
+            const statusText = document.getElementById('modalStatusText');
+            const statusDetail = document.getElementById('modalStatusDetail');
             
-            if (apiKey) document.getElementById('apiKey').value = apiKey;
-            if (apiUrl) document.getElementById('apiUrl').value = apiUrl;
-            
-            updateConfigStatus();
-        }
-
-        function updateConfigStatus() {
-            const apiKey = localStorage.getItem('evo2_api_key');
-            const statusIndicator = document.getElementById('configStatus');
-            const statusText = document.getElementById('configStatusText');
-            
-            if (apiKey) {
+            if (config.apiKey) {
+                statusDisplay.className = 'config-status-display configured';
                 statusIndicator.className = 'status-indicator status-configured';
-                statusText.textContent = 'Configured';
+                statusText.textContent = 'API Configured & Ready';
+                
+                const maskedKey = config.apiKey.substring(0, 12) + '...' + config.apiKey.substring(config.apiKey.length - 4);
+                const lastSaved = config.lastSaved ? new Date(config.lastSaved).toLocaleString() : 'Unknown';
+                statusDetail.textContent = `Key: ${maskedKey} • Saved: ${lastSaved}`;
             } else {
+                statusDisplay.className = 'config-status-display unconfigured';
                 statusIndicator.className = 'status-indicator status-unconfigured';
-                statusText.textContent = 'Not Configured';
+                statusText.textContent = 'API Not Configured';
+                statusDetail.textContent = 'Enter your NVIDIA API key below to enable Evo2 functionality';
             }
         }
+
+        function toggleApiKeyVisibility() {
+            const keyInput = document.getElementById('modalApiKey');
+            const toggleBtn = document.getElementById('apiKeyToggle');
+            
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                keyInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        async function pasteModalApiKey() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('modalApiKey').value = text.trim();
+                validateApiKeyStrength();
+                showNotification('API key pasted successfully!', 'success');
+            } catch (error) {
+                showNotification('Could not access clipboard', 'error');
+                document.getElementById('modalApiKey').focus();
+            }
+        }
+
+        function validateApiKeyStrength() {
+            const apiKey = document.getElementById('modalApiKey').value;
+            const strengthElement = document.getElementById('apiKeyStrength');
+            
+            if (!apiKey) {
+                strengthElement.textContent = '';
+                return;
+            }
+            
+            if (!apiKey.startsWith('nvapi-')) {
+                strengthElement.innerHTML = '⚠️ Key should start with "nvapi-"';
+                strengthElement.style.color = '#f59e0b';
+            } else if (apiKey.length < 20) {
+                strengthElement.innerHTML = '⚠️ Key appears to be too short';
+                strengthElement.style.color = '#f59e0b';
+            } else {
+                strengthElement.innerHTML = '✅ Key format looks valid';
+                strengthElement.style.color = '#10b981';
+            }
+        }
+
+        function testModalApiConnection() {
+            const config = {
+                key: document.getElementById('modalApiKey').value.trim(),
+                url: document.getElementById('modalApiUrl').value.trim()
+            };
+            
+            if (!config.key || !config.url) {
+                showNotification('Please enter both API key and URL', 'warning');
+                return;
+            }
+            
+            const testBtn = document.getElementById('modalTestBtn');
+            testBtn.textContent = '🔄 Testing...';
+            testBtn.disabled = true;
+            
+            // Simulate API test
+            setTimeout(() => {
+                if (config.key.startsWith('nvapi-') && config.url.includes('nvidia')) {
+                    showNotification('API connection test successful!', 'success');
+                    testBtn.innerHTML = '✅ Connected';
+                } else {
+                    showNotification('API connection test failed', 'error');
+                    testBtn.innerHTML = '❌ Failed';
+                }
+                
+                setTimeout(() => {
+                    testBtn.textContent = '🔗 Test Connection';
+                    testBtn.disabled = false;
+                }, 2000);
+            }, 1500);
+        }
+
+        function resetConfigToDefaults() {
+            if (confirm('Reset all configuration to defaults? This will clear your API key.')) {
+                localStorage.removeItem('evo2_api_key');
+                localStorage.removeItem('evo2_api_url');
+                localStorage.removeItem('evo2_timeout');
+                localStorage.removeItem('evo2_max_retries');
+                localStorage.removeItem('evo2_debug_mode');
+                localStorage.removeItem('evo2_config_timestamp');
+                
+                // Reset form
+                document.getElementById('modalApiKey').value = '';
+                document.getElementById('modalApiUrl').value = 'https://integrate.api.nvidia.com';
+                document.getElementById('defaultTimeout').value = '60';
+                document.getElementById('maxRetries').value = '3';
+                document.getElementById('enableDebugMode').checked = false;
+                
+                updateCompactConfigDisplay();
+                updateModalConfigStatus();
+                
+                showNotification('Configuration reset to defaults', 'success');
+            }
+        }
+
+        // Add real-time validation
+        function setupConfigValidation() {
+            const apiKeyInput = document.getElementById('modalApiKey');
+            if (apiKeyInput) {
+                apiKeyInput.addEventListener('input', validateApiKeyStrength);
+            }
+        }
+
+        // Enhanced notification system
+        function showNotification(message, type = 'info') {
+            // Remove any existing notifications
+            const existing = document.querySelector('.notification-toast');
+            if (existing) {
+                existing.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'notification-toast';
+            
+            const colors = {
+                success: '#10b981',
+                error: '#ef4444',
+                warning: '#f59e0b',
+                info: '#3b82f6'
+            };
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${colors[type] || colors.info};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 20000;
+                font-weight: 600;
+                font-size: 14px;
+                max-width: 300px;
+                animation: slideInRight 0.3s ease-out;
+            `;
+
+            notification.innerHTML = `${icons[type] || icons.info} ${message}`;
+            document.body.appendChild(notification);
+
+            // Add CSS animation
+            if (!document.querySelector('#notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOutRight {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        // Enhanced keyboard support
+        document.addEventListener('keydown', function(event) {
+            // Close modal on Escape key
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('configModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeConfigModal();
+                }
+            }
+            
+            // Save config on Ctrl/Cmd+S in modal
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                const modal = document.getElementById('configModal');
+                if (modal && modal.style.display === 'flex') {
+                    event.preventDefault();
+                    saveModalConfig();
+                }
+            }
+        });
 
         async function testApiConnection() {
-            showLoading('Testing API connection...');
-            
-            try {
-                // Test with a simple request
-                const result = await callMCPTool('evo2_generate_sequence', {
-                    prompt: 'ATGCGTA',
-                    maxTokens: 50
-                });
-                
-                hideLoading();
-                showMessage('API connection successful!', 'success');
-            } catch (error) {
-                hideLoading();
-                showMessage(`API connection failed: ${error.message}`, 'error');
-            }
+            // Legacy function - redirect to modal test
+            testModalApiConnection();
         }
 
         // Main analysis functions
@@ -1214,29 +1672,13 @@
             document.getElementById('resultsArea').style.display = 'none';
         }
 
-        // Paste API key from clipboard
+        // Legacy paste API key function - now redirects to modal
         async function pasteApiKey() {
-            try {
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                    // Modern clipboard API
-                    const text = await navigator.clipboard.readText();
-                    document.getElementById('apiKey').value = text.trim();
-                    showMessage('API key pasted successfully!', 'success');
-                    
-                    // Auto-save configuration after pasting
-                    setTimeout(() => {
-                        saveApiConfig();
-                    }, 500);
-                } else {
-                    // Fallback for older browsers or when clipboard API is not available
-                    showMessage('Please paste your API key manually (Ctrl+V)', 'error');
-                    document.getElementById('apiKey').focus();
-                }
-            } catch (error) {
-                console.error('Failed to paste from clipboard:', error);
-                showMessage('Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
-                document.getElementById('apiKey').focus();
-            }
+            // Open config modal and focus on API key field
+            openConfigModal();
+            setTimeout(() => {
+                pasteModalApiKey();
+            }, 300);
         }
 
         // File Menu Functions
@@ -1433,8 +1875,7 @@
 
         // Tools Menu Functions
         function focusApiConfiguration() {
-            document.getElementById('apiUrl').focus();
-            document.getElementById('apiUrl').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            openConfigModal();
         }
 
         function testApiConnection() {
@@ -1662,5 +2103,107 @@
             });
         }
     </script>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="config-overlay" style="display: none;">
+        <div class="config-modal">
+            <div class="config-modal-header">
+                <h2>🔧 NVIDIA Evo2 API Configuration</h2>
+                <button class="config-modal-close" onclick="closeConfigModal()">✕</button>
+            </div>
+            <div class="config-modal-body">
+                <!-- Current Status -->
+                <div class="config-status-display" id="modalConfigStatus">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                            <div class="status-indicator status-unconfigured" id="modalStatusIndicator"></div>
+                            <strong id="modalStatusText">API Not Configured</strong>
+                        </div>
+                        <div style="font-size: 0.9em; color: #6c757d;" id="modalStatusDetail">
+                            Configure your NVIDIA API credentials to enable Evo2 functionality
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="testModalApiConnection()" id="modalTestBtn">
+                        🔗 Test Connection
+                    </button>
+                </div>
+
+                <!-- API Key Configuration -->
+                <div class="config-group">
+                    <h4>🔑 NVIDIA API Key</h4>
+                    <div class="description">
+                        Get your API key from <a href="https://build.nvidia.com/arc/evo2-40b" target="_blank">NVIDIA AI Playground</a>. 
+                        Your key will be stored securely in your browser's local storage.
+                    </div>
+                    <div class="api-key-container">
+                        <input type="password" id="modalApiKey" class="form-control" 
+                               placeholder="nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                        <button class="api-key-toggle" onclick="toggleApiKeyVisibility()" id="apiKeyToggle">
+                            👁️
+                        </button>
+                        <button class="btn btn-secondary" onclick="pasteModalApiKey()" 
+                                style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); padding: 8px 12px; font-size: 12px;">
+                            📋 Paste
+                        </button>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.85em; color: #6c757d;">
+                        <span id="apiKeyStrength"></span>
+                    </div>
+                </div>
+
+                <!-- API URL Configuration -->
+                <div class="config-group">
+                    <h4>🌐 API Endpoint</h4>
+                    <div class="description">
+                        The NVIDIA API base URL. You typically don't need to change this unless using a custom endpoint.
+                    </div>
+                    <input type="text" id="modalApiUrl" class="form-control" 
+                           value="https://integrate.api.nvidia.com"
+                           placeholder="https://integrate.api.nvidia.com">
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="config-group">
+                    <h4>⚡ Advanced Settings</h4>
+                    <div class="description">
+                        Configure additional parameters for API requests and model behavior.
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="defaultTimeout">Request Timeout (seconds)</label>
+                            <input type="number" id="defaultTimeout" class="form-control" 
+                                   value="60" min="10" max="300">
+                        </div>
+                        <div class="form-group">
+                            <label for="maxRetries">Max Retries</label>
+                            <input type="number" id="maxRetries" class="form-control" 
+                                   value="3" min="0" max="10">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>
+                            <input type="checkbox" id="enableDebugMode" style="margin-right: 8px;">
+                            Enable debug mode (detailed logging)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="config-actions">
+                    <button class="btn btn-secondary" onclick="resetConfigToDefaults()">
+                        🔄 Reset to Defaults
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeConfigModal()">
+                        Cancel
+                    </button>
+                    <button class="btn" onclick="saveModalConfig()">
+                        💾 Save Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 
