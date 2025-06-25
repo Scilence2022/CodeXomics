@@ -3,26 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NCBI Database Browser - Genome AI Studio</title>
+    <title>NCBI Database Browser - Professional Bioinformatics Tool</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary-color: #2c5aa0; --secondary-color: #4a7bc8; --bg-primary: #f5f5f5; --bg-secondary: #ffffff; --radius: 8px; --shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-primary); color: #333; line-height: 1.6; }
-        .app-header { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 20px; box-shadow: var(--shadow); }
-        .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; }
-        .app-title { display: flex; align-items: center; gap: 15px; }
-        .app-title i { font-size: 2rem; background: rgba(255,255,255,0.2); padding: 10px; border-radius: var(--radius); }
-        .main-container { display: flex; height: calc(100vh - 100px); max-width: 1400px; margin: 0 auto; gap: 20px; padding: 20px; }
-        .sidebar { width: 350px; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
-        .content-area { flex: 1; background: var(--bg-secondary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; overflow-y: auto; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--radius); font-size: 14px; margin-bottom: 15px; }
-        .btn { padding: 10px 20px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-primary { background: var(--secondary-color); color: white; width: 100%; justify-content: center; }
-        .btn-primary:hover { background: var(--primary-color); transform: translateY(-2px); }
-        .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; color: var(--primary-color); display: flex; align-items: center; gap: 10px; }
-        .result-card { background: var(--bg-secondary); border: 1px solid #ddd; border-radius: var(--radius); padding: 15px; margin-bottom: 15px; transition: all 0.3s ease; }
-        .result-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #4a7bc8;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-accent: #e9ecef;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --border-color: #dee2e6;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .app-title i {
+            font-size: 2rem;
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: var(--radius);
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .header-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 120px);
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .sidebar {
+            width: 380px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            height: fit-content;
+            position: sticky;
+            top: 120px;
+        }
+        
+        .content-area {
+            flex: 1;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 14px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: var(--bg-secondary);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(74, 123, 200, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            line-height: 1;
+        }
+        
+        .btn-primary {
+            background: var(--secondary-color);
+            color: white;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-accent);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: #adb5bd;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+        
+        .btn-info {
+            background: var(--info-color);
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--bg-accent);
+            padding-bottom: 10px;
+        }
+        
+        .advanced-options {
+            background: var(--bg-accent);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-top: 15px;
+        }
+        
+        .filter-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .result-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+            border-color: var(--secondary-color);
+        }
+        
+        .result-card h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .result-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+        
+        .meta-item strong {
+            color: var(--text-primary);
+        }
+        
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .search-stats {
+            background: var(--bg-accent);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+            padding: 20px;
+        }
+        
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .page-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+        
+        .page-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .database-info {
+            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+            border: 1px solid #bbdefb;
+            border-radius: var(--radius);
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        
+        .database-info h4 {
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+        
+        .tag {
+            display: inline-block;
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        
+        .tag.primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .tag.success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .tag.info {
+            background: var(--info-color);
+            color: white;
+        }
+        
+        .sequence-display {
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.4;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .error-state {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .error-state i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            
+            .filter-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-actions {
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -32,8 +473,22 @@
                 <i class="fas fa-database"></i>
                 <div class="title-text">
                     <h1>NCBI Database Browser</h1>
-                    <p>National Center for Biotechnology Information</p>
+                    <p>Professional Bioinformatics Research Tool</p>
                 </div>
+            </div>
+            <div class="header-controls">
+                <button class="header-btn" id="helpBtn">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </button>
+                <button class="header-btn" id="historyBtn">
+                    <i class="fas fa-history"></i>
+                    History
+                </button>
+                <button class="header-btn" id="exportBtn">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
             </div>
         </div>
     </div>
@@ -45,36 +500,121 @@
                 Database Search
             </div>
             
-            <select class="form-control" id="database">
-                <option value="pubmed">PubMed</option>
-                <option value="nucleotide">Nucleotide</option>
-                <option value="protein">Protein</option>
-                <option value="structure">Structure (PDB)</option>
-                <option value="genome">Genome</option>
-                <option value="taxonomy">Taxonomy</option>
-            </select>
+            <div class="form-group">
+                <label class="form-label" for="database">
+                    <i class="fas fa-database"></i> Select Database
+                </label>
+                <select class="form-control" id="database">
+                    <option value="pubmed">PubMed - Biomedical Literature</option>
+                    <option value="nucleotide">Nucleotide - DNA/RNA Sequences</option>
+                    <option value="protein">Protein - Protein Sequences</option>
+                    <option value="structure">Structure - 3D Protein Structures</option>
+                    <option value="genome">Genome - Complete Genomes</option>
+                    <option value="taxonomy">Taxonomy - Organism Classifications</option>
+                    <option value="gene">Gene - Gene Records</option>
+                    <option value="pubchem">PubChem - Chemical Compounds</option>
+                    <option value="clinvar">ClinVar - Genetic Variants</option>
+                    <option value="omia">OMIA - Animal Genetic Disorders</option>
+                </select>
+            </div>
+
+            <div id="databaseInfo" class="database-info">
+                <h4>PubMed Database</h4>
+                <p>Search over 34 million biomedical literature citations from MEDLINE, life science journals, and online books.</p>
+            </div>
             
-            <input type="text" class="form-control" id="searchQuery" placeholder="Enter search terms...">
+            <div class="form-group">
+                <label class="form-label" for="searchQuery">
+                    <i class="fas fa-edit"></i> Search Terms
+                </label>
+                <input type="text" class="form-control" id="searchQuery" 
+                       placeholder="e.g., p53 cancer mutation, BRCA1 breast cancer...">
+            </div>
+            
+            <div class="advanced-options">
+                <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-primary);">
+                    <i class="fas fa-cog"></i> Advanced Options
+                </h4>
+                
+                <div class="form-group">
+                    <label class="form-label" for="maxResults">Results per page</label>
+                    <select class="form-control" id="maxResults">
+                        <option value="20">20 results</option>
+                        <option value="50" selected>50 results</option>
+                        <option value="100">100 results</option>
+                        <option value="200">200 results</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="sortOrder">Sort by</label>
+                    <select class="form-control" id="sortOrder">
+                        <option value="relevance">Relevance</option>
+                        <option value="date">Publication Date</option>
+                        <option value="author">First Author</option>
+                        <option value="journal">Journal</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <div>
+                        <label class="form-label" for="yearFrom">From Year</label>
+                        <input type="number" class="form-control" id="yearFrom" placeholder="2020" min="1950" max="2025">
+                    </div>
+                    <div>
+                        <label class="form-label" for="yearTo">To Year</label>
+                        <input type="number" class="form-control" id="yearTo" placeholder="2024" min="1950" max="2025">
+                    </div>
+                </div>
+            </div>
             
             <button class="btn btn-primary" id="searchBtn">
                 <i class="fas fa-search"></i>
-                Search NCBI
+                Search NCBI Database
             </button>
 
-            <div style="margin-top: 20px;">
-                <button class="btn btn-primary" id="exampleBtn" style="margin-bottom: 10px;">
+            <div style="margin-top: 15px; display: grid; gap: 10px;">
+                <button class="btn btn-secondary" id="exampleBtn">
                     <i class="fas fa-flask"></i>
-                    Load Example
+                    Load Example Query
                 </button>
+                
+                <button class="btn btn-info" id="clearBtn">
+                    <i class="fas fa-eraser"></i>
+                    Clear Results
+                </button>
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-primary);">
+                    <i class="fas fa-bookmark"></i> Quick Searches
+                </h4>
+                <div style="display: grid; gap: 5px;">
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='COVID-19 vaccine'; document.getElementById('database').value='pubmed';">
+                        COVID-19 Research
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='BRCA1 BRCA2'; document.getElementById('database').value='gene';">
+                        BRCA Genes
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='Homo sapiens'; document.getElementById('database').value='genome';">
+                        Human Genome
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('searchQuery').value='insulin protein'; document.getElementById('database').value='protein';">
+                        Insulin Protein
+                    </button>
+                </div>
             </div>
         </div>
 
         <div class="content-area">
             <div id="resultsContainer">
-                <div style="text-align: center; padding: 40px; color: #666;">
-                    <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
-                    <h3>No Search Results</h3>
-                    <p>Select a database and enter search terms to query NCBI.</p>
+                <div class="empty-state">
+                    <i class="fas fa-database"></i>
+                    <h3>NCBI Database Browser</h3>
+                    <p>Select a database and enter search terms to explore NCBI's comprehensive biological databases.</p>
+                    <p style="font-size: 14px; margin-top: 15px; color: var(--text-muted);">
+                        Access millions of sequences, structures, publications, and genomic data from the National Center for Biotechnology Information.
+                    </p>
                 </div>
             </div>
         </div>
@@ -84,107 +624,712 @@
     <script>
         class NCBIBrowser {
             constructor() {
+                this.currentPage = 0;
+                this.totalResults = 0;
+                this.searchHistory = [];
+                this.apiKey = null; // Can be added for increased rate limits
                 this.init();
                 this.initMenuHandler();
             }
 
             initMenuHandler() {
-                // Initialize menu handler with tool-specific actions
                 this.menuHandler = new ToolMenuHandler('NCBI Database Browser', this);
             }
 
             init() {
+                this.setupEventListeners();
+                this.updateDatabaseInfo();
+            }
+
+            setupEventListeners() {
                 document.getElementById('searchBtn').addEventListener('click', () => this.search());
                 document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+                document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
+                document.getElementById('historyBtn').addEventListener('click', () => this.showHistory());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportResults());
+                document.getElementById('database').addEventListener('change', () => this.updateDatabaseInfo());
+                
+                // Enter key support
+                document.getElementById('searchQuery').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.search();
+                });
+            }
+
+            updateDatabaseInfo() {
+                const database = document.getElementById('database').value;
+                const infoElement = document.getElementById('databaseInfo');
+                
+                const databaseInfo = {
+                    'pubmed': {
+                        title: 'PubMed Database',
+                        description: 'Search over 34 million biomedical literature citations from MEDLINE, life science journals, and online books. Updated daily.'
+                    },
+                    'nucleotide': {
+                        title: 'Nucleotide Database',
+                        description: 'DNA and RNA sequences from GenBank, EMBL, and DDBJ. Includes complete genomes, mRNAs, and other sequence data.'
+                    },
+                    'protein': {
+                        title: 'Protein Database',
+                        description: 'Protein sequences from Swiss-Prot, PIR, PRF, RefSeq, and other databases. Includes functional annotations.'
+                    },
+                    'structure': {
+                        title: 'Structure Database (PDB)',
+                        description: '3D molecular structures of proteins, nucleic acids, and complex assemblies determined by X-ray crystallography, NMR, and cryo-EM.'
+                    },
+                    'genome': {
+                        title: 'Genome Database',
+                        description: 'Complete genome sequences and annotations for thousands of organisms from bacteria to mammals.'
+                    },
+                    'gene': {
+                        title: 'Gene Database',
+                        description: 'Gene-centered information including nomenclature, Reference Sequences, maps, pathways, variations, and phenotypes.'
+                    },
+                    'taxonomy': {
+                        title: 'Taxonomy Database',
+                        description: 'Classification and nomenclature for all organisms represented in NCBI databases.'
+                    },
+                    'pubchem': {
+                        title: 'PubChem Database',
+                        description: 'Chemical information repository including compound structures, properties, and biological activities.'
+                    },
+                    'clinvar': {
+                        title: 'ClinVar Database',
+                        description: 'Public archive of relationships among human variations and phenotypes, with clinical significance.'
+                    },
+                    'omia': {
+                        title: 'OMIA Database',
+                        description: 'Online Mendelian Inheritance in Animals - genetic disorders and traits in animal species.'
+                    }
+                };
+
+                const info = databaseInfo[database];
+                infoElement.innerHTML = `
+                    <h4>${info.title}</h4>
+                    <p>${info.description}</p>
+                `;
             }
 
             loadExample() {
-                document.getElementById('database').value = 'protein';
-                document.getElementById('searchQuery').value = 'p53 human';
+                const examples = {
+                    'pubmed': {query: 'CRISPR gene editing cancer therapy', database: 'pubmed'},
+                    'nucleotide': {query: 'SARS-CoV-2 complete genome', database: 'nucleotide'},
+                    'protein': {query: 'human insulin precursor', database: 'protein'},
+                    'structure': {query: 'COVID-19 spike protein', database: 'structure'},
+                    'genome': {query: 'Escherichia coli K12', database: 'genome'},
+                    'gene': {query: 'BRCA1 Homo sapiens', database: 'gene'},
+                    'taxonomy': {query: 'Homo sapiens', database: 'taxonomy'},
+                    'pubchem': {query: 'aspirin', database: 'pubchem'},
+                    'clinvar': {query: 'BRCA1 pathogenic variant', database: 'clinvar'},
+                    'omia': {query: 'muscular dystrophy dog', database: 'omia'}
+                };
+
+                const currentDb = document.getElementById('database').value;
+                const example = examples[currentDb] || examples['pubmed'];
+                
+                document.getElementById('database').value = example.database;
+                document.getElementById('searchQuery').value = example.query;
+                this.updateDatabaseInfo();
             }
 
-            async search() {
+            async search(page = 0) {
                 const database = document.getElementById('database').value;
                 const query = document.getElementById('searchQuery').value.trim();
+                const maxResults = parseInt(document.getElementById('maxResults').value);
+                const sortOrder = document.getElementById('sortOrder').value;
+                const yearFrom = document.getElementById('yearFrom').value;
+                const yearTo = document.getElementById('yearTo').value;
                 
                 if (!query) {
-                    alert('Please enter search terms.');
+                    this.showError('Please enter search terms.');
                     return;
                 }
 
-                const results = this.simulateNCBISearch(database, query);
-                this.displayResults(results, database);
+                this.currentPage = page;
+                this.showLoading();
+
+                // Add to search history
+                this.addToHistory(database, query);
+
+                try {
+                    const results = await this.performNCBISearch(database, query, page, maxResults, sortOrder, yearFrom, yearTo);
+                    this.displayResults(results, database, query);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.showError(`Search failed: ${error.message}`);
+                }
             }
 
-            simulateNCBISearch(database, query) {
-                const databases = {
-                    'pubmed': [
-                        { id: '12345678', title: 'p53 mutations in human cancer', authors: 'Smith J, et al.', journal: 'Nature', year: '2023' },
-                        { id: '87654321', title: 'Tumor suppressor mechanisms', authors: 'Brown A, et al.', journal: 'Cell', year: '2023' }
-                    ],
-                    'protein': [
-                        { id: 'NP_000537', name: 'tumor protein p53', organism: 'Homo sapiens', length: '393 aa' },
-                        { id: 'NP_001276760', name: 'p53 isoform', organism: 'Homo sapiens', length: '347 aa' }
-                    ],
-                    'nucleotide': [
-                        { id: 'NM_000546', name: 'TP53 mRNA', organism: 'Homo sapiens', length: '2579 bp' },
-                        { id: 'NC_000017', name: 'Chromosome 17', organism: 'Homo sapiens', length: '83257441 bp' }
-                    ]
+            async performNCBISearch(database, query, page, maxResults, sortOrder, yearFrom, yearTo) {
+                const retstart = page * maxResults;
+                let searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=${database}&term=${encodeURIComponent(query)}&retmax=${maxResults}&retstart=${retstart}&retmode=json`;
+                
+                // Add date filters for PubMed
+                if ((yearFrom || yearTo) && database === 'pubmed') {
+                    const dateFilter = `${yearFrom || '1950'}:${yearTo || '2025'}[pdat]`;
+                    searchUrl += `&term=${encodeURIComponent(query + ' AND ' + dateFilter)}`;
+                }
+
+                // Add sorting
+                if (sortOrder !== 'relevance') {
+                    const sortMap = {
+                        'date': '&sort=pub_date',
+                        'author': '&sort=first_author',
+                        'journal': '&sort=journal'
+                    };
+                    searchUrl += sortMap[sortOrder] || '';
+                }
+
+                const searchResponse = await fetch(searchUrl);
+                if (!searchResponse.ok) {
+                    throw new Error(`HTTP ${searchResponse.status}: ${searchResponse.statusText}`);
+                }
+                
+                const searchData = await searchResponse.json();
+                
+                if (searchData.esearchresult.errorlist && searchData.esearchresult.errorlist.phrasesnotfound) {
+                    throw new Error('No results found for the search terms');
+                }
+
+                this.totalResults = parseInt(searchData.esearchresult.count);
+                const idList = searchData.esearchresult.idlist;
+
+                if (idList.length === 0) {
+                    return { results: [], total: 0 };
+                }
+
+                // Fetch detailed information
+                const details = await this.fetchDetailedInfo(database, idList);
+                return { results: details, total: this.totalResults };
+            }
+
+            async fetchDetailedInfo(database, idList) {
+                if (idList.length === 0) return [];
+
+                const ids = idList.join(',');
+                let fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=${database}&id=${ids}&retmode=json`;
+
+                try {
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch details: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    const results = [];
+
+                    for (const id of idList) {
+                        const item = data.result[id];
+                        if (item && item.title) {
+                            results.push(this.formatResult(database, item, id));
+                        }
+                    }
+
+                    return results;
+                } catch (error) {
+                    console.error('Error fetching details:', error);
+                    // Return basic results with IDs only
+                    return idList.map(id => ({
+                        id: id,
+                        title: `Record ID: ${id}`,
+                        database: database
+                    }));
+                }
+            }
+
+            formatResult(database, item, id) {
+                const baseResult = {
+                    id: id,
+                    database: database,
+                    title: item.title || 'No title available',
+                    url: `https://www.ncbi.nlm.nih.gov/${database}/${id}`
                 };
 
-                return databases[database] || [];
+                switch (database) {
+                    case 'pubmed':
+                        return {
+                            ...baseResult,
+                            authors: item.authors || 'No authors listed',
+                            journal: item.source || 'Unknown journal',
+                            year: item.pubdate ? item.pubdate.split(' ')[0] : 'Unknown',
+                            pmid: id,
+                            doi: item.doi || null,
+                            abstract: item.abstract || null,
+                            url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`
+                        };
+                    
+                    case 'protein':
+                        return {
+                            ...baseResult,
+                            organism: item.organism || 'Unknown organism',
+                            length: item.length ? `${item.length} aa` : 'Unknown length',
+                            accession: item.accessionversion || item.gi || id,
+                            description: item.title || 'No description'
+                        };
+                    
+                    case 'nucleotide':
+                        return {
+                            ...baseResult,
+                            organism: item.organism || 'Unknown organism',
+                            length: item.length ? `${item.length} bp` : 'Unknown length',
+                            accession: item.accessionversion || item.gi || id,
+                            moltype: item.moltype || 'Unknown',
+                            description: item.title || 'No description'
+                        };
+                    
+                    case 'structure':
+                        return {
+                            ...baseResult,
+                            resolution: item.resolution || 'Unknown',
+                            method: item.expmethod || 'Unknown method',
+                            organism: item.organism || 'Unknown organism',
+                            pdbid: item.pdbid || id,
+                            description: item.title || 'No description'
+                        };
+                    
+                    case 'genome':
+                        return {
+                            ...baseResult,
+                            organism: item.organism_name || item.organism || 'Unknown organism',
+                            size: item.total_length ? `${(item.total_length / 1000000).toFixed(2)} Mb` : 'Unknown size',
+                            assembly: item.assemblyaccession || 'Unknown assembly',
+                            level: item.assemblystatus || 'Unknown level'
+                        };
+                    
+                    case 'gene':
+                        return {
+                            ...baseResult,
+                            organism: item.organism || 'Unknown organism',
+                            gene_type: item.genetype || 'Unknown type',
+                            chromosome: item.chromosome || 'Unknown',
+                            symbol: item.name || 'Unknown symbol',
+                            description: item.description || item.title || 'No description'
+                        };
+                    
+                    default:
+                        return baseResult;
+                }
             }
 
-            displayResults(results, database) {
+            displayResults(data, database, query) {
                 const container = document.getElementById('resultsContainer');
+                const { results, total } = data;
                 
                 if (!results.length) {
                     container.innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #666;">
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
                             <h3>No Results Found</h3>
-                            <p>Try different search terms or select another database.</p>
+                            <p>No results found for "${query}" in ${database.toUpperCase()} database.</p>
+                            <p style="font-size: 14px; margin-top: 10px;">Try:</p>
+                            <ul style="text-align: left; display: inline-block;">
+                                <li>Different search terms</li>
+                                <li>Broader search criteria</li>
+                                <li>Another database</li>
+                                <li>Checking spelling</li>
+                            </ul>
                         </div>
                     `;
                     return;
                 }
 
-                const resultCards = results.map(result => {
-                    if (database === 'pubmed') {
+                const startIndex = this.currentPage * parseInt(document.getElementById('maxResults').value) + 1;
+                const endIndex = Math.min(startIndex + results.length - 1, total);
+
+                const searchStats = `
+                    <div class="search-stats">
+                        <div>
+                            <strong>Results ${startIndex}-${endIndex} of ${total.toLocaleString()}</strong> 
+                            for "${query}" in ${database.toUpperCase()}
+                        </div>
+                        <div>
+                            <span class="tag info">Page ${this.currentPage + 1}</span>
+                            <span class="tag primary">${results.length} shown</span>
+                        </div>
+                    </div>
+                `;
+
+                const resultCards = results.map(result => this.createResultCard(result)).join('');
+                const pagination = this.createPagination(total);
+
+                container.innerHTML = searchStats + resultCards + pagination;
+            }
+
+            createResultCard(result) {
+                const { database } = result;
+                
+                switch (database) {
+                    case 'pubmed':
                         return `
                             <div class="result-card">
                                 <h4>${result.title}</h4>
-                                <p><strong>Authors:</strong> ${result.authors}</p>
-                                <p><strong>Journal:</strong> ${result.journal} (${result.year})</p>
-                                <p><strong>PMID:</strong> ${result.id}</p>
-                                <button class="btn btn-primary" onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${result.id}/', '_blank')" style="margin-top: 10px;">
-                                    <i class="fas fa-external-link-alt"></i> View in PubMed
-                                </button>
+                                <div class="result-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-users"></i>
+                                        <strong>Authors:</strong> ${result.authors}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-book"></i>
+                                        <strong>Journal:</strong> ${result.journal}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-calendar"></i>
+                                        <strong>Year:</strong> ${result.year}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-hashtag"></i>
+                                        <strong>PMID:</strong> ${result.pmid}
+                                    </div>
+                                    ${result.doi ? `
+                                    <div class="meta-item">
+                                        <i class="fas fa-link"></i>
+                                        <strong>DOI:</strong> ${result.doi}
+                                    </div>` : ''}
+                                </div>
+                                <div class="result-actions">
+                                    <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> View in PubMed
+                                    </a>
+                                    <button class="btn btn-secondary btn-sm" onclick="ncbiBrowser.showAbstract('${result.id}')">
+                                        <i class="fas fa-file-text"></i> Abstract
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="ncbiBrowser.citePaper('${result.id}')">
+                                        <i class="fas fa-quote-right"></i> Cite
+                                    </button>
+                                </div>
                             </div>
                         `;
-                    } else {
+                    
+                    case 'protein':
                         return `
                             <div class="result-card">
-                                <h4>${result.name}</h4>
-                                <p><strong>ID:</strong> ${result.id}</p>
-                                <p><strong>Organism:</strong> ${result.organism}</p>
-                                <p><strong>Length:</strong> ${result.length}</p>
-                                <button class="btn btn-primary" onclick="window.open('https://www.ncbi.nlm.nih.gov/${database}/${result.id}', '_blank')" style="margin-top: 10px;">
-                                    <i class="fas fa-external-link-alt"></i> View in NCBI
-                                </button>
+                                <h4>${result.description}</h4>
+                                <div class="result-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-dna"></i>
+                                        <strong>Accession:</strong> ${result.accession}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-microscope"></i>
+                                        <strong>Organism:</strong> ${result.organism}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-ruler"></i>
+                                        <strong>Length:</strong> ${result.length}
+                                    </div>
+                                </div>
+                                <div class="result-actions">
+                                    <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> View in NCBI
+                                    </a>
+                                    <button class="btn btn-success btn-sm" onclick="ncbiBrowser.downloadSequence('${result.id}', 'protein')">
+                                        <i class="fas fa-download"></i> FASTA
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="ncbiBrowser.analyzeProtein('${result.id}')">
+                                        <i class="fas fa-chart-line"></i> Analyze
+                                    </button>
+                                </div>
                             </div>
                         `;
-                    }
-                }).join('');
+                    
+                    case 'nucleotide':
+                        return `
+                            <div class="result-card">
+                                <h4>${result.description}</h4>
+                                <div class="result-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-dna"></i>
+                                        <strong>Accession:</strong> ${result.accession}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-microscope"></i>
+                                        <strong>Organism:</strong> ${result.organism}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-ruler"></i>
+                                        <strong>Length:</strong> ${result.length}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-atom"></i>
+                                        <strong>Type:</strong> ${result.moltype}
+                                    </div>
+                                </div>
+                                <div class="result-actions">
+                                    <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> View in NCBI
+                                    </a>
+                                    <button class="btn btn-success btn-sm" onclick="ncbiBrowser.downloadSequence('${result.id}', 'nucleotide')">
+                                        <i class="fas fa-download"></i> FASTA
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="ncbiBrowser.runBlast('${result.id}')">
+                                        <i class="fas fa-search"></i> BLAST
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    
+                    case 'structure':
+                        return `
+                            <div class="result-card">
+                                <h4>${result.description}</h4>
+                                <div class="result-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-cube"></i>
+                                        <strong>PDB ID:</strong> ${result.pdbid}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-microscope"></i>
+                                        <strong>Method:</strong> ${result.method}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-eye"></i>
+                                        <strong>Resolution:</strong> ${result.resolution}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-dna"></i>
+                                        <strong>Organism:</strong> ${result.organism}
+                                    </div>
+                                </div>
+                                <div class="result-actions">
+                                    <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> View in NCBI
+                                    </a>
+                                    <button class="btn btn-success btn-sm" onclick="ncbiBrowser.view3D('${result.pdbid}')">
+                                        <i class="fas fa-cube"></i> 3D View
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="ncbiBrowser.downloadPDB('${result.pdbid}')">
+                                        <i class="fas fa-download"></i> PDB File
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    
+                    default:
+                        return `
+                            <div class="result-card">
+                                <h4>${result.title}</h4>
+                                <div class="result-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-hashtag"></i>
+                                        <strong>ID:</strong> ${result.id}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-database"></i>
+                                        <strong>Database:</strong> ${result.database.toUpperCase()}
+                                    </div>
+                                </div>
+                                <div class="result-actions">
+                                    <a href="${result.url}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> View in NCBI
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                }
+            }
 
-                container.innerHTML = `
-                    <h3>Search Results (${results.length} found in ${database.toUpperCase()})</h3>
-                    ${resultCards}
+            createPagination(totalResults) {
+                const maxResults = parseInt(document.getElementById('maxResults').value);
+                const totalPages = Math.ceil(totalResults / maxResults);
+                const currentPage = this.currentPage;
+                
+                if (totalPages <= 1) return '';
+
+                let pagination = '<div class="pagination">';
+                
+                // Previous button
+                pagination += `<button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} 
+                    onclick="ncbiBrowser.search(${currentPage - 1})">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>`;
+                
+                // Page numbers
+                const startPage = Math.max(0, currentPage - 2);
+                const endPage = Math.min(totalPages - 1, currentPage + 2);
+                
+                if (startPage > 0) {
+                    pagination += `<button class="page-btn" onclick="ncbiBrowser.search(0)">1</button>`;
+                    if (startPage > 1) pagination += '<span>...</span>';
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination += `<button class="page-btn ${i === currentPage ? 'active' : ''}" 
+                        onclick="ncbiBrowser.search(${i})">${i + 1}</button>`;
+                }
+                
+                if (endPage < totalPages - 1) {
+                    if (endPage < totalPages - 2) pagination += '<span>...</span>';
+                    pagination += `<button class="page-btn" onclick="ncbiBrowser.search(${totalPages - 1})">${totalPages}</button>`;
+                }
+                
+                // Next button
+                pagination += `<button class="page-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} 
+                    onclick="ncbiBrowser.search(${currentPage + 1})">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>`;
+                
+                pagination += '</div>';
+                return pagination;
+            }
+
+            showLoading() {
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <h3>Searching NCBI Database...</h3>
+                        <p>Please wait while we fetch results from NCBI servers.</p>
+                    </div>
                 `;
+            }
+
+            showError(message) {
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Search Error</h3>
+                        <p>${message}</p>
+                        <button class="btn btn-primary" onclick="ncbiBrowser.clearResults()">
+                            <i class="fas fa-refresh"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
+
+            clearResults() {
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-database"></i>
+                        <h3>NCBI Database Browser</h3>
+                        <p>Select a database and enter search terms to explore NCBI's comprehensive biological databases.</p>
+                    </div>
+                `;
+            }
+
+            addToHistory(database, query) {
+                const historyItem = {
+                    database,
+                    query,
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.searchHistory.unshift(historyItem);
+                if (this.searchHistory.length > 20) {
+                    this.searchHistory = this.searchHistory.slice(0, 20);
+                }
+            }
+
+            showHistory() {
+                if (this.searchHistory.length === 0) {
+                    alert('No search history available.');
+                    return;
+                }
+
+                const historyHtml = this.searchHistory.map((item, index) => `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" 
+                         onclick="ncbiBrowser.loadFromHistory(${index})">
+                        <strong>${item.database.toUpperCase()}</strong>: ${item.query}
+                        <br><small style="color: #666;">${new Date(item.timestamp).toLocaleString()}</small>
+                    </div>
+                `).join('');
+
+                const popup = window.open('', 'History', 'width=500,height=600');
+                popup.document.write(`
+                    <html>
+                        <head><title>Search History</title></head>
+                        <body style="font-family: Arial, sans-serif; margin: 20px;">
+                            <h3>Recent Searches</h3>
+                            ${historyHtml}
+                        </body>
+                    </html>
+                `);
+            }
+
+            loadFromHistory(index) {
+                const item = this.searchHistory[index];
+                document.getElementById('database').value = item.database;
+                document.getElementById('searchQuery').value = item.query;
+                this.updateDatabaseInfo();
+                window.focus();
+            }
+
+            showHelp() {
+                const helpContent = `
+                    <h3>NCBI Database Browser Help</h3>
+                    <p><strong>Search Tips:</strong></p>
+                    <ul>
+                        <li>Use specific terms for better results</li>
+                        <li>Use quotes for exact phrases: "gene therapy"</li>
+                        <li>Use AND, OR, NOT for complex queries</li>
+                        <li>Use wildcards: gene* for gene, genes, genetic</li>
+                        <li>Use [field] tags: author[au], title[ti]</li>
+                    </ul>
+                    <p><strong>Database Information:</strong></p>
+                    <ul>
+                        <li><strong>PubMed:</strong> Biomedical literature</li>
+                        <li><strong>Nucleotide:</strong> DNA/RNA sequences</li>
+                        <li><strong>Protein:</strong> Protein sequences</li>
+                        <li><strong>Structure:</strong> 3D molecular structures</li>
+                        <li><strong>Genome:</strong> Complete genome assemblies</li>
+                        <li><strong>Gene:</strong> Gene-specific information</li>
+                    </ul>
+                `;
+
+                const popup = window.open('', 'Help', 'width=600,height=500');
+                popup.document.write(`
+                    <html>
+                        <head><title>Help - NCBI Browser</title></head>
+                        <body style="font-family: Arial, sans-serif; margin: 20px; line-height: 1.6;">
+                            ${helpContent}
+                        </body>
+                    </html>
+                `);
+            }
+
+            exportResults() {
+                // Implementation for exporting current results
+                alert('Export functionality would allow saving results as CSV, JSON, or BibTeX format.');
+            }
+
+            // Utility methods for result actions
+            async downloadSequence(id, database) {
+                try {
+                    const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${database}&id=${id}&rettype=fasta&retmode=text`;
+                    window.open(url, '_blank');
+                } catch (error) {
+                    alert('Error downloading sequence: ' + error.message);
+                }
+            }
+
+            view3D(pdbId) {
+                window.open(`https://www.rcsb.org/3d-view/${pdbId}`, '_blank');
+            }
+
+            runBlast(id) {
+                window.open(`https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn&PAGE_TYPE=BlastSearch&QUERY=${id}`, '_blank');
+            }
+
+            analyzeProtein(id) {
+                window.open(`https://www.ncbi.nlm.nih.gov/protein/${id}`, '_blank');
+            }
+
+            downloadPDB(pdbId) {
+                window.open(`https://files.rcsb.org/download/${pdbId}.pdb`, '_blank');
+            }
+
+            showAbstract(pmid) {
+                window.open(`https://pubmed.ncbi.nlm.nih.gov/${pmid}/`, '_blank');
+            }
+
+            citePaper(pmid) {
+                alert(`Citation for PMID: ${pmid}\nUse standard citation format or export from PubMed.`);
             }
         }
 
+        // Global instance for event handlers
+        let ncbiBrowser;
+
         document.addEventListener('DOMContentLoaded', () => {
-            new NCBIBrowser();
+            ncbiBrowser = new NCBIBrowser();
         });
     </script>
 </body>
