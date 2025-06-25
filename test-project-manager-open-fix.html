@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Manager Open Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .status { padding: 4px 8px; border-radius: 4px; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.pending { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>Project Manager Open Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>1. API Availability Check</h3>
+        <button onclick="checkAPIs()">Check APIs</button>
+        <div id="apiResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Project File Selection Test</h3>
+        <button onclick="testFileSelection()">Test File Selection</button>
+        <div id="fileResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Project Loading Test</h3>
+        <button onclick="testProjectLoading()">Test Project Loading</button>
+        <div id="loadResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Event Listening Test</h3>
+        <button onclick="setupEventListener()">Setup Event Listener</button>
+        <div id="eventResult"></div>
+    </div>
+    
+    <div class="log" id="log"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const color = { info: '#000', success: '#28a745', error: '#dc3545', warning: '#ffc107' };
+            logDiv.innerHTML += `<div style="color: ${color[type]}">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function checkAPIs() {
+            log('Checking API availability...', 'info');
+            
+            const apis = ['selectProjectFile', 'loadProjectFromFile', 'onLoadProjectFromMenu'];
+            let result = '<ul>';
+            let allOk = true;
+            
+            for (const api of apis) {
+                const available = window.electronAPI && typeof window.electronAPI[api] === 'function';
+                result += `<li>${api}: <span class="status ${available ? 'success' : 'error'}">${available ? 'Available' : 'Missing'}</span></li>`;
+                if (!available) allOk = false;
+                log(`${api}: ${available ? 'Available' : 'Missing'}`, available ? 'success' : 'error');
+            }
+            
+            result += '</ul>';
+            document.getElementById('apiResult').innerHTML = result;
+            
+            if (allOk) {
+                log('All APIs are available', 'success');
+            } else {
+                log('Some APIs are missing', 'error');
+            }
+        }
+
+        async function testFileSelection() {
+            log('Testing file selection...', 'info');
+            
+            try {
+                if (!window.electronAPI || !window.electronAPI.selectProjectFile) {
+                    throw new Error('selectProjectFile API not available');
+                }
+                
+                const result = await window.electronAPI.selectProjectFile();
+                
+                if (result.success && !result.canceled) {
+                    log(`File selected: ${result.filePath}`, 'success');
+                    document.getElementById('fileResult').innerHTML = `<span class="status success">Success</span> File: ${result.filePath}`;
+                } else if (result.canceled) {
+                    log('File selection canceled by user', 'warning');
+                    document.getElementById('fileResult').innerHTML = '<span class="status pending">Canceled</span> User canceled selection';
+                } else {
+                    throw new Error(result.error || 'File selection failed');
+                }
+            } catch (error) {
+                log(`File selection failed: ${error.message}`, 'error');
+                document.getElementById('fileResult').innerHTML = `<span class="status error">Error</span> ${error.message}`;
+            }
+        }
+
+        async function testProjectLoading() {
+            log('Testing project loading...', 'info');
+            
+            try {
+                // First select a file
+                const fileResult = await window.electronAPI.selectProjectFile();
+                
+                if (fileResult.success && !fileResult.canceled) {
+                    log(`Selected file: ${fileResult.filePath}`, 'info');
+                    
+                    // Now try to load it
+                    const loadResult = await window.electronAPI.loadProjectFromFile(fileResult.filePath);
+                    
+                    if (loadResult.success) {
+                        log(`Project loaded successfully: ${loadResult.project.name}`, 'success');
+                        document.getElementById('loadResult').innerHTML = `<span class="status success">Success</span> Project: ${loadResult.project.name}`;
+                    } else {
+                        throw new Error(loadResult.error || 'Project loading failed');
+                    }
+                } else if (fileResult.canceled) {
+                    log('File selection canceled', 'warning');
+                    document.getElementById('loadResult').innerHTML = '<span class="status pending">Canceled</span>';
+                } else {
+                    throw new Error(fileResult.error || 'File selection failed');
+                }
+            } catch (error) {
+                log(`Project loading failed: ${error.message}`, 'error');
+                document.getElementById('loadResult').innerHTML = `<span class="status error">Error</span> ${error.message}`;
+            }
+        }
+
+        function setupEventListener() {
+            log('Setting up event listener...', 'info');
+            
+            try {
+                if (!window.electronAPI || !window.electronAPI.onLoadProjectFromMenu) {
+                    throw new Error('onLoadProjectFromMenu API not available');
+                }
+                
+                window.electronAPI.onLoadProjectFromMenu((filePath) => {
+                    log(`Received project load event from menu: ${filePath}`, 'success');
+                    document.getElementById('eventResult').innerHTML = `<span class="status success">Event Received</span> File: ${filePath}`;
+                });
+                
+                log('Event listener setup complete', 'success');
+                document.getElementById('eventResult').innerHTML = '<span class="status pending">Listening</span> Waiting for menu events...';
+                
+            } catch (error) {
+                log(`Event listener setup failed: ${error.message}`, 'error');
+                document.getElementById('eventResult').innerHTML = `<span class="status error">Error</span> ${error.message}`;
+            }
+        }
+
+        // Auto-check APIs on load
+        window.addEventListener('load', () => {
+            log('Test page loaded', 'info');
+            checkAPIs();
+        });
+    </script>
+</body>
+</html> 

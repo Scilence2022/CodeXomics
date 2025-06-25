@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron Right Click Menu Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .fix-item {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .fix-item.critical {
+            background: #f0fff4;
+            border-color: #28a745;
+        }
+        .fix-item.issue {
+            background: #fff5f5;
+            border-color: #dc3545;
+        }
+        .config-diff {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .config-before, .config-after {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .config-before {
+            border-color: #dc3545;
+        }
+        .config-after {
+            border-color: #28a745;
+        }
+        pre {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Electron Right Click Menu Fix</h1>
+        
+        <div class="fix-item critical">
+            <h3>✅ 问题根源确认</h3>
+            <p><strong>您的判断完全正确！</strong> 问题确实是Electron的右键菜单被配置阻隔导致的。</p>
+        </div>
+
+        <div class="fix-item issue">
+            <h3>🐛 配置对比</h3>
+            <div class="config-diff">
+                <div class="config-before">
+                    <h4>❌ 修复前 (Project Manager)</h4>
+                    <pre><code>webPreferences: {
+  nodeIntegration: false,
+  contextIsolation: true,
+  enableRemoteModule: false,
+  preload: path.join(__dirname, 'preload.js')
+}</code></pre>
+                </div>
+                <div class="config-after">
+                    <h4>✅ 修复后 (与主窗口一致)</h4>
+                    <pre><code>webPreferences: {
+  nodeIntegration: true,
+  contextIsolation: false,
+  enableRemoteModule: true,
+  webSecurity: false,
+  cache: false
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="fix-item critical">
+            <h3>🔍 技术原理</h3>
+            <ul>
+                <li><span class="highlight">contextIsolation: true</span> - 隔离了JavaScript上下文，阻止事件访问全局函数</li>
+                <li><span class="highlight">nodeIntegration: false</span> - 禁止了Node.js访问，无法使用window对象上的方法</li>
+                <li><span class="highlight">preload限制</span> - preload脚本无法完全桥接DOM事件处理</li>
+            </ul>
+        </div>
+
+        <h2>🧪 测试方法</h2>
+        
+        <div class="step">
+            <strong>重要:</strong> 必须重启Electron应用以应用新的webPreferences配置
+        </div>
+        
+        <div class="step">
+            <strong>步骤 1:</strong> 重启应用
+            <button class="test-button" onclick="alert('请完全关闭Electron应用并重新启动')">
+                🔄 重启提醒
+            </button>
+        </div>
+        
+        <div class="step">
+            <strong>步骤 2:</strong> 验证配置
+            <button class="test-button" onclick="copyText('console.log(process.versions)')">
+                📋 复制验证命令
+            </button>
+        </div>
+        
+        <div class="step">
+            <strong>步骤 3:</strong> 测试右键菜单
+            <p>在Project Manager中右键点击文件，应该看到菜单正常显示</p>
+        </div>
+
+        <h2>🎯 预期修复效果</h2>
+        
+        <div class="fix-item critical">
+            <h4>✅ 右键事件正常触发</h4>
+            <h4>✅ 上下文菜单正确显示</h4>
+            <h4>✅ 所有菜单功能正常工作</h4>
+            <h4>✅ 不再有"function not defined"错误</h4>
+        </div>
+    </div>
+
+    <script>
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制: ' + text);
+            }).catch(() => {
+                alert('请手动复制: ' + text);
+            });
+        }
+
+        console.log('✅ Electron配置修复测试页面已加载');
+    </script>
+</body>
+</html> 

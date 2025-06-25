@@ -28,16 +28,21 @@ class ProjectManagerWindow {
     async initialize() {
         console.log('Initializing Project Manager Window...');
         
-        // 初始化文本文件预览管理器
-        this.textPreviewManager = new TextFilePreviewManager();
-        
-        // 加载项目数据
+        // 加载已有项目
         await this.loadProjects();
         
         // 初始化UI
         this.setupEventListeners();
         this.renderProjectTree();
         this.updateStatusBar('Ready');
+        
+        // 监听主菜单发送的项目加载事件
+        if (window.electronAPI && window.electronAPI.onLoadProjectFromMenu) {
+            window.electronAPI.onLoadProjectFromMenu((filePath) => {
+                console.log('Received load-project-from-menu event:', filePath);
+                this.loadProjectFromFile(filePath);
+            });
+        }
         
         console.log('Project Manager Window initialized successfully');
     }
@@ -1990,6 +1995,8 @@ Features:
      * 显示文件上下文菜单
      */
     showFileContextMenu(event, fileId) {
+        console.log('📋 showFileContextMenu called with:', event, fileId);
+        
         event.preventDefault();
         event.stopPropagation();
 
@@ -1999,21 +2006,57 @@ Features:
         }
 
         const contextMenu = document.getElementById('fileContextMenu');
-        if (!contextMenu) return;
+        console.log('📋 Context menu element:', contextMenu);
+        
+        if (!contextMenu) {
+            console.error('❌ fileContextMenu element not found!');
+            return;
+        }
 
         // 设置菜单位置
         contextMenu.style.display = 'block';
         contextMenu.style.left = `${event.clientX}px`;
         contextMenu.style.top = `${event.clientY}px`;
+        
+        console.log('📋 Context menu positioned at:', event.clientX, event.clientY);
 
         // 点击外部关闭菜单
         const closeMenu = (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.style.display = 'none';
                 document.removeEventListener('click', closeMenu);
+                console.log('📋 Context menu closed');
             }
         };
         setTimeout(() => document.addEventListener('click', closeMenu), 100);
+    }
+
+    async loadProjectFromFile(filePath) {
+        try {
+            if (window.electronAPI && window.electronAPI.loadProjectFromFile) {
+                const result = await window.electronAPI.loadProjectFromFile(filePath);
+                if (result.success) {
+                    // 将项目添加到项目列表中
+                    this.projects.set(result.project.id, result.project);
+                    
+                    // 保存项目列表
+                    await this.saveProjects();
+                    
+                    // 更新UI
+                    this.renderProjectTree();
+                    this.selectProject(result.project.id);
+                    
+                    this.showNotification(`Project "${result.project.name}" loaded successfully from file`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
+            } else {
+                this.showNotification('Project load from file feature requires Electron API', 'warning');
+            }
+        } catch (error) {
+            console.error('Error loading project from file:', error);
+            this.showNotification(`Failed to load project from file: ${error.message}`, 'error');
+        }
     }
 }
 

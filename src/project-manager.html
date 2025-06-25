@@ -2878,6 +2878,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                             ondragend="projectManagerWindow.handleFileDragEnd(event)"
                             onclick="projectManagerWindow.selectFile('${file.id}')"
                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                            oncontextmenu="event.preventDefault(); console.log('Right click on file:', '${file.id}'); window.projectManagerWindow.showFileContextMenu(event, '${file.id}'); return false;"
                             data-file-id="${file.id}">
                             <td>
                                 <div class="file-icon-small" style="background-color: ${typeConfig.color}">
@@ -4942,16 +4943,83 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
             // 创建 ProjectManagerWindow UI 实例
             projectManagerWindow = new ProjectManagerWindow();
             
+            // 确保全局可访问
+            window.projectManagerWindow = projectManagerWindow;
+            
+            // 全局调试：测试右键菜单功能
+            window.testContextMenu = () => {
+                console.log('Testing context menu...');
+                const menu = document.getElementById('fileContextMenu');
+                if (menu) {
+                    menu.style.display = 'block';
+                    menu.style.left = '200px';
+                    menu.style.top = '200px';
+                    console.log('Context menu shown');
+                } else {
+                    console.error('Context menu element not found');
+                }
+            };
+            
+            // 验证方法存在
+            window.testMethods = () => {
+                console.log('🔍 Testing methods...');
+                console.log('projectManagerWindow:', window.projectManagerWindow);
+                console.log('ProjectManagerWindow class:', window.ProjectManagerWindow);
+                
+                if (window.projectManagerWindow) {
+                    console.log('Instance prototype:', Object.getPrototypeOf(window.projectManagerWindow));
+                    console.log('Constructor:', window.projectManagerWindow.constructor.name);
+                    
+                    // 检查原型链中的方法
+                    const proto = Object.getPrototypeOf(window.projectManagerWindow);
+                    console.log('Methods in prototype:', Object.getOwnPropertyNames(proto));
+                    
+                    // 检查每个方法
+                    const methods = ['previewSelectedFile', 'editSelectedFile', 'renameSelectedFile', 
+                                   'duplicateSelectedFile', 'copyFileToClipboard', 'showFileInExplorer', 
+                                   'deleteSelectedFiles', 'showFileContextMenu'];
+                    
+                    methods.forEach(method => {
+                        console.log(`${method}:`, typeof window.projectManagerWindow[method]);
+                        if (typeof window.projectManagerWindow[method] === 'undefined') {
+                            console.log(`  - In prototype:`, typeof proto[method]);
+                            console.log(`  - Own property:`, window.projectManagerWindow.hasOwnProperty(method));
+                        }
+                    });
+                } else {
+                    console.error('❌ window.projectManagerWindow is null or undefined');
+                }
+            };
+            
             // 创建 ProjectManager 核心逻辑实例并集成
             if (typeof ProjectManager !== 'undefined') {
                 projectManager = new ProjectManager();
+                
+                // 先验证 ProjectManagerWindow 的方法
+                console.log('🔍 ProjectManagerWindow methods before integration:');
+                console.log('previewSelectedFile:', typeof projectManagerWindow.previewSelectedFile);
+                console.log('editSelectedFile:', typeof projectManagerWindow.editSelectedFile);
+                console.log('showFileContextMenu:', typeof projectManagerWindow.showFileContextMenu);
+                
                 // 将 ProjectManager 集成到 ProjectManagerWindow
                 projectManagerWindow.projectManager = projectManager;
                 
-                // 共享数据和状态
-                projectManagerWindow.projects = projectManager.projects;
-                projectManagerWindow.currentProject = projectManager.currentProject;
-                projectManagerWindow.currentPath = projectManager.currentPath;
+                // 同步数据但不覆盖属性，使用setter方法
+                if (projectManager.projects && projectManager.projects.size > 0) {
+                    projectManagerWindow.projects = new Map([...projectManager.projects]);
+                }
+                if (projectManager.currentProject) {
+                    projectManagerWindow.currentProject = {...projectManager.currentProject};
+                }
+                if (projectManager.currentPath) {
+                    projectManagerWindow.currentPath = [...projectManager.currentPath];
+                }
+                
+                // 验证方法仍然存在
+                console.log('🔍 ProjectManagerWindow methods after integration:');
+                console.log('previewSelectedFile:', typeof projectManagerWindow.previewSelectedFile);
+                console.log('editSelectedFile:', typeof projectManagerWindow.editSelectedFile);
+                console.log('showFileContextMenu:', typeof projectManagerWindow.showFileContextMenu);
                 
                 console.log('✅ ProjectManager core logic integrated');
                 console.log('ProjectManager instance:', projectManager);
@@ -4979,12 +5047,33 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                     }
                 });
             }
+            
+            // 延迟验证初始化
+            setTimeout(() => {
+                console.log('🔍 Final verification:');
+                console.log('window.projectManagerWindow:', window.projectManagerWindow);
+                console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(window.projectManagerWindow || {})).filter(name => name !== 'constructor'));
+            }, 1000);
         });
     </script>
     
     <!-- 依赖脚本 -->
     <script src="renderer/modules/ProjectXMLHandler.js"></script>
+    <script>console.log('✅ ProjectXMLHandler.js loaded');</script>
+    
     <script src="renderer/modules/TextFilePreviewManager.js"></script>
+    <script>console.log('✅ TextFilePreviewManager.js loaded');</script>
+    
+    <script src="renderer/modules/ProjectManagerWindow.js"></script>
+    <script>
+        console.log('✅ ProjectManagerWindow.js loaded');
+        console.log('ProjectManagerWindow class available:', typeof ProjectManagerWindow);
+        if (typeof ProjectManagerWindow !== 'undefined') {
+            console.log('ProjectManagerWindow prototype methods:', Object.getOwnPropertyNames(ProjectManagerWindow.prototype));
+        }
+    </script>
+    
     <script src="renderer/modules/ProjectManager.js"></script>
+    <script>console.log('✅ ProjectManager.js loaded');</script>
 </body>
 </html> 

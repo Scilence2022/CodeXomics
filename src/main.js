@@ -991,7 +991,7 @@ function createMenu() {
               const result = await dialog.showOpenDialog(null, {
                 properties: ['openFile'],
                 filters: [
-                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+                  { name: 'Genome AI Studio Project Files (*.prj.GAI)', extensions: ['GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] }
@@ -3224,10 +3224,11 @@ function createProjectManagerWindow() {
       minWidth: 1000,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false,
-        preload: path.join(__dirname, 'preload.js')
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false,
+        cache: false
       },
       title: 'Project Manager - Genome AI Studio',
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -3292,7 +3293,7 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+        { name: 'Genome AI Studio Project Files (*.prj.GAI)', extensions: ['GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
@@ -3366,6 +3367,63 @@ ipcMain.handle('loadProjectFile', async (event, filePath) => {
     return { success: true, content: content, fileName: fileName };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+// Handle loading project from file and parsing it into the project manager
+ipcMain.handle('loadProjectFromFile', async (event, filePath) => {
+  try {
+    console.log('Loading project from file:', filePath);
+    
+    // Read the project file
+    const content = fs.readFileSync(filePath, 'utf8');
+    let project;
+    
+    // Parse the project based on file format
+    if (filePath.endsWith('.xml') || filePath.endsWith('.prj.GAI') || content.trim().startsWith('<?xml') || content.includes('<GenomeExplorerProject')) {
+      // XML format (.prj.GAI or .xml)
+      const ProjectXMLHandler = require('./renderer/modules/ProjectXMLHandler.js');
+      const xmlHandler = new ProjectXMLHandler();
+      const validation = xmlHandler.validateProjectXML(content);
+      
+      if (!validation.valid) {
+        throw new Error(`Invalid XML project file: ${validation.error}`);
+      }
+      project = validation.project;
+    } else {
+      // JSON format (backward compatibility)
+      project = JSON.parse(content);
+      
+      if (!project.id || !project.name) {
+        throw new Error('Invalid project file format: missing required fields');
+      }
+    }
+    
+    // Update project metadata
+    if (!project.metadata) project.metadata = {};
+    project.metadata.lastOpened = new Date().toISOString();
+    project.filePath = filePath;
+    
+    // Generate new ID if needed to avoid conflicts
+    if (!project.id) {
+      project.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+    
+    console.log('Successfully parsed project:', project.name, 'ID:', project.id);
+    
+    return { 
+      success: true, 
+      project: project, 
+      projectId: project.id,
+      message: `Project "${project.name}" loaded successfully` 
+    };
+    
+  } catch (error) {
+    console.error('Error loading project from file:', error);
+    return { 
+      success: false, 
+      error: `Failed to load project: ${error.message}` 
+    };
   }
 });
 

@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectMultipleFiles: () => ipcRenderer.invoke('selectMultipleFiles'),
   createProjectDirectory: (location, projectName) => ipcRenderer.invoke('createProjectDirectory', location, projectName),
   loadProjectFile: (filePath) => ipcRenderer.invoke('loadProjectFile', filePath),
+  loadProjectFromFile: (filePath) => ipcRenderer.invoke('loadProjectFromFile', filePath),
   openFileInMainWindow: (filePath) => ipcRenderer.invoke('openFileInMainWindow', filePath),
   openFolderInExplorer: (folderPath) => ipcRenderer.invoke('openFolderInExplorer', folderPath),
   moveFileInProject: (currentPath, projectName, targetFolderPath) => ipcRenderer.invoke('moveFileInProject', currentPath, projectName, targetFolderPath),
