@@ -126,14 +126,16 @@ class GenomicDataDownloader {
     setupIpcListeners() {
         if (window.electronAPI) {
             // 监听下载类型设置
-            window.electronAPI.onSetDownloadType = (downloadType) => {
+            window.electronAPI.onSetDownloadType((downloadType) => {
+                console.log('📥 Received download type:', downloadType);
                 this.setDownloadType(downloadType);
-            };
+            });
             
             // 监听当前项目设置
-            window.electronAPI.onSetActiveProject = (projectInfo) => {
+            window.electronAPI.onSetActiveProject((projectInfo) => {
+                console.log('📥 Received project info:', projectInfo);
                 this.setActiveProject(projectInfo);
-            };
+            });
             
             // 获取当前项目信息
             this.getCurrentProject();
@@ -225,10 +227,12 @@ class GenomicDataDownloader {
     }
     
     setDownloadType(downloadType) {
+        console.log('🔧 Setting download type:', downloadType);
         this.currentDownloadType = downloadType;
         const config = this.apiConfig[downloadType];
         
         if (config) {
+            console.log('✅ Found config for download type:', config.name);
             // 更新标题和描述
             const titleElement = document.getElementById('downloadTitle');
             const descElement = document.getElementById('downloadDescription');
@@ -255,6 +259,9 @@ class GenomicDataDownloader {
             this.setupDatabaseSpecificOptions(downloadType);
             
             console.log(`✅ Set download type to: ${config.name}`);
+        } else {
+            console.error('❌ No config found for download type:', downloadType);
+            console.log('Available configs:', Object.keys(this.apiConfig));
         }
     }
     
@@ -356,6 +363,15 @@ class GenomicDataDownloader {
         const searchTerm = document.getElementById('searchTerm').value.trim();
         if (!searchTerm) {
             this.showStatusMessage('Please enter a search term', 'error');
+            return;
+        }
+        
+        console.log('🔍 Starting search with download type:', this.currentDownloadType);
+        
+        // Check if download type is set
+        if (!this.currentDownloadType) {
+            this.showStatusMessage('Download type not set. Please close and reopen the window.', 'error');
+            console.error('❌ No download type set. Available types:', Object.keys(this.apiConfig));
             return;
         }
         

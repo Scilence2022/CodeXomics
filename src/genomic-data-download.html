@@ -344,7 +344,26 @@
     <script src="renderer/modules/GenomicDataDownloader.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            window.genomicDownloader = new GenomicDataDownloader();
+            console.log('🚀 DOM loaded, initializing GenomicDataDownloader...');
+            if (typeof GenomicDataDownloader !== 'undefined') {
+                window.genomicDownloader = new GenomicDataDownloader();
+                console.log('✅ GenomicDataDownloader initialized successfully');
+            } else {
+                console.error('❌ GenomicDataDownloader class not found!');
+                console.log('Available in window:', Object.keys(window));
+                
+                // Try alternative approaches
+                console.log('🔄 Attempting to load class from module exports...');
+                if (typeof require !== 'undefined') {
+                    try {
+                        const GenomicDataDownloader = require('./renderer/modules/GenomicDataDownloader.js');
+                        window.genomicDownloader = new GenomicDataDownloader();
+                        console.log('✅ GenomicDataDownloader loaded via require');
+                    } catch (error) {
+                        console.error('❌ Failed to require module:', error);
+                    }
+                }
+            }
         });
     </script>
 </body>

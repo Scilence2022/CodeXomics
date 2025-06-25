@@ -4542,7 +4542,14 @@ function createGenomicDownloadHTML(htmlPath) {
     <script src="renderer/modules/GenomicDataDownloader.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            window.genomicDownloader = new GenomicDataDownloader();
+            console.log('🚀 DOM loaded, initializing GenomicDataDownloader...');
+            if (typeof GenomicDataDownloader !== 'undefined') {
+                window.genomicDownloader = new GenomicDataDownloader();
+                console.log('✅ GenomicDataDownloader initialized successfully');
+            } else {
+                console.error('❌ GenomicDataDownloader class not found!');
+                console.log('Available in window:', Object.keys(window));
+            }
         });
     </script>
 </body>
