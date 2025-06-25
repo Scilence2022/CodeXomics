@@ -2643,7 +2643,7 @@ class GenomeBrowser {
                     html += `
                         <div class="gene-attribute">
                             <div class="gene-attribute-label">${key.replace(/_/g, ' ')}</div>
-                            <div class="gene-attribute-value">${stringValue}</div>
+                            <div class="gene-attribute-value">${this.enhanceGeneAttributeWithLinks(stringValue)}</div>
                         </div>
                     `;
                 }
@@ -2678,6 +2678,83 @@ class GenomeBrowser {
         
         // Add event listeners for expandable sections
         this.setupExpandableSequences();
+    }
+
+    /**
+     * Enhance gene attribute values with clickable links for GO terms, PMIDs, and other database references
+     */
+    enhanceGeneAttributeWithLinks(attributeValue) {
+        if (!attributeValue || typeof attributeValue !== 'string') {
+            return attributeValue;
+        }
+        
+        let enhancedValue = attributeValue;
+        
+        // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
+        const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;
+        enhancedValue = enhancedValue.replace(goTermPattern, (match, fullMatch, goidNumber) => {
+            const goId = goidNumber ? `GO:${goidNumber}` : fullMatch;
+            return `<a href="https://amigo.geneontology.org/amigo/term/${goId}" target="_blank" class="go-term-link" title="View in Gene Ontology database">${goId}</a>`;
+        });
+        
+        // Pattern for PubMed IDs: PMID:XXXXXXX or PMID XXXXXXX
+        const pmidPattern = /\b(PMID:?\s*(\d+))\b/gi;
+        enhancedValue = enhancedValue.replace(pmidPattern, (match, fullMatch, pmidNumber) => {
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidNumber}/" target="_blank" class="pmid-link" title="View in PubMed">PMID:${pmidNumber}</a>`;
+        });
+        
+        // Pattern for evidence codes in brackets: [evidence XXX]
+        const evidencePattern = /\[evidence\s+([A-Z]{2,4})\]/gi;
+        enhancedValue = enhancedValue.replace(evidencePattern, (match, evidenceCode) => {
+            return `<span class="evidence-tag" title="Evidence code: ${evidenceCode}">${evidenceCode}</span>`;
+        });
+        
+        // Pattern for database cross-references like UniProt, InterPro, etc.
+        const dbXrefPattern = /\b(UniProt|InterPro|Pfam|KEGG|COG|KO)[:=]\s*([A-Za-z0-9_\.-]+)\b/gi;
+        enhancedValue = enhancedValue.replace(dbXrefPattern, (match, database, id) => {
+            let url = '';
+            let title = '';
+            
+            switch (database.toLowerCase()) {
+                case 'uniprot':
+                    url = `https://www.uniprot.org/uniprot/${id}`;
+                    title = 'View in UniProt';
+                    break;
+                case 'interpro':
+                    url = `https://www.ebi.ac.uk/interpro/entry/${id}`;
+                    title = 'View in InterPro';
+                    break;
+                case 'pfam':
+                    url = `https://pfam.xfam.org/family/${id}`;
+                    title = 'View in Pfam';
+                    break;
+                case 'kegg':
+                    url = `https://www.genome.jp/kegg-bin/show_pathway?${id}`;
+                    title = 'View in KEGG';
+                    break;
+                case 'cog':
+                    url = `https://www.ncbi.nlm.nih.gov/Structure/cdd/cddsrv.cgi?uid=${id}`;
+                    title = 'View in COG database';
+                    break;
+                case 'ko':
+                    url = `https://www.genome.jp/kegg-bin/show_pathway?ko${id}`;
+                    title = 'View in KEGG Orthology';
+                    break;
+            }
+            
+            if (url) {
+                return `<a href="${url}" target="_blank" class="db-xref-link" title="${title}">${database}:${id}</a>`;
+            }
+            return match;
+        });
+        
+        // Pattern for EC numbers: EC:X.X.X.X or EC X.X.X.X
+        const ecPattern = /\b(EC:?\s*([\d\.-]+))\b/gi;
+        enhancedValue = enhancedValue.replace(ecPattern, (match, fullMatch, ecNumber) => {
+            return `<a href="https://enzyme.expasy.org/EC/${ecNumber}" target="_blank" class="db-xref-link" title="View in ENZYME database">EC:${ecNumber}</a>`;
+        });
+        
+        return enhancedValue;
     }
     
     /**

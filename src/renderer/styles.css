@@ -3957,6 +3957,82 @@ svg {
     line-height: 1.4;
 }
 
+/* Enhanced styles for GO terms and PMIDs */
+.go-term-link {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #e3f2fd;
+    color: #1565c0;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #bbdefb;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.go-term-link:hover {
+    background: #2196f3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.pmid-link {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #f3e5f5;
+    color: #7b1fa2;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #ce93d8;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.pmid-link:hover {
+    background: #9c27b0;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+}
+
+.evidence-tag {
+    display: inline-block;
+    padding: 1px 4px;
+    background: #fff3e0;
+    color: #ef6c00;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin: 2px 2px 2px 0;
+    border: 1px solid #ffcc02;
+}
+
+.db-xref-link {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #e8f5e8;
+    color: #2e7d32;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #a5d6a7;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.db-xref-link:hover {
+    background: #4caf50;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
 .gene-actions {
     display: flex;
     gap: 8px;

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Gene Details with GO Terms and PMID Links - Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .gene-details-content {
+            margin: 20px 0;
+        }
+
+        .gene-details-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .gene-basic-info {
+            margin-bottom: 20px;
+        }
+
+        .gene-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .gene-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .gene-position {
+            color: #555;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .gene-strand {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .gene-attributes {
+            margin-top: 20px;
+        }
+
+        .gene-attributes h4 {
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .gene-attribute {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+
+        .gene-attribute-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            text-transform: capitalize;
+        }
+
+        .gene-attribute-value {
+            color: #6c757d;
+            word-wrap: break-word;
+        }
+
+        /* Enhanced styles for GO terms and PMIDs */
+        .go-term-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #e3f2fd;
+            color: #1565c0;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #bbdefb;
+            transition: all 0.2s ease;
+        }
+
+        .go-term-link:hover {
+            background: #2196f3;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        .pmid-link {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #f3e5f5;
+            color: #7b1fa2;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border: 1px solid #ce93d8;
+            transition: all 0.2s ease;
+        }
+
+        .pmid-link:hover {
+            background: #9c27b0;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+        }
+
+        .evidence-tag {
+            display: inline-block;
+            padding: 1px 4px;
+            background: #fff3e0;
+            color: #ef6c00;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 2px 2px 2px 0;
+            border: 1px solid #ffcc02;
+        }
+
+        .demo-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .demo-note strong {
+            color: #6f5500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Enhanced Gene Details with GO Terms and PMID Links</h1>
+        
+        <div class="demo-note">
+            <strong>Demo:</strong> This shows how the gene details sidebar will display GO terms and PMID references with clickable links.
+        </div>
+
+        <div class="gene-details-content">
+            <div class="gene-details-info">
+                <div class="gene-basic-info">
+                    <div class="gene-name">thrA</div>
+                    <div class="gene-type-badge">CDS</div>
+                    <div class="gene-position">Position: 337-2,799</div>
+                    <div class="gene-strand">Strand: Forward (+) | Length: 2,463 bp</div>
+                </div>
+                
+                <div class="gene-attributes">
+                    <h4>Attributes</h4>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">gene</div>
+                        <div class="gene-attribute-value">thrA</div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">product</div>
+                        <div class="gene-attribute-value">aspartate kinase I/homoserine dehydrogenase I</div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">go process</div>
+                        <div class="gene-attribute-value">
+                            homoserine biosynthetic process 
+                            <a href="https://amigo.geneontology.org/amigo/term/GO:0009090" target="_blank" class="go-term-link">GO:0009090</a>
+                            <span class="evidence-tag">IBA</span>
+                            <a href="https://pubmed.ncbi.nlm.nih.gov/21873635/" target="_blank" class="pmid-link">PMID:21873635</a>
+                        </div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">go function</div>
+                        <div class="gene-attribute-value">
+                            aspartate kinase activity 
+                            <a href="https://amigo.geneontology.org/amigo/term/GO:0004072" target="_blank" class="go-term-link">GO:0004072</a>
+                            <span class="evidence-tag">IBA</span>
+                            <a href="https://pubmed.ncbi.nlm.nih.gov/21873635/" target="_blank" class="pmid-link">PMID:21873635</a>
+                        </div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">go component</div>
+                        <div class="gene-attribute-value">
+                            cytosol 
+                            <a href="https://amigo.geneontology.org/amigo/term/GO:0005829" target="_blank" class="go-term-link">GO:0005829</a>
+                            <span class="evidence-tag">IEA</span>
+                            <a href="https://pubmed.ncbi.nlm.nih.gov/26602691/" target="_blank" class="pmid-link">PMID:26602691</a>
+                        </div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">locus tag</div>
+                        <div class="gene-attribute-value">b0002</div>
+                    </div>
+                    
+                    <div class="gene-attribute">
+                        <div class="gene-attribute-label">protein id</div>
+                        <div class="gene-attribute-value">AAC73113.1</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>Implementation Notes</h2>
+        <ul>
+            <li><strong>GO Terms:</strong> Blue links that open to the AmiGO Gene Ontology database</li>
+            <li><strong>PMIDs:</strong> Purple links that open to PubMed abstracts</li>
+            <li><strong>Evidence Tags:</strong> Orange badges showing evidence codes (IBA, IEA, etc.)</li>
+            <li><strong>Hover Effects:</strong> Links have smooth hover animations for better UX</li>
+            <li><strong>Auto-detection:</strong> Regex patterns detect GO IDs and PMIDs in gene qualifiers</li>
+        </ul>
+    </div>
+
+    <script>
+        // Test the link functionality
+        console.log('Enhanced Gene Details Demo loaded successfully');
+        
+        // Add click handlers for demonstration
+        document.querySelectorAll('.go-term-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                console.log('GO term clicked:', e.target.textContent);
+            });
+        });
+        
+        document.querySelectorAll('.pmid-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                console.log('PMID clicked:', e.target.textContent);
+            });
+        });
+    </script>
+</body>
+</html> 
