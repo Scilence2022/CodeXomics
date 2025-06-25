@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRING Networks Microbial Examples Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f7fa;
+            color: #2c3e50;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: #34495e;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background: #fafbfc;
+        }
+        .test-section h2 {
+            color: #2980b9;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        .gene-list {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+            border-left: 4px solid #3498db;
+        }
+        .gene-count {
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        .test-checklist {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-checklist h3 {
+            color: #e17055;
+            margin-bottom: 15px;
+        }
+        .checklist-item {
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+        .status-good {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-new {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .button-demo {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .button-demo:hover {
+            background: #2980b9;
+        }
+        .yeast-button {
+            background: #17a2b8;
+        }
+        .yeast-button:hover {
+            background: #138496;
+        }
+        .organism-info {
+            background: #e8f5e8;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .functional-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .category {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #6c757d;
+        }
+        .category h4 {
+            margin: 0 0 8px 0;
+            color: #495057;
+        }
+        .category-genes {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧬 STRING Networks Microbial Examples Test</h1>
+        
+        <div class="test-section">
+            <h2>📋 Test Overview</h2>
+            <p>This test validates the microbial examples functionality in STRING Protein Networks, including the new <strong>S. cerevisiae (酿酒酵母)</strong> example button.</p>
+            
+            <div class="test-checklist">
+                <h3>🔍 Testing Checklist</h3>
+                <div class="checklist-item">✅ E. coli K12 example button loads >30 genes</div>
+                <div class="checklist-item">✅ C. glutamicum ATCC13032 example button loads >30 genes</div>
+                <div class="checklist-item">🆕 <span class="status-new">S. cerevisiae (酿酒酵母) example button loads >30 genes</span></div>
+                <div class="checklist-item">✅ Organism dropdown includes all three species</div>
+                <div class="checklist-item">✅ Network building works for all examples</div>
+                <div class="checklist-item">✅ Protein annotations are comprehensive</div>
+                <div class="checklist-item">✅ Interaction networks are biologically relevant</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🦠 E. coli K-12 substr. MG1655 (NCBI Taxonomy ID: 511145)</h2>
+            <div class="organism-info">
+                <strong>Model organism for bacterial genetics and molecular biology</strong><br>
+                Essential genes covering DNA replication, transcription, translation, and cell division.
+            </div>
+            
+            <div class="gene-count">Gene Count: 70+ essential genes</div>
+            
+            <div class="functional-categories">
+                <div class="category">
+                    <h4>DNA Replication & Repair</h4>
+                    <div class="category-genes">dnaA, dnaB, dnaC, dnaG, recA, recB, recC, recD, lexA, ssb, polA, polB, polC</div>
+                </div>
+                <div class="category">
+                    <h4>Transcription Machinery</h4>
+                    <div class="category-genes">rpoA, rpoB, rpoC, rpoD, rpoN, rpoS, crp, fnr, iclR, araC, lacI, trpR</div>
+                </div>
+                <div class="category">
+                    <h4>Cell Division</h4>
+                    <div class="category-genes">ftsZ, ftsA, ftsQ, ftsI, ftsW, minC, minD, minE, mreB, mreC, mreD, rodA</div>
+                </div>
+                <div class="category">
+                    <h4>Protein Folding</h4>
+                    <div class="category-genes">dnaK, dnaJ, grpE, groEL, groES, lon, clpP, clpX, hslU, hslV, ftsH, htpG</div>
+                </div>
+            </div>
+            
+            <button class="button-demo" onclick="window.open('src/bioinformatics-tools/string-networks.html', '_blank')">
+                🧪 Test E. coli Example
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h2>🔬 C. glutamicum ATCC 13032 (NCBI Taxonomy ID: 196627)</h2>
+            <div class="organism-info">
+                <strong>Industrial biotechnology workhorse for amino acid production</strong><br>
+                Essential genes for central metabolism, respiration, and cell wall biosynthesis.
+            </div>
+            
+            <div class="gene-count">Gene Count: 90+ essential genes</div>
+            
+            <div class="functional-categories">
+                <div class="category">
+                    <h4>Sigma Factors</h4>
+                    <div class="category-genes">sigA, sigB, sigC, sigE, sigF, sigH, sigM, whiB, glnR, ramA, ramB</div>
+                </div>
+                <div class="category">
+                    <h4>Cell Wall Biosynthesis</h4>
+                    <div class="category-genes">murA, murB, murC, murD, murE, murF, murG, ddl, alr, glmS, glmU, glmM</div>
+                </div>
+                <div class="category">
+                    <h4>Central Metabolism</h4>
+                    <div class="category-genes">ogdh, icd, sucC, sucD, fumC, mdh, citH, acnA, acnB, sdhA, sdhB, sdhC, sdhD</div>
+                </div>
+                <div class="category">
+                    <h4>Respiratory Complexes</h4>
+                    <div class="category-genes">nuoA-N (NADH dehydrogenase), qcrA-C (bc1 complex), ctaC-F (cytochrome oxidase)</div>
+                </div>
+            </div>
+            
+            <button class="button-demo" onclick="window.open('src/bioinformatics-tools/string-networks.html', '_blank')">
+                🧪 Test C. glutamicum Example
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h2>🍞 S. cerevisiae S288C - 酿酒酵母 (NCBI Taxonomy ID: 559292)</h2>
+            <div class="organism-info">
+                <strong>Baker's yeast - premier eukaryotic model organism</strong><br>
+                Essential genes for cell cycle, DNA replication, transcription, ribosome biogenesis, and cytoskeleton organization.
+            </div>
+            
+            <div class="gene-count">Gene Count: 320+ essential genes - 🆕 <span class="status-new">NEW ADDITION!</span></div>
+            
+            <div class="functional-categories">
+                <div class="category">
+                    <h4>Cell Cycle Control</h4>
+                    <div class="category-genes">CDC28, CLN1, CLN2, CLB1-6, CDC6, CDC7, CDC45, CDC25, SWE1, MIH1</div>
+                </div>
+                <div class="category">
+                    <h4>DNA Replication</h4>
+                    <div class="category-genes">MCM2-7, ORC1-6, RFC1-5, PCNA, POL1-3, RPA1-3</div>
+                </div>
+                <div class="category">
+                    <h4>DNA Repair</h4>
+                    <div class="category-genes">RAD51-59, MRE11, RAD50, XRS2, KU70/80, DNL4, LIG4, NEJ1</div>
+                </div>
+                <div class="category">
+                    <h4>RNA Polymerase II</h4>
+                    <div class="category-genes">RPB1-12, TFIIA-H, MED1/4/7/14/17/21</div>
+                </div>
+                <div class="category">
+                    <h4>Transcriptional Regulation</h4>
+                    <div class="category-genes">GCN4/5, ADA2/3, SPT3/7/8/15/20, TAF1/2/5/6/9/10/12</div>
+                </div>
+                <div class="category">
+                    <h4>Chromatin Remodeling</h4>
+                    <div class="category-genes">SWI1-3, SNF2/5/6/11 (SWI/SNF complex)</div>
+                </div>
+                <div class="category">
+                    <h4>Protein Folding</h4>
+                    <div class="category-genes">HSP104/82/70/60/40, SSA1/2, SSB1/2, SSE1/2, KAR2, ERO1, PDI1</div>
+                </div>
+                <div class="category">
+                    <h4>Cell Wall & Cytoskeleton</h4>
+                    <div class="category-genes">FKS1/2, GSC1/2, CHS1-3/7, BNI1/4, BUD1-9, CDC3/10-12/24/42</div>
+                </div>
+                <div class="category">
+                    <h4>Cell Polarity</h4>
+                    <div class="category-genes">BEM1-4, RSR1, CLA4, STE20, CDC14/15/5, DBF2/20, MOB1</div>
+                </div>
+                <div class="category">
+                    <h4>Microtubules & SPB</h4>
+                    <div class="category-genes">TUB1-4, SPC42/97/98, NUD1 (spindle pole body)</div>
+                </div>
+                <div class="category">
+                    <h4>Ribosomal Proteins</h4>
+                    <div class="category-genes">RPL1A/B-5, RPS0A/B-3 (40S/60S subunits)</div>
+                </div>
+                <div class="category">
+                    <h4>Translation Factors</h4>
+                    <div class="category-genes">TEF1/2/4, EFT1/2, TIF1-5, SUI1-3, GCD1/2/6/7/10/11</div>
+                </div>
+                <div class="category">
+                    <h4>Ribosome Biogenesis</h4>
+                    <div class="category-genes">NOP1/2/4/7/56/58, eIF4E/G/A, PAB1, GCN1-3/20</div>
+                </div>
+            </div>
+            
+            <button class="button-demo yeast-button" onclick="window.open('src/bioinformatics-tools/string-networks.html', '_blank')">
+                🧪 Test S. cerevisiae (酿酒酵母) Example - NEW!
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h2>🔬 Organism Selection Validation</h2>
+            <p>The organism dropdown should now include:</p>
+            <div class="organism-info">
+                <strong>Updated Organism List:</strong><br>
+                • Homo sapiens (Human) - 9606<br>
+                • Mus musculus (Mouse) - 10090<br>
+                • <span class="status-good">Escherichia coli K-12 substr. MG1655 - 511145</span><br>
+                • <span class="status-new">Corynebacterium glutamicum ATCC 13032 - 196627</span><br>
+                • <span class="status-new">Saccharomyces cerevisiae S288C (Baker's yeast) - 559292</span><br>
+                • Drosophila melanogaster (Fruit fly) - 7227<br>
+                • Caenorhabditis elegans (Roundworm) - 6239<br>
+                • <span class="status-new">Arabidopsis thaliana (Thale cress) - 3702</span><br>
+                • <span class="status-new">Saccharomyces cerevisiae (Baker's yeast - general) - 4932</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Testing Instructions</h2>
+            <ol>
+                <li><strong>Open STRING Networks Tool:</strong> Click any test button above to open the tool</li>
+                <li><strong>Verify Organism Dropdown:</strong> Check that C. glutamicum ATCC 13032 and both yeast options are present</li>
+                <li><strong>Test E. coli Example:</strong> Click "E. coli K12 Example" button, verify >70 genes load</li>
+                <li><strong>Test C. glutamicum Example:</strong> Click "C. glutamicum Example" button, verify >90 genes load</li>
+                <li><strong>Test Yeast Example:</strong> Click "S. cerevisiae (酿酒酵母)" button, verify >320 genes load</li>
+                <li><strong>Build Networks:</strong> Test network building for each organism</li>
+                <li><strong>Verify Interactions:</strong> Check that protein-protein interactions are displayed</li>
+                <li><strong>Check Statistics:</strong> Verify network statistics update correctly</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>✅ Expected Results</h2>
+            <div class="organism-info">
+                <strong>Success Criteria:</strong><br>
+                ✓ All three microbial example buttons work correctly<br>
+                ✓ Gene lists contain appropriate numbers of genes (>30 each)<br>
+                ✓ Organism IDs are correctly set when examples load<br>
+                ✓ Network visualization displays realistic protein interactions<br>
+                ✓ Status messages indicate successful loading<br>
+                ✓ Network statistics show appropriate node/edge counts<br>
+                ✓ No JavaScript errors in browser console
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

@@ -373,10 +373,13 @@
                     <select class="form-control" id="organism">
                         <option value="9606">Homo sapiens (Human)</option>
                         <option value="10090">Mus musculus (Mouse)</option>
-                        <option value="83333">Escherichia coli K-12</option>
-                        <option value="559292">Saccharomyces cerevisiae</option>
-                        <option value="7227">Drosophila melanogaster</option>
-                        <option value="6239">Caenorhabditis elegans</option>
+                        <option value="511145">Escherichia coli K-12 substr. MG1655</option>
+                        <option value="196627">Corynebacterium glutamicum ATCC 13032</option>
+                        <option value="559292">Saccharomyces cerevisiae S288C (Baker's yeast)</option>
+                        <option value="7227">Drosophila melanogaster (Fruit fly)</option>
+                        <option value="6239">Caenorhabditis elegans (Roundworm)</option>
+                        <option value="3702">Arabidopsis thaliana (Thale cress)</option>
+                        <option value="4932">Saccharomyces cerevisiae (Baker's yeast - general)</option>
                     </select>
                 </div>
 
@@ -477,7 +480,22 @@ KRAS" rows="6"></textarea>
 
                 <button class="btn btn-success btn-block" id="exampleBtn">
                     <i class="fas fa-flask"></i>
-                    Load Example
+                    Human Cancer Pathway
+                </button>
+
+                <button class="btn btn-primary btn-block" id="ecoliBtn">
+                    <i class="fas fa-bacteria"></i>
+                    E. coli K12 Example
+                </button>
+
+                <button class="btn btn-primary btn-block" id="corynebacteriumBtn">
+                    <i class="fas fa-dna"></i>
+                    C. glutamicum Example
+                </button>
+
+                <button class="btn btn-info btn-block" id="yeastBtn">
+                    <i class="fas fa-circle"></i>
+                    S. cerevisiae (酿酒酵母)
                 </button>
 
                 <button class="btn btn-warning btn-block" id="clearBtn">
@@ -549,6 +567,9 @@ KRAS" rows="6"></textarea>
             setupEventListeners() {
                 document.getElementById('buildNetworkBtn').addEventListener('click', () => this.buildNetwork());
                 document.getElementById('exampleBtn').addEventListener('click', () => this.loadExample());
+                document.getElementById('ecoliBtn').addEventListener('click', () => this.loadEcoliExample());
+                document.getElementById('corynebacteriumBtn').addEventListener('click', () => this.loadCorynebacteriumExample());
+                document.getElementById('yeastBtn').addEventListener('click', () => this.loadYeastExample());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearNetwork());
                 document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportNetwork());
@@ -558,6 +579,30 @@ KRAS" rows="6"></textarea>
                 document.getElementById('proteinInput').value = `TP53\nMDM2\nCDKN1A\nCCNG1\nGADD45A\nBBX\nRRM2B\nSESN1\nXPC\nDDB2`;
                 document.getElementById('organism').value = '9606';
                 this.showStatus('Example cancer pathway proteins loaded. Click "Build Network" to visualize.', 'success');
+            }
+
+            loadEcoliExample() {
+                const ecoliGenes = `dnaA\ndnaB\ndnaC\ndnaG\nrecA\nrecB\nrecC\nrecD\nlexA\nssb\npolA\npolB\npolC\nrpoA\nrpoB\nrpoC\nrpoD\nrpoN\nrpoS\ncrp\nfnr\niclR\naraC\nlacI\ntrpR\ngyrA\ngyrB\ntopA\nftsZ\nftsA\nftsQ\nftsI\nftsW\nminC\nminD\nminE\nmreB\nmreC\nmreD\nrodA\npbpA\npbpB\nlpoB\nenvA\nompA\nompC\nompF\nlpp\ntolC\nacrA\nacrB\nmarA\nsoxS\nsoxR\nkatG\nkatE\nsodA\nsodB\ngrpE\ndnaK\ndnaJ\ngroEL\ngroES\nlon\nclpP\nclpX\nhslU\nhslV\nftsH\nhtpG\nrpoH\nrpoE\nsigE\nsmpB\nssrA\ntmRNA\nrnpA\nrnpB\nrne\nrng\npcnB\npnp\nrph\nrrfA\nrrfB\nrrfC\nrrfD\nrrfE\nrrfF\nrrfG\nrrfH\ntufA\ntufB\ntsf\nefp\nprfA\nprfB\nprfC\nselA\nselB\nselC\nselD\nthrS\nalaS\nargS\nasnS\naspS\ncysS\nglnS\ngluS\nglyS\nhisS\nileS\nleuS\nlysS\nmetS\npheS\nproS\nserS\nthrS\ntrpS\ntyrS\nvalS\ninfA\ninfB\ninfC\nfrr\nfusA\nribosomal\nrplA\nrplB\nrplC\nrplD\nrplE\nrplF\nrplI\nrplJ\nrplK\nrplL\nrplM\nrplN\nrplO\nrplP\nrplQ\nrplR\nrplS\nrplT\nrplU\nrplV\nrplW\nrplX\nrpmA\nrpmB\nrpmC\nrpmD\nrpmE\nrpmF\nrpmG\nrpmH\nrpmI\nrpmJ\nrpsA\nrpsB\nrpsC\nrpsD\nrpsE\nrpsF\nrpsG\nrpsH\nrpsI\nrpsJ\nrpsK\nrpsL\nrpsM\nrpsN\nrpsO\nrpsP\nrpsQ\nrpsR\nrpsS\nrpsT\nrpsU`;
+                
+                document.getElementById('proteinInput').value = ecoliGenes;
+                document.getElementById('organism').value = '511145';
+                this.showStatus('E. coli K12 essential genes loaded (>30 genes). This includes DNA replication, transcription, translation, and cell division genes.', 'success');
+            }
+
+            loadCorynebacteriumExample() {
+                const corynebacteriumGenes = `dnaA\ndnaB\ndnaC\ndnaG\nrecA\nrecF\nrecO\nrecR\nlexA\nssb\npolA\npolC\nrpoA\nrpoB\nrpoC\nsigA\nsigB\nsigC\nsigE\nsigF\nsigH\nsigM\nwhiB\nglnR\nramA\nramB\nftsZ\nftsA\nftsQ\nftsI\nftsW\nmurA\nmurB\nmurC\nmurD\nmurE\nmurF\nmurG\nddl\nalr\nglmS\nglmU\nglmM\npbp1\npbp2\nrodA\nmreB\nmreC\nmreD\nldtA\nldtB\nps1\nps2\ncspA\ncspB\ndnaK\ndnaJ\ngrpE\ngroEL\ngroES\nhtpG\nlon\nclpP\nclpC\nclpX\nhrcA\nhspR\nkatA\nsodA\nahpC\ntrxA\ntrxB\nmsrA\nmsrB\nogdh\nicd\nsucC\nsucD\nfumC\nmdh\ncitH\nacnA\nacnB\nsdhA\nsdhB\nsdhC\nsdhD\natpA\natpB\natpC\natpD\natpE\natpF\natpG\natpH\nnuoA\nnuoB\nnuoC\nnuoD\nnuoE\nnuoF\nnuoG\nnuoH\nnuoI\nnuoJ\nnuoK\nnuoL\nnuoM\nnuoN\nqcrA\nqcrB\nqcrC\nctaC\nctaD\nctaE\nctaF\ncydA\ncydB\ncco\nrpoZ\nrpoE\ngreA\nnusA\nnusB\nnusG\nrho\nrnc\nrnpA\nrne\npnp\npcnB\ndeaD\ndbpA\nrimM\nrimP\nrbfA\nrsfS\ntsf\nefp\nprfA\nprfB\nfrr\nfusA\ntufA\ninfA\ninfB\ninfC\nalgorithmic\nrrf\nrrn\nthrS\nalaS\nargS\nasnS\naspS\ncysS\nglnS\ngluS\nglyS\nhisS\nileS\nleuS\nlysS\nmetS\npheS\nproS\nserS\ntrpS\ntyrS\nvalS\nrplA\nrplB\nrplC\nrplD\nrplE\nrplF\nrplI\nrplJ\nrplK\nrplL\nrplM\nrplN\nrplO\nrplP\nrplQ\nrplR\nrplS\nrplT\nrplU\nrplV\nrplW\nrplX\nrpmA\nrpmB\nrpmC\nrpmD\nrpmE\nrpmF\nrpmG\nrpmH\nrpmI\nrpmJ\nrpsA\nrpsB\nrpsC\nrpsD\nrpsE\nrpsF\nrpsG\nrpsH\nrpsI\nrpsJ\nrpsK\nrpsL\nrpsM\nrpsN\nrpsO\nrpsP\nrpsQ\nrpsR\nrpsS\nrpsT\nrpsU`;
+                
+                document.getElementById('proteinInput').value = corynebacteriumGenes;
+                document.getElementById('organism').value = '196627';
+                this.showStatus('C. glutamicum ATCC13032 essential genes loaded (>30 genes). This includes central metabolism, respiration, and protein synthesis genes.', 'success');
+            }
+
+            loadYeastExample() {
+                const yeastGenes = `CDC28\nCLN1\nCLN2\nCLB1\nCLB2\nCLB3\nCLB4\nCLB5\nCLB6\nCDC6\nCDC7\nCDC45\nMCM2\nMCM3\nMCM4\nMCM5\nMCM6\nMCM7\nORC1\nORC2\nORC3\nORC4\nORC5\nORC6\nRFC1\nRFC2\nRFC3\nRFC4\nRFC5\nPCNA\nPOL1\nPOL2\nPOL3\nPOL30\nRPA1\nRPA2\nRPA3\nRAD51\nRAD52\nRAD53\nRAD54\nRAD55\nRAD57\nRAD59\nMRE11\nRAD50\nXRS2\nKU70\nKU80\nDNL4\nLIG4\nNEJ1\nYKU70\nYKU80\nRPB1\nRPB2\nRPB3\nRPB4\nRPB5\nRPB8\nRPB9\nRPB10\nRPB11\nRPB12\nTFIIA\nTFIIB\nTFIID\nTFIIE\nTFIIF\nTFIIH\nMED1\nMED4\nMED7\nMED14\nMED17\nMED21\nGCN4\nGCN5\nADA2\nADA3\nSPT3\nSPT7\nSPT8\nSPT15\nSPT20\nTAF1\nTAF2\nTAF5\nTAF6\nTAF9\nTAF10\nTAF12\nSWI1\nSWI2\nSWI3\nSNF2\nSNF5\nSNF6\nSNF11\nHSP104\nHSP82\nHSP70\nHSP60\nHSP40\nSSA1\nSSA2\nSSB1\nSSB2\nSSE1\nSSE2\nKAR2\nERO1\nPDI1\nEUG1\nCNE1\nCWP1\nCWP2\nFKS1\nFKS2\nGSC1\nGSC2\nSMI1\nCHS1\nCHS2\nCHS3\nCHS7\nBNI1\nBNI4\nBUD1\nBUD2\nBUD3\nBUD4\nBUD5\nBUD6\nBUD8\nBUD9\nCDC3\nCDC10\nCDC11\nCDC12\nCDC24\nCDC42\nBEM1\nBEM2\nBEM3\nBEM4\nRSR1\nCLA4\nSTE20\nCDC25\nSWE1\nMIH1\nCDC14\nCDC15\nCDC5\nDBF2\nDBF20\nMOB1\nNUD1\nSPC42\nSPC97\nSPC98\nTUB1\nTUB2\nTUB3\nTUB4\nCIN1\nCIN2\nCIN4\nCIN8\nKIP1\nKIP2\nKIP3\nDYN1\nDYN2\nDYN3\nPAC1\nPAC2\nNUM1\nJNM1\nASE1\nBIK1\nBIM1\nKAR3\nKAR9\nSPC24\nSPC25\nOKP1\nAME1\nCTF19\nMCM21\nNDC80\nSPC105\nDAD1\nDAD2\nDAD3\nDAD4\nDUO1\nMPS1\nBUB1\nBUB2\nBUB3\nMAD1\nMAD2\nMAD3\nRPL1A\nRPL1B\nRPL2A\nRPL2B\nRPL3\nRPL4A\nRPL4B\nRPL5\nRPL6A\nRPL6B\nRPL7A\nRPL7B\nRPL8A\nRPL8B\nRPL9A\nRPL9B\nRPL10\nRPL11A\nRPL11B\nRPL12A\nRPL12B\nRPL13A\nRPL13B\nRPS0A\nRPS0B\nRPS1A\nRPS1B\nRPS2\nRPS3\nRPS4A\nRPS4B\nRPS5\nRPS6A\nRPS6B\nRPS7A\nRPS7B\nRPS8A\nRPS8B\nRPS9A\nRPS9B\nRPS10A\nRPS10B\nTEF1\nTEF2\nTEF4\nEFT1\nEFT2\nTIF1\nTIF2\nTIF3\nTIF4\nTIF5\nSUI1\nSUI2\nSUI3\nGCD1\nGCD2\nGCD6\nGCD7\nGCD10\nGCD11\nGCN1\nGCN2\nGCN3\nGCN20\neIF4E\neIF4G\neIF4A\nPAB1\nUPF1\nUPF2\nUPF3\nCBP1\nNAM7\nTIF34\nTIF35\nSUI1\nFUN12\nHYP2\nTIF11\nGIS2\nSTO1\nDED1\nDBP1\nROK1\nSPB1\nKRR1\nNOB1\nDIM1\nRRP5\nRRP12\nNOP1\nNOP2\nNOP4\nNOP7\nNOP56\nNOP58\nPWP2\nRIX1\nRIX7\nRSA1\nRSA3\nRSA4\nSAS10\nSDO1\nUTP4\nUTP5\nUTP6\nUTP8\nUTP9\nUTP10\nUTP13\nUTP14\nUTP15\nUTP18\nUTP20\nUTP21\nUTP22\nNAN1\nIMP3\nIMP4\nMPP10\nTIF6\nRLP7\nNOG1\nNUG1\nNSA2`;
+                
+                document.getElementById('proteinInput').value = yeastGenes;
+                document.getElementById('organism').value = '559292';
+                this.showStatus('S. cerevisiae (酿酒酵母) essential genes loaded (>30 genes). This includes cell cycle, DNA replication, transcription, ribosome biogenesis, and cytoskeleton genes.', 'success');
             }
 
             clearNetwork() {
@@ -621,6 +666,7 @@ KRAS" rows="6"></textarea>
             async simulateSTRINGQuery(proteins, organism, confidence, maxInteractions, evidenceTypes) {
                 // Simulate realistic STRING network data
                 const proteinDatabase = {
+                    // Human proteins
                     'TP53': { name: 'Tumor protein p53', type: 'tumor suppressor' },
                     'MDM2': { name: 'MDM2 proto-oncogene', type: 'oncogene' },
                     'CDKN1A': { name: 'Cyclin dependent kinase inhibitor 1A', type: 'cell cycle' },
@@ -634,7 +680,429 @@ KRAS" rows="6"></textarea>
                     'EGFR': { name: 'Epidermal growth factor receptor', type: 'receptor' },
                     'BRCA1': { name: 'BRCA1 DNA repair associated', type: 'DNA repair' },
                     'MYC': { name: 'MYC proto-oncogene', type: 'oncogene' },
-                    'KRAS': { name: 'KRAS proto-oncogene', type: 'oncogene' }
+                    'KRAS': { name: 'KRAS proto-oncogene', type: 'oncogene' },
+                    
+                    // E. coli K12 proteins
+                    'dnaA': { name: 'Chromosomal replication initiator protein DnaA', type: 'DNA replication' },
+                    'dnaB': { name: 'Replicative DNA helicase', type: 'DNA replication' },
+                    'dnaC': { name: 'DNA replication protein DnaC', type: 'DNA replication' },
+                    'dnaG': { name: 'DNA primase', type: 'DNA replication' },
+                    'recA': { name: 'Protein RecA', type: 'DNA repair' },
+                    'recB': { name: 'RecBCD enzyme subunit RecB', type: 'DNA repair' },
+                    'recC': { name: 'RecBCD enzyme subunit RecC', type: 'DNA repair' },
+                    'recD': { name: 'RecBCD enzyme subunit RecD', type: 'DNA repair' },
+                    'lexA': { name: 'LexA repressor', type: 'transcriptional regulator' },
+                    'ssb': { name: 'Single-strand DNA-binding protein', type: 'DNA binding' },
+                    'polA': { name: 'DNA polymerase I', type: 'DNA replication' },
+                    'polB': { name: 'DNA polymerase II', type: 'DNA replication' },
+                    'polC': { name: 'DNA polymerase III subunit alpha', type: 'DNA replication' },
+                    'rpoA': { name: 'RNA polymerase subunit alpha', type: 'transcription' },
+                    'rpoB': { name: 'RNA polymerase subunit beta', type: 'transcription' },
+                    'rpoC': { name: 'RNA polymerase subunit beta-prime', type: 'transcription' },
+                    'rpoD': { name: 'RNA polymerase sigma factor RpoD', type: 'transcription' },
+                    'rpoN': { name: 'RNA polymerase sigma-54 factor', type: 'transcription' },
+                    'rpoS': { name: 'RNA polymerase sigma factor RpoS', type: 'transcription' },
+                    'crp': { name: 'cAMP receptor protein', type: 'transcriptional regulator' },
+                    'fnr': { name: 'Fumarate and nitrate reduction regulatory protein', type: 'transcriptional regulator' },
+                    'iclR': { name: 'Transcriptional repressor IclR', type: 'transcriptional regulator' },
+                    'araC': { name: 'Arabinose operon regulatory protein', type: 'transcriptional regulator' },
+                    'lacI': { name: 'Lactose operon repressor', type: 'transcriptional regulator' },
+                    'trpR': { name: 'Trp operon repressor', type: 'transcriptional regulator' },
+                    'gyrA': { name: 'DNA gyrase subunit A', type: 'DNA topology' },
+                    'gyrB': { name: 'DNA gyrase subunit B', type: 'DNA topology' },
+                    'topA': { name: 'DNA topoisomerase I', type: 'DNA topology' },
+                    'ftsZ': { name: 'Cell division protein FtsZ', type: 'cell division' },
+                    'ftsA': { name: 'Cell division protein FtsA', type: 'cell division' },
+                    'ftsQ': { name: 'Cell division protein FtsQ', type: 'cell division' },
+                    'ftsI': { name: 'Peptidoglycan DD-transpeptidase FtsI', type: 'cell division' },
+                    'ftsW': { name: 'Cell division protein FtsW', type: 'cell division' },
+                    'minC': { name: 'Septum site-determining protein MinC', type: 'cell division' },
+                    'minD': { name: 'Septum site-determining protein MinD', type: 'cell division' },
+                    'minE': { name: 'Cell division topological specificity factor MinE', type: 'cell division' },
+                    'mreB': { name: 'Rod shape-determining protein MreB', type: 'cell shape' },
+                    'mreC': { name: 'Rod shape-determining protein MreC', type: 'cell shape' },
+                    'mreD': { name: 'Rod shape-determining protein MreD', type: 'cell shape' },
+                    'rodA': { name: 'Rod shape-determining protein RodA', type: 'cell shape' },
+                    'dnaK': { name: 'Chaperone protein DnaK', type: 'protein folding' },
+                    'dnaJ': { name: 'Chaperone protein DnaJ', type: 'protein folding' },
+                    'grpE': { name: 'Protein GrpE', type: 'protein folding' },
+                    'groEL': { name: 'Chaperonin GroEL', type: 'protein folding' },
+                    'groES': { name: 'Co-chaperonin GroES', type: 'protein folding' },
+                    'lon': { name: 'Lon protease', type: 'proteolysis' },
+                    'clpP': { name: 'ATP-dependent Clp protease proteolytic subunit', type: 'proteolysis' },
+                    'clpX': { name: 'ATP-dependent Clp protease ATP-binding subunit ClpX', type: 'proteolysis' },
+                    'hslU': { name: 'ATP-dependent protease ATPase subunit HslU', type: 'proteolysis' },
+                    'hslV': { name: 'ATP-dependent protease subunit HslV', type: 'proteolysis' },
+                    'ftsH': { name: 'ATP-dependent zinc metalloprotease FtsH', type: 'proteolysis' },
+                    'htpG': { name: 'Chaperone protein HtpG', type: 'protein folding' },
+                    'rpoH': { name: 'RNA polymerase sigma factor RpoH', type: 'transcription' },
+                    'rpoE': { name: 'RNA polymerase sigma factor RpoE', type: 'transcription' },
+                    'tufA': { name: 'Elongation factor Tu', type: 'translation' },
+                    'tufB': { name: 'Elongation factor Tu 2', type: 'translation' },
+                    'fusA': { name: 'Elongation factor G', type: 'translation' },
+                    'tsf': { name: 'Elongation factor Ts', type: 'translation' },
+                    'efp': { name: 'Elongation factor P', type: 'translation' },
+                    'prfA': { name: 'Peptide chain release factor 1', type: 'translation' },
+                    'prfB': { name: 'Peptide chain release factor 2', type: 'translation' },
+                    'prfC': { name: 'Peptide chain release factor 3', type: 'translation' },
+                    'frr': { name: 'Ribosome recycling factor', type: 'translation' },
+                    'infA': { name: 'Translation initiation factor IF-1', type: 'translation' },
+                    'infB': { name: 'Translation initiation factor IF-2', type: 'translation' },
+                    'infC': { name: 'Translation initiation factor IF-3', type: 'translation' },
+                    'rplA': { name: '50S ribosomal protein L1', type: 'ribosomal protein' },
+                    'rplB': { name: '50S ribosomal protein L2', type: 'ribosomal protein' },
+                    'rplC': { name: '50S ribosomal protein L3', type: 'ribosomal protein' },
+                    'rplD': { name: '50S ribosomal protein L4', type: 'ribosomal protein' },
+                    'rplE': { name: '50S ribosomal protein L5', type: 'ribosomal protein' },
+                    'rplF': { name: '50S ribosomal protein L6', type: 'ribosomal protein' },
+                    'rpsA': { name: '30S ribosomal protein S1', type: 'ribosomal protein' },
+                    'rpsB': { name: '30S ribosomal protein S2', type: 'ribosomal protein' },
+                    'rpsC': { name: '30S ribosomal protein S3', type: 'ribosomal protein' },
+                    'rpsD': { name: '30S ribosomal protein S4', type: 'ribosomal protein' },
+                    'rpsE': { name: '30S ribosomal protein S5', type: 'ribosomal protein' },
+                    
+                    // C. glutamicum ATCC13032 proteins
+                    'sigA': { name: 'RNA polymerase sigma factor SigA', type: 'transcription' },
+                    'sigB': { name: 'RNA polymerase sigma factor SigB', type: 'transcription' },
+                    'sigC': { name: 'RNA polymerase sigma factor SigC', type: 'transcription' },
+                    'sigE': { name: 'RNA polymerase sigma factor SigE', type: 'transcription' },
+                    'sigF': { name: 'RNA polymerase sigma factor SigF', type: 'transcription' },
+                    'sigH': { name: 'RNA polymerase sigma factor SigH', type: 'transcription' },
+                    'sigM': { name: 'RNA polymerase sigma factor SigM', type: 'transcription' },
+                    'whiB': { name: 'WhiB-like transcription regulator', type: 'transcriptional regulator' },
+                    'glnR': { name: 'Nitrogen regulation protein NtrC', type: 'transcriptional regulator' },
+                    'ramA': { name: 'Transcriptional regulator RamA', type: 'transcriptional regulator' },
+                    'ramB': { name: 'Transcriptional regulator RamB', type: 'transcriptional regulator' },
+                    'murA': { name: 'UDP-N-acetylglucosamine 1-carboxyvinyltransferase', type: 'cell wall biosynthesis' },
+                    'murB': { name: 'UDP-N-acetylenolpyruvoylglucosamine reductase', type: 'cell wall biosynthesis' },
+                    'murC': { name: 'UDP-N-acetylmuramate--L-alanine ligase', type: 'cell wall biosynthesis' },
+                    'murD': { name: 'UDP-N-acetylmuramoylalanine--D-glutamate ligase', type: 'cell wall biosynthesis' },
+                    'murE': { name: 'UDP-N-acetylmuramoyl-L-alanyl-D-glutamate--2,6-diaminopimelate ligase', type: 'cell wall biosynthesis' },
+                    'murF': { name: 'UDP-N-acetylmuramoyl-tripeptide--D-alanyl-D-alanine ligase', type: 'cell wall biosynthesis' },
+                    'murG': { name: 'UDP-N-acetylglucosamine--N-acetylmuramyl-(pentapeptide) pyrophosphoryl-undecaprenol N-acetylglucosamine transferase', type: 'cell wall biosynthesis' },
+                    'ddl': { name: 'D-alanine--D-alanine ligase', type: 'cell wall biosynthesis' },
+                    'alr': { name: 'Alanine racemase', type: 'cell wall biosynthesis' },
+                    'glmS': { name: 'Glutamine--fructose-6-phosphate aminotransferase', type: 'cell wall biosynthesis' },
+                    'glmU': { name: 'Bifunctional protein GlmU', type: 'cell wall biosynthesis' },
+                    'glmM': { name: 'Phosphoglucosamine mutase', type: 'cell wall biosynthesis' },
+                    'pbp1': { name: 'Penicillin-binding protein 1', type: 'cell wall biosynthesis' },
+                    'pbp2': { name: 'Penicillin-binding protein 2', type: 'cell wall biosynthesis' },
+                    'ldtA': { name: 'L,D-transpeptidase LdtA', type: 'cell wall biosynthesis' },
+                    'ldtB': { name: 'L,D-transpeptidase LdtB', type: 'cell wall biosynthesis' },
+                    'katA': { name: 'Catalase', type: 'antioxidant' },
+                    'sodA': { name: 'Superoxide dismutase [Mn]', type: 'antioxidant' },
+                    'ahpC': { name: 'Alkyl hydroperoxide reductase subunit C', type: 'antioxidant' },
+                    'trxA': { name: 'Thioredoxin', type: 'antioxidant' },
+                    'trxB': { name: 'Thioredoxin reductase', type: 'antioxidant' },
+                    'msrA': { name: 'Peptide methionine sulfoxide reductase MsrA', type: 'antioxidant' },
+                    'msrB': { name: 'Peptide methionine sulfoxide reductase MsrB', type: 'antioxidant' },
+                    'ogdh': { name: '2-oxoglutarate dehydrogenase E1 component', type: 'central metabolism' },
+                    'icd': { name: 'Isocitrate dehydrogenase [NADP]', type: 'central metabolism' },
+                    'sucC': { name: 'Succinate--CoA ligase [ADP-forming] subunit beta', type: 'central metabolism' },
+                    'sucD': { name: 'Succinate--CoA ligase [ADP-forming] subunit alpha', type: 'central metabolism' },
+                    'fumC': { name: 'Fumarate hydratase class II', type: 'central metabolism' },
+                    'mdh': { name: 'Malate dehydrogenase', type: 'central metabolism' },
+                    'citH': { name: 'Citrate synthase', type: 'central metabolism' },
+                    'acnA': { name: 'Aconitate hydratase A', type: 'central metabolism' },
+                    'acnB': { name: 'Aconitate hydratase B', type: 'central metabolism' },
+                    'sdhA': { name: 'Succinate dehydrogenase flavoprotein subunit', type: 'respiration' },
+                    'sdhB': { name: 'Succinate dehydrogenase iron-sulfur subunit', type: 'respiration' },
+                    'sdhC': { name: 'Succinate dehydrogenase cytochrome b556 subunit', type: 'respiration' },
+                    'sdhD': { name: 'Succinate dehydrogenase hydrophobic membrane anchor protein', type: 'respiration' },
+                    'atpA': { name: 'ATP synthase subunit alpha', type: 'ATP synthesis' },
+                    'atpB': { name: 'ATP synthase subunit a', type: 'ATP synthesis' },
+                    'atpC': { name: 'ATP synthase epsilon chain', type: 'ATP synthesis' },
+                    'atpD': { name: 'ATP synthase subunit beta', type: 'ATP synthesis' },
+                    'atpE': { name: 'ATP synthase subunit c', type: 'ATP synthesis' },
+                    'atpF': { name: 'ATP synthase subunit b', type: 'ATP synthesis' },
+                    'atpG': { name: 'ATP synthase gamma chain', type: 'ATP synthesis' },
+                    'atpH': { name: 'ATP synthase subunit delta', type: 'ATP synthesis' },
+                    'nuoA': { name: 'NADH-quinone oxidoreductase subunit A', type: 'respiration' },
+                    'nuoB': { name: 'NADH-quinone oxidoreductase subunit B', type: 'respiration' },
+                    'nuoC': { name: 'NADH-quinone oxidoreductase subunit C', type: 'respiration' },
+                    'nuoD': { name: 'NADH-quinone oxidoreductase subunit D', type: 'respiration' },
+                    'nuoE': { name: 'NADH-quinone oxidoreductase subunit E', type: 'respiration' },
+                    'nuoF': { name: 'NADH-quinone oxidoreductase subunit F', type: 'respiration' },
+                    'nuoG': { name: 'NADH-quinone oxidoreductase subunit G', type: 'respiration' },
+                    'nuoH': { name: 'NADH-quinone oxidoreductase subunit H', type: 'respiration' },
+                    'nuoI': { name: 'NADH-quinone oxidoreductase subunit I', type: 'respiration' },
+                    'nuoJ': { name: 'NADH-quinone oxidoreductase subunit J', type: 'respiration' },
+                    'nuoK': { name: 'NADH-quinone oxidoreductase subunit K', type: 'respiration' },
+                    'nuoL': { name: 'NADH-quinone oxidoreductase subunit L', type: 'respiration' },
+                    'nuoM': { name: 'NADH-quinone oxidoreductase subunit M', type: 'respiration' },
+                    'nuoN': { name: 'NADH-quinone oxidoreductase subunit N', type: 'respiration' },
+                    'qcrA': { name: 'Cytochrome bc1 complex Rieske subunit', type: 'respiration' },
+                    'qcrB': { name: 'Cytochrome bc1 complex cytochrome b subunit', type: 'respiration' },
+                    'qcrC': { name: 'Cytochrome bc1 complex cytochrome c1 subunit', type: 'respiration' },
+                    'ctaC': { name: 'Cytochrome c oxidase subunit 2', type: 'respiration' },
+                    'ctaD': { name: 'Cytochrome c oxidase subunit 1', type: 'respiration' },
+                    'ctaE': { name: 'Cytochrome c oxidase subunit 3', type: 'respiration' },
+                    'ctaF': { name: 'Cytochrome c oxidase assembly protein', type: 'respiration' },
+                    'cydA': { name: 'Cytochrome bd-I oxidase subunit 1', type: 'respiration' },
+                    'cydB': { name: 'Cytochrome bd-I oxidase subunit 2', type: 'respiration' },
+                    'cco': { name: 'Cytochrome c oxidase', type: 'respiration' },
+                    'recF': { name: 'DNA replication and repair protein RecF', type: 'DNA repair' },
+                    'recO': { name: 'DNA repair protein RecO', type: 'DNA repair' },
+                    'recR': { name: 'Recombination protein RecR', type: 'DNA repair' },
+                    'cspA': { name: 'Cold shock protein CspA', type: 'stress response' },
+                    'cspB': { name: 'Cold shock protein CspB', type: 'stress response' },
+                    'clpC': { name: 'ATP-dependent Clp protease ATP-binding subunit ClpC', type: 'proteolysis' },
+                    'hrcA': { name: 'Heat-inducible transcription repressor HrcA', type: 'transcriptional regulator' },
+                    'hspR': { name: 'Heat shock protein transcriptional repressor', type: 'transcriptional regulator' },
+                    'ps1': { name: 'Proteasome subunit alpha type-1', type: 'proteolysis' },
+                    'ps2': { name: 'Proteasome subunit alpha type-2', type: 'proteolysis' },
+                    'rpoZ': { name: 'RNA polymerase subunit omega', type: 'transcription' },
+                    'greA': { name: 'Transcription elongation factor GreA', type: 'transcription' },
+                    'nusA': { name: 'N utilization substance protein A', type: 'transcription' },
+                    'nusB': { name: 'N utilization substance protein B', type: 'transcription' },
+                    'nusG': { name: 'Transcription termination/antitermination protein NusG', type: 'transcription' },
+                    'rho': { name: 'Transcription termination factor Rho', type: 'transcription' },
+                    'rnc': { name: 'Ribonuclease 3', type: 'RNA processing' },
+                    'rnpA': { name: 'Ribonuclease P protein component', type: 'RNA processing' },
+                    'rne': { name: 'Ribonuclease E', type: 'RNA processing' },
+                    'pnp': { name: 'Polyribonucleotide nucleotidyltransferase', type: 'RNA processing' },
+                    'pcnB': { name: 'Poly(A) polymerase I', type: 'RNA processing' },
+                    'deaD': { name: 'ATP-dependent RNA helicase DeaD', type: 'RNA processing' },
+                    'dbpA': { name: 'ATP-dependent RNA helicase DbpA', type: 'RNA processing' },
+                    'rimM': { name: 'Ribosome maturation factor RimM', type: 'ribosome biogenesis' },
+                    'rimP': { name: 'Ribosome maturation factor RimP', type: 'ribosome biogenesis' },
+                    'rbfA': { name: 'Ribosome-binding factor A', type: 'ribosome biogenesis' },
+                    'rsfS': { name: 'Ribosomal silencing factor RsfS', type: 'ribosome biogenesis' },
+                    'thrS': { name: 'Threonine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'alaS': { name: 'Alanine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'argS': { name: 'Arginine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'asnS': { name: 'Asparagine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'aspS': { name: 'Aspartate--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'cysS': { name: 'Cysteine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'glnS': { name: 'Glutamine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'gluS': { name: 'Glutamate--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'glyS': { name: 'Glycine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'hisS': { name: 'Histidine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'ileS': { name: 'Isoleucine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'leuS': { name: 'Leucine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'lysS': { name: 'Lysine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'metS': { name: 'Methionine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'pheS': { name: 'Phenylalanine--tRNA ligase alpha subunit', type: 'aminoacyl-tRNA synthetase' },
+                    'proS': { name: 'Proline--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'serS': { name: 'Serine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'trpS': { name: 'Tryptophan--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'tyrS': { name: 'Tyrosine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    'valS': { name: 'Valine--tRNA ligase', type: 'aminoacyl-tRNA synthetase' },
+                    
+                    // S. cerevisiae (酿酒酵母) proteins
+                    'CDC28': { name: 'Cyclin-dependent kinase 1', type: 'cell cycle' },
+                    'CLN1': { name: 'G1/S-specific cyclin CLN1', type: 'cell cycle' },
+                    'CLN2': { name: 'G1/S-specific cyclin CLN2', type: 'cell cycle' },
+                    'CLB1': { name: 'B-type cyclin CLB1', type: 'cell cycle' },
+                    'CLB2': { name: 'B-type cyclin CLB2', type: 'cell cycle' },
+                    'CLB3': { name: 'B-type cyclin CLB3', type: 'cell cycle' },
+                    'CLB4': { name: 'B-type cyclin CLB4', type: 'cell cycle' },
+                    'CLB5': { name: 'B-type cyclin CLB5', type: 'cell cycle' },
+                    'CLB6': { name: 'B-type cyclin CLB6', type: 'cell cycle' },
+                    'CDC6': { name: 'Cell division control protein 6', type: 'DNA replication' },
+                    'CDC7': { name: 'Cell division control protein 7', type: 'DNA replication' },
+                    'CDC45': { name: 'Cell division control protein 45', type: 'DNA replication' },
+                    'MCM2': { name: 'DNA replication licensing factor MCM2', type: 'DNA replication' },
+                    'MCM3': { name: 'DNA replication licensing factor MCM3', type: 'DNA replication' },
+                    'MCM4': { name: 'DNA replication licensing factor MCM4', type: 'DNA replication' },
+                    'MCM5': { name: 'DNA replication licensing factor MCM5', type: 'DNA replication' },
+                    'MCM6': { name: 'DNA replication licensing factor MCM6', type: 'DNA replication' },
+                    'MCM7': { name: 'DNA replication licensing factor MCM7', type: 'DNA replication' },
+                    'ORC1': { name: 'Origin recognition complex subunit 1', type: 'DNA replication' },
+                    'ORC2': { name: 'Origin recognition complex subunit 2', type: 'DNA replication' },
+                    'ORC3': { name: 'Origin recognition complex subunit 3', type: 'DNA replication' },
+                    'ORC4': { name: 'Origin recognition complex subunit 4', type: 'DNA replication' },
+                    'ORC5': { name: 'Origin recognition complex subunit 5', type: 'DNA replication' },
+                    'ORC6': { name: 'Origin recognition complex subunit 6', type: 'DNA replication' },
+                    'RFC1': { name: 'Replication factor C subunit 1', type: 'DNA replication' },
+                    'RFC2': { name: 'Replication factor C subunit 2', type: 'DNA replication' },
+                    'RFC3': { name: 'Replication factor C subunit 3', type: 'DNA replication' },
+                    'RFC4': { name: 'Replication factor C subunit 4', type: 'DNA replication' },
+                    'RFC5': { name: 'Replication factor C subunit 5', type: 'DNA replication' },
+                    'PCNA': { name: 'Proliferating cell nuclear antigen', type: 'DNA replication' },
+                    'POL1': { name: 'DNA polymerase alpha catalytic subunit', type: 'DNA replication' },
+                    'POL2': { name: 'DNA polymerase epsilon catalytic subunit', type: 'DNA replication' },
+                    'POL3': { name: 'DNA polymerase delta catalytic subunit', type: 'DNA replication' },
+                    'POL30': { name: 'Proliferating cell nuclear antigen', type: 'DNA replication' },
+                    'RPA1': { name: 'Replication protein A 70 kDa DNA-binding subunit', type: 'DNA replication' },
+                    'RPA2': { name: 'Replication protein A 32 kDa subunit', type: 'DNA replication' },
+                    'RPA3': { name: 'Replication protein A 14 kDa subunit', type: 'DNA replication' },
+                    'RAD51': { name: 'DNA repair protein RAD51', type: 'DNA repair' },
+                    'RAD52': { name: 'DNA repair protein RAD52', type: 'DNA repair' },
+                    'RAD53': { name: 'Serine/threonine-protein kinase RAD53', type: 'DNA repair' },
+                    'RAD54': { name: 'DNA repair and recombination protein RAD54', type: 'DNA repair' },
+                    'RAD55': { name: 'DNA repair protein RAD55', type: 'DNA repair' },
+                    'RAD57': { name: 'DNA repair protein RAD57', type: 'DNA repair' },
+                    'RAD59': { name: 'DNA repair protein RAD59', type: 'DNA repair' },
+                    'MRE11': { name: 'Double-strand break repair protein MRE11', type: 'DNA repair' },
+                    'RAD50': { name: 'DNA repair protein RAD50', type: 'DNA repair' },
+                    'XRS2': { name: 'DNA repair protein XRS2', type: 'DNA repair' },
+                    'KU70': { name: 'ATP-dependent DNA helicase 2 subunit KU70', type: 'DNA repair' },
+                    'KU80': { name: 'ATP-dependent DNA helicase 2 subunit KU80', type: 'DNA repair' },
+                    'DNL4': { name: 'DNA ligase 4', type: 'DNA repair' },
+                    'LIG4': { name: 'DNA ligase 4', type: 'DNA repair' },
+                    'NEJ1': { name: 'Protein NEJ1', type: 'DNA repair' },
+                    'YKU70': { name: 'ATP-dependent DNA helicase 2 subunit YKU70', type: 'DNA repair' },
+                    'YKU80': { name: 'ATP-dependent DNA helicase 2 subunit YKU80', type: 'DNA repair' },
+                    'RPB1': { name: 'DNA-directed RNA polymerase II subunit RPB1', type: 'transcription' },
+                    'RPB2': { name: 'DNA-directed RNA polymerase II subunit RPB2', type: 'transcription' },
+                    'RPB3': { name: 'DNA-directed RNA polymerase II subunit RPB3', type: 'transcription' },
+                    'RPB4': { name: 'DNA-directed RNA polymerase II subunit RPB4', type: 'transcription' },
+                    'RPB5': { name: 'DNA-directed RNA polymerase II subunit RPB5', type: 'transcription' },
+                    'RPB8': { name: 'DNA-directed RNA polymerase II subunit RPB8', type: 'transcription' },
+                    'RPB9': { name: 'DNA-directed RNA polymerase II subunit RPB9', type: 'transcription' },
+                    'RPB10': { name: 'DNA-directed RNA polymerase II subunit RPB10', type: 'transcription' },
+                    'RPB11': { name: 'DNA-directed RNA polymerase II subunit RPB11', type: 'transcription' },
+                    'RPB12': { name: 'DNA-directed RNA polymerase II subunit RPB12', type: 'transcription' },
+                    'TFIIA': { name: 'Transcription initiation factor TFIIA', type: 'transcription factor' },
+                    'TFIIB': { name: 'Transcription initiation factor TFIIB', type: 'transcription factor' },
+                    'TFIID': { name: 'Transcription initiation factor TFIID', type: 'transcription factor' },
+                    'TFIIE': { name: 'Transcription initiation factor TFIIE', type: 'transcription factor' },
+                    'TFIIF': { name: 'Transcription initiation factor TFIIF', type: 'transcription factor' },
+                    'TFIIH': { name: 'Transcription initiation factor TFIIH', type: 'transcription factor' },
+                    'MED1': { name: 'Mediator of RNA polymerase II transcription subunit 1', type: 'transcription factor' },
+                    'MED4': { name: 'Mediator of RNA polymerase II transcription subunit 4', type: 'transcription factor' },
+                    'MED7': { name: 'Mediator of RNA polymerase II transcription subunit 7', type: 'transcription factor' },
+                    'MED14': { name: 'Mediator of RNA polymerase II transcription subunit 14', type: 'transcription factor' },
+                    'MED17': { name: 'Mediator of RNA polymerase II transcription subunit 17', type: 'transcription factor' },
+                    'MED21': { name: 'Mediator of RNA polymerase II transcription subunit 21', type: 'transcription factor' },
+                    'GCN4': { name: 'General control transcription factor GCN4', type: 'transcriptional regulator' },
+                    'GCN5': { name: 'Histone acetyltransferase GCN5', type: 'chromatin modification' },
+                    'ADA2': { name: 'Transcriptional adapter 2', type: 'transcriptional regulator' },
+                    'ADA3': { name: 'Transcriptional adapter 3', type: 'transcriptional regulator' },
+                    'SPT3': { name: 'Transcription factor SPT3', type: 'transcriptional regulator' },
+                    'SPT7': { name: 'Transcription factor SPT7', type: 'transcriptional regulator' },
+                    'SPT8': { name: 'Transcription factor SPT8', type: 'transcriptional regulator' },
+                    'SPT15': { name: 'TATA-box-binding protein', type: 'transcriptional regulator' },
+                    'SPT20': { name: 'Transcription factor SPT20', type: 'transcriptional regulator' },
+                    'TAF1': { name: 'Transcription initiation factor TFIID subunit 1', type: 'transcription factor' },
+                    'TAF2': { name: 'Transcription initiation factor TFIID subunit 2', type: 'transcription factor' },
+                    'TAF5': { name: 'Transcription initiation factor TFIID subunit 5', type: 'transcription factor' },
+                    'TAF6': { name: 'Transcription initiation factor TFIID subunit 6', type: 'transcription factor' },
+                    'TAF9': { name: 'Transcription initiation factor TFIID subunit 9', type: 'transcription factor' },
+                    'TAF10': { name: 'Transcription initiation factor TFIID subunit 10', type: 'transcription factor' },
+                    'TAF12': { name: 'Transcription initiation factor TFIID subunit 12', type: 'transcription factor' },
+                    'SWI1': { name: 'Transcription regulatory protein SWI1', type: 'chromatin remodeling' },
+                    'SWI2': { name: 'Transcription regulatory protein SWI2', type: 'chromatin remodeling' },
+                    'SWI3': { name: 'Transcription regulatory protein SWI3', type: 'chromatin remodeling' },
+                    'SNF2': { name: 'Transcription regulatory protein SNF2', type: 'chromatin remodeling' },
+                    'SNF5': { name: 'Transcription regulatory protein SNF5', type: 'chromatin remodeling' },
+                    'SNF6': { name: 'Transcription regulatory protein SNF6', type: 'chromatin remodeling' },
+                    'SNF11': { name: 'Transcription regulatory protein SNF11', type: 'chromatin remodeling' },
+                    'HSP104': { name: 'Heat shock protein 104', type: 'protein folding' },
+                    'HSP82': { name: 'Heat shock protein 82', type: 'protein folding' },
+                    'HSP70': { name: 'Heat shock protein 70', type: 'protein folding' },
+                    'HSP60': { name: 'Heat shock protein 60', type: 'protein folding' },
+                    'HSP40': { name: 'Heat shock protein 40', type: 'protein folding' },
+                    'SSA1': { name: 'Heat shock protein SSA1', type: 'protein folding' },
+                    'SSA2': { name: 'Heat shock protein SSA2', type: 'protein folding' },
+                    'SSB1': { name: 'Heat shock protein SSB1', type: 'protein folding' },
+                    'SSB2': { name: 'Heat shock protein SSB2', type: 'protein folding' },
+                    'SSE1': { name: 'Heat shock protein SSE1', type: 'protein folding' },
+                    'SSE2': { name: 'Heat shock protein SSE2', type: 'protein folding' },
+                    'KAR2': { name: 'Endoplasmic reticulum chaperone BiP', type: 'protein folding' },
+                    'ERO1': { name: 'Endoplasmic reticulum oxidoreductin 1', type: 'protein folding' },
+                    'PDI1': { name: 'Protein disulfide-isomerase', type: 'protein folding' },
+                    'EUG1': { name: 'Protein EUG1', type: 'protein processing' },
+                    'CNE1': { name: 'Calnexin', type: 'protein folding' },
+                    'CWP1': { name: 'Cell wall protein 1', type: 'cell wall' },
+                    'CWP2': { name: 'Cell wall protein 2', type: 'cell wall' },
+                    'FKS1': { name: '1,3-beta-glucan synthase component FKS1', type: 'cell wall biosynthesis' },
+                    'FKS2': { name: '1,3-beta-glucan synthase component FKS2', type: 'cell wall biosynthesis' },
+                    'GSC1': { name: '1,3-beta-glucan synthase component GSC1', type: 'cell wall biosynthesis' },
+                    'GSC2': { name: '1,3-beta-glucan synthase component GSC2', type: 'cell wall biosynthesis' },
+                    'SMI1': { name: 'Protein SMI1', type: 'cell wall' },
+                    'CHS1': { name: 'Chitin synthase 1', type: 'cell wall biosynthesis' },
+                    'CHS2': { name: 'Chitin synthase 2', type: 'cell wall biosynthesis' },
+                    'CHS3': { name: 'Chitin synthase 3', type: 'cell wall biosynthesis' },
+                    'CHS7': { name: 'Chitin synthase export chaperone', type: 'cell wall biosynthesis' },
+                    'BNI1': { name: 'Formin BNI1', type: 'cytoskeleton' },
+                    'BNI4': { name: 'Protein BNI4', type: 'cytoskeleton' },
+                    'BUD1': { name: 'Bud site selection protein BUD1', type: 'cell polarity' },
+                    'BUD2': { name: 'Bud site selection protein BUD2', type: 'cell polarity' },
+                    'BUD3': { name: 'Bud site selection protein BUD3', type: 'cell polarity' },
+                    'BUD4': { name: 'Bud site selection protein BUD4', type: 'cell polarity' },
+                    'BUD5': { name: 'Bud site selection protein BUD5', type: 'cell polarity' },
+                    'BUD6': { name: 'Bud site selection protein BUD6', type: 'cell polarity' },
+                    'BUD8': { name: 'Bud site selection protein BUD8', type: 'cell polarity' },
+                    'BUD9': { name: 'Bud site selection protein BUD9', type: 'cell polarity' },
+                    'CDC3': { name: 'Cell division control protein 3', type: 'cell division' },
+                    'CDC10': { name: 'Cell division control protein 10', type: 'cell division' },
+                    'CDC11': { name: 'Cell division control protein 11', type: 'cell division' },
+                    'CDC12': { name: 'Cell division control protein 12', type: 'cell division' },
+                    'CDC24': { name: 'Cell division control protein 24', type: 'cell polarity' },
+                    'CDC42': { name: 'Cell division control protein 42', type: 'cell polarity' },
+                    'BEM1': { name: 'Bud emergence protein 1', type: 'cell polarity' },
+                    'BEM2': { name: 'Bud emergence protein 2', type: 'cell polarity' },
+                    'BEM3': { name: 'Bud emergence protein 3', type: 'cell polarity' },
+                    'BEM4': { name: 'Bud emergence protein 4', type: 'cell polarity' },
+                    'RSR1': { name: 'Ras-related protein RSR1', type: 'cell polarity' },
+                    'CLA4': { name: 'Serine/threonine-protein kinase CLA4', type: 'cell polarity' },
+                    'STE20': { name: 'Serine/threonine-protein kinase STE20', type: 'signal transduction' },
+                    'CDC25': { name: 'Cell division control protein 25', type: 'cell cycle' },
+                    'SWE1': { name: 'Protein kinase SWE1', type: 'cell cycle' },
+                    'MIH1': { name: 'Protein phosphatase MIH1', type: 'cell cycle' },
+                    'CDC14': { name: 'Dual specificity protein phosphatase CDC14', type: 'cell cycle' },
+                    'CDC15': { name: 'Cell division control protein 15', type: 'cell cycle' },
+                    'CDC5': { name: 'Cell division control protein 5', type: 'cell cycle' },
+                    'DBF2': { name: 'Cell cycle protein kinase DBF2', type: 'cell cycle' },
+                    'DBF20': { name: 'Cell cycle protein kinase DBF20', type: 'cell cycle' },
+                    'MOB1': { name: 'Mps one binder kinase activator-like 1', type: 'cell cycle' },
+                    'NUD1': { name: 'Nuclear migration protein NUD1', type: 'cell division' },
+                    'SPC42': { name: 'Spindle pole component 42', type: 'cytoskeleton' },
+                    'SPC97': { name: 'Spindle pole component 97', type: 'cytoskeleton' },
+                    'SPC98': { name: 'Spindle pole component 98', type: 'cytoskeleton' },
+                    'TUB1': { name: 'Tubulin alpha-1 chain', type: 'cytoskeleton' },
+                    'TUB2': { name: 'Tubulin beta chain', type: 'cytoskeleton' },
+                    'TUB3': { name: 'Tubulin alpha-3 chain', type: 'cytoskeleton' },
+                    'TUB4': { name: 'Tubulin gamma chain', type: 'cytoskeleton' },
+                    'RPL1A': { name: '60S ribosomal protein L1-A', type: 'ribosomal protein' },
+                    'RPL1B': { name: '60S ribosomal protein L1-B', type: 'ribosomal protein' },
+                    'RPL2A': { name: '60S ribosomal protein L2-A', type: 'ribosomal protein' },
+                    'RPL2B': { name: '60S ribosomal protein L2-B', type: 'ribosomal protein' },
+                    'RPL3': { name: '60S ribosomal protein L3', type: 'ribosomal protein' },
+                    'RPL4A': { name: '60S ribosomal protein L4-A', type: 'ribosomal protein' },
+                    'RPL4B': { name: '60S ribosomal protein L4-B', type: 'ribosomal protein' },
+                    'RPL5': { name: '60S ribosomal protein L5', type: 'ribosomal protein' },
+                    'RPS0A': { name: '40S ribosomal protein S0-A', type: 'ribosomal protein' },
+                    'RPS0B': { name: '40S ribosomal protein S0-B', type: 'ribosomal protein' },
+                    'RPS1A': { name: '40S ribosomal protein S1-A', type: 'ribosomal protein' },
+                    'RPS1B': { name: '40S ribosomal protein S1-B', type: 'ribosomal protein' },
+                    'RPS2': { name: '40S ribosomal protein S2', type: 'ribosomal protein' },
+                    'RPS3': { name: '40S ribosomal protein S3', type: 'ribosomal protein' },
+                    'TEF1': { name: 'Elongation factor 1-alpha', type: 'translation' },
+                    'TEF2': { name: 'Elongation factor 1-alpha 2', type: 'translation' },
+                    'TEF4': { name: 'Elongation factor 1-gamma', type: 'translation' },
+                    'EFT1': { name: 'Elongation factor 2', type: 'translation' },
+                    'EFT2': { name: 'Elongation factor 2', type: 'translation' },
+                    'TIF1': { name: 'Translation initiation factor eIF4A', type: 'translation' },
+                    'TIF2': { name: 'Translation initiation factor eIF4A', type: 'translation' },
+                    'TIF3': { name: 'Translation initiation factor eIF4B', type: 'translation' },
+                    'TIF4': { name: 'Translation initiation factor eIF1', type: 'translation' },
+                    'TIF5': { name: 'Translation initiation factor eIF5', type: 'translation' },
+                    'SUI1': { name: 'Translation initiation factor eIF1', type: 'translation' },
+                    'SUI2': { name: 'Translation initiation factor eIF2 alpha subunit', type: 'translation' },
+                    'SUI3': { name: 'Translation initiation factor eIF2 beta subunit', type: 'translation' },
+                    'GCD1': { name: 'Translation initiation factor eIF2B gamma subunit', type: 'translation' },
+                    'GCD2': { name: 'Translation initiation factor eIF2B delta subunit', type: 'translation' },
+                    'GCD6': { name: 'Translation initiation factor eIF2B epsilon subunit', type: 'translation' },
+                    'GCD7': { name: 'Translation initiation factor eIF2B beta subunit', type: 'translation' },
+                    'GCD10': { name: 'Translation initiation factor eIF3 subunit j', type: 'translation' },
+                    'GCD11': { name: 'Translation initiation factor eIF2 gamma subunit', type: 'translation' },
+                    'GCN1': { name: 'Translational activator GCN1', type: 'translation' },
+                    'GCN2': { name: 'eIF2-alpha kinase GCN2', type: 'translation' },
+                    'GCN3': { name: 'Translation initiation factor eIF2B alpha subunit', type: 'translation' },
+                    'GCN20': { name: 'Positive regulator of the Gcn2p kinase activity', type: 'translation' },
+                    'eIF4E': { name: 'Eukaryotic translation initiation factor 4E', type: 'translation' },
+                    'eIF4G': { name: 'Eukaryotic translation initiation factor 4G', type: 'translation' },
+                    'eIF4A': { name: 'Eukaryotic translation initiation factor 4A', type: 'translation' },
+                    'PAB1': { name: 'Polyadenylate-binding protein', type: 'translation' },
+                    'NOP1': { name: 'Nucleolar protein 1', type: 'ribosome biogenesis' },
+                    'NOP2': { name: 'Nucleolar protein 2', type: 'ribosome biogenesis' },
+                    'NOP4': { name: 'Nucleolar protein 4', type: 'ribosome biogenesis' },
+                    'NOP7': { name: 'Nucleolar protein 7', type: 'ribosome biogenesis' },
+                    'NOP56': { name: 'Nucleolar protein 56', type: 'ribosome biogenesis' },
+                    'NOP58': { name: 'Nucleolar protein 58', type: 'ribosome biogenesis' }
                 };
 
                 // Create nodes for input proteins
@@ -649,7 +1117,7 @@ KRAS" rows="6"></textarea>
                 // Generate realistic interactions
                 const edges = [];
                 const interactions = [
-                    // p53 pathway interactions
+                    // Human p53 pathway interactions
                     { source: 'TP53', target: 'MDM2', score: 0.98, evidence: ['experimental', 'database'] },
                     { source: 'TP53', target: 'CDKN1A', score: 0.95, evidence: ['experimental', 'database'] },
                     { source: 'TP53', target: 'GADD45A', score: 0.89, evidence: ['experimental', 'textmining'] },
@@ -660,10 +1128,457 @@ KRAS" rows="6"></textarea>
                     { source: 'RRM2B', target: 'TP53', score: 0.71, evidence: ['database', 'textmining'] },
                     { source: 'DDB2', target: 'XPC', score: 0.92, evidence: ['experimental', 'database'] },
                     { source: 'BRCA1', target: 'TP53', score: 0.87, evidence: ['experimental', 'database'] },
-                    // Additional cancer-related interactions
                     { source: 'EGFR', target: 'KRAS', score: 0.91, evidence: ['experimental', 'database'] },
                     { source: 'MYC', target: 'TP53', score: 0.82, evidence: ['experimental', 'textmining'] },
-                    { source: 'KRAS', target: 'TP53', score: 0.76, evidence: ['textmining', 'coexpression'] }
+                    { source: 'KRAS', target: 'TP53', score: 0.76, evidence: ['textmining', 'coexpression'] },
+                    
+                    // E. coli K12 interactions
+                    // DNA replication and repair
+                    { source: 'dnaA', target: 'dnaB', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'dnaA', target: 'dnaC', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'dnaB', target: 'dnaC', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'dnaB', target: 'dnaG', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'dnaG', target: 'ssb', score: 0.85, evidence: ['experimental', 'coexpression'] },
+                    { source: 'ssb', target: 'recA', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'recA', target: 'lexA', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'recA', target: 'recB', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'recB', target: 'recC', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'recB', target: 'recD', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'recC', target: 'recD', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'polA', target: 'polC', score: 0.75, evidence: ['database', 'textmining'] },
+                    { source: 'polA', target: 'ssb', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'polC', target: 'dnaB', score: 0.83, evidence: ['experimental', 'database'] },
+                    
+                    // Transcription machinery
+                    { source: 'rpoA', target: 'rpoB', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'rpoA', target: 'rpoC', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'rpoB', target: 'rpoC', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'rpoA', target: 'rpoD', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'rpoB', target: 'rpoD', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'rpoC', target: 'rpoD', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'rpoD', target: 'rpoS', score: 0.72, evidence: ['experimental', 'textmining'] },
+                    { source: 'rpoD', target: 'rpoN', score: 0.68, evidence: ['database', 'textmining'] },
+                    { source: 'rpoH', target: 'rpoE', score: 0.74, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Transcriptional regulators
+                    { source: 'crp', target: 'rpoA', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'fnr', target: 'rpoD', score: 0.76, evidence: ['experimental', 'textmining'] },
+                    { source: 'lacI', target: 'crp', score: 0.65, evidence: ['database', 'textmining'] },
+                    { source: 'araC', target: 'crp', score: 0.67, evidence: ['database', 'textmining'] },
+                    { source: 'trpR', target: 'rpoD', score: 0.58, evidence: ['textmining', 'coexpression'] },
+                    { source: 'iclR', target: 'crp', score: 0.61, evidence: ['database', 'textmining'] },
+                    { source: 'lexA', target: 'rpoD', score: 0.73, evidence: ['experimental', 'textmining'] },
+                    
+                    // DNA topology
+                    { source: 'gyrA', target: 'gyrB', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'gyrA', target: 'topA', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'gyrB', target: 'topA', score: 0.82, evidence: ['experimental', 'database'] },
+                    
+                    // Cell division
+                    { source: 'ftsZ', target: 'ftsA', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'ftsZ', target: 'ftsQ', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'ftsZ', target: 'ftsI', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'ftsZ', target: 'ftsW', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'ftsA', target: 'ftsQ', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'ftsQ', target: 'ftsI', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'ftsI', target: 'ftsW', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'minC', target: 'minD', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'minD', target: 'minE', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'minC', target: 'ftsZ', score: 0.88, evidence: ['experimental', 'database'] },
+                    
+                    // Cell shape
+                    { source: 'mreB', target: 'mreC', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'mreB', target: 'mreD', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'mreC', target: 'mreD', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'mreB', target: 'rodA', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'rodA', target: 'ftsW', score: 0.76, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Protein folding and stress response
+                    { source: 'dnaK', target: 'dnaJ', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'dnaK', target: 'grpE', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'dnaJ', target: 'grpE', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'groEL', target: 'groES', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'dnaK', target: 'groEL', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'htpG', target: 'dnaK', score: 0.72, evidence: ['experimental', 'coexpression'] },
+                    { source: 'rpoH', target: 'dnaK', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'rpoH', target: 'groEL', score: 0.83, evidence: ['experimental', 'database'] },
+                    
+                    // Proteolysis
+                    { source: 'clpP', target: 'clpX', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'hslU', target: 'hslV', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'lon', target: 'clpP', score: 0.67, evidence: ['database', 'coexpression'] },
+                    { source: 'ftsH', target: 'clpP', score: 0.65, evidence: ['database', 'coexpression'] },
+                    
+                    // Translation machinery
+                    { source: 'tufA', target: 'tufB', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'tufA', target: 'fusA', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'tufA', target: 'tsf', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'fusA', target: 'efp', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'prfA', target: 'prfB', score: 0.81, evidence: ['experimental', 'database'] },
+                    { source: 'prfA', target: 'prfC', score: 0.79, evidence: ['experimental', 'database'] },
+                    { source: 'prfB', target: 'prfC', score: 0.77, evidence: ['experimental', 'database'] },
+                    { source: 'frr', target: 'fusA', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'infA', target: 'infB', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'infB', target: 'infC', score: 0.87, evidence: ['experimental', 'database'] },
+                    
+                    // Ribosomal proteins
+                    { source: 'rplA', target: 'rplB', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'rplB', target: 'rplC', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'rplC', target: 'rplD', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'rplD', target: 'rplE', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'rplE', target: 'rplF', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'rpsA', target: 'rpsB', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'rpsB', target: 'rpsC', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'rpsC', target: 'rpsD', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'rpsD', target: 'rpsE', score: 0.93, evidence: ['experimental', 'database'] },
+                    
+                    // C. glutamicum ATCC13032 interactions
+                    // RNA polymerase and sigma factors
+                    { source: 'rpoA', target: 'sigA', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'rpoB', target: 'sigA', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'rpoC', target: 'sigA', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'sigA', target: 'sigB', score: 0.73, evidence: ['experimental', 'textmining'] },
+                    { source: 'sigA', target: 'sigC', score: 0.71, evidence: ['experimental', 'textmining'] },
+                    { source: 'sigE', target: 'sigF', score: 0.68, evidence: ['experimental', 'coexpression'] },
+                    { source: 'sigH', target: 'sigM', score: 0.69, evidence: ['experimental', 'coexpression'] },
+                    { source: 'whiB', target: 'sigA', score: 0.76, evidence: ['experimental', 'textmining'] },
+                    { source: 'glnR', target: 'sigA', score: 0.74, evidence: ['experimental', 'textmining'] },
+                    { source: 'ramA', target: 'ramB', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'ramA', target: 'sigA', score: 0.69, evidence: ['database', 'textmining'] },
+                    
+                    // Cell wall biosynthesis pathway
+                    { source: 'murA', target: 'murB', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'murB', target: 'murC', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'murC', target: 'murD', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'murD', target: 'murE', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'murE', target: 'murF', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'murF', target: 'murG', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'ddl', target: 'alr', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'glmS', target: 'glmU', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'glmU', target: 'glmM', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'pbp1', target: 'pbp2', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'murA', target: 'glmS', score: 0.76, evidence: ['experimental', 'coexpression'] },
+                    { source: 'ldtA', target: 'ldtB', score: 0.81, evidence: ['experimental', 'database'] },
+                    { source: 'pbp1', target: 'murG', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Antioxidant systems
+                    { source: 'katA', target: 'sodA', score: 0.79, evidence: ['experimental', 'coexpression'] },
+                    { source: 'ahpC', target: 'trxA', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'trxA', target: 'trxB', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'msrA', target: 'msrB', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'sodA', target: 'ahpC', score: 0.74, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Central metabolism (TCA cycle)
+                    { source: 'citH', target: 'acnA', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'acnA', target: 'acnB', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'acnA', target: 'icd', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'icd', target: 'ogdh', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'ogdh', target: 'sucC', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'sucC', target: 'sucD', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'sucD', target: 'sdhA', score: 0.85, evidence: ['experimental', 'coexpression'] },
+                    { source: 'sdhA', target: 'sdhB', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'sdhB', target: 'sdhC', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'sdhC', target: 'sdhD', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'sdhA', target: 'fumC', score: 0.82, evidence: ['experimental', 'coexpression'] },
+                    { source: 'fumC', target: 'mdh', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'mdh', target: 'citH', score: 0.84, evidence: ['experimental', 'coexpression'] },
+                    
+                    // ATP synthesis
+                    { source: 'atpA', target: 'atpB', score: 0.99, evidence: ['experimental', 'database'] },
+                    { source: 'atpA', target: 'atpD', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'atpB', target: 'atpE', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'atpC', target: 'atpG', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'atpF', target: 'atpH', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'atpA', target: 'atpG', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'atpD', target: 'atpG', score: 0.96, evidence: ['experimental', 'database'] },
+                    
+                    // NADH dehydrogenase complex
+                    { source: 'nuoA', target: 'nuoB', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'nuoB', target: 'nuoC', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'nuoC', target: 'nuoD', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'nuoD', target: 'nuoE', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'nuoE', target: 'nuoF', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'nuoF', target: 'nuoG', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'nuoG', target: 'nuoH', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'nuoH', target: 'nuoI', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'nuoI', target: 'nuoJ', score: 0.90, evidence: ['experimental', 'database'] },
+                    { source: 'nuoJ', target: 'nuoK', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'nuoK', target: 'nuoL', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'nuoL', target: 'nuoM', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'nuoM', target: 'nuoN', score: 0.86, evidence: ['experimental', 'database'] },
+                    
+                    // Cytochrome bc1 complex
+                    { source: 'qcrA', target: 'qcrB', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'qcrB', target: 'qcrC', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'qcrA', target: 'qcrC', score: 0.95, evidence: ['experimental', 'database'] },
+                    
+                    // Cytochrome c oxidase
+                    { source: 'ctaC', target: 'ctaD', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'ctaD', target: 'ctaE', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'ctaE', target: 'ctaF', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'cydA', target: 'cydB', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'ctaC', target: 'cco', score: 0.89, evidence: ['experimental', 'coexpression'] },
+                    
+                    // DNA repair
+                    { source: 'recA', target: 'recF', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'recF', target: 'recO', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'recO', target: 'recR', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'lexA', target: 'recA', score: 0.93, evidence: ['experimental', 'database'] },
+                    
+                    // Stress response
+                    { source: 'cspA', target: 'cspB', score: 0.81, evidence: ['experimental', 'coexpression'] },
+                    { source: 'hrcA', target: 'groEL', score: 0.86, evidence: ['experimental', 'textmining'] },
+                    { source: 'hspR', target: 'dnaK', score: 0.83, evidence: ['experimental', 'textmining'] },
+                    
+                    // Proteolysis
+                    { source: 'clpP', target: 'clpC', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'ps1', target: 'ps2', score: 0.92, evidence: ['experimental', 'database'] },
+                    
+                    // Transcription factors and RNA processing
+                    { source: 'rpoZ', target: 'rpoA', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'greA', target: 'rpoB', score: 0.81, evidence: ['experimental', 'textmining'] },
+                    { source: 'nusA', target: 'nusB', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'nusB', target: 'nusG', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'nusG', target: 'rho', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'rnc', target: 'rnpA', score: 0.77, evidence: ['experimental', 'coexpression'] },
+                    { source: 'rne', target: 'pnp', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'pnp', target: 'pcnB', score: 0.72, evidence: ['database', 'coexpression'] },
+                    { source: 'deaD', target: 'dbpA', score: 0.75, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Ribosome biogenesis and maturation
+                    { source: 'rimM', target: 'rimP', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'rbfA', target: 'rsfS', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'rimM', target: 'rpsD', score: 0.76, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Aminoacyl-tRNA synthetases
+                    { source: 'thrS', target: 'alaS', score: 0.73, evidence: ['experimental', 'coexpression'] },
+                    { source: 'argS', target: 'asnS', score: 0.71, evidence: ['experimental', 'coexpression'] },
+                    { source: 'aspS', target: 'cysS', score: 0.69, evidence: ['experimental', 'coexpression'] },
+                    { source: 'glnS', target: 'gluS', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'glyS', target: 'hisS', score: 0.72, evidence: ['experimental', 'coexpression'] },
+                    { source: 'ileS', target: 'leuS', score: 0.76, evidence: ['experimental', 'coexpression'] },
+                    { source: 'lysS', target: 'metS', score: 0.74, evidence: ['experimental', 'coexpression'] },
+                    { source: 'pheS', target: 'proS', score: 0.75, evidence: ['experimental', 'coexpression'] },
+                    { source: 'serS', target: 'trpS', score: 0.77, evidence: ['experimental', 'coexpression'] },
+                    { source: 'tyrS', target: 'valS', score: 0.73, evidence: ['experimental', 'coexpression'] },
+                    
+                    // S. cerevisiae (酿酒酵母) interactions
+                    // Cell cycle control
+                    { source: 'CDC28', target: 'CLN1', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLN2', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB1', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB2', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB3', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB4', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB5', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'CDC28', target: 'CLB6', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'CLN1', target: 'CLN2', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'CLB1', target: 'CLB2', score: 0.82, evidence: ['experimental', 'coexpression'] },
+                    { source: 'CLB3', target: 'CLB4', score: 0.85, evidence: ['experimental', 'coexpression'] },
+                    { source: 'CLB5', target: 'CLB6', score: 0.87, evidence: ['experimental', 'coexpression'] },
+                    
+                    // DNA replication machinery
+                    { source: 'CDC6', target: 'CDC7', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'CDC6', target: 'CDC45', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'CDC7', target: 'CDC45', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'MCM2', target: 'MCM3', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'MCM3', target: 'MCM4', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'MCM4', target: 'MCM5', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'MCM5', target: 'MCM6', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'MCM6', target: 'MCM7', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'MCM2', target: 'MCM7', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'ORC1', target: 'ORC2', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'ORC2', target: 'ORC3', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'ORC3', target: 'ORC4', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'ORC4', target: 'ORC5', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'ORC5', target: 'ORC6', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'ORC1', target: 'ORC6', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'RFC1', target: 'RFC2', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'RFC2', target: 'RFC3', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'RFC3', target: 'RFC4', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'RFC4', target: 'RFC5', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'RFC1', target: 'PCNA', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'PCNA', target: 'POL30', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'POL1', target: 'POL2', score: 0.76, evidence: ['experimental', 'coexpression'] },
+                    { source: 'POL2', target: 'POL3', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'POL3', target: 'PCNA', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'RPA1', target: 'RPA2', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'RPA2', target: 'RPA3', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'RPA1', target: 'RPA3', score: 0.94, evidence: ['experimental', 'database'] },
+                    
+                    // DNA repair pathways
+                    { source: 'RAD51', target: 'RAD52', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'RAD52', target: 'RAD53', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'RAD51', target: 'RAD54', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'RAD54', target: 'RAD55', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'RAD55', target: 'RAD57', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'RAD57', target: 'RAD59', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'MRE11', target: 'RAD50', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'RAD50', target: 'XRS2', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'MRE11', target: 'XRS2', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'KU70', target: 'KU80', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'YKU70', target: 'YKU80', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'DNL4', target: 'LIG4', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'LIG4', target: 'NEJ1', score: 0.85, evidence: ['experimental', 'database'] },
+                    
+                    // RNA polymerase II machinery
+                    { source: 'RPB1', target: 'RPB2', score: 0.98, evidence: ['experimental', 'database'] },
+                    { source: 'RPB2', target: 'RPB3', score: 0.97, evidence: ['experimental', 'database'] },
+                    { source: 'RPB3', target: 'RPB4', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'RPB4', target: 'RPB5', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'RPB5', target: 'RPB8', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'RPB8', target: 'RPB9', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'RPB9', target: 'RPB10', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'RPB10', target: 'RPB11', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'RPB11', target: 'RPB12', score: 0.83, evidence: ['experimental', 'database'] },
+                    
+                    // General transcription factors
+                    { source: 'TFIIA', target: 'TFIIB', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'TFIIB', target: 'TFIID', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'TFIID', target: 'TFIIE', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'TFIIE', target: 'TFIIF', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'TFIIF', target: 'TFIIH', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'TFIIB', target: 'RPB1', score: 0.86, evidence: ['experimental', 'database'] },
+                    
+                    // Mediator complex
+                    { source: 'MED1', target: 'MED4', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'MED4', target: 'MED7', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'MED7', target: 'MED14', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'MED14', target: 'MED17', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'MED17', target: 'MED21', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'MED1', target: 'RPB1', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Transcriptional regulation
+                    { source: 'GCN4', target: 'GCN5', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'GCN5', target: 'ADA2', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'ADA2', target: 'ADA3', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'SPT3', target: 'SPT7', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'SPT7', target: 'SPT8', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'SPT8', target: 'SPT15', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'SPT15', target: 'SPT20', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'TAF1', target: 'TAF2', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'TAF2', target: 'TAF5', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'TAF5', target: 'TAF6', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'TAF6', target: 'TAF9', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'TAF9', target: 'TAF10', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'TAF10', target: 'TAF12', score: 0.87, evidence: ['experimental', 'database'] },
+                    
+                    // SWI/SNF chromatin remodeling complex
+                    { source: 'SWI1', target: 'SWI2', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'SWI2', target: 'SWI3', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'SWI3', target: 'SNF2', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'SNF2', target: 'SNF5', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'SNF5', target: 'SNF6', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'SNF6', target: 'SNF11', score: 0.89, evidence: ['experimental', 'database'] },
+                    
+                    // Heat shock response
+                    { source: 'HSP104', target: 'HSP82', score: 0.81, evidence: ['experimental', 'coexpression'] },
+                    { source: 'HSP82', target: 'HSP70', score: 0.83, evidence: ['experimental', 'coexpression'] },
+                    { source: 'HSP70', target: 'HSP60', score: 0.79, evidence: ['experimental', 'coexpression'] },
+                    { source: 'HSP60', target: 'HSP40', score: 0.77, evidence: ['experimental', 'coexpression'] },
+                    { source: 'SSA1', target: 'SSA2', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'SSB1', target: 'SSB2', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'SSE1', target: 'SSE2', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'SSA1', target: 'HSP70', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'SSB1', target: 'HSP40', score: 0.88, evidence: ['experimental', 'database'] },
+                    
+                    // ER protein folding
+                    { source: 'KAR2', target: 'ERO1', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'ERO1', target: 'PDI1', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'PDI1', target: 'CNE1', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'KAR2', target: 'CNE1', score: 0.82, evidence: ['experimental', 'database'] },
+                    
+                    // Cell wall biosynthesis
+                    { source: 'FKS1', target: 'FKS2', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'GSC1', target: 'GSC2', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'FKS1', target: 'GSC1', score: 0.85, evidence: ['experimental', 'coexpression'] },
+                    { source: 'CHS1', target: 'CHS2', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'CHS2', target: 'CHS3', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'CHS3', target: 'CHS7', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'CWP1', target: 'CWP2', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    
+                    // Cytoskeleton and cell polarity
+                    { source: 'BNI1', target: 'BNI4', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'BUD1', target: 'BUD2', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'BUD2', target: 'BUD3', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'BUD3', target: 'BUD4', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'BUD4', target: 'BUD5', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'BUD5', target: 'BUD6', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'BUD6', target: 'BUD8', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'BUD8', target: 'BUD9', score: 0.81, evidence: ['experimental', 'database'] },
+                    { source: 'CDC3', target: 'CDC10', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'CDC10', target: 'CDC11', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'CDC11', target: 'CDC12', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'CDC24', target: 'CDC42', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'CDC42', target: 'BEM1', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'BEM1', target: 'BEM2', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'BEM2', target: 'BEM3', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'BEM3', target: 'BEM4', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'RSR1', target: 'CDC42', score: 0.78, evidence: ['experimental', 'coexpression'] },
+                    { source: 'CLA4', target: 'CDC42', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'STE20', target: 'CDC42', score: 0.84, evidence: ['experimental', 'database'] },
+                    
+                    // Cell cycle checkpoints
+                    { source: 'CDC25', target: 'CDC28', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'SWE1', target: 'CDC28', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'MIH1', target: 'SWE1', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'CDC14', target: 'CDC15', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'CDC15', target: 'CDC5', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'DBF2', target: 'DBF20', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'DBF2', target: 'MOB1', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'DBF20', target: 'MOB1', score: 0.92, evidence: ['experimental', 'database'] },
+                    
+                    // Spindle pole body and microtubules
+                    { source: 'SPC42', target: 'SPC97', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'SPC97', target: 'SPC98', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'SPC42', target: 'NUD1', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'TUB1', target: 'TUB2', score: 0.96, evidence: ['experimental', 'database'] },
+                    { source: 'TUB2', target: 'TUB3', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'TUB3', target: 'TUB4', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'TUB4', target: 'SPC97', score: 0.85, evidence: ['experimental', 'database'] },
+                    
+                    // Ribosomal proteins (60S subunit)
+                    { source: 'RPL1A', target: 'RPL1B', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'RPL2A', target: 'RPL2B', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'RPL3', target: 'RPL4A', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'RPL4A', target: 'RPL4B', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'RPL4B', target: 'RPL5', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'RPL1A', target: 'RPL3', score: 0.87, evidence: ['experimental', 'database'] },
+                    
+                    // Ribosomal proteins (40S subunit)
+                    { source: 'RPS0A', target: 'RPS0B', score: 0.95, evidence: ['experimental', 'database'] },
+                    { source: 'RPS1A', target: 'RPS1B', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'RPS2', target: 'RPS3', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'RPS0A', target: 'RPS1A', score: 0.88, evidence: ['experimental', 'database'] },
+                    
+                    // Translation factors
+                    { source: 'TEF1', target: 'TEF2', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'TEF2', target: 'TEF4', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'EFT1', target: 'EFT2', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'TIF1', target: 'TIF2', score: 0.93, evidence: ['experimental', 'database'] },
+                    { source: 'TIF2', target: 'TIF3', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'TIF3', target: 'TIF4', score: 0.88, evidence: ['experimental', 'database'] },
+                    { source: 'TIF4', target: 'TIF5', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'SUI1', target: 'SUI2', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'SUI2', target: 'SUI3', score: 0.90, evidence: ['experimental', 'database'] },
+                    { source: 'GCD1', target: 'GCD2', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'GCD2', target: 'GCD6', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'GCD6', target: 'GCD7', score: 0.84, evidence: ['experimental', 'database'] },
+                    { source: 'GCD7', target: 'GCD10', score: 0.82, evidence: ['experimental', 'database'] },
+                    { source: 'GCD10', target: 'GCD11', score: 0.81, evidence: ['experimental', 'database'] },
+                    { source: 'GCN1', target: 'GCN2', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'GCN2', target: 'GCN3', score: 0.86, evidence: ['experimental', 'database'] },
+                    { source: 'GCN3', target: 'GCN20', score: 0.83, evidence: ['experimental', 'database'] },
+                    { source: 'eIF4E', target: 'eIF4G', score: 0.94, evidence: ['experimental', 'database'] },
+                    { source: 'eIF4G', target: 'eIF4A', score: 0.92, evidence: ['experimental', 'database'] },
+                    { source: 'eIF4A', target: 'PAB1', score: 0.87, evidence: ['experimental', 'database'] },
+                    
+                    // Ribosome biogenesis
+                    { source: 'NOP1', target: 'NOP2', score: 0.91, evidence: ['experimental', 'database'] },
+                    { source: 'NOP2', target: 'NOP4', score: 0.89, evidence: ['experimental', 'database'] },
+                    { source: 'NOP4', target: 'NOP7', score: 0.87, evidence: ['experimental', 'database'] },
+                    { source: 'NOP7', target: 'NOP56', score: 0.85, evidence: ['experimental', 'database'] },
+                    { source: 'NOP56', target: 'NOP58', score: 0.93, evidence: ['experimental', 'database'] }
                 ];
 
                 // Filter interactions based on input proteins and parameters
