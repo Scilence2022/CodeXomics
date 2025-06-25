@@ -14,6 +14,22 @@ class GenomicDataDownloader {
         
         // API配置
         this.apiConfig = {
+            'ncbi-unified': {
+                name: 'NCBI Databases',
+                baseUrl: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/',
+                description: 'Search and download data from all NCBI databases (GenBank, RefSeq, SRA, Assembly)',
+                searchDb: 'nucleotide', // Default, can be changed by user
+                retmax: 100,
+                supportedDbs: ['nucleotide', 'genome', 'sra', 'assembly', 'protein', 'pubmed']
+            },
+            'embl-unified': {
+                name: 'EMBL-EBI Databases',
+                baseUrl: 'https://www.ebi.ac.uk/ena/browser/api/',
+                description: 'Search and download data from EMBL-EBI databases (EMBL, Ensembl, ENA)',
+                retmax: 50,
+                supportedDbs: ['embl-sequences', 'ensembl-genomes', 'ena-archive']
+            },
+            // Legacy individual database configs for backward compatibility
             'ncbi-genbank': {
                 name: 'NCBI GenBank',
                 baseUrl: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/',
@@ -272,6 +288,67 @@ class GenomicDataDownloader {
         let optionsHTML = '';
         
         switch (downloadType) {
+            case 'ncbi-unified':
+                optionsHTML = `
+                    <label class="form-label">Database Type</label>
+                    <select id="ncbiDatabase" class="form-select">
+                        <option value="nucleotide">GenBank Nucleotide Sequences</option>
+                        <option value="genome">RefSeq Genomes</option>
+                        <option value="sra">SRA Sequencing Data</option>
+                        <option value="assembly">Assembly Data</option>
+                        <option value="protein">Protein Sequences</option>
+                        <option value="pubmed">PubMed Articles</option>
+                    </select>
+                    
+                    <label class="form-label" style="margin-top: 15px;">Organism</label>
+                    <input type="text" id="organism" class="form-input" placeholder="e.g., Escherichia coli">
+                    <div class="help-text">Filter by organism name</div>
+                    
+                    <label class="form-label" style="margin-top: 15px;">Sequence Length</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="minLength" class="form-input" placeholder="Min length">
+                        <input type="number" id="maxLength" class="form-input" placeholder="Max length">
+                    </div>
+                    
+                    <label class="form-label" style="margin-top: 15px;">Platform (for SRA)</label>
+                    <select id="platform" class="form-select">
+                        <option value="">All platforms</option>
+                        <option value="illumina">Illumina</option>
+                        <option value="pacbio">PacBio</option>
+                        <option value="nanopore">Oxford Nanopore</option>
+                        <option value="454">454</option>
+                    </select>
+                `;
+                break;
+                
+            case 'embl-unified':
+                optionsHTML = `
+                    <label class="form-label">Database Type</label>
+                    <select id="emblDatabase" class="form-select">
+                        <option value="embl-sequences">EMBL Sequences</option>
+                        <option value="ensembl-genomes">Ensembl Genomes</option>
+                        <option value="ena-archive">ENA Archive</option>
+                    </select>
+                    
+                    <label class="form-label" style="margin-top: 15px;">Species Division (Ensembl)</label>
+                    <select id="division" class="form-select">
+                        <option value="vertebrates">Vertebrates</option>
+                        <option value="plants">Plants</option>
+                        <option value="fungi">Fungi</option>
+                        <option value="protists">Protists</option>
+                        <option value="bacteria">Bacteria</option>
+                    </select>
+                    
+                    <label class="form-label" style="margin-top: 15px;">Data Type</label>
+                    <select id="dataType" class="form-select">
+                        <option value="genome">Genome sequence</option>
+                        <option value="cdna">cDNA</option>
+                        <option value="cds">CDS</option>
+                        <option value="protein">Protein</option>
+                    </select>
+                `;
+                break;
+                
             case 'ncbi-genbank':
             case 'ncbi-refseq':
                 optionsHTML = `
@@ -382,6 +459,18 @@ class GenomicDataDownloader {
             let results = [];
             
             switch (this.currentDownloadType) {
+                case 'ncbi-unified':
+                    // Get the selected database type from the UI
+                    const ncbiDb = document.getElementById('ncbiDatabase')?.value || 'nucleotide';
+                    results = await this.searchNCBIUnified(searchTerm, ncbiDb);
+                    break;
+                    
+                case 'embl-unified':
+                    // Get the selected database type from the UI
+                    const emblDb = document.getElementById('emblDatabase')?.value || 'embl-sequences';
+                    results = await this.searchEMBLUnified(searchTerm, emblDb);
+                    break;
+                    
                 case 'ncbi-genbank':
                 case 'ncbi-refseq':
                 case 'ncbi-sra':
@@ -483,6 +572,39 @@ class GenomicDataDownloader {
         }
         
         return results;
+    }
+    
+    async searchNCBIUnified(searchTerm, database) {
+        // Use the existing searchNCBI method but override the database
+        const originalDownloadType = this.currentDownloadType;
+        
+        // Temporarily set the config to use the selected database
+        const config = {...this.apiConfig['ncbi-unified']};
+        config.searchDb = database;
+        
+        // Temporarily update the current download type config
+        this.apiConfig[this.currentDownloadType] = config;
+        
+        try {
+            const results = await this.searchNCBI(searchTerm);
+            return results;
+        } finally {
+            // Restore original config
+            this.apiConfig[originalDownloadType] = this.apiConfig['ncbi-unified'];
+        }
+    }
+    
+    async searchEMBLUnified(searchTerm, database) {
+        switch (database) {
+            case 'embl-sequences':
+                return await this.searchEMBL(searchTerm);
+            case 'ensembl-genomes':
+                return await this.searchEnsembl(searchTerm);
+            case 'ena-archive':
+                return await this.searchENA(searchTerm);
+            default:
+                return await this.searchEMBL(searchTerm);
+        }
     }
     
     async searchEMBL(searchTerm) {

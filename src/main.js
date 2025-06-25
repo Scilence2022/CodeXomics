@@ -1413,78 +1413,33 @@ function createMenu() {
       submenu: [
         {
           label: 'NCBI Databases',
-          submenu: [
-            {
-              label: 'GenBank Sequences',
-              click: () => {
-                createGenomicDownloadWindow('ncbi-genbank');
-              }
-            },
-            {
-              label: 'RefSeq Genomes',
-              click: () => {
-                createGenomicDownloadWindow('ncbi-refseq');
-              }
-            },
-            {
-              label: 'SRA Sequencing Data',
-              click: () => {
-                createGenomicDownloadWindow('ncbi-sra');
-              }
-            },
-            {
-              label: 'Assembly Data',
-              click: () => {
-                createGenomicDownloadWindow('ncbi-assembly');
-              }
-            }
-          ]
+          click: () => {
+            createGenomicDownloadWindow('ncbi-unified');
+          }
         },
         {
           label: 'EMBL-EBI Databases',
-          submenu: [
-            {
-              label: 'EMBL Sequences',
-              click: () => {
-                createGenomicDownloadWindow('embl-sequences');
-              }
-            },
-            {
-              label: 'Ensembl Genomes',
-              click: () => {
-                createGenomicDownloadWindow('ensembl-genomes');
-              }
-            },
-            {
-              label: 'ENA Archive',
-              click: () => {
-                createGenomicDownloadWindow('ena-archive');
-              }
-            }
-          ]
+          click: () => {
+            createGenomicDownloadWindow('embl-unified');
+          }
         },
         {
-          label: 'Other Databases',
-          submenu: [
-            {
-              label: 'DDBJ Sequences',
-              click: () => {
-                createGenomicDownloadWindow('ddbj-sequences');
-              }
-            },
-            {
-              label: 'UniProt Proteins',
-              click: () => {
-                createGenomicDownloadWindow('uniprot-proteins');
-              }
-            },
-            {
-              label: 'KEGG Pathways',
-              click: () => {
-                createGenomicDownloadWindow('kegg-pathways');
-              }
-            }
-          ]
+          label: 'DDBJ Sequences',
+          click: () => {
+            createGenomicDownloadWindow('ddbj-sequences');
+          }
+        },
+        {
+          label: 'UniProt Proteins',
+          click: () => {
+            createGenomicDownloadWindow('uniprot-proteins');
+          }
+        },
+        {
+          label: 'KEGG Pathways',
+          click: () => {
+            createGenomicDownloadWindow('kegg-pathways');
+          }
         },
         { type: 'separator' },
         {
