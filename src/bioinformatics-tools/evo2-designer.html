@@ -362,8 +362,14 @@
                     
                     <div class="form-group">
                         <label for="apiKey">NVIDIA API Key</label>
-                        <input type="password" id="apiKey" class="form-control" 
-                               placeholder="Enter your NVIDIA API key">
+                        <div style="display: flex; gap: 5px; align-items: stretch;">
+                            <input type="password" id="apiKey" class="form-control" 
+                                   placeholder="Enter your NVIDIA API key" style="margin-bottom: 0;">
+                            <button class="btn btn-secondary" onclick="pasteApiKey()" 
+                                    style="padding: 12px 15px; margin-bottom: 0; white-space: nowrap;">
+                                📋 Paste
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -1019,6 +1025,31 @@
             
             // Hide results
             document.getElementById('resultsArea').style.display = 'none';
+        }
+
+        // Paste API key from clipboard
+        async function pasteApiKey() {
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    // Modern clipboard API
+                    const text = await navigator.clipboard.readText();
+                    document.getElementById('apiKey').value = text.trim();
+                    showMessage('API key pasted successfully!', 'success');
+                    
+                    // Auto-save configuration after pasting
+                    setTimeout(() => {
+                        saveApiConfig();
+                    }, 500);
+                } else {
+                    // Fallback for older browsers or when clipboard API is not available
+                    showMessage('Please paste your API key manually (Ctrl+V)', 'error');
+                    document.getElementById('apiKey').focus();
+                }
+            } catch (error) {
+                console.error('Failed to paste from clipboard:', error);
+                showMessage('Could not access clipboard. Please paste manually (Ctrl+V)', 'error');
+                document.getElementById('apiKey').focus();
+            }
         }
     </script>
 </body>
