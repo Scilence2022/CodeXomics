@@ -5101,9 +5101,42 @@ function createGenomicDownloadWindow(downloadType) {
 
     downloadWindow.once('ready-to-show', () => {
       downloadWindow.show();
-      // Send download type and current project info
+      // Send download type
       downloadWindow.webContents.send('set-download-type', downloadType);
-      downloadWindow.webContents.send('set-active-project', getCurrentProjectInfo());
+      
+      // Try to get project info from Project Manager window first, then fallback to current active project
+      const projectManagerWindows = BrowserWindow.getAllWindows().filter(window => 
+        window.getTitle().includes('Project Manager')
+      );
+      
+      if (projectManagerWindows.length > 0) {
+        console.log('🔍 Found Project Manager window, requesting current project info...');
+        // Request current project info from Project Manager
+        projectManagerWindows[0].webContents.send('request-current-project-for-download');
+        
+        // Listen for project info response
+        const handleProjectInfo = (event, projectInfo) => {
+          console.log('📥 Received project info from Project Manager:', projectInfo);
+          downloadWindow.webContents.send('set-active-project', projectInfo);
+          // Remove the listener after receiving the response
+          ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
+        };
+        
+        ipcMain.on('project-manager-current-project-response', handleProjectInfo);
+        
+        // Fallback timeout - if no response in 1 second, use current active project
+        setTimeout(() => {
+          ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
+          const fallbackProject = getCurrentProjectInfo();
+          console.log('⏰ Using fallback project info:', fallbackProject);
+          downloadWindow.webContents.send('set-active-project', fallbackProject);
+        }, 1000);
+      } else {
+        // No Project Manager window found, use current active project
+        const currentProject = getCurrentProjectInfo();
+        console.log('📂 Using current active project:', currentProject);
+        downloadWindow.webContents.send('set-active-project', currentProject);
+      }
     });
 
     downloadWindow.on('closed', () => {

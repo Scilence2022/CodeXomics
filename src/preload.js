@@ -138,11 +138,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
         'menu-batch-rename', 'menu-batch-move', 'menu-batch-delete', 'menu-open-genome-viewer',
         'menu-open-external-editor', 'menu-open-file-explorer', 'menu-preferences',
         'menu-help', 'menu-keyboard-shortcuts', 'menu-user-guide', 'menu-file-formats',
-        'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about'
+        'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about',
+        'request-current-project-for-download'
       ];
       
       if (validChannels.includes(channel)) {
         ipcRenderer.on(channel, listener);
+      }
+    },
+    send: (channel, ...args) => {
+      // Whitelist of allowed send channels for security
+      const validSendChannels = [
+        'close-resource-manager',
+        'project-manager-current-project-response'
+      ];
+      
+      if (validSendChannels.includes(channel)) {
+        ipcRenderer.send(channel, ...args);
       }
     },
     removeAllListeners: (channel) => {

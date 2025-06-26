@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Project Info Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .summary {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        .summary h3 {
+            margin-top: 0;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Project Manager Project Info Fix Test</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Overview</h3>
+            <p>This test verifies that the Project Manager correctly passes current project information to Download windows.</p>
+            <div class="status info">
+                <strong>修复内容:</strong>
+                <ul>
+                    <li>修改 createGenomicDownloadWindow() 函数以从 Project Manager 获取项目信息</li>
+                    <li>在 Project Manager 中添加 'request-current-project-for-download' 监听器</li>
+                    <li>在 preload.js 中暴露 ipcRenderer.send 方法</li>
+                    <li>添加项目信息传递的完整通信机制</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Instructions</h3>
+            <div class="status info">
+                <strong>测试步骤:</strong>
+                <ol>
+                    <li>打开 Project Manager</li>
+                    <li>加载或创建一个项目</li>
+                    <li>从 Project Manager 的 Download 菜单中选择任意选项（如 "NCBI Databases"）</li>
+                    <li>检查 Download 窗口控制台是否显示正确的项目信息</li>
+                    <li>验证项目信息不再是 null</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Expected Console Output</h3>
+            <div class="status pass">
+                <strong>修复前:</strong>
+                <div class="code-block">GenomicDataDownloader.js:152 📥 Received project info: null
+GenomicDataDownloader.js:183 🗂️ Active project set: null</div>
+            </div>
+            
+            <div class="status pass">
+                <strong>修复后:</strong>
+                <div class="code-block">🔍 Found Project Manager window, requesting current project info...
+📥 Received request for current project info from Download window
+📤 Sending project info: {id: "...", name: "...", dataFolderPath: "..."}
+📥 Received project info from Project Manager: {id: "...", name: "..."}
+GenomicDataDownloader.js:152 📥 Received project info: {id: "...", name: "..."}
+GenomicDataDownloader.js:183 🗂️ Active project set: {id: "...", name: "..."}</div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <h3>📋 测试总结</h3>
+            <p><strong>修复状态:</strong> 已完成项目信息传递机制的完整实现</p>
+            <p><strong>测试方法:</strong> 从 Project Manager 打开 Download 窗口并检查控制台输出</p>
+            <p><strong>预期结果:</strong> Download 窗口应该接收到完整的项目信息，包括 id、name、dataFolderPath 等</p>
+            <p><strong>关键改进:</strong> 解决了 Project Manager 和 Download 窗口之间的通信问题，确保项目上下文正确传递</p>
+        </div>
+    </div>
+</body>
+</html>

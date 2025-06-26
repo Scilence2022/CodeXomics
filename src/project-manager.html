@@ -5902,6 +5902,25 @@ Use specialized tools to view the full content.`;
                 ipcRenderer.on('menu-about', () => {
                     if (projectManagerWindow) projectManagerWindow.showAbout();
                 });
+
+                // Handle request for current project info from Download window
+                ipcRenderer.on('request-current-project-for-download', () => {
+                    console.log('📥 Received request for current project info from Download window');
+                    if (projectManagerWindow && projectManagerWindow.currentProject) {
+                        const projectInfo = {
+                            id: projectManagerWindow.currentProject.id,
+                            name: projectManagerWindow.currentProject.name,
+                            location: projectManagerWindow.currentProject.location,
+                            dataFolderPath: projectManagerWindow.currentProject.dataFolderPath,
+                            metadata: projectManagerWindow.currentProject.metadata
+                        };
+                        console.log('📤 Sending project info:', projectInfo);
+                        ipcRenderer.send('project-manager-current-project-response', projectInfo);
+                    } else {
+                        console.log('⚠️ No current project available');
+                        ipcRenderer.send('project-manager-current-project-response', null);
+                    }
+                });
             }
         });
     </script>
