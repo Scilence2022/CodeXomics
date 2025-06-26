@@ -18,6 +18,9 @@ class ProjectManagerWindow {
         this.compactTreeMode = false;
         this.ultraCompactMode = false;
         
+        // Header折叠状态
+        this.headerCollapsed = false;
+        
         // 文件类型定义
         this.fileTypes = {
             'fasta': { icon: 'GB', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
@@ -56,6 +59,9 @@ class ProjectManagerWindow {
         
         // 初始化树视图事件和设置
         this.initializeTreeViewEvents();
+        
+        // 初始化Header事件和设置
+        this.initializeHeaderEvents();
         
         console.log('Project Manager Window initialized successfully');
     }
@@ -3647,6 +3653,100 @@ To view this file, click "Open in Main Window".`;
         
         // 加载保存的设置
         this.loadTreeViewPreference();
+    }
+
+    /**
+     * 切换Header折叠状态
+     */
+    toggleHeaderCollapse() {
+        this.headerCollapsed = !this.headerCollapsed;
+        
+        const header = document.querySelector('.header');
+        const mainContainer = document.querySelector('.main-container');
+        const statusBar = document.querySelector('.status-bar');
+        const toggleButton = document.getElementById('headerToggle');
+        const body = document.body;
+        
+        if (this.headerCollapsed) {
+            // 折叠header
+            header.classList.add('header-collapsed');
+            mainContainer.classList.add('main-container-fullheight');
+            statusBar.classList.add('status-bar-collapsed');
+            body.classList.add('sidebar-collapsed-mode');
+            
+            if (toggleButton) {
+                toggleButton.classList.add('collapsed');
+                toggleButton.innerHTML = '⌄';
+                toggleButton.title = 'Show header';
+            }
+            
+            this.showNotification('Header collapsed - sidebar-only mode', 'success');
+        } else {
+            // 展开header
+            header.classList.remove('header-collapsed');
+            mainContainer.classList.remove('main-container-fullheight');
+            statusBar.classList.remove('status-bar-collapsed');
+            body.classList.remove('sidebar-collapsed-mode');
+            
+            if (toggleButton) {
+                toggleButton.classList.remove('collapsed');
+                toggleButton.innerHTML = '⌃';
+                toggleButton.title = 'Hide header';
+            }
+            
+            this.showNotification('Header restored - full interface mode', 'success');
+        }
+        
+        // 保存状态
+        this.saveHeaderCollapsePreference();
+        
+        console.log(`Header ${this.headerCollapsed ? 'collapsed' : 'expanded'}`);
+    }
+
+    /**
+     * 保存Header折叠偏好设置
+     */
+    saveHeaderCollapsePreference() {
+        localStorage.setItem('projectManagerHeaderCollapsed', JSON.stringify(this.headerCollapsed));
+    }
+
+    /**
+     * 加载Header折叠偏好设置
+     */
+    loadHeaderCollapsePreference() {
+        try {
+            const stored = localStorage.getItem('projectManagerHeaderCollapsed');
+            if (stored !== null) {
+                this.headerCollapsed = JSON.parse(stored);
+                
+                // 应用保存的状态
+                if (this.headerCollapsed) {
+                    // 延迟应用状态，确保DOM已加载
+                    setTimeout(() => {
+                        this.toggleHeaderCollapse();
+                    }, 100);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load header collapse preference:', error);
+            this.headerCollapsed = false;
+        }
+    }
+
+    /**
+     * 初始化Header相关事件监听
+     */
+    initializeHeaderEvents() {
+        // 键盘快捷键支持 (Ctrl+Shift+H)
+        document.addEventListener('keydown', (event) => {
+            if (event.ctrlKey && event.shiftKey && event.key === 'H') {
+                event.preventDefault();
+                this.toggleHeaderCollapse();
+            }
+        });
+        
+        // 加载保存的设置
+        this.loadHeaderCollapsePreference();
     }
 }
 

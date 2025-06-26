@@ -785,6 +785,72 @@
             font-size: 8px;
         }
 
+        /* ===== Header折叠模式样式 ===== */
+        .header-collapsed {
+            display: none !important;
+        }
+
+        .main-container-fullheight {
+            height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        /* 折叠切换按钮 */
+        .header-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-toggle:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-toggle.collapsed {
+            background: rgba(40, 167, 69, 0.9);
+        }
+
+        .header-toggle.collapsed:hover {
+            background: rgba(40, 167, 69, 1);
+        }
+
+        /* 折叠模式下的sidebar样式优化 */
+        .sidebar-collapsed-mode .sidebar-header {
+            padding: 15px 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        }
+
+        .sidebar-collapsed-mode .sidebar-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* 状态栏在折叠模式下的调整 */
+        .status-bar-collapsed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+        }
+
         /* 上下文菜单样式 */
         .context-menu {
             position: fixed;
@@ -1995,9 +2061,14 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>Projects & Workspaces</h3>
-                <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.refreshProjects()">
-                    🔄
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.refreshProjects()">
+                        🔄
+                    </button>
+                    <button class="header-toggle" id="headerToggle" onclick="projectManagerWindow.toggleHeaderCollapse()" title="Toggle header visibility">
+                        ⌃
+                    </button>
+                </div>
             </div>
             
             <!-- Tree View Compact Mode Toggle -->
