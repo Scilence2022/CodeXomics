@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin System Phase 2 - Marketplace & Dependencies Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .test-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .test-body {
+            padding: 20px;
+        }
+
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #45a049;
+        }
+
+        .btn.danger {
+            background: #f44336;
+        }
+
+        .btn.danger:hover {
+            background: #da190b;
+        }
+
+        .btn.warning {
+            background: #ff9800;
+        }
+
+        .btn.warning:hover {
+            background: #e68900;
+        }
+
+        .results {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Plugin System Phase 2 Testing</h1>
+            <p>Plugin Marketplace, Dependency Resolution & Security Validation</p>
+        </div>
+
+        <div class="content">
+            <!-- System Status -->
+            <div class="test-section">
+                <div class="test-header">🔧 System Status</div>
+                <div class="test-body">
+                    <div id="systemStatus" class="status">Initializing...</div>
+                    <button class="btn" onclick="initializeSystem()">Initialize Plugin System V2</button>
+                    <button class="btn warning" onclick="checkSystemHealth()">Check System Health</button>
+                </div>
+            </div>
+
+            <!-- Plugin Marketplace -->
+            <div class="test-section">
+                <div class="test-header">🛒 Plugin Marketplace</div>
+                <div class="test-body">
+                    <button class="btn" onclick="searchPlugins()">Search Plugins</button>
+                    <button class="btn" onclick="browseCategories()">Browse Categories</button>
+                    <button class="btn" onclick="checkMarketplaceStats()">Marketplace Stats</button>
+                    <div id="marketplaceResults" class="results"></div>
+                </div>
+            </div>
+
+            <!-- Dependency Resolution -->
+            <div class="test-section">
+                <div class="test-header">🔗 Dependency Resolution</div>
+                <div class="test-body">
+                    <button class="btn" onclick="testDependencyResolution()">Test Dependency Resolution</button>
+                    <button class="btn" onclick="testVersionConflicts()">Test Version Conflicts</button>
+                    <button class="btn" onclick="testCircularDependencies()">Test Circular Dependencies</button>
+                    <div id="dependencyResults" class="results"></div>
+                </div>
+            </div>
+
+            <!-- Security Validation -->
+            <div class="test-section">
+                <div class="test-header">🔒 Security Validation</div>
+                <div class="test-body">
+                    <button class="btn" onclick="testSecurityValidation()">Test Security Validation</button>
+                    <button class="btn" onclick="simulateSecurityThreats()">Simulate Security Threats</button>
+                    <button class="btn" onclick="checkSecurityStats()">Security Statistics</button>
+                    <div id="securityResults" class="results"></div>
+                </div>
+            </div>
+
+            <!-- Plugin Installation & Updates -->
+            <div class="test-section">
+                <div class="test-header">📦 Installation & Updates</div>
+                <div class="test-body">
+                    <button class="btn" onclick="installPlugin()">Install Plugin</button>
+                    <button class="btn" onclick="checkUpdates()">Check for Updates</button>
+                    <button class="btn" onclick="updatePlugin()">Update Plugin</button>
+                    <button class="btn danger" onclick="rollbackPlugin()">Rollback Plugin</button>
+                    <div id="installResults" class="results"></div>
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div class="test-section">
+                <div class="test-header">📊 Statistics Dashboard</div>
+                <div class="test-body">
+                    <button class="btn" onclick="refreshStats()">Refresh Statistics</button>
+                    <div id="statsContainer" class="stats-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include all required modules -->
+    <script src="src/renderer/modules/PluginAPI.js"></script>
+    <script src="src/renderer/modules/PluginResourceManager.js"></script>
+    <script src="src/renderer/modules/PluginDependencyResolver.js"></script>
+    <script src="src/renderer/modules/PluginSecurityValidator.js"></script>
+    <script src="src/renderer/modules/PluginUpdateManager.js"></script>
+    <script src="src/renderer/modules/PluginMarketplace.js"></script>
+    <script src="src/renderer/modules/PluginManagerV2.js"></script>
+
+    <script>
+        // Test globals
+        let pluginManagerV2 = null;
+        let marketplace = null;
+
+        // Initialize the system
+        async function initializeSystem() {
+            try {
+                updateStatus('Initializing Plugin System V2...', 'warning');
+                
+                // Mock app object
+                const mockApp = {
+                    sequences: new Map(),
+                    annotations: new Map(),
+                    features: new Map(),
+                    tracks: new Map()
+                };
+                
+                // Mock config manager
+                const mockConfigManager = {
+                    config: new Map(),
+                    get: function(key) { return this.config.get(key); },
+                    set: function(key, value) { this.config.set(key, value); }
+                };
+                
+                // Initialize PluginManagerV2 with marketplace enabled
+                pluginManagerV2 = new PluginManagerV2(mockApp, mockConfigManager, {
+                    enableResourceManagement: true,
+                    enableMarketplace: true,
+                    enableSecurityValidation: true,
+                    enableDependencyResolution: true,
+                    enableAutoUpdates: true
+                });
+                
+                await pluginManagerV2.initialize();
+                marketplace = pluginManagerV2.marketplace;
+                
+                updateStatus('✅ Plugin System V2 initialized successfully!', 'success');
+                
+            } catch (error) {
+                updateStatus(`❌ Initialization failed: ${error.message}`, 'error');
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Search plugins in marketplace
+        async function searchPlugins() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                const results = await marketplace.searchPlugins('phylogenetic', {
+                    category: 'phylogenetics',
+                    type: 'function',
+                    minRating: 4.0
+                });
+                
+                displayResults('marketplaceResults', `
+🔍 Plugin Search Results:
+Found ${results.length} plugins matching criteria
+
+${results.map(plugin => `
+📦 ${plugin.name} v${plugin.version}
+   Author: ${plugin.author}
+   Category: ${plugin.category}
+   Rating: ${plugin.rating || 'N/A'}
+   Downloads: ${plugin.downloads || 'N/A'}
+   Description: ${plugin.description}
+   Dependencies: ${plugin.dependencies?.length || 0}
+   Source: ${plugin.source?.name || 'Unknown'}
+`).join('\n')}
+
+Marketplace Statistics:
+${JSON.stringify(marketplace.getMarketplaceStats(), null, 2)}
+                `);
+                
+            } catch (error) {
+                displayResults('marketplaceResults', `❌ Search failed: ${error.message}`);
+            }
+        }
+
+        // Browse plugin categories
+        async function browseCategories() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                const categories = ['phylogenetics', 'protein-analysis', 'network-analysis', 'sequence-analysis'];
+                let results = '';
+                
+                for (const category of categories) {
+                    const plugins = await marketplace.searchPlugins('', { category });
+                    results += `
+📂 ${category.toUpperCase()}:
+   ${plugins.length} plugins available
+   ${plugins.slice(0, 3).map(p => `   • ${p.name} v${p.version}`).join('\n')}
+   ${plugins.length > 3 ? `   ... and ${plugins.length - 3} more` : ''}
+\n`;
+                }
+                
+                displayResults('marketplaceResults', results);
+                
+            } catch (error) {
+                displayResults('marketplaceResults', `❌ Browse failed: ${error.message}`);
+            }
+        }
+
+        // Test dependency resolution
+        async function testDependencyResolution() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                // Find a plugin with dependencies
+                const plugins = await marketplace.searchPlugins('advanced-phylogenetics');
+                const plugin = plugins[0];
+                
+                if (!plugin) {
+                    displayResults('dependencyResults', '❌ No suitable plugin found for testing');
+                    return;
+                }
+                
+                const resolver = marketplace.dependencyResolver;
+                const installPlan = await resolver.createInstallPlan(plugin);
+                
+                displayResults('dependencyResults', `
+🔗 Dependency Resolution Test:
+
+Target Plugin: ${plugin.name} v${plugin.version}
+
+Install Plan:
+${installPlan.plugins.map((p, i) => `
+${i + 1}. ${p.id} v${p.version} ${p.isDependency ? '(dependency)' : '(main)'}
+`).join('')}
+
+Resolution Summary:
+• Total plugins to install: ${installPlan.totalPlugins}
+• Dependencies: ${installPlan.dependencies}
+• Resolved versions: ${Object.keys(installPlan.resolvedVersions).length}
+
+Resolved Versions:
+${JSON.stringify(installPlan.resolvedVersions, null, 2)}
+
+Dependency Resolution Stats:
+${JSON.stringify(resolver.getResolutionStats(), null, 2)}
+                `);
+                
+            } catch (error) {
+                displayResults('dependencyResults', `❌ Dependency resolution failed: ${error.message}`);
+            }
+        }
+
+        // Test security validation
+        async function testSecurityValidation() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                // Find a plugin to validate
+                const plugins = await marketplace.searchPlugins('protein-folding');
+                const plugin = plugins[0];
+                
+                if (!plugin) {
+                    displayResults('securityResults', '❌ No suitable plugin found for testing');
+                    return;
+                }
+                
+                const validator = marketplace.securityValidator;
+                const validationResult = await validator.validatePlugin(plugin);
+                
+                displayResults('securityResults', `
+🔒 Security Validation Test:
+
+Plugin: ${plugin.name} v${plugin.version}
+Source: ${plugin.source?.name || 'Unknown'}
+
+Validation Result:
+• Approved: ${validationResult.approved ? '✅ YES' : '❌ NO'}
+• Risk Score: ${validationResult.riskScore}/100
+• Risk Level: ${validationResult.riskLevel || 'Unknown'}
+• Reason: ${validationResult.reason}
+
+Security Issues Found: ${validationResult.issues.length}
+${validationResult.issues.map(issue => `
+• ${issue.type}: ${issue.description} (${issue.severity})
+`).join('')}
+
+Security Statistics:
+${JSON.stringify(validator.getSecurityStats(), null, 2)}
+                `);
+                
+            } catch (error) {
+                displayResults('securityResults', `❌ Security validation failed: ${error.message}`);
+            }
+        }
+
+        // Test plugin installation
+        async function installPlugin() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                // Install a plugin with dependencies
+                const result = await marketplace.installPlugin('advanced-phylogenetics');
+                
+                displayResults('installResults', `
+📦 Plugin Installation Test:
+
+Installation Result:
+${JSON.stringify(result, null, 2)}
+
+Installed Plugins Registry:
+${Array.from(marketplace.installedPlugins.entries()).map(([id, plugin]) => `
+• ${id} v${plugin.version} (installed: ${plugin.installedAt})
+`).join('')}
+
+Installation Statistics:
+${JSON.stringify(marketplace.stats, null, 2)}
+                `);
+                
+            } catch (error) {
+                displayResults('installResults', `❌ Installation failed: ${error.message}`);
+            }
+        }
+
+        // Check for updates
+        async function checkUpdates() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                const updateManager = marketplace.updateManager;
+                const updateCheck = await updateManager.checkForUpdates();
+                
+                displayResults('installResults', `
+🔄 Update Check Results:
+
+Available Updates: ${updateCheck.availableUpdates.length}
+
+${updateCheck.availableUpdates.map(update => `
+📦 ${update.pluginId}:
+   Current: v${update.installedVersion}
+   Available: v${update.availableVersion}
+   Type: ${update.updateType}
+   Auto-update: ${update.autoUpdate ? 'Yes' : 'No'}
+   Security: ${update.securityUpdate ? 'Yes' : 'No'}
+`).join('')}
+
+Update Manager Statistics:
+${JSON.stringify(updateManager.getUpdateStats(), null, 2)}
+                `);
+                
+            } catch (error) {
+                displayResults('installResults', `❌ Update check failed: ${error.message}`);
+            }
+        }
+
+        // Refresh statistics
+        async function refreshStats() {
+            if (!pluginManagerV2) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            try {
+                const stats = {
+                    system: pluginManagerV2.getSystemStats(),
+                    marketplace: marketplace?.getMarketplaceStats() || {},
+                    security: marketplace?.securityValidator?.getSecurityStats() || {},
+                    updates: marketplace?.updateManager?.getUpdateStats() || {}
+                };
+                
+                const statsHtml = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.system.totalPlugins}</div>
+                        <div class="stat-label">Total Plugins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.marketplace.sources?.total || 0}</div>
+                        <div class="stat-label">Marketplace Sources</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.marketplace.installed?.total || 0}</div>
+                        <div class="stat-label">Installed Plugins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.security.totalValidations || 0}</div>
+                        <div class="stat-label">Security Validations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.updates.totalUpdates || 0}</div>
+                        <div class="stat-label">Plugin Updates</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.marketplace.stats?.totalSearches || 0}</div>
+                        <div class="stat-label">Plugin Searches</div>
+                    </div>
+                `;
+                
+                document.getElementById('statsContainer').innerHTML = statsHtml;
+                
+            } catch (error) {
+                console.error('Stats refresh failed:', error);
+            }
+        }
+
+        // Utility functions
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('systemStatus');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function displayResults(elementId, content) {
+            document.getElementById(elementId).textContent = content;
+        }
+
+        async function checkSystemHealth() {
+            if (!pluginManagerV2) {
+                updateStatus('❌ System not initialized', 'error');
+                return;
+            }
+            
+            try {
+                const health = {
+                    pluginManager: !!pluginManagerV2.isInitialized,
+                    marketplace: !!marketplace?.isInitialized,
+                    dependencyResolver: !!marketplace?.dependencyResolver,
+                    securityValidator: !!marketplace?.securityValidator,
+                    updateManager: !!marketplace?.updateManager
+                };
+                
+                const allHealthy = Object.values(health).every(h => h);
+                
+                updateStatus(
+                    `System Health: ${allHealthy ? '✅ All systems operational' : '⚠️ Some issues detected'}
+                    Plugin Manager: ${health.pluginManager ? '✅' : '❌'}
+                    Marketplace: ${health.marketplace ? '✅' : '❌'}
+                    Dependency Resolver: ${health.dependencyResolver ? '✅' : '❌'}
+                    Security Validator: ${health.securityValidator ? '✅' : '❌'}
+                    Update Manager: ${health.updateManager ? '✅' : '❌'}`,
+                    allHealthy ? 'success' : 'warning'
+                );
+                
+            } catch (error) {
+                updateStatus(`❌ Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Additional test functions
+        async function testVersionConflicts() {
+            displayResults('dependencyResults', '🔗 Testing version conflicts...\n(This would test complex dependency scenarios)');
+        }
+
+        async function testCircularDependencies() {
+            displayResults('dependencyResults', '🔗 Testing circular dependencies...\n(This would test circular dependency detection)');
+        }
+
+        async function simulateSecurityThreats() {
+            displayResults('securityResults', '🔒 Simulating security threats...\n(This would test malicious plugin detection)');
+        }
+
+        async function checkMarketplaceStats() {
+            if (!marketplace) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            const stats = marketplace.getMarketplaceStats();
+            displayResults('marketplaceResults', `📊 Marketplace Statistics:\n${JSON.stringify(stats, null, 2)}`);
+        }
+
+        async function checkSecurityStats() {
+            if (!marketplace?.securityValidator) {
+                alert('Please initialize the system first');
+                return;
+            }
+            
+            const stats = marketplace.securityValidator.getSecurityStats();
+            displayResults('securityResults', `🔒 Security Statistics:\n${JSON.stringify(stats, null, 2)}`);
+        }
+
+        async function updatePlugin() {
+            displayResults('installResults', '🔄 Testing plugin update...\n(This would perform a plugin update)');
+        }
+
+        async function rollbackPlugin() {
+            displayResults('installResults', '⏪ Testing plugin rollback...\n(This would rollback a plugin to previous version)');
+        }
+
+        // Auto-initialize on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Plugin System Phase 2 Test Suite loaded');
+            updateStatus('Ready to initialize Plugin System V2', 'warning');
+        });
+    </script>
+</body>
+</html> 

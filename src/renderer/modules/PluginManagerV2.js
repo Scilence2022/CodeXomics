@@ -81,15 +81,25 @@ class PluginManagerV2 {
                 console.log('✅ PluginResourceManager initialized');
             }
             
-            // 3. Load and register built-in plugins
+            // 3. Initialize Plugin Marketplace if enabled
+            if (this.options.enableMarketplace !== false) {
+                this.marketplace = new PluginMarketplace(this, this.configManager, {
+                    enableSecurityValidation: this.options.enableSecurityValidation !== false,
+                    enableDependencyResolution: this.options.enableDependencyResolution !== false,
+                    enableAutoUpdates: this.options.enableAutoUpdates !== false
+                });
+                console.log('✅ PluginMarketplace initialized');
+            }
+            
+            // 4. Load and register built-in plugins
             await this.loadBuiltinPlugins();
             console.log('✅ Built-in plugins loaded');
             
-            // 4. Set up event listeners
+            // 5. Set up event listeners
             this.setupEventListeners();
             console.log('✅ Event listeners configured');
             
-            // 5. Set global reference
+            // 6. Set global reference
             if (typeof window !== 'undefined') {
                 window.pluginManagerV2 = this;
                 // Maintain backward compatibility
