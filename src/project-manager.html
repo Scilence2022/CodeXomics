@@ -2859,9 +2859,9 @@ Folders: ${project.folders ? project.folders.length : 0}
                             if (this.currentProject.dataFolderPath) {
                                 projectBasePath = this.currentProject.dataFolderPath;
                             } else if (this.currentProject.location && this.currentProject.name) {
-                                // 从Documents/Genome AI Studio Projects/ProjectName推算
+                                // 从Documents/GenomeExplorer Projects/ProjectName推算
                                 const documentsPath = await window.electronAPI.getDocumentsPath();
-                                projectBasePath = `${documentsPath}/Genome AI Studio Projects/${this.currentProject.name}`;
+                                projectBasePath = `${documentsPath}/GenomeExplorer Projects/${this.currentProject.name}`;
                             }
                             
                             if (projectBasePath) {
@@ -3477,8 +3477,8 @@ Folders: ${project.folders ? project.folders.length : 0}
                     return normalizedPath.substring(newIndex + newStructurePattern.length);
                 }
                 
-                // 兼容旧的Genome AI Studio Projects结构
-                const oldDataPattern = `Genome AI Studio Projects/${projectName}/data/`;
+                // 兼容旧的Genome Explorer Projects结构
+                const oldDataPattern = `Genome Explorer Projects/${projectName}/data/`;
                 const oldDataIndex = normalizedPath.indexOf(oldDataPattern);
                 
                 if (oldDataIndex !== -1) {
@@ -4648,11 +4648,27 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                 try {
                     // 如果没有项目文件路径，自动生成一个
                     if (!this.currentProject.projectFilePath) {
-                        const documentsPath = window.electronAPI ? await window.electronAPI.getDocumentsPath() : 'Documents';
-                        const projectsDir = `${documentsPath}/Genome AI Studio Projects`;
-                        this.currentProject.projectFilePath = `${projectsDir}/${this.currentProject.name}.prj.GAI`;
-                        this.currentProject.location = projectsDir;
-                        console.log(`📁 Auto-generated project file path: ${this.currentProject.projectFilePath}`);
+                        let projectsDir;
+                        
+                        // 优先使用项目的实际数据文件夹路径来推算项目文件路径
+                        if (this.currentProject.dataFolderPath) {
+                            // 从dataFolderPath推算：/path/to/ProjectName -> /path/to/ProjectName.prj.GAI
+                            const parentDir = this.currentProject.dataFolderPath.substring(0, this.currentProject.dataFolderPath.lastIndexOf('/'));
+                            this.currentProject.projectFilePath = `${parentDir}/${this.currentProject.name}.prj.GAI`;
+                            this.currentProject.location = parentDir;
+                            console.log(`📁 Generated project file path from dataFolderPath: ${this.currentProject.projectFilePath}`);
+                        } else if (this.currentProject.location) {
+                            // 使用项目已有的location信息
+                            this.currentProject.projectFilePath = `${this.currentProject.location}/${this.currentProject.name}.prj.GAI`;
+                            console.log(`📁 Generated project file path from location: ${this.currentProject.projectFilePath}`);
+                        } else {
+                            // 最后的备用方案：使用默认目录（保持向后兼容）
+                            const documentsPath = window.electronAPI ? await window.electronAPI.getDocumentsPath() : 'Documents';
+                            projectsDir = `${documentsPath}/GenomeExplorer Projects`;
+                            this.currentProject.projectFilePath = `${projectsDir}/${this.currentProject.name}.prj.GAI`;
+                            this.currentProject.location = projectsDir;
+                            console.log(`📁 Auto-generated project file path (fallback): ${this.currentProject.projectFilePath}`);
+                        }
                     }
 
                     await this.saveProjectToFile(this.currentProject);

@@ -3411,7 +3411,7 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
 
     // 修正：构建目标路径，不使用额外的data目录
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
+    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
     const targetDir = path.join(projectsDir, projectName, targetFolderPath);
     
     // 确保目标目录存在
@@ -4088,7 +4088,7 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     
     // 修正：直接使用项目目录结构，不要额外的data子目录
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
+    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
     const projectDir = path.join(projectsDir, projectName);
     const targetFolderDir = path.join(projectDir, folderPath);
     
