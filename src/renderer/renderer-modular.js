@@ -246,20 +246,7 @@ class GenomeBrowser {
 
         // Step 5.5: Initialize Plugin Management UI
         console.log('🧩 About to initialize PluginManagementUI...');
-        try {
-            // Wait for ChatManager to initialize its PluginManager
-            setTimeout(() => {
-                if (this.chatManager && this.chatManager.pluginManager) {
-                    this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
-                    window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers
-                    console.log('✅ PluginManagementUI initialized successfully');
-                } else {
-                    console.warn('⚠️ PluginManager not available, PluginManagementUI initialization delayed');
-                }
-            }, 100);
-        } catch (error) {
-            console.error('❌ Error initializing PluginManagementUI:', error);
-        }
+        this.initializePluginManagementUI();
 
         // Step 5.6: Initialize General Settings Manager
         console.log('⚙️ About to initialize GeneralSettingsManager...');
@@ -4415,6 +4402,45 @@ class GenomeBrowser {
             this.showNotification('Unable to open Project Manager window', 'error');
             throw error;
         }
+    }
+
+    /**
+     * Initialize Plugin Management UI with retry mechanism
+     */
+    async initializePluginManagementUI() {
+        let attempts = 0;
+        const maxAttempts = 10;
+        const delay = 200; // 200ms delay between attempts
+        
+        const tryInitialize = async () => {
+            attempts++;
+            
+            try {
+                if (this.chatManager && this.chatManager.pluginManager) {
+                    this.pluginManagementUI = new PluginManagementUI(this.chatManager.pluginManager, this.configManager);
+                    window.pluginManagementUI = this.pluginManagementUI; // Make globally available for onclick handlers
+                    console.log('✅ PluginManagementUI initialized successfully');
+                    return true;
+                } else if (attempts < maxAttempts) {
+                    console.log(`🔄 PluginManager not ready yet, retrying... (${attempts}/${maxAttempts})`);
+                    setTimeout(tryInitialize, delay);
+                    return false;
+                } else {
+                    console.warn('⚠️ PluginManager not available after maximum attempts, PluginManagementUI initialization failed');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Error initializing PluginManagementUI:', error);
+                if (attempts < maxAttempts) {
+                    setTimeout(tryInitialize, delay);
+                    return false;
+                } else {
+                    return false;
+                }
+            }
+        };
+        
+        return tryInitialize();
     }
 
     /**

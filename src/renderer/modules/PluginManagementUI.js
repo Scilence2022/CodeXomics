@@ -200,9 +200,22 @@ class PluginManagementUI {
 
         container.innerHTML = '';
 
-        const functionPlugins = this.pluginManager.functionPlugins;
+        // Check if we're using PluginManagerV2 or legacy PluginManager
+        let functionPlugins;
         
-        if (functionPlugins.size === 0) {
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            functionPlugins = this.pluginManager.pluginRegistry.function;
+        } else if (this.pluginManager.functionPlugins) {
+            // Legacy PluginManager
+            functionPlugins = this.pluginManager.functionPlugins;
+        } else {
+            console.warn('Plugin manager structure not recognized');
+            container.innerHTML = '<div class="no-plugins">Plugin manager not available</div>';
+            return;
+        }
+        
+        if (!functionPlugins || functionPlugins.size === 0) {
             container.innerHTML = '<div class="no-plugins">No function plugins installed</div>';
             return;
         }
@@ -222,9 +235,22 @@ class PluginManagementUI {
 
         container.innerHTML = '';
 
-        const visualizationPlugins = this.pluginManager.visualizationPlugins;
+        // Check if we're using PluginManagerV2 or legacy PluginManager
+        let visualizationPlugins;
         
-        if (visualizationPlugins.size === 0) {
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            visualizationPlugins = this.pluginManager.pluginRegistry.visualization;
+        } else if (this.pluginManager.visualizationPlugins) {
+            // Legacy PluginManager
+            visualizationPlugins = this.pluginManager.visualizationPlugins;
+        } else {
+            console.warn('Plugin manager structure not recognized');
+            container.innerHTML = '<div class="no-plugins">Plugin manager not available</div>';
+            return;
+        }
+        
+        if (!visualizationPlugins || visualizationPlugins.size === 0) {
             container.innerHTML = '<div class="no-plugins">No visualization plugins installed</div>';
             return;
         }
@@ -304,9 +330,21 @@ class PluginManagementUI {
      * Show plugin details
      */
     showPluginDetails(pluginId, type) {
-        const plugin = type === 'function' ? 
-            this.pluginManager.functionPlugins.get(pluginId) :
-            this.pluginManager.visualizationPlugins.get(pluginId);
+        let plugin;
+        
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            if (type === 'function') {
+                plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
+            } else {
+                plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
+            }
+        } else {
+            // Legacy PluginManager
+            plugin = type === 'function' ? 
+                this.pluginManager.functionPlugins.get(pluginId) :
+                this.pluginManager.visualizationPlugins.get(pluginId);
+        }
 
         if (!plugin) return;
 
@@ -355,9 +393,21 @@ class PluginManagementUI {
      * Toggle plugin enabled/disabled state
      */
     togglePlugin(pluginId, type) {
-        const plugin = type === 'function' ? 
-            this.pluginManager.functionPlugins.get(pluginId) :
-            this.pluginManager.visualizationPlugins.get(pluginId);
+        let plugin;
+        
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            if (type === 'function') {
+                plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
+            } else {
+                plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
+            }
+        } else {
+            // Legacy PluginManager
+            plugin = type === 'function' ? 
+                this.pluginManager.functionPlugins.get(pluginId) :
+                this.pluginManager.visualizationPlugins.get(pluginId);
+        }
 
         if (!plugin) return;
 
@@ -582,9 +632,21 @@ class PluginManagementUI {
      * Run comprehensive test for a plugin
      */
     async runPluginTest(pluginId, type) {
-        const plugin = type === 'function' ? 
-            this.pluginManager.functionPlugins.get(pluginId) :
-            this.pluginManager.visualizationPlugins.get(pluginId);
+        let plugin;
+        
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            if (type === 'function') {
+                plugin = this.pluginManager.pluginRegistry.function.get(pluginId);
+            } else {
+                plugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
+            }
+        } else {
+            // Legacy PluginManager
+            plugin = type === 'function' ? 
+                this.pluginManager.functionPlugins.get(pluginId) :
+                this.pluginManager.visualizationPlugins.get(pluginId);
+        }
 
         if (!plugin) {
             this.showMessage(`Plugin "${pluginId}" not found`, 'error');
@@ -2347,17 +2409,44 @@ class PluginManagementUI {
      * Get plugin statistics
      */
     getPluginStatistics() {
-        const functionPlugins = this.pluginManager.functionPlugins.size;
-        const visualizationPlugins = this.pluginManager.visualizationPlugins.size;
-        const totalFunctions = Array.from(this.pluginManager.functionPlugins.values())
-            .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0);
+        let functionPlugins, visualizationPlugins, utilityPlugins = 0;
+        
+        if (this.pluginManager.pluginRegistry) {
+            // PluginManagerV2
+            functionPlugins = this.pluginManager.pluginRegistry.function.size;
+            visualizationPlugins = this.pluginManager.pluginRegistry.visualization.size;
+            utilityPlugins = this.pluginManager.pluginRegistry.utility?.size || 0;
+            
+            const totalFunctions = Array.from(this.pluginManager.pluginRegistry.function.values())
+                .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0) +
+                Array.from(this.pluginManager.pluginRegistry.utility?.values() || [])
+                .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0);
+            
+            return {
+                functionPlugins,
+                visualizationPlugins,
+                utilityPlugins,
+                totalPlugins: functionPlugins + visualizationPlugins + utilityPlugins,
+                totalFunctions,
+                version: 'V2'
+            };
+        } else {
+            // Legacy PluginManager
+            functionPlugins = this.pluginManager.functionPlugins?.size || 0;
+            visualizationPlugins = this.pluginManager.visualizationPlugins?.size || 0;
+            
+            const totalFunctions = Array.from(this.pluginManager.functionPlugins?.values() || [])
+                .reduce((total, plugin) => total + Object.keys(plugin.functions || {}).length, 0);
 
-        return {
-            functionPlugins,
-            visualizationPlugins,
-            totalPlugins: functionPlugins + visualizationPlugins,
-            totalFunctions
-        };
+            return {
+                functionPlugins,
+                visualizationPlugins,
+                utilityPlugins: 0,
+                totalPlugins: functionPlugins + visualizationPlugins,
+                totalFunctions,
+                version: 'Legacy'
+            };
+        }
     }
 }
 
