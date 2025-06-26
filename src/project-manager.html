@@ -1414,6 +1414,183 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
+
+        /* List和Details视图的操作按钮样式 */
+        .file-action-btn-small {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin: 0 1px;
+        }
+
+        .file-action-btn-small:hover {
+            background: white;
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        /* List视图样式 */
+        .file-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin: 2px 0;
+        }
+
+        .file-list-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateX(4px);
+        }
+
+        .file-list-item.selected {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-left: 3px solid #667eea;
+            color: #667eea;
+        }
+
+        .file-list-item .file-icon-small {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-list-item .file-name {
+            flex: 1;
+            font-weight: 500;
+            margin-right: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-item .file-size {
+            width: 80px;
+            text-align: right;
+            margin-right: 12px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-list-item .file-date {
+            width: 120px;
+            text-align: right;
+            margin-right: 12px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-actions-list {
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .file-list-item:hover .file-actions-list {
+            opacity: 1;
+        }
+
+        /* Details视图（表格）样式 */
+        .file-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-details-table thead {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .file-details-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .file-details-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+
+        .file-details-table tr {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-details-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-details-table tr.selected {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            color: #667eea;
+        }
+
+        .file-details-table .file-icon-small {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-details-table .file-name {
+            font-weight: 500;
+        }
+
+        .file-actions-details {
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+        }
+
+        /* 视图容器样式 */
+        #fileList {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        #fileDetails {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
@@ -2689,12 +2866,10 @@ Folders: ${project.folders ? project.folders.length : 0}
                 if (filteredFiles.length === 0) {
                     fileList.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">📄</div>
+                            <div class="empty-icon">📁</div>
                             <h3>No files found</h3>
-                            <p>Add some files to this folder to get started.</p>
-                            <button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">
-                                Add Files
-                            </button>
+                            <p>Add files to your project or try a different search term</p>
+                            ${this.currentProject ? '<button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">Add Files</button>' : ''}
                         </div>
                     `;
                     return;
@@ -2703,15 +2878,17 @@ Folders: ${project.folders ? project.folders.length : 0}
                 let html = '';
                 filteredFiles.forEach(file => {
                     const fileType = this.detectFileType(file.name);
-                    const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+                    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+                    const isSelected = this.selectedFiles.has(file.id);
 
                     html += `
-                        <div class="file-list-item" 
+                        <div class="file-list-item ${isSelected ? 'selected' : ''}" 
                              draggable="true"
                              ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                              ondragend="projectManagerWindow.handleFileDragEnd(event)"
-                             onclick="projectManagerWindow.selectFile('${file.id}')"
-                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                             onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                             ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                             oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                              data-file-id="${file.id}">
                             <div class="file-icon-small" style="background-color: ${typeConfig.color}">
                                 ${typeConfig.icon}
@@ -2719,6 +2896,11 @@ Folders: ${project.folders ? project.folders.length : 0}
                             <div class="file-name" title="${file.name}">${file.name}</div>
                             <div class="file-size">${this.formatFileSize(file.size || 0)}</div>
                             <div class="file-date">${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
+                            <div class="file-actions-list">
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                            </div>
                         </div>
                     `;
                 });
@@ -2738,12 +2920,10 @@ Folders: ${project.folders ? project.folders.length : 0}
                 if (filteredFiles.length === 0) {
                     fileDetails.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">📄</div>
+                            <div class="empty-icon">📁</div>
                             <h3>No files found</h3>
-                            <p>Add some files to this folder to get started.</p>
-                            <button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">
-                                Add Files
-                            </button>
+                            <p>Add files to your project or try a different search term</p>
+                            ${this.currentProject ? '<button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">Add Files</button>' : ''}
                         </div>
                     `;
                     return;
@@ -2758,7 +2938,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                                 <th style="width: 100px;">Type</th>
                                 <th style="width: 80px;">Size</th>
                                 <th style="width: 120px;">Modified</th>
-                                <th style="width: 200px;">Path</th>
+                                <th style="width: 150px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2766,14 +2946,17 @@ Folders: ${project.folders ? project.folders.length : 0}
 
                 filteredFiles.forEach(file => {
                     const fileType = this.detectFileType(file.name);
-                    const typeConfig = this.fileTypes[fileType] || { icon: 'FILE', color: '#6c757d' };
+                    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+                    const isSelected = this.selectedFiles.has(file.id);
 
                     html += `
-                        <tr draggable="true"
+                        <tr class="${isSelected ? 'selected' : ''}"
+                            draggable="true"
                             ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                             ondragend="projectManagerWindow.handleFileDragEnd(event)"
-                            onclick="projectManagerWindow.selectFile('${file.id}')"
-                            ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                            onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                            ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                            oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                             data-file-id="${file.id}">
                             <td>
                                 <div class="file-icon-small" style="background-color: ${typeConfig.color}">
@@ -2784,7 +2967,11 @@ Folders: ${project.folders ? project.folders.length : 0}
                             <td>${fileType.toUpperCase()}</td>
                             <td>${this.formatFileSize(file.size || 0)}</td>
                             <td>${file.modified ? this.formatDate(file.modified) : 'Unknown'}</td>
-                            <td title="${file.path || 'N/A'}">${this.truncatePath(file.path || 'N/A', 25)}</td>
+                            <td class="file-actions-details">
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                            </td>
                         </tr>
                     `;
                 });
