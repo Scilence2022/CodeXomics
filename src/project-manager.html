@@ -4149,6 +4149,9 @@ Folders: ${project.folders ? project.folders.length : 0}
                             this.currentProject.modified = new Date().toISOString();
                             this.projects.set(this.currentProject.id, this.currentProject);
 
+                            // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
+                            this.markProjectAsModified();
+
                             // Save changes to localStorage
                             await this.saveProjects();
 
