@@ -4122,6 +4122,44 @@ ipcMain.handle('moveFileInProject', async (event, currentPath, projectName, targ
   }
 });
 
+// Handle renaming file within project
+ipcMain.handle('renameFileInProject', async (event, currentPath, newFileName) => {
+  try {
+    if (!fs.existsSync(currentPath)) {
+      return { success: false, error: 'Source file does not exist' };
+    }
+
+    // 获取文件目录和构建新的文件路径
+    const fileDir = path.dirname(currentPath);
+    const newFilePath = path.join(fileDir, newFileName);
+    
+    // 检查新文件名是否已存在
+    if (fs.existsSync(newFilePath)) {
+      return { success: false, error: 'A file with this name already exists' };
+    }
+    
+    // 验证新文件名是否合法
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(newFileName)) {
+      return { success: false, error: 'File name contains invalid characters' };
+    }
+    
+    // 重命名文件
+    fs.renameSync(currentPath, newFilePath);
+    
+    console.log(`✅ File renamed from ${currentPath} to ${newFilePath}`);
+    return { 
+      success: true, 
+      newPath: newFilePath, 
+      oldPath: currentPath,
+      message: 'File renamed successfully' 
+    };
+  } catch (error) {
+    console.error('Error renaming file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // File locking management
 const projectFileLocks = new Map();
 

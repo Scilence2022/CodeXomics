@@ -4974,7 +4974,7 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                         return;
                     }
 
-                    console.log('✏️ Found file:', file.name);
+                    console.log('✏️ Found file:', file.name, 'at path:', file.path);
                     
                     // 使用自定义对话框替代 prompt()
                     const newName = await this.showRenameDialog(file.name);
@@ -4993,10 +4993,63 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                         return;
                     }
 
-                    // 更新文件名
+                    // 尝试重命名文件系统中的实际文件
+                    let physicalRenameSuccess = false;
+                    let newFilePath = null;
+                    
+                    if (file.path && window.electronAPI && window.electronAPI.renameFileInProject) {
+                        console.log('🔄 Attempting to rename file in filesystem:', file.path, '→', newName.trim());
+                        
+                        try {
+                            const renameResult = await window.electronAPI.renameFileInProject(file.path, newName.trim());
+                            
+                            if (renameResult.success) {
+                                physicalRenameSuccess = true;
+                                newFilePath = renameResult.newPath;
+                                console.log('✅ File physically renamed to:', newFilePath);
+                            } else {
+                                console.warn('⚠️ Failed to physically rename file:', renameResult.error);
+                                
+                                // 如果文件系统重命名失败，询问用户是否仅更新Project Manager
+                                const continueWithMetadataOnly = confirm(
+                                    `Failed to rename the actual file in the filesystem:\n\n${renameResult.error}\n\n` +
+                                    `Would you like to update the file name in Project Manager only?\n\n` +
+                                    `Note: The actual file will keep its original name "${file.name}".`
+                                );
+                                
+                                if (!continueWithMetadataOnly) {
+                                    console.log('❌ User cancelled rename operation');
+                                    return;
+                                }
+                            }
+                        } catch (renameError) {
+                            console.error('❌ Error during physical file rename:', renameError);
+                            
+                            const continueWithMetadataOnly = confirm(
+                                `An error occurred while renaming the file:\n\n${renameError.message}\n\n` +
+                                `Would you like to update the file name in Project Manager only?\n\n` +
+                                `Note: The actual file will keep its original name "${file.name}".`
+                            );
+                            
+                            if (!continueWithMetadataOnly) {
+                                console.log('❌ User cancelled rename operation');
+                                return;
+                            }
+                        }
+                    } else {
+                        console.log('📝 File has no path or Electron API not available - updating metadata only');
+                    }
+
+                    // 更新Project Manager中的文件名和路径
                     const oldName = file.name;
                     file.name = newName.trim();
                     file.modified = new Date().toISOString();
+                    
+                    // 如果文件系统重命名成功，更新文件路径
+                    if (physicalRenameSuccess && newFilePath) {
+                        file.path = newFilePath;
+                        console.log('✅ Updated file path to:', newFilePath);
+                    }
                     
                     console.log('✅ File renamed from:', oldName, 'to:', file.name);
                     
@@ -5006,7 +5059,13 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                     // 刷新视图
                     this.refreshCurrentView();
                     
-                    this.showNotification(`File renamed to "${newName.trim()}"`, 'success');
+                    // 显示成功消息
+                    if (physicalRenameSuccess) {
+                        this.showNotification(`File renamed to "${newName.trim()}" (filesystem updated)`, 'success');
+                    } else {
+                        this.showNotification(`File renamed to "${newName.trim()}" (metadata only)`, 'warning');
+                    }
+                    
                     console.log('✅ Rename operation completed successfully');
                     
                 } catch (error) {
