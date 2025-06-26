@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Compact Mode Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .test-header h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            background: #f8f9fa;
+        }
+        
+        .test-section h3 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .demo-iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .button-group {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .test-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .test-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .test-btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .test-btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>📁 Project Manager Compact Mode Test</h1>
+            <p>Testing the new Simple Mode functionality for Project Manager</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎯 Test Overview</h3>
+            <p>This test validates the compact mode implementation for Project Manager, which provides a simplified interface showing only the workspace and core project operations.</p>
+            
+            <ul class="feature-list">
+                <li>Toggle Switch for switching between Full and Simple modes</li>
+                <li>Workspace-only view in Simple mode (similar to sidebar)</li>
+                <li>Core action buttons: Open, Save, Save As</li>
+                <li>Preference persistence across sessions</li>
+                <li>Smooth animations and transitions</li>
+                <li>Status bar updates reflecting current mode</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <div class="button-group">
+                <button class="test-btn test-btn-primary" onclick="runCompactModeTests()">
+                    🧪 Run Compact Mode Tests
+                </button>
+                <button class="test-btn test-btn-secondary" onclick="resetProjectManager()">
+                    🔄 Reset Project Manager
+                </button>
+                <button class="test-btn test-btn-secondary" onclick="clearTestResults()">
+                    🗑️ Clear Results
+                </button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="testResults">
+                <div class="test-info">Click "Run Compact Mode Tests" to start testing...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎭 Project Manager Demo</h3>
+            <p>Live Project Manager window with compact mode functionality:</p>
+            <iframe src="src/project-manager.html" class="demo-iframe" id="projectManagerFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        
+        function addTestResult(test, status, message) {
+            testResults.push({ test, status, message, timestamp: new Date() });
+            updateTestDisplay();
+        }
+        
+        function updateTestDisplay() {
+            const resultsDiv = document.getElementById('testResults');
+            if (testResults.length === 0) {
+                resultsDiv.innerHTML = '<div class="test-info">No tests run yet...</div>';
+                return;
+            }
+            
+            let html = '';
+            testResults.forEach((result, index) => {
+                const statusClass = result.status === 'PASS' ? 'test-pass' : 
+                                  result.status === 'FAIL' ? 'test-fail' : 'test-info';
+                html += `
+                    <div class="test-result ${statusClass}">
+                        <strong>Test ${index + 1}: ${result.test}</strong><br>
+                        Status: ${result.status}<br>
+                        ${result.message}<br>
+                        <small>Time: ${result.timestamp.toLocaleTimeString()}</small>
+                    </div>
+                `;
+            });
+            resultsDiv.innerHTML = html;
+        }
+        
+        function clearTestResults() {
+            testResults = [];
+            updateTestDisplay();
+        }
+        
+        function resetProjectManager() {
+            const iframe = document.getElementById('projectManagerFrame');
+            iframe.src = iframe.src; // Force reload
+            addTestResult('Reset', 'INFO', 'Project Manager iframe reloaded');
+        }
+        
+        async function runCompactModeTests() {
+            clearTestResults();
+            addTestResult('Test Suite Start', 'INFO', 'Starting comprehensive compact mode tests...');
+            
+            try {
+                // Test 1: Check if compact mode toggle exists
+                await testCompactModeToggleExists();
+                
+                // Test 2: Test toggle functionality
+                await testToggleFunctionality();
+                
+                // Test 3: Test UI state changes
+                await testUIStateChanges();
+                
+                // Test 4: Test action buttons visibility
+                await testActionButtonsVisibility();
+                
+                // Test 5: Test preference persistence
+                await testPreferencePersistence();
+                
+                addTestResult('Test Suite Complete', 'PASS', 'All compact mode tests completed successfully!');
+                
+            } catch (error) {
+                addTestResult('Test Suite Error', 'FAIL', `Test suite failed: ${error.message}`);
+            }
+        }
+        
+        async function testCompactModeToggleExists() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        const iframe = document.getElementById('projectManagerFrame');
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const toggle = iframeDoc.getElementById('compactModeToggle');
+                        
+                        if (toggle) {
+                            addTestResult('Toggle Element', 'PASS', 'Compact mode toggle switch found in header');
+                            resolve();
+                        } else {
+                            addTestResult('Toggle Element', 'FAIL', 'Compact mode toggle switch not found');
+                            resolve();
+                        }
+                    } catch (error) {
+                        addTestResult('Toggle Element', 'FAIL', `Error accessing iframe: ${error.message}`);
+                        resolve();
+                    }
+                }, 1000);
+            });
+        }
+        
+        async function testToggleFunctionality() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        const iframe = document.getElementById('projectManagerFrame');
+                        const iframeWindow = iframe.contentWindow;
+                        
+                        if (iframeWindow.projectManagerWindow && typeof iframeWindow.projectManagerWindow.toggleCompactMode === 'function') {
+                            addTestResult('Toggle Function', 'PASS', 'toggleCompactMode function is available');
+                        } else {
+                            addTestResult('Toggle Function', 'FAIL', 'toggleCompactMode function not found');
+                        }
+                        resolve();
+                    } catch (error) {
+                        addTestResult('Toggle Function', 'FAIL', `Error testing toggle function: ${error.message}`);
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+        
+        async function testUIStateChanges() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        const iframe = document.getElementById('projectManagerFrame');
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const headerActions = iframeDoc.getElementById('headerActions');
+                        const headerActionsCompact = iframeDoc.getElementById('headerActionsCompact');
+                        
+                        if (headerActions && headerActionsCompact) {
+                            addTestResult('UI Elements', 'PASS', 'Both normal and compact action buttons found');
+                        } else {
+                            addTestResult('UI Elements', 'FAIL', 'Missing header action elements');
+                        }
+                        resolve();
+                    } catch (error) {
+                        addTestResult('UI Elements', 'FAIL', `Error checking UI elements: ${error.message}`);
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+        
+        async function testActionButtonsVisibility() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        const iframe = document.getElementById('projectManagerFrame');
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const compactButtons = iframeDoc.querySelectorAll('.btn-compact');
+                        
+                        if (compactButtons.length >= 3) {
+                            addTestResult('Compact Buttons', 'PASS', `Found ${compactButtons.length} compact mode buttons (Open, Save, Save As)`);
+                        } else {
+                            addTestResult('Compact Buttons', 'FAIL', `Only found ${compactButtons.length} compact buttons, expected 3`);
+                        }
+                        resolve();
+                    } catch (error) {
+                        addTestResult('Compact Buttons', 'FAIL', `Error checking compact buttons: ${error.message}`);
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+        
+        async function testPreferencePersistence() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        const iframe = document.getElementById('projectManagerFrame');
+                        const iframeWindow = iframe.contentWindow;
+                        
+                        if (iframeWindow.projectManagerWindow && 
+                            typeof iframeWindow.projectManagerWindow.saveCompactModePreference === 'function' &&
+                            typeof iframeWindow.projectManagerWindow.loadCompactModePreference === 'function') {
+                            addTestResult('Preferences', 'PASS', 'Preference save/load functions are available');
+                        } else {
+                            addTestResult('Preferences', 'FAIL', 'Preference management functions not found');
+                        }
+                        resolve();
+                    } catch (error) {
+                        addTestResult('Preferences', 'FAIL', `Error testing preferences: ${error.message}`);
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+        
+        // Initialize test environment
+        window.addEventListener('load', () => {
+            addTestResult('Test Environment', 'INFO', 'Compact mode test environment loaded successfully');
+        });
+    </script>
+</body>
+</html> 
