@@ -3810,11 +3810,76 @@ Folders: ${project.folders ? project.folders.length : 0}
                     }
 
                     if (project && project.id) {
+                        // Set up project paths if fileName is provided
+                        if (fileName) {
+                            project.xmlFileName = fileName;
+                            project.loadedFromFile = true;
+                            project.lastOpened = new Date().toISOString();
+                            
+                            // Try to determine project paths
+                            if (fileName.includes('/')) {
+                                const projectDir = fileName.substring(0, fileName.lastIndexOf('/'));
+                                project.dataFolderPath = `${projectDir}/${project.name}`;
+                                project.location = projectDir;
+                            }
+                        }
+                        
                         this.projects.set(project.id, project);
                         await this.saveProjects();
+                        
+                        // Set as current project
+                        this.currentProject = project;
+                        
                         this.renderProjectTree();
                         this.selectProject(project.id);
                         this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
+                        
+                        // Auto-scan project directory after loading to ensure workspace shows current files
+                        setTimeout(async () => {
+                            console.log('🔄 Auto-scanning project directory after loading (loadProjectFromText)...');
+                            console.log('🔍 Current project:', this.currentProject?.name);
+                            console.log('🔍 Project location:', this.currentProject?.location);
+                            console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
+                            console.log('🔍 ElectronAPI available:', !!window.electronAPI);
+                            console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
+                            
+                            // Force scan execution even if initial state is empty
+                            if (this.currentProject) {
+                                // Ensure project has basic array structures
+                                if (!this.currentProject.files) {
+                                    this.currentProject.files = [];
+                                    console.log('📁 Initialized empty files array');
+                                }
+                                if (!this.currentProject.folders) {
+                                    this.currentProject.folders = [];
+                                    console.log('📁 Initialized empty folders array');
+                                }
+                                
+                                // Execute scan
+                                try {
+                                    await this.scanAndAddNewFiles();
+                                    console.log('✅ Directory scan completed');
+                                } catch (error) {
+                                    console.error('❌ Directory scan failed:', error);
+                                    // If scan fails, at least ensure basic structure is displayed
+                                    this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
+                                }
+                            }
+                            
+                            // Force UI refresh regardless of scan success
+                            this.renderProjectTree();
+                            if (this.currentProject) {
+                                this.selectProject(this.currentProject.id);
+                                this.renderProjectContent(); // Ensure workspace content is also refreshed
+                            }
+                            
+                            console.log('🎯 UI refresh completed - check workspace for files/folders');
+                            console.log('📊 Final project state:', {
+                                files: this.currentProject?.files?.length || 0,
+                                folders: this.currentProject?.folders?.length || 0
+                            });
+                        }, 300);
+                        
                     } else {
                         throw new Error('Invalid project format');
                     }
