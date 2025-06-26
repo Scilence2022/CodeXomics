@@ -2697,7 +2697,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                              ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                              ondragend="projectManagerWindow.handleFileDragEnd(event)"
                              onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                             ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
                              oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                              data-file-id="${file.id}">
                             <div class="file-icon-small" style="background-color: ${typeConfig.color}">
@@ -2765,7 +2765,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                             ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                             ondragend="projectManagerWindow.handleFileDragEnd(event)"
                             onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                            ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                            ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
                             oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
                             data-file-id="${file.id}">
                             <td>
@@ -3222,7 +3222,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                              ondragstart="projectManagerWindow.handleFileDragStart(event, '${file.id}')"
                              ondragend="projectManagerWindow.handleFileDragEnd(event)"
                              onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                             ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                             ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
                              oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
                             <div class="file-icon" style="background-color: ${typeConfig.color}">
                                 ${typeConfig.icon}
@@ -5520,6 +5520,52 @@ chr1	200	.	G	C	80	PASS	.`;
 chr1	3000	4000	region2	200	-
 chr2	5000	6000	region3	150	+`;
 
+                    case 'genbank':
+                        return `LOCUS       SAMPLE_GENE             1000 bp    DNA     linear   BCT 01-JAN-2024
+DEFINITION  Sample bacterial gene sequence for GenBank preview.
+ACCESSION   SAMPLE001
+VERSION     SAMPLE001.1
+KEYWORDS    .
+SOURCE      Sample organism
+  ORGANISM  Sample organism
+            Bacteria; Sample phylum; Sample class; Sample order; Sample family;
+            Sample genus.
+REFERENCE   1  (bases 1 to 1000)
+  AUTHORS   Sample,A. and Example,B.
+  TITLE     Sample gene from sample organism
+  JOURNAL   Sample Journal 1 (1), 1-10 (2024)
+FEATURES             Location/Qualifiers
+     source          1..1000
+                     /organism="Sample organism"
+                     /mol_type="genomic DNA"
+     gene            100..900
+                     /gene="sampleGene"
+                     /product="sample protein"
+     CDS             100..900
+                     /gene="sampleGene"
+                     /codon_start=1
+                     /product="sample protein"
+                     /translation="MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQL..."
+ORIGIN
+        1 atgcgatcga tcgatcgatc gatcgatcga tcgatcgatc gatcgatcga tcgatcgatc
+       61 gatcgatcga tcgatcgatc gatcgatcga tcgatcgatc gatcgatcga tcgatcgatc
+      121 atgaaatcta ccgcatatat cgcaaaacag cgacaaatta tcttcgttaa atctcatttc
+      181 tctcgccaac ttgaagaacg acttggactc attgaagtac aagctccaat ccttctctct
+      241 cgtgtaggag atggaacact tcagttggaa tctcgttatg gcatggatga actatacaaa
+      301 taaagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      361 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      421 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      481 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      541 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      601 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      661 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      721 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      781 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      841 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      901 gctagctagc tagctagcta gctagctagc tagctagcta gctagctagc tagctagcta
+      961 gctagctagc tagctagcta gctagctagc tagctagcta
+//`;
+
                     default:
                         return `This is a preview of ${file.name}
 
@@ -5586,6 +5632,24 @@ Use specialized tools to view the full content.`;
                             size: 4096,
                             type: 'vcf',
                             path: '/test/variants.vcf',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        },
+                        {
+                            id: this.generateId(),
+                            name: 'genome.gb',
+                            size: 8192,
+                            type: 'genbank',
+                            path: '/test/genome.gb',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        },
+                        {
+                            id: this.generateId(),
+                            name: 'plasmid.gbk',
+                            size: 3072,
+                            type: 'genbank',
+                            path: '/test/plasmid.gbk',
                             created: new Date().toISOString(),
                             modified: new Date().toISOString()
                         }
