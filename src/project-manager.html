@@ -2671,7 +2671,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                             <div class="file-date">${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
                             <div class="file-actions-list">
                                 <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
-                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); console.log('🔧 Rename button clicked for file:', '${file.id}'); try { projectManagerWindow.renameFile('${file.id}'); } catch(e) { console.error('💥 Rename button error:', e); alert('Rename error: ' + e.message); }" title="Rename">✏️</button>
                                 <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
                             </div>
                         </div>
@@ -2742,7 +2742,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                             <td>${file.modified ? this.formatDate(file.modified) : 'Unknown'}</td>
                             <td class="file-actions-details">
                                 <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
-                                <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                                <button class="file-action-btn-small" onclick="event.stopPropagation(); console.log('🔧 Detail view rename button clicked for file:', '${file.id}'); try { projectManagerWindow.renameFile('${file.id}'); } catch(e) { console.error('💥 Detail view rename error:', e); alert('Detail view rename error: ' + e.message); }" title="Rename">✏️</button>
                                 <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
                             </td>
                         </tr>
@@ -3201,7 +3201,7 @@ Folders: ${project.folders ? project.folders.length : 0}
                                 <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">
                                     👁️
                                 </button>
-                                <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
+                                <button class="file-action-btn" onclick="event.stopPropagation(); console.log('🔧 Grid view rename button clicked for file:', '${file.id}'); try { projectManagerWindow.renameFile('${file.id}'); } catch(e) { console.error('💥 Grid view rename error:', e); alert('Grid view rename error: ' + e.message); }" title="Rename">
                                     ✏️
                                 </button>
                                 <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">
@@ -4930,35 +4930,50 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
 
             // 重命名文件
             async renameFile(fileId) {
-                console.log('✏️ Rename file:', fileId);
+                console.log('✏️ Rename file called with ID:', fileId);
+                console.log('✏️ Current project:', this.currentProject ? 'exists' : 'null');
+                console.log('✏️ ProjectManagerWindow instance:', this);
                 
-                if (!this.currentProject) {
-                    this.showNotification('No project selected', 'warning');
-                    return;
-                }
-
-                const file = this.currentProject.files?.find(f => f.id === fileId);
-                if (!file) {
-                    this.showNotification('File not found', 'error');
-                    return;
-                }
-
-                const newName = prompt('Enter new file name:', file.name);
-                if (!newName || newName.trim() === '' || newName.trim() === file.name) {
-                    return;
-                }
-
-                // 检查是否有重名文件
-                const existingFile = this.currentProject.files.find(f => f.name === newName.trim() && f.id !== fileId);
-                if (existingFile) {
-                    this.showNotification('A file with this name already exists', 'error');
-                    return;
-                }
-
                 try {
+                    if (!this.currentProject) {
+                        console.log('❌ No project selected');
+                        this.showNotification('No project selected', 'warning');
+                        return;
+                    }
+
+                    console.log('✏️ Project files count:', this.currentProject.files ? this.currentProject.files.length : 0);
+                    
+                    const file = this.currentProject.files?.find(f => f.id === fileId);
+                    if (!file) {
+                        console.log('❌ File not found with ID:', fileId);
+                        this.showNotification('File not found', 'error');
+                        return;
+                    }
+
+                    console.log('✏️ Found file:', file.name);
+                    
+                    const newName = prompt('Enter new file name:', file.name);
+                    console.log('✏️ Prompt result:', newName);
+                    
+                    if (!newName || newName.trim() === '' || newName.trim() === file.name) {
+                        console.log('❌ Rename cancelled or no change');
+                        return;
+                    }
+
+                    // 检查是否有重名文件
+                    const existingFile = this.currentProject.files.find(f => f.name === newName.trim() && f.id !== fileId);
+                    if (existingFile) {
+                        console.log('❌ File name already exists:', newName.trim());
+                        this.showNotification('A file with this name already exists', 'error');
+                        return;
+                    }
+
                     // 更新文件名
+                    const oldName = file.name;
                     file.name = newName.trim();
                     file.modified = new Date().toISOString();
+                    
+                    console.log('✅ File renamed from:', oldName, 'to:', file.name);
                     
                     // 标记项目有未保存更改
                     this.markProjectAsModified();
@@ -4967,9 +4982,12 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                     this.refreshCurrentView();
                     
                     this.showNotification(`File renamed to "${newName.trim()}"`, 'success');
+                    console.log('✅ Rename operation completed successfully');
+                    
                 } catch (error) {
-                    console.error('Error renaming file:', error);
-                    this.showNotification('Failed to rename file', 'error');
+                    console.error('💥 Error in renameFile function:', error);
+                    console.error('💥 Error stack:', error.stack);
+                    this.showNotification('Failed to rename file: ' + error.message, 'error');
                 }
             }
 
