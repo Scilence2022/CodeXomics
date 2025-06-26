@@ -383,13 +383,15 @@ class ProjectManagerWindow {
                         <div class="tree-item file ${isSelected ? 'selected' : ''}" 
                              style="margin-left: ${(level + 1) * 20}px;"
                              data-file-id="${file.id}">
-                            <div class="tree-item-content" onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)">
+                            <div class="tree-item-content" 
+                                 onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                                 ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')">
                                 <div class="tree-expander" style="visibility: hidden;"></div>
                                 <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: 8px; width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
                                 <span class="tree-label" title="${file.name}">${file.name}</span>
                                 <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
                                 <div class="tree-actions">
-                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
+                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
                                 </div>
                             </div>
                         </div>
@@ -3247,6 +3249,249 @@ Modified: ${this.formatDate(project.modified)}
         
         // 这里可以添加打开系统文件管理器的逻辑
         this.showNotification(`Would open folder "${folder.name}" in file explorer`, 'info');
+    }
+
+    /**
+     * 文件预览方法 - 显示文件预览弹窗
+     */
+    async showFilePreview(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        try {
+            const fileType = this.detectFileType(file.name);
+            
+            // 创建预览模态框
+            this.createPreviewModal(file, fileType);
+            
+            this.showNotification(`Previewing: ${file.name}`, 'info');
+        } catch (error) {
+            console.error('Error previewing file:', error);
+            this.showNotification('Failed to preview file', 'error');
+        }
+    }
+
+    /**
+     * 创建文件预览模态框
+     */
+    createPreviewModal(file, fileType) {
+        // 移除现有的预览模态框
+        const existingModal = document.getElementById('filePreviewModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // 创建预览模态框
+        const modal = document.createElement('div');
+        modal.id = 'filePreviewModal';
+        modal.style.cssText = `
+            display: block;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80%;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        `;
+
+        // 模态框头部
+        const header = document.createElement('div');
+        header.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = `Preview: ${file.name}`;
+        title.style.margin = '0';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '×';
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        closeBtn.onclick = () => modal.remove();
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+
+        // 文件信息区域
+        const infoSection = document.createElement('div');
+        infoSection.style.cssText = `
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        `;
+        
+        infoSection.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">
+                <div><strong>File Name:</strong> ${file.name}</div>
+                <div><strong>File Type:</strong> ${fileType.toUpperCase()}</div>
+                <div><strong>Size:</strong> ${this.formatFileSize(file.size || 0)}</div>
+                <div><strong>Modified:</strong> ${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
+            </div>
+        `;
+
+        // 预览内容区域
+        const previewContent = document.createElement('div');
+        previewContent.style.cssText = `
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        `;
+
+        // 根据文件类型显示不同的预览内容
+        this.generatePreviewContent(file, fileType, previewContent);
+
+        // 按钮区域
+        const buttonSection = document.createElement('div');
+        buttonSection.style.cssText = `
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        `;
+
+        const openInMainBtn = document.createElement('button');
+        openInMainBtn.textContent = 'Open in Main Window';
+        openInMainBtn.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+        openInMainBtn.onclick = () => {
+            this.openFileInMainWindow(file.id);
+            modal.remove();
+        };
+
+        const closeModalBtn = document.createElement('button');
+        closeModalBtn.textContent = 'Close';
+        closeModalBtn.style.cssText = `
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+        closeModalBtn.onclick = () => modal.remove();
+
+        buttonSection.appendChild(openInMainBtn);
+        buttonSection.appendChild(closeModalBtn);
+
+        // 组装模态框
+        modalContent.appendChild(header);
+        modalContent.appendChild(infoSection);
+        modalContent.appendChild(previewContent);
+        modalContent.appendChild(buttonSection);
+        modal.appendChild(modalContent);
+
+        // 添加到页面
+        document.body.appendChild(modal);
+
+        // 点击背景关闭
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        };
+    }
+
+    /**
+     * 生成预览内容
+     */
+    generatePreviewContent(file, fileType, container) {
+        const placeholderContent = {
+            'fasta': `>Sequence_1
+ATGCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATC
+GATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATC
+GATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATC
+...
+
+📄 This is a preview of what a FASTA file might contain.
+To view the actual file content, click "Open in Main Window".`,
+            
+            'gff': `##gff-version 3
+##sequence-region ctg123 1 1497228
+ctg123	.	gene	1000	9000	.	+	.	ID=gene00001;Name=EDEN
+ctg123	.	mRNA	1050	9000	.	+	.	ID=mRNA00001;Parent=gene00001
+ctg123	.	exon	1050	1500	.	+	.	ID=exon00001;Parent=mRNA00001
+...
+
+📄 This is a preview of what a GFF file might contain.
+To view the actual file content, click "Open in Main Window".`,
+            
+            'vcf': `##fileformat=VCFv4.2
+##contig=<ID=20,length=62435964>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+20	14370	rs6054257	G	A	29	PASS	NS=3;DP=14;AF=0.5
+20	17330	.	T	A	3	q10	NS=3;DP=11;AF=0.017
+...
+
+📄 This is a preview of what a VCF file might contain.
+To view the actual file content, click "Open in Main Window".`,
+            
+            'genbank': `LOCUS       SCU49845     5028 bp    DNA     linear   PLN 21-JUN-1999
+DEFINITION  Saccharomyces cerevisiae TCP1-beta gene, partial cds; and Axl2p
+ACCESSION   U49845
+VERSION     U49845.1  GI:1293613
+FEATURES             Location/Qualifiers
+     source          1..5028
+                     /organism="Saccharomyces cerevisiae"
+...
+
+📄 This is a preview of what a GenBank file might contain.
+To view the actual file content, click "Open in Main Window".`
+        };
+
+        const content = placeholderContent[fileType] || `📄 Preview not available for ${fileType.toUpperCase()} files.
+
+File: ${file.name}
+Type: ${fileType.toUpperCase()}
+Size: ${this.formatFileSize(file.size || 0)}
+
+To view this file, click "Open in Main Window".`;
+
+        container.innerHTML = `<pre style="white-space: pre-wrap; margin: 0; color: #333;">${content}</pre>`;
     }
 }
 
