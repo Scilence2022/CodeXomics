@@ -1735,7 +1735,7 @@
             <span class="menu-icon">📁</span>
             Add Files
         </div>
-        <div class="context-menu-item" onclick="projectManagerWindow.createSubfolder()">
+        <div class="context-menu-item" onclick="projectManagerWindow.addSubfolder()">
             <span class="menu-icon">📂</span>
             New Subfolder
         </div>
@@ -1919,15 +1919,18 @@
                 const project = this.projects.get(this.currentContextProjectId);
                 if (!project) return;
                 
-                const newName = prompt('Enter new project name:', project.name);
-                if (newName && newName.trim() && newName.trim() !== project.name) {
-                    project.name = newName.trim();
-                    project.modified = new Date().toISOString();
-                    this.projects.set(this.currentContextProjectId, project);
-                    this.saveProjects();
-                    this.renderProjectTree();
-                    this.showNotification(`Project renamed to "${newName}"`, 'success');
-                }
+                // 使用自定义对话框替代 prompt()
+                this.showInputDialog('📝 Rename Project', 'Enter new project name:', project.name)
+                    .then(newName => {
+                        if (newName && newName.trim() && newName.trim() !== project.name) {
+                            project.name = newName.trim();
+                            project.modified = new Date().toISOString();
+                            this.projects.set(this.currentContextProjectId, project);
+                            this.saveProjects();
+                            this.renderProjectTree();
+                            this.showNotification(`Project renamed to "${newName}"`, 'success');
+                        }
+                    });
             }
 
             duplicateProject() {
@@ -1937,22 +1940,25 @@
                 const project = this.projects.get(this.currentContextProjectId);
                 if (!project) return;
                 
-                const newName = prompt('Enter name for duplicated project:', project.name + ' Copy');
-                if (newName && newName.trim()) {
-                    const newProject = {
-                        ...project,
-                        id: this.generateId(),
-                        name: newName.trim(),
-                        created: new Date().toISOString(),
-                        modified: new Date().toISOString(),
-                        isCurrentlyOpen: false
-                    };
-                    
-                    this.projects.set(newProject.id, newProject);
-                    this.saveProjects();
-                    this.renderProjectTree();
-                    this.showNotification(`Project duplicated as "${newName}"`, 'success');
-                }
+                // 使用自定义对话框替代 prompt()
+                this.showInputDialog('📋 Duplicate Project', 'Enter name for duplicated project:', project.name + ' Copy')
+                    .then(newName => {
+                        if (newName && newName.trim()) {
+                            const newProject = {
+                                ...project,
+                                id: this.generateId(),
+                                name: newName.trim(),
+                                created: new Date().toISOString(),
+                                modified: new Date().toISOString(),
+                                isCurrentlyOpen: false
+                            };
+                            
+                            this.projects.set(newProject.id, newProject);
+                            this.saveProjects();
+                            this.renderProjectTree();
+                            this.showNotification(`Project duplicated as "${newName}"`, 'success');
+                        }
+                    });
             }
 
             exportProjectAs() {
@@ -2032,27 +2038,42 @@ Folders: ${project.folders ? project.folders.length : 0}
                 this.addFiles();
             }
 
-            createSubfolder() {
+            addSubfolder() {
                 this.hideContextMenus();
                 if (!this.currentContextFolderPath || !this.currentProject) return;
                 
-                const folderName = prompt('Enter new subfolder name:');
-                if (folderName && folderName.trim()) {
-                    const newFolderPath = [...this.currentContextFolderPath, folderName.trim()];
-                    const newFolder = {
-                        name: folderName.trim(),
-                        icon: '📁',
-                        path: newFolderPath,
-                        files: []
-                    };
-                    
-                    this.currentProject.folders.push(newFolder);
-                    this.currentProject.modified = new Date().toISOString();
-                    this.projects.set(this.currentProject.id, this.currentProject);
-                    this.saveProjects();
-                    this.renderProjectTree();
-                    this.showNotification(`Subfolder "${folderName}" created`, 'success');
-                }
+                // 使用自定义对话框替代 prompt()
+                this.showInputDialog('📁 Create Subfolder', 'Enter new subfolder name:', '', 'Folder name')
+                    .then(folderName => {
+                        if (folderName && folderName.trim()) {
+                            const newFolderPath = [...this.currentContextFolderPath, folderName.trim()];
+                            
+                            // 检查是否已存在
+                            const exists = this.currentProject.folders.some(f => 
+                                this.arraysEqual(f.path, newFolderPath)
+                            );
+                            
+                            if (exists) {
+                                this.showNotification('Folder already exists', 'warning');
+                                return;
+                            }
+                            
+                            // 创建新文件夹
+                            const newFolder = {
+                                id: this.generateId(),
+                                name: folderName.trim(),
+                                path: newFolderPath,
+                                created: new Date().toISOString()
+                            };
+                            
+                            this.currentProject.folders.push(newFolder);
+                            this.currentProject.modified = new Date().toISOString();
+                            this.projects.set(this.currentProject.id, this.currentProject);
+                            this.saveProjects();
+                            this.renderProjectTree();
+                            this.showNotification(`Subfolder "${folderName}" created`, 'success');
+                        }
+                    });
             }
 
             renameFolder() {
@@ -2064,15 +2085,18 @@ Folders: ${project.folders ? project.folders.length : 0}
                 );
                 if (!folder) return;
                 
-                const newName = prompt('Enter new folder name:', folder.name);
-                if (newName && newName.trim() && newName.trim() !== folder.name) {
-                    folder.name = newName.trim();
-                    this.currentProject.modified = new Date().toISOString();
-                    this.projects.set(this.currentProject.id, this.currentProject);
-                    this.saveProjects();
-                    this.renderProjectTree();
-                    this.showNotification(`Folder renamed to "${newName}"`, 'success');
-                }
+                // 使用自定义对话框替代 prompt()
+                this.showInputDialog('📁 Rename Folder', 'Enter new folder name:', folder.name)
+                    .then(newName => {
+                        if (newName && newName.trim() && newName.trim() !== folder.name) {
+                            folder.name = newName.trim();
+                            this.currentProject.modified = new Date().toISOString();
+                            this.projects.set(this.currentProject.id, this.currentProject);
+                            this.saveProjects();
+                            this.renderProjectTree();
+                            this.showNotification(`Folder renamed to "${newName}"`, 'success');
+                        }
+                    });
             }
 
             openFolderInExplorer() {
@@ -4952,8 +4976,9 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
 
                     console.log('✏️ Found file:', file.name);
                     
-                    const newName = prompt('Enter new file name:', file.name);
-                    console.log('✏️ Prompt result:', newName);
+                    // 使用自定义对话框替代 prompt()
+                    const newName = await this.showRenameDialog(file.name);
+                    console.log('✏️ Dialog result:', newName);
                     
                     if (!newName || newName.trim() === '' || newName.trim() === file.name) {
                         console.log('❌ Rename cancelled or no change');
@@ -4989,6 +5014,161 @@ Demo_Genome_Chr1\tGenome_AI_Studio\tCDS\t400\t600\t.\t+\t0\tID=cds003;Parent=gen
                     console.error('💥 Error stack:', error.stack);
                     this.showNotification('Failed to rename file: ' + error.message, 'error');
                 }
+            }
+
+            // 显示重命名对话框
+            showRenameDialog(currentName) {
+                return this.showInputDialog('✏️ Rename File', 'New file name:', currentName);
+            }
+
+            // 通用输入对话框
+            showInputDialog(title, label, defaultValue = '', placeholder = '') {
+                return new Promise((resolve) => {
+                    // 创建模态对话框
+                    const modal = document.createElement('div');
+                    modal.id = 'inputDialog';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    `;
+
+                    const dialogBox = document.createElement('div');
+                    dialogBox.style.cssText = `
+                        background: white;
+                        padding: 30px;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                        min-width: 400px;
+                        max-width: 500px;
+                    `;
+
+                    dialogBox.innerHTML = `
+                        <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 18px;">${title}</h3>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #495057;">${label}</label>
+                            <input type="text" id="dialogInput" value="${defaultValue}" placeholder="${placeholder}" style="
+                                width: 100%;
+                                padding: 12px;
+                                border: 2px solid #e9ecef;
+                                border-radius: 6px;
+                                font-size: 14px;
+                                box-sizing: border-box;
+                                transition: border-color 0.2s;
+                            " />
+                        </div>
+                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                            <button id="cancelInput" style="
+                                padding: 10px 20px;
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: background-color 0.2s;
+                            ">Cancel</button>
+                            <button id="confirmInput" style="
+                                padding: 10px 20px;
+                                background: #007bff;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                transition: background-color 0.2s;
+                            ">OK</button>
+                        </div>
+                    `;
+
+                    modal.appendChild(dialogBox);
+                    document.body.appendChild(modal);
+
+                    const input = dialogBox.querySelector('#dialogInput');
+                    const cancelBtn = dialogBox.querySelector('#cancelInput');
+                    const confirmBtn = dialogBox.querySelector('#confirmInput');
+
+                    // 聚焦输入框并选中文本
+                    input.focus();
+                    if (defaultValue) {
+                        // 如果是文件名，选中不包括扩展名的部分
+                        const dotIndex = defaultValue.lastIndexOf('.');
+                        if (dotIndex > 0 && title.includes('File')) {
+                            input.setSelectionRange(0, dotIndex);
+                        } else {
+                            input.select();
+                        }
+                    }
+
+                    // 添加输入框样式
+                    input.addEventListener('focus', () => {
+                        input.style.borderColor = '#007bff';
+                        input.style.outline = 'none';
+                        input.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+                    });
+
+                    input.addEventListener('blur', () => {
+                        input.style.borderColor = '#e9ecef';
+                        input.style.boxShadow = 'none';
+                    });
+
+                    // 按钮悬停效果
+                    cancelBtn.addEventListener('mouseenter', () => {
+                        cancelBtn.style.backgroundColor = '#5a6268';
+                    });
+                    cancelBtn.addEventListener('mouseleave', () => {
+                        cancelBtn.style.backgroundColor = '#6c757d';
+                    });
+
+                    confirmBtn.addEventListener('mouseenter', () => {
+                        confirmBtn.style.backgroundColor = '#0056b3';
+                    });
+                    confirmBtn.addEventListener('mouseleave', () => {
+                        confirmBtn.style.backgroundColor = '#007bff';
+                    });
+
+                    // 处理确认
+                    const handleConfirm = () => {
+                        const value = input.value.trim();
+                        modal.remove();
+                        resolve(value);
+                    };
+
+                    // 处理取消
+                    const handleCancel = () => {
+                        modal.remove();
+                        resolve(null);
+                    };
+
+                    // 事件监听器
+                    confirmBtn.addEventListener('click', handleConfirm);
+                    cancelBtn.addEventListener('click', handleCancel);
+
+                    // 回车键确认，Esc键取消
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleConfirm();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            handleCancel();
+                        }
+                    });
+
+                    // 点击背景关闭
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            handleCancel();
+                        }
+                    });
+                });
             }
 
             // 删除文件
