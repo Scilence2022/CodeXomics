@@ -1118,12 +1118,60 @@ class ProjectManagerWindow {
             // 更新项目修改时间
             this.currentProject.modified = new Date().toISOString();
             
+            // 确保项目数据是最新的
+            this.projects.set(this.currentProject.id, this.currentProject);
+            
             // 保存到localStorage
             await this.saveProjects();
             
-            // 如果有XML文件路径，也保存到XML文件
-            if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
-                await this.saveProjectAsXML();
+            // 保存到XML文件 - 直接保存到现有项目文件路径
+            if (this.currentProject.projectFilePath) {
+                // 使用 saveProjectToSpecificFile 保存到固定路径
+                if (!this.xmlHandler) {
+                    this.xmlHandler = new ProjectXMLHandler();
+                }
+                
+                const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
+                
+                if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
+                    const result = await window.electronAPI.saveProjectToSpecificFile(
+                        this.currentProject.projectFilePath, 
+                        xmlContent
+                    );
+                    
+                    if (result.success) {
+                        console.log(`✅ Project XML saved to: ${this.currentProject.projectFilePath}`);
+                    } else {
+                        throw new Error(result.error || 'Failed to save XML file');
+                    }
+                } else {
+                    console.warn('saveProjectToSpecificFile API not available');
+                }
+            } else if (this.currentProject.xmlFilePath) {
+                // 备用：如果有xmlFilePath但没有projectFilePath
+                if (!this.xmlHandler) {
+                    this.xmlHandler = new ProjectXMLHandler();
+                }
+                
+                const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
+                
+                if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
+                    const result = await window.electronAPI.saveProjectToSpecificFile(
+                        this.currentProject.xmlFilePath, 
+                        xmlContent
+                    );
+                    
+                    if (result.success) {
+                        console.log(`✅ Project XML saved to: ${this.currentProject.xmlFilePath}`);
+                    } else {
+                        throw new Error(result.error || 'Failed to save XML file');
+                    }
+                } else {
+                    console.warn('saveProjectToSpecificFile API not available');
+                }
+            } else {
+                // 如果没有现有路径，使用另存为逻辑
+                console.warn('No project file path found, project will only be saved to localStorage');
             }
             
             // 标记项目为已保存

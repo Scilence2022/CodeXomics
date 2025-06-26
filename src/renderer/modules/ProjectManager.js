@@ -1338,19 +1338,70 @@ class ProjectManager {
             // 生成XML内容
             const xmlContent = this.xmlHandler.projectToXML(project);
             
-            if (window.electronAPI) {
-                const defaultPath = project.filePath || `${project.name}_project.xml`;
-                const result = await window.electronAPI.saveProjectFile(defaultPath, xmlContent);
-                if (result.success) {
-                    project.filePath = result.filePath;
-                    project.modified = new Date().toISOString();
-                    this.showNotification(`Project saved to ${result.filePath}`, 'success');
+            if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
+                // 直接保存到项目文件路径，不弹出对话框
+                const filePath = project.projectFilePath || project.xmlFilePath;
+                if (filePath) {
+                    const result = await window.electronAPI.saveProjectToSpecificFile(filePath, xmlContent);
+                    if (result.success) {
+                        project.modified = new Date().toISOString();
+                        console.log(`✅ Project XML saved to: ${filePath}`);
+                        this.showNotification(`Project saved to XML file`, 'success');
+                    } else {
+                        throw new Error(result.error);
+                    }
                 } else {
-                    throw new Error(result.error);
+                    // 如果没有现有路径，使用saveProjectFile（会弹出对话框）
+                    const defaultPath = `${project.name}.prj.GAI`;
+                    const result = await window.electronAPI.saveProjectFile(defaultPath, xmlContent);
+                    if (result.success) {
+                        project.projectFilePath = result.filePath;
+                        project.modified = new Date().toISOString();
+                        console.log(`✅ Project XML saved to: ${result.filePath}`);
+                        this.showNotification(`Project saved to ${result.filePath}`, 'success');
+                    } else {
+                        throw new Error(result.error);
+                    }
                 }
+            } else {
+                console.warn('XML save API not available');
             }
         } catch (error) {
             console.error('Error saving project as XML:', error);
+            this.showNotification(`Failed to save project: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 保存当前项目
+     */
+    async saveCurrentProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project to save', 'warning');
+            return;
+        }
+        
+        try {
+            // 更新项目修改时间
+            this.currentProject.modified = new Date().toISOString();
+            
+            // 确保项目数据是最新的
+            this.projects.set(this.currentProject.id, this.currentProject);
+            
+            // 保存到localStorage
+            await this.saveProjects();
+            
+            // 保存到XML文件
+            await this.saveProjectAsXML(this.currentProject.id);
+            
+            // 标记项目为已保存
+            this.markProjectAsSaved();
+            
+            this.showNotification(`✅ Project "${this.currentProject.name}" saved successfully`, 'success');
+            console.log(`💾 Project saved: ${this.currentProject.name}`);
+            
+        } catch (error) {
+            console.error('Error saving current project:', error);
             this.showNotification(`Failed to save project: ${error.message}`, 'error');
         }
     }

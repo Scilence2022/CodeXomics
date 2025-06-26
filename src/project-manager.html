@@ -3890,6 +3890,32 @@ Folders: ${project.folders ? project.folders.length : 0}
                             // Save changes to localStorage
                             await this.saveProjects();
 
+                            // 自动保存到XML文件，确保新文件保存到.prj.GAI文件
+                            if (this.currentProject.projectFilePath) {
+                                try {
+                                    if (!this.xmlHandler) {
+                                        this.xmlHandler = new ProjectXMLHandler();
+                                    }
+                                    
+                                    const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
+                                    
+                                    if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
+                                        const saveResult = await window.electronAPI.saveProjectToSpecificFile(
+                                            this.currentProject.projectFilePath, 
+                                            xmlContent
+                                        );
+                                        
+                                        if (saveResult.success) {
+                                            console.log(`✅ Auto-saved project XML with new files: ${this.currentProject.projectFilePath}`);
+                                        } else {
+                                            console.warn('Failed to auto-save project XML:', saveResult.error);
+                                        }
+                                    }
+                                } catch (xmlError) {
+                                    console.error('Error auto-saving project XML:', xmlError);
+                                }
+                            }
+
                             // Create detailed summary message
                             let summaryMessage = `✅ Auto-scan completed: `;
                             const parts = [];
