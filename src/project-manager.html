@@ -483,7 +483,7 @@
             background: rgba(102, 126, 234, 0.1);
             transform: translateX(2px);
         }
-
+        
         .tree-item.active > .tree-item-content {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
             color: #667eea;
@@ -939,7 +939,7 @@
         body.compact-mode .tree-file-size {
             font-size: 9px;
         }
-
+        
         .tree-item.project {
             font-weight: 600;
             border-left: 3px solid #007bff;
@@ -2065,7 +2065,7 @@
                     <span class="toggle-slider"></span>
                     <span class="toggle-label">Simple Mode</span>
                 </label>
-            </div>
+        </div>
         </div>
         <div class="header-actions" id="headerActions">
             <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">
@@ -2108,8 +2108,8 @@
                         <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
                         </svg>
-                    </button>
-                </div>
+                </button>
+            </div>
             </div>
             
             <!-- Tree View Compact Mode Toggle -->
@@ -2399,65 +2399,65 @@
         <div class="context-menu-item" onclick="projectManagerWindow.previewFile(projectManagerWindow.currentContextFileId); projectManagerWindow.hideFileContextMenu();">
             <span class="menu-icon">👁️</span>
             Preview File
-        </div>
+                        </div>
         <div class="context-menu-item" onclick="projectManagerWindow.renameFile(projectManagerWindow.currentContextFileId); projectManagerWindow.hideFileContextMenu();">
             <span class="menu-icon">✏️</span>
             Rename File
-        </div>
+                                </div>
         <div class="context-menu-item" onclick="projectManagerWindow.duplicateFile(projectManagerWindow.currentContextFileId); projectManagerWindow.hideFileContextMenu();">
             <span class="menu-icon">📋</span>
             Duplicate File
-        </div>
+                            </div>
         <div class="context-menu-item" style="color: #dc3545;" onclick="projectManagerWindow.deleteFile(projectManagerWindow.currentContextFileId); projectManagerWindow.hideFileContextMenu();">
             <span class="menu-icon">🗑️</span>
             Delete File
-        </div>
-    </div>
+                                        </div>
+                                    </div>
 
     <!-- Enhanced Folder Creation Modal -->
     <div id="createSubfolderModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
+                        <div class="modal-content">
+                            <div class="modal-header">
                 <h3>📁 Create New Subfolder</h3>
                 <span class="close" onclick="projectManagerWindow.closeModal('createSubfolderModal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
                     <label for="subfolderName">Subfolder Name:</label>
                     <input type="text" id="subfolderName" placeholder="Enter subfolder name..." />
-                </div>
-                <div class="form-group">
+                                </div>
+                                <div class="form-group">
                     <label for="subfolderIcon">Icon:</label>
                     <select id="subfolderIcon">
-                        <option value="📁">📁 Default Folder</option>
-                        <option value="🧬">🧬 Genomes</option>
-                        <option value="📋">📋 Annotations</option>
-                        <option value="🔄">🔄 Variants</option>
+                                        <option value="📁">📁 Default Folder</option>
+                                        <option value="🧬">🧬 Genomes</option>
+                                        <option value="📋">📋 Annotations</option>
+                                        <option value="🔄">🔄 Variants</option>
                         <option value="📊">📊 Reads</option>
-                        <option value="📈">📈 Analysis</option>
+                                        <option value="📈">📈 Analysis</option>
                         <option value="🔬">🔬 Experiments</option>
                         <option value="📚">📚 Documentation</option>
                         <option value="⚙️">⚙️ Tools</option>
                         <option value="🎯">🎯 Results</option>
-                    </select>
-                </div>
-                <div class="form-group">
+                                    </select>
+                                </div>
+                                <div class="form-group">
                     <label for="subfolderDescription">Description (optional):</label>
                     <textarea id="subfolderDescription" placeholder="Brief description of this folder's purpose..." rows="2"></textarea>
-                </div>
+                                </div>
                 <div class="form-group">
                     <label>Location:</label>
                     <div id="currentFolderPath" style="padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px; color: #6c757d;">
                         <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="projectManagerWindow.closeModal('createSubfolderModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="projectManagerWindow.createSubfolderFromModal()">Create Subfolder</button>
-            </div>
-        </div>
-    </div>
+                        </div>
+                    </div>
+                        </div>
 
     <script>
         // 全局项目管理器实例
@@ -2468,7 +2468,7 @@
         function toggleCompactMode() {
             if (projectManagerWindow && typeof projectManagerWindow.toggleCompactMode === 'function') {
                 projectManagerWindow.toggleCompactMode();
-            } else {
+                        } else {
                 console.warn('ProjectManagerWindow not ready or toggleCompactMode method not available');
             }
         }
