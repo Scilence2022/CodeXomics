@@ -20,21 +20,21 @@ class ProjectManagerWindow {
         
         // 文件类型定义
         this.fileTypes = {
-            'fasta': { icon: 'GB', color: '#28a745' },
-            'fastq': { icon: 'FQ', color: '#17a2b8' },
-            'gff': { icon: 'GF', color: '#ffc107' },
-            'gtf': { icon: 'GT', color: '#fd7e14' },
-            'vcf': { icon: 'VC', color: '#dc3545' },
-            'sam': { icon: 'SM', color: '#6f42c1' },
-            'bam': { icon: 'BM', color: '#495057' },
-            'bed': { icon: 'BD', color: '#20c997' },
-            'genbank': { icon: 'GB', color: '#28a745' },
-            'embl': { icon: 'EB', color: '#007bff' },
-            'xml': { icon: 'XML', color: '#6c757d' },
-            'json': { icon: 'JS', color: '#f8d7da' },
-            'text': { icon: 'TXT', color: '#6c757d' },
-            'csv': { icon: 'CSV', color: '#e74c3c' },
-            'tsv': { icon: 'TSV', color: '#e67e22' }
+            'fasta': { icon: 'GB', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
+            'fastq': { icon: 'FQ', color: '#17a2b8', extensions: ['.fastq', '.fq'] },
+            'gff': { icon: 'GF', color: '#ffc107', extensions: ['.gff', '.gff3'] },
+            'gtf': { icon: 'GT', color: '#fd7e14', extensions: ['.gtf'] },
+            'vcf': { icon: 'VC', color: '#dc3545', extensions: ['.vcf'] },
+            'sam': { icon: 'SM', color: '#6f42c1', extensions: ['.sam'] },
+            'bam': { icon: 'BM', color: '#495057', extensions: ['.bam'] },
+            'bed': { icon: 'BD', color: '#20c997', extensions: ['.bed'] },
+            'genbank': { icon: 'GB', color: '#28a745', extensions: ['.gb', '.gbk', '.gbff'] },
+            'embl': { icon: 'EB', color: '#007bff', extensions: ['.embl'] },
+            'xml': { icon: 'XML', color: '#6c757d', extensions: ['.xml'] },
+            'json': { icon: 'JS', color: '#f8d7da', extensions: ['.json'] },
+            'text': { icon: 'TXT', color: '#6c757d', extensions: ['.txt', '.text'] },
+            'csv': { icon: 'CSV', color: '#e74c3c', extensions: ['.csv'] },
+            'tsv': { icon: 'TSV', color: '#e67e22', extensions: ['.tsv'] }
         };
         
         this.initialize();
@@ -1144,12 +1144,23 @@ class ProjectManagerWindow {
     }
 
     detectFileType(fileName) {
-        const ext = '.' + fileName.toLowerCase().split('.').pop();
+        if (!fileName || typeof fileName !== 'string') {
+            return 'unknown';
+        }
+        
+        const parts = fileName.toLowerCase().split('.');
+        if (parts.length < 2) {
+            return 'text'; // 没有扩展名的文件默认为文本文件
+        }
+        
+        const ext = '.' + parts.pop();
+        
         for (const [type, config] of Object.entries(this.fileTypes)) {
-            if (config.extensions.includes(ext)) {
+            if (config.extensions && config.extensions.includes(ext)) {
                 return type;
             }
         }
+        
         return 'unknown';
     }
 

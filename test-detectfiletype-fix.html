@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DetectFileType Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 DetectFileType Method Fix Test</h1>
+        <p>Testing the fixed <code>detectFileType</code> method to ensure it handles edge cases properly.</p>
+
+        <div class="test-section">
+            <h3>Problem Description</h3>
+            <p>The error occurred because the <code>detectFileType</code> method tried to access <code>config.extensions.includes(ext)</code> but the <code>fileTypes</code> object was missing the <code>extensions</code> property.</p>
+            <div class="test-result error">
+                <strong>Error:</strong> <code>Cannot read properties of undefined (reading 'includes')</code>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>Fix Applied</h3>
+            <ol>
+                <li>Added <code>extensions</code> property to all file types in the constructor</li>
+                <li>Enhanced <code>detectFileType</code> method with proper null/undefined checks</li>
+                <li>Added fallback handling for files without extensions</li>
+                <li>Added safety check for <code>config.extensions</code> existence</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>Testing detectFileType Method</h3>
+            <div id="testResults"></div>
+            <button onclick="runTests()" style="margin-top: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Run Tests</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Instructions</h3>
+            <ol>
+                <li>The fix has been applied to <code>src/renderer/modules/ProjectManagerWindow.js</code></li>
+                <li>File type definitions now include <code>extensions</code> arrays</li>
+                <li>The <code>detectFileType</code> method now handles edge cases safely</li>
+                <li>Test by opening Project Manager and expanding folder trees</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the fixed fileTypes structure
+        const fileTypes = {
+            'fasta': { icon: 'GB', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
+            'fastq': { icon: 'FQ', color: '#17a2b8', extensions: ['.fastq', '.fq'] },
+            'gff': { icon: 'GF', color: '#ffc107', extensions: ['.gff', '.gff3'] },
+            'gtf': { icon: 'GT', color: '#fd7e14', extensions: ['.gtf'] },
+            'vcf': { icon: 'VC', color: '#dc3545', extensions: ['.vcf'] },
+            'sam': { icon: 'SM', color: '#6f42c1', extensions: ['.sam'] },
+            'bam': { icon: 'BM', color: '#495057', extensions: ['.bam'] },
+            'bed': { icon: 'BD', color: '#20c997', extensions: ['.bed'] },
+            'genbank': { icon: 'GB', color: '#28a745', extensions: ['.gb', '.gbk', '.gbff'] },
+            'embl': { icon: 'EB', color: '#007bff', extensions: ['.embl'] },
+            'xml': { icon: 'XML', color: '#6c757d', extensions: ['.xml'] },
+            'json': { icon: 'JS', color: '#f8d7da', extensions: ['.json'] },
+            'text': { icon: 'TXT', color: '#6c757d', extensions: ['.txt', '.text'] },
+            'csv': { icon: 'CSV', color: '#e74c3c', extensions: ['.csv'] },
+            'tsv': { icon: 'TSV', color: '#e67e22', extensions: ['.tsv'] }
+        };
+
+        // Fixed detectFileType method
+        function detectFileType(fileName) {
+            if (!fileName || typeof fileName !== 'string') {
+                return 'unknown';
+            }
+            
+            const parts = fileName.toLowerCase().split('.');
+            if (parts.length < 2) {
+                return 'text'; // 没有扩展名的文件默认为文本文件
+            }
+            
+            const ext = '.' + parts.pop();
+            
+            for (const [type, config] of Object.entries(fileTypes)) {
+                if (config.extensions && config.extensions.includes(ext)) {
+                    return type;
+                }
+            }
+            
+            return 'unknown';
+        }
+
+        function runTests() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+
+            const testCases = [
+                { input: 'genome.fasta', expected: 'fasta' },
+                { input: 'reads.fastq', expected: 'fastq' },
+                { input: 'annotation.gff', expected: 'gff' },
+                { input: 'variants.vcf', expected: 'vcf' },
+                { input: 'sequence.gb', expected: 'genbank' },
+                { input: 'data.csv', expected: 'csv' },
+                { input: 'README', expected: 'text' }, // no extension
+                { input: '', expected: 'unknown' }, // empty string
+                { input: null, expected: 'unknown' }, // null
+                { input: undefined, expected: 'unknown' }, // undefined
+                { input: 'file.unknown_ext', expected: 'unknown' }, // unknown extension
+                { input: 'file.FA', expected: 'fasta' }, // uppercase
+                { input: 'file.FASTA', expected: 'fasta' } // uppercase
+            ];
+
+            let passedTests = 0;
+            let totalTests = testCases.length;
+
+            testCases.forEach((testCase, index) => {
+                try {
+                    const result = detectFileType(testCase.input);
+                    const passed = result === testCase.expected;
+                    
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = `test-result ${passed ? 'success' : 'error'}`;
+                    resultDiv.innerHTML = `
+                        <strong>Test ${index + 1}:</strong> 
+                        Input: <code>${testCase.input}</code> → 
+                        Expected: <code>${testCase.expected}</code>, 
+                        Got: <code>${result}</code> 
+                        ${passed ? '✅' : '❌'}
+                    `;
+                    resultsDiv.appendChild(resultDiv);
+                    
+                    if (passed) passedTests++;
+                } catch (error) {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'test-result error';
+                    resultDiv.innerHTML = `
+                        <strong>Test ${index + 1} ERROR:</strong> 
+                        Input: <code>${testCase.input}</code> → 
+                        Error: <code>${error.message}</code> ❌
+                    `;
+                    resultsDiv.appendChild(resultDiv);
+                }
+            });
+
+            // Summary
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = `test-result ${passedTests === totalTests ? 'success' : 'error'}`;
+            summaryDiv.innerHTML = `
+                <strong>Summary:</strong> ${passedTests}/${totalTests} tests passed 
+                ${passedTests === totalTests ? '🎉' : '⚠️'}
+            `;
+            resultsDiv.appendChild(summaryDiv);
+        }
+
+        // Run tests on page load
+        window.onload = runTests;
+    </script>
+</body>
+</html> 
