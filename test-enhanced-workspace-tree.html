@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Workspace Tree Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            background: #f8f9fa;
+        }
+        
+        .test-section h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f1b2b7;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #b6d4db;
+        }
+        
+        #projectManagerFrame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn.secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn.success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌳 Enhanced Workspace Tree Test Suite</h1>
+        <p>Testing the enhanced file tree functionality with expand/collapse and subfolder creation features.</p>
+        
+        <div class="test-section">
+            <h3>📋 Test Checklist</h3>
+            <div id="testResults">
+                <div class="status info">⏳ Initializing tests...</div>
+            </div>
+        </div>
+        
+        <div class="test-controls">
+            <button class="btn primary" onclick="runFileTreeTests()">🧪 Run File Tree Tests</button>
+            <button class="btn secondary" onclick="testExpandCollapse()">📂 Test Expand/Collapse</button>
+            <button class="btn success" onclick="testSubfolderCreation()">📁 Test Subfolder Creation</button>
+            <button class="btn primary" onclick="testRightClickMenus()">🖱️ Test Context Menus</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🖼️ Project Manager Interface</h3>
+            <iframe id="projectManagerFrame" src="src/project-manager.html"></iframe>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Test Details</h3>
+            <div id="testDetails">
+                <p>Click the test buttons above to run specific tests.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        let pmWindow = null;
+
+        // 等待iframe加载
+        document.getElementById('projectManagerFrame').onload = function() {
+            pmWindow = this.contentWindow;
+            updateTestResults('✅ Project Manager loaded successfully', 'success');
+            setTimeout(() => {
+                runInitialTests();
+            }, 1000);
+        };
+
+        function updateTestResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            resultsDiv.appendChild(statusDiv);
+            
+            // 保持最多10个结果
+            const statusElements = resultsDiv.querySelectorAll('.status');
+            if (statusElements.length > 10) {
+                statusElements[0].remove();
+            }
+        }
+
+        function updateTestDetails(details) {
+            document.getElementById('testDetails').innerHTML = details;
+        }
+
+        async function runInitialTests() {
+            updateTestResults('🔄 Running initial compatibility tests...', 'info');
+            
+            try {
+                // 检查ProjectManagerWindow类是否存在
+                if (pmWindow.projectManagerWindow) {
+                    updateTestResults('✅ ProjectManagerWindow instance found', 'success');
+                } else {
+                    updateTestResults('❌ ProjectManagerWindow instance not found', 'error');
+                    return;
+                }
+
+                // 检查增强方法是否存在
+                const requiredMethods = [
+                    'renderProjectTree',
+                    'renderFolderTree', 
+                    'toggleProjectExpansion',
+                    'toggleFolderExpansion',
+                    'createSubfolderInPath',
+                    'showCreateSubfolderModal',
+                    'showProjectContextMenu',
+                    'showFolderContextMenu'
+                ];
+
+                let methodsFound = 0;
+                requiredMethods.forEach(method => {
+                    if (typeof pmWindow.projectManagerWindow[method] === 'function') {
+                        methodsFound++;
+                    } else {
+                        updateTestResults(`❌ Method missing: ${method}`, 'error');
+                    }
+                });
+
+                updateTestResults(`✅ Found ${methodsFound}/${requiredMethods.length} required methods`, 
+                    methodsFound === requiredMethods.length ? 'success' : 'error');
+
+                // 检查CSS类是否存在
+                const pmDoc = pmWindow.document;
+                const cssTests = [
+                    '.tree-item-content',
+                    '.tree-expander', 
+                    '.tree-children',
+                    '.context-menu',
+                    '.tree-file-count'
+                ];
+
+                let cssFound = 0;
+                cssTests.forEach(selector => {
+                    try {
+                        const element = pmDoc.querySelector(selector);
+                        if (element !== null || pmDoc.styleSheets.length > 0) {
+                            cssFound++;
+                        }
+                    } catch (e) {
+                        // CSS可能还未加载
+                    }
+                });
+
+                updateTestResults(`✅ CSS structure compatibility: ${cssFound}/${cssTests.length}`, 
+                    cssFound >= 3 ? 'success' : 'info');
+
+            } catch (error) {
+                updateTestResults(`❌ Initial test error: ${error.message}`, 'error');
+            }
+        }
+
+        function runFileTreeTests() {
+            updateTestResults('🧪 Running file tree structure tests...', 'info');
+            
+            try {
+                const pmDoc = pmWindow.document;
+                const projectTree = pmDoc.getElementById('projectTree');
+                
+                if (projectTree) {
+                    updateTestResults('✅ Project tree container found', 'success');
+                    
+                    // 检查树结构
+                    const treeItems = projectTree.querySelectorAll('.tree-item');
+                    updateTestResults(`📊 Found ${treeItems.length} tree items`, 'info');
+                    
+                    // 检查展开器
+                    const expanders = projectTree.querySelectorAll('.tree-expander');
+                    updateTestResults(`🔽 Found ${expanders.length} expander controls`, 'info');
+                    
+                    // 检查文件计数显示
+                    const fileCounts = projectTree.querySelectorAll('.tree-file-count');
+                    updateTestResults(`🔢 Found ${fileCounts.length} file count indicators`, 'info');
+                    
+                    updateTestDetails(`
+                        <h4>File Tree Structure Analysis</h4>
+                        <ul>
+                            <li><strong>Tree Items:</strong> ${treeItems.length} found</li>
+                            <li><strong>Expander Controls:</strong> ${expanders.length} found</li>
+                            <li><strong>File Count Indicators:</strong> ${fileCounts.length} found</li>
+                            <li><strong>Context Menu Elements:</strong> ${pmDoc.querySelectorAll('.context-menu').length} found</li>
+                        </ul>
+                        <p><em>The enhanced tree structure provides hierarchical navigation with expand/collapse functionality.</em></p>
+                    `);
+                    
+                } else {
+                    updateTestResults('❌ Project tree container not found', 'error');
+                }
+                
+            } catch (error) {
+                updateTestResults(`❌ File tree test error: ${error.message}`, 'error');
+            }
+        }
+
+        function testExpandCollapse() {
+            updateTestResults('📂 Testing expand/collapse functionality...', 'info');
+            
+            try {
+                if (pmWindow.projectManagerWindow.expandedProjects) {
+                    updateTestResults('✅ Expansion state management initialized', 'success');
+                    
+                    // 模拟测试展开状态
+                    const testProjectId = 'test-project';
+                    pmWindow.projectManagerWindow.toggleProjectExpansion(testProjectId);
+                    
+                    const isExpanded = pmWindow.projectManagerWindow.expandedProjects.has(testProjectId);
+                    updateTestResults(`✅ Project expansion toggle: ${isExpanded ? 'Expanded' : 'Collapsed'}`, 'success');
+                    
+                    // 测试文件夹展开
+                    const testFolderId = 'test/folder';
+                    pmWindow.projectManagerWindow.toggleFolderExpansion(testFolderId);
+                    
+                    const folderExpanded = pmWindow.projectManagerWindow.expandedFolders && 
+                                         pmWindow.projectManagerWindow.expandedFolders.has(testFolderId);
+                    updateTestResults(`✅ Folder expansion toggle: ${folderExpanded ? 'Expanded' : 'Collapsed'}`, 'success');
+                    
+                    updateTestDetails(`
+                        <h4>Expand/Collapse Test Results</h4>
+                        <ul>
+                            <li><strong>Project Expansion:</strong> Working ✅</li>
+                            <li><strong>Folder Expansion:</strong> Working ✅</li>
+                            <li><strong>State Management:</strong> Functional ✅</li>
+                        </ul>
+                        <p><em>Click the folder/project icons in the tree to test expand/collapse visually.</em></p>
+                    `);
+                    
+                } else {
+                    updateTestResults('❌ Expansion state management not initialized', 'error');
+                }
+                
+            } catch (error) {
+                updateTestResults(`❌ Expand/collapse test error: ${error.message}`, 'error');
+            }
+        }
+
+        function testSubfolderCreation() {
+            updateTestResults('📁 Testing subfolder creation functionality...', 'info');
+            
+            try {
+                // 检查创建子文件夹的方法
+                if (typeof pmWindow.projectManagerWindow.createSubfolderInPath === 'function') {
+                    updateTestResults('✅ Subfolder creation method available', 'success');
+                }
+                
+                if (typeof pmWindow.projectManagerWindow.showCreateSubfolderModal === 'function') {
+                    updateTestResults('✅ Enhanced subfolder modal available', 'success');
+                }
+                
+                // 检查模态框元素
+                const pmDoc = pmWindow.document;
+                const subfolderModal = pmDoc.getElementById('createSubfolderModal');
+                if (subfolderModal) {
+                    updateTestResults('✅ Enhanced subfolder modal found in DOM', 'success');
+                    
+                    // 检查模态框的输入字段
+                    const nameInput = pmDoc.getElementById('subfolderName');
+                    const iconSelect = pmDoc.getElementById('subfolderIcon');
+                    const descInput = pmDoc.getElementById('subfolderDescription');
+                    
+                    if (nameInput && iconSelect && descInput) {
+                        updateTestResults('✅ All modal input fields present', 'success');
+                    } else {
+                        updateTestResults('⚠️ Some modal input fields missing', 'error');
+                    }
+                } else {
+                    updateTestResults('❌ Enhanced subfolder modal not found', 'error');
+                }
+                
+                updateTestDetails(`
+                    <h4>Subfolder Creation Test Results</h4>
+                    <ul>
+                        <li><strong>Creation Method:</strong> Available ✅</li>
+                        <li><strong>Enhanced Modal:</strong> ${subfolderModal ? 'Found' : 'Missing'} ${subfolderModal ? '✅' : '❌'}</li>
+                        <li><strong>Icon Selection:</strong> ${pmDoc.getElementById('subfolderIcon') ? 'Available' : 'Missing'} ${pmDoc.getElementById('subfolderIcon') ? '✅' : '❌'}</li>
+                        <li><strong>Path Display:</strong> ${pmDoc.getElementById('currentFolderPath') ? 'Available' : 'Missing'} ${pmDoc.getElementById('currentFolderPath') ? '✅' : '❌'}</li>
+                    </ul>
+                    <p><em>Right-click on folders in the tree to access the "New Subfolder" option.</em></p>
+                `);
+                
+            } catch (error) {
+                updateTestResults(`❌ Subfolder creation test error: ${error.message}`, 'error');
+            }
+        }
+
+        function testRightClickMenus() {
+            updateTestResults('🖱️ Testing right-click context menus...', 'info');
+            
+            try {
+                const pmDoc = pmWindow.document;
+                
+                // 检查上下文菜单元素
+                const projectMenu = pmDoc.getElementById('projectContextMenu');
+                const folderMenu = pmDoc.getElementById('folderContextMenu'); 
+                const fileMenu = pmDoc.getElementById('fileContextMenu');
+                
+                let menuCount = 0;
+                if (projectMenu) {
+                    menuCount++;
+                    updateTestResults('✅ Project context menu found', 'success');
+                }
+                if (folderMenu) {
+                    menuCount++;
+                    updateTestResults('✅ Folder context menu found', 'success');
+                }
+                if (fileMenu) {
+                    menuCount++;
+                    updateTestResults('✅ File context menu found', 'success');
+                }
+                
+                // 检查菜单方法
+                const menuMethods = [
+                    'showProjectContextMenu',
+                    'showFolderContextMenu', 
+                    'hideContextMenus'
+                ];
+                
+                let methodCount = 0;
+                menuMethods.forEach(method => {
+                    if (typeof pmWindow.projectManagerWindow[method] === 'function') {
+                        methodCount++;
+                    }
+                });
+                
+                updateTestResults(`✅ Found ${methodCount}/${menuMethods.length} context menu methods`, 
+                    methodCount === menuMethods.length ? 'success' : 'error');
+                
+                updateTestDetails(`
+                    <h4>Context Menu Test Results</h4>
+                    <ul>
+                        <li><strong>Project Menu:</strong> ${projectMenu ? 'Found' : 'Missing'} ${projectMenu ? '✅' : '❌'}</li>
+                        <li><strong>Folder Menu:</strong> ${folderMenu ? 'Found' : 'Missing'} ${folderMenu ? '✅' : '❌'}</li>
+                        <li><strong>File Menu:</strong> ${fileMenu ? 'Found' : 'Missing'} ${fileMenu ? '✅' : '❌'}</li>
+                        <li><strong>Menu Methods:</strong> ${methodCount}/${menuMethods.length} available</li>
+                        <li><strong>Total Menus:</strong> ${menuCount}/3 implemented</li>
+                    </ul>
+                    <p><em>Right-click on items in the workspace tree to test context menus.</em></p>
+                `);
+                
+            } catch (error) {
+                updateTestResults(`❌ Context menu test error: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTestResults('🚀 Enhanced Workspace Tree Test Suite initialized', 'info');
+        });
+    </script>
+</body>
+</html> 

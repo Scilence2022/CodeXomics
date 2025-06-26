@@ -9,6 +9,15 @@ class ProjectManagerWindow {
         this.currentPath = [];
         this.selectedFiles = new Set();
         this.searchTerm = '';
+        this.isCompactMode = false; // 添加简约模式状态
+        
+        // 文件树展开状态管理
+        this.expandedProjects = new Set();
+        this.expandedFolders = new Set();
+        
+        // 右键菜单状态
+        this.currentContextProjectId = null;
+        this.currentContextFolderPath = null;
         
         // 文件类型配置
         this.fileTypes = {
@@ -35,6 +44,9 @@ class ProjectManagerWindow {
         this.setupEventListeners();
         this.renderProjectTree();
         this.updateStatusBar('Ready');
+        
+        // 初始化简约模式
+        this.initializeCompactMode();
         
         console.log('Project Manager Window initialized successfully');
     }
@@ -268,7 +280,7 @@ class ProjectManagerWindow {
                 <div style="padding: 20px; text-align: center; color: #6c757d;">
                     <div style="font-size: 2em; margin-bottom: 10px;">📂</div>
                     <div>No projects found</div>
-                    <button class="btn btn-primary" onclick="projectManager.createNewProject()" style="margin-top: 10px; font-size: 12px;">
+                    <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()" style="margin-top: 10px; font-size: 12px;">
                         Create Project
                     </button>
                 </div>
@@ -276,33 +288,314 @@ class ProjectManagerWindow {
         } else {
             this.projects.forEach((project, projectId) => {
                 const isActive = this.currentProject && this.currentProject.id === projectId;
+                const isExpanded = this.expandedProjects && this.expandedProjects.has(projectId);
+                
                 html += `
                     <div class="tree-item project ${isActive ? 'active' : ''}" 
-                         onclick="projectManager.selectProject('${projectId}')"
                          data-project-id="${projectId}">
-                        <div class="tree-icon">📂</div>
-                        <span title="${project.description || project.name}">${project.name}</span>
-                    </div>
+                        <div class="tree-item-content" onclick="projectManagerWindow.selectProject('${projectId}')">
+                            <div class="tree-expander" onclick="event.stopPropagation(); projectManagerWindow.toggleProjectExpansion('${projectId}')" 
+                                 style="visibility: ${project.folders && project.folders.length > 0 ? 'visible' : 'hidden'}">
+                                ${isExpanded ? '📂' : '📁'}
+                            </div>
+                            <div class="tree-icon">🗂️</div>
+                            <span class="tree-label" title="${project.description || project.name}">${project.name}</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showProjectContextMenu(event, '${projectId}')" title="More options">⋯</button>
+                            </div>
+                        </div>
                 `;
                 
-                // 显示文件夹结构（如果项目被选中）
-                if (isActive && project.folders) {
-                    project.folders.forEach(folder => {
-                        const isCurrentPath = this.arraysEqual(this.currentPath, folder.path);
-                        html += `
-                            <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
-                                 onclick="projectManager.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
-                                 style="margin-left: 20px;">
-                                <div class="tree-icon">${folder.icon}</div>
-                                <span>${folder.name}</span>
-                            </div>
-                        `;
-                    });
+                // 显示项目内容（如果项目被选中和展开）
+                if (isActive && isExpanded && project.folders) {
+                    html += '<div class="tree-children">';
+                    html += this.renderFolderTree(project.folders, project.files, 1);
+                    html += '</div>';
                 }
+                
+                html += '</div>';
             });
         }
         
         projectTree.innerHTML = html;
+    }
+
+    /**
+     * 渲染文件夹树结构
+     */
+    renderFolderTree(folders, files, level = 0) {
+        let html = '';
+        const indent = level * 20;
+        
+        // 首先渲染文件夹
+        folders.forEach(folder => {
+            const isCurrentPath = this.arraysEqual(this.currentPath, folder.path);
+            const folderId = folder.path.join('/');
+            const isExpanded = this.expandedFolders && this.expandedFolders.has(folderId);
+            
+            // 获取该文件夹下的文件
+            const folderFiles = files.filter(file => 
+                file.folder && this.arraysEqual(file.folder, folder.path)
+            );
+            
+            // 获取该文件夹下的子文件夹
+            const subFolders = folders.filter(f => 
+                f.path.length === folder.path.length + 1 && 
+                this.arraysEqual(f.path.slice(0, -1), folder.path)
+            );
+            
+            const hasChildren = folderFiles.length > 0 || subFolders.length > 0;
+            
+            html += `
+                <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
+                     style="margin-left: ${indent}px;"
+                     data-folder-path="${JSON.stringify(folder.path).replace(/"/g, '&quot;')}">
+                    <div class="tree-item-content">
+                        <div class="tree-expander" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}')"
+                             style="visibility: ${hasChildren ? 'visible' : 'hidden'}">
+                            ${isExpanded ? '📂' : '📁'}
+                        </div>
+                        <div class="tree-icon">${folder.icon || '📁'}</div>
+                        <span class="tree-label" onclick="projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})">${folder.name}</span>
+                        <div class="tree-file-count">${folderFiles.length}</div>
+                        <div class="tree-actions">
+                            <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFolderContextMenu(event, ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})" title="More options">⋯</button>
+                        </div>
+                    </div>
+            `;
+            
+            // 如果文件夹展开，显示其内容
+            if (isExpanded && hasChildren) {
+                html += '<div class="tree-children">';
+                
+                // 显示子文件夹
+                if (subFolders.length > 0) {
+                    html += this.renderFolderTree(subFolders, files, level + 1);
+                }
+                
+                // 显示文件
+                folderFiles.forEach(file => {
+                    const fileType = this.detectFileType(file.name);
+                    const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+                    const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
+                    
+                    html += `
+                        <div class="tree-item file ${isSelected ? 'selected' : ''}" 
+                             style="margin-left: ${(level + 1) * 20}px;"
+                             data-file-id="${file.id}">
+                            <div class="tree-item-content" onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)">
+                                <div class="tree-expander" style="visibility: hidden;"></div>
+                                <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: 8px; width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
+                                <span class="tree-label" title="${file.name}">${file.name}</span>
+                                <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
+                                <div class="tree-actions">
+                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">👁️</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+        });
+        
+        return html;
+    }
+
+    /**
+     * 切换项目展开状态
+     */
+    toggleProjectExpansion(projectId) {
+        if (!this.expandedProjects) {
+            this.expandedProjects = new Set();
+        }
+        
+        if (this.expandedProjects.has(projectId)) {
+            this.expandedProjects.delete(projectId);
+        } else {
+            this.expandedProjects.add(projectId);
+        }
+        
+        this.renderProjectTree();
+    }
+
+    /**
+     * 切换文件夹展开状态
+     */
+    toggleFolderExpansion(folderId) {
+        if (!this.expandedFolders) {
+            this.expandedFolders = new Set();
+        }
+        
+        if (this.expandedFolders.has(folderId)) {
+            this.expandedFolders.delete(folderId);
+        } else {
+            this.expandedFolders.add(folderId);
+        }
+        
+        this.renderProjectTree();
+    }
+
+    /**
+     * 选择项目时自动展开
+     */
+    selectProject(projectId) {
+        this.currentProject = this.projects.get(projectId);
+        this.currentPath = [];
+        
+        if (this.currentProject) {
+            this.currentProject.metadata.lastOpened = new Date().toISOString();
+            
+            // 自动展开选中的项目
+            if (!this.expandedProjects) {
+                this.expandedProjects = new Set();
+            }
+            this.expandedProjects.add(projectId);
+            
+            // 更新UI
+            this.renderProjectContent();
+            this.updateActiveTreeItem(projectId);
+            this.updateContentTitle();
+            
+            // 显示项目内容
+            document.getElementById('projectOverview').style.display = 'none';
+            document.getElementById('projectContent').style.display = 'block';
+            
+            this.updateStatusBar(`Opened: ${this.currentProject.name}`);
+            this.saveProjects(); // 保存最后打开时间
+            
+            // 更新详细信息面板
+            this.updateDetailsPanel();
+            
+            // 自动刷新Projects & Workspaces显示
+            this.autoRefreshProjectsAndWorkspaces();
+        }
+    }
+
+    /**
+     * 增强的创建子文件夹功能
+     */
+    createSubfolderInPath(parentPath = null) {
+        if (!this.currentProject) {
+            this.showNotification('Please select a project first', 'warning');
+            return;
+        }
+
+        const basePath = parentPath || this.currentPath;
+        const folderName = prompt(`Enter new subfolder name${basePath.length > 0 ? ` in ${basePath.join('/')}` : ''}:`);
+        
+        if (!folderName || !folderName.trim()) return;
+
+        // Create proper folder path
+        const newPath = [...basePath, folderName.trim().toLowerCase()];
+            
+        const folder = {
+            name: folderName.trim(),
+            icon: '📁',
+            path: newPath,
+            files: [],  
+            created: new Date().toISOString(),
+            custom: true,  
+            parent: basePath.length > 0 ? basePath : null
+        };
+
+        // Check if folder already exists
+        const existingFolder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, newPath)
+        );
+        
+        if (existingFolder) {
+            this.showNotification(`Folder "${folderName}" already exists at this location`, 'warning');
+            return;
+        }
+
+        this.currentProject.folders.push(folder);
+        this.currentProject.modified = new Date().toISOString();
+        
+        // 自动展开父文件夹
+        if (basePath.length > 0) {
+            if (!this.expandedFolders) {
+                this.expandedFolders = new Set();
+            }
+            this.expandedFolders.add(basePath.join('/'));
+        }
+        
+        // Add to project history
+        if (!this.currentProject.history) {
+            this.currentProject.history = [];
+        }
+        this.currentProject.history.unshift({
+            timestamp: new Date().toISOString(),
+            action: 'subfolder-created',
+            description: `Created subfolder "${folderName}" in ${basePath.length > 0 ? basePath.join('/') : 'root'}`
+        });
+        
+        this.saveProjects();
+        
+        // Also save as XML if possible to ensure persistence
+        if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+            this.saveProjectAsXML();
+        }
+        
+        this.renderProjectTree();
+        this.showNotification(`Subfolder "${folderName}" created successfully`, 'success');
+        
+        console.log(`📁 Created subfolder: ${folderName} at path: ${newPath.join('/')}`);
+    }
+
+    /**
+     * 右键菜单相关方法
+     */
+    showProjectContextMenu(event, projectId) {
+        event.preventDefault();
+        this.currentContextProjectId = projectId;
+        const menu = document.getElementById('projectContextMenu');
+        this.showContextMenu(menu, event);
+    }
+
+    showFolderContextMenu(event, folderPath) {
+        event.preventDefault();
+        this.currentContextFolderPath = folderPath;
+        const menu = document.getElementById('folderContextMenu');
+        this.showContextMenu(menu, event);
+    }
+
+    showContextMenu(menu, event) {
+        // 隐藏所有上下文菜单
+        document.querySelectorAll('.context-menu').forEach(m => m.style.display = 'none');
+        
+        // 显示指定菜单
+        menu.style.display = 'block';
+        menu.style.left = (event.clientX + 10) + 'px';
+        menu.style.top = (event.clientY + 10) + 'px';
+
+        // 确保菜单在视窗内
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            menu.style.left = (event.clientX - rect.width) + 'px';
+        }
+        if (rect.bottom > window.innerHeight) {
+            menu.style.top = (event.clientY - rect.height) + 'px';
+        }
+    }
+
+    hideContextMenus() {
+        document.querySelectorAll('.context-menu').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+
+    /**
+     * 增强的addSubfolder方法
+     */
+    addSubfolder() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        this.createSubfolderInPath(this.currentContextFolderPath);
     }
 
     navigateToFolder(path) {
@@ -2387,6 +2680,573 @@ Built with ❤️ for the bioinformatics community.
         `.trim();
         
         alert(about);
+    }
+    
+    // ====== 简约模式管理 ======
+    
+    toggleCompactMode() {
+        this.isCompactMode = !this.isCompactMode;
+        
+        const body = document.body;
+        const headerActions = document.getElementById('headerActions');
+        const headerActionsCompact = document.getElementById('headerActionsCompact');
+        const compactToggle = document.getElementById('compactModeToggle');
+        
+        if (this.isCompactMode) {
+            // 启用简约模式
+            body.classList.add('compact-mode');
+            headerActions.style.display = 'none';
+            headerActionsCompact.style.display = 'flex';
+            compactToggle.checked = true;
+            
+            // 更新状态栏信息
+            this.updateStatusBar('Simple Mode: Showing workspace only');
+            
+            // 保存简约模式状态
+            this.saveCompactModePreference(true);
+            
+            console.log('🎯 Compact mode enabled - showing workspace only');
+        } else {
+            // 禁用简约模式
+            body.classList.remove('compact-mode');
+            headerActions.style.display = 'flex';
+            headerActionsCompact.style.display = 'none';
+            compactToggle.checked = false;
+            
+            // 恢复正常状态栏信息
+            if (this.currentProject) {
+                this.updateStatusBar(`Project: ${this.currentProject.name}`);
+            } else {
+                this.updateStatusBar('Ready');
+            }
+            
+            // 保存简约模式状态
+            this.saveCompactModePreference(false);
+            
+            console.log('🎯 Compact mode disabled - showing full interface');
+        }
+        
+        // 添加视觉反馈
+        this.showNotification(
+            this.isCompactMode ? 'Simple Mode enabled' : 'Full interface restored', 
+            'info'
+        );
+    }
+    
+    saveCompactModePreference(isCompact) {
+        try {
+            localStorage.setItem('projectManager_compactMode', JSON.stringify(isCompact));
+        } catch (error) {
+            console.error('Failed to save compact mode preference:', error);
+        }
+    }
+    
+    loadCompactModePreference() {
+        try {
+            const saved = localStorage.getItem('projectManager_compactMode');
+            if (saved !== null) {
+                const isCompact = JSON.parse(saved);
+                if (isCompact !== this.isCompactMode) {
+                    // 延迟应用模式，确保DOM已加载
+                    setTimeout(() => {
+                        this.toggleCompactMode();
+                    }, 100);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load compact mode preference:', error);
+        }
+    }
+    
+    initializeCompactMode() {
+        // 在页面加载时应用保存的简约模式设置
+        this.loadCompactModePreference();
+        
+        // 确保toggle按钮状态正确
+        setTimeout(() => {
+            const compactToggle = document.getElementById('compactModeToggle');
+            if (compactToggle) {
+                compactToggle.checked = this.isCompactMode;
+            }
+        }, 200);
+    }
+
+    /**
+     * 显示增强的子文件夹创建模态框
+     */
+    showCreateSubfolderModal(parentPath = null) {
+        const basePath = parentPath || this.currentContextFolderPath || this.currentPath;
+        
+        // 更新模态框中的当前路径显示
+        const pathDisplay = document.getElementById('currentFolderPath');
+        if (pathDisplay) {
+            if (basePath && basePath.length > 0) {
+                pathDisplay.textContent = `${this.currentProject.name}/${basePath.join('/')}`;
+            } else {
+                pathDisplay.textContent = `${this.currentProject.name} (root)`;
+            }
+        }
+        
+        // 清空表单
+        document.getElementById('subfolderName').value = '';
+        document.getElementById('subfolderIcon').value = '📁';
+        document.getElementById('subfolderDescription').value = '';
+        
+        // 显示模态框
+        document.getElementById('createSubfolderModal').style.display = 'block';
+        
+        // 聚焦到名称输入框
+        setTimeout(() => {
+            document.getElementById('subfolderName').focus();
+        }, 100);
+    }
+
+    /**
+     * 从增强模态框创建子文件夹
+     */
+    createSubfolderFromModal() {
+        const folderName = document.getElementById('subfolderName').value.trim();
+        const folderIcon = document.getElementById('subfolderIcon').value;
+        const folderDescription = document.getElementById('subfolderDescription').value.trim();
+        
+        if (!folderName) {
+            this.showNotification('Please enter a folder name', 'warning');
+            return;
+        }
+
+        const basePath = this.currentContextFolderPath || this.currentPath;
+        const newPath = [...basePath, folderName.toLowerCase()];
+            
+        const folder = {
+            name: folderName,
+            icon: folderIcon,
+            path: newPath,
+            files: [],
+            description: folderDescription || null,
+            created: new Date().toISOString(),
+            custom: true,
+            parent: basePath.length > 0 ? basePath : null
+        };
+
+        // Check if folder already exists
+        const existingFolder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, newPath)
+        );
+        
+        if (existingFolder) {
+            this.showNotification(`Folder "${folderName}" already exists at this location`, 'warning');
+            return;
+        }
+
+        this.currentProject.folders.push(folder);
+        this.currentProject.modified = new Date().toISOString();
+        
+        // 自动展开父文件夹
+        if (basePath.length > 0) {
+            if (!this.expandedFolders) {
+                this.expandedFolders = new Set();
+            }
+            this.expandedFolders.add(basePath.join('/'));
+        }
+        
+        // Add to project history
+        if (!this.currentProject.history) {
+            this.currentProject.history = [];
+        }
+        this.currentProject.history.unshift({
+            timestamp: new Date().toISOString(),
+            action: 'subfolder-created',
+            description: `Created subfolder "${folderName}" (${folderIcon}) in ${basePath.length > 0 ? basePath.join('/') : 'root'}`
+        });
+        
+        this.saveProjects();
+        
+        // Also save as XML if possible to ensure persistence
+        if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+            this.saveProjectAsXML();
+        }
+        
+        this.closeModal('createSubfolderModal');
+        this.renderProjectTree();
+        this.showNotification(`Subfolder "${folderName}" created successfully`, 'success');
+        
+        console.log(`📁 Created enhanced subfolder: ${folderName} (${folderIcon}) at path: ${newPath.join('/')}`);
+    }
+
+    /**
+     * 改进的addSubfolder方法，使用增强模态框
+     */
+    addSubfolder() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        this.showCreateSubfolderModal(this.currentContextFolderPath);
+    }
+
+    /**
+     * 文件右键菜单
+     */
+    showFileContextMenu(event, fileId) {
+        event.preventDefault();
+        this.currentContextFileId = fileId;
+        const menu = document.getElementById('fileContextMenu');
+        this.showContextMenu(menu, event);
+    }
+
+    hideFileContextMenu() {
+        const menu = document.getElementById('fileContextMenu');
+        if (menu) menu.style.display = 'none';
+    }
+
+    /**
+     * 预览文件方法
+     */
+    async previewFile(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        try {
+            // 这里可以根据文件类型调用不同的预览方法
+            const fileType = this.detectFileType(file.name);
+            
+            if (window.electronAPI && window.electronAPI.openFileInMainWindow) {
+                const result = await window.electronAPI.openFileInMainWindow(file.path);
+                if (result.success) {
+                    this.showNotification(`Opened "${file.name}" for preview`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
+            } else {
+                this.showNotification(`Preview: ${file.name} (${fileType})`, 'info');
+            }
+        } catch (error) {
+            console.error('Error previewing file:', error);
+            this.showNotification('Failed to preview file', 'error');
+        }
+    }
+
+    /**
+     * 重命名文件方法
+     */
+    async renameFile(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        const newName = prompt(`Rename file "${file.name}" to:`, file.name);
+        if (!newName || newName.trim() === file.name) return;
+
+        try {
+            file.name = newName.trim();
+            file.modified = new Date().toISOString();
+            
+            this.currentProject.modified = new Date().toISOString();
+            this.saveProjects();
+            
+            this.renderProjectTree();
+            this.renderProjectContent(); // 更新主视图
+            this.showNotification(`File renamed to "${newName}"`, 'success');
+            
+        } catch (error) {
+            console.error('Error renaming file:', error);
+            this.showNotification('Failed to rename file', 'error');
+        }
+    }
+
+    /**
+     * 删除文件方法
+     */
+    async deleteFile(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+
+        try {
+            // 从项目中移除文件
+            this.currentProject.files = this.currentProject.files.filter(f => f.id !== fileId);
+            
+            // 从选择列表中移除
+            this.selectedFiles.delete(fileId);
+            
+            this.currentProject.modified = new Date().toISOString();
+            this.saveProjects();
+            
+            this.renderProjectTree();
+            this.renderProjectContent(); // 更新主视图
+            this.showNotification(`File "${file.name}" deleted`, 'success');
+            
+        } catch (error) {
+            console.error('Error deleting file:', error);
+            this.showNotification('Failed to delete file', 'error');
+        }
+    }
+
+    /**
+     * 复制文件方法
+     */
+    async duplicateFile(fileId) {
+        const file = this.findFileById(fileId);
+        if (!file) return;
+
+        try {
+            const fileName = file.name;
+            const fileExtension = fileName.lastIndexOf('.') > 0 ? fileName.substring(fileName.lastIndexOf('.')) : '';
+            const baseName = fileExtension ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
+            const newName = `${baseName}_copy${fileExtension}`;
+            
+            const duplicatedFile = {
+                ...file,
+                id: this.generateId(),
+                name: newName,
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            
+            this.currentProject.files.push(duplicatedFile);
+            this.currentProject.modified = new Date().toISOString();
+            this.saveProjects();
+            
+            this.renderProjectTree();
+            this.renderProjectContent(); // 更新主视图
+            this.showNotification(`File duplicated as "${newName}"`, 'success');
+            
+        } catch (error) {
+            console.error('Error duplicating file:', error);
+            this.showNotification('Failed to duplicate file', 'error');
+        }
+    }
+
+    /**
+     * 增强的文件夹操作方法
+     */
+    renameProject() {
+        this.hideContextMenus();
+        if (!this.currentContextProjectId) return;
+        
+        const project = this.projects.get(this.currentContextProjectId);
+        if (!project) return;
+        
+        const newName = prompt('Enter new project name:', project.name);
+        if (newName && newName.trim() && newName.trim() !== project.name) {
+            project.name = newName.trim();
+            project.modified = new Date().toISOString();
+            this.projects.set(this.currentContextProjectId, project);
+            this.saveProjects();
+            this.renderProjectTree();
+            this.showNotification(`Project renamed to "${newName}"`, 'success');
+        }
+    }
+
+    deleteProject() {
+        this.hideContextMenus();
+        if (!this.currentContextProjectId) return;
+        
+        const project = this.projects.get(this.currentContextProjectId);
+        if (!project) return;
+        
+        if (confirm(`Are you sure you want to delete project "${project.name}"? This action cannot be undone.`)) {
+            this.projects.delete(this.currentContextProjectId);
+            
+            // 如果删除的是当前项目，清空当前项目
+            if (this.currentProject && this.currentProject.id === this.currentContextProjectId) {
+                this.currentProject = null;
+                this.currentPath = [];
+                this.selectedFiles.clear();
+                
+                // 显示项目概览
+                document.getElementById('projectOverview').style.display = 'block';
+                document.getElementById('projectContent').style.display = 'none';
+            }
+            
+            this.saveProjects();
+            this.renderProjectTree();
+            this.showNotification(`Project "${project.name}" deleted`, 'success');
+        }
+    }
+
+    duplicateProject() {
+        this.hideContextMenus();
+        if (!this.currentContextProjectId) return;
+        
+        const project = this.projects.get(this.currentContextProjectId);
+        if (!project) return;
+        
+        const newName = prompt('Enter name for duplicated project:', project.name + ' Copy');
+        if (newName && newName.trim()) {
+            const newProject = {
+                ...project,
+                id: this.generateId(),
+                name: newName.trim(),
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            
+            this.projects.set(newProject.id, newProject);
+            this.saveProjects();
+            this.renderProjectTree();
+            this.showNotification(`Project duplicated as "${newName}"`, 'success');
+        }
+    }
+
+    exportProjectAs() {
+        this.hideContextMenus();
+        if (!this.currentContextProjectId) return;
+        
+        const project = this.projects.get(this.currentContextProjectId);
+        if (!project) return;
+        
+        try {
+            if (!this.xmlHandler) {
+                this.xmlHandler = new ProjectXMLHandler();
+            }
+            
+            const xmlContent = this.xmlHandler.projectToXML(project);
+            this.downloadXMLFile(xmlContent, `${project.name}.prj.GAI`);
+            this.showNotification(`Project "${project.name}" exported successfully`, 'success');
+        } catch (error) {
+            console.error('Error exporting project:', error);
+            this.showNotification('Failed to export project', 'error');
+        }
+    }
+
+    showProjectProperties() {
+        this.hideContextMenus();
+        if (!this.currentContextProjectId) return;
+        
+        const project = this.projects.get(this.currentContextProjectId);
+        if (!project) return;
+        
+        const properties = `
+Project: ${project.name}
+Description: ${project.description || 'N/A'}
+Location: ${project.location || 'N/A'}
+Files: ${project.files?.length || 0}
+Folders: ${project.folders?.length || 0}
+Created: ${this.formatDate(project.created)}
+Modified: ${this.formatDate(project.modified)}
+        `.trim();
+        
+                 alert(properties);
+     }
+
+    /**
+     * 下载XML文件方法
+     */
+    downloadXMLFile(xmlContent, filename) {
+        try {
+            if (window.electronAPI && window.electronAPI.saveProjectFile) {
+                // Electron环境
+                window.electronAPI.saveProjectFile(filename, xmlContent);
+            } else {
+                // 浏览器环境
+                const blob = new Blob([xmlContent], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        } catch (error) {
+            console.error('Error downloading XML file:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 文件夹相关的附加方法
+     */
+    renameFolder() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        const folder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, this.currentContextFolderPath)
+        );
+        
+        if (!folder) return;
+        
+        const newName = prompt('Enter new folder name:', folder.name);
+        if (newName && newName.trim() && newName.trim() !== folder.name) {
+            folder.name = newName.trim();
+            this.currentProject.modified = new Date().toISOString();
+            this.saveProjects();
+            this.renderProjectTree();
+            this.showNotification(`Folder renamed to "${newName}"`, 'success');
+        }
+    }
+
+    deleteFolder() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        const folder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, this.currentContextFolderPath)
+        );
+        
+        if (!folder) return;
+        
+        // 检查文件夹是否包含文件
+        const filesInFolder = this.currentProject.files.filter(file => 
+            file.folder && this.arraysEqual(file.folder, this.currentContextFolderPath)
+        );
+        
+        const confirmMessage = filesInFolder.length > 0 
+            ? `Are you sure you want to delete folder "${folder.name}" and its ${filesInFolder.length} file(s)? This action cannot be undone.`
+            : `Are you sure you want to delete folder "${folder.name}"?`;
+        
+        if (confirm(confirmMessage)) {
+            // 删除文件夹中的所有文件
+            this.currentProject.files = this.currentProject.files.filter(file => 
+                !file.folder || !this.arraysEqual(file.folder, this.currentContextFolderPath)
+            );
+            
+            // 删除文件夹
+            this.currentProject.folders = this.currentProject.folders.filter(f => 
+                !this.arraysEqual(f.path, this.currentContextFolderPath)
+            );
+            
+            // 如果当前在被删除的文件夹中，回到根目录
+            if (this.arraysEqual(this.currentPath, this.currentContextFolderPath)) {
+                this.currentPath = [];
+            }
+            
+            this.currentProject.modified = new Date().toISOString();
+            this.saveProjects();
+            this.renderProjectTree();
+            this.renderProjectContent();
+            this.showNotification(`Folder "${folder.name}" deleted`, 'success');
+        }
+    }
+
+    addFilesToFolder() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        // 临时设置当前路径为文件夹路径，然后调用添加文件
+        const originalPath = this.currentPath;
+        this.currentPath = this.currentContextFolderPath;
+        
+        this.addFiles().then(() => {
+            // 恢复原始路径
+            this.currentPath = originalPath;
+        });
+    }
+
+    openFolderInExplorer() {
+        this.hideContextMenus();
+        if (!this.currentContextFolderPath || !this.currentProject) return;
+        
+        const folder = this.currentProject.folders.find(f => 
+            this.arraysEqual(f.path, this.currentContextFolderPath)
+        );
+        
+        if (!folder) return;
+        
+        // 这里可以添加打开系统文件管理器的逻辑
+        this.showNotification(`Would open folder "${folder.name}" in file explorer`, 'info');
     }
 }
 
