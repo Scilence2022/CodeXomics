@@ -929,7 +929,7 @@ function createMenu() {
       ]
     }] : []),
     {
-      label: 'Project',
+      label: 'File',
       submenu: [
         {
           label: 'New Project',
@@ -1400,49 +1400,6 @@ function createMenu() {
             role: 'front'
           }
         ] : [])
-      ]
-    },
-    {
-      label: 'Download',
-      submenu: [
-        {
-          label: 'NCBI Databases',
-          click: () => {
-            createGenomicDownloadWindow('ncbi-unified');
-          }
-        },
-        {
-          label: 'EMBL-EBI Databases',
-          click: () => {
-            createGenomicDownloadWindow('embl-unified');
-          }
-        },
-        {
-          label: 'DDBJ Sequences',
-          click: () => {
-            createGenomicDownloadWindow('ddbj-sequences');
-          }
-        },
-        {
-          label: 'UniProt Proteins',
-          click: () => {
-            createGenomicDownloadWindow('uniprot-proteins');
-          }
-        },
-        {
-          label: 'KEGG Pathways',
-          click: () => {
-            createGenomicDownloadWindow('kegg-pathways');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Bulk Download Manager',
-          accelerator: 'CmdOrCtrl+Shift+D',
-          click: () => {
-            createGenomicDownloadWindow('bulk-manager');
-          }
-        }
       ]
     },
     {
@@ -3887,51 +3844,6 @@ function createProjectManagerMenu(projectManagerWindow) {
           label: 'About Project Manager',
           click: () => {
             projectManagerWindow.webContents.send('menu-about');
-          }
-        }
-      ]
-    },
-    
-    // Download Menu - copied from main window
-    {
-      label: 'Download',
-      submenu: [
-        {
-          label: 'NCBI Databases',
-          click: () => {
-            createGenomicDownloadWindow('ncbi-unified');
-          }
-        },
-        {
-          label: 'EMBL-EBI Databases',
-          click: () => {
-            createGenomicDownloadWindow('embl-unified');
-          }
-        },
-        {
-          label: 'DDBJ Sequences',
-          click: () => {
-            createGenomicDownloadWindow('ddbj-sequences');
-          }
-        },
-        {
-          label: 'UniProt Proteins',
-          click: () => {
-            createGenomicDownloadWindow('uniprot-proteins');
-          }
-        },
-        {
-          label: 'KEGG Pathways',
-          click: () => {
-            createGenomicDownloadWindow('kegg-pathways');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Bulk Download Manager',
-          accelerator: 'CmdOrCtrl+Shift+D',
-          click: () => {
-            createGenomicDownloadWindow('bulk-manager');
           }
         }
       ]
