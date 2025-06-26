@@ -1020,6 +1020,9 @@ class ProjectManager {
                     this.currentProject.modified = new Date().toISOString();
                     this.projects.set(this.currentProject.id, this.currentProject);
 
+                    // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
+                    this.markProjectAsModified();
+
                     // Save changes to both localStorage and XML
                     await this.saveProjects();
                     
@@ -1427,6 +1430,73 @@ class ProjectManager {
             }
         } catch (error) {
             console.error('Error loading settings:', error);
+        }
+    }
+
+    // ====== 项目状态管理方法 ======
+    
+    /**
+     * 标记项目为已修改
+     */
+    markProjectAsModified() {
+        if (!this.currentProject) return;
+        
+        this.currentProject.hasUnsavedChanges = true;
+        this.currentProject.modified = new Date().toISOString();
+        
+        // 保存到本地存储
+        this.projects.set(this.currentProject.id, this.currentProject);
+        this.saveProjects();
+        
+        // 更新保存按钮状态
+        this.updateSaveButtonState();
+        
+        console.log('📝 Project marked as modified (changes buffered)');
+    }
+    
+    /**
+     * 标记项目为已保存
+     */
+    markProjectAsSaved() {
+        if (!this.currentProject) return;
+        
+        this.currentProject.hasUnsavedChanges = false;
+        
+        // 保存到本地存储
+        this.projects.set(this.currentProject.id, this.currentProject);
+        this.saveProjects();
+        
+        this.updateSaveButtonState();
+        
+        console.log('💾 Project marked as saved');
+    }
+    
+    /**
+     * 更新保存按钮状态
+     */
+    updateSaveButtonState() {
+        const saveBtn = document.querySelector('[onclick*="saveCurrentProject"]') || 
+                       document.querySelector('.save-btn') ||
+                       document.querySelector('[title*="Save"]');
+        
+        if (!saveBtn) return;
+        
+        const hasChanges = this.currentProject && this.currentProject.hasUnsavedChanges;
+        
+        if (hasChanges) {
+            saveBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
+            saveBtn.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4)';
+            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save *' : 'Save *';
+            saveBtn.title = 'Save project - You have unsaved changes';
+            
+            // 添加脉冲动画
+            saveBtn.style.animation = 'pulse 2s infinite';
+        } else {
+            saveBtn.style.background = 'linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)';
+            saveBtn.style.boxShadow = '0 4px 15px rgba(54, 209, 220, 0.4)';
+            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save' : 'Save';
+            saveBtn.title = 'Save current project';
+            saveBtn.style.animation = '';
         }
     }
 }

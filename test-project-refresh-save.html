@@ -120,6 +120,8 @@
                 <button class="btn btn-warning" onclick="checkState()">📊 检查状态</button>
                 <button class="btn" onclick="simulateRefresh()">🔄 模拟Refresh</button>
                 <button class="btn btn-danger" onclick="clearTest()">🗑️ 清除测试</button>
+                <button class="btn" onclick="checkSaveButton()">💾 检查保存按钮</button>
+                <button class="btn" onclick="debugMethods()">🔍 调试方法</button>
             </div>
         </div>
 
@@ -250,6 +252,61 @@ await this.saveProjects();
             } else {
                 alert('没有找到模拟文件');
             }
+        }
+        
+        function checkSaveButton() {
+            const saveBtn = document.querySelector('[onclick*="saveCurrentProject"]') || 
+                           document.querySelector('.save-btn') ||
+                           document.querySelector('[title*="Save"]');
+            
+            if (!saveBtn) {
+                alert('❌ 未找到保存按钮');
+                return;
+            }
+            
+            const hasChanges = window.projectManagerWindow?.currentProject?.hasUnsavedChanges;
+            const buttonText = saveBtn.innerHTML || saveBtn.textContent;
+            const buttonStyle = saveBtn.style.background || 'default';
+            
+            alert('保存按钮状态：\n\n' +
+                  '按钮文本: ' + buttonText + '\n' +
+                  '背景颜色: ' + buttonStyle + '\n' +
+                  '项目有未保存更改: ' + (hasChanges ? '是' : '否') + '\n' +
+                  '按钮标题: ' + (saveBtn.title || 'none'));
+        }
+        
+        function debugMethods() {
+            if (!window.projectManagerWindow) {
+                alert('❌ ProjectManagerWindow未找到');
+                return;
+            }
+            
+            const methods = [
+                'markProjectAsModified',
+                'markProjectAsSaved', 
+                'updateSaveButtonState',
+                'scanAndAddNewFiles',
+                'saveCurrentProject',
+                'refreshProjects'
+            ];
+            
+            let report = '方法检查报告：\n\n';
+            methods.forEach(method => {
+                const exists = typeof window.projectManagerWindow[method] === 'function';
+                report += (exists ? '✅' : '❌') + ' ' + method + '\n';
+            });
+            
+            // 检查项目状态
+            if (window.projectManagerWindow.currentProject) {
+                const project = window.projectManagerWindow.currentProject;
+                report += '\n项目状态：\n';
+                report += '名称: ' + project.name + '\n';
+                report += '文件数: ' + (project.files?.length || 0) + '\n';
+                report += '未保存更改: ' + (project.hasUnsavedChanges ? '是' : '否') + '\n';
+                report += '最后修改: ' + (project.modified || 'unknown') + '\n';
+            }
+            
+            alert(report);
         }
     </script>
 </body>

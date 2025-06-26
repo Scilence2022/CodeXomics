@@ -1009,6 +1009,9 @@ class ProjectManagerWindow {
                     this.currentProject.modified = new Date().toISOString();
                     this.projects.set(this.currentProject.id, this.currentProject);
 
+                    // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
+                    this.markProjectAsModified();
+
                     // Save changes to both localStorage and XML
                     await this.saveProjects();
                     
@@ -1105,15 +1108,34 @@ class ProjectManagerWindow {
         }
     }
 
-    saveCurrentProject() {
+    async saveCurrentProject() {
         if (!this.currentProject) {
             this.showNotification('No project to save', 'warning');
             return;
         }
         
-        this.currentProject.modified = new Date().toISOString();
-        this.saveProjects();
-        this.showNotification(`Project "${this.currentProject.name}" saved successfully`, 'success');
+        try {
+            // 更新项目修改时间
+            this.currentProject.modified = new Date().toISOString();
+            
+            // 保存到localStorage
+            await this.saveProjects();
+            
+            // 如果有XML文件路径，也保存到XML文件
+            if (this.currentProject.xmlFilePath || this.currentProject.projectFilePath) {
+                await this.saveProjectAsXML();
+            }
+            
+            // 标记项目为已保存
+            this.markProjectAsSaved();
+            
+            this.showNotification(`✅ Project "${this.currentProject.name}" saved successfully`, 'success');
+            console.log(`💾 Project saved: ${this.currentProject.name}`);
+            
+        } catch (error) {
+            console.error('Error saving current project:', error);
+            this.showNotification(`Failed to save project: ${error.message}`, 'error');
+        }
     }
 
     async saveProjectAs() {
@@ -2175,6 +2197,75 @@ Last modified: ${this.formatDate(file.modified)}
 
         this.showNotification('✅ Test project created with sample files! Try right-clicking on files to see the context menu.', 'success');
     }
+
+    // ====== 项目状态管理方法 ======
+    
+    /**
+     * 标记项目为已修改
+     */
+    markProjectAsModified() {
+        if (!this.currentProject) return;
+        
+        this.currentProject.hasUnsavedChanges = true;
+        this.currentProject.modified = new Date().toISOString();
+        
+        // 保存到本地存储
+        this.projects.set(this.currentProject.id, this.currentProject);
+        this.saveProjects();
+        
+        // 更新保存按钮状态
+        this.updateSaveButtonState();
+        
+        console.log('📝 Project marked as modified (changes buffered)');
+    }
+    
+    /**
+     * 标记项目为已保存
+     */
+    markProjectAsSaved() {
+        if (!this.currentProject) return;
+        
+        this.currentProject.hasUnsavedChanges = false;
+        
+        // 保存到本地存储
+        this.projects.set(this.currentProject.id, this.currentProject);
+        this.saveProjects();
+        
+        this.updateSaveButtonState();
+        
+        console.log('💾 Project marked as saved');
+    }
+    
+    /**
+     * 更新保存按钮状态
+     */
+    updateSaveButtonState() {
+        const saveBtn = document.querySelector('[onclick*="saveCurrentProject"]') || 
+                       document.querySelector('.save-btn') ||
+                       document.querySelector('[title*="Save"]');
+        
+        if (!saveBtn) return;
+        
+        const hasChanges = this.currentProject && this.currentProject.hasUnsavedChanges;
+        
+        if (hasChanges) {
+            saveBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
+            saveBtn.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4)';
+            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save *' : 'Save *';
+            saveBtn.title = 'Save project - You have unsaved changes';
+            
+            // 添加脉冲动画
+            saveBtn.style.animation = 'pulse 2s infinite';
+        } else {
+            saveBtn.style.background = 'linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)';
+            saveBtn.style.boxShadow = '0 4px 15px rgba(54, 209, 220, 0.4)';
+            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save' : 'Save';
+            saveBtn.title = 'Save current project';
+            saveBtn.style.animation = '';
+        }
+    }
+
+    // ====== 菜单系统功能实现 ======
 }
 
 // 确保类在全局范围内可用
