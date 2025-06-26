@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced File Operations Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-section h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .feature-list li:before {
+            content: "✅ ";
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Project Manager Enhanced File Operations</h1>
+        
+        <div class="test-section">
+            <h3>🎯 实现的功能增强</h3>
+            <ul class="feature-list">
+                <li><strong>取消最小宽度限制:</strong> Project Manager 窗口可以自由调整到任意宽度</li>
+                <li><strong>双击文件打开:</strong> 双击文件树中的文件在主窗口 Genome AI Studio 中打开</li>
+                <li><strong>眼睛按钮预览:</strong> 点击 👁️ 按钮显示文件预览弹窗，而不是在主窗口打开</li>
+                <li><strong>单击选择不变:</strong> 单击文件仍然是选择功能</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 实施的代码修改</h3>
+            <pre><code>1. main.js 修改:
+   - 移除了 minWidth: 1000 设置
+   - Project Manager 窗口现在可以自由调整宽度
+
+2. ProjectManagerWindow.js 修改:
+   - 文件项添加了 ondblclick 事件处理
+   - 眼睛按钮改为调用 showFilePreview() 方法
+   - 实现了新的预览模态框系统
+   - 添加了文件类型特定的预览内容
+
+3. 文件操作行为:
+   - 单击: selectFile() - 选择文件
+   - 双击: openFileInMainWindow() - 在主窗口打开文件  
+   - 眼睛按钮: showFilePreview() - 显示预览弹窗</code></pre>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 测试步骤</h3>
+            <ol>
+                <li><strong>启动应用:</strong> 运行 <code>npm start</code></li>
+                <li><strong>打开 Project Manager:</strong> File → Project Manager</li>
+                <li><strong>测试窗口调整:</strong> 尝试将窗口宽度调整到很小 ✅ 应该可以自由调整</li>
+                <li><strong>测试文件操作:</strong>
+                    <ul>
+                        <li>单击文件 → 选择文件</li>
+                        <li>双击文件 → 在主窗口打开</li>
+                        <li>点击 👁️ → 显示预览弹窗</li>
+                    </ul>
+                </li>
+                <li><strong>验证预览功能:</strong> 预览弹窗应显示文件信息和内容示例</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>✨ 新预览功能特点</h3>
+            <ul class="feature-list">
+                <li>美观的模态框界面设计</li>
+                <li>显示文件详细信息（名称、类型、大小、修改时间）</li>
+                <li>根据文件类型显示示例内容（FASTA、GFF、VCF、GenBank等）</li>
+                <li>"Open in Main Window" 按钮用于实际打开文件</li>
+                <li>可通过多种方式关闭（X按钮、Close按钮、点击背景）</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 完成状态</h3>
+            <p><strong>所有要求都已实现:</strong></p>
+            <ul class="feature-list">
+                <li>✅ 取消了 Project Manager 的最小宽度设置</li>
+                <li>✅ 双击文件在主窗口 Genome AI Studio 中打开</li>
+                <li>✅ 眼睛按钮功能改为真正的预览，显示预览弹窗</li>
+                <li>✅ 保持单击选择文件的原有功能</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html> 

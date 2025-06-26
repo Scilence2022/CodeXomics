@@ -9,26 +9,32 @@ class ProjectManagerWindow {
         this.currentPath = [];
         this.selectedFiles = new Set();
         this.searchTerm = '';
-        this.isCompactMode = false; // 添加简约模式状态
-        
-        // 文件树展开状态管理
+        this.currentViewMode = 'grid';
+        this.detailsPanelVisible = false;
         this.expandedProjects = new Set();
         this.expandedFolders = new Set();
         
-        // 右键菜单状态
-        this.currentContextProjectId = null;
-        this.currentContextFolderPath = null;
+        // 紧凑模式状态
+        this.compactTreeMode = false;
+        this.ultraCompactMode = false;
         
-        // 文件类型配置
+        // 文件类型定义
         this.fileTypes = {
-            'fasta': { icon: 'FA', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
-            'gff': { icon: 'GFF', color: '#17a2b8', extensions: ['.gff', '.gff3', '.gtf'] },
-            'vcf': { icon: 'VCF', color: '#ffc107', extensions: ['.vcf'] },
-            'bam': { icon: 'BAM', color: '#6f42c1', extensions: ['.bam', '.sam'] },
-            'wig': { icon: 'WIG', color: '#fd7e14', extensions: ['.wig', '.bw', '.bigwig'] },
-            'bed': { icon: 'BED', color: '#dc3545', extensions: ['.bed'] },
-            'genbank': { icon: 'GB', color: '#20c997', extensions: ['.gb', '.gbk', '.gbff'] },
-            'folder': { icon: '📁', color: '#6c757d', extensions: [] }
+            'fasta': { icon: 'GB', color: '#28a745' },
+            'fastq': { icon: 'FQ', color: '#17a2b8' },
+            'gff': { icon: 'GF', color: '#ffc107' },
+            'gtf': { icon: 'GT', color: '#fd7e14' },
+            'vcf': { icon: 'VC', color: '#dc3545' },
+            'sam': { icon: 'SM', color: '#6f42c1' },
+            'bam': { icon: 'BM', color: '#495057' },
+            'bed': { icon: 'BD', color: '#20c997' },
+            'genbank': { icon: 'GB', color: '#28a745' },
+            'embl': { icon: 'EB', color: '#007bff' },
+            'xml': { icon: 'XML', color: '#6c757d' },
+            'json': { icon: 'JS', color: '#f8d7da' },
+            'text': { icon: 'TXT', color: '#6c757d' },
+            'csv': { icon: 'CSV', color: '#e74c3c' },
+            'tsv': { icon: 'TSV', color: '#e67e22' }
         };
         
         this.initialize();
@@ -47,6 +53,9 @@ class ProjectManagerWindow {
         
         // 初始化简约模式
         this.initializeCompactMode();
+        
+        // 初始化树视图事件和设置
+        this.initializeTreeViewEvents();
         
         console.log('Project Manager Window initialized successfully');
     }
@@ -325,7 +334,14 @@ class ProjectManagerWindow {
      */
     renderFolderTree(folders, files, level = 0) {
         let html = '';
-        const indent = level * 20;
+        // 根据当前模式决定缩进大小
+        let baseIndent = 20;
+        if (this.ultraCompactMode) {
+            baseIndent = 8;
+        } else if (this.compactTreeMode) {
+            baseIndent = 12;
+        }
+        const indent = level * baseIndent;
         
         // 首先渲染文件夹
         folders.forEach(folder => {
@@ -378,16 +394,28 @@ class ProjectManagerWindow {
                     const fileType = this.detectFileType(file.name);
                     const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
                     const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
+                    const fileIndent = (level + 1) * baseIndent;
+                    
+                    // 动态调整文件图标大小
+                    let iconSize = '16px';
+                    let fontSize = '8px';
+                    if (this.ultraCompactMode) {
+                        iconSize = '10px';
+                        fontSize = '6px';
+                    } else if (this.compactTreeMode) {
+                        iconSize = '12px';
+                        fontSize = '7px';
+                    }
                     
                     html += `
                         <div class="tree-item file ${isSelected ? 'selected' : ''}" 
-                             style="margin-left: ${(level + 1) * 20}px;"
+                             style="margin-left: ${fileIndent}px;"
                              data-file-id="${file.id}">
                             <div class="tree-item-content" 
                                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                                  ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')">
                                 <div class="tree-expander" style="visibility: hidden;"></div>
-                                <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: 8px; width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
+                                <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: ${fontSize}; width: ${iconSize}; height: ${iconSize}; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
                                 <span class="tree-label" title="${file.name}">${file.name}</span>
                                 <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
                                 <div class="tree-actions">
@@ -3492,6 +3520,122 @@ Size: ${this.formatFileSize(file.size || 0)}
 To view this file, click "Open in Main Window".`;
 
         container.innerHTML = `<pre style="white-space: pre-wrap; margin: 0; color: #333;">${content}</pre>`;
+    }
+
+    /**
+     * 切换紧凑树视图模式
+     */
+    toggleCompactTreeMode() {
+        this.compactTreeMode = !this.compactTreeMode;
+        
+        const sidebar = document.querySelector('.sidebar-content');
+        const compactToggle = document.getElementById('compactTreeToggle');
+        
+        if (this.compactTreeMode) {
+            sidebar.classList.add('compact-tree-mode');
+            if (compactToggle) compactToggle.checked = true;
+            this.showNotification('Compact tree view enabled', 'success');
+        } else {
+            sidebar.classList.remove('compact-tree-mode');
+            sidebar.classList.remove('ultra-compact-mode');
+            if (compactToggle) compactToggle.checked = false;
+            this.ultraCompactMode = false;
+            this.showNotification('Normal tree view enabled', 'success');
+        }
+        
+        // 保存设置到localStorage
+        this.saveTreeViewPreference();
+        
+        console.log(`Tree view mode: ${this.compactTreeMode ? 'compact' : 'normal'}`);
+    }
+
+    /**
+     * 切换超级紧凑模式（双击紧凑模式切换按钮触发）
+     */
+    toggleUltraCompactMode() {
+        if (!this.compactTreeMode) {
+            this.toggleCompactTreeMode();
+        }
+        
+        this.ultraCompactMode = !this.ultraCompactMode;
+        const sidebar = document.querySelector('.sidebar-content');
+        
+        if (this.ultraCompactMode) {
+            sidebar.classList.add('ultra-compact-mode');
+            this.showNotification('Ultra compact tree view enabled', 'success');
+        } else {
+            sidebar.classList.remove('ultra-compact-mode');
+            this.showNotification('Compact tree view enabled', 'success');
+        }
+        
+        this.saveTreeViewPreference();
+        console.log(`Ultra compact mode: ${this.ultraCompactMode ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * 保存树视图偏好设置
+     */
+    saveTreeViewPreference() {
+        const preferences = {
+            compactTreeMode: this.compactTreeMode,
+            ultraCompactMode: this.ultraCompactMode
+        };
+        localStorage.setItem('projectManagerTreeViewPreferences', JSON.stringify(preferences));
+    }
+
+    /**
+     * 加载树视图偏好设置
+     */
+    loadTreeViewPreference() {
+        try {
+            const stored = localStorage.getItem('projectManagerTreeViewPreferences');
+            if (stored) {
+                const preferences = JSON.parse(stored);
+                this.compactTreeMode = preferences.compactTreeMode || false;
+                this.ultraCompactMode = preferences.ultraCompactMode || false;
+                
+                // 应用设置到UI
+                const sidebar = document.querySelector('.sidebar-content');
+                const compactToggle = document.getElementById('compactTreeToggle');
+                
+                if (this.compactTreeMode) {
+                    sidebar.classList.add('compact-tree-mode');
+                    if (compactToggle) compactToggle.checked = true;
+                }
+                
+                if (this.ultraCompactMode) {
+                    sidebar.classList.add('ultra-compact-mode');
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load tree view preferences:', error);
+            this.compactTreeMode = false;
+            this.ultraCompactMode = false;
+        }
+    }
+
+    /**
+     * 初始化紧凑模式相关事件监听
+     */
+    initializeTreeViewEvents() {
+        const compactToggle = document.getElementById('compactTreeToggle');
+        if (compactToggle) {
+            // 双击切换超级紧凑模式
+            compactToggle.addEventListener('dblclick', () => {
+                this.toggleUltraCompactMode();
+            });
+            
+            // 添加键盘快捷键支持 (Ctrl+Shift+T)
+            document.addEventListener('keydown', (event) => {
+                if (event.ctrlKey && event.shiftKey && event.key === 'T') {
+                    event.preventDefault();
+                    this.toggleCompactTreeMode();
+                }
+            });
+        }
+        
+        // 加载保存的设置
+        this.loadTreeViewPreference();
     }
 }
 

@@ -1393,6 +1393,60 @@ function createMenu() {
             }
           }
         },
+        { type: 'separator' },
+        {
+          label: 'Window Layout',
+          submenu: [
+            {
+              label: 'Optimal Layout (Main 75% + Project Manager 25%)',
+              accelerator: 'CmdOrCtrl+Alt+L',
+              click: () => {
+                arrangeWindowsOptimal();
+              }
+            },
+            {
+              label: 'Side by Side (50% + 50%)',
+              accelerator: 'CmdOrCtrl+Alt+S',
+              click: () => {
+                arrangeWindowsSideBySide();
+              }
+            },
+            {
+              label: 'Main Window Focus',
+              accelerator: 'CmdOrCtrl+Alt+M',
+              click: () => {
+                arrangeMainWindowFocus();
+              }
+            },
+            {
+              label: 'Project Manager Focus',
+              accelerator: 'CmdOrCtrl+Alt+P',
+              click: () => {
+                arrangeProjectManagerFocus();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Stack Vertically',
+              click: () => {
+                arrangeWindowsVertical();
+              }
+            },
+            {
+              label: 'Cascade Windows',
+              click: () => {
+                arrangeWindowsCascade();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Reset to Default Positions',
+              click: () => {
+                resetWindowPositions();
+              }
+            }
+          ]
+        },
         ...(process.platform === 'darwin' ? [
           { type: 'separator' },
           {
@@ -5598,3 +5652,985 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
     }
   });
 }); 
+
+// ========== WINDOW LAYOUT MANAGEMENT FUNCTIONS ==========
+
+/**
+ * 获取主显示器的工作区域
+ */
+function getDisplayWorkArea() {
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  return primaryDisplay.workAreaSize;
+}
+
+/**
+ * 获取主窗口和Project Manager窗口
+ */
+function getMainWindows() {
+  const allWindows = BrowserWindow.getAllWindows();
+  
+  const mainWindow = allWindows.find(win => 
+    win.getTitle().includes('Genome AI Studio') && 
+    !win.getTitle().includes('Project Manager') &&
+    !win.isDestroyed()
+  );
+  
+  const projectManagerWindow = allWindows.find(win => 
+    win.getTitle().includes('Project Manager') && 
+    !win.isDestroyed()
+  );
+  
+  return { mainWindow, projectManagerWindow };
+}
+
+/**
+ * 最优布局：主窗口右侧75%，Project Manager左侧25%
+ */
+function arrangeWindowsOptimal() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) {
+    console.log('Main window not found');
+    return;
+  }
+  
+  const workArea = getDisplayWorkArea();
+  const totalWidth = workArea.width;
+  const totalHeight = workArea.height;
+  
+  // 计算窗口尺寸
+  const pmWidth = Math.floor(totalWidth * 0.25); // Project Manager 25%
+  const mainWidth = totalWidth - pmWidth;        // Main Window 75%
+  
+  // 设置主窗口位置和大小
+  mainWindow.setBounds({
+    x: pmWidth,
+    y: 0,
+    width: mainWidth,
+    height: totalHeight
+  });
+  
+  // 如果Project Manager存在，设置其位置和大小
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 0,
+      y: 0,
+      width: pmWidth,
+      height: totalHeight
+    });
+  } else {
+    // 如果Project Manager不存在，创建它
+    const newPMWindow = createProjectManagerWindow();
+    if (newPMWindow) {
+      newPMWindow.once('ready-to-show', () => {
+        newPMWindow.setBounds({
+          x: 0,
+          y: 0,
+          width: pmWidth,
+          height: totalHeight
+        });
+      });
+    }
+  }
+  
+  // 聚焦到主窗口
+  mainWindow.focus();
+  
+  console.log('🎯 Optimal layout applied: Main 75% + Project Manager 25%');
+}
+
+/**
+ * 并排布局：50% + 50%
+ */
+function arrangeWindowsSideBySide() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) return;
+  
+  const workArea = getDisplayWorkArea();
+  const halfWidth = Math.floor(workArea.width * 0.5);
+  
+  // 主窗口右侧50%
+  mainWindow.setBounds({
+    x: halfWidth,
+    y: 0,
+    width: halfWidth,
+    height: workArea.height
+  });
+  
+  // Project Manager左侧50%
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 0,
+      y: 0,
+      width: halfWidth,
+      height: workArea.height
+    });
+  } else {
+    const newPMWindow = createProjectManagerWindow();
+    if (newPMWindow) {
+      newPMWindow.once('ready-to-show', () => {
+        newPMWindow.setBounds({
+          x: 0,
+          y: 0,
+          width: halfWidth,
+          height: workArea.height
+        });
+      });
+    }
+  }
+  
+  mainWindow.focus();
+  console.log('📐 Side by side layout applied: 50% + 50%');
+}
+
+/**
+ * 主窗口聚焦模式：主窗口占85%，Project Manager占15%
+ */
+function arrangeMainWindowFocus() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) return;
+  
+  const workArea = getDisplayWorkArea();
+  const pmWidth = Math.floor(workArea.width * 0.15);
+  const mainWidth = workArea.width - pmWidth;
+  
+  mainWindow.setBounds({
+    x: pmWidth,
+    y: 0,
+    width: mainWidth,
+    height: workArea.height
+  });
+  
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 0,
+      y: 0,
+      width: pmWidth,
+      height: workArea.height
+    });
+  }
+  
+  mainWindow.focus();
+  console.log('🎯 Main window focus layout applied: Main 85% + PM 15%');
+}
+
+/**
+ * Project Manager聚焦模式：Project Manager占60%，主窗口占40%
+ */
+function arrangeProjectManagerFocus() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) return;
+  
+  const workArea = getDisplayWorkArea();
+  const pmWidth = Math.floor(workArea.width * 0.6);
+  const mainWidth = workArea.width - pmWidth;
+  
+  mainWindow.setBounds({
+    x: pmWidth,
+    y: 0,
+    width: mainWidth,
+    height: workArea.height
+  });
+  
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 0,
+      y: 0,
+      width: pmWidth,
+      height: workArea.height
+    });
+    projectManagerWindow.focus();
+  } else {
+    const newPMWindow = createProjectManagerWindow();
+    if (newPMWindow) {
+      newPMWindow.once('ready-to-show', () => {
+        newPMWindow.setBounds({
+          x: 0,
+          y: 0,
+          width: pmWidth,
+          height: workArea.height
+        });
+        newPMWindow.focus();
+      });
+    }
+  }
+  
+  console.log('📊 Project Manager focus layout applied: PM 60% + Main 40%');
+}
+
+/**
+ * 垂直堆叠布局
+ */
+function arrangeWindowsVertical() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) return;
+  
+  const workArea = getDisplayWorkArea();
+  const halfHeight = Math.floor(workArea.height * 0.5);
+  
+  // 主窗口上半部分
+  mainWindow.setBounds({
+    x: 0,
+    y: 0,
+    width: workArea.width,
+    height: halfHeight
+  });
+  
+  // Project Manager下半部分
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 0,
+      y: halfHeight,
+      width: workArea.width,
+      height: halfHeight
+    });
+  } else {
+    const newPMWindow = createProjectManagerWindow();
+    if (newPMWindow) {
+      newPMWindow.once('ready-to-show', () => {
+        newPMWindow.setBounds({
+          x: 0,
+          y: halfHeight,
+          width: workArea.width,
+          height: halfHeight
+        });
+      });
+    }
+  }
+  
+  mainWindow.focus();
+  console.log('📚 Vertical stack layout applied');
+}
+
+/**
+ * 层叠布局
+ */
+function arrangeWindowsCascade() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (!mainWindow) return;
+  
+  const workArea = getDisplayWorkArea();
+  const windowWidth = Math.floor(workArea.width * 0.8);
+  const windowHeight = Math.floor(workArea.height * 0.8);
+  const offset = 50;
+  
+  // 主窗口
+  mainWindow.setBounds({
+    x: 0,
+    y: 0,
+    width: windowWidth,
+    height: windowHeight
+  });
+  
+  // Project Manager偏移位置
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: offset,
+      y: offset,
+      width: windowWidth,
+      height: windowHeight
+    });
+  }
+  
+  mainWindow.focus();
+  console.log('🔄 Cascade layout applied');
+}
+
+/**
+ * 重置到默认位置
+ */
+function resetWindowPositions() {
+  const { mainWindow, projectManagerWindow } = getMainWindows();
+  
+  if (mainWindow) {
+    mainWindow.setBounds({
+      x: 100,
+      y: 100,
+      width: 1200,
+      height: 800
+    });
+    mainWindow.center();
+  }
+  
+  if (projectManagerWindow) {
+    projectManagerWindow.setBounds({
+      x: 150,
+      y: 150,
+      width: 1200,
+      height: 800
+    });
+    projectManagerWindow.center();
+  }
+  
+  console.log('🔄 Window positions reset to default');
+}
+
+// ========== END WINDOW LAYOUT FUNCTIONS ==========
+
+function createMenu() {
+  const template = [
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    ...(process.platform === 'darwin' ? [{
+      label: 'Genome AI Studio',
+      submenu: [
+        {
+          label: 'About Genome AI Studio',
+          click: () => {
+            mainWindow.webContents.send('show-about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: () => {
+            mainWindow.webContents.send('general-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide Genome AI Studio',
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit Genome AI Studio',
+          accelerator: 'Cmd+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    }] : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            // Create Project Manager window and trigger new project creation
+            createProjectManagerWindow();
+            // Send event to trigger new project modal after window is ready
+            setTimeout(() => {
+              const projectManagerWindow = BrowserWindow.getAllWindows().find(
+                win => win.getTitle().includes('Project Manager')
+              );
+              if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
+                projectManagerWindow.webContents.send('create-new-project');
+              }
+            }, 500);
+          }
+        },
+        {
+          label: 'Open File',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'All Genome Files', extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'] },
+                { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
+                { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
+                { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
+                { name: 'Variant Files', extensions: ['vcf'] },
+                { name: 'Alignment Files', extensions: ['bam', 'sam'] },
+                { name: 'All Files', extensions: ['*'] }
+              ]
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              mainWindow.webContents.send('file-opened', result.filePaths[0]);
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Project Manager',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            createProjectManagerWindow();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Open Project',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: async () => {
+            // Create or focus Project Manager window first
+            createProjectManagerWindow();
+            
+            // Small delay to ensure window is ready
+            setTimeout(async () => {
+              const result = await dialog.showOpenDialog(null, {
+                properties: ['openFile'],
+                filters: [
+                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+                  { name: 'XML Files', extensions: ['xml'] },
+                  { name: 'Project Files', extensions: ['genomeproj', 'json'] },
+                  { name: 'All Files', extensions: ['*'] }
+                ],
+                title: 'Open Project'
+              });
+              
+              if (!result.canceled && result.filePaths.length > 0) {
+                // Send the file path to the Project Manager window
+                const projectManagerWindow = BrowserWindow.getAllWindows().find(
+                  win => win.getTitle().includes('Project Manager')
+                );
+                if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
+                  projectManagerWindow.webContents.send('load-project-from-menu', result.filePaths[0]);
+                }
+              }
+            }, 100);
+          }
+        },
+        {
+          label: 'Save Project',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            mainWindow.webContents.send('save-current-project');
+          }
+        },
+        {
+          label: 'Save Project As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            mainWindow.webContents.send('save-project-as');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Recent Projects',
+          id: 'recent-projects',
+          submenu: [
+            {
+              label: 'No recent projects',
+              enabled: false
+            }
+          ]
+        },
+        ...(process.platform !== 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Exit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              app.quit();
+            }
+          }
+        ] : [])
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            mainWindow.webContents.send('menu-copy');
+          }
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            mainWindow.webContents.send('menu-paste');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            mainWindow.webContents.send('menu-select-all');
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        {
+          label: 'Show File Information',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'fileInfoSection');
+          }
+        },
+        {
+          label: 'Show Navigation',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'navigationSection');
+          }
+        },
+        {
+          label: 'Show Statistics',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'statisticsSection');
+          }
+        },
+        {
+          label: 'Show All Panels',
+          accelerator: 'CmdOrCtrl+Shift+A',
+          click: () => {
+            mainWindow.webContents.send('show-all-panels');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Show Tracks Panel',
+          accelerator: 'CmdOrCtrl+4',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'tracksSection');
+          }
+        },
+        {
+          label: 'Show Features Panel',
+          accelerator: 'CmdOrCtrl+5',
+          click: () => {
+            mainWindow.webContents.send('show-panel', 'featuresSection');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Resource Manager',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            mainWindow.webContents.send('open-resource-manager');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'Search Sequence',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            mainWindow.webContents.send('show-search');
+          }
+        },
+        {
+          label: 'Go to Position',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => {
+            mainWindow.webContents.send('show-goto');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Circos Genome Plotter',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            createCircosWindow();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Conversation Evolution System',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            createEvolutionWindow();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'CRISPR Guide RNA Design',
+          accelerator: 'CmdOrCtrl+Shift+G',
+          click: () => {
+            createCrisprDesignerWindow();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Visualization Tools',
+          submenu: [
+            {
+              label: 'KGML Pathway Viewer',
+              accelerator: 'CmdOrCtrl+Shift+K',
+              click: () => {
+                createKGMLViewerWindow();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Network Graph Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'network-graph');
+              }
+            },
+            {
+              label: 'Protein Interaction Network',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'protein-interaction-network');
+              }
+            },
+            {
+              label: 'Gene Regulatory Network',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'gene-regulatory-network');
+              }
+            },
+            {
+              label: 'Phylogenetic Tree Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'phylogenetic-tree');
+              }
+            },
+            {
+              label: 'Sequence Alignment Viewer',
+              click: () => {
+                mainWindow.webContents.send('open-visualization-tool', 'sequence-alignment');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Biological Databases',
+          submenu: [
+            {
+              label: 'KEGG Pathway Analysis',
+              accelerator: 'CmdOrCtrl+Shift+K',
+              click: () => {
+                createKEGGWindow();
+              }
+            },
+            {
+              label: 'Gene Ontology (GO) Analyzer',
+              accelerator: 'CmdOrCtrl+Alt+G',
+              click: () => {
+                createGOWindow();
+              }
+            },
+            {
+              label: 'UniProt Database Search',
+              accelerator: 'CmdOrCtrl+Shift+U',
+              click: () => {
+                createUniProtWindow();
+              }
+            },
+            {
+              label: 'InterPro Domain Analysis',
+              accelerator: 'CmdOrCtrl+Shift+I',
+              click: () => {
+                createInterProWindow();
+              }
+            },
+            {
+              label: 'NCBI Database Browser',
+              accelerator: 'CmdOrCtrl+Shift+N',
+              click: () => {
+                createNCBIWindow();
+              }
+            },
+            {
+              label: 'Ensembl Genome Browser',
+              accelerator: 'CmdOrCtrl+Shift+B',
+              click: () => {
+                createEnsemblWindow();
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Analysis Tools',
+          submenu: [
+            {
+              label: 'STRING Protein Networks',
+              accelerator: 'CmdOrCtrl+Shift+S',
+              click: () => {
+                createSTRINGWindow();
+              }
+            },
+            {
+              label: 'DAVID Functional Analysis',
+              accelerator: 'CmdOrCtrl+Shift+D',
+              click: () => {
+                createDAVIDWindow();
+              }
+            },
+            {
+              label: 'Reactome Pathway Browser',
+              accelerator: 'CmdOrCtrl+Shift+R',
+              click: () => {
+                createReactomeWindow();
+              }
+            },
+            {
+              label: 'PDB Structure Viewer',
+              accelerator: 'CmdOrCtrl+Shift+T',
+              click: () => {
+                createPDBWindow();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Evo2 Design',
+              accelerator: 'CmdOrCtrl+Shift+E',
+              click: () => {
+                createEvo2Window();
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      label: 'Options',
+      submenu: [
+        {
+          label: 'Configure LLMs',
+          click: () => {
+            mainWindow.webContents.send('configure-llms');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'ChatBox Settings',
+          click: () => {
+            mainWindow.webContents.send('chatbox-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'MCP Server Settings',
+          click: () => {
+            mainWindow.webContents.send('mcp-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'General Settings',
+          click: () => {
+            mainWindow.webContents.send('general-settings');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Plugins',
+      submenu: [
+        {
+          label: 'Plugin Management',
+          accelerator: 'CmdOrCtrl+Alt+P',
+          click: () => {
+            mainWindow.webContents.send('show-plugin-management');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Smart Execution Demo',
+          click: () => {
+            mainWindow.webContents.send('show-smart-execution-demo');
+          }
+        },
+        {
+          label: 'Plugin Function Calling Test',
+          click: () => {
+            mainWindow.webContents.send('show-plugin-function-calling-test');
+          }
+        }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        {
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          role: 'minimize'
+        },
+        {
+          label: 'Close',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.close();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Window Layout',
+          submenu: [
+            {
+              label: 'Optimal Layout (Main 75% + Project Manager 25%)',
+              accelerator: 'CmdOrCtrl+Alt+L',
+              click: () => {
+                arrangeWindowsOptimal();
+              }
+            },
+            {
+              label: 'Side by Side (50% + 50%)',
+              accelerator: 'CmdOrCtrl+Alt+S',
+              click: () => {
+                arrangeWindowsSideBySide();
+              }
+            },
+            {
+              label: 'Main Window Focus',
+              accelerator: 'CmdOrCtrl+Alt+M',
+              click: () => {
+                arrangeMainWindowFocus();
+              }
+            },
+            {
+              label: 'Project Manager Focus',
+              accelerator: 'CmdOrCtrl+Alt+P',
+              click: () => {
+                arrangeProjectManagerFocus();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Stack Vertically',
+              click: () => {
+                arrangeWindowsVertical();
+              }
+            },
+            {
+              label: 'Cascade Windows',
+              click: () => {
+                arrangeWindowsCascade();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Reset to Default Positions',
+              click: () => {
+                resetWindowPositions();
+              }
+            }
+          ]
+        },
+        ...(process.platform === 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Bring All to Front',
+            role: 'front'
+          }
+        ] : [])
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        ...(process.platform !== 'darwin' ? [
+          {
+                      label: 'About Genome AI Studio',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About Genome AI Studio',
+              message: 'Genome AI Studio v0.2 beta',
+                detail: 'A modern AI-powered genome analysis studio built with Electron'
+              });
+            }
+          },
+          { type: 'separator' }
+        ] : []),
+        {
+          label: 'User Guide',
+          accelerator: 'F1',
+          click: () => {
+            mainWindow.webContents.send('show-user-guide');
+          }
+        },
+        {
+          label: 'Documentation',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/docs');
+          }
+        },
+        {
+          label: 'Report Issue',
+          click: () => {
+            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
+          }
+        }
+      ]
+    },
+    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
+    {
+      label: 'Genome AI Studio',
+      submenu: [
+        {
+          label: 'About Genome AI Studio',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About Genome AI Studio',
+              message: 'Genome AI Studio v0.2 beta',
+              detail: 'An intelligent genome analysis platform with AI-powered features.',
+              buttons: ['OK']
+            });
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Services',
+          role: 'services',
+          submenu: []
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide Genome AI Studio',
+          accelerator: 'Command+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Command+Shift+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit Genome AI Studio',
+          accelerator: 'Command+Q',
+          click: () => app.quit()
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}

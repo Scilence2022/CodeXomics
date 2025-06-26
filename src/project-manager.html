@@ -597,6 +597,194 @@
             font-size: 13px;
         }
 
+        /* ===== 紧凑文件树样式 ===== */
+        .compact-tree-mode {
+            font-size: 12px;
+        }
+
+        .compact-tree-mode .tree-item {
+            margin: 1px 0;
+        }
+
+        .compact-tree-mode .tree-item-content {
+            padding: 4px 8px;
+            min-height: 22px;
+        }
+
+        .compact-tree-mode .tree-item.file .tree-item-content {
+            padding: 3px 8px;
+            min-height: 20px;
+        }
+
+        .compact-tree-mode .tree-expander {
+            width: 12px;
+            height: 12px;
+            font-size: 10px;
+            margin-right: 3px;
+        }
+
+        .compact-tree-mode .tree-icon {
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            font-size: 10px;
+        }
+
+        .compact-tree-mode .tree-icon.file-icon {
+            width: 12px;
+            height: 12px;
+            font-size: 7px;
+            border-radius: 2px;
+        }
+
+        .compact-tree-mode .tree-label {
+            font-size: 12px;
+            margin-right: 4px;
+            line-height: 1.2;
+        }
+
+        .compact-tree-mode .tree-item.file .tree-label {
+            font-size: 11px;
+        }
+
+        .compact-tree-mode .tree-file-count {
+            font-size: 9px;
+            padding: 1px 4px;
+            margin-right: 4px;
+            min-width: 14px;
+        }
+
+        .compact-tree-mode .tree-file-size {
+            font-size: 9px;
+            margin-right: 4px;
+            min-width: 30px;
+        }
+
+        .compact-tree-mode .tree-actions {
+            gap: 1px;
+        }
+
+        .compact-tree-mode .tree-action-btn {
+            padding: 2px 4px;
+            font-size: 9px;
+            border-radius: 3px;
+        }
+
+        .compact-tree-mode .tree-children {
+            margin-left: 6px;
+            padding-left: 2px;
+        }
+
+        /* 紧凑模式下的悬停效果优化 */
+        .compact-tree-mode .tree-item-content:hover {
+            transform: translateX(1px);
+        }
+
+        /* 紧凑模式切换按钮 */
+        .tree-view-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 6px;
+            margin: 8px 12px;
+            font-size: 11px;
+            color: #667eea;
+        }
+
+        .tree-view-toggle label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .tree-view-toggle .toggle-slider {
+            width: 32px;
+            height: 16px;
+        }
+
+        .tree-view-toggle .toggle-slider:before {
+            width: 12px;
+            height: 12px;
+            top: 2px;
+            left: 2px;
+        }
+
+        .tree-view-toggle .toggle-switch input[type="checkbox"]:checked + .toggle-slider:before {
+            transform: translateX(16px);
+        }
+
+        /* 统计信息在紧凑模式下的优化 */
+        .compact-tree-mode .sidebar-header {
+            padding: 12px 16px;
+        }
+
+        .compact-tree-mode .sidebar-header h3 {
+            font-size: 14px;
+        }
+
+        /* 文件夹级别缩进优化 */
+        .compact-tree-mode .tree-item[style*="margin-left: 20px"] {
+            margin-left: 12px !important;
+        }
+
+        .compact-tree-mode .tree-item[style*="margin-left: 40px"] {
+            margin-left: 24px !important;
+        }
+
+        .compact-tree-mode .tree-item[style*="margin-left: 60px"] {
+            margin-left: 36px !important;
+        }
+
+        .compact-tree-mode .tree-item[style*="margin-left: 80px"] {
+            margin-left: 48px !important;
+        }
+
+        /* 响应式优化 - 超级紧凑模式 */
+        .ultra-compact-mode {
+            font-size: 11px;
+        }
+
+        .ultra-compact-mode .tree-item-content {
+            padding: 2px 6px;
+            min-height: 18px;
+        }
+
+        .ultra-compact-mode .tree-item.file .tree-item-content {
+            padding: 2px 6px;
+            min-height: 16px;
+        }
+
+        .ultra-compact-mode .tree-expander {
+            width: 10px;
+            height: 10px;
+            font-size: 8px;
+            margin-right: 2px;
+        }
+
+        .ultra-compact-mode .tree-icon {
+            width: 10px;
+            height: 10px;
+            margin-right: 3px;
+            font-size: 8px;
+        }
+
+        .ultra-compact-mode .tree-label {
+            font-size: 10px;
+            margin-right: 3px;
+        }
+
+        .ultra-compact-mode .tree-file-count,
+        .ultra-compact-mode .tree-file-size {
+            font-size: 8px;
+            margin-right: 3px;
+        }
+
+        .ultra-compact-mode .tree-action-btn {
+            padding: 1px 3px;
+            font-size: 8px;
+        }
+
         /* 上下文菜单样式 */
         .context-menu {
             position: fixed;
@@ -1811,6 +1999,16 @@
                     🔄
                 </button>
             </div>
+            
+            <!-- Tree View Compact Mode Toggle -->
+            <div class="tree-view-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="compactTreeToggle" onchange="projectManagerWindow.toggleCompactTreeMode()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <label for="compactTreeToggle">Compact View</label>
+            </div>
+            
             <div class="sidebar-content">
                 <div id="projectTree">
                     <!-- Project tree will be rendered here -->
