@@ -135,48 +135,56 @@ class FunctionCallsOrganizer {
                 ]
             },
             
-            // 类别8: 插件系统 - 基因组分析插件
-            pluginGenomicAnalysis: {
+            // 类别8: 插件系统V2 - 功能插件（快速执行）
+            pluginFunctions: {
                 priority: 3,
-                description: "Plugin-based genomic analysis functions",
+                description: "Plugin Manager V2 - Function plugins for analysis",
                 functions: [
+                    // Genomic Analysis Plugin V2
                     'genomic-analysis.analyzeGCContent',
                     'genomic-analysis.findMotifs',
                     'genomic-analysis.calculateDiversity',
-                    'genomic-analysis.compareRegions'
-                ]
-            },
-            
-            // 类别9: 插件系统 - 系统发育分析插件
-            pluginPhylogenetic: {
-                priority: 4,
-                description: "Plugin-based phylogenetic analysis functions",
-                functions: [
+                    'genomic-analysis.compareRegions',
+                    
+                    // Phylogenetic Analysis Plugin V2
                     'phylogenetic-analysis.buildPhylogeneticTree',
-                    'phylogenetic-analysis.calculateEvolutionaryDistance'
+                    'phylogenetic-analysis.calculateEvolutionaryDistance',
+                    
+                    // Machine Learning Analysis Plugin V2
+                    'ml-analysis.predictGeneFunction',
+                    'ml-analysis.classifySequence'
                 ]
             },
             
-            // 类别10: 插件系统 - 生物网络分析插件
+            // 类别9: 插件系统V2 - 实用工具插件（高优先级）
+            pluginUtilities: {
+                priority: 2,
+                description: "Plugin Manager V2 - Utility plugins for common tasks",
+                functions: [
+                    'sequence-utils.reverseComplement',
+                    'sequence-utils.translateSequence'
+                ]
+            },
+            
+            // 类别10: 插件系统V2 - 可视化插件（低优先级）
+            pluginVisualizations: {
+                priority: 5,
+                description: "Plugin Manager V2 - Visualization plugins",
+                functions: [
+                    // These are handled by getAvailableVisualizations()
+                    // and rendered automatically with data
+                ]
+            },
+            
+            // 类别11: 生物网络分析（保持向后兼容）
             pluginNetworkAnalysis: {
                 priority: 4,
-                description: "Plugin-based biological network analysis functions",
+                description: "Legacy biological network analysis functions",
                 functions: [
                     'biological-networks.buildProteinInteractionNetwork',
                     'biological-networks.buildGeneRegulatoryNetwork',
                     'biological-networks.analyzeNetworkCentrality',
                     'biological-networks.detectNetworkCommunities'
-                ]
-            },
-            
-            // 类别11: 插件系统 - 机器学习分析插件
-            pluginMachineLearning: {
-                priority: 4,
-                description: "Plugin-based machine learning analysis functions",
-                functions: [
-                    'ml-analysis.predictGeneFunction',
-                    'ml-analysis.classifySequence',
-                    'ml-analysis.clusterSequences'
                 ]
             }
         };

@@ -143,54 +143,82 @@ class ChatManager {
     }
 
     /**
-     * Initialize Plugin Manager integration
+     * Initialize Plugin Manager V2 integration
      */
     initializePluginManager() {
         try {
-            // Check if PluginManager is already available globally
-            if (typeof PluginManager !== 'undefined') {
-                this.pluginManager = new PluginManager(this.app, this.configManager);
-                console.log('PluginManager integrated successfully from global');
+            // Check if PluginManagerV2 is already available globally
+            if (typeof PluginManagerV2 !== 'undefined') {
+                this.pluginManager = new PluginManagerV2(this.app, this.configManager);
+                console.log('🔧 PluginManagerV2 integrated successfully from global');
                 
-                // Listen to plugin events
-                this.pluginManager.on('functionExecuted', (data) => {
-                    console.log('Plugin function executed:', data);
+                // Listen to enhanced plugin events
+                this.pluginManager.on('system-initialized', (data) => {
+                    console.log('🚀 Plugin system initialized:', data);
                 });
                 
-                this.pluginManager.on('visualizationRendered', (data) => {
-                    console.log('Plugin visualization rendered:', data);
+                this.pluginManager.on('function-executed', (data) => {
+                    console.log('✅ Plugin function executed:', data);
                 });
                 
-                this.pluginManager.on('functionError', (data) => {
-                    console.error('Plugin function error:', data);
+                this.pluginManager.on('function-error', (data) => {
+                    console.error('❌ Plugin function error:', data);
                 });
+                
+                this.pluginManager.on('plugin-registered', (data) => {
+                    console.log('📦 Plugin registered:', data);
+                });
+                
             } else {
-                console.warn('PluginManager not available, loading dynamically...');
+                console.warn('PluginManagerV2 not available, loading dynamically...');
                 this.loadPluginManager();
             }
         } catch (error) {
-            console.error('Failed to initialize PluginManager:', error);
+            console.error('Failed to initialize PluginManagerV2:', error);
         }
     }
 
     /**
-     * Load Plugin Manager dynamically
+     * Load Plugin Manager V2 dynamically
      */
     async loadPluginManager() {
         try {
-            // Load plugin system files
-            await this.loadScript('modules/PluginManager.js');
+            // Load new plugin system files in correct order
+            await this.loadScript('modules/PluginAPI.js');
+            await this.loadScript('modules/PluginResourceManager.js');
+            await this.loadScript('modules/PluginManagerV2.js');
+            
+            // Load legacy files for backward compatibility
             await this.loadScript('modules/PluginUtils.js');
             await this.loadScript('modules/PluginImplementations.js');
             await this.loadScript('modules/PluginVisualization.js');
             
             // Initialize after loading
-            if (typeof PluginManager !== 'undefined') {
-                this.pluginManager = new PluginManager(this.app, this.configManager);
-                console.log('PluginManager loaded and initialized successfully');
+            if (typeof PluginManagerV2 !== 'undefined') {
+                this.pluginManager = new PluginManagerV2(this.app, this.configManager);
+                console.log('🚀 PluginManagerV2 loaded and initialized successfully');
             }
         } catch (error) {
-            console.error('Failed to load PluginManager:', error);
+            console.error('Failed to load PluginManagerV2:', error);
+            // Fallback to legacy system if V2 fails
+            console.warn('Attempting fallback to legacy PluginManager...');
+            await this.loadLegacyPluginManager();
+        }
+    }
+
+    /**
+     * Fallback to legacy plugin manager if V2 fails
+     */
+    async loadLegacyPluginManager() {
+        try {
+            await this.loadScript('modules/PluginManager.js');
+            
+            if (typeof PluginManager !== 'undefined') {
+                this.pluginManager = new PluginManager(this.app, this.configManager);
+                console.log('⚠️ Legacy PluginManager loaded as fallback');
+            }
+        } catch (error) {
+            console.error('Failed to load legacy PluginManager as fallback:', error);
         }
     }
 
