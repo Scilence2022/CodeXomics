@@ -3748,6 +3748,47 @@ To view this file, click "Open in Main Window".`;
         // 加载保存的设置
         this.loadHeaderCollapsePreference();
     }
+
+    /**
+     * Update details panel (compatibility method)
+     */
+    updateDetailsPanel() {
+        // This is a compatibility method for details panel functionality
+        // Currently, details panel is not fully implemented
+        console.log('updateDetailsPanel called - details panel not fully implemented');
+    }
+
+    /**
+     * Toggle details panel (compatibility method)
+     */
+    toggleDetailsPanel() {
+        // This is a compatibility method for details panel functionality
+        const detailsPanel = document.getElementById('detailsPanel');
+        const toggle = document.getElementById('detailsPanelToggle');
+        
+        if (detailsPanel && toggle) {
+            const isVisible = detailsPanel.style.display !== 'none';
+            detailsPanel.style.display = isVisible ? 'none' : 'block';
+            toggle.checked = !isVisible;
+            
+            // Save preference
+            localStorage.setItem('projectManager-detailsPanel', !isVisible ? 'open' : 'closed');
+            
+            this.showNotification(`Details panel ${!isVisible ? 'opened' : 'closed'}`, 'info');
+        } else {
+            console.log('toggleDetailsPanel called - details panel elements not found');
+        }
+    }
+
+    /**
+     * Mark project as modified
+     */
+    markProjectAsModified() {
+        if (this.currentProject) {
+            this.currentProject.hasUnsavedChanges = true;
+            this.currentProject.modified = new Date().toISOString();
+        }
+    }
 }
 
 // 确保类在全局范围内可用
