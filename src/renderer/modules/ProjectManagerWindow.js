@@ -1022,37 +1022,25 @@ class ProjectManagerWindow {
 
                     // Update UI
                     this.renderProjectTree();
-                    this.renderProjectContent();
-                    this.updateDetailsPanel();
-
-                    // Create detailed summary message
-                    let summaryMessage = `✅ Auto-scan completed: `;
-                    const parts = [];
-                    if (newFiles.length > 0) {
-                        parts.push(`${newFiles.length} new file${newFiles.length === 1 ? '' : 's'}`);
-                    }
-                    if (newFolders.length > 0) {
-                        parts.push(`${newFolders.length} new folder${newFolders.length === 1 ? '' : 's'}`);
-                    }
-                    summaryMessage += parts.join(' and ') + ' added to project';
+                    this.selectProject(project.id);
                     
-                    this.showNotification(summaryMessage, 'success');
-                    
-                    // Add to project history
-                    if (!this.currentProject.history) {
-                        this.currentProject.history = [];
-                    }
-                    this.currentProject.history.unshift({
-                        timestamp: new Date().toISOString(),
-                        action: 'auto-scan-enhanced',
-                        description: `Auto-discovered ${totalNewItems} new item${totalNewItems === 1 ? '' : 's'}: ${newFiles.length} files, ${newFolders.length} folders`,
-                        details: {
-                            files: newFiles.length,
-                            folders: newFolders.length,
-                            total: totalNewItems,
-                            scanPath: projectPath
+                    // Auto-scan project directory after loading to ensure workspace shows current files
+                    setTimeout(async () => {
+                        console.log('🔄 Auto-scanning project directory after loading...');
+                        // Scan project directory to get latest file structure
+                        await this.scanAndAddNewFiles();
+                        
+                        // Refresh interface display
+                        this.renderProjectTree();
+                        if (this.currentProject) {
+                            this.selectProject(this.currentProject.id);
+                            this.renderProjectContent(); // Ensure workspace content is also refreshed
                         }
-                    });
+                        
+                        console.log('✅ Project workspace updated with current directory structure');
+                    }, 300);
+                    
+                    this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
                     
                     console.log(`📊 Scan Summary:`, {
                         newFiles: newFiles.length,
@@ -2192,6 +2180,22 @@ System Information:
                     // Update UI
                     this.renderProjectTree();
                     this.selectProject(project.id);
+                    
+                    // Auto-scan project directory after loading to ensure workspace shows current files
+                    setTimeout(async () => {
+                        console.log('🔄 Auto-scanning project directory after loading...');
+                        // Scan project directory to get latest file structure
+                        await this.scanAndAddNewFiles();
+                        
+                        // Refresh interface display
+                        this.renderProjectTree();
+                        if (this.currentProject) {
+                            this.selectProject(this.currentProject.id);
+                            this.renderProjectContent(); // Ensure workspace content is also refreshed
+                        }
+                        
+                        console.log('✅ Project workspace updated with current directory structure');
+                    }, 300);
                     
                     this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
                     

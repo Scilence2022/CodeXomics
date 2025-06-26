@@ -2429,13 +2429,21 @@ Folders: ${project.folders ? project.folders.length : 0}
                     this.renderProjectTree();
                     this.selectProject(project.id);
                     
-                    // 修复：项目加载后立即刷新左侧项目树，确保显示Genomes、Annotations等文件夹
-                    setTimeout(() => {
+                    // 修复：项目加载后自动扫描项目目录，确保显示最新的文件夹结构和文件
+                    setTimeout(async () => {
+                        console.log('🔄 Auto-scanning project directory after loading...');
+                        // 扫描项目目录获取最新文件结构
+                        await this.scanAndAddNewFiles();
+                        
+                        // 刷新界面显示
                         this.renderProjectTree();
                         if (this.currentProject) {
                             this.selectProject(this.currentProject.id);
+                            this.renderProjectContent(); // 确保workspace内容也被刷新
                         }
-                    }, 100);
+                        
+                        console.log('✅ Project workspace updated with current directory structure');
+                    }, 300);
                     
                     // 显示成功消息
                     const fileType = fileName.toLowerCase().endsWith('.prj.gai') ? 'XML (.prj.GAI)' : fileExtension.toUpperCase();
