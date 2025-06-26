@@ -3676,8 +3676,12 @@ To view this file, click "Open in Main Window".`;
             
             if (toggleButton) {
                 toggleButton.classList.add('collapsed');
-                toggleButton.innerHTML = '⌄';
                 toggleButton.title = 'Show header';
+                // 更新SVG图标为向上箭头（展开状态）
+                const svgIcon = toggleButton.querySelector('.btn-icon');
+                if (svgIcon) {
+                    svgIcon.innerHTML = '<path d="M8 12l-4.5-4.5L5 6l3 3 3-3 1.5 1.5z"/>';
+                }
             }
             
             this.showNotification('Header collapsed - sidebar-only mode', 'success');
@@ -3690,8 +3694,12 @@ To view this file, click "Open in Main Window".`;
             
             if (toggleButton) {
                 toggleButton.classList.remove('collapsed');
-                toggleButton.innerHTML = '⌃';
                 toggleButton.title = 'Hide header';
+                // 更新SVG图标为向下箭头（折叠状态）
+                const svgIcon = toggleButton.querySelector('.btn-icon');
+                if (svgIcon) {
+                    svgIcon.innerHTML = '<path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>';
+                }
             }
             
             this.showNotification('Header restored - full interface mode', 'success');

@@ -796,39 +796,75 @@
             border-radius: 0 !important;
         }
 
-        /* 折叠切换按钮 */
-        .header-toggle {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(102, 126, 234, 0.9);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            width: 28px;
-            height: 28px;
+        /* Sidebar Header Actions */
+        .sidebar-header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .sidebar-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            color: #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
-        .header-toggle:hover {
-            background: rgba(102, 126, 234, 1);
+        .sidebar-action-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar-action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-action-btn .btn-icon {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-action-btn:hover .btn-icon {
             transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        .header-toggle.collapsed {
-            background: rgba(40, 167, 69, 0.9);
+        /* Header Toggle Button States */
+        .header-toggle-btn.collapsed {
+            background: rgba(40, 167, 69, 0.1);
+            border-color: rgba(40, 167, 69, 0.3);
+            color: #28a745;
         }
 
-        .header-toggle.collapsed:hover {
-            background: rgba(40, 167, 69, 1);
+        .header-toggle-btn.collapsed:hover {
+            background: rgba(40, 167, 69, 0.2);
+            border-color: rgba(40, 167, 69, 0.5);
+        }
+
+        .header-toggle-btn.collapsed .btn-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Refresh Button Animation */
+        .refresh-btn:hover .btn-icon {
+            animation: rotate-refresh 0.5s ease-in-out;
+        }
+
+        @keyframes rotate-refresh {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* 折叠模式下的sidebar样式优化 */
@@ -2061,12 +2097,17 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>Projects & Workspaces</h3>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.refreshProjects()">
-                        🔄
+                <div class="sidebar-header-actions">
+                    <button class="sidebar-action-btn refresh-btn" onclick="projectManagerWindow.refreshProjects()" title="Refresh projects">
+                        <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                        </svg>
                     </button>
-                    <button class="header-toggle" id="headerToggle" onclick="projectManagerWindow.toggleHeaderCollapse()" title="Toggle header visibility">
-                        ⌃
+                    <button class="sidebar-action-btn header-toggle-btn" id="headerToggle" onclick="projectManagerWindow.toggleHeaderCollapse()" title="Toggle header visibility">
+                        <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                        </svg>
                     </button>
                 </div>
             </div>
