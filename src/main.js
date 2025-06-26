@@ -3887,6 +3887,89 @@ function createProjectManagerMenu(projectManagerWindow) {
       ]
     },
     
+    // Window Menu - cloned from main window
+    {
+      label: 'Window',
+      submenu: [
+        {
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          role: 'minimize'
+        },
+        {
+          label: 'Close',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.close();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Window Layout',
+          submenu: [
+            {
+              label: 'Optimal Layout (Main 75% + Project Manager 25%)',
+              accelerator: 'CmdOrCtrl+Alt+L',
+              click: () => {
+                arrangeWindowsOptimal();
+              }
+            },
+            {
+              label: 'Side by Side (50% + 50%)',
+              accelerator: 'CmdOrCtrl+Alt+S',
+              click: () => {
+                arrangeWindowsSideBySide();
+              }
+            },
+            {
+              label: 'Main Window Focus',
+              accelerator: 'CmdOrCtrl+Alt+M',
+              click: () => {
+                arrangeMainWindowFocus();
+              }
+            },
+            {
+              label: 'Project Manager Focus',
+              accelerator: 'CmdOrCtrl+Alt+P',
+              click: () => {
+                arrangeProjectManagerFocus();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Stack Vertically',
+              click: () => {
+                arrangeWindowsVertical();
+              }
+            },
+            {
+              label: 'Cascade Windows',
+              click: () => {
+                arrangeWindowsCascade();
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Reset to Default Positions',
+              click: () => {
+                resetWindowPositions();
+              }
+            }
+          ]
+        },
+        ...(process.platform === 'darwin' ? [
+          { type: 'separator' },
+          {
+            label: 'Bring All to Front',
+            role: 'front'
+          }
+        ] : [])
+      ]
+    },
+    
     // Help Menu
     {
       label: 'Help',
