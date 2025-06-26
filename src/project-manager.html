@@ -3278,6 +3278,10 @@ Folders: ${project.folders ? project.folders.length : 0}
                 this.projects.set(this.currentProject.id, this.currentProject);
                 this.saveProjects();
                 
+                // 更新项目树状态显示
+                this.renderProjectTree();
+                this.updateSaveButtonState();
+                
                 console.log('📝 Project marked as modified (changes buffered)');
             }
             
@@ -5374,15 +5378,6 @@ Use specialized tools to view the full content.`;
                 }
             }
 
-            // 标记项目为已修改
-            markProjectAsModified() {
-                if (this.currentProject) {
-                    this.currentProject.hasUnsavedChanges = true;
-                    this.currentProject.modified = new Date().toISOString();
-                    this.updateProjectTreeItemStatus();
-                }
-            }
-
             // 刷新当前视图
             refreshCurrentView() {
                 switch (this.viewMode) {
@@ -5396,6 +5391,10 @@ Use specialized tools to view the full content.`;
                         this.renderFileDetails();
                         break;
                 }
+                
+                // 更新统计信息
+                this.renderProjectStats();
+                this.updateFileCountDisplay();
             }
 
             // 创建测试项目
