@@ -3239,7 +3239,31 @@ function createProjectManagerWindow() {
     
     // Create Project Manager specific menu
     const projectManagerMenu = createProjectManagerMenu(projectManagerWindow);
+    
+    // Set the menu immediately for this window
     projectManagerWindow.setMenu(projectManagerMenu);
+    
+    // Override application menu when this window is focused
+    projectManagerWindow.on('focus', () => {
+      console.log('Project Manager window focused - setting Project Manager menu');
+      Menu.setApplicationMenu(projectManagerMenu);
+    });
+    
+    // Handle window focus lost - revert to main menu if main window exists
+    projectManagerWindow.on('blur', () => {
+      const mainWindow = BrowserWindow.getAllWindows().find(win => 
+        win.getTitle().includes('Genome AI Studio') && !win.getTitle().includes('Project Manager')
+      );
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        console.log('Project Manager window lost focus - reverting to main menu');
+        // Only revert if the main window is focused
+        setTimeout(() => {
+          if (mainWindow.isFocused()) {
+            createMenu(); // Restore main window menu
+          }
+        }, 100);
+      }
+    });
     
     // Load the project manager HTML
     const projectManagerPath = path.join(__dirname, 'project-manager.html');
@@ -3251,17 +3275,30 @@ function createProjectManagerWindow() {
       return;
     }
     
-    // Show window when ready
+    // Show window when ready and ensure menu is set
     projectManagerWindow.once('ready-to-show', () => {
       projectManagerWindow.show();
+      // Force menu update after window is shown
+      setTimeout(() => {
+        console.log('Setting Project Manager menu after window ready');
+        Menu.setApplicationMenu(projectManagerMenu);
+      }, 500);
     });
     
-    // Handle window closed
+    // Handle window closed - revert to main menu
     projectManagerWindow.on('closed', () => {
-      console.log('Project Manager window closed');
+      console.log('Project Manager window closed - reverting to main menu');
+      const mainWindow = BrowserWindow.getAllWindows().find(win => 
+        win.getTitle().includes('Genome AI Studio') && !win.getTitle().includes('Project Manager')
+      );
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        createMenu(); // Restore main window menu
+      }
     });
     
-    console.log('Project Manager window created successfully');
+    console.log('Project Manager window created successfully with independent menu');
+    
+    return projectManagerWindow;
     
   } catch (error) {
     console.error('Failed to open Project Manager:', error);
