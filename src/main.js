@@ -3625,6 +3625,28 @@ function createProjectManagerMenu(projectManagerWindow) {
             const isFullScreen = projectManagerWindow.isFullScreen();
             projectManagerWindow.setFullScreen(!isFullScreen);
           }
+        },
+        { type: 'separator' },
+        {
+          label: 'Developer Tools',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Alt+I' : 'Ctrl+Shift+I',
+          click: () => {
+            projectManagerWindow.webContents.toggleDevTools();
+          }
+        },
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            projectManagerWindow.webContents.reload();
+          }
+        },
+        {
+          label: 'Force Reload',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            projectManagerWindow.webContents.reloadIgnoringCache();
+          }
         }
       ]
     },

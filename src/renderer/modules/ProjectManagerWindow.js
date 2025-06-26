@@ -1027,17 +1027,47 @@ class ProjectManagerWindow {
                     // Auto-scan project directory after loading to ensure workspace shows current files
                     setTimeout(async () => {
                         console.log('🔄 Auto-scanning project directory after loading...');
-                        // Scan project directory to get latest file structure
-                        await this.scanAndAddNewFiles();
+                        console.log('🔍 Current project:', this.currentProject?.name);
+                        console.log('🔍 Project location:', this.currentProject?.location);
+                        console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
+                        console.log('🔍 ElectronAPI available:', !!window.electronAPI);
+                        console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
                         
-                        // Refresh interface display
+                        // Force scan execution even if initial state is empty
+                        if (this.currentProject) {
+                            // Ensure project has basic array structures
+                            if (!this.currentProject.files) {
+                                this.currentProject.files = [];
+                                console.log('📁 Initialized empty files array');
+                            }
+                            if (!this.currentProject.folders) {
+                                this.currentProject.folders = [];
+                                console.log('📁 Initialized empty folders array');
+                            }
+                            
+                            // Execute scan
+                            try {
+                                await this.scanAndAddNewFiles();
+                                console.log('✅ Directory scan completed');
+                            } catch (error) {
+                                console.error('❌ Directory scan failed:', error);
+                                // If scan fails, at least ensure basic structure is displayed
+                                this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
+                            }
+                        }
+                        
+                        // Force UI refresh regardless of scan success
                         this.renderProjectTree();
                         if (this.currentProject) {
                             this.selectProject(this.currentProject.id);
                             this.renderProjectContent(); // Ensure workspace content is also refreshed
                         }
                         
-                        console.log('✅ Project workspace updated with current directory structure');
+                        console.log('🎯 UI refresh completed - check workspace for files/folders');
+                        console.log('📊 Final project state:', {
+                            files: this.currentProject?.files?.length || 0,
+                            folders: this.currentProject?.folders?.length || 0
+                        });
                     }, 300);
                     
                     this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
@@ -2184,17 +2214,47 @@ System Information:
                     // Auto-scan project directory after loading to ensure workspace shows current files
                     setTimeout(async () => {
                         console.log('🔄 Auto-scanning project directory after loading...');
-                        // Scan project directory to get latest file structure
-                        await this.scanAndAddNewFiles();
+                        console.log('🔍 Current project:', this.currentProject?.name);
+                        console.log('🔍 Project location:', this.currentProject?.location);
+                        console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
+                        console.log('🔍 ElectronAPI available:', !!window.electronAPI);
+                        console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
                         
-                        // Refresh interface display
+                        // Force scan execution even if initial state is empty
+                        if (this.currentProject) {
+                            // Ensure project has basic array structures
+                            if (!this.currentProject.files) {
+                                this.currentProject.files = [];
+                                console.log('📁 Initialized empty files array');
+                            }
+                            if (!this.currentProject.folders) {
+                                this.currentProject.folders = [];
+                                console.log('📁 Initialized empty folders array');
+                            }
+                            
+                            // Execute scan
+                            try {
+                                await this.scanAndAddNewFiles();
+                                console.log('✅ Directory scan completed');
+                            } catch (error) {
+                                console.error('❌ Directory scan failed:', error);
+                                // If scan fails, at least ensure basic structure is displayed
+                                this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
+                            }
+                        }
+                        
+                        // Force UI refresh regardless of scan success
                         this.renderProjectTree();
                         if (this.currentProject) {
                             this.selectProject(this.currentProject.id);
                             this.renderProjectContent(); // Ensure workspace content is also refreshed
                         }
                         
-                        console.log('✅ Project workspace updated with current directory structure');
+                        console.log('🎯 UI refresh completed - check workspace for files/folders');
+                        console.log('📊 Final project state:', {
+                            files: this.currentProject?.files?.length || 0,
+                            folders: this.currentProject?.folders?.length || 0
+                        });
                     }, 300);
                     
                     this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');

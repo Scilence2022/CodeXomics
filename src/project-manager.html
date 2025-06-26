@@ -2432,17 +2432,47 @@ Folders: ${project.folders ? project.folders.length : 0}
                     // 修复：项目加载后自动扫描项目目录，确保显示最新的文件夹结构和文件
                     setTimeout(async () => {
                         console.log('🔄 Auto-scanning project directory after loading...');
-                        // 扫描项目目录获取最新文件结构
-                        await this.scanAndAddNewFiles();
+                        console.log('🔍 Current project:', this.currentProject?.name);
+                        console.log('🔍 Project location:', this.currentProject?.location);
+                        console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
+                        console.log('🔍 ElectronAPI available:', !!window.electronAPI);
+                        console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
                         
-                        // 刷新界面显示
+                        // 强制执行扫描，即使初始状态为空
+                        if (this.currentProject) {
+                            // 确保项目有基本的数组结构
+                            if (!this.currentProject.files) {
+                                this.currentProject.files = [];
+                                console.log('📁 Initialized empty files array');
+                            }
+                            if (!this.currentProject.folders) {
+                                this.currentProject.folders = [];
+                                console.log('📁 Initialized empty folders array');
+                            }
+                            
+                            // 执行扫描
+                            try {
+                                await this.scanAndAddNewFiles();
+                                console.log('✅ Directory scan completed');
+                            } catch (error) {
+                                console.error('❌ Directory scan failed:', error);
+                                // 如果扫描失败，至少确保基本结构显示
+                                this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
+                            }
+                        }
+                        
+                        // 强制刷新界面显示，无论扫描是否成功
                         this.renderProjectTree();
                         if (this.currentProject) {
                             this.selectProject(this.currentProject.id);
                             this.renderProjectContent(); // 确保workspace内容也被刷新
                         }
                         
-                        console.log('✅ Project workspace updated with current directory structure');
+                        console.log('🎯 UI refresh completed - check workspace for files/folders');
+                        console.log('📊 Final project state:', {
+                            files: this.currentProject?.files?.length || 0,
+                            folders: this.currentProject?.folders?.length || 0
+                        });
                     }, 300);
                     
                     // 显示成功消息
