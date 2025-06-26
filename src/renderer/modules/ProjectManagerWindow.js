@@ -1078,1070 +1078,693 @@ class ProjectManagerWindow {
 
     // ====== 菜单系统功能实现 ======
 
-    /**
-     * File菜单功能
-     */
-    openRecentProject() {
-        // 显示最近项目列表
-        if (this.projects.size === 0) {
-            this.showNotification('No recent projects available', 'info');
-            return;
-        }
-        
-        const recentProjects = Array.from(this.projects.values())
-            .sort((a, b) => new Date(b.metadata.lastOpened) - new Date(a.metadata.lastOpened))
-            .slice(0, 5);
-            
-        const projectList = recentProjects.map(project => 
-            `${project.name} (${this.formatDate(project.metadata.lastOpened)})`
-        ).join('\n');
-        
-        const choice = prompt(`Recent Projects:\n${projectList}\n\nEnter project name to open:`);
-        if (choice) {
-            const selectedProject = recentProjects.find(p => p.name === choice.trim());
-            if (selectedProject) {
-                this.selectProject(selectedProject.id);
-                this.showNotification(`Opened project: ${selectedProject.name}`, 'success');
-            } else {
-                this.showNotification('Project not found', 'warning');
-            }
-        }
-    }
-
-    async saveCurrentProject() {
+    // ==================== FILE MENU METHODS ====================
+    
+    async exportProjectAsXML() {
         if (!this.currentProject) {
-            this.showNotification('No project to save', 'warning');
+            this.showNotification('No project to export', 'warning');
             return;
         }
-        
-        try {
-            // 更新项目修改时间
-            this.currentProject.modified = new Date().toISOString();
-            
-            // 确保项目数据是最新的
-            this.projects.set(this.currentProject.id, this.currentProject);
-            
-            // 保存到localStorage
-            await this.saveProjects();
-            
-            // 保存到XML文件 - 直接保存到现有项目文件路径
-            if (this.currentProject.projectFilePath) {
-                // 使用 saveProjectToSpecificFile 保存到固定路径
-                if (!this.xmlHandler) {
-                    this.xmlHandler = new ProjectXMLHandler();
-                }
-                
-                const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
-                
-                if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
-                    const result = await window.electronAPI.saveProjectToSpecificFile(
-                        this.currentProject.projectFilePath, 
-                        xmlContent
-                    );
-                    
-                    if (result.success) {
-                        console.log(`✅ Project XML saved to: ${this.currentProject.projectFilePath}`);
-                    } else {
-                        throw new Error(result.error || 'Failed to save XML file');
-                    }
-                } else {
-                    console.warn('saveProjectToSpecificFile API not available');
-                }
-            } else if (this.currentProject.xmlFilePath) {
-                // 备用：如果有xmlFilePath但没有projectFilePath
-                if (!this.xmlHandler) {
-                    this.xmlHandler = new ProjectXMLHandler();
-                }
-                
-                const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
-                
-                if (window.electronAPI && window.electronAPI.saveProjectToSpecificFile) {
-                    const result = await window.electronAPI.saveProjectToSpecificFile(
-                        this.currentProject.xmlFilePath, 
-                        xmlContent
-                    );
-                    
-                    if (result.success) {
-                        console.log(`✅ Project XML saved to: ${this.currentProject.xmlFilePath}`);
-                    } else {
-                        throw new Error(result.error || 'Failed to save XML file');
-                    }
-                } else {
-                    console.warn('saveProjectToSpecificFile API not available');
-                }
-            } else {
-                // 如果没有现有路径，使用另存为逻辑
-                console.warn('No project file path found, project will only be saved to localStorage');
-            }
-            
-            // 标记项目为已保存
-            this.markProjectAsSaved();
-            
-            this.showNotification(`✅ Project "${this.currentProject.name}" saved successfully`, 'success');
-            console.log(`💾 Project saved: ${this.currentProject.name}`);
-            
-        } catch (error) {
-            console.error('Error saving current project:', error);
-            this.showNotification(`Failed to save project: ${error.message}`, 'error');
-        }
+        await this.saveProjectAsXML();
     }
 
-    async saveProjectAs() {
+    async exportProjectAsJSON() {
         if (!this.currentProject) {
-            this.showNotification('No project to save', 'warning');
+            this.showNotification('No project to export', 'warning');
             return;
         }
-        
-        const newName = prompt('Enter new project name:', this.currentProject.name + '_copy');
-        if (!newName || newName.trim() === '') return;
-        
-        try {
-            // 创建项目副本
-            const newId = this.generateId();
-            const projectCopy = {
-                ...this.currentProject,
-                id: newId,
-                name: newName.trim(),
-                created: new Date().toISOString(),
-                modified: new Date().toISOString(),
-                metadata: {
-                    ...this.currentProject.metadata,
-                    lastOpened: new Date().toISOString()
-                }
-            };
-            
-            this.projects.set(newId, projectCopy);
-            await this.saveProjects();
-            
-            this.renderProjectTree();
-            this.selectProject(newId);
-            this.showNotification(`Project saved as "${newName}"`, 'success');
-            
-        } catch (error) {
-            console.error('Error saving project as:', error);
-            this.showNotification('Failed to save project copy', 'error');
-        }
+        await this.exportCurrentProject();
     }
 
-    async importProject() {
-        try {
-            if (window.electronAPI && window.electronAPI.selectProjectFile) {
-                const result = await window.electronAPI.selectProjectFile();
-                if (result.success && !result.canceled && result.filePath) {
-                    await this.loadProjectFromFile(result.filePath);
-                }
-            } else {
-                // 浏览器环境下的文件导入
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json,.xml,.prj.GAI';
-                input.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = async (event) => {
-                            try {
-                                const projectData = JSON.parse(event.target.result);
-                                const newId = this.generateId();
-                                projectData.id = newId;
-                                projectData.metadata.lastOpened = new Date().toISOString();
-                                
-                                this.projects.set(newId, projectData);
-                                await this.saveProjects();
-                                this.renderProjectTree();
-                                this.selectProject(newId);
-                                this.showNotification('Project imported successfully', 'success');
-                            } catch (error) {
-                                console.error('Error importing project:', error);
-                                this.showNotification('Failed to import project file', 'error');
-                            }
-                        };
-                        reader.readAsText(file);
-                    }
-                };
-                input.click();
-            }
-        } catch (error) {
-            console.error('Error importing project:', error);
-            this.showNotification('Failed to import project', 'error');
-        }
-    }
-
-    async exportCurrentProject() {
+    async exportProjectArchive() {
         if (!this.currentProject) {
             this.showNotification('No project to export', 'warning');
             return;
         }
         
         try {
-            const projectData = JSON.stringify(this.currentProject, null, 2);
-            const blob = new Blob([projectData], { type: 'application/json' });
+            if (window.electronAPI && window.electronAPI.selectDirectory) {
+                const result = await window.electronAPI.selectDirectory();
+                if (result.success && !result.canceled) {
+                    // Create archive with project files and data
+                    this.showNotification(`Project archive export initiated to: ${result.filePath}`, 'info');
+                    // TODO: Implement actual archive creation
+                }
+            } else {
+                this.showNotification('Archive export not available in browser mode', 'warning');
+            }
+        } catch (error) {
+            console.error('Error exporting project archive:', error);
+            this.showNotification('Failed to export project archive', 'error');
+        }
+    }
+
+    async importFiles(filePaths) {
+        if (!this.currentProject) {
+            this.showNotification('Please select a project first', 'warning');
+            return;
+        }
+        
+        try {
+            await this.processSelectedFiles(filePaths);
+            this.showNotification(`Imported ${filePaths.length} files`, 'success');
+        } catch (error) {
+            console.error('Error importing files:', error);
+            this.showNotification('Failed to import some files', 'error');
+        }
+    }
+
+    // ==================== EDIT MENU METHODS ====================
+    
+    undoLastAction() {
+        if (!this.currentProject || !this.currentProject.history) {
+            this.showNotification('No actions to undo', 'info');
+            return;
+        }
+        
+        if (this.currentProject.history.length === 0) {
+            this.showNotification('No actions to undo', 'info');
+            return;
+        }
+        
+        const lastAction = this.currentProject.history.shift();
+        this.showNotification(`Undid: ${lastAction.description}`, 'info');
+        // TODO: Implement actual undo logic based on action type
+    }
+
+    redoLastAction() {
+        // TODO: Implement redo functionality with redo stack
+        this.showNotification('Redo functionality coming soon', 'info');
+    }
+
+    cutSelectedFiles() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('No files selected to cut', 'warning');
+            return;
+        }
+        
+        this.clipboard = {
+            operation: 'cut',
+            files: Array.from(this.selectedFiles).map(id => this.findFileById(id)).filter(f => f)
+        };
+        
+        this.showNotification(`Cut ${this.clipboard.files.length} files`, 'info');
+    }
+
+    copySelectedFiles() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('No files selected to copy', 'warning');
+            return;
+        }
+        
+        this.clipboard = {
+            operation: 'copy',
+            files: Array.from(this.selectedFiles).map(id => this.findFileById(id)).filter(f => f)
+        };
+        
+        this.showNotification(`Copied ${this.clipboard.files.length} files`, 'info');
+    }
+
+    pasteFiles() {
+        if (!this.clipboard || !this.clipboard.files || this.clipboard.files.length === 0) {
+            this.showNotification('No files in clipboard to paste', 'warning');
+            return;
+        }
+        
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        try {
+            this.clipboard.files.forEach(file => {
+                if (this.clipboard.operation === 'cut') {
+                    // Move file to current location
+                    file.folder = this.currentPath.slice();
+                } else {
+                    // Copy file (duplicate)
+                    const newFile = { ...file };
+                    newFile.id = this.generateId();
+                    newFile.name = `Copy of ${file.name}`;
+                    newFile.folder = this.currentPath.slice();
+                    newFile.created = new Date().toISOString();
+                    this.currentProject.files.push(newFile);
+                }
+            });
+            
+            if (this.clipboard.operation === 'cut') {
+                this.clipboard = null; // Clear clipboard after cut
+            }
+            
+            this.markProjectAsModified();
+            this.renderProjectContent();
+            this.showNotification(`Pasted ${this.clipboard ? this.clipboard.files.length : 'files'}`, 'success');
+        } catch (error) {
+            console.error('Error pasting files:', error);
+            this.showNotification('Failed to paste files', 'error');
+        }
+    }
+
+    showFindDialog() {
+        const searchTerm = prompt('Enter search term to find files:');
+        if (searchTerm && searchTerm.trim()) {
+            this.searchFiles(searchTerm.trim());
+        }
+    }
+
+    showFindReplaceDialog() {
+        const findTerm = prompt('Enter term to find in file names:');
+        if (!findTerm || !findTerm.trim()) return;
+        
+        const replaceTerm = prompt('Enter replacement term:');
+        if (replaceTerm === null) return;
+        
+        this.findAndReplaceInFileNames(findTerm.trim(), replaceTerm.trim());
+    }
+
+    searchFiles(searchTerm) {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        const matchingFiles = this.currentProject.files.filter(file => 
+            file.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        if (matchingFiles.length === 0) {
+            this.showNotification(`No files found matching "${searchTerm}"`, 'info');
+        } else {
+            // Select matching files
+            this.selectedFiles.clear();
+            matchingFiles.forEach(file => this.selectedFiles.add(file.id));
+            this.updateFileCardSelection();
+            this.showNotification(`Found ${matchingFiles.length} files matching "${searchTerm}"`, 'success');
+        }
+    }
+
+    findAndReplaceInFileNames(findTerm, replaceTerm) {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        let replacedCount = 0;
+        this.currentProject.files.forEach(file => {
+            if (file.name.includes(findTerm)) {
+                file.name = file.name.replace(new RegExp(findTerm, 'g'), replaceTerm);
+                file.modified = new Date().toISOString();
+                replacedCount++;
+            }
+        });
+        
+        if (replacedCount > 0) {
+            this.markProjectAsModified();
+            this.renderProjectContent();
+            this.showNotification(`Replaced "${findTerm}" with "${replaceTerm}" in ${replacedCount} file names`, 'success');
+        } else {
+            this.showNotification(`No files found containing "${findTerm}"`, 'info');
+        }
+    }
+
+    // ==================== VIEW MENU METHODS ====================
+    
+    setSortBy(sortBy) {
+        this.sortBy = sortBy;
+        this.renderProjectContent();
+        this.showNotification(`Sorted by ${sortBy}`, 'info');
+    }
+
+    toggleHiddenFiles(show) {
+        this.showHiddenFiles = show;
+        this.renderProjectContent();
+        this.showNotification(`Hidden files ${show ? 'shown' : 'hidden'}`, 'info');
+    }
+
+    toggleFileExtensions(show) {
+        this.showFileExtensions = show;
+        this.renderProjectContent();
+        this.showNotification(`File extensions ${show ? 'shown' : 'hidden'}`, 'info');
+    }
+
+    // ==================== PROJECT MENU METHODS ====================
+    
+    showProjectProperties() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        const properties = `
+📁 Project Properties
+
+Name: ${this.currentProject.name}
+Description: ${this.currentProject.description || 'No description'}
+Location: ${this.currentProject.location || 'Unknown'}
+Created: ${this.formatDate(this.currentProject.created)}
+Modified: ${this.formatDate(this.currentProject.modified)}
+
+📊 Statistics:
+Files: ${this.currentProject.files?.length || 0}
+Folders: ${this.currentProject.folders?.length || 0}
+Total Size: ${this.formatFileSize(this.currentProject.metadata?.totalSize || 0)}
+
+🔧 Status:
+Has Unsaved Changes: ${this.currentProject.hasUnsavedChanges ? 'Yes' : 'No'}
+Project File: ${this.currentProject.projectFilePath || 'Not set'}
+Data Folder: ${this.currentProject.dataFolderPath || 'Not set'}
+        `.trim();
+        
+        alert(properties);
+    }
+
+    showProjectStatistics() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        const stats = this.calculateProjectStatistics();
+        const statsText = `
+📊 Project Statistics
+
+📁 Files by Type:
+${Object.entries(stats.fileTypes).map(([type, count]) => `• ${type}: ${count}`).join('\n')}
+
+📈 Storage:
+• Total Files: ${stats.totalFiles}
+• Total Size: ${this.formatFileSize(stats.totalSize)}
+• Average File Size: ${this.formatFileSize(stats.averageFileSize)}
+
+📅 Timeline:
+• Oldest File: ${stats.oldestFile ? this.formatDate(stats.oldestFile) : 'N/A'}
+• Newest File: ${stats.newestFile ? this.formatDate(stats.newestFile) : 'N/A'}
+
+📂 Organization:
+• Folders: ${stats.folderCount}
+• Files in Root: ${stats.rootFiles}
+• Files in Folders: ${stats.folderFiles}
+        `.trim();
+        
+        alert(statsText);
+    }
+
+    autoOrganizeFiles() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        let movedCount = 0;
+        this.currentProject.files.forEach(file => {
+            const fileType = this.detectFileType(file.name);
+            let targetFolder = null;
+            
+            // Auto-organize by file type
+            switch (fileType) {
+                case 'fasta':
+                case 'genbank':
+                    targetFolder = ['Genomes'];
+                    break;
+                case 'gff':
+                case 'bed':
+                    targetFolder = ['Annotations'];
+                    break;
+                case 'vcf':
+                    targetFolder = ['Variants'];
+                    break;
+                case 'bam':
+                case 'sam':
+                    targetFolder = ['Reads'];
+                    break;
+                default:
+                    targetFolder = ['Analysis'];
+            }
+            
+            if (targetFolder && !this.arraysEqual(file.folder || [], targetFolder)) {
+                file.folder = targetFolder;
+                file.modified = new Date().toISOString();
+                movedCount++;
+            }
+        });
+        
+        if (movedCount > 0) {
+            this.markProjectAsModified();
+            this.renderProjectContent();
+            this.showNotification(`Auto-organized ${movedCount} files by type`, 'success');
+        } else {
+            this.showNotification('All files are already organized', 'info');
+        }
+    }
+
+    groupFilesByDate() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        // Create date-based folders and move files
+        const dateGroups = {};
+        this.currentProject.files.forEach(file => {
+            const date = new Date(file.created).toISOString().split('T')[0]; // YYYY-MM-DD
+            if (!dateGroups[date]) {
+                dateGroups[date] = [];
+            }
+            dateGroups[date].push(file);
+        });
+        
+        // Create folders for each date and move files
+        Object.entries(dateGroups).forEach(([date, files]) => {
+            const folderName = `Files_${date}`;
+            const folderPath = [folderName.toLowerCase()];
+            
+            // Check if folder exists, if not create it
+            if (!this.currentProject.folders.find(f => this.arraysEqual(f.path, folderPath))) {
+                this.currentProject.folders.push({
+                    name: folderName,
+                    icon: '📅',
+                    path: folderPath,
+                    files: [],
+                    created: new Date().toISOString(),
+                    custom: true,
+                    autoGenerated: true
+                });
+            }
+            
+            // Move files to date folder
+            files.forEach(file => {
+                file.folder = folderPath;
+                file.modified = new Date().toISOString();
+            });
+        });
+        
+        this.markProjectAsModified();
+        this.renderProjectTree();
+        this.renderProjectContent();
+        this.showNotification(`Grouped files into ${Object.keys(dateGroups).length} date-based folders`, 'success');
+    }
+
+    cleanEmptyFolders() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        let removedCount = 0;
+        this.currentProject.folders = this.currentProject.folders.filter(folder => {
+            const hasFiles = this.currentProject.files.some(file => 
+                this.arraysEqual(file.folder || [], folder.path)
+            );
+            
+            if (!hasFiles && folder.custom) {
+                removedCount++;
+                return false;
+            }
+            return true;
+        });
+        
+        if (removedCount > 0) {
+            this.markProjectAsModified();
+            this.renderProjectTree();
+            this.showNotification(`Removed ${removedCount} empty folders`, 'success');
+        } else {
+            this.showNotification('No empty folders found', 'info');
+        }
+    }
+
+    backupProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        try {
+            const backupData = JSON.stringify(this.currentProject, null, 2);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupName = `${this.currentProject.name}_backup_${timestamp}.json`;
+            
+            const blob = new Blob([backupData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${this.currentProject.name}.json`;
+            a.download = backupName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            this.showNotification(`Project "${this.currentProject.name}" exported successfully`, 'success');
-            
+            this.showNotification(`Project backed up as ${backupName}`, 'success');
         } catch (error) {
-            console.error('Error exporting project:', error);
-            this.showNotification('Failed to export project', 'error');
+            console.error('Error backing up project:', error);
+            this.showNotification('Failed to backup project', 'error');
         }
     }
 
-    closeCurrentProject() {
+    restoreFromBackup() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const projectData = JSON.parse(event.target.result);
+                            const newId = this.generateId();
+                            projectData.id = newId;
+                            projectData.name += ' (Restored)';
+                            projectData.metadata.lastOpened = new Date().toISOString();
+                            
+                            this.projects.set(newId, projectData);
+                            this.saveProjects();
+                            this.renderProjectTree();
+                            this.selectProject(newId);
+                            this.showNotification('Project restored from backup', 'success');
+                        } catch (error) {
+                            console.error('Error parsing backup file:', error);
+                            this.showNotification('Invalid backup file format', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                } catch (error) {
+                    console.error('Error restoring backup:', error);
+                    this.showNotification('Failed to restore from backup', 'error');
+                }
+            }
+        };
+        input.click();
+    }
+
+    archiveProject() {
         if (!this.currentProject) {
-            this.showNotification('No project to close', 'warning');
+            this.showNotification('No project selected', 'warning');
             return;
         }
         
-        const confirm = window.confirm(`Close project "${this.currentProject.name}"?`);
+        const confirm = window.confirm(
+            `Archive project "${this.currentProject.name}"?\n\n` +
+            'This will:\n' +
+            '• Export the project as a backup\n' +
+            '• Mark it as archived\n' +
+            '• Remove it from active projects list'
+        );
+        
         if (confirm) {
-            const projectName = this.currentProject.name;
-            this.currentProject = null;
-            this.currentPath = [];
-            this.selectedFiles.clear();
+            // Export backup first
+            this.backupProject();
             
+            // Mark as archived and remove
+            this.currentProject.archived = true;
+            this.currentProject.archivedDate = new Date().toISOString();
+            
+            const projectName = this.currentProject.name;
+            this.projects.delete(this.currentProject.id);
+            this.saveProjects();
+            
+            this.currentProject = null;
             this.renderProjectTree();
             this.renderProjectContent();
-            this.updateStatusBar('Ready');
-            this.showNotification(`Project "${projectName}" closed`, 'info');
+            
+            this.showNotification(`Project "${projectName}" archived successfully`, 'success');
         }
     }
 
-    /**
-     * Edit菜单功能
-     */
-    selectAllFiles() {
-        if (!this.currentProject) return;
-        
-        const currentFiles = this.getCurrentFolderFiles();
-        this.selectedFiles.clear();
-        currentFiles.forEach(file => this.selectedFiles.add(file.id));
-        
-        this.updateFileCardSelection();
-        this.updateFileCountDisplay();
-        this.updateDetailsPanel();
-        this.showNotification(`Selected ${this.selectedFiles.size} files`, 'info');
-    }
-
-    clearSelection() {
-        this.selectedFiles.clear();
-        this.updateFileCardSelection();
-        this.updateFileCountDisplay();
-        this.updateDetailsPanel();
-        this.showNotification('Selection cleared', 'info');
-    }
-
-    deleteSelectedFiles() {
-        if (!this.currentProject || this.selectedFiles.size === 0) {
-            this.showNotification('No files selected for deletion', 'warning');
+    deleteCurrentProject() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
             return;
         }
         
-        const selectedCount = this.selectedFiles.size;
-        const confirm = window.confirm(`Delete ${selectedCount} selected file(s)? This action cannot be undone.`);
+        const confirm = window.confirm(
+            `⚠️ DELETE PROJECT "${this.currentProject.name}"?\n\n` +
+            'This action cannot be undone!\n\n' +
+            'This will permanently delete:\n' +
+            '• All project metadata\n' +
+            '• File references (actual files may remain on disk)\n' +
+            '• Project configuration\n\n' +
+            'Type "DELETE" to confirm:'
+        );
         
-        if (confirm) {
-            // 从项目中删除选定的文件
-            const deletedFiles = [];
-            this.selectedFiles.forEach(fileId => {
-                const fileIndex = this.currentProject.files.findIndex(f => f.id === fileId);
-                if (fileIndex !== -1) {
-                    deletedFiles.push(this.currentProject.files[fileIndex].name);
-                    this.currentProject.files.splice(fileIndex, 1);
-                }
-            });
-            
-            this.selectedFiles.clear();
-            this.currentProject.modified = new Date().toISOString();
+        if (confirm === 'DELETE') {
+            const projectName = this.currentProject.name;
+            this.projects.delete(this.currentProject.id);
             this.saveProjects();
+            
+            this.currentProject = null;
+            this.renderProjectTree();
             this.renderProjectContent();
-            this.updateDetailsPanel();
             
-            this.showNotification(`Deleted ${deletedFiles.length} file(s): ${deletedFiles.join(', ')}`, 'success');
-        }
-    }
-
-    /**
-     * View菜单功能
-     */
-    setViewMode(mode) {
-        this.viewMode = mode;
-        
-        // 更新视图模式按钮状态
-        document.querySelectorAll('.view-mode-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.mode === mode) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // 重新渲染文件视图
-        this.renderFileGrid();
-        this.showNotification(`View mode: ${mode}`, 'info');
-    }
-
-    /**
-     * Toggle详细信息面板
-     */
-    toggleDetailsPanel() {
-        const panel = document.getElementById('detailsPanel');
-        const toggle = document.getElementById('detailsPanelToggle');
-        
-        if (panel.style.display === 'none' || !panel.style.display) {
-            panel.style.display = 'block';
-            toggle.checked = true;
-            this.updateDetailsPanel();
-            this.showNotification('Details panel opened', 'info');
+            this.showNotification(`Project "${projectName}" deleted permanently`, 'success');
         } else {
-            panel.style.display = 'none';
-            toggle.checked = false;
-            this.showNotification('Details panel closed', 'info');
+            this.showNotification('Project deletion cancelled', 'info');
         }
     }
 
-    toggleSidebar() {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar.style.display === 'none') {
-            sidebar.style.display = 'flex';
-            this.showNotification('Sidebar opened', 'info');
-        } else {
-            sidebar.style.display = 'none';
-            this.showNotification('Sidebar closed', 'info');
-        }
-    }
-
-    /**
-     * Tools菜单功能
-     */
-    analyzeProject() {
-        if (!this.currentProject) {
-            this.showNotification('No project to analyze', 'warning');
-            return;
-        }
-
-        const stats = this.calculateProjectStatistics();
-        const analysis = `
-Project Analysis for "${this.currentProject.name}":
-
-📊 File Statistics:
-- Total Files: ${stats.totalFiles}
-- Total Size: ${this.formatFileSize(stats.totalSize)}
-- Average File Size: ${this.formatFileSize(stats.averageSize)}
-
-🏷️ File Types:
-${Object.entries(stats.fileTypes).map(([type, count]) => `- ${type}: ${count} files`).join('\n')}
-
-📁 Folder Distribution:
-${this.currentProject.folders.map(folder => `- ${folder.name}: ${stats.folderFiles[folder.name] || 0} files`).join('\n')}
-        `.trim();
-
-        alert(analysis);
-    }
-
-    calculateProjectStatistics() {
-        if (!this.currentProject) return {};
-        
-        const files = this.currentProject.files || [];
-        const totalFiles = files.length;
-        const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
-        const averageSize = totalFiles > 0 ? totalSize / totalFiles : 0;
-        
-        const fileTypes = {};
-        const folderFiles = {};
-        
-        files.forEach(file => {
-            const type = this.detectFileType(file.name);
-            fileTypes[type] = (fileTypes[type] || 0) + 1;
-            
-            const folder = file.folder || 'root';
-            folderFiles[folder] = (folderFiles[folder] || 0) + 1;
-        });
-        
-        return {
-            totalFiles,
-            totalSize,
-            averageSize,
-            fileTypes,
-            folderFiles
-        };
-    }
-
-    validateFiles() {
-        if (!this.currentProject) {
-            this.showNotification('No project to validate', 'warning');
-            return;
-        }
-        
-        const missingFiles = [];
-        const invalidFiles = [];
-        
-        this.currentProject.files.forEach(file => {
-            if (!file.name || !file.id) {
-                invalidFiles.push(file);
-            }
-            // 这里可以添加更多文件验证逻辑
-        });
-        
-        if (missingFiles.length === 0 && invalidFiles.length === 0) {
-            this.showNotification('All files are valid', 'success');
-        } else {
-            const message = `Validation complete:\n- ${invalidFiles.length} invalid files found`;
-            alert(message);
-        }
-    }
-
-    findDuplicateFiles() {
-        if (!this.currentProject) {
-            this.showNotification('No project to check', 'warning');
-            return;
-        }
-        
-        const fileNames = {};
-        const duplicates = [];
-        
-        this.currentProject.files.forEach(file => {
-            if (fileNames[file.name]) {
-                duplicates.push(file.name);
-            } else {
-                fileNames[file.name] = true;
-            }
-        });
-        
-        if (duplicates.length === 0) {
-            this.showNotification('No duplicate files found', 'success');
-        } else {
-            alert(`Found ${duplicates.length} duplicate file names:\n${duplicates.join('\n')}`);
-        }
-    }
-
-    openInGenomeViewer() {
-        this.showNotification('Opening in Genome Viewer...', 'info');
-        // 这里可以添加与主窗口通信的逻辑
-    }
-
-    runGenomicAnalysis() {
-        this.showNotification('Genomic analysis feature coming soon', 'info');
-    }
-
-    /**
-     * Help菜单功能
-     */
-    showDocumentation() {
-        const docContent = `
-📖 Project Manager Documentation
-
-🔧 Basic Operations:
-• Ctrl+N: Create new project
-• Ctrl+O: Open project
-• Ctrl+S: Save project
-• F5: Refresh projects
-• F8: Toggle sidebar
-• F9: Toggle details panel
-
-📁 File Management:
-• Drag & drop files to add them to project
-• Right-click for context menu
-• Use Ctrl+Click for multiple selection
-
-🎯 Tips:
-• Projects are automatically saved to localStorage
-• Use the details panel for quick project statistics
-• Export projects as JSON for backup
-        `.trim();
-        
-        alert(docContent);
-    }
-
-    showKeyboardShortcuts() {
-        const shortcuts = `
-⌨️ Keyboard Shortcuts
-
-File Operations:
-• Ctrl+N - New Project
-• Ctrl+O - Open Project
-• Ctrl+S - Save Project
-• Ctrl+Shift+S - Save As
-• Ctrl+A - Add Files
-• Ctrl+Shift+N - New Folder
-
-View Controls:
-• F5 - Refresh
-• F8 - Toggle Sidebar
-• F9 - Toggle Details Panel
-• Esc - Clear Selection
-• Del - Delete Selected
-
-Selection:
-• Ctrl+A - Select All
-• Ctrl+Click - Multi-select
-• Shift+Click - Range select
-        `.trim();
-        
-        alert(shortcuts);
-    }
-
-    reportBug() {
-        const bugReport = `
-Please send bug reports to: support@genomeaistudio.com
-
-Include the following information:
-• Project Manager version
-• Steps to reproduce the issue
-• Expected vs actual behavior
-• Browser/OS information
-        `.trim();
-        
-        alert(bugReport);
-    }
-
-    showAbout() {
-        const aboutInfo = `
-📁 Project Manager v0.2 Beta
-
-Part of Genome AI Studio
-A comprehensive genomic data management solution
-
-Features:
-• Project organization and management
-• Multi-format file support
-• Advanced file operations
-• Integration with genome viewer
-
-© 2024 Genome AI Studio
-        `.trim();
-        
-        alert(aboutInfo);
-    }
-
-    /**
-     * 更新详细信息面板内容
-     */
-    updateDetailsPanel() {
-        if (!this.currentProject) return;
-        
-        // 更新选择信息
-        const selectionInfo = document.getElementById('selectionInfo');
-        if (selectionInfo) {
-            if (this.selectedFiles.size === 0) {
-                selectionInfo.innerHTML = '<p>No files selected</p>';
-            } else {
-                const selectedFilesList = Array.from(this.selectedFiles)
-                    .map(fileId => this.findFileById(fileId))
-                    .filter(file => file)
-                    .map(file => `<div class="selected-file-item">${file.name}</div>`)
-                    .join('');
-                    
-                selectionInfo.innerHTML = `
-                    <p><strong>${this.selectedFiles.size} files selected</strong></p>
-                    <div class="selected-files-list">${selectedFilesList}</div>
-                `;
-            }
-        }
-        
-        // 更新项目统计
-        const stats = this.calculateProjectStatistics();
-        document.getElementById('totalFilesCount').textContent = stats.totalFiles;
-        document.getElementById('totalSizeValue').textContent = this.formatFileSize(stats.totalSize);
-        document.getElementById('fileTypesCount').textContent = Object.keys(stats.fileTypes).length;
-        
-        // 更新文件类型分布
-        const fileTypeDistribution = document.getElementById('fileTypeDistribution');
-        if (fileTypeDistribution && stats.fileTypes) {
-            const typeItems = Object.entries(stats.fileTypes)
-                .map(([type, count]) => {
-                    const typeConfig = this.fileTypes[type] || this.fileTypes['unknown'];
-                    return `
-                        <div class="file-type-item">
-                            <div class="file-type-name">
-                                <div class="file-type-icon" style="background-color: ${typeConfig.color}">
-                                    ${typeConfig.icon}
-                                </div>
-                                <span>${type}</span>
-                            </div>
-                            <span class="file-type-count">${count}</span>
-                        </div>
-                    `;
-                })
-                .join('');
-                
-            fileTypeDistribution.innerHTML = typeItems || '<p>No data available</p>';
-        }
-        
-        // 更新最近活动
-        const recentActivity = document.getElementById('recentActivity');
-        if (recentActivity) {
-            const activities = [
-                `Project opened: ${this.formatDate(this.currentProject.metadata.lastOpened)}`,
-                `Last modified: ${this.formatDate(this.currentProject.modified)}`,
-                `Created: ${this.formatDate(this.currentProject.created)}`
-            ];
-            
-            recentActivity.innerHTML = activities
-                .map(activity => `<div class="activity-item">${activity}</div>`)
-                .join('');
-        }
-    }
-
-    // 文件重命名功能
-    async renameFile(fileId) {
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
-            return;
-        }
-        
-        const newName = prompt('Enter new file name:', file.name);
-        if (!newName || newName.trim() === '' || newName === file.name) {
-            return;
-        }
-        
-        // 检查文件名是否已存在
-        const existingFile = this.currentProject.files.find(f => f.name === newName.trim() && f.id !== fileId);
-        if (existingFile) {
-            this.showNotification('A file with this name already exists', 'warning');
-            return;
-        }
-        
-        try {
-            const oldName = file.name;
-            file.name = newName.trim();
-            file.modified = new Date().toISOString();
-            
-            // 尝试重命名物理文件（如果在Electron环境中）
-            if (window.electronAPI && window.electronAPI.renameFile && file.path) {
-                const result = await window.electronAPI.renameFile(file.path, newName.trim());
-                if (result.success) {
-                    file.path = result.newPath;
-                }
-            }
-            
-            this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
-            
-            this.showNotification(`File renamed from "${oldName}" to "${newName.trim()}"`, 'success');
-            
-        } catch (error) {
-            console.error('Error renaming file:', error);
-            this.showNotification('Failed to rename file', 'error');
-        }
-    }
-
-    // 文件预览功能
-    async previewFile(fileId) {
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
-            return;
-        }
-        
-        // 创建预览模态框
-        this.createFilePreviewModal(file);
-    }
-
-    createFilePreviewModal(file) {
-        // 移除现有的预览模态框
-        const existingModal = document.getElementById('filePreviewModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        const modal = document.createElement('div');
-        modal.id = 'filePreviewModal';
-        modal.className = 'modal';
-        modal.style.display = 'block';
-        
-        const isTextFile = this.isTextFile(file.name);
-        const canEdit = isTextFile && file.size < 1024 * 1024; // 限制编辑文件大小为1MB
-        
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 80%; max-height: 80%;">
-                <div class="modal-header">
-                    <h3>📄 ${file.name}</h3>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        ${canEdit ? '<button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.toggleEditMode()">✏️ Edit</button>' : ''}
-                        <button class="btn btn-sm btn-secondary" onclick="projectManagerWindow.downloadFile(\'${file.id}\')">⬇️ Download</button>
-                        <button class="modal-close" onclick="projectManagerWindow.closeFilePreview()">&times;</button>
-                    </div>
-                </div>
-                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-                    <div class="file-info" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                        <strong>Size:</strong> ${this.formatFileSize(file.size)} | 
-                        <strong>Type:</strong> ${file.type || 'Unknown'} | 
-                        <strong>Modified:</strong> ${this.formatDate(file.modified)}
-                    </div>
-                    <div id="fileContent" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; overflow-x: auto;">
-                        ${isTextFile ? 'Loading...' : 'Binary file preview not available'}
-                    </div>
-                    ${canEdit ? `
-                        <textarea id="fileEditor" style="display: none; width: 100%; height: 400px; font-family: monospace; border: 1px solid #ddd; border-radius: 5px; padding: 10px;"></textarea>
-                        <div id="editControls" style="display: none; margin-top: 10px; text-align: right;">
-                            <button class="btn btn-secondary" onclick="projectManagerWindow.cancelEdit()">Cancel</button>
-                            <button class="btn btn-success" onclick="projectManagerWindow.saveFileContent('${file.id}')">Save Changes</button>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // 加载文件内容
-        if (isTextFile) {
-            this.loadFileContent(file);
-        }
-    }
-
-    async loadFileContent(file) {
-        try {
-            let content = '';
-            
-            if (window.electronAPI && window.electronAPI.readFileContent && file.path) {
-                const result = await window.electronAPI.readFileContent(file.path);
-                content = result.success ? result.content : 'Error loading file content';
-            } else {
-                // 模拟文件内容（实际应用中应该从实际文件读取）
-                content = this.generateSampleContent(file);
-            }
-            
-            const fileContentDiv = document.getElementById('fileContent');
-            if (fileContentDiv) {
-                // 限制显示的内容长度
-                const maxDisplayLength = 10000;
-                if (content.length > maxDisplayLength) {
-                    content = content.substring(0, maxDisplayLength) + '\n\n... (content truncated)';
-                }
-                fileContentDiv.textContent = content;
-            }
-            
-            // 同时设置编辑器内容
-            const fileEditor = document.getElementById('fileEditor');
-            if (fileEditor) {
-                fileEditor.value = content;
-            }
-            
-        } catch (error) {
-            console.error('Error loading file content:', error);
-            const fileContentDiv = document.getElementById('fileContent');
-            if (fileContentDiv) {
-                fileContentDiv.textContent = 'Error loading file content';
-            }
-        }
-    }
-
-    toggleEditMode() {
-        const fileContent = document.getElementById('fileContent');
-        const fileEditor = document.getElementById('fileEditor');
-        const editControls = document.getElementById('editControls');
-        
-        if (fileContent && fileEditor && editControls) {
-            if (fileContent.style.display !== 'none') {
-                // 切换到编辑模式
-                fileContent.style.display = 'none';
-                fileEditor.style.display = 'block';
-                editControls.style.display = 'block';
-                fileEditor.value = fileContent.textContent;
-                fileEditor.focus();
-            } else {
-                // 切换到预览模式
-                fileContent.style.display = 'block';
-                fileEditor.style.display = 'none';
-                editControls.style.display = 'none';
-            }
-        }
-    }
-
-    cancelEdit() {
-        this.toggleEditMode();
-    }
-
-    async saveFileContent(fileId) {
-        const file = this.findFileById(fileId);
-        const fileEditor = document.getElementById('fileEditor');
-        
-        if (!file || !fileEditor) {
-            this.showNotification('Error saving file', 'error');
-            return;
-        }
-        
-        try {
-            const newContent = fileEditor.value;
-            
-            // 尝试保存到物理文件（如果在Electron环境中）
-            if (window.electronAPI && window.electronAPI.writeFileContent && file.path) {
-                const result = await window.electronAPI.writeFileContent(file.path, newContent);
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
-            }
-            
-            // 更新文件元数据
-            file.modified = new Date().toISOString();
-            file.size = new Blob([newContent]).size;
-            
-            this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
-            
-            // 更新预览内容
-            const fileContent = document.getElementById('fileContent');
-            if (fileContent) {
-                fileContent.textContent = newContent;
-            }
-            
-            this.toggleEditMode();
-            this.showNotification(`File "${file.name}" saved successfully`, 'success');
-            
-        } catch (error) {
-            console.error('Error saving file content:', error);
-            this.showNotification('Failed to save file content', 'error');
-        }
-    }
-
-    downloadFile(fileId) {
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
-            return;
-        }
-        
-        // 创建下载链接（实际应用中应该访问真实文件）
-        const content = this.generateSampleContent(file);
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.showNotification(`File "${file.name}" downloaded`, 'success');
-    }
-
-    closeFilePreview() {
-        const modal = document.getElementById('filePreviewModal');
-        if (modal) {
-            modal.remove();
-        }
-    }
-
-    isTextFile(fileName) {
-        const textExtensions = ['.txt', '.md', '.json', '.xml', '.csv', '.tsv', '.fasta', '.fa', '.gff', '.gtf', '.bed', '.vcf', '.sam', '.wig'];
-        const ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-        return textExtensions.includes(ext);
-    }
-
-    generateSampleContent(file) {
-        // 根据文件类型生成示例内容
-        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        
-        switch (ext) {
-            case '.fasta':
-            case '.fa':
-                return `>sequence_1 Example DNA sequence
-ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG
-ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG
->sequence_2 Another example sequence
-GCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCT`;
-                
-            case '.gff':
-            case '.gtf':
-                return `##gff-version 3
-chr1	HAVANA	gene	11869	14409	.	+	.	ID=ENSG00000223972.5;gene_id=ENSG00000223972.5;gene_type=transcribed_unprocessed_pseudogene;gene_name=DDX11L1;level=2;havana_gene=OTTHUMG00000000961.2
-chr1	HAVANA	transcript	11869	14409	.	+	.	ID=ENST00000456328.2;Parent=ENSG00000223972.5;gene_id=ENSG00000223972.5;transcript_id=ENST00000456328.2;gene_type=transcribed_unprocessed_pseudogene;gene_name=DDX11L1;transcript_type=processed_transcript;transcript_name=DDX11L1-202;level=2;transcript_support_level=1;tag=basic;havana_gene=OTTHUMG00000000961.2;havana_transcript=OTTHUMT00000362751.1`;
-                
-            case '.bed':
-                return `track name=example description="Example BED track"
-chr1	1000	2000	feature1	100	+
-chr1	3000	4000	feature2	200	-
-chr2	5000	6000	feature3	150	+`;
-                
-            case '.vcf':
-                return `##fileformat=VCFv4.2
-##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1
-chr1	12345	.	A	T	60	PASS	DP=30	GT	0/1
-chr1	23456	.	G	C	80	PASS	DP=40	GT	1/1`;
-                
-            default:
-                return `This is a preview of file: ${file.name}
-File size: ${this.formatFileSize(file.size)}
-Last modified: ${this.formatDate(file.modified)}
-
-[Preview content would be loaded from the actual file]`;
-        }
-    }
-
-    // 显示文件右键菜单
-    showFileContextMenu(event, fileId) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // 移除现有的上下文菜单
-        const existingMenu = document.getElementById('fileContextMenu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
-        
-        const file = this.findFileById(fileId);
-        if (!file) return;
-        
-        // 选择当前文件（如果未选择）
-        if (!this.selectedFiles.has(fileId)) {
-            this.selectFile(fileId, false);
-        }
-        
-        const menu = document.createElement('div');
-        menu.id = 'fileContextMenu';
-        menu.className = 'context-menu';
-        menu.style.position = 'fixed';
-        menu.style.left = event.clientX + 'px';
-        menu.style.top = event.clientY + 'px';
-        menu.style.zIndex = '1000';
-        menu.style.display = 'block';
-        
-        const isTextFile = this.isTextFile(file.name);
-        
-        menu.innerHTML = `
-            <div class="context-menu-item" onclick="projectManagerWindow.previewFile('${fileId}')">
-                <span class="menu-icon">👁️</span>
-                Preview File
-            </div>
-            ${isTextFile ? `
-                <div class="context-menu-item" onclick="projectManagerWindow.previewFile('${fileId}'); setTimeout(() => projectManagerWindow.toggleEditMode(), 100)">
-                    <span class="menu-icon">✏️</span>
-                    Edit File
-                </div>
-            ` : ''}
-            <div class="context-menu-item" onclick="projectManagerWindow.renameFile('${fileId}')">
-                <span class="menu-icon">📝</span>
-                Rename File
-            </div>
-            <div class="context-menu-item" onclick="projectManagerWindow.downloadFile('${fileId}')">
-                <span class="menu-icon">⬇️</span>
-                Download File
-            </div>
-            <div class="context-menu-separator"></div>
-            <div class="context-menu-item" onclick="projectManagerWindow.duplicateFile('${fileId}')">
-                <span class="menu-icon">📋</span>
-                Duplicate File
-            </div>
-            <div class="context-menu-item" onclick="projectManagerWindow.moveFileToFolder('${fileId}')">
-                <span class="menu-icon">📁</span>
-                Move to Folder
-            </div>
-            <div class="context-menu-separator"></div>
-            <div class="context-menu-item danger" onclick="projectManagerWindow.deleteFile('${fileId}')">
-                <span class="menu-icon">🗑️</span>
-                Delete File
-            </div>
-        `;
-        
-        document.body.appendChild(menu);
-        
-        // 点击其他地方关闭菜单
-        setTimeout(() => {
-            document.addEventListener('click', this.hideContextMenu.bind(this), { once: true });
-        }, 0);
-    }
+    // ==================== TOOLS MENU METHODS ====================
     
-    hideContextMenu() {
-        const menu = document.getElementById('fileContextMenu');
-        if (menu) {
-            menu.remove();
-        }
-    }
-
-    // 删除单个文件
-    deleteFile(fileId) {
-        this.hideContextMenu();
-        
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
+    checkFileIntegrity() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
             return;
         }
         
-        const confirm = window.confirm(`Delete "${file.name}"? This action cannot be undone.`);
-        if (confirm) {
-            const fileIndex = this.currentProject.files.findIndex(f => f.id === fileId);
-            if (fileIndex !== -1) {
-                this.currentProject.files.splice(fileIndex, 1);
-                this.selectedFiles.delete(fileId);
-                
-                this.currentProject.modified = new Date().toISOString();
-                this.saveProjects();
-                this.renderProjectContent();
-                this.updateDetailsPanel();
-                
-                this.showNotification(`File "${file.name}" deleted successfully`, 'success');
+        let checkedCount = 0;
+        let issuesFound = 0;
+        const issues = [];
+        
+        this.currentProject.files.forEach(file => {
+            checkedCount++;
+            
+            // Check for common issues
+            if (!file.name || file.name.trim() === '') {
+                issues.push(`File ${file.id}: Missing or empty name`);
+                issuesFound++;
             }
+            
+            if (!file.type || file.type === 'unknown') {
+                issues.push(`File ${file.name}: Unknown or missing file type`);
+                issuesFound++;
+            }
+            
+            if (!file.size || file.size < 0) {
+                issues.push(`File ${file.name}: Invalid file size`);
+                issuesFound++;
+            }
+            
+            if (!file.created || !file.modified) {
+                issues.push(`File ${file.name}: Missing timestamp information`);
+                issuesFound++;
+            }
+        });
+        
+        if (issuesFound === 0) {
+            this.showNotification(`File integrity check complete: ${checkedCount} files, no issues found`, 'success');
+        } else {
+            const issueReport = `
+File Integrity Check Results:
+
+Checked: ${checkedCount} files
+Issues Found: ${issuesFound}
+
+Issues:
+${issues.slice(0, 10).join('\n')}
+${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
+            `.trim();
+            
+            alert(issueReport);
+            this.showNotification(`Integrity check found ${issuesFound} issues`, 'warning');
         }
     }
 
-    // 复制文件
-    duplicateFile(fileId) {
-        this.hideContextMenu();
+    convertFastaToGenBank() {
+        this.showNotification('FASTA to GenBank conversion: Feature coming soon', 'info');
+        // TODO: Implement actual conversion
+    }
+
+    convertGffToBed() {
+        this.showNotification('GFF to BED conversion: Feature coming soon', 'info');
+        // TODO: Implement actual conversion
+    }
+
+    showCustomConversionDialog() {
+        const conversionOptions = [
+            'FASTA to GenBank',
+            'GenBank to FASTA',
+            'GFF to BED',
+            'BED to GFF',
+            'VCF to BED',
+            'Custom script...'
+        ].join('\n');
         
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
+        const choice = prompt(`Select conversion type:\n${conversionOptions}\n\nEnter conversion name:`);
+        if (choice) {
+            this.showNotification(`Custom conversion "${choice}": Feature coming soon`, 'info');
+        }
+    }
+
+    showBatchRenameDialog() {
+        if (!this.currentProject || this.selectedFiles.size === 0) {
+            this.showNotification('Please select files to rename', 'warning');
             return;
         }
         
-        const newName = prompt('Enter name for the duplicate file:', file.name.replace(/(\.[^.]+)$/, '_copy$1'));
-        if (!newName || newName.trim() === '') return;
+        const pattern = prompt(
+            `Batch Rename ${this.selectedFiles.size} files\n\n` +
+            'Enter rename pattern (use {n} for number, {name} for original name):\n' +
+            'Examples:\n' +
+            '• "sample_{n}.fasta" → sample_1.fasta, sample_2.fasta\n' +
+            '• "processed_{name}" → processed_original_name.ext'
+        );
         
-        // 检查文件名是否已存在
-        const existingFile = this.currentProject.files.find(f => f.name === newName.trim());
-        if (existingFile) {
-            this.showNotification('A file with this name already exists', 'warning');
-            return;
+        if (pattern && pattern.trim()) {
+            this.batchRenameFiles(pattern.trim());
         }
+    }
+
+    batchRenameFiles(pattern) {
+        let renamedCount = 0;
+        let counter = 1;
         
-        try {
-            const duplicateFile = {
-                ...file,
-                id: this.generateId(),
-                name: newName.trim(),
-                created: new Date().toISOString(),
-                modified: new Date().toISOString()
-            };
-            
-            this.currentProject.files.push(duplicateFile);
-            this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
+        Array.from(this.selectedFiles).forEach(fileId => {
+            const file = this.findFileById(fileId);
+            if (file) {
+                const originalName = file.name;
+                const nameWithoutExt = originalName.split('.').slice(0, -1).join('.');
+                const extension = originalName.split('.').pop();
+                
+                let newName = pattern
+                    .replace(/{n}/g, counter)
+                    .replace(/{name}/g, nameWithoutExt);
+                
+                if (!newName.includes('.') && extension) {
+                    newName += '.' + extension;
+                }
+                
+                file.name = newName;
+                file.modified = new Date().toISOString();
+                renamedCount++;
+                counter++;
+            }
+        });
+        
+        if (renamedCount > 0) {
+            this.markProjectAsModified();
             this.renderProjectContent();
-            
-            this.showNotification(`File duplicated as "${newName.trim()}"`, 'success');
-            
-        } catch (error) {
-            console.error('Error duplicating file:', error);
-            this.showNotification('Failed to duplicate file', 'error');
+            this.showNotification(`Batch renamed ${renamedCount} files`, 'success');
         }
     }
 
-    // 移动文件到文件夹
-    moveFileToFolder(fileId) {
-        this.hideContextMenu();
-        
-        const file = this.findFileById(fileId);
-        if (!file) {
-            this.showNotification('File not found', 'error');
+    showBatchMoveDialog() {
+        if (!this.currentProject || this.selectedFiles.size === 0) {
+            this.showNotification('Please select files to move', 'warning');
             return;
         }
         
         if (!this.currentProject.folders || this.currentProject.folders.length === 0) {
-            this.showNotification('No folders available. Create a folder first.', 'warning');
+            this.showNotification('No folders available. Create folders first.', 'warning');
             return;
         }
         
@@ -2149,171 +1772,558 @@ Last modified: ${this.formatDate(file.modified)}
             `${folder.name} (${folder.path.join('/')})`
         ).join('\n');
         
-        const choice = prompt(`Select target folder:\n${folderOptions}\n\nEnter folder name:`);
-        if (!choice) return;
+        const choice = prompt(
+            `Batch Move ${this.selectedFiles.size} files\n\n` +
+            `Available folders:\n${folderOptions}\n\n` +
+            'Enter target folder name:'
+        );
         
-        const targetFolder = this.currentProject.folders.find(f => f.name === choice.trim());
-        if (targetFolder) {
-            file.folder = targetFolder.path;
-            file.modified = new Date().toISOString();
-            
-            this.currentProject.modified = new Date().toISOString();
-            this.saveProjects();
-            this.renderProjectContent();
-            
-            this.showNotification(`File "${file.name}" moved to "${targetFolder.name}"`, 'success');
-        } else {
-            this.showNotification('Folder not found', 'warning');
+        if (choice && choice.trim()) {
+            this.batchMoveFiles(choice.trim());
         }
     }
 
-    // 创建测试项目（用于演示和测试）
-    createTestProject() {
-        const projectId = this.generateId();
-        const testProject = {
-            id: projectId,
-            name: 'Test Project',
-            description: 'A sample project with test files for demonstration',
-            location: 'Test Location',
-            created: new Date().toISOString(),
-            modified: new Date().toISOString(),
-            files: [
-                {
-                    id: this.generateId(),
-                    name: 'sample_genome.fasta',
-                    type: 'fasta',
-                    size: 1024000,
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString(),
-                    folder: ['Genomes']
-                },
-                {
-                    id: this.generateId(),
-                    name: 'annotations.gff',
-                    type: 'gff',
-                    size: 512000,
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString(),
-                    folder: ['Annotations']
-                },
-                {
-                    id: this.generateId(),
-                    name: 'variants.vcf',
-                    type: 'vcf',
-                    size: 256000,
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString(),
-                    folder: ['Variants']
-                },
-                {
-                    id: this.generateId(),
-                    name: 'readme.txt',
-                    type: 'txt',
-                    size: 2048,
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString(),
-                    folder: []
-                },
-                {
-                    id: this.generateId(),
-                    name: 'analysis_results.bed',
-                    type: 'bed',
-                    size: 128000,
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString(),
-                    folder: ['Analysis']
-                }
-            ],
-            folders: [
-                { name: 'Genomes', icon: '🧬', path: ['Genomes'], files: [] },
-                { name: 'Annotations', icon: '📋', path: ['Annotations'], files: [] },
-                { name: 'Variants', icon: '🔄', path: ['Variants'], files: [] },
-                { name: 'Reads', icon: '📊', path: ['Reads'], files: [] },
-                { name: 'Analysis', icon: '📈', path: ['Analysis'], files: [] }
-            ],
-            metadata: {
-                totalFiles: 5,
-                totalSize: 1922048,
-                lastOpened: new Date().toISOString()
+    batchMoveFiles(targetFolderName) {
+        const targetFolder = this.currentProject.folders.find(f => f.name === targetFolderName);
+        if (!targetFolder) {
+            this.showNotification('Target folder not found', 'error');
+            return;
+        }
+        
+        let movedCount = 0;
+        Array.from(this.selectedFiles).forEach(fileId => {
+            const file = this.findFileById(fileId);
+            if (file) {
+                file.folder = targetFolder.path.slice();
+                file.modified = new Date().toISOString();
+                movedCount++;
             }
-        };
-
-        this.projects.set(projectId, testProject);
-        this.saveProjects();
-        this.renderProjectTree();
-        this.selectProject(projectId);
-
-        this.showNotification('✅ Test project created with sample files! Try right-clicking on files to see the context menu.', 'success');
-    }
-
-    // ====== 项目状态管理方法 ======
-    
-    /**
-     * 标记项目为已修改
-     */
-    markProjectAsModified() {
-        if (!this.currentProject) return;
+        });
         
-        this.currentProject.hasUnsavedChanges = true;
-        this.currentProject.modified = new Date().toISOString();
-        
-        // 保存到本地存储
-        this.projects.set(this.currentProject.id, this.currentProject);
-        this.saveProjects();
-        
-        // 更新保存按钮状态
-        this.updateSaveButtonState();
-        
-        console.log('📝 Project marked as modified (changes buffered)');
-    }
-    
-    /**
-     * 标记项目为已保存
-     */
-    markProjectAsSaved() {
-        if (!this.currentProject) return;
-        
-        this.currentProject.hasUnsavedChanges = false;
-        
-        // 保存到本地存储
-        this.projects.set(this.currentProject.id, this.currentProject);
-        this.saveProjects();
-        
-        this.updateSaveButtonState();
-        
-        console.log('💾 Project marked as saved');
-    }
-    
-    /**
-     * 更新保存按钮状态
-     */
-    updateSaveButtonState() {
-        const saveBtn = document.querySelector('[onclick*="saveCurrentProject"]') || 
-                       document.querySelector('.save-btn') ||
-                       document.querySelector('[title*="Save"]');
-        
-        if (!saveBtn) return;
-        
-        const hasChanges = this.currentProject && this.currentProject.hasUnsavedChanges;
-        
-        if (hasChanges) {
-            saveBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
-            saveBtn.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4)';
-            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save *' : 'Save *';
-            saveBtn.title = 'Save project - You have unsaved changes';
-            
-            // 添加脉冲动画
-            saveBtn.style.animation = 'pulse 2s infinite';
-        } else {
-            saveBtn.style.background = 'linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)';
-            saveBtn.style.boxShadow = '0 4px 15px rgba(54, 209, 220, 0.4)';
-            saveBtn.innerHTML = saveBtn.innerHTML.includes('💾') ? '💾 Save' : 'Save';
-            saveBtn.title = 'Save current project';
-            saveBtn.style.animation = '';
+        if (movedCount > 0) {
+            this.markProjectAsModified();
+            this.renderProjectContent();
+            this.showNotification(`Batch moved ${movedCount} files to "${targetFolder.name}"`, 'success');
         }
     }
 
-    // ====== 菜单系统功能实现 ======
+    batchDeleteFiles() {
+        if (!this.currentProject || this.selectedFiles.size === 0) {
+            this.showNotification('Please select files to delete', 'warning');
+            return;
+        }
+        
+        const confirm = window.confirm(
+            `Delete ${this.selectedFiles.size} selected files?\n\n` +
+            'This action cannot be undone!'
+        );
+        
+        if (confirm) {
+            let deletedCount = 0;
+            Array.from(this.selectedFiles).forEach(fileId => {
+                const fileIndex = this.currentProject.files.findIndex(f => f.id === fileId);
+                if (fileIndex !== -1) {
+                    this.currentProject.files.splice(fileIndex, 1);
+                    deletedCount++;
+                }
+            });
+            
+            this.selectedFiles.clear();
+            
+            if (deletedCount > 0) {
+                this.markProjectAsModified();
+                this.renderProjectContent();
+                this.showNotification(`Batch deleted ${deletedCount} files`, 'success');
+            }
+        }
+    }
+
+    openInExternalEditor() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('Please select a file to open', 'warning');
+            return;
+        }
+        
+        const fileId = Array.from(this.selectedFiles)[0];
+        const file = this.findFileById(fileId);
+        
+        if (file && file.path) {
+            if (window.electronAPI && window.electronAPI.openFileInExternalEditor) {
+                window.electronAPI.openFileInExternalEditor(file.path);
+                this.showNotification(`Opening "${file.name}" in external editor`, 'info');
+            } else {
+                this.showNotification('External editor not available in browser mode', 'warning');
+            }
+        } else {
+            this.showNotification('File path not available', 'error');
+        }
+    }
+
+    openProjectInExplorer() {
+        if (!this.currentProject) {
+            this.showNotification('No project selected', 'warning');
+            return;
+        }
+        
+        const folderPath = this.currentProject.dataFolderPath || this.currentProject.location;
+        
+        if (folderPath && window.electronAPI && window.electronAPI.openFolderInExplorer) {
+            window.electronAPI.openFolderInExplorer(folderPath);
+            this.showNotification('Opening project folder in file explorer', 'info');
+        } else {
+            this.showNotification('File explorer not available or project path not set', 'warning');
+        }
+    }
+
+    showPreferences() {
+        const preferences = `
+⚙️ Project Manager Preferences
+
+Current Settings:
+• View Mode: ${this.viewMode || 'grid'}
+• Sort By: ${this.sortBy || 'name'}
+• Show Hidden Files: ${this.showHiddenFiles ? 'Yes' : 'No'}
+• Show File Extensions: ${this.showFileExtensions ? 'Yes' : 'No'}
+• Auto-save: ${this.autoSave ? 'Enabled' : 'Disabled'}
+
+Default Locations:
+• Projects Directory: ${this.defaultProjectLocation || 'Not set'}
+• Data Directory: ${this.currentProject?.dataFolderPath || 'Not set'}
+
+Note: Full preferences dialog coming soon!
+        `.trim();
+        
+        alert(preferences);
+    }
+
+    // ==================== HELP MENU METHODS ====================
+    
+    showHelp() {
+        const helpContent = `
+📖 Project Manager Help
+
+🎯 Quick Start:
+1. Create a new project or open an existing one
+2. Import files using drag & drop or File menu
+3. Organize files into folders
+4. Save your project regularly
+
+⌨️ Essential Shortcuts:
+• Ctrl+N - New Project
+• Ctrl+O - Open Project
+• Ctrl+S - Save Project
+• Ctrl+I - Import Files
+• F5 - Refresh
+• Del - Delete Selected
+
+🔧 Features:
+• File Management - Add, organize, and track files
+• Project Organization - Folders and metadata
+• Batch Operations - Rename, move, delete multiple files
+• Export/Import - Backup and share projects
+• File Validation - Check integrity and find duplicates
+
+💡 Tips:
+• Right-click for context menus
+• Use Ctrl+Click for multiple selection
+• Drag files between folders to organize
+• Export projects regularly for backup
+
+For more help, visit the User Guide or report issues.
+        `.trim();
+        
+        alert(helpContent);
+    }
+
+    showUserGuide() {
+        const userGuide = `
+📚 Project Manager User Guide
+
+🚀 Getting Started:
+1. PROJECT CREATION
+   • File → New Project (Ctrl+N)
+   • Choose project location and name
+   • Project automatically creates standard folders
+
+2. ADDING FILES
+   • File → Import Files (Ctrl+I)
+   • Drag & drop files directly
+   • Files are automatically organized by type
+
+3. PROJECT ORGANIZATION
+   • Create custom folders (Project → Create Folder)
+   • Drag files between folders
+   • Use auto-organize features
+
+📁 File Management:
+• VIEW MODES: Grid, List, Details
+• SORTING: Name, Date, Size, Type
+• SEARCH: Find files by name (Ctrl+F)
+• SELECTION: Single click, Ctrl+click, range select
+
+🔧 Advanced Features:
+• BATCH OPERATIONS: Rename, move, delete multiple files
+• FILE VALIDATION: Check integrity and find duplicates
+• PROJECT BACKUP: Export and import projects
+• CONVERSION TOOLS: Transform file formats
+
+⚙️ Project Settings:
+• Project Properties: View metadata and statistics
+• Preferences: Customize interface and behavior
+• Auto-organize: Automatically sort files by type
+
+🎯 Best Practices:
+• Save projects regularly
+• Use descriptive project names
+• Organize files into logical folders
+• Export backups before major changes
+• Validate files periodically
+
+For technical support, use Help → Report Issue
+        `.trim();
+        
+        alert(userGuide);
+    }
+
+    showFileFormatsInfo() {
+        const formats = `
+📋 Supported File Formats
+
+🧬 GENOME FILES:
+• FASTA (.fasta, .fa, .fas) - Sequence data
+• GenBank (.gb, .gbk, .gbff) - Annotated sequences
+• EMBL (.embl) - European sequence format
+
+📋 ANNOTATION FILES:
+• GFF (.gff, .gff3) - Gene feature format
+• GTF (.gtf) - Gene transfer format
+• BED (.bed) - Browser extensible data
+• PSL (.psl) - Pattern space layout
+
+🔄 VARIANT FILES:
+• VCF (.vcf) - Variant call format
+• MAF (.maf) - Mutation annotation format
+
+📊 READ/ALIGNMENT FILES:
+• BAM (.bam) - Binary alignment map
+• SAM (.sam) - Sequence alignment map
+• FASTQ (.fastq, .fq) - Sequence with quality
+
+📈 VISUALIZATION FILES:
+• WIG (.wig) - Wiggle format
+• BigWig (.bw, .bigwig) - Binary wiggle
+• BedGraph (.bedgraph) - Graph data
+
+📄 OTHER FORMATS:
+• TSV (.tsv) - Tab-separated values
+• CSV (.csv) - Comma-separated values
+• TXT (.txt) - Plain text files
+• JSON (.json) - Structured data
+
+🔧 Conversion Support:
+• FASTA ↔ GenBank
+• GFF ↔ BED
+• VCF → BED
+• Custom conversions available
+
+For format-specific help, consult the documentation.
+        `.trim();
+        
+        alert(formats);
+    }
+
+    showBestPractices() {
+        const practices = `
+🌟 Project Manager Best Practices
+
+📁 PROJECT ORGANIZATION:
+• Use descriptive project names
+• Create projects for each research topic
+• Organize files into logical folders (Genomes, Annotations, etc.)
+• Keep related files together
+
+💾 DATA MANAGEMENT:
+• Save projects frequently (Ctrl+S)
+• Create backups before major changes
+• Use version control for important projects
+• Export archives for long-term storage
+
+📋 FILE NAMING:
+• Use consistent naming conventions
+• Avoid spaces and special characters
+• Include version numbers or dates
+• Use descriptive, searchable names
+
+🔍 QUALITY CONTROL:
+• Validate files regularly (Tools → Validate Files)
+• Check for duplicates periodically
+• Verify file integrity before analysis
+• Document file sources and processing
+
+⚡ EFFICIENCY TIPS:
+• Use batch operations for multiple files
+• Set up auto-organization rules
+• Utilize keyboard shortcuts
+• Keep projects under 1000 files for performance
+
+🔒 SECURITY & BACKUP:
+• Export projects regularly
+• Store backups in multiple locations
+• Use meaningful project descriptions
+• Document data provenance
+
+🚀 COLLABORATION:
+• Export projects for sharing
+• Use standardized folder structures
+• Include README files with descriptions
+• Maintain consistent metadata
+
+⚠️ TROUBLESHOOTING:
+• Refresh project if files don't appear
+• Check file permissions if imports fail
+• Validate project integrity after crashes
+• Report bugs with detailed information
+
+Following these practices ensures reliable, efficient project management.
+        `.trim();
+        
+        alert(practices);
+    }
+
+    sendFeedback() {
+        const feedback = prompt(
+            'Send Feedback\n\n' +
+            'Please share your thoughts, suggestions, or feature requests:\n' +
+            '(This will prepare an email for you to send)'
+        );
+        
+        if (feedback && feedback.trim()) {
+            const subject = 'Project Manager Feedback';
+            const body = `
+Project Manager Feedback:
+
+${feedback.trim()}
+
+---
+System Information:
+• User Agent: ${navigator.userAgent}
+• Current Project: ${this.currentProject ? this.currentProject.name : 'None'}
+• Projects Count: ${this.projects.size}
+• Timestamp: ${new Date().toISOString()}
+            `.trim();
+            
+            const mailtoLink = `mailto:support@genomeaistudio.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Try to open email client
+            const a = document.createElement('a');
+            a.href = mailtoLink;
+            a.click();
+            
+            this.showNotification('Feedback email prepared - please send when ready', 'info');
+        }
+    }
+
+    // Initialize clipboard for cut/copy/paste operations
+    clipboard = null;
+
+    // ==================== ADDITIONAL MENU METHODS ====================
+    
+    /**
+     * Load project from file (for menu system)
+     */
+    async loadProjectFromFile(filePath) {
+        if (!filePath) {
+            this.showNotification('No file path provided', 'error');
+            return;
+        }
+
+        try {
+            if (window.electronAPI && window.electronAPI.loadProjectFile) {
+                const result = await window.electronAPI.loadProjectFile(filePath);
+                
+                if (result.success) {
+                    // Parse the project file content
+                    let project;
+                    const content = result.content;
+                    const fileName = result.fileName;
+                    
+                    // Determine file format and parse accordingly
+                    if (fileName.toLowerCase().endsWith('.prj.gai') || fileName.toLowerCase().endsWith('.xml')) {
+                        // XML format
+                        if (!this.xmlHandler) {
+                            this.xmlHandler = new ProjectXMLHandler();
+                        }
+                        project = this.xmlHandler.xmlToProject(content);
+                    } else if (fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.genomeproj')) {
+                        // JSON format
+                        project = JSON.parse(content);
+                    } else {
+                        throw new Error(`Unsupported file format: ${fileName}`);
+                    }
+                    
+                    // Validate project data
+                    if (!project || !project.id || !project.name) {
+                        throw new Error('Invalid project data structure');
+                    }
+                    
+                    // Set up project paths
+                    project.projectFilePath = filePath;
+                    const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                    project.dataFolderPath = `${projectDir}/${project.name}`;
+                    project.location = projectDir;
+                    
+                    // Update project metadata
+                    project.xmlFileName = fileName;
+                    project.loadedFromFile = true;
+                    project.lastOpened = new Date().toISOString();
+                    project.isCurrentlyOpen = true;
+                    project.hasUnsavedChanges = false;
+                    
+                    // Close previous project
+                    if (this.currentProject) {
+                        this.currentProject.isCurrentlyOpen = false;
+                    }
+                    
+                    // Set as current project
+                    this.currentProject = project;
+                    this.projects.set(project.id, project);
+                    await this.saveProjects();
+                    
+                    // Update UI
+                    this.renderProjectTree();
+                    this.selectProject(project.id);
+                    
+                    this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
+                    
+                    console.log('📊 Project loaded successfully:', {
+                        id: project.id,
+                        name: project.name,
+                        files: project.files?.length || 0,
+                        folders: project.folders?.length || 0,
+                        projectFile: project.projectFilePath,
+                        dataFolder: project.dataFolderPath
+                    });
+                    
+                } else {
+                    throw new Error(result.error || 'Failed to load project file');
+                }
+            } else {
+                this.showNotification('File loading not available in browser mode', 'warning');
+            }
+        } catch (error) {
+            console.error('Error loading project from file:', error);
+            this.showNotification(`Failed to load project: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Create new project (for menu system)
+     */
+    createNewProject() {
+        this.showModal('newProjectModal');
+    }
+
+    /**
+     * Show modal helper
+     */
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    }
+
+    /**
+     * Report issue (for help menu)
+     */
+    reportIssue() {
+        const issueDetails = prompt(
+            'Report an Issue\n\n' +
+            'Please describe the issue you encountered:\n' +
+            '(Include steps to reproduce, expected vs actual behavior)'
+        );
+        
+        if (issueDetails && issueDetails.trim()) {
+            const subject = 'Project Manager Issue Report';
+            const body = `
+Project Manager Issue Report:
+
+Issue Description:
+${issueDetails.trim()}
+
+Steps to Reproduce:
+1. 
+2. 
+3. 
+
+Expected Behavior:
+
+
+Actual Behavior:
+
+
+---
+System Information:
+• User Agent: ${navigator.userAgent}
+• Current Project: ${this.currentProject ? this.currentProject.name : 'None'}
+• Projects Count: ${this.projects.size}
+• Files in Current Project: ${this.currentProject ? (this.currentProject.files?.length || 0) : 0}
+• Timestamp: ${new Date().toISOString()}
+• Project Manager Version: 1.0.0
+            `.trim();
+            
+            const mailtoLink = `mailto:support@genomeaistudio.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Try to open email client
+            const a = document.createElement('a');
+            a.href = mailtoLink;
+            a.click();
+            
+            this.showNotification('Issue report email prepared - please complete and send', 'info');
+        }
+    }
+
+    /**
+     * Enhanced about dialog
+     */
+    showAbout() {
+        const about = `
+📁 Project Manager
+Part of Genome AI Studio
+
+Version: 1.0.0 Beta
+Build: ${new Date().toISOString().split('T')[0]}
+
+🎯 Purpose:
+Advanced project management for genomic data analysis and bioinformatics workflows.
+
+✨ Key Features:
+• Multi-format file support (FASTA, GenBank, GFF, VCF, BAM, etc.)
+• Intelligent project organization
+• Batch file operations
+• Data validation and integrity checking
+• Export/import capabilities
+• Cross-platform compatibility
+
+👥 Development Team:
+Genome AI Studio Development Team
+
+📧 Support:
+support@genomeaistudio.com
+
+📖 Documentation:
+Visit Help → User Guide for comprehensive documentation
+
+🐛 Report Issues:
+Use Help → Report Issue to submit bug reports
+
+© 2024 Genome AI Studio. All rights reserved.
+
+Built with ❤️ for the bioinformatics community.
+        `.trim();
+        
+        alert(about);
+    }
 }
 
 // 确保类在全局范围内可用

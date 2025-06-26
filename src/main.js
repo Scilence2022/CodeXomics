@@ -3237,6 +3237,10 @@ function createProjectManagerWindow() {
       show: false
     });
     
+    // Create Project Manager specific menu
+    const projectManagerMenu = createProjectManagerMenu(projectManagerWindow);
+    projectManagerWindow.setMenu(projectManagerMenu);
+    
     // Load the project manager HTML
     const projectManagerPath = path.join(__dirname, 'project-manager.html');
     
@@ -3262,6 +3266,622 @@ function createProjectManagerWindow() {
   } catch (error) {
     console.error('Failed to open Project Manager:', error);
   }
+}
+
+// Create Project Manager specific menu system
+function createProjectManagerMenu(projectManagerWindow) {
+  const template = [
+    // File Menu
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Project',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-new-project');
+          }
+        },
+        {
+          label: 'Open Project...',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(projectManagerWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+                { name: 'XML Files', extensions: ['xml'] },
+                { name: 'Project Files', extensions: ['genomeproj', 'json'] },
+                { name: 'All Files', extensions: ['*'] }
+              ],
+              title: 'Open Project'
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              projectManagerWindow.webContents.send('menu-open-project', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Open Recent',
+          submenu: [
+            {
+              label: 'No Recent Projects',
+              enabled: false
+            }
+            // Recent projects will be dynamically populated
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Save Project',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-save-project');
+          }
+        },
+        {
+          label: 'Save Project As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-save-project-as');
+          }
+        },
+        {
+          label: 'Export Project',
+          submenu: [
+            {
+              label: 'Export as XML',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-export-xml');
+              }
+            },
+            {
+              label: 'Export as JSON',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-export-json');
+              }
+            },
+            {
+              label: 'Export Project Archive',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-export-archive');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Import Files...',
+          accelerator: 'CmdOrCtrl+I',
+          click: async () => {
+            const result = await dialog.showOpenDialog(projectManagerWindow, {
+              properties: ['openFile', 'multiSelections'],
+              filters: [
+                { name: 'Genome Files', extensions: ['fasta', 'fa', 'fas', 'gff', 'gff3', 'gtf', 'vcf', 'bam', 'sam', 'wig', 'bigwig', 'bed', 'gb', 'gbk', 'gbff'] },
+                { name: 'All Files', extensions: ['*'] }
+              ],
+              title: 'Import Files to Project'
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              projectManagerWindow.webContents.send('menu-import-files', result.filePaths);
+            }
+          }
+        },
+        {
+          label: 'Import Project...',
+          click: async () => {
+            const result = await dialog.showOpenDialog(projectManagerWindow, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'Project Files', extensions: ['prj.GAI', 'xml', 'json', 'genomeproj'] },
+                { name: 'All Files', extensions: ['*'] }
+              ],
+              title: 'Import Project'
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+              projectManagerWindow.webContents.send('menu-import-project', result.filePaths[0]);
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Close Project',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-close-project');
+          }
+        },
+        {
+          label: 'Close Window',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Shift+W' : 'Ctrl+Shift+W',
+          click: () => {
+            projectManagerWindow.close();
+          }
+        }
+      ]
+    },
+    
+    // Edit Menu
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-undo');
+          }
+        },
+        {
+          label: 'Redo',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Shift+Z' : 'Ctrl+Y',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-redo');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-cut');
+          }
+        },
+        {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-copy');
+          }
+        },
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-paste');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Select All Files',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-select-all');
+          }
+        },
+        {
+          label: 'Clear Selection',
+          accelerator: 'Escape',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-clear-selection');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Find Files...',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-find-files');
+          }
+        },
+        {
+          label: 'Find and Replace...',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-find-replace');
+          }
+        }
+      ]
+    },
+    
+    // View Menu
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Refresh',
+          accelerator: 'F5',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-refresh');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'View Mode',
+          submenu: [
+            {
+              label: 'Grid View',
+              type: 'radio',
+              checked: true,
+              click: () => {
+                projectManagerWindow.webContents.send('menu-view-mode', 'grid');
+              }
+            },
+            {
+              label: 'List View',
+              type: 'radio',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-view-mode', 'list');
+              }
+            },
+            {
+              label: 'Details View',
+              type: 'radio',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-view-mode', 'details');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Sort By',
+          submenu: [
+            {
+              label: 'Name',
+              type: 'radio',
+              checked: true,
+              click: () => {
+                projectManagerWindow.webContents.send('menu-sort-by', 'name');
+              }
+            },
+            {
+              label: 'Date Modified',
+              type: 'radio',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-sort-by', 'modified');
+              }
+            },
+            {
+              label: 'Size',
+              type: 'radio',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-sort-by', 'size');
+              }
+            },
+            {
+              label: 'Type',
+              type: 'radio',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-sort-by', 'type');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Show Hidden Files',
+          type: 'checkbox',
+          click: (menuItem) => {
+            projectManagerWindow.webContents.send('menu-toggle-hidden-files', menuItem.checked);
+          }
+        },
+        {
+          label: 'Show File Extensions',
+          type: 'checkbox',
+          checked: true,
+          click: (menuItem) => {
+            projectManagerWindow.webContents.send('menu-toggle-file-extensions', menuItem.checked);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Sidebar',
+          accelerator: 'F8',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-toggle-sidebar');
+          }
+        },
+        {
+          label: 'Toggle Details Panel',
+          accelerator: 'F9',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-toggle-details-panel');
+          }
+        },
+        {
+          label: 'Toggle Full Screen',
+          accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : 'F11',
+          click: () => {
+            const isFullScreen = projectManagerWindow.isFullScreen();
+            projectManagerWindow.setFullScreen(!isFullScreen);
+          }
+        }
+      ]
+    },
+    
+    // Project Menu
+    {
+      label: 'Project',
+      submenu: [
+        {
+          label: 'Project Properties',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-project-properties');
+          }
+        },
+        {
+          label: 'Project Statistics',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-project-statistics');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Create Folder',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-create-folder');
+          }
+        },
+        {
+          label: 'Organize Files',
+          submenu: [
+            {
+              label: 'Auto-organize by Type',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-auto-organize');
+              }
+            },
+            {
+              label: 'Group by Date',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-group-by-date');
+              }
+            },
+            {
+              label: 'Clean Empty Folders',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-clean-empty-folders');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Backup Project',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-backup-project');
+          }
+        },
+        {
+          label: 'Restore from Backup',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-restore-backup');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Archive Project',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-archive-project');
+          }
+        },
+        {
+          label: 'Delete Project',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-delete-project');
+          }
+        }
+      ]
+    },
+    
+    // Tools Menu
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'Validate Files',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-validate-files');
+          }
+        },
+        {
+          label: 'Find Duplicates',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-find-duplicates');
+          }
+        },
+        {
+          label: 'Check File Integrity',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-check-integrity');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Convert Files',
+          submenu: [
+            {
+              label: 'FASTA to GenBank',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-convert-fasta-genbank');
+              }
+            },
+            {
+              label: 'GFF to BED',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-convert-gff-bed');
+              }
+            },
+            {
+              label: 'Custom Conversion...',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-custom-conversion');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Batch Operations',
+          submenu: [
+            {
+              label: 'Batch Rename',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-batch-rename');
+              }
+            },
+            {
+              label: 'Batch Move',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-batch-move');
+              }
+            },
+            {
+              label: 'Batch Delete',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-batch-delete');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'External Tools',
+          submenu: [
+            {
+              label: 'Open in Genome Viewer',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-open-genome-viewer');
+              }
+            },
+            {
+              label: 'Open in External Editor',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-open-external-editor');
+              }
+            },
+            {
+              label: 'Open in File Explorer',
+              click: () => {
+                projectManagerWindow.webContents.send('menu-open-file-explorer');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences...',
+          accelerator: process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-preferences');
+          }
+        }
+      ]
+    },
+    
+    // Help Menu
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Project Manager Help',
+          accelerator: 'F1',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-help');
+          }
+        },
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'CmdOrCtrl+/',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-keyboard-shortcuts');
+          }
+        },
+        {
+          label: 'User Guide',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-user-guide');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'File Format Support',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-file-formats');
+          }
+        },
+        {
+          label: 'Best Practices',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-best-practices');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Report Issue',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-report-issue');
+          }
+        },
+        {
+          label: 'Send Feedback',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-send-feedback');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'About Project Manager',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-about');
+          }
+        }
+      ]
+    }
+  ];
+
+  // Add platform-specific menu adjustments
+  if (process.platform === 'darwin') {
+    // macOS specific adjustments
+    template.unshift({
+      label: app.getName(),
+      submenu: [
+        {
+          label: 'About Project Manager',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-about');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Preferences...',
+          accelerator: 'Cmd+,',
+          click: () => {
+            projectManagerWindow.webContents.send('menu-preferences');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Hide Project Manager',
+          accelerator: 'Cmd+H',
+          role: 'hide'
+        },
+        {
+          label: 'Hide Others',
+          accelerator: 'Cmd+Alt+H',
+          role: 'hideothers'
+        },
+        {
+          label: 'Show All',
+          role: 'unhide'
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit',
+          accelerator: 'Cmd+Q',
+          click: () => {
+            projectManagerWindow.close();
+          }
+        }
+      ]
+    });
+  }
+
+  return Menu.buildFromTemplate(template);
 }
 
 // ========== PROJECT MANAGER IPC HANDLERS ==========

@@ -5287,6 +5287,249 @@ Use specialized tools to view the full content.`;
                     }
                 });
             }
+
+            // ================================
+            // PROJECT MANAGER MENU SYSTEM EVENT HANDLERS
+            // ================================
+
+            // Listen for menu events from the independent menu system
+            if (window.electronAPI && window.electronAPI.ipcRenderer) {
+                const { ipcRenderer } = window.electronAPI;
+
+                // File Menu Events
+                ipcRenderer.on('menu-new-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.createNewProject();
+                });
+
+                ipcRenderer.on('menu-open-project', (event, filePath) => {
+                    if (projectManagerWindow) projectManagerWindow.loadProjectFromFile(filePath);
+                });
+
+                ipcRenderer.on('menu-save-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.saveCurrentProject();
+                });
+
+                ipcRenderer.on('menu-save-project-as', () => {
+                    if (projectManagerWindow) projectManagerWindow.saveProjectAs();
+                });
+
+                ipcRenderer.on('menu-export-xml', () => {
+                    if (projectManagerWindow) projectManagerWindow.exportProjectAsXML();
+                });
+
+                ipcRenderer.on('menu-export-json', () => {
+                    if (projectManagerWindow) projectManagerWindow.exportProjectAsJSON();
+                });
+
+                ipcRenderer.on('menu-export-archive', () => {
+                    if (projectManagerWindow) projectManagerWindow.exportProjectArchive();
+                });
+
+                ipcRenderer.on('menu-import-files', (event, filePaths) => {
+                    if (projectManagerWindow) projectManagerWindow.importFiles(filePaths);
+                });
+
+                ipcRenderer.on('menu-import-project', (event, filePath) => {
+                    if (projectManagerWindow) projectManagerWindow.importProject(filePath);
+                });
+
+                ipcRenderer.on('menu-close-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.closeCurrentProject();
+                });
+
+                // Edit Menu Events
+                ipcRenderer.on('menu-undo', () => {
+                    if (projectManagerWindow) projectManagerWindow.undoLastAction();
+                });
+
+                ipcRenderer.on('menu-redo', () => {
+                    if (projectManagerWindow) projectManagerWindow.redoLastAction();
+                });
+
+                ipcRenderer.on('menu-cut', () => {
+                    if (projectManagerWindow) projectManagerWindow.cutSelectedFiles();
+                });
+
+                ipcRenderer.on('menu-copy', () => {
+                    if (projectManagerWindow) projectManagerWindow.copySelectedFiles();
+                });
+
+                ipcRenderer.on('menu-paste', () => {
+                    if (projectManagerWindow) projectManagerWindow.pasteFiles();
+                });
+
+                ipcRenderer.on('menu-select-all', () => {
+                    if (projectManagerWindow) projectManagerWindow.selectAllFiles();
+                });
+
+                ipcRenderer.on('menu-clear-selection', () => {
+                    if (projectManagerWindow) projectManagerWindow.clearSelection();
+                });
+
+                ipcRenderer.on('menu-find-files', () => {
+                    if (projectManagerWindow) projectManagerWindow.showFindDialog();
+                });
+
+                ipcRenderer.on('menu-find-replace', () => {
+                    if (projectManagerWindow) projectManagerWindow.showFindReplaceDialog();
+                });
+
+                // View Menu Events
+                ipcRenderer.on('menu-refresh', () => {
+                    if (projectManagerWindow) projectManagerWindow.manualRefreshProjects();
+                });
+
+                ipcRenderer.on('menu-view-mode', (event, mode) => {
+                    if (projectManagerWindow) projectManagerWindow.setViewMode(mode);
+                });
+
+                ipcRenderer.on('menu-sort-by', (event, sortBy) => {
+                    if (projectManagerWindow) projectManagerWindow.setSortBy(sortBy);
+                });
+
+                ipcRenderer.on('menu-toggle-hidden-files', (event, show) => {
+                    if (projectManagerWindow) projectManagerWindow.toggleHiddenFiles(show);
+                });
+
+                ipcRenderer.on('menu-toggle-file-extensions', (event, show) => {
+                    if (projectManagerWindow) projectManagerWindow.toggleFileExtensions(show);
+                });
+
+                ipcRenderer.on('menu-toggle-sidebar', () => {
+                    if (projectManagerWindow) projectManagerWindow.toggleSidebar();
+                });
+
+                ipcRenderer.on('menu-toggle-details-panel', () => {
+                    if (projectManagerWindow) projectManagerWindow.toggleDetailsPanel();
+                });
+
+                // Project Menu Events
+                ipcRenderer.on('menu-project-properties', () => {
+                    if (projectManagerWindow) projectManagerWindow.showProjectProperties();
+                });
+
+                ipcRenderer.on('menu-project-statistics', () => {
+                    if (projectManagerWindow) projectManagerWindow.showProjectStatistics();
+                });
+
+                ipcRenderer.on('menu-create-folder', () => {
+                    if (projectManagerWindow) projectManagerWindow.createFolder();
+                });
+
+                ipcRenderer.on('menu-auto-organize', () => {
+                    if (projectManagerWindow) projectManagerWindow.autoOrganizeFiles();
+                });
+
+                ipcRenderer.on('menu-group-by-date', () => {
+                    if (projectManagerWindow) projectManagerWindow.groupFilesByDate();
+                });
+
+                ipcRenderer.on('menu-clean-empty-folders', () => {
+                    if (projectManagerWindow) projectManagerWindow.cleanEmptyFolders();
+                });
+
+                ipcRenderer.on('menu-backup-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.backupProject();
+                });
+
+                ipcRenderer.on('menu-restore-backup', () => {
+                    if (projectManagerWindow) projectManagerWindow.restoreFromBackup();
+                });
+
+                ipcRenderer.on('menu-archive-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.archiveProject();
+                });
+
+                ipcRenderer.on('menu-delete-project', () => {
+                    if (projectManagerWindow) projectManagerWindow.deleteCurrentProject();
+                });
+
+                // Tools Menu Events
+                ipcRenderer.on('menu-validate-files', () => {
+                    if (projectManagerWindow) projectManagerWindow.validateFiles();
+                });
+
+                ipcRenderer.on('menu-find-duplicates', () => {
+                    if (projectManagerWindow) projectManagerWindow.findDuplicateFiles();
+                });
+
+                ipcRenderer.on('menu-check-integrity', () => {
+                    if (projectManagerWindow) projectManagerWindow.checkFileIntegrity();
+                });
+
+                ipcRenderer.on('menu-convert-fasta-genbank', () => {
+                    if (projectManagerWindow) projectManagerWindow.convertFastaToGenBank();
+                });
+
+                ipcRenderer.on('menu-convert-gff-bed', () => {
+                    if (projectManagerWindow) projectManagerWindow.convertGffToBed();
+                });
+
+                ipcRenderer.on('menu-custom-conversion', () => {
+                    if (projectManagerWindow) projectManagerWindow.showCustomConversionDialog();
+                });
+
+                ipcRenderer.on('menu-batch-rename', () => {
+                    if (projectManagerWindow) projectManagerWindow.showBatchRenameDialog();
+                });
+
+                ipcRenderer.on('menu-batch-move', () => {
+                    if (projectManagerWindow) projectManagerWindow.showBatchMoveDialog();
+                });
+
+                ipcRenderer.on('menu-batch-delete', () => {
+                    if (projectManagerWindow) projectManagerWindow.batchDeleteFiles();
+                });
+
+                ipcRenderer.on('menu-open-genome-viewer', () => {
+                    if (projectManagerWindow) projectManagerWindow.openInGenomeViewer();
+                });
+
+                ipcRenderer.on('menu-open-external-editor', () => {
+                    if (projectManagerWindow) projectManagerWindow.openInExternalEditor();
+                });
+
+                ipcRenderer.on('menu-open-file-explorer', () => {
+                    if (projectManagerWindow) projectManagerWindow.openProjectInExplorer();
+                });
+
+                ipcRenderer.on('menu-preferences', () => {
+                    if (projectManagerWindow) projectManagerWindow.showPreferences();
+                });
+
+                // Help Menu Events
+                ipcRenderer.on('menu-help', () => {
+                    if (projectManagerWindow) projectManagerWindow.showHelp();
+                });
+
+                ipcRenderer.on('menu-keyboard-shortcuts', () => {
+                    if (projectManagerWindow) projectManagerWindow.showKeyboardShortcuts();
+                });
+
+                ipcRenderer.on('menu-user-guide', () => {
+                    if (projectManagerWindow) projectManagerWindow.showUserGuide();
+                });
+
+                ipcRenderer.on('menu-file-formats', () => {
+                    if (projectManagerWindow) projectManagerWindow.showFileFormatsInfo();
+                });
+
+                ipcRenderer.on('menu-best-practices', () => {
+                    if (projectManagerWindow) projectManagerWindow.showBestPractices();
+                });
+
+                ipcRenderer.on('menu-report-issue', () => {
+                    if (projectManagerWindow) projectManagerWindow.reportIssue();
+                });
+
+                ipcRenderer.on('menu-send-feedback', () => {
+                    if (projectManagerWindow) projectManagerWindow.sendFeedback();
+                });
+
+                ipcRenderer.on('menu-about', () => {
+                    if (projectManagerWindow) projectManagerWindow.showAbout();
+                });
+            }
         });
     </script>
     

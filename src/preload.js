@@ -116,7 +116,38 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   
   // File reading API for project manager
-  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+
+  // Expose ipcRenderer for menu system event handling
+  ipcRenderer: {
+    on: (channel, listener) => {
+      // Whitelist of allowed channels for security
+      const validChannels = [
+        'menu-new-project', 'menu-open-project', 'menu-save-project', 'menu-save-project-as',
+        'menu-export-xml', 'menu-export-json', 'menu-export-archive', 'menu-import-files',
+        'menu-import-project', 'menu-close-project', 'menu-undo', 'menu-redo', 'menu-cut',
+        'menu-copy', 'menu-paste', 'menu-select-all', 'menu-clear-selection', 'menu-find-files',
+        'menu-find-replace', 'menu-refresh', 'menu-view-mode', 'menu-sort-by',
+        'menu-toggle-hidden-files', 'menu-toggle-file-extensions', 'menu-toggle-sidebar',
+        'menu-toggle-details-panel', 'menu-project-properties', 'menu-project-statistics',
+        'menu-create-folder', 'menu-auto-organize', 'menu-group-by-date', 'menu-clean-empty-folders',
+        'menu-backup-project', 'menu-restore-backup', 'menu-archive-project', 'menu-delete-project',
+        'menu-validate-files', 'menu-find-duplicates', 'menu-check-integrity',
+        'menu-convert-fasta-genbank', 'menu-convert-gff-bed', 'menu-custom-conversion',
+        'menu-batch-rename', 'menu-batch-move', 'menu-batch-delete', 'menu-open-genome-viewer',
+        'menu-open-external-editor', 'menu-open-file-explorer', 'menu-preferences',
+        'menu-help', 'menu-keyboard-shortcuts', 'menu-user-guide', 'menu-file-formats',
+        'menu-best-practices', 'menu-report-issue', 'menu-send-feedback', 'menu-about'
+      ];
+      
+      if (validChannels.includes(channel)) {
+        ipcRenderer.on(channel, listener);
+      }
+    },
+    removeAllListeners: (channel) => {
+      ipcRenderer.removeAllListeners(channel);
+    }
+  }
 });
 
 // Provide access to node process information (for development)
