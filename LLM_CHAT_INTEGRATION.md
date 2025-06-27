@@ -55,7 +55,7 @@ Access via **Options → Configure LLMs** in the header menu:
 
 #### Local LLM Configuration
 - **API Endpoint**: e.g., `http://localhost:11434/v1` (Ollama), `http://localhost:1234/v1` (LMStudio)
-- **Model Name**: e.g., `llama3.2`, `codellama`, `mistral`, `qwen2.5`
+- **Model Name**: e.g., `qwen3:8b`, `deepseek-r1:8b`, `llama3.2`, `codellama`, `mistral`
 - **Optional API Key**: If required by your local setup
 - **Streaming Support**: Enable for real-time responses
 - **Custom Parameters**: Temperature, max tokens, and other model parameters
