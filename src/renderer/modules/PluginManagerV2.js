@@ -1,7 +1,6 @@
 /**
- * PluginManagerV2 - Refactored plugin system core for GenomeExplorer
- * Integrates PluginAPI abstraction layer, resource management, and improved architecture
- * Replaces the legacy PluginManager with better separation of concerns
+ * PluginManagerV2 - Modern plugin system core for GenomeExplorer
+ * Advanced plugin management with integrated marketplace, resource management, and security
  */
 class PluginManagerV2 {
     constructor(app, configManager = null, options = {}) {
@@ -10,6 +9,10 @@ class PluginManagerV2 {
         this.options = {
             enableResourceManagement: true,
             enableCaching: true,
+            enableMarketplace: true,
+            enableSecurityValidation: true,
+            enableDependencyResolution: true,
+            enableAutoUpdates: true,
             maxConcurrentExecutions: 5,
             defaultPermissions: {
                 'genome.read': true,
@@ -23,6 +26,7 @@ class PluginManagerV2 {
         // Core components
         this.api = null;
         this.resourceManager = null;
+        this.marketplace = null;
         this.eventBus = new EventTarget();
         
         // Plugin registries - separated by type for better organization
@@ -81,12 +85,12 @@ class PluginManagerV2 {
                 console.log('✅ PluginResourceManager initialized');
             }
             
-            // 3. Initialize Plugin Marketplace if enabled
+            // 3. Initialize Plugin Marketplace
             if (this.options.enableMarketplace !== false) {
                 this.marketplace = new PluginMarketplace(this, this.configManager, {
-                    enableSecurityValidation: this.options.enableSecurityValidation !== false,
-                    enableDependencyResolution: this.options.enableDependencyResolution !== false,
-                    enableAutoUpdates: this.options.enableAutoUpdates !== false
+                    enableSecurityValidation: this.options.enableSecurityValidation,
+                    enableDependencyResolution: this.options.enableDependencyResolution,
+                    enableAutoUpdates: this.options.enableAutoUpdates
                 });
                 console.log('✅ PluginMarketplace initialized');
             }
@@ -102,8 +106,6 @@ class PluginManagerV2 {
             // 6. Set global reference
             if (typeof window !== 'undefined') {
                 window.pluginManagerV2 = this;
-                // Maintain backward compatibility
-                window.pluginManager = this;
             }
             
             this.isInitialized = true;
@@ -631,22 +633,7 @@ class PluginManagerV2 {
      * Execute function by path (legacy compatibility)
      */
     async executeByPath(executorPath, context) {
-        // Handle legacy executor paths
-        if (executorPath.startsWith('PluginExecutors.')) {
-            const funcName = executorPath.replace('PluginExecutors.', '');
-            
-            // Import legacy implementations
-            if (typeof require !== 'undefined') {
-                const PluginImplementations = require('./PluginImplementations');
-                const impl = PluginImplementations.init(this.app, this.configManager);
-                
-                if (typeof impl[funcName] === 'function') {
-                    return await impl[funcName](context.parameters);
-                }
-            }
-        }
-        
-        throw new Error(`Executor not found: ${executorPath}`);
+        throw new Error('Legacy executor paths are no longer supported');
     }
 
     /**
@@ -883,7 +870,7 @@ class PluginManagerV2 {
         
         this.eventBus.dispatchEvent(event);
         
-        // Also emit to window if available (for backward compatibility)
+        // Also emit to window for global event handling
         if (typeof window !== 'undefined') {
             window.dispatchEvent(event);
         }

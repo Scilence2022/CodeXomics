@@ -186,9 +186,13 @@ class ChatManager {
             // Load new plugin system files in correct order
             await this.loadScript('modules/PluginAPI.js');
             await this.loadScript('modules/PluginResourceManager.js');
+            await this.loadScript('modules/PluginMarketplace.js');
+            await this.loadScript('modules/PluginDependencyResolver.js');
+            await this.loadScript('modules/PluginSecurityValidator.js');
+            await this.loadScript('modules/PluginUpdateManager.js');
             await this.loadScript('modules/PluginManagerV2.js');
             
-            // Load legacy files for backward compatibility
+            // Load supporting files
             await this.loadScript('modules/PluginUtils.js');
             await this.loadScript('modules/PluginImplementations.js');
             await this.loadScript('modules/PluginVisualization.js');
@@ -197,28 +201,12 @@ class ChatManager {
             if (typeof PluginManagerV2 !== 'undefined') {
                 this.pluginManager = new PluginManagerV2(this.app, this.configManager);
                 console.log('🚀 PluginManagerV2 loaded and initialized successfully');
+            } else {
+                throw new Error('PluginManagerV2 failed to load');
             }
         } catch (error) {
             console.error('Failed to load PluginManagerV2:', error);
-            // Fallback to legacy system if V2 fails
-            console.warn('Attempting fallback to legacy PluginManager...');
-            await this.loadLegacyPluginManager();
-        }
-    }
-
-    /**
-     * Fallback to legacy plugin manager if V2 fails
-     */
-    async loadLegacyPluginManager() {
-        try {
-            await this.loadScript('modules/PluginManager.js');
-            
-            if (typeof PluginManager !== 'undefined') {
-                this.pluginManager = new PluginManager(this.app, this.configManager);
-                console.log('⚠️ Legacy PluginManager loaded as fallback');
-            }
-        } catch (error) {
-            console.error('Failed to load legacy PluginManager as fallback:', error);
+            throw new Error('PluginManagerV2 is required for ChatManager functionality');
         }
     }
 
