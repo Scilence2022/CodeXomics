@@ -2464,16 +2464,30 @@ class PluginManagementUI {
         try {
             console.log('🛒 Opening Plugin Marketplace...');
             
-            // Initialize marketplace if not already done
-            if (!window.pluginMarketplaceUI) {
-                // Check plugin manager availability and version
-                if (!this.pluginManager) {
-                    throw new Error('Plugin manager not initialized. Please restart the application.');
+            if (!this.pluginManager) {
+                throw new Error('Plugin manager not initialized. Please restart the application.');
+            }
+            
+            // Detect plugin manager type
+            const managerType = this.pluginManager.constructor.name;
+            console.log(`🔍 Detected plugin manager type: ${managerType}`);
+            
+            // Check if we have PluginManagerV2
+            if (managerType === 'PluginManagerV2') {
+                console.log('✅ PluginManagerV2 detected');
+                
+                // Initialize marketplace if not already done
+                if (!this.pluginManager.marketplace) {
+                    console.log('🔄 Initializing PluginManagerV2 marketplace...');
+                    // Try to initialize marketplace (this may be needed for some setups)
+                    if (typeof this.pluginManager.initializeMarketplace === 'function') {
+                        this.pluginManager.initializeMarketplace();
+                    }
                 }
                 
-                // Check if we have PluginManagerV2 with marketplace
+                // Check if marketplace is available now
                 if (this.pluginManager.marketplace) {
-                    console.log('✅ PluginManagerV2 with marketplace detected');
+                    console.log('✅ PluginManagerV2 marketplace available');
                     
                     // Import PluginMarketplaceUI if not already loaded
                     if (!window.PluginMarketplaceUI) {
@@ -2484,22 +2498,22 @@ class PluginManagementUI {
                     window.pluginMarketplaceUI = new PluginMarketplaceUI(this.pluginManager.marketplace);
                     console.log('✅ Plugin Marketplace UI initialized');
                     
-                } else if (this.pluginManager.constructor.name === 'PluginManager') {
-                    // Legacy PluginManager detected - offer upgrade or alternative
-                    console.warn('⚠️ Legacy PluginManager detected, marketplace not fully supported');
+                } else {
+                    // PluginManagerV2 without marketplace - try to initialize it
+                    console.warn('⚠️ PluginManagerV2 detected but marketplace not available');
                     
                     const userChoice = confirm(
-                        'The Plugin Marketplace requires PluginManagerV2 for full functionality.\n\n' +
-                        'Current system is using legacy PluginManager.\n\n' +
+                        'PluginManagerV2 is detected but the marketplace component is not initialized.\n\n' +
+                        'This might happen if the system was recently upgraded.\n\n' +
                         'Options:\n' +
-                        '• Click OK to try upgrading to PluginManagerV2\n' +
+                        '• Click OK to try reinitializing the marketplace\n' +
                         '• Click Cancel to use basic plugin management instead'
                     );
                     
                     if (userChoice) {
-                        // Try to upgrade to PluginManagerV2
-                        await this.upgradeToPluginManagerV2();
-                        // Retry opening marketplace after upgrade
+                        // Try to reinitialize PluginManagerV2 completely
+                        await this.reinitializePluginManagerV2();
+                        // Retry opening marketplace after reinitialization
                         return this.openPluginMarketplace();
                     } else {
                         // Fall back to basic plugin management
@@ -2507,10 +2521,37 @@ class PluginManagementUI {
                         this.showPluginModal();
                         return;
                     }
-                } else {
-                    // Unknown plugin manager type
-                    throw new Error(`Unknown plugin manager type: ${this.pluginManager.constructor.name}. Please ensure PluginManagerV2 is properly initialized.`);
                 }
+                
+            } else if (managerType === 'PluginManager') {
+                // Legacy PluginManager detected - offer upgrade
+                console.warn('⚠️ Legacy PluginManager detected, marketplace not fully supported');
+                
+                const userChoice = confirm(
+                    'The Plugin Marketplace requires PluginManagerV2 for full functionality.\n\n' +
+                    'Current system is using legacy PluginManager.\n\n' +
+                    'Options:\n' +
+                    '• Click OK to try upgrading to PluginManagerV2\n' +
+                    '• Click Cancel to use basic plugin management instead'
+                );
+                
+                if (userChoice) {
+                    // Try to upgrade to PluginManagerV2
+                    await this.upgradeToPluginManagerV2();
+                    // Retry opening marketplace after upgrade
+                    return this.openPluginMarketplace();
+                } else {
+                    // Fall back to basic plugin management
+                    this.showMessage('Opening basic plugin management instead...', 'info');
+                    this.showPluginModal();
+                    return;
+                }
+            } else {
+                // Unknown plugin manager type
+                console.error(`❌ Unknown plugin manager type: ${managerType}`);
+                console.log('Available properties:', Object.keys(this.pluginManager));
+                
+                throw new Error(`Unknown plugin manager type: ${managerType}. Please ensure PluginManagerV2 is properly initialized.`);
             }
             
             // Open the marketplace
@@ -2660,6 +2701,44 @@ class PluginManagementUI {
         } catch (error) {
             console.error('❌ Failed to load PluginMarketplaceUI:', error);
             throw new Error(`Failed to load PluginMarketplaceUI: ${error.message}`);
+        }
+    }
+
+    /**
+     * Attempt to reinitialize PluginManagerV2 marketplace
+     */
+    async reinitializePluginManagerV2() {
+        try {
+            console.log('🔄 Attempting to reinitialize PluginManagerV2 marketplace...');
+            
+            // First check if PluginManagerV2 modules are loaded
+            if (!window.PluginManagerV2) {
+                console.log('📦 Loading PluginManagerV2 modules...');
+                await this.loadPluginManagerV2Modules();
+            }
+            
+            // Get current app and config references
+            const app = this.pluginManager.app || window.genomeBrowser;
+            const configManager = this.pluginManager.configManager || window.configManager;
+            
+            // Create new PluginManagerV2 instance with marketplace
+            console.log('🔄 Creating new PluginManagerV2 instance...');
+            const newPluginManager = new PluginManagerV2(app, configManager);
+            
+            // Update references
+            this.pluginManager = newPluginManager;
+            
+            // Update ChatManager reference if available
+            if (window.chatManager && window.chatManager.pluginManager) {
+                window.chatManager.pluginManager = newPluginManager;
+            }
+            
+            console.log('✅ Successfully reinitialized PluginManagerV2');
+            this.showMessage('Successfully reinitialized PluginManagerV2 with marketplace!', 'success');
+            
+        } catch (error) {
+            console.error('❌ Failed to reinitialize PluginManagerV2:', error);
+            throw new Error(`Reinitialization failed: ${error.message}`);
         }
     }
 }
