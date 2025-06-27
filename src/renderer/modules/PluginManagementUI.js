@@ -2660,19 +2660,14 @@ class PluginManagementUI {
                 'PluginManagerV2.js'
             ];
             
-            // Check which modules are already available
-            const availableModules = {
-                'PluginMarketplace.js': !!window.PluginMarketplace,
-                'PluginDependencyResolver.js': !!window.PluginDependencyResolver,
-                'PluginSecurityValidator.js': !!window.PluginSecurityValidator,
-                'PluginUpdateManager.js': !!window.PluginUpdateManager,
-                'PluginManagerV2.js': !!window.PluginManagerV2
-            };
-            
-            console.log('📋 Module availability check:', availableModules);
+            // Check which modules are already available before loading
+            const initialAvailability = this.checkModuleAvailability();
+            console.log('📋 Initial module availability check:', initialAvailability);
             
             for (const module of modules) {
-                if (availableModules[module]) {
+                const moduleKey = module.replace('.js', '');
+                
+                if (initialAvailability[moduleKey]) {
                     console.log(`✅ ${module} already available, skipping load`);
                     continue;
                 }
@@ -2692,22 +2687,42 @@ class PluginManagementUI {
                         throw new Error(`Could not load ${module}: ${error.message}`);
                     }
                 }
+                
+                // After loading, wait a bit for the script to execute and check availability
+                await this.waitForModuleAvailability(moduleKey, 5000); // 5 second timeout
             }
             
-            // Verify all required modules are now available
-            const finalCheck = {
-                'PluginMarketplace': !!window.PluginMarketplace,
-                'PluginDependencyResolver': !!window.PluginDependencyResolver,
-                'PluginSecurityValidator': !!window.PluginSecurityValidator,
-                'PluginUpdateManager': !!window.PluginUpdateManager,
-                'PluginManagerV2': !!window.PluginManagerV2
-            };
-            
+            // Final comprehensive check
+            const finalCheck = this.checkModuleAvailability();
             console.log('🔍 Final module availability:', finalCheck);
             
             const missing = Object.keys(finalCheck).filter(key => !finalCheck[key]);
             if (missing.length > 0) {
-                throw new Error(`Required modules still missing after loading: ${missing.join(', ')}`);
+                console.warn('⚠️ Some modules still missing, attempting forced reload...');
+                
+                // Try to force reload missing modules
+                for (const missingModule of missing) {
+                    try {
+                        // Remove existing script tags for this module
+                        const existingScripts = document.querySelectorAll(`script[src*="${missingModule}"]`);
+                        existingScripts.forEach(script => script.remove());
+                        
+                        // Force reload
+                        await this.loadScript(`./${missingModule}.js`, true); // Add force=true parameter
+                        await this.waitForModuleAvailability(missingModule, 3000);
+                        console.log(`🔄 Force reloaded ${missingModule}`);
+                    } catch (error) {
+                        console.error(`❌ Failed to force reload ${missingModule}:`, error);
+                    }
+                }
+                
+                // Final final check
+                const ultimateCheck = this.checkModuleAvailability();
+                const stillMissing = Object.keys(ultimateCheck).filter(key => !ultimateCheck[key]);
+                
+                if (stillMissing.length > 0) {
+                    throw new Error(`Required modules still missing after all attempts: ${stillMissing.join(', ')}`);
+                }
             }
             
             console.log('✅ All PluginManagerV2 modules loaded successfully');
@@ -2719,16 +2734,66 @@ class PluginManagementUI {
     }
 
     /**
+     * Check module availability in window scope
+     */
+    checkModuleAvailability() {
+        return {
+            'PluginMarketplace': !!window.PluginMarketplace,
+            'PluginDependencyResolver': !!window.PluginDependencyResolver,
+            'PluginSecurityValidator': !!window.PluginSecurityValidator,
+            'PluginUpdateManager': !!window.PluginUpdateManager,
+            'PluginManagerV2': !!window.PluginManagerV2
+        };
+    }
+
+    /**
+     * Wait for a specific module to become available
+     */
+    async waitForModuleAvailability(moduleKey, timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            
+            const checkAvailability = () => {
+                if (window[moduleKey]) {
+                    console.log(`✅ Module ${moduleKey} is now available`);
+                    resolve();
+                    return;
+                }
+                
+                if (Date.now() - startTime > timeout) {
+                    console.warn(`⚠️ Timeout waiting for ${moduleKey} to become available`);
+                    resolve(); // Don't reject, continue anyway
+                    return;
+                }
+                
+                // Check again in 100ms
+                setTimeout(checkAvailability, 100);
+            };
+            
+            checkAvailability();
+        });
+    }
+
+    /**
      * Load script utility method
      */
-    loadScript(src) {
+    loadScript(src, force = false) {
         return new Promise((resolve, reject) => {
-            // Check if script is already loaded
-            const existingScript = document.querySelector(`script[src="${src}"]`);
-            if (existingScript) {
-                console.log(`Script ${src} already loaded, skipping...`);
-                resolve();
-                return;
+            // Check if script is already loaded (unless force is true)
+            if (!force) {
+                const existingScript = document.querySelector(`script[src="${src}"]`);
+                if (existingScript) {
+                    console.log(`Script ${src} already loaded, skipping...`);
+                    resolve();
+                    return;
+                }
+            }
+            
+            // If forcing reload, remove existing script first
+            if (force) {
+                const existingScripts = document.querySelectorAll(`script[src="${src}"]`);
+                existingScripts.forEach(script => script.remove());
+                console.log(`🔄 Force reloading script: ${src}`);
             }
             
             const script = document.createElement('script');
@@ -2804,19 +2869,52 @@ class PluginManagementUI {
         try {
             console.log('🔄 Attempting to reinitialize PluginManagerV2 marketplace...');
             
-            // First check if PluginManagerV2 modules are loaded
+            // First try to use existing PluginManagerV2 if available
+            if (window.PluginManagerV2 && this.pluginManager && this.pluginManager.constructor.name === 'PluginManagerV2') {
+                console.log('✅ PluginManagerV2 already available, trying direct marketplace initialization...');
+                
+                // Try to initialize marketplace directly
+                try {
+                    if (!this.pluginManager.marketplace && typeof this.pluginManager.initializeMarketplace === 'function') {
+                        this.pluginManager.initializeMarketplace();
+                        console.log('✅ Marketplace initialized directly');
+                    }
+                    
+                    // If marketplace is now available, we're done
+                    if (this.pluginManager.marketplace) {
+                        console.log('✅ PluginManagerV2 marketplace is now available');
+                        this.showMessage('Successfully initialized marketplace!', 'success');
+                        return;
+                    }
+                } catch (directError) {
+                    console.warn('⚠️ Direct marketplace initialization failed:', directError);
+                }
+            }
+            
+            // If direct initialization didn't work, try creating a new instance
+            console.log('🔄 Creating new PluginManagerV2 instance...');
+            
+            // Check if PluginManagerV2 modules are loaded, load if necessary
             if (!window.PluginManagerV2) {
                 console.log('📦 Loading PluginManagerV2 modules...');
                 await this.loadPluginManagerV2Modules();
             }
             
+            // Verify PluginManagerV2 is now available
+            if (!window.PluginManagerV2) {
+                throw new Error('PluginManagerV2 still not available after loading modules');
+            }
+            
             // Get current app and config references
-            const app = this.pluginManager.app || window.genomeBrowser;
-            const configManager = this.pluginManager.configManager || window.configManager;
+            const app = this.pluginManager?.app || window.genomeBrowser || { name: 'GenomeExplorer', version: '1.0.0' };
+            const configManager = this.pluginManager?.configManager || window.configManager || null;
             
             // Create new PluginManagerV2 instance with marketplace
             console.log('🔄 Creating new PluginManagerV2 instance...');
             const newPluginManager = new PluginManagerV2(app, configManager);
+            
+            // Wait a moment for initialization
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Update references
             this.pluginManager = newPluginManager;
