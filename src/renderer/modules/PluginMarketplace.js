@@ -98,12 +98,20 @@ class PluginMarketplace {
         // Default sources
         const defaultSources = [
             {
+                id: 'localhost',
+                name: 'Local Development Server',
+                url: 'http://localhost:3001/api/v1',
+                priority: 0,
+                trusted: true,
+                enabled: true
+            },
+            {
                 id: 'official',
                 name: 'GenomeExplorer Official Repository',
                 url: 'https://plugins.genomeexplorer.org/api/v1',
                 priority: 1,
                 trusted: true,
-                enabled: true
+                enabled: false  // Disabled until real server exists
             },
             {
                 id: 'community',
@@ -111,7 +119,7 @@ class PluginMarketplace {
                 url: 'https://community-plugins.genomeexplorer.org/api/v1',
                 priority: 2,
                 trusted: false,
-                enabled: true
+                enabled: false  // Disabled until real server exists
             },
             {
                 id: 'local',
@@ -281,14 +289,93 @@ class PluginMarketplace {
      */
     async searchRemoteSource(source, query, filters) {
         try {
-            // Simulate API call to remote marketplace
-            const mockResponse = await this.simulateMarketplaceAPI(source, query, filters);
-            return mockResponse.plugins || [];
+            // Check if this is a real API endpoint (localhost server)
+            if (source.url.includes('localhost:3001')) {
+                console.log(`🌐 Calling real API: ${source.url}/plugins`);
+                return this.callRealMarketplaceAPI(source, query, filters);
+            } else {
+                // Simulate API call for non-existent remote marketplaces
+                console.log(`🎭 Simulating API for: ${source.id}`);
+                const mockResponse = await this.simulateMarketplaceAPI(source, query, filters);
+                return mockResponse.plugins || [];
+            }
             
         } catch (error) {
             console.error(`❌ Failed to search in source ${source.id}:`, error);
             source.errorCount++;
+            
+            // If real API failed, fallback to simulation
+            if (source.url.includes('localhost:3001')) {
+                console.log(`🔄 Falling back to simulation for ${source.id}`);
+                try {
+                    const mockResponse = await this.simulateMarketplaceAPI(source, query, filters);
+                    return mockResponse.plugins || [];
+                } catch (fallbackError) {
+                    console.error(`❌ Fallback simulation also failed:`, fallbackError);
+                    return [];
+                }
+            }
+            
             return [];
+        }
+    }
+
+    /**
+     * Call real marketplace API
+     */
+    async callRealMarketplaceAPI(source, query, filters) {
+        try {
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (query) params.append('query', query);
+            if (filters.category) params.append('category', filters.category);
+            if (filters.type) params.append('type', filters.type);
+            if (filters.author) params.append('author', filters.author);
+            if (filters.tags) {
+                const tags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
+                tags.forEach(tag => params.append('tags', tag));
+            }
+            params.append('limit', '50');
+            params.append('offset', '0');
+            
+            const url = `${source.url}/plugins?${params.toString()}`;
+            console.log(`📡 Fetching: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeExplorer/2.0.0'
+                },
+                signal: AbortSignal.timeout(10000)  // 10 second timeout
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'API returned error');
+            }
+            
+            console.log(`✅ Real API returned ${data.data.plugins.length} plugins from ${source.id}`);
+            
+            // Transform API response to match internal format
+            return data.data.plugins.map(plugin => ({
+                ...plugin,
+                source: source.id,
+                // Ensure required fields exist
+                tags: plugin.tags || [],
+                dependencies: plugin.dependencies || [],
+                rating: plugin.rating || 0,
+                downloads: plugin.downloads || 0
+            }));
+            
+        } catch (error) {
+            console.error(`❌ Real API call failed for ${source.id}:`, error);
+            throw error;
         }
     }
 

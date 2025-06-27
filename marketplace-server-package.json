@@ -1,0 +1,39 @@
+{
+  "name": "genomeexplorer-plugin-marketplace",
+  "version": "1.0.0",
+  "description": "Simple Plugin Marketplace Server for GenomeExplorer",
+  "main": "plugin-marketplace-server.js",
+  "scripts": {
+    "start": "node plugin-marketplace-server.js",
+    "dev": "nodemon plugin-marketplace-server.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "setup": "npm install && node setup-marketplace.js"
+  },
+  "keywords": [
+    "genome",
+    "bioinformatics", 
+    "plugins",
+    "marketplace",
+    "server"
+  ],
+  "author": "GenomeExplorer Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/genomeexplorer/plugin-marketplace"
+  },
+  "bugs": {
+    "url": "https://github.com/genomeexplorer/plugin-marketplace/issues"
+  },
+  "homepage": "https://genomeexplorer.org"
+}
