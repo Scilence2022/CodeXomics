@@ -945,14 +945,39 @@
                         <div class="form-group">
                             <label for="localModel">Model Name:</label>
                             <select id="localModel" class="select input-full">
-                                <option value="deepseek-r1:70b">deepseek-r1:70b</option>
-                                <option value="deepseek-r1:1.5b">deepseek-r1:1.5b</option>
-                                <option value="mistral-large:latest">mistral-large:latest</option>
-                                <option value="llama3.1:70b">llama3.1:70b</option>
-                                <option value="llama3.1:latest">llama3.1:latest</option>
-                                <option value="llama3:latest">llama3:latest</option>
-                                <option value="qwen2:latest">qwen2:latest</option>
-                                <option value="gemma3:27b">gemma3:27b</option>
+                                <!-- Qwen3 Series (Latest Generation) -->
+                                <optgroup label="Qwen3 Series (Latest)">
+                                    <option value="qwen3:8b">qwen3:8b (Latest - 5.2GB)</option>
+                                    <option value="qwen3:4b">qwen3:4b (2.6GB)</option>
+                                    <option value="qwen3:1.7b">qwen3:1.7b (1.4GB)</option>
+                                    <option value="qwen3:0.6b">qwen3:0.6b (523MB)</option>
+                                    <option value="qwen3:14b">qwen3:14b (9.3GB)</option>
+                                    <option value="qwen3:32b">qwen3:32b (20GB)</option>
+                                    <option value="qwen3:30b">qwen3:30b-a3b (MoE 19GB)</option>
+                                    <option value="qwen3:235b">qwen3:235b-a22b (MoE 142GB)</option>
+                                </optgroup>
+                                
+                                <!-- DeepSeek-R1 Series (Latest Generation) -->
+                                <optgroup label="DeepSeek-R1 Series (Latest)">
+                                    <option value="deepseek-r1:8b">deepseek-r1:8b (Latest - 5.2GB)</option>
+                                    <option value="deepseek-r1:7b">deepseek-r1:7b (4.7GB)</option>
+                                    <option value="deepseek-r1:1.5b">deepseek-r1:1.5b (1.1GB)</option>
+                                    <option value="deepseek-r1:14b">deepseek-r1:14b (9.0GB)</option>
+                                    <option value="deepseek-r1:32b">deepseek-r1:32b (20GB)</option>
+                                    <option value="deepseek-r1:70b">deepseek-r1:70b (43GB)</option>
+                                    <option value="deepseek-r1:671b">deepseek-r1:671b (404GB)</option>
+                                </optgroup>
+                                
+                                <!-- Legacy Models -->
+                                <optgroup label="Legacy Models">
+                                    <option value="qwen2:latest">qwen2:latest</option>
+                                    <option value="mistral-large:latest">mistral-large:latest</option>
+                                    <option value="llama3.1:70b">llama3.1:70b</option>
+                                    <option value="llama3.1:latest">llama3.1:latest</option>
+                                    <option value="llama3:latest">llama3:latest</option>
+                                    <option value="gemma3:27b">gemma3:27b</option>
+                                </optgroup>
+                                
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
@@ -2154,9 +2179,11 @@
     <script src="modules/PluginSecurityValidator.js"></script>
     <script src="modules/PluginUpdateManager.js"></script>
     <script src="modules/PluginManagerV2.js"></script>
-    <script src="modules/PluginMarketplaceUI.js"></script>
-    <script src="modules/PluginManagementUI.js"></script>
-    <script src="modules/PluginSystemBootstrap.js"></script>
+    <script src="modules/PluginMarketplaceConfig.js"></script>
+<script src="modules/PluginSubmissionUI.js"></script>
+<script src="modules/PluginMarketplaceUI.js"></script>
+<script src="modules/PluginManagementUI.js"></script>
+<script src="modules/PluginSystemBootstrap.js"></script>
     
     <!-- Plugin Testing and Development -->
     <script src="modules/PluginTestManager.js"></script>

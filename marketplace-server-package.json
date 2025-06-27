@@ -1,26 +1,28 @@
 {
   "name": "genomeexplorer-plugin-marketplace",
-  "version": "1.0.0",
-  "description": "Simple Plugin Marketplace Server for GenomeExplorer",
+  "version": "1.1.0",
+  "description": "Plugin Marketplace Server for GenomeExplorer with submission support",
   "main": "plugin-marketplace-server.js",
   "scripts": {
     "start": "node plugin-marketplace-server.js",
     "dev": "nodemon plugin-marketplace-server.js",
     "test": "echo \"No tests specified\" && exit 0",
-    "setup": "npm install && node setup-marketplace.js"
+    "setup": "npm install"
   },
   "keywords": [
     "genome",
     "bioinformatics", 
     "plugins",
     "marketplace",
-    "server"
+    "server",
+    "submission"
   ],
   "author": "GenomeExplorer Team",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -35,5 +37,9 @@
   "bugs": {
     "url": "https://github.com/genomeexplorer/plugin-marketplace/issues"
   },
-  "homepage": "https://genomeexplorer.org"
+  "homepage": "https://genomeexplorer.org",
+  "config": {
+    "defaultPort": 3001,
+    "description": "Default port is MCP Server port (3000) + 1"
+  }
 }

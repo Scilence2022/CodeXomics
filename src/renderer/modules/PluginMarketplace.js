@@ -96,43 +96,14 @@ class PluginMarketplace {
      */
     async loadMarketplaceSources() {
         // Default sources
-        const defaultSources = [
-            {
-                id: 'localhost',
-                name: 'Local Development Server',
-                url: 'http://localhost:3001/api/v1',
-                priority: 0,
-                trusted: true,
-                enabled: true
-            },
-            {
-                id: 'official',
-                name: 'GenomeExplorer Official Repository',
-                url: 'https://plugins.genomeexplorer.org/api/v1',
-                priority: 1,
-                trusted: true,
-                enabled: false  // Disabled until real server exists
-            },
-            {
-                id: 'community',
-                name: 'Community Plugin Repository', 
-                url: 'https://community-plugins.genomeexplorer.org/api/v1',
-                priority: 2,
-                trusted: false,
-                enabled: false  // Disabled until real server exists
-            },
-            {
-                id: 'local',
-                name: 'Local Plugin Directory',
-                url: 'file://~/.genome-explorer/plugins',
-                priority: 3,
-                trusted: true,
-                enabled: true
-            }
+        this.defaultSources = [
+            { id: 'localhost', url: 'http://localhost:3001/api/v1', priority: 0, enabled: true },    // Updated to port 3001
+            { id: 'official', url: 'https://plugins.genomeexplorer.org/api/v1', priority: 1, enabled: false },
+            { id: 'community', url: 'https://community-plugins.genomeexplorer.org/api/v1', priority: 2, enabled: false }
         ];
         
         // Load from config or use defaults
-        const configuredSources = this.configManager?.get('marketplace.sources') || defaultSources;
+        const configuredSources = this.configManager?.get('marketplace.sources') || this.defaultSources;
         
         for (const source of configuredSources) {
             if (source.enabled) {
