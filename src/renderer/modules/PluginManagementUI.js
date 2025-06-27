@@ -59,11 +59,19 @@ class PluginManagementUI {
      */
     setupModalHandlers() {
         const pluginManagerBtn = document.getElementById('pluginManagerBtn');
+        const pluginMarketplaceBtn = document.getElementById('pluginMarketplaceBtn');
         const pluginModal = document.getElementById('pluginManagementModal');
         
         if (pluginManagerBtn) {
             pluginManagerBtn.addEventListener('click', () => {
                 this.showPluginModal();
+            });
+        }
+
+        // Add Plugin Marketplace button handler
+        if (pluginMarketplaceBtn) {
+            pluginMarketplaceBtn.addEventListener('click', () => {
+                this.openPluginMarketplace();
             });
         }
 
@@ -2446,6 +2454,74 @@ class PluginManagementUI {
                 totalFunctions,
                 version: 'Legacy'
             };
+        }
+    }
+
+    /**
+     * Open the plugin marketplace
+     */
+    async openPluginMarketplace() {
+        try {
+            console.log('🛒 Opening Plugin Marketplace...');
+            
+            // Initialize marketplace if not already done
+            if (!window.pluginMarketplaceUI) {
+                // Check if we have PluginManagerV2 with marketplace
+                if (this.pluginManager && this.pluginManager.marketplace) {
+                    // Import PluginMarketplaceUI if not already loaded
+                    if (!window.PluginMarketplaceUI) {
+                        await this.loadPluginMarketplaceUI();
+                    }
+                    
+                    // Create marketplace UI instance
+                    window.pluginMarketplaceUI = new PluginMarketplaceUI(this.pluginManager.marketplace);
+                    console.log('✅ Plugin Marketplace UI initialized');
+                } else {
+                    throw new Error('Plugin marketplace not available. Please ensure PluginManagerV2 is properly initialized.');
+                }
+            }
+            
+            // Open the marketplace
+            await window.pluginMarketplaceUI.openMarketplace();
+            
+        } catch (error) {
+            console.error('❌ Failed to open Plugin Marketplace:', error);
+            this.showMessage(`Failed to open Plugin Marketplace: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Load PluginMarketplaceUI module
+     */
+    async loadPluginMarketplaceUI() {
+        try {
+            // Check if the module is already loaded
+            if (window.PluginMarketplaceUI) {
+                return;
+            }
+
+            // Try to load from the modules directory
+            const script = document.createElement('script');
+            script.src = '../modules/PluginMarketplaceUI.js';
+            script.onload = () => {
+                console.log('✅ PluginMarketplaceUI module loaded');
+            };
+            script.onerror = (error) => {
+                console.error('❌ Failed to load PluginMarketplaceUI module:', error);
+                throw new Error('Failed to load PluginMarketplaceUI module');
+            };
+            
+            document.head.appendChild(script);
+            
+            // Wait for the script to load
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+            });
+            
+        } catch (error) {
+            console.error('Failed to load PluginMarketplaceUI:', error);
+            throw error;
         }
     }
 }
