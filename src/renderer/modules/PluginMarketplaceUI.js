@@ -19,10 +19,14 @@ class PluginMarketplaceUI {
             source: 'all'
         };
         
+        // Draggable functionality
+        this.dragManager = null;
+        this.initializeDragManager();
+        
         // Initialize configuration and submission components
         this.initializeComponents();
         
-        console.log('🎨 PluginMarketplaceUI initialized');
+        console.log('🎨 PluginMarketplaceUI initialized with draggable functionality');
     }
 
     initializeComponents() {
@@ -35,6 +39,77 @@ class PluginMarketplaceUI {
         if (typeof PluginSubmissionUI !== 'undefined') {
             this.submissionUI = new PluginSubmissionUI(this.config, this.marketplace?.pluginManager);
         }
+    }
+
+    /**
+     * Initialize drag manager for marketplace window
+     */
+    initializeDragManager() {
+        // Create a lightweight drag manager for the marketplace
+        this.dragManager = {
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            offsetX: 0,
+            offsetY: 0,
+            draggedElement: null,
+
+            startDrag: (element, e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                
+                this.isDragging = true;
+                this.draggedElement = element;
+                
+                const rect = element.getBoundingClientRect();
+                this.startX = rect.left;
+                this.startY = rect.top;
+                this.offsetX = e.clientX - this.startX;
+                this.offsetY = e.clientY - this.startY;
+                
+                element.classList.add('marketplace-dragging');
+                document.body.style.cursor = 'move';
+                document.body.style.userSelect = 'none';
+                
+                document.addEventListener('mousemove', this.doDrag);
+                document.addEventListener('mouseup', this.stopDrag);
+            },
+
+            doDrag: (e) => {
+                if (!this.isDragging || !this.draggedElement) return;
+                
+                e.preventDefault();
+                
+                const newX = e.clientX - this.offsetX;
+                const newY = e.clientY - this.offsetY;
+                
+                // Constrain to viewport
+                const rect = this.draggedElement.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                const constrainedX = Math.max(0, Math.min(newX, viewportWidth - rect.width));
+                const constrainedY = Math.max(0, Math.min(newY, viewportHeight - rect.height));
+                
+                this.draggedElement.style.left = `${constrainedX}px`;
+                this.draggedElement.style.top = `${constrainedY}px`;
+            },
+
+            stopDrag: () => {
+                if (!this.isDragging) return;
+                
+                this.isDragging = false;
+                if (this.draggedElement) {
+                    this.draggedElement.classList.remove('marketplace-dragging');
+                }
+                this.draggedElement = null;
+                
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                document.removeEventListener('mousemove', this.doDrag);
+                document.removeEventListener('mouseup', this.stopDrag);
+            }
+        };
     }
 
     /**
@@ -60,61 +135,356 @@ class PluginMarketplaceUI {
      * Create the marketplace window UI
      */
     createMarketplaceWindow() {
+        // Add draggable styles to head if not present
+        this.addMarketplaceStyles();
+        
         const marketplaceWindow = document.createElement('div');
         marketplaceWindow.id = 'plugin-marketplace-window';
+        marketplaceWindow.className = 'marketplace-modal';
         marketplaceWindow.innerHTML = `
-            <div style="position: fixed; top: 50px; left: 50px; width: 1000px; height: 700px; 
-                        background: white; border: 1px solid #ccc; border-radius: 8px; 
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10000;">
-                <div style="background: linear-gradient(135deg, #4CAF50, #45a049); 
-                           color: white; padding: 15px; border-radius: 8px 8px 0 0;">
-                    <h2 style="margin: 0; display: inline-block;">🛒 Plugin Marketplace</h2>
-                    <div style="float: right; display: flex; gap: 10px; align-items: center;">
-                        <button onclick="pluginMarketplaceUI.showConfiguration()" 
-                                style="background: rgba(255,255,255,0.2); border: none; color: white; 
-                                       padding: 8px 12px; border-radius: 4px; cursor: pointer;" 
-                                title="Marketplace Configuration">⚙️</button>
-                        <button onclick="pluginMarketplaceUI.showSubmissionDialog()" 
-                                style="background: rgba(255,255,255,0.2); border: none; color: white; 
-                                       padding: 8px 12px; border-radius: 4px; cursor: pointer;" 
-                                title="Submit Plugin">📤</button>
-                        <button onclick="pluginMarketplaceUI.closeMarketplace()" 
-                                style="background: rgba(255,255,255,0.2); border: none; color: white; 
-                                       padding: 5px 10px; border-radius: 4px; cursor: pointer;">×</button>
+            <div class="marketplace-content" id="marketplace-modal-content">
+                <div class="marketplace-header draggable-header" id="marketplace-header">
+                    <div class="header-content">
+                        <div class="header-left">
+                            <span class="drag-indicator">⋮⋮</span>
+                            <h2>🛒 Plugin Marketplace</h2>
+                        </div>
+                        <div class="header-controls">
+                            <button onclick="pluginMarketplaceUI.showConfiguration()" 
+                                    class="header-btn" title="Marketplace Configuration">⚙️</button>
+                            <button onclick="pluginMarketplaceUI.showSubmissionDialog()" 
+                                    class="header-btn" title="Submit Plugin">📤</button>
+                            <button onclick="pluginMarketplaceUI.resetPosition()" 
+                                    class="header-btn" title="Reset Position">🔄</button>
+                            <button onclick="pluginMarketplaceUI.closeMarketplace()" 
+                                    class="header-btn close-btn">×</button>
+                        </div>
                     </div>
                 </div>
-                <div style="padding: 20px; height: calc(100% - 120px); overflow-y: auto;">
+                <div class="marketplace-body">
                     <div id="marketplace-content">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div class="marketplace-controls">
                             <h3>Available Plugins</h3>
-                            <div style="display: flex; gap: 10px;">
+                            <div class="search-controls">
                                 <input type="text" id="plugin-search" placeholder="Search plugins..." 
-                                       style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                       class="search-input">
                                 <button onclick="pluginMarketplaceUI.searchPlugins()" 
-                                        style="background: #4CAF50; color: white; border: none; 
-                                               padding: 8px 16px; border-radius: 4px; cursor: pointer;">Search</button>
+                                        class="control-btn primary">Search</button>
                                 <button onclick="pluginMarketplaceUI.refreshPlugins()" 
-                                        style="background: #2196F3; color: white; border: none; 
-                                               padding: 8px 16px; border-radius: 4px; cursor: pointer;">Refresh</button>
+                                        class="control-btn secondary">Refresh</button>
                             </div>
                         </div>
-                        <div id="plugin-list"></div>
+                        <div id="plugin-list" class="plugin-list"></div>
                     </div>
                 </div>
-                <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #ddd; 
-                           border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="marketplace-status">Ready</span>
-                    <div style="display: flex; gap: 10px;">
-                        <span style="color: #666; font-size: 12px;">Port: ${this.config?.getSettings()?.defaultPort || 3001}</span>
-                        <span style="color: #666; font-size: 12px;" id="connection-status">🔴 Disconnected</span>
+                <div class="marketplace-footer">
+                    <span id="marketplace-status" class="status-text">Ready</span>
+                    <div class="connection-info">
+                        <span class="port-info">Port: ${this.config?.getSettings()?.defaultPort || 3001}</span>
+                        <span id="connection-status" class="connection-status">🔴 Disconnected</span>
                     </div>
                 </div>
             </div>
         `;
         
         document.body.appendChild(marketplaceWindow);
+        
+        // Setup draggable functionality
+        this.setupDraggable();
+        
         this.loadPluginList();
         this.checkConnectionStatus();
+    }
+
+    /**
+     * Add marketplace-specific styles
+     */
+    addMarketplaceStyles() {
+        if (document.getElementById('marketplace-draggable-styles')) return;
+        
+        const styles = document.createElement('style');
+        styles.id = 'marketplace-draggable-styles';
+        styles.textContent = `
+            /* Marketplace Modal Styles */
+            .marketplace-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .marketplace-content {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                width: 1000px;
+                height: 700px;
+                max-width: 95vw;
+                max-height: 95vh;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            .marketplace-content.marketplace-dragging {
+                transform: scale(1.02);
+                box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+            }
+
+            .marketplace-header {
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                color: white;
+                border-radius: 12px 12px 0 0;
+                padding: 0;
+                cursor: move;
+                user-select: none;
+                position: relative;
+            }
+
+            .marketplace-header:hover {
+                background: linear-gradient(135deg, #45a049, #3d8b40);
+            }
+
+            .header-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px 20px;
+            }
+
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .drag-indicator {
+                font-size: 14px;
+                opacity: 0.7;
+                transition: opacity 0.2s ease;
+            }
+
+            .marketplace-header:hover .drag-indicator {
+                opacity: 1;
+            }
+
+            .header-left h2 {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            .header-controls {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .header-btn {
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 36px;
+                height: 36px;
+            }
+
+            .header-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: translateY(-1px);
+            }
+
+            .header-btn.close-btn {
+                background: rgba(244, 67, 54, 0.8);
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .header-btn.close-btn:hover {
+                background: rgba(244, 67, 54, 1);
+            }
+
+            .marketplace-body {
+                padding: 20px;
+                flex: 1;
+                overflow-y: auto;
+                min-height: 0;
+            }
+
+            .marketplace-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #f0f0f0;
+            }
+
+            .marketplace-controls h3 {
+                margin: 0;
+                color: #333;
+                font-size: 20px;
+                font-weight: 600;
+            }
+
+            .search-controls {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .search-input {
+                padding: 10px 15px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 14px;
+                width: 250px;
+                transition: border-color 0.2s ease;
+            }
+
+            .search-input:focus {
+                outline: none;
+                border-color: #4CAF50;
+                box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+            }
+
+            .control-btn {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                min-width: 80px;
+            }
+
+            .control-btn.primary {
+                background: #4CAF50;
+                color: white;
+            }
+
+            .control-btn.primary:hover {
+                background: #45a049;
+                transform: translateY(-1px);
+            }
+
+            .control-btn.secondary {
+                background: #2196F3;
+                color: white;
+            }
+
+            .control-btn.secondary:hover {
+                background: #1976D2;
+                transform: translateY(-1px);
+            }
+
+            .plugin-list {
+                max-height: calc(100% - 80px);
+                overflow-y: auto;
+            }
+
+            .marketplace-footer {
+                background: #f8f9fa;
+                padding: 15px 20px;
+                border-top: 1px solid #ddd;
+                border-radius: 0 0 12px 12px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-shrink: 0;
+            }
+
+            .status-text {
+                font-weight: 500;
+                color: #333;
+            }
+
+            .connection-info {
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                font-size: 13px;
+            }
+
+            .port-info {
+                color: #666;
+            }
+
+            .connection-status {
+                font-weight: 500;
+            }
+
+            /* Scrollbar styling */
+            .marketplace-body::-webkit-scrollbar,
+            .plugin-list::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .marketplace-body::-webkit-scrollbar-track,
+            .plugin-list::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+
+            .marketplace-body::-webkit-scrollbar-thumb,
+            .plugin-list::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 4px;
+            }
+
+            .marketplace-body::-webkit-scrollbar-thumb:hover,
+            .plugin-list::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
+            }
+        `;
+        
+        document.head.appendChild(styles);
+    }
+
+    /**
+     * Setup draggable functionality for the marketplace window
+     */
+    setupDraggable() {
+        const marketplaceContent = document.getElementById('marketplace-modal-content');
+        const header = document.getElementById('marketplace-header');
+        
+        if (!marketplaceContent || !header) return;
+        
+        header.addEventListener('mousedown', (e) => {
+            this.dragManager.startDrag(marketplaceContent, e);
+        });
+    }
+
+    /**
+     * Reset marketplace window position to center
+     */
+    resetPosition() {
+        const marketplaceContent = document.getElementById('marketplace-modal-content');
+        if (!marketplaceContent) return;
+        
+        marketplaceContent.style.position = '';
+        marketplaceContent.style.left = '';
+        marketplaceContent.style.top = '';
+        marketplaceContent.style.margin = '';
+        marketplaceContent.style.transform = '';
+        
+        console.log('🔄 Marketplace position reset to center');
     }
 
     async loadPluginList() {
@@ -302,8 +672,15 @@ class PluginMarketplaceUI {
     focusMarketplaceWindow() {
         const window = document.getElementById('plugin-marketplace-window');
         if (window) {
-            window.style.zIndex = '10001';
-            setTimeout(() => window.style.zIndex = '10000', 100);
+            window.style.zIndex = '10000';
+            // Add a subtle animation to indicate focus
+            const content = window.querySelector('.marketplace-content');
+            if (content) {
+                content.style.animation = 'marketplace-focus 0.3s ease';
+                setTimeout(() => {
+                    content.style.animation = '';
+                }, 300);
+            }
         }
     }
 }
