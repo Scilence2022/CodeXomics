@@ -2632,6 +2632,26 @@ class PluginManagementUI {
         try {
             console.log('📦 Loading PluginManagerV2 modules...');
             
+            // Detect current script directory to build proper paths
+            const currentScript = document.currentScript || 
+                document.querySelector('script[src*="PluginManagementUI"]') ||
+                document.querySelector('script[src*="renderer-modular"]');
+            
+            let basePath = './';
+            if (currentScript && currentScript.src) {
+                const scriptPath = currentScript.src;
+                const pathParts = scriptPath.split('/');
+                // Remove the filename to get directory
+                pathParts.pop();
+                basePath = pathParts.join('/') + '/';
+                // Make it relative if it's an absolute path
+                if (basePath.startsWith('file:///')) {
+                    basePath = './';
+                }
+            }
+            
+            console.log(`🔍 Using base path: ${basePath}`);
+            
             const modules = [
                 'PluginMarketplace.js',
                 'PluginDependencyResolver.js', 
@@ -2640,10 +2660,57 @@ class PluginManagementUI {
                 'PluginManagerV2.js'
             ];
             
+            // Check which modules are already available
+            const availableModules = {
+                'PluginMarketplace.js': !!window.PluginMarketplace,
+                'PluginDependencyResolver.js': !!window.PluginDependencyResolver,
+                'PluginSecurityValidator.js': !!window.PluginSecurityValidator,
+                'PluginUpdateManager.js': !!window.PluginUpdateManager,
+                'PluginManagerV2.js': !!window.PluginManagerV2
+            };
+            
+            console.log('📋 Module availability check:', availableModules);
+            
             for (const module of modules) {
-                await this.loadScript(`../modules/${module}`);
-                console.log(`✅ Loaded ${module}`);
+                if (availableModules[module]) {
+                    console.log(`✅ ${module} already available, skipping load`);
+                    continue;
+                }
+                
+                try {
+                    await this.loadScript(`${basePath}${module}`);
+                    console.log(`✅ Loaded ${module}`);
+                } catch (error) {
+                    console.warn(`⚠️ Failed to load ${module} from ${basePath}, trying alternative path...`);
+                    
+                    // Try alternative path
+                    try {
+                        await this.loadScript(`./${module}`);
+                        console.log(`✅ Loaded ${module} with alternative path`);
+                    } catch (altError) {
+                        console.error(`❌ Failed to load ${module} with both paths:`, error, altError);
+                        throw new Error(`Could not load ${module}: ${error.message}`);
+                    }
+                }
             }
+            
+            // Verify all required modules are now available
+            const finalCheck = {
+                'PluginMarketplace': !!window.PluginMarketplace,
+                'PluginDependencyResolver': !!window.PluginDependencyResolver,
+                'PluginSecurityValidator': !!window.PluginSecurityValidator,
+                'PluginUpdateManager': !!window.PluginUpdateManager,
+                'PluginManagerV2': !!window.PluginManagerV2
+            };
+            
+            console.log('🔍 Final module availability:', finalCheck);
+            
+            const missing = Object.keys(finalCheck).filter(key => !finalCheck[key]);
+            if (missing.length > 0) {
+                throw new Error(`Required modules still missing after loading: ${missing.join(', ')}`);
+            }
+            
+            console.log('✅ All PluginManagerV2 modules loaded successfully');
             
         } catch (error) {
             console.error('❌ Failed to load PluginManagerV2 modules:', error);
@@ -2686,11 +2753,37 @@ class PluginManagementUI {
         try {
             // Check if the module is already loaded
             if (window.PluginMarketplaceUI) {
+                console.log('✅ PluginMarketplaceUI already available');
                 return;
             }
 
-            // Try to load the PluginMarketplaceUI module
-            await this.loadScript('../modules/PluginMarketplaceUI.js');
+            console.log('📦 Loading PluginMarketplaceUI module...');
+            
+            // Use smart path detection
+            let basePath = './';
+            const currentScript = document.currentScript || 
+                document.querySelector('script[src*="PluginManagementUI"]') ||
+                document.querySelector('script[src*="renderer-modular"]');
+            
+            if (currentScript && currentScript.src) {
+                const scriptPath = currentScript.src;
+                const pathParts = scriptPath.split('/');
+                pathParts.pop(); // Remove filename
+                basePath = pathParts.join('/') + '/';
+                if (basePath.startsWith('file:///')) {
+                    basePath = './';
+                }
+            }
+            
+            console.log(`🔍 Using base path for PluginMarketplaceUI: ${basePath}`);
+
+            // Try to load the PluginMarketplaceUI module with fallback
+            try {
+                await this.loadScript(`${basePath}PluginMarketplaceUI.js`);
+            } catch (error) {
+                console.warn('⚠️ Failed with base path, trying alternative...');
+                await this.loadScript('./PluginMarketplaceUI.js');
+            }
             
             if (!window.PluginMarketplaceUI) {
                 throw new Error('PluginMarketplaceUI module not available after loading');
