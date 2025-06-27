@@ -215,7 +215,7 @@ class ConfigManager {
                     local: {
                         name: 'Local LLM',
                         apiKey: '',
-                        model: 'llama3.2',
+                        model: 'qwen3:8b',
                         baseUrl: 'http://localhost:11434/v1',
                         streamingSupport: true,
                         enabled: false,
