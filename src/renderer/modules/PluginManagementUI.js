@@ -1,6 +1,7 @@
 /**
  * PluginManagementUI - Modern user interface for managing plugins in GenomeExplorer
  * Designed exclusively for PluginManagerV2 - no legacy compatibility
+ * Enhanced with local storage persistence for settings
  */
 class PluginManagementUI {
     constructor(pluginManager, configManager) {
@@ -10,6 +11,62 @@ class PluginManagementUI {
         
         this.pluginManager = pluginManager;
         this.configManager = configManager;
+        
+        // Local storage key for plugin management settings
+        this.storageKey = 'genomeexplorer-plugin-management-settings';
+        
+        // Default settings structure
+        this.defaultSettings = {
+            // Plugin system settings
+            pluginDirectory: 'src/renderer/modules/Plugins',
+            enablePluginSandbox: true,
+            enablePluginDebug: false,
+            
+            // Plugin states (enabled/disabled)
+            pluginStates: {},
+            
+            // UI preferences
+            uiPreferences: {
+                currentTab: 'installed',
+                showPluginDetails: true,
+                sortBy: 'name',
+                sortOrder: 'asc',
+                gridView: false,
+                showDisabledPlugins: true
+            },
+            
+            // Marketplace settings
+            marketplaceSettings: {
+                autoCheckUpdates: true,
+                enableNotifications: true,
+                trustedSources: ['localhost', 'official'],
+                installationPath: 'auto'
+            },
+            
+            // Performance settings
+            performanceSettings: {
+                maxConcurrentPlugins: 10,
+                enableCaching: true,
+                cacheTimeout: 3600000,
+                enableLazyLoading: true
+            },
+            
+            // Security settings
+            securitySettings: {
+                validateSignatures: true,
+                allowUntrustedSources: false,
+                enableSandboxMode: true,
+                restrictNetworkAccess: true
+            },
+            
+            // Metadata
+            version: '1.0.0',
+            lastSaved: null,
+            lastLoaded: null
+        };
+        
+        // Current settings (loaded from storage or defaults)
+        this.settings = { ...this.defaultSettings };
         
         // Initialize test framework
         if (typeof PluginTestFramework !== 'undefined') {
@@ -39,10 +96,357 @@ class PluginManagementUI {
         this.currentTab = 'installed';
         this.selectedPlugin = null;
         
+        // Load settings from local storage
+        this.loadSettingsFromStorage();
+        
         // Initialize UI
         this.initializeUI();
         
-        console.log('PluginManagementUI initialized with PluginManagerV2');
+        // Auto-save settings when they change
+        this.setupAutoSave();
+        
+        console.log('PluginManagementUI initialized with PluginManagerV2 and local storage persistence');
+    }
+
+    /**
+     * Load settings from local storage
+     */
+    loadSettingsFromStorage() {
+        try {
+            const stored = localStorage.getItem(this.storageKey);
+            if (stored) {
+                const parsedSettings = JSON.parse(stored);
+                
+                // Merge with defaults to ensure all properties exist
+                this.settings = this.mergeSettingsWithDefaults(parsedSettings);
+                this.settings.lastLoaded = new Date().toISOString();
+                
+                console.log('✅ Plugin management settings loaded from local storage');
+                this.applyLoadedSettings();
+            } else {
+                console.log('📝 No saved plugin management settings found, using defaults');
+                this.settings = { ...this.defaultSettings };
+            }
+        } catch (error) {
+            console.error('❌ Error loading plugin management settings from storage:', error);
+            this.settings = { ...this.defaultSettings };
+        }
+    }
+
+    /**
+     * Merge loaded settings with defaults to ensure all properties exist
+     */
+    mergeSettingsWithDefaults(loadedSettings) {
+        const merged = { ...this.defaultSettings };
+        
+        // Deep merge for nested objects
+        Object.keys(loadedSettings).forEach(key => {
+            if (typeof loadedSettings[key] === 'object' && loadedSettings[key] !== null && !Array.isArray(loadedSettings[key])) {
+                merged[key] = { ...this.defaultSettings[key], ...loadedSettings[key] };
+            } else {
+                merged[key] = loadedSettings[key];
+            }
+        });
+        
+        return merged;
+    }
+
+    /**
+     * Apply loaded settings to the UI and plugin system
+     */
+    applyLoadedSettings() {
+        try {
+            // Apply plugin states (enabled/disabled)
+            this.applyPluginStates();
+            
+            // Apply UI preferences
+            this.applyUIPreferences();
+            
+            // Apply system settings to configManager if available
+            if (this.configManager) {
+                this.configManager.set('pluginDirectory', this.settings.pluginDirectory);
+                this.configManager.set('enablePluginSandbox', this.settings.enablePluginSandbox);
+                this.configManager.set('enablePluginDebug', this.settings.enablePluginDebug);
+            }
+            
+            console.log('✅ Loaded plugin management settings applied successfully');
+        } catch (error) {
+            console.error('❌ Error applying loaded settings:', error);
+        }
+    }
+
+    /**
+     * Apply plugin enabled/disabled states
+     */
+    applyPluginStates() {
+        if (!this.settings.pluginStates) return;
+        
+        Object.keys(this.settings.pluginStates).forEach(pluginId => {
+            const state = this.settings.pluginStates[pluginId];
+            
+            // Find plugin in registries
+            const functionPlugin = this.pluginManager.pluginRegistry.function.get(pluginId);
+            const visualizationPlugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
+            const utilityPlugin = this.pluginManager.pluginRegistry.utility?.get(pluginId);
+            
+            if (functionPlugin) {
+                functionPlugin.enabled = state.enabled;
+            }
+            if (visualizationPlugin) {
+                visualizationPlugin.enabled = state.enabled;
+            }
+            if (utilityPlugin) {
+                utilityPlugin.enabled = state.enabled;
+            }
+        });
+    }
+
+    /**
+     * Apply UI preferences
+     */
+    applyUIPreferences() {
+        if (this.settings.uiPreferences) {
+            this.currentTab = this.settings.uiPreferences.currentTab || 'installed';
+        }
+    }
+
+    /**
+     * Save settings to local storage
+     */
+    saveSettingsToStorage() {
+        try {
+            // Update metadata
+            this.settings.lastSaved = new Date().toISOString();
+            
+            // Save current plugin states
+            this.updatePluginStates();
+            
+            // Save current UI preferences
+            this.updateUIPreferences();
+            
+            // Store in localStorage
+            localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
+            
+            console.log('✅ Plugin management settings saved to local storage');
+            return true;
+        } catch (error) {
+            console.error('❌ Error saving plugin management settings to storage:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Update plugin states in settings from current plugin registry
+     */
+    updatePluginStates() {
+        this.settings.pluginStates = {};
+        
+        // Save function plugins states
+        this.pluginManager.pluginRegistry.function.forEach((plugin, pluginId) => {
+            this.settings.pluginStates[pluginId] = {
+                type: 'function',
+                enabled: plugin.enabled !== false,
+                lastUsed: plugin.lastUsed || null,
+                usageCount: plugin.usageCount || 0
+            };
+        });
+        
+        // Save visualization plugins states
+        this.pluginManager.pluginRegistry.visualization.forEach((plugin, pluginId) => {
+            this.settings.pluginStates[pluginId] = {
+                type: 'visualization',
+                enabled: plugin.enabled !== false,
+                lastUsed: plugin.lastUsed || null,
+                usageCount: plugin.usageCount || 0
+            };
+        });
+        
+        // Save utility plugins states if available
+        if (this.pluginManager.pluginRegistry.utility) {
+            this.pluginManager.pluginRegistry.utility.forEach((plugin, pluginId) => {
+                this.settings.pluginStates[pluginId] = {
+                    type: 'utility',
+                    enabled: plugin.enabled !== false,
+                    lastUsed: plugin.lastUsed || null,
+                    usageCount: plugin.usageCount || 0
+                };
+            });
+        }
+    }
+
+    /**
+     * Update UI preferences in settings
+     */
+    updateUIPreferences() {
+        this.settings.uiPreferences = {
+            ...this.settings.uiPreferences,
+            currentTab: this.currentTab,
+            lastUpdated: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Setup auto-save functionality
+     */
+    setupAutoSave() {
+        // Save settings periodically (every 30 seconds)
+        setInterval(() => {
+            this.saveSettingsToStorage();
+        }, 30000);
+        
+        // Save when page is about to unload
+        window.addEventListener('beforeunload', () => {
+            this.saveSettingsToStorage();
+        });
+        
+        // Save when visibility changes (tab switch, minimize, etc.)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.saveSettingsToStorage();
+            }
+        });
+    }
+
+    /**
+     * Export settings to file
+     */
+    exportSettings() {
+        try {
+            const exportData = {
+                ...this.settings,
+                exportDate: new Date().toISOString(),
+                exportVersion: this.settings.version,
+                application: 'GenomeExplorer',
+                type: 'plugin-management-settings'
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `genomeexplorer-plugin-settings-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            
+            this.showMessage('Plugin settings exported successfully!', 'success');
+        } catch (error) {
+            this.showMessage(`Error exporting settings: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Import settings from file
+     */
+    importSettings() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate imported data
+                    if (importedData.type !== 'plugin-management-settings') {
+                        throw new Error('Invalid settings file format');
+                    }
+                    
+                    // Merge imported settings with defaults
+                    this.settings = this.mergeSettingsWithDefaults(importedData);
+                    this.settings.lastLoaded = new Date().toISOString();
+                    
+                    // Apply imported settings
+                    this.applyLoadedSettings();
+                    
+                    // Save to storage
+                    this.saveSettingsToStorage();
+                    
+                    // Refresh UI
+                    this.refreshPluginLists();
+                    this.loadPluginSettings();
+                    
+                    this.showMessage('Plugin settings imported successfully!', 'success');
+                    
+                } catch (error) {
+                    this.showMessage(`Error importing settings: ${error.message}`, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    /**
+     * Reset settings to defaults
+     */
+    resetSettingsToDefaults() {
+        if (confirm('Are you sure you want to reset all plugin management settings to defaults? This action cannot be undone.')) {
+            try {
+                // Clear localStorage
+                localStorage.removeItem(this.storageKey);
+                
+                // Reset to defaults
+                this.settings = { ...this.defaultSettings };
+                
+                // Apply defaults
+                this.applyLoadedSettings();
+                
+                // Refresh UI
+                this.refreshPluginLists();
+                this.loadPluginSettings();
+                
+                this.showMessage('Plugin settings reset to defaults successfully!', 'success');
+                
+            } catch (error) {
+                this.showMessage(`Error resetting settings: ${error.message}`, 'error');
+            }
+        }
+    }
+
+    /**
+     * Get storage information
+     */
+    getStorageInfo() {
+        try {
+            const stored = localStorage.getItem(this.storageKey);
+            const size = stored ? new Blob([stored]).size : 0;
+            
+            return {
+                exists: !!stored,
+                size: size,
+                sizeFormatted: this.formatBytes(size),
+                lastSaved: this.settings.lastSaved,
+                lastLoaded: this.settings.lastLoaded,
+                version: this.settings.version
+            };
+        } catch (error) {
+            return {
+                exists: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Format bytes to human readable string
+     */
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     /**
@@ -135,7 +539,7 @@ class PluginManagementUI {
     }
 
     /**
-     * Setup plugin action handlers
+     * Setup plugin action handlers including storage management
      */
     setupPluginActions() {
         // Load plugin from file
@@ -169,6 +573,35 @@ class PluginManagementUI {
                 this.browsePluginDirectory();
             });
         }
+
+        // Storage Management Actions
+        const exportSettingsBtn = document.getElementById('exportPluginSettingsBtn');
+        if (exportSettingsBtn) {
+            exportSettingsBtn.addEventListener('click', () => {
+                this.exportSettings();
+            });
+        }
+
+        const importSettingsBtn = document.getElementById('importPluginSettingsBtn');
+        if (importSettingsBtn) {
+            importSettingsBtn.addEventListener('click', () => {
+                this.importSettings();
+            });
+        }
+
+        const resetSettingsBtn = document.getElementById('resetPluginSettingsBtn');
+        if (resetSettingsBtn) {
+            resetSettingsBtn.addEventListener('click', () => {
+                this.resetSettingsToDefaults();
+            });
+        }
+
+        const viewDetailsBtn = document.getElementById('viewStorageDetailsBtn');
+        if (viewDetailsBtn) {
+            viewDetailsBtn.addEventListener('click', () => {
+                this.showStorageDetails();
+            });
+        }
     }
 
     /**
@@ -193,7 +626,7 @@ class PluginManagementUI {
     }
 
     /**
-     * Switch between tabs
+     * Switch between tabs and initialize content as needed
      */
     switchTab(tabName) {
         // Update tab buttons
@@ -401,7 +834,7 @@ class PluginManagementUI {
     }
 
     /**
-     * Toggle plugin enabled/disabled state
+     * Toggle plugin enabled/disabled state with local storage persistence
      */
     togglePlugin(pluginId, type) {
         let plugin;
@@ -562,29 +995,41 @@ class PluginManagementUI {
     }
 
     /**
-     * Load plugin settings
+     * Load plugin settings from both configManager and local storage
      */
     loadPluginSettings() {
-        // Load current settings
+        // Load current settings from local storage first, then fall back to configManager
         const pluginDirectory = document.getElementById('pluginDirectory');
         const enableSandbox = document.getElementById('enablePluginSandbox');
         const enableDebug = document.getElementById('enablePluginDebug');
 
         if (pluginDirectory) {
-            pluginDirectory.value = this.configManager?.get('pluginDirectory') || 'modules/Plugins';
+            // Use local storage value if available, otherwise use configManager or default
+            pluginDirectory.value = this.settings.pluginDirectory || 
+                                  this.configManager?.get('pluginDirectory') || 
+                                  'src/renderer/modules/Plugins';
         }
 
         if (enableSandbox) {
-            enableSandbox.checked = this.configManager?.get('enablePluginSandbox') !== false;
+            // Use local storage value if available, otherwise use configManager or default
+            enableSandbox.checked = this.settings.enablePluginSandbox !== undefined ? 
+                                   this.settings.enablePluginSandbox : 
+                                   (this.configManager?.get('enablePluginSandbox') !== false);
         }
 
         if (enableDebug) {
-            enableDebug.checked = this.configManager?.get('enablePluginDebug') === true;
+            // Use local storage value if available, otherwise use configManager or default
+            enableDebug.checked = this.settings.enablePluginDebug !== undefined ?
+                                 this.settings.enablePluginDebug :
+                                 (this.configManager?.get('enablePluginDebug') === true);
         }
+
+        // Show storage info if available
+        this.updateStorageInfo();
     }
 
     /**
-     * Save plugin settings
+     * Save plugin settings to both local storage and configManager
      */
     savePluginSettings() {
         try {
@@ -592,18 +1037,212 @@ class PluginManagementUI {
             const enableSandbox = document.getElementById('enablePluginSandbox').checked;
             const enableDebug = document.getElementById('enablePluginDebug').checked;
 
-            // Save settings
+            // Update local settings object
+            this.settings.pluginDirectory = pluginDirectory;
+            this.settings.enablePluginSandbox = enableSandbox;
+            this.settings.enablePluginDebug = enableDebug;
+
+            // Save to local storage
+            const storageSuccess = this.saveSettingsToStorage();
+
+            // Also save to configManager for compatibility
             if (this.configManager) {
                 this.configManager.set('pluginDirectory', pluginDirectory);
                 this.configManager.set('enablePluginSandbox', enableSandbox);
                 this.configManager.set('enablePluginDebug', enableDebug);
             }
 
-            this.showMessage('Plugin settings saved successfully!', 'success');
+            // Update storage info display
+            this.updateStorageInfo();
+
+            // Show success message with storage info
+            const storageInfo = this.getStorageInfo();
+            this.showMessage(
+                `Plugin settings saved successfully! Storage size: ${storageInfo.sizeFormatted}`, 
+                'success'
+            );
 
         } catch (error) {
             this.showMessage(`Error saving settings: ${error.message}`, 'error');
         }
+    }
+
+    /**
+     * Update storage information display in the UI
+     */
+    updateStorageInfo() {
+        const storageInfo = this.getStorageInfo();
+        
+        // Add storage info to settings tab if not already present
+        let storageInfoElement = document.getElementById('plugin-storage-info');
+        if (!storageInfoElement) {
+            const settingsTab = document.getElementById('settings-plugins-tab');
+            if (settingsTab) {
+                storageInfoElement = document.createElement('div');
+                storageInfoElement.id = 'plugin-storage-info';
+                storageInfoElement.className = 'settings-section';
+                
+                storageInfoElement.innerHTML = `
+                    <h4><i class="fas fa-database"></i> Storage Information</h4>
+                    <div class="storage-info-content">
+                        <div class="storage-stats">
+                            <div class="storage-stat">
+                                <span class="stat-label">Settings Size:</span>
+                                <span class="stat-value" id="storage-size">${storageInfo.sizeFormatted || '0 Bytes'}</span>
+                            </div>
+                            <div class="storage-stat">
+                                <span class="stat-label">Last Saved:</span>
+                                <span class="stat-value" id="last-saved">${storageInfo.lastSaved ? new Date(storageInfo.lastSaved).toLocaleString() : 'Never'}</span>
+                            </div>
+                            <div class="storage-stat">
+                                <span class="stat-label">Version:</span>
+                                <span class="stat-value">${storageInfo.version || '1.0.0'}</span>
+                            </div>
+                        </div>
+                        <div class="storage-actions">
+                            <button id="exportSettingsBtn" class="btn btn-info btn-sm">
+                                <i class="fas fa-download"></i>
+                                Export Settings
+                            </button>
+                            <button id="importSettingsBtn" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-upload"></i>
+                                Import Settings
+                            </button>
+                            <button id="resetSettingsBtn" class="btn btn-warning btn-sm">
+                                <i class="fas fa-undo"></i>
+                                Reset to Defaults
+                            </button>
+                            <button id="viewStorageDetailsBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-info-circle"></i>
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                settingsTab.appendChild(storageInfoElement);
+                
+                // Add event listeners for storage actions
+                this.setupStorageActionHandlers();
+            }
+        } else {
+            // Update existing storage info
+            const sizeElement = storageInfoElement.querySelector('#storage-size');
+            const lastSavedElement = storageInfoElement.querySelector('#last-saved');
+            
+            if (sizeElement) {
+                sizeElement.textContent = storageInfo.sizeFormatted || '0 Bytes';
+            }
+            if (lastSavedElement) {
+                lastSavedElement.textContent = storageInfo.lastSaved ? 
+                    new Date(storageInfo.lastSaved).toLocaleString() : 'Never';
+            }
+        }
+    }
+
+    /**
+     * Setup event handlers for storage action buttons
+     */
+    setupStorageActionHandlers() {
+        const exportBtn = document.getElementById('exportSettingsBtn');
+        const importBtn = document.getElementById('importSettingsBtn');
+        const resetBtn = document.getElementById('resetSettingsBtn');
+        const detailsBtn = document.getElementById('viewStorageDetailsBtn');
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportSettings();
+            });
+        }
+
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                this.importSettings();
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.resetSettingsToDefaults();
+            });
+        }
+
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', () => {
+                this.showStorageDetails();
+            });
+        }
+    }
+
+    /**
+     * Show detailed storage information
+     */
+    showStorageDetails() {
+        const storageInfo = this.getStorageInfo();
+        const pluginCount = Object.keys(this.settings.pluginStates || {}).length;
+        
+        const details = `
+            <div class="storage-details">
+                <h4>📊 Storage Details</h4>
+                <table class="details-table">
+                    <tr><td><strong>Storage Status:</strong></td><td>${storageInfo.exists ? '✅ Active' : '❌ Not Found'}</td></tr>
+                    <tr><td><strong>Storage Size:</strong></td><td>${storageInfo.sizeFormatted}</td></tr>
+                    <tr><td><strong>Version:</strong></td><td>${storageInfo.version}</td></tr>
+                    <tr><td><strong>Plugins Tracked:</strong></td><td>${pluginCount}</td></tr>
+                    <tr><td><strong>Last Saved:</strong></td><td>${storageInfo.lastSaved ? new Date(storageInfo.lastSaved).toLocaleString() : 'Never'}</td></tr>
+                    <tr><td><strong>Last Loaded:</strong></td><td>${storageInfo.lastLoaded ? new Date(storageInfo.lastLoaded).toLocaleString() : 'Never'}</td></tr>
+                    <tr><td><strong>Auto-Save:</strong></td><td>✅ Every 30 seconds</td></tr>
+                    <tr><td><strong>Storage Key:</strong></td><td><code>${this.storageKey}</code></td></tr>
+                </table>
+                
+                <h5>📋 Settings Categories</h5>
+                <ul class="settings-categories">
+                    <li>🔧 System Settings (directory, sandbox, debug)</li>
+                    <li>🔌 Plugin States (enabled/disabled status)</li>
+                    <li>🎨 UI Preferences (tabs, sorting, view options)</li>
+                    <li>🛒 Marketplace Settings (updates, notifications)</li>
+                    <li>⚡ Performance Settings (caching, limits)</li>
+                    <li>🔒 Security Settings (validation, restrictions)</li>
+                </ul>
+            </div>
+        `;
+        
+        // Create modal for details
+        const detailsModal = document.createElement('div');
+        detailsModal.className = 'storage-details-modal';
+        detailsModal.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-database"></i> Plugin Storage Details</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        ${details}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary modal-close">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(detailsModal);
+        
+        // Add close handlers
+        const closeButtons = detailsModal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                detailsModal.remove();
+            });
+        });
+        
+        // Click outside to close
+        detailsModal.addEventListener('click', (e) => {
+            if (e.target === detailsModal.querySelector('.modal-overlay')) {
+                detailsModal.remove();
+            }
+        });
     }
 
     /**
