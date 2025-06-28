@@ -8,37 +8,41 @@ class ProjectManagerWindow {
         this.currentProject = null;
         this.currentPath = [];
         this.selectedFiles = new Set();
-        this.searchTerm = '';
-        this.currentViewMode = 'grid';
-        this.detailsPanelVisible = false;
-        this.expandedProjects = new Set();
-        this.expandedFolders = new Set();
-        
-        // 紧凑模式状态
+        this.sortBy = 'name';
+        this.showHiddenFiles = false;
+        this.showFileExtensions = true;
+        this.isCompactMode = false;
         this.compactTreeMode = false;
         this.ultraCompactMode = false;
-        
-        // Header折叠状态
         this.headerCollapsed = false;
+        this.detailsOpen = false;
+        this.currentViewMode = 'grid'; // Add view mode tracking
+        this.viewMode = 'grid'; // For compatibility
         
-        // 文件类型定义
+        // File type configurations
         this.fileTypes = {
-            'fasta': { icon: 'GB', color: '#28a745', extensions: ['.fasta', '.fa', '.fas'] },
-            'fastq': { icon: 'FQ', color: '#17a2b8', extensions: ['.fastq', '.fq'] },
-            'gff': { icon: 'GF', color: '#ffc107', extensions: ['.gff', '.gff3'] },
-            'gtf': { icon: 'GT', color: '#fd7e14', extensions: ['.gtf'] },
-            'vcf': { icon: 'VC', color: '#dc3545', extensions: ['.vcf'] },
-            'sam': { icon: 'SM', color: '#6f42c1', extensions: ['.sam'] },
-            'bam': { icon: 'BM', color: '#495057', extensions: ['.bam'] },
-            'bed': { icon: 'BD', color: '#20c997', extensions: ['.bed'] },
-            'genbank': { icon: 'GB', color: '#28a745', extensions: ['.gb', '.gbk', '.gbff'] },
-            'embl': { icon: 'EB', color: '#007bff', extensions: ['.embl'] },
-            'xml': { icon: 'XML', color: '#6c757d', extensions: ['.xml'] },
-            'json': { icon: 'JS', color: '#f8d7da', extensions: ['.json'] },
-            'text': { icon: 'TXT', color: '#6c757d', extensions: ['.txt', '.text'] },
-            'csv': { icon: 'CSV', color: '#e74c3c', extensions: ['.csv'] },
-            'tsv': { icon: 'TSV', color: '#e67e22', extensions: ['.tsv'] }
+            'fasta': { icon: 'FA', color: '#28a745' },
+            'genbank': { icon: 'GB', color: '#17a2b8' },
+            'gff': { icon: 'GFF', color: '#007bff' },
+            'bed': { icon: 'BED', color: '#fd7e14' },
+            'vcf': { icon: 'VCF', color: '#6f42c1' },
+            'sam': { icon: 'SAM', color: '#e83e8c' },
+            'bam': { icon: 'BAM', color: '#dc3545' },
+            'fastq': { icon: 'FQ', color: '#20c997' },
+            'txt': { icon: 'TXT', color: '#6c757d' },
+            'csv': { icon: 'CSV', color: '#198754' },
+            'json': { icon: 'JS', color: '#ffc107' },
+            'xml': { icon: 'XML', color: '#0d6efd' },
+            'html': { icon: 'HTM', color: '#fd7e14' },
+            'pdf': { icon: 'PDF', color: '#dc3545' },
+            'log': { icon: 'LOG', color: '#6c757d' },
+            'tsv': { icon: 'TSV', color: '#198754' }
         };
+        
+        this.expandedProjects = new Set();
+        this.expandedFolders = new Set();
+        this.currentContextFolderPath = null;
+        this.clipboard = null;
         
         this.initialize();
     }
@@ -665,7 +669,7 @@ class ProjectManagerWindow {
         if (projectContent) projectContent.style.display = 'block';
         
         this.renderProjectStats();
-        this.renderFileGrid();
+        this.renderFiles(); // Use renderFiles to support different view modes
         this.updateContentTitle();
     }
 
@@ -697,8 +701,11 @@ class ProjectManagerWindow {
     }
 
     renderFileGrid() {
+        this.hideAllViews(); // Hide other views first
         const container = document.getElementById('fileGrid');
         if (!container) return;
+        
+        container.style.display = 'block'; // Ensure grid is visible
 
         const files = this.getCurrentFolderFiles();
         const filteredFiles = this.filterFiles(files);
@@ -1685,6 +1692,198 @@ class ProjectManagerWindow {
         this.sortBy = sortBy;
         this.renderProjectContent();
         this.showNotification(`Sorted by ${sortBy}`, 'info');
+    }
+
+    /**
+     * Set view mode (grid, list, details)
+     */
+    setViewMode(mode) {
+        if (this.currentViewMode === mode) return;
+        
+        this.currentViewMode = mode;
+        this.viewMode = mode; // For compatibility
+        
+        // Update button states
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`.view-mode-btn[data-mode="${mode}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // Re-render file view
+        this.renderFiles();
+        this.showNotification(`Switched to ${mode} view`, 'info');
+    }
+
+    /**
+     * Render files based on current view mode
+     */
+    renderFiles() {
+        if (!this.currentProject) return;
+        
+        switch (this.currentViewMode) {
+            case 'list':
+                this.renderFileList();
+                break;
+            case 'details':
+                this.renderFileDetails();
+                break;
+            default:
+                this.hideAllViews();
+                this.renderFileGrid();
+                break;
+        }
+    }
+
+    /**
+     * Hide all view containers
+     */
+    hideAllViews() {
+        const fileGrid = document.getElementById('fileGrid');
+        const fileList = document.getElementById('fileList');
+        const fileDetails = document.getElementById('fileDetails');
+        
+        if (fileGrid) fileGrid.style.display = 'none';
+        if (fileList) fileList.style.display = 'none';
+        if (fileDetails) fileDetails.style.display = 'none';
+    }
+
+    /**
+     * Render files in list view
+     */
+    renderFileList() {
+        this.hideAllViews();
+        const fileList = document.getElementById('fileList');
+        if (!fileList) return;
+        
+        fileList.style.display = 'block';
+
+        const currentFiles = this.getCurrentFolderFiles();
+        const filteredFiles = this.filterFiles(currentFiles);
+
+        if (filteredFiles.length === 0) {
+            fileList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📁</div>
+                    <h3>No files found</h3>
+                    <p>Add files to your project or try a different search term</p>
+                    ${this.currentProject ? '<button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">Add Files</button>' : ''}
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        filteredFiles.forEach(file => {
+            const fileType = this.detectFileType(file.name);
+            const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+            const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
+
+            html += `
+                <div class="file-list-item ${isSelected ? 'selected' : ''}" 
+                     draggable="true"
+                     onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                     ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
+                     data-file-id="${file.id}">
+                    <div class="file-icon-small" style="background-color: ${typeConfig.color}">
+                        ${typeConfig.icon}
+                    </div>
+                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-size">${this.formatFileSize(file.size || 0)}</div>
+                    <div class="file-date">${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
+                    <div class="file-actions-list">
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        fileList.innerHTML = html;
+        this.updateFileCountDisplay(filteredFiles.length);
+    }
+
+    /**
+     * Render files in details view
+     */
+    renderFileDetails() {
+        this.hideAllViews();
+        const fileDetails = document.getElementById('fileDetails');
+        if (!fileDetails) return;
+        
+        fileDetails.style.display = 'block';
+
+        const currentFiles = this.getCurrentFolderFiles();
+        const filteredFiles = this.filterFiles(currentFiles);
+
+        if (filteredFiles.length === 0) {
+            fileDetails.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📁</div>
+                    <h3>No files found</h3>
+                    <p>Add files to your project or try a different search term</p>
+                    ${this.currentProject ? '<button class="btn btn-primary" onclick="projectManagerWindow.addFiles()">Add Files</button>' : ''}
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <table class="file-details-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Name</th>
+                        <th style="width: 100px;">Type</th>
+                        <th style="width: 80px;">Size</th>
+                        <th style="width: 120px;">Modified</th>
+                        <th style="width: 150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        filteredFiles.forEach(file => {
+            const fileType = this.detectFileType(file.name);
+            const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+            const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
+
+            html += `
+                <tr class="${isSelected ? 'selected' : ''}"
+                    draggable="true"
+                    onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                    ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
+                    oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
+                    data-file-id="${file.id}">
+                    <td>
+                        <div class="file-icon-small" style="background-color: ${typeConfig.color}">
+                            ${typeConfig.icon}
+                        </div>
+                    </td>
+                    <td class="file-name" title="${file.name}">${file.name}</td>
+                    <td>${fileType.toUpperCase()}</td>
+                    <td>${this.formatFileSize(file.size || 0)}</td>
+                    <td>${file.modified ? this.formatDate(file.modified) : 'Unknown'}</td>
+                    <td class="file-actions-details">
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+        `;
+
+        fileDetails.innerHTML = html;
+        this.updateFileCountDisplay(filteredFiles.length);
     }
 
     toggleHiddenFiles(show) {
