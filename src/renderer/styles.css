@@ -29720,16 +29720,287 @@ path.svg-gene-element.selected {
     width: 90vw;
     max-height: 90vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .blast-modal-body {
     padding: 0;
     overflow-y: auto;
-    max-height: calc(90vh - 120px);
+    flex: 1;
+    min-height: 0;
+    max-height: calc(90vh - 200px); /* More conservative height calculation */
 }
 
 .blast-search-container {
     padding: 24px;
+}
+
+/* Ensure BLAST modal footer is always visible */
+#blastSearchModal .modal-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 20px !important;
+    border-top: 1px solid #e5e7eb !important;
+    background: #f9fafb !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    margin-top: auto !important;
+}
+
+#blastSearchModal .modal-footer .keyboard-shortcut-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+#blastSearchModal .modal-footer .keyboard-shortcut-hint i {
+    font-size: 14px;
+}
+
+#blastSearchModal .modal-footer .modal-footer-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Database Management Styles */
+.blast-db-management-section {
+    margin-bottom: 32px;
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.blast-db-management-section.custom-db-section {
+    border-left: 4px solid #3b82f6;
+    background: #f0f9ff;
+}
+
+.genome-list {
+    margin-top: 16px;
+}
+
+.genome-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    margin: 12px 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.genome-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #d1d5db;
+}
+
+.genome-info {
+    flex: 1;
+}
+
+.genome-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.genome-details {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.genome-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.genome-stat {
+    font-size: 12px;
+    padding: 2px 6px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    color: #374151;
+}
+
+.db-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: white;
+    border: none;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    transform: translateY(-1px);
+}
+
+.file-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.file-input-group input {
+    flex: 1;
+}
+
+.no-genomes-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.database-list {
+    margin-top: 16px;
+}
+
+.database-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 8px 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.database-info {
+    flex: 1;
+}
+
+.database-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.database-details {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-creating {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.db-operation-log {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f3f4f6;
+    border-radius: 8px;
+}
+
+.db-operation-log h5 {
+    margin: 0 0 12px 0;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.log-content {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Consolas', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 2px;
+}
+
+.log-timestamp {
+    color: #9ca3af;
+}
+
+.log-success {
+    color: #34d399;
+}
+
+.log-error {
+    color: #f87171;
+}
+
+.log-info {
+    color: #60a5fa;
 }
 
 /* Section Headers */

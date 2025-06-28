@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLAST Interface Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .blast-btn {
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .blast-btn:hover {
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 5px;
+        }
+        
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: #f9fafb;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .modal-body {
+            padding: 0;
+            overflow-y: auto;
+            max-height: calc(90vh - 200px);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        /* Database Management Styles */
+        .db-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .db-section h4 {
+            margin: 0 0 15px 0;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .genome-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+        
+        .genome-info {
+            flex: 1;
+        }
+        
+        .genome-name {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .genome-details {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        .db-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-info {
+            background: #06b6d4;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #0891b2;
+        }
+        
+        .custom-db-section {
+            border-left: 4px solid #3b82f6;
+            background: #f0f9ff;
+        }
+        
+        .file-input-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .file-input-group input {
+            flex: 1;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .fa-solid, .fas {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+        
+        .log-output {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1><i class="fas fa-search"></i> BLAST Interface Fix & Enhancement Test</h1>
+            <p>Testing BLAST submit button visibility and Database Management enhancements</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>1. BLAST Modal Test</h2>
+            <button id="openBlastModal" class="blast-btn">
+                <i class="fas fa-search"></i> Open BLAST Search
+            </button>
+        </div>
+        
+        <div class="test-section" style="margin-top: 30px;">
+            <h2>2. Current Project Genomes</h2>
+            <div id="currentGenomes">
+                <!-- Simulated project genomes for testing -->
+                <div class="genome-item">
+                    <div class="genome-info">
+                        <div class="genome-name">E. coli K-12 MG1655</div>
+                        <div class="genome-details">4,641,652 bp • 4,288 genes • NC_000913.3</div>
+                    </div>
+                    <div class="db-actions">
+                        <button class="btn btn-success btn-sm" onclick="createGenomeDB('ecoli', 'nucl')">
+                            <i class="fas fa-dna"></i> Nucleotide DB
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="createGenomeDB('ecoli', 'prot')">
+                            <i class="fas fa-circle"></i> Protein DB
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="genome-item">
+                    <div class="genome-info">
+                        <div class="genome-name">Salmonella enterica subsp. enterica serovar Typhimurium str. LT2</div>
+                        <div class="genome-details">4,857,432 bp • 4,489 genes • NC_003197.2</div>
+                    </div>
+                    <div class="db-actions">
+                        <button class="btn btn-success btn-sm" onclick="createGenomeDB('salmonella', 'nucl')">
+                            <i class="fas fa-dna"></i> Nucleotide DB
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="createGenomeDB('salmonella', 'prot')">
+                            <i class="fas fa-circle"></i> Protein DB
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLAST Search Modal -->
+    <div id="blastSearchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-search"></i> BLAST Search</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="tab-button active" onclick="switchTab('blast-search')">BLAST Search</button>
+                <button class="tab-button" onclick="switchTab('db-management')">Database Management</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- BLAST Search Tab -->
+                <div id="blast-search-tab" class="tab-content active">
+                    <div style="padding: 20px 0;">
+                        <h4><i class="fas fa-dna"></i> Query Sequence</h4>
+                        <textarea id="blastQuerySequence" 
+                                  placeholder="Enter your DNA, RNA, or protein sequence here..." 
+                                  style="width: 100%; height: 120px; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;"></textarea>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4><i class="fas fa-database"></i> Database Selection</h4>
+                            <select id="blastDatabase" class="form-control">
+                                <option value="nt">Nucleotide collection (nt)</option>
+                                <option value="nr">Non-redundant protein sequences (nr)</option>
+                                <option value="custom_ecoli_nucl">E. coli K-12 MG1655 (Nucleotide)</option>
+                                <option value="custom_ecoli_prot">E. coli K-12 MG1655 (Protein)</option>
+                                <option value="custom_salmonella_nucl">Salmonella LT2 (Nucleotide)</option>
+                                <option value="custom_salmonella_prot">Salmonella LT2 (Protein)</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4><i class="fas fa-cog"></i> Parameters</h4>
+                            <div class="form-group">
+                                <label>E-value threshold:</label>
+                                <select id="blastEvalue" class="form-control">
+                                    <option value="0.01" selected>0.01</option>
+                                    <option value="0.001">0.001</option>
+                                    <option value="1e-10">1e-10</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Database Management Tab -->
+                <div id="db-management-tab" class="tab-content">
+                    <!-- Project Genomes Database Creation -->
+                    <div class="db-section">
+                        <h4><i class="fas fa-project-diagram"></i> Project Genomes</h4>
+                        <p>Create BLAST databases from genomes currently loaded in your project.</p>
+                        
+                        <div id="projectGenomesList">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Custom File Database Creation -->
+                    <div class="db-section custom-db-section">
+                        <h4><i class="fas fa-file-upload"></i> Custom File Database</h4>
+                        <p>Create BLAST database from a custom FASTA file.</p>
+                        
+                        <div class="form-group">
+                            <label>File Path:</label>
+                            <div class="file-input-group">
+                                <input type="text" id="customFilePath" class="form-control" placeholder="Select a FASTA file..." readonly>
+                                <button class="btn btn-secondary" onclick="browseCustomFile()">
+                                    <i class="fas fa-folder-open"></i> Browse
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Database Name:</label>
+                            <input type="text" id="customDbName" class="form-control" placeholder="Enter database name...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Database Type:</label>
+                            <select id="customDbType" class="form-control">
+                                <option value="nucl">Nucleotide</option>
+                                <option value="prot">Protein</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="createCustomDB()">
+                            <i class="fas fa-database"></i> Create Custom Database
+                        </button>
+                    </div>
+                    
+                    <!-- Database Status -->
+                    <div class="db-section">
+                        <h4><i class="fas fa-list"></i> Available Databases</h4>
+                        <div id="availableDatabases">
+                            <div class="genome-item">
+                                <div class="genome-info">
+                                    <div class="genome-name">NCBI nt</div>
+                                    <div class="genome-details">Remote database • Nucleotide collection</div>
+                                </div>
+                                <div class="status-indicator status-success">
+                                    <i class="fas fa-check"></i> Available
+                                </div>
+                            </div>
+                            
+                            <div class="genome-item">
+                                <div class="genome-info">
+                                    <div class="genome-name">NCBI nr</div>
+                                    <div class="genome-details">Remote database • Non-redundant proteins</div>
+                                </div>
+                                <div class="status-indicator status-success">
+                                    <i class="fas fa-check"></i> Available
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Log Output -->
+                    <div id="dbOperationLog" class="log-output" style="display: none;">
+                        <div>Database operation log will appear here...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer with Submit Button -->
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button id="runBlastBtn" class="btn btn-primary">
+                    <i class="fas fa-play"></i> Run BLAST Search
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for simulating project data
+        let projectGenomes = [
+            {
+                id: 'ecoli',
+                name: 'E. coli K-12 MG1655',
+                accession: 'NC_000913.3',
+                size: 4641652,
+                genes: 4288,
+                sequenceFile: '/project/data/ecoli_genome.fasta',
+                proteinFile: '/project/data/ecoli_proteins.fasta'
+            },
+            {
+                id: 'salmonella',
+                name: 'Salmonella enterica subsp. enterica serovar Typhimurium str. LT2',
+                accession: 'NC_003197.2',
+                size: 4857432,
+                genes: 4489,
+                sequenceFile: '/project/data/salmonella_genome.fasta',
+                proteinFile: '/project/data/salmonella_proteins.fasta'
+            }
+        ];
+        
+        let customDatabases = [];
+        
+        // Modal functions
+        function openModal() {
+            document.getElementById('blastSearchModal').classList.add('show');
+            populateProjectGenomes();
+        }
+        
+        function closeModal() {
+            document.getElementById('blastSearchModal').classList.remove('show');
+        }
+        
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Database Management Functions
+        function populateProjectGenomes() {
+            const container = document.getElementById('projectGenomesList');
+            if (!container) return;
+            
+            container.innerHTML = projectGenomes.map(genome => `
+                <div class="genome-item">
+                    <div class="genome-info">
+                        <div class="genome-name">${genome.name}</div>
+                        <div class="genome-details">${genome.size.toLocaleString()} bp • ${genome.genes.toLocaleString()} genes • ${genome.accession}</div>
+                    </div>
+                    <div class="db-actions">
+                        <button class="btn btn-success btn-sm" onclick="createGenomeDB('${genome.id}', 'nucl')">
+                            <i class="fas fa-dna"></i> Nucleotide DB
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="createGenomeDB('${genome.id}', 'prot')">
+                            <i class="fas fa-circle"></i> Protein DB
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            updateAvailableDatabases();
+        }
+        
+        function createGenomeDB(genomeId, dbType) {
+            const genome = projectGenomes.find(g => g.id === genomeId);
+            if (!genome) return;
+            
+            const dbName = `${genome.id}_${dbType}`;
+            const sourceFile = dbType === 'nucl' ? genome.sequenceFile : genome.proteinFile;
+            
+            showLog();
+            appendLog(`Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genome.name}...`);
+            appendLog(`Source file: ${sourceFile}`);
+            appendLog(`Database name: ${dbName}`);
+            
+            // Simulate makeblastdb command
+            setTimeout(() => {
+                appendLog(`Running: makeblastdb -in "${sourceFile}" -dbtype ${dbType} -out "${dbName}"`);
+                
+                setTimeout(() => {
+                    appendLog(`✓ Database created successfully: ${dbName}`);
+                    appendLog(`Database files: ${dbName}.nhr, ${dbName}.nin, ${dbName}.nsq`);
+                    
+                    // Add to custom databases
+                    customDatabases.push({
+                        id: dbName,
+                        name: `${genome.name} (${dbType === 'nucl' ? 'Nucleotide' : 'Protein'})`,
+                        type: dbType,
+                        source: 'project',
+                        status: 'ready'
+                    });
+                    
+                    // Update database selection options
+                    updateBlastDatabaseOptions();
+                    updateAvailableDatabases();
+                    
+                }, 1500);
+            }, 500);
+        }
+        
+        function browseCustomFile() {
+            // Simulate file browser
+            const samplePaths = [
+                '/Users/song/Documents/GenomeExplorer Projects/MyProject/data/custom_sequences.fasta',
+                '/Users/song/Desktop/bacterial_genomes.fasta',
+                '/Users/song/Downloads/protein_sequences.fasta'
+            ];
+            
+            const selectedPath = samplePaths[Math.floor(Math.random() * samplePaths.length)];
+            document.getElementById('customFilePath').value = selectedPath;
+            
+            // Auto-generate database name from filename
+            const filename = selectedPath.split('/').pop().replace(/\.(fasta|fa|fas)$/i, '');
+            document.getElementById('customDbName').value = filename + '_db';
+        }
+        
+        function createCustomDB() {
+            const filePath = document.getElementById('customFilePath').value;
+            const dbName = document.getElementById('customDbName').value;
+            const dbType = document.getElementById('customDbType').value;
+            
+            if (!filePath || !dbName) {
+                alert('Please select a file and enter a database name.');
+                return;
+            }
+            
+            showLog();
+            appendLog(`Creating custom ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database...`);
+            appendLog(`Source file: ${filePath}`);
+            appendLog(`Database name: ${dbName}`);
+            
+            // Simulate makeblastdb command
+            setTimeout(() => {
+                appendLog(`Running: makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${dbName}"`);
+                
+                setTimeout(() => {
+                    appendLog(`✓ Custom database created successfully: ${dbName}`);
+                    
+                    // Add to custom databases
+                    customDatabases.push({
+                        id: dbName,
+                        name: `${dbName} (Custom ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'})`,
+                        type: dbType,
+                        source: 'custom',
+                        status: 'ready'
+                    });
+                    
+                    // Update database selection options
+                    updateBlastDatabaseOptions();
+                    updateAvailableDatabases();
+                    
+                    // Clear form
+                    document.getElementById('customFilePath').value = '';
+                    document.getElementById('customDbName').value = '';
+                    
+                }, 2000);
+            }, 500);
+        }
+        
+        function updateBlastDatabaseOptions() {
+            const select = document.getElementById('blastDatabase');
+            
+            // Remove existing custom options
+            const options = Array.from(select.options);
+            options.forEach(option => {
+                if (option.value.startsWith('custom_')) {
+                    option.remove();
+                }
+            });
+            
+            // Add new custom databases
+            customDatabases.forEach(db => {
+                const option = document.createElement('option');
+                option.value = `custom_${db.id}`;
+                option.textContent = db.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function updateAvailableDatabases() {
+            const container = document.getElementById('availableDatabases');
+            
+            // Standard databases
+            let html = `
+                <div class="genome-item">
+                    <div class="genome-info">
+                        <div class="genome-name">NCBI nt</div>
+                        <div class="genome-details">Remote database • Nucleotide collection</div>
+                    </div>
+                    <div class="status-indicator status-success">
+                        <i class="fas fa-check"></i> Available
+                    </div>
+                </div>
+                
+                <div class="genome-item">
+                    <div class="genome-info">
+                        <div class="genome-name">NCBI nr</div>
+                        <div class="genome-details">Remote database • Non-redundant proteins</div>
+                    </div>
+                    <div class="status-indicator status-success">
+                        <i class="fas fa-check"></i> Available
+                    </div>
+                </div>
+            `;
+            
+            // Custom databases
+            customDatabases.forEach(db => {
+                html += `
+                    <div class="genome-item">
+                        <div class="genome-info">
+                            <div class="genome-name">${db.name}</div>
+                            <div class="genome-details">Local database • ${db.source === 'project' ? 'Project genome' : 'Custom file'}</div>
+                        </div>
+                        <div class="status-indicator status-success">
+                            <i class="fas fa-check"></i> Ready
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function showLog() {
+            document.getElementById('dbOperationLog').style.display = 'block';
+            document.getElementById('dbOperationLog').innerHTML = '<div>Database operation log:</div>';
+        }
+        
+        function appendLog(message) {
+            const log = document.getElementById('dbOperationLog');
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // BLAST search function
+        function runBlastSearch() {
+            const sequence = document.getElementById('blastQuerySequence').value.trim();
+            const database = document.getElementById('blastDatabase').value;
+            
+            if (!sequence) {
+                alert('Please enter a query sequence.');
+                return;
+            }
+            
+            const button = document.getElementById('runBlastBtn');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+            
+            // Simulate BLAST search
+            setTimeout(() => {
+                alert(`BLAST search completed!\nDatabase: ${database}\nSequence length: ${sequence.length} characters`);
+                
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-play"></i> Run BLAST Search';
+            }, 3000);
+        }
+        
+        // Event listeners
+        document.getElementById('openBlastModal').addEventListener('click', openModal);
+        document.getElementById('runBlastBtn').addEventListener('click', runBlastSearch);
+        
+        // Close modal when clicking outside
+        document.getElementById('blastSearchModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('BLAST Interface Test initialized');
+            updateBlastDatabaseOptions();
+            updateAvailableDatabases();
+        });
+    </script>
+</body>
+</html> 

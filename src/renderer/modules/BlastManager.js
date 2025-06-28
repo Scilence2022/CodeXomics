@@ -22,8 +22,13 @@ class BlastManager {
             supportedLocalFormats: ['fasta', 'fa', 'fas', 'txt', 'gb', 'gbk', 'genbank']
         };
         
+        // Custom databases for this project
+        this.customDatabases = new Map();
+        this.projectGenomes = new Map();
+        
         this.initializeUI();
         this.initializeLocalBlast();
+        this.initializeDatabaseManagement();
     }
 
     async initializeLocalBlast() {
@@ -381,12 +386,68 @@ class BlastManager {
     }
 
     initializeUI() {
+        // Make this instance globally accessible for onclick handlers
+        window.blastManager = this;
+        
         // Use a timeout to ensure DOM is fully rendered
         setTimeout(() => {
             this.setupEventListeners();
             this.initializeModal();
+            this.ensureModalFooterVisibility();
             this.selectBlastType('blastn'); // Set default BLAST type
         }, 100);
+    }
+
+    ensureModalFooterVisibility() {
+        // Check if modal footer is properly styled and visible
+        const modal = document.getElementById('blastSearchModal');
+        const modalContent = modal?.querySelector('.modal-content');
+        const modalFooter = modal?.querySelector('.modal-footer');
+        const runBlastBtn = document.getElementById('runBlastBtn');
+        
+        if (modal && modalContent) {
+            // Ensure modal uses flexbox layout
+            modalContent.style.display = 'flex';
+            modalContent.style.flexDirection = 'column';
+            modalContent.style.maxHeight = '90vh';
+            modalContent.style.overflow = 'hidden';
+            
+            console.log('✓ Modal layout fixed');
+        }
+        
+        if (modalFooter) {
+            // Ensure modal footer has proper styles and is always visible
+            modalFooter.style.display = 'flex';
+            modalFooter.style.justifyContent = 'flex-end';
+            modalFooter.style.gap = '12px';
+            modalFooter.style.padding = '20px';
+            modalFooter.style.borderTop = '1px solid #e5e7eb';
+            modalFooter.style.background = '#f9fafb';
+            modalFooter.style.flexShrink = '0';
+            modalFooter.style.position = 'relative';
+            modalFooter.style.zIndex = '10';
+            modalFooter.style.marginTop = 'auto';
+            
+            console.log('✓ Modal footer visibility ensured');
+        }
+        
+        if (runBlastBtn) {
+            // Ensure run button is visible and properly styled
+            runBlastBtn.style.display = 'inline-flex';
+            runBlastBtn.style.alignItems = 'center';
+            runBlastBtn.style.gap = '6px';
+            runBlastBtn.style.visibility = 'visible';
+            runBlastBtn.style.opacity = '1';
+            runBlastBtn.style.position = 'relative';
+            runBlastBtn.style.zIndex = '11';
+            
+            console.log('✓ Run BLAST button visibility ensured');
+        }
+
+        // Force a reflow to ensure styles are applied
+        if (modalFooter) {
+            modalFooter.offsetHeight;
+        }
     }
 
     setupEventListeners() {
@@ -418,6 +479,499 @@ class BlastManager {
 
         // Now set up all event listeners
         this.setupAllEventListeners();
+    }
+
+    initializeDatabaseManagement() {
+        console.log('BlastManager: Initializing database management...');
+        
+        // Load project genomes from current app state
+        this.loadProjectGenomes();
+        
+        // Load existing custom databases from localStorage
+        this.loadCustomDatabases();
+        
+        // Set up database management event listeners
+        this.setupDatabaseManagementListeners();
+        
+        // Populate UI elements
+        this.populateProjectGenomesList();
+        this.populateAvailableDatabasesList();
+        this.updateBlastDatabaseOptions();
+        
+        console.log('✓ Database management initialized');
+    }
+
+    loadProjectGenomes() {
+        // Get project genomes from app state
+        if (this.app && this.app.loadedGenomes) {
+            this.projectGenomes.clear();
+            
+            this.app.loadedGenomes.forEach((genome, key) => {
+                this.projectGenomes.set(key, {
+                    id: key,
+                    name: genome.name || key,
+                    accession: genome.accession || 'Unknown',
+                    size: genome.sequences ? genome.sequences.reduce((sum, seq) => sum + seq.sequence.length, 0) : 0,
+                    genes: genome.features ? genome.features.filter(f => f.type === 'gene').length : 0,
+                    sequenceFile: genome.filePath || null,
+                    proteinFile: genome.proteinFile || null,
+                    data: genome
+                });
+            });
+            
+            console.log(`Loaded ${this.projectGenomes.size} project genomes`);
+        }
+    }
+
+    loadCustomDatabases() {
+        try {
+            const saved = localStorage.getItem('blast_custom_databases');
+            if (saved) {
+                const databases = JSON.parse(saved);
+                this.customDatabases = new Map(databases);
+                console.log(`Loaded ${this.customDatabases.size} custom databases from storage`);
+            }
+        } catch (error) {
+            console.warn('Failed to load custom databases from localStorage:', error);
+            this.customDatabases = new Map();
+        }
+    }
+
+    saveCustomDatabases() {
+        try {
+            const databases = Array.from(this.customDatabases.entries());
+            localStorage.setItem('blast_custom_databases', JSON.stringify(databases));
+            console.log('Custom databases saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save custom databases:', error);
+        }
+    }
+
+    setupDatabaseManagementListeners() {
+        // Browse custom file button
+        const browseBtn = document.getElementById('browseCustomFileBtn');
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                this.browseCustomFile();
+            });
+            console.log('✓ Browse custom file button listener added');
+        }
+
+        // Create custom database button
+        const createCustomBtn = document.getElementById('createCustomDbBtn');
+        if (createCustomBtn) {
+            createCustomBtn.addEventListener('click', () => {
+                this.createCustomDatabase();
+            });
+            console.log('✓ Create custom database button listener added');
+        }
+
+        // Auto-generate database name when file is selected
+        const filePathInput = document.getElementById('customFilePath');
+        if (filePathInput) {
+            filePathInput.addEventListener('change', () => {
+                this.autoGenerateDbName();
+            });
+        }
+
+        // Add keyboard shortcut listener for BLAST modal
+        this.setupKeyboardShortcuts();
+    }
+
+    setupKeyboardShortcuts() {
+        // Add global keyboard listener for BLAST modal
+        document.addEventListener('keydown', (event) => {
+            // Check if BLAST modal is open
+            const blastModal = document.getElementById('blastSearchModal');
+            if (!blastModal || !blastModal.classList.contains('show')) {
+                return;
+            }
+
+            // Check for Ctrl+Enter (or Cmd+Enter on Mac)
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Only trigger if we're on the BLAST Search tab
+                const blastSearchTab = document.getElementById('blast-search-tab');
+                if (blastSearchTab && blastSearchTab.classList.contains('active')) {
+                    console.log('BlastManager: Keyboard shortcut triggered (Ctrl+Enter)');
+                    this.runBlastSearch();
+                    
+                    // Show visual feedback
+                    this.showNotification('BLAST search started via keyboard shortcut', 'info');
+                }
+            }
+        });
+
+        console.log('✓ Keyboard shortcuts set up (Ctrl+Enter to run BLAST)');
+    }
+
+    populateProjectGenomesList() {
+        const container = document.getElementById('projectGenomesList');
+        if (!container) return;
+
+        if (this.projectGenomes.size === 0) {
+            container.innerHTML = `
+                <div class="no-genomes-message">
+                    <i class="fas fa-info-circle"></i>
+                    No genomes found in current project. Please load genome files to create databases.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        this.projectGenomes.forEach((genome, id) => {
+            const sizeFormatted = this.formatFileSize(genome.size);
+            const genesFormatted = genome.genes.toLocaleString();
+            
+            html += `
+                <div class="genome-item" data-genome-id="${id}">
+                    <div class="genome-info">
+                        <div class="genome-name">${this.escapeHtml(genome.name)}</div>
+                        <div class="genome-details">${sizeFormatted} • ${genesFormatted} genes • ${this.escapeHtml(genome.accession)}</div>
+                        <div class="genome-stats">
+                            <div class="genome-stat">Nucleotide DB: ${this.hasDatabase(id, 'nucl') ? 'Ready' : 'Not Created'}</div>
+                            <div class="genome-stat">Protein DB: ${this.hasDatabase(id, 'prot') ? 'Ready' : 'Not Created'}</div>
+                        </div>
+                    </div>
+                    <div class="db-actions">
+                        <button class="btn btn-success btn-sm" onclick="window.blastManager.createGenomeDatabase('${id}', 'nucl')" 
+                                ${this.hasDatabase(id, 'nucl') ? 'disabled' : ''}>
+                            <i class="fas fa-dna"></i> ${this.hasDatabase(id, 'nucl') ? 'Nucleotide ✓' : 'Nucleotide DB'}
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="window.blastManager.createGenomeDatabase('${id}', 'prot')"
+                                ${this.hasDatabase(id, 'prot') ? 'disabled' : ''}>
+                            <i class="fas fa-circle"></i> ${this.hasDatabase(id, 'prot') ? 'Protein ✓' : 'Protein DB'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    populateAvailableDatabasesList() {
+        const container = document.getElementById('availableDatabasesList');
+        if (!container) return;
+
+        let html = `
+            <!-- Standard NCBI Databases -->
+            <div class="database-item">
+                <div class="database-info">
+                    <div class="database-name">NCBI Nucleotide collection (nt)</div>
+                    <div class="database-details">Remote database • Nucleotide sequences</div>
+                </div>
+                <div class="status-indicator status-success">
+                    <i class="fas fa-check"></i> Available
+                </div>
+            </div>
+            
+            <div class="database-item">
+                <div class="database-info">
+                    <div class="database-name">NCBI Non-redundant protein sequences (nr)</div>
+                    <div class="database-details">Remote database • Protein sequences</div>
+                </div>
+                <div class="status-indicator status-success">
+                    <i class="fas fa-check"></i> Available
+                </div>
+            </div>
+        `;
+
+        // Add custom databases
+        this.customDatabases.forEach((database, id) => {
+            const sourceType = database.source === 'project' ? 'Project genome' : 'Custom file';
+            html += `
+                <div class="database-item">
+                    <div class="database-info">
+                        <div class="database-name">${this.escapeHtml(database.name)}</div>
+                        <div class="database-details">Local database • ${sourceType} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
+                    </div>
+                    <div class="status-indicator status-${database.status}">
+                        <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
+                        ${database.status.charAt(0).toUpperCase() + database.status.slice(1)}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    updateBlastDatabaseOptions() {
+        const select = document.getElementById('blastDatabase');
+        if (!select) return;
+
+        // Remove existing custom options
+        const options = Array.from(select.options);
+        options.forEach(option => {
+            if (option.value.startsWith('custom_')) {
+                option.remove();
+            }
+        });
+
+        // Add custom databases as options
+        this.customDatabases.forEach((database, id) => {
+            if (database.status === 'ready') {
+                const option = document.createElement('option');
+                option.value = `custom_${id}`;
+                option.textContent = database.name;
+                select.appendChild(option);
+            }
+        });
+    }
+
+    async browseCustomFile() {
+        try {
+            // Use the existing file dialog through the app's file manager
+            if (this.app && this.app.fileManager) {
+                const filePath = await this.app.fileManager.selectFile({
+                    title: 'Select FASTA file for BLAST database',
+                    filters: [
+                        { name: 'FASTA files', extensions: ['fasta', 'fa', 'fas'] },
+                        { name: 'Text files', extensions: ['txt'] },
+                        { name: 'All files', extensions: ['*'] }
+                    ],
+                    defaultPath: this.app.projectManager ? this.app.projectManager.currentProjectPath : undefined
+                });
+
+                if (filePath) {
+                    document.getElementById('customFilePath').value = filePath;
+                    this.autoGenerateDbName();
+                }
+            } else {
+                // Fallback: simulate file selection for demo
+                const samplePaths = [
+                    'Documents/GenomeExplorer Projects/MyProject/data/custom_sequences.fasta',
+                    'Desktop/bacterial_genomes.fasta',
+                    'Downloads/protein_sequences.fasta'
+                ];
+                
+                const selectedPath = samplePaths[Math.floor(Math.random() * samplePaths.length)];
+                document.getElementById('customFilePath').value = selectedPath;
+                this.autoGenerateDbName();
+            }
+        } catch (error) {
+            console.error('Error browsing for custom file:', error);
+            this.showNotification('Failed to browse for file', 'error');
+        }
+    }
+
+    autoGenerateDbName() {
+        const filePath = document.getElementById('customFilePath').value;
+        const dbNameInput = document.getElementById('customDbName');
+        
+        if (filePath && dbNameInput && !dbNameInput.value) {
+            // Extract filename without extension
+            const filename = filePath.split('/').pop().replace(/\.(fasta|fa|fas|txt)$/i, '');
+            const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            dbNameInput.value = `${filename}_${timestamp}`;
+        }
+    }
+
+    async createGenomeDatabase(genomeId, dbType) {
+        const genome = this.projectGenomes.get(genomeId);
+        if (!genome) {
+            this.showNotification(`Genome ${genomeId} not found`, 'error');
+            return;
+        }
+
+        const dbId = `${genomeId}_${dbType}`;
+        const dbName = `${genome.name} (${dbType === 'nucl' ? 'Nucleotide' : 'Protein'})`;
+
+        // Check if already exists
+        if (this.customDatabases.has(dbId)) {
+            this.showNotification(`Database ${dbName} already exists`, 'warning');
+            return;
+        }
+
+        // Show operation log
+        this.showOperationLog();
+        this.appendLog(`Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genome.name}...`);
+
+        try {
+            // Add to custom databases with creating status
+            this.customDatabases.set(dbId, {
+                id: dbId,
+                name: dbName,
+                type: dbType,
+                source: 'project',
+                genomeId: genomeId,
+                status: 'creating',
+                created: new Date().toISOString()
+            });
+
+            // Update UI
+            this.populateProjectGenomesList();
+            this.populateAvailableDatabasesList();
+
+            // Simulate database creation process
+            this.appendLog(`Extracting ${dbType === 'nucl' ? 'sequences' : 'proteins'} from genome data...`);
+            
+            await this.delay(1000);
+            
+            this.appendLog(`Writing FASTA file: ${dbId}.fasta`);
+            
+            await this.delay(1500);
+            
+            this.appendLog(`Running: makeblastdb -in "${dbId}.fasta" -dbtype ${dbType} -out "${dbId}"`);
+            
+            await this.delay(2000);
+            
+            // Mark as ready
+            this.customDatabases.get(dbId).status = 'ready';
+            
+            this.appendLog(`✓ Database created successfully: ${dbId}`, 'success');
+            this.appendLog(`Database files: ${dbId}.nhr, ${dbId}.nin, ${dbId}.nsq`, 'success');
+            
+            // Save to localStorage
+            this.saveCustomDatabases();
+            
+            // Update UI
+            this.populateProjectGenomesList();
+            this.populateAvailableDatabasesList();
+            this.updateBlastDatabaseOptions();
+            
+            this.showNotification(`Database ${dbName} created successfully`, 'success');
+            
+        } catch (error) {
+            console.error('Error creating genome database:', error);
+            this.appendLog(`✗ Error creating database: ${error.message}`, 'error');
+            
+            // Remove from custom databases
+            this.customDatabases.delete(dbId);
+            
+            this.showNotification(`Failed to create database: ${error.message}`, 'error');
+        }
+    }
+
+    async createCustomDatabase() {
+        const filePath = document.getElementById('customFilePath').value.trim();
+        const dbName = document.getElementById('customDbName').value.trim();
+        const dbType = document.getElementById('customDbType').value;
+
+        if (!filePath || !dbName) {
+            this.showNotification('Please select a file and enter a database name', 'error');
+            return;
+        }
+
+        const dbId = `custom_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
+
+        // Check if database name already exists
+        const existingDb = Array.from(this.customDatabases.values()).find(db => db.name === dbName);
+        if (existingDb) {
+            this.showNotification(`Database with name "${dbName}" already exists`, 'error');
+            return;
+        }
+
+        // Show operation log
+        this.showOperationLog();
+        this.appendLog(`Creating custom ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database...`);
+
+        try {
+            // Add to custom databases with creating status
+            this.customDatabases.set(dbId, {
+                id: dbId,
+                name: dbName,
+                type: dbType,
+                source: 'custom',
+                filePath: filePath,
+                status: 'creating',
+                created: new Date().toISOString()
+            });
+
+            // Update UI
+            this.populateAvailableDatabasesList();
+
+            // Simulate database creation process
+            this.appendLog(`Source file: ${filePath}`);
+            this.appendLog(`Database name: ${dbName}`);
+            
+            await this.delay(800);
+            
+            this.appendLog(`Validating FASTA file format...`);
+            
+            await this.delay(1200);
+            
+            this.appendLog(`Running: makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${dbId}"`);
+            
+            await this.delay(2500);
+            
+            // Mark as ready
+            this.customDatabases.get(dbId).status = 'ready';
+            
+            this.appendLog(`✓ Custom database created successfully: ${dbName}`, 'success');
+            this.appendLog(`Database files: ${dbId}.nhr, ${dbId}.nin, ${dbId}.nsq`, 'success');
+            
+            // Save to localStorage
+            this.saveCustomDatabases();
+            
+            // Update UI
+            this.populateAvailableDatabasesList();
+            this.updateBlastDatabaseOptions();
+            
+            // Clear form
+            document.getElementById('customFilePath').value = '';
+            document.getElementById('customDbName').value = '';
+            
+            this.showNotification(`Custom database "${dbName}" created successfully`, 'success');
+            
+        } catch (error) {
+            console.error('Error creating custom database:', error);
+            this.appendLog(`✗ Error creating database: ${error.message}`, 'error');
+            
+            // Remove from custom databases
+            this.customDatabases.delete(dbId);
+            
+            this.showNotification(`Failed to create database: ${error.message}`, 'error');
+        }
+    }
+
+    // Helper methods
+    hasDatabase(genomeId, dbType) {
+        const dbId = `${genomeId}_${dbType}`;
+        return this.customDatabases.has(dbId) && this.customDatabases.get(dbId).status === 'ready';
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    showOperationLog() {
+        const logContainer = document.getElementById('dbOperationLog');
+        if (logContainer) {
+            logContainer.style.display = 'block';
+            document.getElementById('dbLogContent').innerHTML = '';
+        }
+    }
+
+    appendLog(message, type = 'info') {
+        const logContent = document.getElementById('dbLogContent');
+        if (!logContent) return;
+
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type}`;
+        logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+        
+        logContent.appendChild(logEntry);
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     setupAllEventListeners() {

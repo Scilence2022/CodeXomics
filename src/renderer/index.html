@@ -1571,50 +1571,82 @@
 
                 <!-- Database Management Tab Content -->
                 <div id="db-management-tab" class="tab-content">
-                    <!-- Local Database Management -->
+                    <!-- Project Genomes Database Creation -->
                     <div class="blast-db-management-section">
-                        <h4><i class="fas fa-database"></i> Local Database Management</h4>
-                        <p class="help-text">Create searchable local BLAST databases from currently loaded genome sequences.</p>
-                        <div class="form-group">
-                            <label for="loadedGenomeSelect">Select Loaded Genome:</label>
-                            <select id="loadedGenomeSelect">
-                                <option value="">-- Select a loaded genome --</option>
-                                <!-- Options will be populated by JS -->
-                            </select>
+                        <h4><i class="fas fa-project-diagram"></i> Project Genomes</h4>
+                        <p class="help-text">Create BLAST databases from genomes currently loaded in your project.</p>
+                        
+                        <div id="projectGenomesList" class="genome-list">
+                            <!-- Project genomes will be populated here by JavaScript -->
+                            <div class="no-genomes-message">
+                                <i class="fas fa-info-circle"></i>
+                                No genomes found in current project. Please load genome files to create databases.
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- Custom File Database Creation -->
+                    <div class="blast-db-management-section custom-db-section">
+                        <h4><i class="fas fa-file-upload"></i> Custom File Database</h4>
+                        <p class="help-text">Create BLAST database from a custom FASTA file (automatically opens in Project directory).</p>
+                        
                         <div class="form-group">
-                            <label for="newDbName">New Database Name:</label>
-                            <input type="text" id="newDbName" placeholder="Enter database name...">
+                            <label for="customFilePath">File Path:</label>
+                            <div class="file-input-group">
+                                <input type="text" id="customFilePath" class="form-control" placeholder="Select a FASTA file..." readonly>
+                                <button id="browseCustomFileBtn" class="btn btn-secondary">
+                                    <i class="fas fa-folder-open"></i> Browse
+                                </button>
+                            </div>
                         </div>
-                         <div class="form-group">
-                            <label for="newDbType">Database Type:</label>
-                            <select id="newDbType">
+                        
+                        <div class="form-group">
+                            <label for="customDbName">Database Name:</label>
+                            <input type="text" id="customDbName" class="form-control" placeholder="Enter database name...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="customDbType">Database Type:</label>
+                            <select id="customDbType" class="form-control">
                                 <option value="nucl">Nucleotide</option>
                                 <option value="prot">Protein</option>
                             </select>
                         </div>
-                        <button id="createLocalDbBtn" class="btn btn-secondary">
-                            <i class="fas fa-database"></i>
-                            Create Database
+                        
+                        <button id="createCustomDbBtn" class="btn btn-primary">
+                            <i class="fas fa-database"></i> Create Custom Database
                         </button>
                     </div>
                     
-                    <!-- Existing Local Databases (Optional: display list here later) -->
-                    <div class="existing-local-dbs-section">
-                        <h4><i class="fas fa-list"></i> Existing Local Databases</h4>
-                        <ul id="existingLocalDbList">
-                            <!-- Existing databases will be listed here by JS -->
-                            <li>No local databases found.</li>
-                        </ul>
+                    <!-- Available Databases Status -->
+                    <div class="blast-db-management-section">
+                        <h4><i class="fas fa-list"></i> Available Databases</h4>
+                        <div id="availableDatabasesList" class="database-list">
+                            <!-- Available databases will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Database Operations Log -->
+                    <div id="dbOperationLog" class="db-operation-log" style="display: none;">
+                        <h5><i class="fas fa-terminal"></i> Operation Log</h5>
+                        <div id="dbLogContent" class="log-content">
+                            <!-- Log messages will appear here -->
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary modal-close">Cancel</button>
-                <button id="runBlastBtn" class="btn btn-primary">
-                    <i class="fas fa-play"></i>
-                    Run BLAST Search
-                </button>
+                <div class="keyboard-shortcut-hint">
+                    <i class="fas fa-keyboard"></i>
+                    <span>Ctrl+Enter to run</span>
+                </div>
+                <div class="modal-footer-buttons">
+                    <button class="btn btn-secondary modal-close">Cancel</button>
+                    <button id="runBlastBtn" class="btn btn-primary">
+                        <i class="fas fa-play"></i>
+                        Run BLAST Search
+                    </button>
+                </div>
             </div>
         </div>
     </div>
