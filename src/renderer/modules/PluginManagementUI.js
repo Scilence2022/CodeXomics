@@ -176,10 +176,18 @@ class PluginManagementUI {
     }
 
     /**
-     * Apply plugin enabled/disabled states
+     * Apply plugin enabled/disabled states with detailed logging
      */
     applyPluginStates() {
-        if (!this.settings.pluginStates) return;
+        if (!this.settings.pluginStates) {
+            console.log('📋 No plugin states found in settings');
+            return;
+        }
+        
+        console.log('🔧 Applying plugin states from local storage:', this.settings.pluginStates);
+        
+        let appliedCount = 0;
+        let skippedCount = 0;
         
         Object.keys(this.settings.pluginStates).forEach(pluginId => {
             const state = this.settings.pluginStates[pluginId];
@@ -189,16 +197,33 @@ class PluginManagementUI {
             const visualizationPlugin = this.pluginManager.pluginRegistry.visualization.get(pluginId);
             const utilityPlugin = this.pluginManager.pluginRegistry.utility?.get(pluginId);
             
+            let targetPlugin = null;
+            let pluginType = 'unknown';
+            
             if (functionPlugin) {
-                functionPlugin.enabled = state.enabled;
+                targetPlugin = functionPlugin;
+                pluginType = 'function';
+            } else if (visualizationPlugin) {
+                targetPlugin = visualizationPlugin;
+                pluginType = 'visualization';
+            } else if (utilityPlugin) {
+                targetPlugin = utilityPlugin;
+                pluginType = 'utility';
             }
-            if (visualizationPlugin) {
-                visualizationPlugin.enabled = state.enabled;
-            }
-            if (utilityPlugin) {
-                utilityPlugin.enabled = state.enabled;
+            
+            if (targetPlugin) {
+                const previousState = targetPlugin.enabled;
+                targetPlugin.enabled = state.enabled;
+                appliedCount++;
+                
+                console.log(`✅ Applied state for ${pluginType} plugin "${pluginId}": ${previousState} → ${state.enabled}`);
+            } else {
+                skippedCount++;
+                console.warn(`⚠️ Plugin "${pluginId}" not found in registries, skipping state application`);
             }
         });
+        
+        console.log(`🎯 Plugin state application complete: ${appliedCount} applied, ${skippedCount} skipped`);
     }
 
     /**
@@ -643,22 +668,40 @@ class PluginManagementUI {
 
         this.currentTab = tabName;
 
+        // Update UI preferences in local storage
+        this.updateUIPreferences();
+
         // Load tab-specific data
         if (tabName === 'installed') {
+            // Validate and fix plugin states before showing installed plugins
+            this.validateAndFixPluginStates();
             this.refreshPluginLists();
         } else if (tabName === 'available') {
             this.loadAvailablePlugins();
         } else if (tabName === 'settings') {
             this.loadPluginSettings();
+            // Initialize storage info when settings tab is opened
+            setTimeout(() => {
+                this.updateStorageInfoDisplay();
+            }, 100);
         }
     }
 
     /**
-     * Refresh all plugin lists
+     * Refresh plugin lists and reapply saved states
      */
     refreshPluginLists() {
+        // Reapply plugin states from local storage before refreshing UI
+        // This ensures the UI shows the correct state even if there are timing issues
+        this.applyPluginStates();
+        
         this.refreshFunctionPlugins();
         this.refreshVisualizationPlugins();
+        
+        // Debug logging to verify states are applied
+        if (this.settings.pluginStates) {
+            console.log('🔄 Plugin states reapplied during refresh:', this.settings.pluginStates);
+        }
     }
 
     /**
@@ -852,20 +895,41 @@ class PluginManagementUI {
         // Toggle enabled state
         plugin.enabled = !plugin.enabled;
 
+        // Update plugin state in local storage immediately
+        if (!this.settings.pluginStates) {
+            this.settings.pluginStates = {};
+        }
+        
+        this.settings.pluginStates[pluginId] = {
+            type: type,
+            enabled: plugin.enabled,
+            lastUsed: plugin.lastUsed || null,
+            usageCount: plugin.usageCount || 0,
+            lastToggled: new Date().toISOString()
+        };
+
+        // Save to local storage immediately
+        const saveSuccess = this.saveSettingsToStorage();
+
         // Update UI
         this.refreshPluginLists();
 
-        // Show feedback
+        // Show feedback with storage status
         const action = plugin.enabled ? 'enabled' : 'disabled';
-        this.showMessage(`Plugin "${plugin.name}" has been ${action}`, 'info');
+        const storageStatus = saveSuccess ? ' and saved to storage' : ' (save failed)';
+        this.showMessage(`Plugin "${plugin.name}" has been ${action}${storageStatus}`, saveSuccess ? 'success' : 'warning');
 
         // Emit event for other components
         this.pluginManager.emitEvent('plugin-toggled', {
             pluginId,
             type,
             enabled: plugin.enabled,
+            saved: saveSuccess,
             timestamp: Date.now()
         });
+        
+        // Debug logging
+        console.log(`🔧 Plugin ${pluginId} toggled: ${action}, saved: ${saveSuccess}`);
     }
 
     /**
@@ -3434,6 +3498,73 @@ class PluginManagementUI {
             console.error('❌ Failed to load PluginMarketplaceUI:', error);
             throw new Error(`Failed to load PluginMarketplaceUI: ${error.message}`);
         }
+    }
+
+    /**
+     * Validate plugin state consistency and fix any discrepancies
+     */
+    validateAndFixPluginStates() {
+        if (!this.settings.pluginStates) {
+            console.log('📋 No plugin states to validate');
+            return { fixed: 0, validated: 0 };
+        }
+        
+        let fixedCount = 0;
+        let validatedCount = 0;
+        
+        console.log('🔍 Validating plugin state consistency...');
+        
+        // Check all registered plugins against saved states
+        const allPlugins = new Map();
+        
+        // Collect all plugins from registries
+        this.pluginManager.pluginRegistry.function.forEach((plugin, id) => {
+            allPlugins.set(id, { plugin, type: 'function' });
+        });
+        
+        this.pluginManager.pluginRegistry.visualization.forEach((plugin, id) => {
+            allPlugins.set(id, { plugin, type: 'visualization' });
+        });
+        
+        if (this.pluginManager.pluginRegistry.utility) {
+            this.pluginManager.pluginRegistry.utility.forEach((plugin, id) => {
+                allPlugins.set(id, { plugin, type: 'utility' });
+            });
+        }
+        
+        allPlugins.forEach(({ plugin, type }, pluginId) => {
+            const savedState = this.settings.pluginStates[pluginId];
+            validatedCount++;
+            
+            if (savedState) {
+                // Check if current state matches saved state
+                if (plugin.enabled !== savedState.enabled) {
+                    console.warn(`🔧 Fixing state mismatch for ${type} plugin "${pluginId}": current=${plugin.enabled}, saved=${savedState.enabled}`);
+                    plugin.enabled = savedState.enabled;
+                    fixedCount++;
+                }
+            } else {
+                // Plugin exists but no saved state - create one
+                console.log(`📝 Creating missing state for ${type} plugin "${pluginId}": enabled=${plugin.enabled !== false}`);
+                this.settings.pluginStates[pluginId] = {
+                    type: type,
+                    enabled: plugin.enabled !== false,
+                    lastUsed: plugin.lastUsed || null,
+                    usageCount: plugin.usageCount || 0,
+                    createdAt: new Date().toISOString()
+                };
+                fixedCount++;
+            }
+        });
+        
+        // Save fixes if any were made
+        if (fixedCount > 0) {
+            this.saveSettingsToStorage();
+            console.log(`💾 Saved ${fixedCount} plugin state fixes to local storage`);
+        }
+        
+        console.log(`✅ Plugin state validation complete: ${validatedCount} checked, ${fixedCount} fixed`);
+        return { fixed: fixedCount, validated: validatedCount };
     }
 }
 

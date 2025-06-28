@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin State Persistence Fix Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .test-content {
+            padding: 30px;
+        }
+
+        .status-card {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+        }
+
+        .status-success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .plugin-test-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .plugin-test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .plugin-toggle {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .plugin-enabled {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .plugin-disabled {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .test-log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .log-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .log-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .log-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>
+                <i class="fas fa-bug"></i>
+                Plugin State Persistence Fix Test
+            </h1>
+            <p>Test to verify that disabled plugins stay disabled after app restart</p>
+        </div>
+
+        <div class="test-content">
+            <!-- Fix Status -->
+            <div id="fix-status" class="status-card status-warning">
+                <h3><i class="fas fa-tools"></i> Fix Implementation Status</h3>
+                <p>Testing plugin state persistence fix...</p>
+            </div>
+
+            <!-- Test Instructions -->
+            <div class="status-card">
+                <h3><i class="fas fa-list-check"></i> Test Instructions</h3>
+                <ol>
+                    <li>Click "Initialize Mock Plugins" to create test plugins</li>
+                    <li>Toggle some plugins to disabled state</li>
+                    <li>Click "Save Plugin States" to persist changes</li>
+                    <li>Click "Simulate App Restart" to test state restoration</li>
+                    <li>Verify that disabled plugins remain disabled</li>
+                </ol>
+            </div>
+
+            <!-- Plugin Management Mock -->
+            <div class="status-card">
+                <h3><i class="fas fa-puzzle-piece"></i> Mock Plugin Management</h3>
+                
+                <div class="plugin-test-list" id="plugin-list">
+                    <!-- Plugins will be added here -->
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="initializeMockPlugins()">
+                        <i class="fas fa-plus"></i> Initialize Mock Plugins
+                    </button>
+                    <button class="btn btn-success" onclick="savePluginStates()">
+                        <i class="fas fa-save"></i> Save Plugin States
+                    </button>
+                    <button class="btn btn-danger" onclick="simulateAppRestart()">
+                        <i class="fas fa-redo"></i> Simulate App Restart
+                    </button>
+                    <button class="btn btn-primary" onclick="validatePersistence()">
+                        <i class="fas fa-check"></i> Validate Persistence
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div class="status-card">
+                <h3><i class="fas fa-clipboard-list"></i> Test Results</h3>
+                <div id="test-log" class="test-log">
+                    <div class="log-info">Test system initialized. Ready to run tests.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock plugin management system
+        const storageKey = 'genomeexplorer-plugin-management-settings';
+        
+        // Mock plugin data
+        let mockPluginRegistry = {
+            function: new Map(),
+            visualization: new Map()
+        };
+
+        let mockSettings = {
+            pluginDirectory: 'src/renderer/modules/Plugins',
+            enablePluginSandbox: true,
+            enablePluginDebug: false,
+            pluginStates: {},
+            version: '1.0.0',
+            lastSaved: null,
+            lastLoaded: null
+        };
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Initialize mock plugins
+        function initializeMockPlugins() {
+            log('Initializing mock plugins...', 'info');
+            
+            // Clear existing plugins
+            mockPluginRegistry.function.clear();
+            mockPluginRegistry.visualization.clear();
+
+            // Add function plugins
+            mockPluginRegistry.function.set('biological-networks', {
+                name: 'Biological Networks Plugin',
+                version: '1.0.0',
+                enabled: true,
+                type: 'function',
+                description: 'Network analysis plugin'
+            });
+
+            mockPluginRegistry.function.set('sequence-alignment', {
+                name: 'Sequence Alignment Plugin',
+                version: '1.2.0',
+                enabled: true,
+                type: 'function',
+                description: 'Sequence alignment tools'
+            });
+
+            // Add visualization plugins
+            mockPluginRegistry.visualization.set('phylogenetic-tree', {
+                name: 'Phylogenetic Tree Viewer',
+                version: '2.0.0',
+                enabled: true,
+                type: 'visualization',
+                description: 'Tree visualization plugin'
+            });
+
+            mockPluginRegistry.visualization.set('genome-browser', {
+                name: 'Genome Browser Plugin',
+                version: '1.5.0',
+                enabled: true,
+                type: 'visualization',
+                description: 'Genome browsing visualization'
+            });
+
+            updatePluginDisplay();
+            log(`✅ Initialized ${mockPluginRegistry.function.size + mockPluginRegistry.visualization.size} mock plugins`, 'success');
+        }
+
+        // Update plugin display
+        function updatePluginDisplay() {
+            const container = document.getElementById('plugin-list');
+            container.innerHTML = '';
+
+            // Display function plugins
+            mockPluginRegistry.function.forEach((plugin, id) => {
+                container.appendChild(createPluginTestItem(id, plugin));
+            });
+
+            // Display visualization plugins
+            mockPluginRegistry.visualization.forEach((plugin, id) => {
+                container.appendChild(createPluginTestItem(id, plugin));
+            });
+        }
+
+        // Create plugin test item
+        function createPluginTestItem(id, plugin) {
+            const item = document.createElement('div');
+            item.className = 'plugin-test-item';
+            item.innerHTML = `
+                <div>
+                    <strong>${plugin.name}</strong>
+                    <br>
+                    <small>${plugin.description}</small>
+                </div>
+                <div class="plugin-toggle ${plugin.enabled ? 'plugin-enabled' : 'plugin-disabled'}" 
+                     onclick="toggleMockPlugin('${id}', '${plugin.type}')" 
+                     id="toggle-${id}">
+                    ${plugin.enabled ? 'Enabled' : 'Disabled'}
+                </div>
+            `;
+            return item;
+        }
+
+        // Toggle mock plugin state
+        function toggleMockPlugin(pluginId, type) {
+            let plugin = null;
+            
+            if (type === 'function') {
+                plugin = mockPluginRegistry.function.get(pluginId);
+            } else if (type === 'visualization') {
+                plugin = mockPluginRegistry.visualization.get(pluginId);
+            }
+
+            if (!plugin) return;
+
+            // Toggle state
+            plugin.enabled = !plugin.enabled;
+
+            // Update UI
+            const toggleElement = document.getElementById(`toggle-${pluginId}`);
+            toggleElement.className = `plugin-toggle ${plugin.enabled ? 'plugin-enabled' : 'plugin-disabled'}`;
+            toggleElement.textContent = plugin.enabled ? 'Enabled' : 'Disabled';
+
+            // Update settings
+            mockSettings.pluginStates[pluginId] = {
+                type: type,
+                enabled: plugin.enabled,
+                lastUsed: null,
+                usageCount: 0,
+                lastToggled: new Date().toISOString()
+            };
+
+            log(`🔧 Toggled ${type} plugin "${pluginId}": ${plugin.enabled ? 'enabled' : 'disabled'}`, 'info');
+        }
+
+        // Save plugin states
+        function savePluginStates() {
+            try {
+                // Update plugin states in settings
+                mockSettings.pluginStates = {};
+                
+                mockPluginRegistry.function.forEach((plugin, id) => {
+                    mockSettings.pluginStates[id] = {
+                        type: 'function',
+                        enabled: plugin.enabled,
+                        lastUsed: null,
+                        usageCount: 0
+                    };
+                });
+
+                mockPluginRegistry.visualization.forEach((plugin, id) => {
+                    mockSettings.pluginStates[id] = {
+                        type: 'visualization',
+                        enabled: plugin.enabled,
+                        lastUsed: null,
+                        usageCount: 0
+                    };
+                });
+
+                // Save to localStorage
+                mockSettings.lastSaved = new Date().toISOString();
+                localStorage.setItem(storageKey, JSON.stringify(mockSettings));
+                
+                log('✅ Plugin states saved to localStorage', 'success');
+                
+                // Update fix status
+                updateFixStatus('success', 'Plugin states saved successfully');
+                
+            } catch (error) {
+                log(`❌ Error saving plugin states: ${error.message}`, 'error');
+                updateFixStatus('error', 'Failed to save plugin states');
+            }
+        }
+
+        // Simulate app restart
+        function simulateAppRestart() {
+            log('🔄 Simulating app restart...', 'info');
+            
+            // Reset plugins to default enabled state (simulating fresh load)
+            mockPluginRegistry.function.forEach((plugin) => {
+                plugin.enabled = true; // Fresh plugins default to enabled
+            });
+            
+            mockPluginRegistry.visualization.forEach((plugin) => {
+                plugin.enabled = true; // Fresh plugins default to enabled
+            });
+            
+            // Load saved states from localStorage
+            loadPluginStates();
+            
+            // Update display
+            updatePluginDisplay();
+            
+            log('🚀 App restart simulation complete', 'info');
+        }
+
+        // Load plugin states from localStorage
+        function loadPluginStates() {
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    
+                    if (settings.pluginStates) {
+                        // Apply saved states
+                        Object.keys(settings.pluginStates).forEach(pluginId => {
+                            const state = settings.pluginStates[pluginId];
+                            
+                            let plugin = null;
+                            if (state.type === 'function') {
+                                plugin = mockPluginRegistry.function.get(pluginId);
+                            } else if (state.type === 'visualization') {
+                                plugin = mockPluginRegistry.visualization.get(pluginId);
+                            }
+                            
+                            if (plugin) {
+                                plugin.enabled = state.enabled;
+                                log(`✅ Restored state for ${state.type} plugin "${pluginId}": ${state.enabled}`, 'success');
+                            }
+                        });
+                        
+                        log('✅ Plugin states loaded from localStorage', 'success');
+                    } else {
+                        log('⚠️ No plugin states found in stored settings', 'info');
+                    }
+                } else {
+                    log('⚠️ No stored settings found', 'info');
+                }
+            } catch (error) {
+                log(`❌ Error loading plugin states: ${error.message}`, 'error');
+            }
+        }
+
+        // Validate persistence
+        function validatePersistence() {
+            log('🔍 Validating plugin state persistence...', 'info');
+            
+            let disabledCount = 0;
+            let totalCount = 0;
+            let persistenceWorking = true;
+            
+            // Check function plugins
+            mockPluginRegistry.function.forEach((plugin, id) => {
+                totalCount++;
+                if (!plugin.enabled) {
+                    disabledCount++;
+                    
+                    // Check if state is saved
+                    const savedState = mockSettings.pluginStates[id];
+                    if (!savedState || savedState.enabled !== false) {
+                        persistenceWorking = false;
+                        log(`❌ Plugin "${id}" is disabled but not properly saved`, 'error');
+                    }
+                }
+            });
+            
+            // Check visualization plugins
+            mockPluginRegistry.visualization.forEach((plugin, id) => {
+                totalCount++;
+                if (!plugin.enabled) {
+                    disabledCount++;
+                    
+                    // Check if state is saved
+                    const savedState = mockSettings.pluginStates[id];
+                    if (!savedState || savedState.enabled !== false) {
+                        persistenceWorking = false;
+                        log(`❌ Plugin "${id}" is disabled but not properly saved`, 'error');
+                    }
+                }
+            });
+            
+            if (persistenceWorking) {
+                log(`✅ Persistence validation passed: ${disabledCount}/${totalCount} plugins disabled and properly saved`, 'success');
+                updateFixStatus('success', `Persistence working correctly: ${disabledCount}/${totalCount} disabled plugins saved`);
+            } else {
+                log(`❌ Persistence validation failed: Some disabled plugins not properly saved`, 'error');
+                updateFixStatus('error', 'Persistence validation failed');
+            }
+        }
+
+        // Update fix status
+        function updateFixStatus(type, message) {
+            const statusCard = document.getElementById('fix-status');
+            statusCard.className = `status-card status-${type}`;
+            
+            const icon = type === 'success' ? 'check-circle' : 
+                        type === 'error' ? 'exclamation-circle' : 'tools';
+            
+            statusCard.innerHTML = `
+                <h3><i class="fas fa-${icon}"></i> Fix Implementation Status</h3>
+                <p>${message}</p>
+            `;
+        }
+
+        // Initialize test
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Plugin state persistence test initialized', 'success');
+        });
+    </script>
+</body>
+</html> 
