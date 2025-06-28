@@ -431,6 +431,11 @@ class PluginManagerV2 {
                 status: 'registered'
             };
             
+            // Set default enabled state if not explicitly defined
+            if (pluginDefinition.enabled === undefined) {
+                pluginDefinition.enabled = true;
+            }
+
             // Register plugin
             this.pluginRegistry[pluginDefinition.type].set(pluginId, pluginDefinition);
             this.pluginMetadata.set(pluginId, metadata);

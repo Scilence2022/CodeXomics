@@ -105,6 +105,9 @@ class PluginManagementUI {
         // Auto-save settings when they change
         this.setupAutoSave();
         
+        // Wait for plugin system to be fully initialized before applying states
+        this.waitForPluginSystemInitialization();
+        
         console.log('PluginManagementUI initialized with PluginManagerV2 and local storage persistence');
     }
 
@@ -152,12 +155,12 @@ class PluginManagementUI {
     }
 
     /**
-     * Apply loaded settings to the UI and plugin system
+     * Apply loaded settings to the UI and plugin system (except plugin states during initialization)
      */
     applyLoadedSettings() {
         try {
-            // Apply plugin states (enabled/disabled)
-            this.applyPluginStates();
+            // Skip plugin states during initial load - they will be applied after plugin system initialization
+            // this.applyPluginStates(); // Moved to waitForPluginSystemInitialization()
             
             // Apply UI preferences
             this.applyUIPreferences();
@@ -169,7 +172,7 @@ class PluginManagementUI {
                 this.configManager.set('enablePluginDebug', this.settings.enablePluginDebug);
             }
             
-            console.log('✅ Loaded plugin management settings applied successfully');
+            console.log('✅ Loaded plugin management settings applied successfully (plugin states will be applied after system initialization)');
         } catch (error) {
             console.error('❌ Error applying loaded settings:', error);
         }
@@ -261,37 +264,37 @@ class PluginManagementUI {
     }
 
     /**
-     * Update plugin states in settings from current plugin registry
+     * Update plugin states in settings from current plugin registry with explicit boolean handling
      */
     updatePluginStates() {
         this.settings.pluginStates = {};
         
-        // Save function plugins states
+        // Save function plugins states with explicit boolean handling
         this.pluginManager.pluginRegistry.function.forEach((plugin, pluginId) => {
             this.settings.pluginStates[pluginId] = {
                 type: 'function',
-                enabled: plugin.enabled !== false,
+                enabled: plugin.enabled === true, // Explicit boolean check
                 lastUsed: plugin.lastUsed || null,
                 usageCount: plugin.usageCount || 0
             };
         });
         
-        // Save visualization plugins states
+        // Save visualization plugins states with explicit boolean handling
         this.pluginManager.pluginRegistry.visualization.forEach((plugin, pluginId) => {
             this.settings.pluginStates[pluginId] = {
                 type: 'visualization',
-                enabled: plugin.enabled !== false,
+                enabled: plugin.enabled === true, // Explicit boolean check
                 lastUsed: plugin.lastUsed || null,
                 usageCount: plugin.usageCount || 0
             };
         });
         
-        // Save utility plugins states if available
+        // Save utility plugins states if available with explicit boolean handling
         if (this.pluginManager.pluginRegistry.utility) {
             this.pluginManager.pluginRegistry.utility.forEach((plugin, pluginId) => {
                 this.settings.pluginStates[pluginId] = {
                     type: 'utility',
-                    enabled: plugin.enabled !== false,
+                    enabled: plugin.enabled === true, // Explicit boolean check
                     lastUsed: plugin.lastUsed || null,
                     usageCount: plugin.usageCount || 0
                 };
@@ -3565,6 +3568,63 @@ class PluginManagementUI {
         
         console.log(`✅ Plugin state validation complete: ${validatedCount} checked, ${fixedCount} fixed`);
         return { fixed: fixedCount, validated: validatedCount };
+    }
+
+    /**
+     * Wait for plugin system to be fully initialized before applying saved states
+     */
+    waitForPluginSystemInitialization() {
+        // Check if plugin manager is already initialized
+        if (this.pluginManager.isInitialized) {
+            console.log('🔧 Plugin system already initialized, applying saved states...');
+            this.delayedApplyPluginStates();
+            return;
+        }
+        
+        // Listen for system initialization event
+        this.pluginManager.on('system-initialized', () => {
+            console.log('🎯 Plugin system initialization complete, applying saved states...');
+            this.delayedApplyPluginStates();
+        });
+        
+        // Fallback: Check periodically in case event was missed
+        const maxWaitTime = 10000; // 10 seconds
+        const checkInterval = 500; // 500ms
+        let waitTime = 0;
+        
+        const intervalId = setInterval(() => {
+            waitTime += checkInterval;
+            
+            if (this.pluginManager.isInitialized) {
+                clearInterval(intervalId);
+                console.log('🔧 Plugin system initialized (fallback check), applying saved states...');
+                this.delayedApplyPluginStates();
+            } else if (waitTime >= maxWaitTime) {
+                clearInterval(intervalId);
+                console.warn('⚠️ Plugin system initialization timeout, applying states anyway...');
+                this.delayedApplyPluginStates();
+            }
+        }, checkInterval);
+    }
+
+    /**
+     * Apply plugin states after plugin system is fully initialized
+     */
+    delayedApplyPluginStates() {
+        if (!this.settings.pluginStates || Object.keys(this.settings.pluginStates).length === 0) {
+            console.log('📋 No plugin states to apply');
+            return;
+        }
+        
+        console.log('🔧 Applying saved plugin states after system initialization...');
+        
+        // Force apply plugin states
+        this.applyPluginStates();
+        
+        // Refresh UI to show correct states
+        this.refreshPluginLists();
+        
+        console.log('✅ Plugin states applied successfully after system initialization');
     }
 }
 
