@@ -882,6 +882,40 @@ function createWindow() {
   });
 }
 
+// Helper function to get the current active main window
+function getCurrentMainWindow() {
+  // First try to use the tracked current active window
+  if (currentActiveWindow && !currentActiveWindow.isDestroyed() && 
+      currentActiveWindow.getTitle().includes('Genome AI Studio') && 
+      !currentActiveWindow.getTitle().includes('Project Manager')) {
+    return currentActiveWindow;
+  }
+  
+  // Fall back to the original mainWindow
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow;
+  }
+  
+  // Last resort: find any main window
+  const mainWindows = BrowserWindow.getAllWindows().filter(win => 
+    !win.isDestroyed() && 
+    win.getTitle().includes('Genome AI Studio') && 
+    !win.getTitle().includes('Project Manager')
+  );
+  
+  return mainWindows.length > 0 ? mainWindows[0] : null;
+}
+
+// Helper function to safely send message to current main window
+function sendToCurrentMainWindow(channel, ...args) {
+  const currentWindow = getCurrentMainWindow();
+  if (currentWindow && !currentWindow.isDestroyed()) {
+    currentWindow.webContents.send(channel, ...args);
+  } else {
+    console.warn(`Cannot send message '${channel}': No active main window found`);
+  }
+}
+
 // Create menu
 function createMenu() {
   const template = [
@@ -892,7 +926,7 @@ function createMenu() {
         {
           label: 'About Genome AI Studio',
           click: () => {
-            mainWindow.webContents.send('show-about');
+            sendToCurrentMainWindow('show-about');
           }
         },
         { type: 'separator' },
@@ -900,7 +934,7 @@ function createMenu() {
           label: 'Preferences',
           accelerator: 'Cmd+,',
           click: () => {
-            mainWindow.webContents.send('general-settings');
+            sendToCurrentMainWindow('general-settings');
           }
         },
         { type: 'separator' },
@@ -966,7 +1000,7 @@ function createMenu() {
             });
             
             if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow.webContents.send('file-opened', result.filePaths[0]);
+              sendToCurrentMainWindow('file-opened', result.filePaths[0]);
             }
           }
         },
@@ -1015,14 +1049,14 @@ function createMenu() {
           label: 'Save Project',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
-            mainWindow.webContents.send('save-current-project');
+            sendToCurrentMainWindow('save-current-project');
           }
         },
         {
           label: 'Save Project As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => {
-            mainWindow.webContents.send('save-project-as');
+            sendToCurrentMainWindow('save-project-as');
           }
         },
         { type: 'separator' },
@@ -1055,14 +1089,14 @@ function createMenu() {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
           click: () => {
-            mainWindow.webContents.send('menu-copy');
+            sendToCurrentMainWindow('menu-copy');
           }
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
           click: () => {
-            mainWindow.webContents.send('menu-paste');
+            sendToCurrentMainWindow('menu-paste');
           }
         },
         { type: 'separator' },
@@ -1070,7 +1104,7 @@ function createMenu() {
           label: 'Select All',
           accelerator: 'CmdOrCtrl+A',
           click: () => {
-            mainWindow.webContents.send('menu-select-all');
+            sendToCurrentMainWindow('menu-select-all');
           }
         }
       ]
@@ -1092,28 +1126,28 @@ function createMenu() {
           label: 'Show File Information',
           accelerator: 'CmdOrCtrl+1',
           click: () => {
-            mainWindow.webContents.send('show-panel', 'fileInfoSection');
+            sendToCurrentMainWindow('show-panel', 'fileInfoSection');
           }
         },
         {
           label: 'Show Navigation',
           accelerator: 'CmdOrCtrl+2',
           click: () => {
-            mainWindow.webContents.send('show-panel', 'navigationSection');
+            sendToCurrentMainWindow('show-panel', 'navigationSection');
           }
         },
         {
           label: 'Show Statistics',
           accelerator: 'CmdOrCtrl+3',
           click: () => {
-            mainWindow.webContents.send('show-panel', 'statisticsSection');
+            sendToCurrentMainWindow('show-panel', 'statisticsSection');
           }
         },
         {
           label: 'Show All Panels',
           accelerator: 'CmdOrCtrl+Shift+A',
           click: () => {
-            mainWindow.webContents.send('show-all-panels');
+            sendToCurrentMainWindow('show-all-panels');
           }
         },
         { type: 'separator' },
@@ -1121,14 +1155,14 @@ function createMenu() {
           label: 'Show Tracks Panel',
           accelerator: 'CmdOrCtrl+4',
           click: () => {
-            mainWindow.webContents.send('show-panel', 'tracksSection');
+            sendToCurrentMainWindow('show-panel', 'tracksSection');
           }
         },
         {
           label: 'Show Features Panel',
           accelerator: 'CmdOrCtrl+5',
           click: () => {
-            mainWindow.webContents.send('show-panel', 'featuresSection');
+            sendToCurrentMainWindow('show-panel', 'featuresSection');
           }
         },
         { type: 'separator' },
@@ -1136,7 +1170,7 @@ function createMenu() {
           label: 'Resource Manager',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
-            mainWindow.webContents.send('open-resource-manager');
+            sendToCurrentMainWindow('open-resource-manager');
           }
         }
       ]
@@ -1148,14 +1182,14 @@ function createMenu() {
           label: 'Search Sequence',
           accelerator: 'CmdOrCtrl+F',
           click: () => {
-            mainWindow.webContents.send('show-search');
+            sendToCurrentMainWindow('show-search');
           }
         },
         {
           label: 'Go to Position',
           accelerator: 'CmdOrCtrl+G',
           click: () => {
-            mainWindow.webContents.send('show-goto');
+            sendToCurrentMainWindow('show-goto');
           }
         },
         { type: 'separator' },
@@ -1197,31 +1231,31 @@ function createMenu() {
             {
               label: 'Network Graph Viewer',
               click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'network-graph');
+                sendToCurrentMainWindow('open-visualization-tool', 'network-graph');
               }
             },
             {
               label: 'Protein Interaction Network',
               click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'protein-interaction-network');
+                sendToCurrentMainWindow('open-visualization-tool', 'protein-interaction-network');
               }
             },
             {
               label: 'Gene Regulatory Network',
               click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'gene-regulatory-network');
+                sendToCurrentMainWindow('open-visualization-tool', 'gene-regulatory-network');
               }
             },
             {
               label: 'Phylogenetic Tree Viewer',
               click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'phylogenetic-tree');
+                sendToCurrentMainWindow('open-visualization-tool', 'phylogenetic-tree');
               }
             },
             {
               label: 'Sequence Alignment Viewer',
               click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'sequence-alignment');
+                sendToCurrentMainWindow('open-visualization-tool', 'sequence-alignment');
               }
             }
           ]
@@ -1330,13 +1364,13 @@ function createMenu() {
             {
               label: 'Check BLAST Installation',
               click: () => {
-                mainWindow.webContents.send('check-blast-installation');
+                sendToCurrentMainWindow('check-blast-installation');
               }
             },
             {
               label: 'System Requirements Check',
               click: () => {
-                mainWindow.webContents.send('system-requirements-check');
+                sendToCurrentMainWindow('system-requirements-check');
               }
             }
           ]
@@ -1349,28 +1383,28 @@ function createMenu() {
         {
           label: 'Configure LLMs',
           click: () => {
-            mainWindow.webContents.send('configure-llms');
+            sendToCurrentMainWindow('configure-llms');
           }
         },
         { type: 'separator' },
         {
           label: 'ChatBox Settings',
           click: () => {
-            mainWindow.webContents.send('chatbox-settings');
+            sendToCurrentMainWindow('chatbox-settings');
           }
         },
         { type: 'separator' },
         {
           label: 'MCP Server Settings',
           click: () => {
-            mainWindow.webContents.send('mcp-settings');
+            sendToCurrentMainWindow('mcp-settings');
           }
         },
         { type: 'separator' },
         {
           label: 'General Settings',
           click: () => {
-            mainWindow.webContents.send('general-settings');
+            sendToCurrentMainWindow('general-settings');
           }
         }
       ]
@@ -1382,20 +1416,20 @@ function createMenu() {
           label: 'Plugin Management',
           accelerator: 'CmdOrCtrl+Alt+P',
           click: () => {
-            mainWindow.webContents.send('show-plugin-management');
+            sendToCurrentMainWindow('show-plugin-management');
           }
         },
         { type: 'separator' },
         {
           label: 'Smart Execution Demo',
           click: () => {
-            mainWindow.webContents.send('show-smart-execution-demo');
+            sendToCurrentMainWindow('show-smart-execution-demo');
           }
         },
         {
           label: 'Plugin Function Calling Test',
           click: () => {
-            mainWindow.webContents.send('show-plugin-function-calling-test');
+            sendToCurrentMainWindow('show-plugin-function-calling-test');
           }
         }
       ]
@@ -1488,7 +1522,8 @@ function createMenu() {
           {
                       label: 'About Genome AI Studio',
           click: () => {
-            dialog.showMessageBox(mainWindow, {
+            const currentWindow = getCurrentMainWindow();
+            dialog.showMessageBox(currentWindow || null, {
               type: 'info',
               title: 'About Genome AI Studio',
               message: 'Genome AI Studio v0.2 beta',
@@ -1502,7 +1537,7 @@ function createMenu() {
           label: 'User Guide',
           accelerator: 'F1',
           click: () => {
-            mainWindow.webContents.send('show-user-guide');
+            sendToCurrentMainWindow('show-user-guide');
           }
         },
         {
@@ -1526,7 +1561,8 @@ function createMenu() {
         {
           label: 'About Genome AI Studio',
           click: () => {
-            dialog.showMessageBox(mainWindow, {
+            const currentWindow = getCurrentMainWindow();
+            dialog.showMessageBox(currentWindow || null, {
               type: 'info',
               title: 'About Genome AI Studio',
               message: 'Genome AI Studio v0.2 beta',
@@ -6326,690 +6362,3 @@ function resetWindowPositions() {
 }
 
 // ========== END WINDOW LAYOUT FUNCTIONS ==========
-
-function createMenu() {
-  const template = [
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
-    ...(process.platform === 'darwin' ? [{
-      label: 'Genome AI Studio',
-      submenu: [
-        {
-          label: 'About Genome AI Studio',
-          click: () => {
-            mainWindow.webContents.send('show-about');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
-          click: () => {
-            mainWindow.webContents.send('general-settings');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Hide Genome AI Studio',
-          accelerator: 'Cmd+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Cmd+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit Genome AI Studio',
-          accelerator: 'Cmd+Q',
-          click: () => {
-            app.quit();
-          }
-        }
-      ]
-    }] : []),
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'New Project',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => {
-            // Create Project Manager window and trigger new project creation
-            createProjectManagerWindow();
-            // Send event to trigger new project modal after window is ready
-            setTimeout(() => {
-              const projectManagerWindow = BrowserWindow.getAllWindows().find(
-                win => win.getTitle().includes('Project Manager')
-              );
-              if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
-                projectManagerWindow.webContents.send('create-new-project');
-              }
-            }, 500);
-          }
-        },
-        {
-          label: 'Open File',
-          accelerator: 'CmdOrCtrl+O',
-          click: async () => {
-            const result = await dialog.showOpenDialog(mainWindow, {
-              properties: ['openFile'],
-              filters: [
-                { name: 'All Genome Files', extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'] },
-                { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
-                { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
-                { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
-                { name: 'Variant Files', extensions: ['vcf'] },
-                { name: 'Alignment Files', extensions: ['bam', 'sam'] },
-                { name: 'All Files', extensions: ['*'] }
-              ]
-            });
-            
-            if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow.webContents.send('file-opened', result.filePaths[0]);
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Project Manager',
-          accelerator: 'CmdOrCtrl+Shift+P',
-          click: () => {
-            createProjectManagerWindow();
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Open Project',
-          accelerator: 'CmdOrCtrl+Shift+O',
-          click: async () => {
-            // Create or focus Project Manager window first
-            createProjectManagerWindow();
-            
-            // Small delay to ensure window is ready
-            setTimeout(async () => {
-              const result = await dialog.showOpenDialog(null, {
-                properties: ['openFile'],
-                filters: [
-                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
-                  { name: 'XML Files', extensions: ['xml'] },
-                  { name: 'Project Files', extensions: ['genomeproj', 'json'] },
-                  { name: 'All Files', extensions: ['*'] }
-                ],
-                title: 'Open Project'
-              });
-              
-              if (!result.canceled && result.filePaths.length > 0) {
-                // Send the file path to the Project Manager window
-                const projectManagerWindow = BrowserWindow.getAllWindows().find(
-                  win => win.getTitle().includes('Project Manager')
-                );
-                if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
-                  projectManagerWindow.webContents.send('load-project-from-menu', result.filePaths[0]);
-                }
-              }
-            }, 100);
-          }
-        },
-        {
-          label: 'Save Project',
-          accelerator: 'CmdOrCtrl+S',
-          click: () => {
-            mainWindow.webContents.send('save-current-project');
-          }
-        },
-        {
-          label: 'Save Project As...',
-          accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => {
-            mainWindow.webContents.send('save-project-as');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Recent Projects',
-          id: 'recent-projects',
-          submenu: [
-            {
-              label: 'No recent projects',
-              enabled: false
-            }
-          ]
-        },
-        ...(process.platform !== 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Exit',
-            accelerator: 'Ctrl+Q',
-            click: () => {
-              app.quit();
-            }
-          }
-        ] : [])
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        {
-          label: 'Copy',
-          accelerator: 'CmdOrCtrl+C',
-          click: () => {
-            mainWindow.webContents.send('menu-copy');
-          }
-        },
-        {
-          label: 'Paste',
-          accelerator: 'CmdOrCtrl+V',
-          click: () => {
-            mainWindow.webContents.send('menu-paste');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Select All',
-          accelerator: 'CmdOrCtrl+A',
-          click: () => {
-            mainWindow.webContents.send('menu-select-all');
-          }
-        }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-        { type: 'separator' },
-        {
-          label: 'Show File Information',
-          accelerator: 'CmdOrCtrl+1',
-          click: () => {
-            mainWindow.webContents.send('show-panel', 'fileInfoSection');
-          }
-        },
-        {
-          label: 'Show Navigation',
-          accelerator: 'CmdOrCtrl+2',
-          click: () => {
-            mainWindow.webContents.send('show-panel', 'navigationSection');
-          }
-        },
-        {
-          label: 'Show Statistics',
-          accelerator: 'CmdOrCtrl+3',
-          click: () => {
-            mainWindow.webContents.send('show-panel', 'statisticsSection');
-          }
-        },
-        {
-          label: 'Show All Panels',
-          accelerator: 'CmdOrCtrl+Shift+A',
-          click: () => {
-            mainWindow.webContents.send('show-all-panels');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Show Tracks Panel',
-          accelerator: 'CmdOrCtrl+4',
-          click: () => {
-            mainWindow.webContents.send('show-panel', 'tracksSection');
-          }
-        },
-        {
-          label: 'Show Features Panel',
-          accelerator: 'CmdOrCtrl+5',
-          click: () => {
-            mainWindow.webContents.send('show-panel', 'featuresSection');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Resource Manager',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => {
-            mainWindow.webContents.send('open-resource-manager');
-          }
-        }
-      ]
-    },
-    {
-      label: 'Tools',
-      submenu: [
-        {
-          label: 'Search Sequence',
-          accelerator: 'CmdOrCtrl+F',
-          click: () => {
-            mainWindow.webContents.send('show-search');
-          }
-        },
-        {
-          label: 'Go to Position',
-          accelerator: 'CmdOrCtrl+G',
-          click: () => {
-            mainWindow.webContents.send('show-goto');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Circos Genome Plotter',
-          accelerator: 'CmdOrCtrl+Shift+C',
-          click: () => {
-            createCircosWindow();
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Conversation Evolution System',
-          accelerator: 'CmdOrCtrl+Shift+E',
-          click: () => {
-            createEvolutionWindow();
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'CRISPR Guide RNA Design',
-          accelerator: 'CmdOrCtrl+Shift+G',
-          click: () => {
-            createCrisprDesignerWindow();
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Visualization Tools',
-          submenu: [
-            {
-              label: 'KGML Pathway Viewer',
-              accelerator: 'CmdOrCtrl+Shift+K',
-              click: () => {
-                createKGMLViewerWindow();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Network Graph Viewer',
-              click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'network-graph');
-              }
-            },
-            {
-              label: 'Protein Interaction Network',
-              click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'protein-interaction-network');
-              }
-            },
-            {
-              label: 'Gene Regulatory Network',
-              click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'gene-regulatory-network');
-              }
-            },
-            {
-              label: 'Phylogenetic Tree Viewer',
-              click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'phylogenetic-tree');
-              }
-            },
-            {
-              label: 'Sequence Alignment Viewer',
-              click: () => {
-                mainWindow.webContents.send('open-visualization-tool', 'sequence-alignment');
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Biological Databases',
-          submenu: [
-            {
-              label: 'KEGG Pathway Analysis',
-              accelerator: 'CmdOrCtrl+Shift+K',
-              click: () => {
-                createKEGGWindow();
-              }
-            },
-            {
-              label: 'Gene Ontology (GO) Analyzer',
-              accelerator: 'CmdOrCtrl+Alt+G',
-              click: () => {
-                createGOWindow();
-              }
-            },
-            {
-              label: 'UniProt Database Search',
-              accelerator: 'CmdOrCtrl+Shift+U',
-              click: () => {
-                createUniProtWindow();
-              }
-            },
-            {
-              label: 'InterPro Domain Analysis',
-              accelerator: 'CmdOrCtrl+Shift+I',
-              click: () => {
-                createInterProWindow();
-              }
-            },
-            {
-              label: 'NCBI Database Browser',
-              accelerator: 'CmdOrCtrl+Shift+N',
-              click: () => {
-                createNCBIWindow();
-              }
-            },
-            {
-              label: 'Ensembl Genome Browser',
-              accelerator: 'CmdOrCtrl+Shift+B',
-              click: () => {
-                createEnsemblWindow();
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Analysis Tools',
-          submenu: [
-            {
-              label: 'STRING Protein Networks',
-              accelerator: 'CmdOrCtrl+Shift+S',
-              click: () => {
-                createSTRINGWindow();
-              }
-            },
-            {
-              label: 'DAVID Functional Analysis',
-              accelerator: 'CmdOrCtrl+Shift+D',
-              click: () => {
-                createDAVIDWindow();
-              }
-            },
-            {
-              label: 'Reactome Pathway Browser',
-              accelerator: 'CmdOrCtrl+Shift+R',
-              click: () => {
-                createReactomeWindow();
-              }
-            },
-            {
-              label: 'PDB Structure Viewer',
-              accelerator: 'CmdOrCtrl+Shift+T',
-              click: () => {
-                createPDBWindow();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Evo2 Design',
-              accelerator: 'CmdOrCtrl+Shift+E',
-              click: () => {
-                createEvo2Window();
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'System Tools',
-          submenu: [
-            {
-              label: 'Install BLAST+ Tools',
-              accelerator: 'CmdOrCtrl+Alt+B',
-              click: () => {
-                createBlastInstallerWindow();
-              }
-            },
-            {
-              label: 'Check BLAST Installation',
-              click: () => {
-                mainWindow.webContents.send('check-blast-installation');
-              }
-            },
-            {
-              label: 'System Requirements Check',
-              click: () => {
-                mainWindow.webContents.send('system-requirements-check');
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      label: 'Options',
-      submenu: [
-        {
-          label: 'Configure LLMs',
-          click: () => {
-            mainWindow.webContents.send('configure-llms');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'ChatBox Settings',
-          click: () => {
-            mainWindow.webContents.send('chatbox-settings');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'MCP Server Settings',
-          click: () => {
-            mainWindow.webContents.send('mcp-settings');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'General Settings',
-          click: () => {
-            mainWindow.webContents.send('general-settings');
-          }
-        }
-      ]
-    },
-    {
-      label: 'Plugins',
-      submenu: [
-        {
-          label: 'Plugin Management',
-          accelerator: 'CmdOrCtrl+Alt+P',
-          click: () => {
-            mainWindow.webContents.send('show-plugin-management');
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Smart Execution Demo',
-          click: () => {
-            mainWindow.webContents.send('show-smart-execution-demo');
-          }
-        },
-        {
-          label: 'Plugin Function Calling Test',
-          click: () => {
-            mainWindow.webContents.send('show-plugin-function-calling-test');
-          }
-        }
-      ]
-    },
-    {
-      label: 'Window',
-      submenu: [
-        {
-          label: 'Minimize',
-          accelerator: 'CmdOrCtrl+M',
-          role: 'minimize'
-        },
-        {
-          label: 'Close',
-          accelerator: 'CmdOrCtrl+W',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.close();
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Window Layout',
-          submenu: [
-            {
-              label: 'Optimal Layout (Main 75% + Project Manager 25%)',
-              accelerator: 'CmdOrCtrl+Alt+L',
-              click: () => {
-                arrangeWindowsOptimal();
-              }
-            },
-            {
-              label: 'Side by Side (50% + 50%)',
-              accelerator: 'CmdOrCtrl+Alt+S',
-              click: () => {
-                arrangeWindowsSideBySide();
-              }
-            },
-            {
-              label: 'Main Window Focus',
-              accelerator: 'CmdOrCtrl+Alt+M',
-              click: () => {
-                arrangeMainWindowFocus();
-              }
-            },
-            {
-              label: 'Project Manager Focus',
-              accelerator: 'CmdOrCtrl+Alt+P',
-              click: () => {
-                arrangeProjectManagerFocus();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Stack Vertically',
-              click: () => {
-                arrangeWindowsVertical();
-              }
-            },
-            {
-              label: 'Cascade Windows',
-              click: () => {
-                arrangeWindowsCascade();
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Reset to Default Positions',
-              click: () => {
-                resetWindowPositions();
-              }
-            }
-          ]
-        },
-        ...(process.platform === 'darwin' ? [
-          { type: 'separator' },
-          {
-            label: 'Bring All to Front',
-            role: 'front'
-          }
-        ] : [])
-      ]
-    },
-    {
-      label: 'Help',
-      submenu: [
-        ...(process.platform !== 'darwin' ? [
-          {
-                      label: 'About Genome AI Studio',
-          click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'About Genome AI Studio',
-              message: 'Genome AI Studio v0.2 beta',
-                detail: 'A modern AI-powered genome analysis studio built with Electron'
-              });
-            }
-          },
-          { type: 'separator' }
-        ] : []),
-        {
-          label: 'User Guide',
-          accelerator: 'F1',
-          click: () => {
-            mainWindow.webContents.send('show-user-guide');
-          }
-        },
-        {
-          label: 'Documentation',
-          click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/docs');
-          }
-        },
-        {
-          label: 'Report Issue',
-          click: () => {
-            require('electron').shell.openExternal('https://github.com/Scilence2022/GenomeAIStudio/issues');
-          }
-        }
-      ]
-    },
-    // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
-    {
-      label: 'Genome AI Studio',
-      submenu: [
-        {
-          label: 'About Genome AI Studio',
-          click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'About Genome AI Studio',
-              message: 'Genome AI Studio v0.2 beta',
-              detail: 'An intelligent genome analysis platform with AI-powered features.',
-              buttons: ['OK']
-            });
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Services',
-          role: 'services',
-          submenu: []
-        },
-        { type: 'separator' },
-        {
-          label: 'Hide Genome AI Studio',
-          accelerator: 'Command+H',
-          role: 'hide'
-        },
-        {
-          label: 'Hide Others',
-          accelerator: 'Command+Shift+H',
-          role: 'hideothers'
-        },
-        {
-          label: 'Show All',
-          role: 'unhide'
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit Genome AI Studio',
-          accelerator: 'Command+Q',
-          click: () => app.quit()
-        }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-}
