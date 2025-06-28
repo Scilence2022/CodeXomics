@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Mode Style Consistency Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .test-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .mode-panel {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 400px;
+        }
+        
+        .mode-panel.simple-mode {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .simple-mode .panel-title {
+            color: #667eea;
+        }
+        
+        /* Mock Project Manager Styles */
+        .mock-sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 350px;
+        }
+        
+        .mock-sidebar-header {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .mock-sidebar h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        /* Normal Mode Tree Styles */
+        .tree-item {
+            display: flex;
+            flex-direction: column;
+            margin: 2px 0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .tree-item-content {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            min-height: 22px;
+        }
+
+        .tree-item-content:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(2px);
+        }
+        
+        .tree-item.active > .tree-item-content {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            color: #667eea;
+            border-left: 3px solid #667eea;
+            font-weight: 600;
+        }
+
+        .tree-main-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .tree-label {
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .tree-file-count {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-right: 8px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .tree-file-size {
+            font-size: 10px;
+            color: #6c757d;
+            margin-right: 8px;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .tree-actions {
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .tree-item-content:hover .tree-actions {
+            opacity: 1;
+        }
+
+        .tree-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* File Items */
+        .tree-item.file .tree-item-content {
+            padding: 3px 8px;
+            min-height: 20px;
+        }
+
+        .tree-item.file.selected > .tree-item-content {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-left: 2px solid #667eea;
+        }
+
+        .tree-item.file .tree-label {
+            font-weight: 400;
+            font-size: 12px;
+        }
+
+        /* Simple Mode Styles - 修复后保持与normal模式一致 */
+        .simple-mode .tree-item {
+            /* 与normal模式完全一致 */
+            display: flex;
+            flex-direction: column;
+            margin: 2px 0;  /* 原来错误: padding: 10px 16px; margin: 2px 8px; */
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .simple-mode .tree-item-content {
+            /* 与normal模式完全一致 */
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;  /* 原来错误: padding: 6px 8px; */
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            min-height: 22px;
+        }
+
+        .simple-mode .tree-item.file .tree-item-content {
+            /* 与normal模式完全一致 */
+            padding: 3px 8px;
+            min-height: 20px;
+        }
+
+        .simple-mode .tree-label {
+            /* 与normal模式完全一致 */
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .simple-mode .tree-item.file .tree-label {
+            /* 与normal模式完全一致 */
+            font-weight: 400;
+            font-size: 12px;
+        }
+
+        .simple-mode .tree-file-count,
+        .simple-mode .tree-file-size {
+            /* 与normal模式完全一致 */
+            font-size: 10px;  /* 原来错误: font-size: 9px; */
+        }
+        
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .result-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #28a745;
+        }
+        
+        .fix-highlight {
+            background: rgba(255, 193, 7, 0.2);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1 class="test-title">🎯 Simple Mode 样式一致性修复验证</h1>
+        </div>
+        
+        <div class="comparison-container">
+            <div class="mode-panel">
+                <h3 class="panel-title">🔄 Normal Mode</h3>
+                <div class="mock-sidebar">
+                    <div class="mock-sidebar-header">
+                        <h3>Projects & Workspaces</h3>
+                    </div>
+                    
+                    <!-- Project Items -->
+                    <div class="tree-item project active">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📂</div>
+                            <span class="tree-label">GenomeProject</span>
+                            <div class="tree-file-count">12</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Folder Items -->
+                    <div class="tree-item folder" style="margin-left: 8px;">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📁</div>
+                            <span class="tree-label">sequences</span>
+                            <div class="tree-file-count">5</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Items -->
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="tree-icon file-icon" style="background-color: #28a745; color: white; font-size: 7px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">FA</div>
+                            <span class="tree-label">genome.fasta</span>
+                            <div class="tree-file-size">2.1MB</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="tree-icon file-icon" style="background-color: #007bff; color: white; font-size: 7px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">GFF</div>
+                            <span class="tree-label">annotations.gff3</span>
+                            <div class="tree-file-size">456KB</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mode-panel simple-mode">
+                <h3 class="panel-title">⚡ Simple Mode (修复后)</h3>
+                <div class="mock-sidebar">
+                    <div class="mock-sidebar-header">
+                        <h3>Projects & Workspaces</h3>
+                    </div>
+                    
+                    <!-- Same content with simple-mode class -->
+                    <div class="tree-item project active">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📂</div>
+                            <span class="tree-label">GenomeProject</span>
+                            <div class="tree-file-count">12</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item folder" style="margin-left: 8px;">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📁</div>
+                            <span class="tree-label">sequences</span>
+                            <div class="tree-file-count">5</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="tree-icon file-icon" style="background-color: #28a745; color: white; font-size: 7px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">FA</div>
+                            <span class="tree-label">genome.fasta</span>
+                            <div class="tree-file-size">2.1MB</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="tree-icon file-icon" style="background-color: #007bff; color: white; font-size: 7px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center;">GFF</div>
+                            <span class="tree-label">annotations.gff3</span>
+                            <div class="tree-file-size">456KB</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-results">
+            <h3>🎯 修复内容对比</h3>
+            
+            <h4>❌ 修复前的问题样式：</h4>
+            <div class="result-item">
+                <span class="status-indicator" style="background: #dc3545;"></span>
+                <strong>tree-item:</strong> <span class="fix-highlight">padding: 10px 16px; margin: 2px 8px;</span> (额外的内边距和外边距)
+            </div>
+            <div class="result-item">
+                <span class="status-indicator" style="background: #dc3545;"></span>
+                <strong>tree-item-content:</strong> <span class="fix-highlight">padding: 6px 8px;</span> (与normal模式不一致)
+            </div>
+            <div class="result-item">
+                <span class="status-indicator" style="background: #dc3545;"></span>
+                <strong>文件计数/大小:</strong> <span class="fix-highlight">font-size: 9px;</span> (比normal模式小)
+            </div>
+            
+            <h4>✅ 修复后的正确样式：</h4>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                <strong>tree-item:</strong> <span class="fix-highlight">margin: 2px 0;</span> 与normal模式保持一致
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                <strong>tree-item-content:</strong> <span class="fix-highlight">padding: 4px 8px; min-height: 22px;</span> 与normal模式保持一致
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                <strong>文件项内容:</strong> <span class="fix-highlight">padding: 3px 8px; min-height: 20px;</span> 与normal模式保持一致
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                <strong>文件计数/大小:</strong> <span class="fix-highlight">font-size: 10px;</span> 与normal模式保持一致
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                <strong>文件标签:</strong> <span class="fix-highlight">font-size: 12px;</span> 与normal模式保持一致
+            </div>
+            
+            <h4>🔧 技术实现：</h4>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                移除了 <code>body.compact-mode .tree-item</code> 中的额外 padding 和 margin
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                调整了 <code>body.compact-mode .tree-item-content</code> 的 padding 值
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                统一了文件项和标签的字体大小设置
+            </div>
+            <div class="result-item">
+                <span class="status-indicator"></span>
+                保持了所有交互效果（hover、active）的一致性
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Simple Mode 样式一致性修复验证已加载');
+            console.log('📋 修复对比:');
+            console.log('  修复前: body.compact-mode .tree-item { padding: 10px 16px; margin: 2px 8px; }');
+            console.log('  修复后: body.compact-mode .tree-item { margin: 2px 0; } (与normal模式一致)');
+            console.log('  修复前: body.compact-mode .tree-item-content { padding: 6px 8px; }');
+            console.log('  修复后: body.compact-mode .tree-item-content { padding: 4px 8px; min-height: 22px; }');
+            console.log('  修复前: font-size: 9px (文件计数/大小)');
+            console.log('  修复后: font-size: 10px (与normal模式一致)');
+        });
+    </script>
+</body>
+</html> 

@@ -163,10 +163,15 @@
             margin: 0;
         }
 
+        /* 保持与normal模式一致的tree-item样式 */
         body.compact-mode .tree-item {
-            padding: 10px 16px;
-            margin: 2px 8px;
+            /* 移除额外的padding和margin，保持与normal模式一致 */
+            display: flex;
+            flex-direction: column;
+            margin: 2px 0;
             border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
         }
 
         body.compact-mode .tree-item.project {
@@ -176,7 +181,7 @@
 
         body.compact-mode .tree-item.folder {
             font-size: 13px;
-            margin-left: 20px;
+            /* 移除额外的margin-left，由JS动态控制缩进 */
         }
 
         /* Compact Mode Animations */
@@ -950,18 +955,44 @@
             text-align: center;
         }
 
-        /* 简约模式下的文件树优化 */
+        /* 简约模式下的文件树优化 - 保持与normal模式一致 */
         body.compact-mode .tree-item-content {
-            padding: 6px 8px;
+            /* 保持与normal模式一致的padding和min-height */
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            min-height: 22px;
+        }
+
+        body.compact-mode .tree-item.file .tree-item-content {
+            /* 文件项保持与normal模式一致 */
+            padding: 3px 8px;
+            min-height: 20px;
         }
 
         body.compact-mode .tree-label {
+            /* 保持与normal模式一致的字体大小 */
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        body.compact-mode .tree-item.file .tree-label {
+            /* 文件标签保持与normal模式一致 */
+            font-weight: 400;
             font-size: 12px;
         }
 
         body.compact-mode .tree-file-count,
         body.compact-mode .tree-file-size {
-            font-size: 9px;
+            /* 保持与normal模式一致的字体大小 */
+            font-size: 10px;
         }
         
         .tree-item.project {
