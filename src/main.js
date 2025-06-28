@@ -3412,17 +3412,22 @@ function createProjectManagerWindow() {
     
     // Handle window focus lost - revert to main menu if main window exists
     projectManagerWindow.on('blur', () => {
-      const mainWindow = BrowserWindow.getAllWindows().find(win => 
+      // Find any main window (including newly created ones)
+      const mainWindows = BrowserWindow.getAllWindows().filter(win => 
         win.getTitle().includes('Genome AI Studio') && !win.getTitle().includes('Project Manager')
       );
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        console.log('Project Manager window lost focus - reverting to main menu');
-        // Only revert if the main window is focused
+      
+      if (mainWindows.length > 0) {
+        console.log('Project Manager window lost focus - checking for focused main window');
+        // Wait a bit longer to allow window focus to settle
         setTimeout(() => {
-          if (mainWindow.isFocused()) {
+          const focusedMainWindow = mainWindows.find(win => win.isFocused());
+          if (focusedMainWindow) {
+            console.log('Restoring main menu for focused main window');
+            currentActiveWindow = focusedMainWindow;
             createMenu(); // Restore main window menu
           }
-        }, 100);
+        }, 200); // Increased delay for better stability
       }
     });
     
@@ -4696,39 +4701,84 @@ ipcMain.handle('checkMainWindowStatus', async () => {
 // Handle creating new main window with file
 ipcMain.handle('createNewMainWindow', async (event, filePath) => {
   try {
-    // Create a new main window similar to the original
+    // Create a new main window with identical configuration to the original
     const newMainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
       minWidth: 800,
       minHeight: 600,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js')
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false,
+        cache: false
       },
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false
     });
 
-    // Set up the new window
+    // Set up the new window with same initialization as original main window
     newMainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
-    // Set menu for new window
-    createMenu();
+    // Clear cache aggressively to ensure fresh file loading (same as original)
+    newMainWindow.webContents.session.clearCache();
+    newMainWindow.webContents.session.clearStorageData();
+    
+    // Handle multiple reload cycles to ensure proper initialization
+    let reloadCount = 0;
+    const maxReloads = 1; // Only one reload cycle
+    
+    newMainWindow.webContents.on('did-finish-load', () => {
+      if (reloadCount < maxReloads) {
+        console.log(`New window reload cycle ${reloadCount + 1}/${maxReloads}`);
+        reloadCount++;
+        newMainWindow.webContents.reload();
+      } else {
+        console.log('New window fully loaded, waiting for complete initialization');
+        // Window is fully loaded, wait for DOM and modules to be ready
+        setTimeout(() => {
+          console.log('Checking if new window is ready for file loading...');
+          // Send a test message to verify the window is responsive
+          newMainWindow.webContents.send('ping-test');
+          
+          // Wait a bit more and then send the file
+          setTimeout(() => {
+            console.log('Sending load-file event to new window with path:', filePath);
+            newMainWindow.webContents.send('load-file', filePath);
+          }, 500);
+        }, 1500); // Extended delay for complete module initialization
+      }
+    });
 
-    // Show window when ready and load file
+    // Show window when ready
     newMainWindow.once('ready-to-show', () => {
       newMainWindow.show();
-      // Load the file after window is shown
-      setTimeout(() => {
-        newMainWindow.webContents.send('load-file', filePath);
-      }, 500);
+      // Set focus to new window and ensure proper menu
+      newMainWindow.focus();
+      currentActiveWindow = newMainWindow;
+      createMenu(); // Set main window menu immediately
+      console.log('New window shown and focused with main menu set');
+    });
+
+    // Open DevTools to debug UI issues (same as original main window)
+    newMainWindow.webContents.openDevTools();
+
+    // Handle window focus to manage menu properly
+    newMainWindow.on('focus', () => {
+      if (currentActiveWindow !== newMainWindow) {
+        currentActiveWindow = newMainWindow;
+        createMenu(); // Set main window menu when focused
+        console.log('New window focused - set main menu');
+      }
     });
 
     // Handle window closed
     newMainWindow.on('closed', () => {
       console.log('New main window closed');
+      if (currentActiveWindow === newMainWindow) {
+        currentActiveWindow = null;
+      }
     });
 
     return { success: true, message: 'New window created with file' };

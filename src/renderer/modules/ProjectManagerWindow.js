@@ -970,12 +970,36 @@ class ProjectManagerWindow {
         if (!file) return;
 
         try {
-            if (window.electronAPI && window.electronAPI.openFileInMainWindow) {
-                const result = await window.electronAPI.openFileInMainWindow(file.path);
-                if (result.success) {
-                    this.showNotification(`Opened "${file.name}" in GenomeExplorer`, 'success');
+            if (window.electronAPI) {
+                // First check if main window exists and its status
+                const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
+                
+                if (mainWindowStatus.error && mainWindowStatus.error === 'Main window not available') {
+                    // No main window exists, create a new one
+                    console.log('No main window available, creating new window...');
+                    const result = await window.electronAPI.createNewMainWindow(file.path);
+                    if (result.success) {
+                        this.showNotification(`Opened "${file.name}" in new GenomeExplorer window`, 'success');
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } else if (window.electronAPI.openFileInMainWindow) {
+                    // Main window exists, try to open file in it
+                    const result = await window.electronAPI.openFileInMainWindow(file.path);
+                    if (result.success) {
+                        this.showNotification(`Opened "${file.name}" in GenomeExplorer`, 'success');
+                    } else {
+                        // If opening in existing window fails, try creating new window
+                        console.log('Failed to open in existing window, creating new window...');
+                        const newWindowResult = await window.electronAPI.createNewMainWindow(file.path);
+                        if (newWindowResult.success) {
+                            this.showNotification(`Opened "${file.name}" in new GenomeExplorer window`, 'success');
+                        } else {
+                            throw new Error(newWindowResult.error);
+                        }
+                    }
                 } else {
-                    throw new Error(result.error);
+                    this.showNotification(`Would open "${file.name}" in main window`, 'info');
                 }
             } else {
                 this.showNotification(`Would open "${file.name}" in main window`, 'info');
@@ -2215,6 +2239,16 @@ ${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
         } else {
             this.showNotification('File path not available', 'error');
         }
+    }
+
+    async openInGenomeViewer() {
+        if (this.selectedFiles.size === 0) {
+            this.showNotification('Please select a file to open in Genome Viewer', 'warning');
+            return;
+        }
+        
+        const fileId = Array.from(this.selectedFiles)[0];
+        await this.openFileInMainWindow(fileId);
     }
 
     openProjectInExplorer() {
