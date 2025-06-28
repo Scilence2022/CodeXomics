@@ -3214,8 +3214,7 @@ function createBlastInstallerWindow() {
       // 如果关闭的是当前活动窗口，恢复主窗口菜单
       if (currentActiveWindow === blastInstallerWindow) {
         currentActiveWindow = null;
-        const mainMenu = Menu.buildFromTemplate(createMenu());
-        Menu.setApplicationMenu(mainMenu);
+        createMenu(); // 直接调用createMenu()来恢复主窗口菜单
       }
       console.log('BLAST+ Installer window closed');
     });
@@ -3293,6 +3292,78 @@ ipcMain.on('open-evo2-window', () => {
 ipcMain.on('open-blast-installer-window', () => {
   console.log('IPC: Opening BLAST+ Installer window...');
   createBlastInstallerWindow();
+});
+
+// IPC handler for BLAST installation check
+ipcMain.on('check-blast-installation', (event) => {
+  console.log('IPC: Checking BLAST installation...');
+  const { exec } = require('child_process');
+  
+  exec('blastn -version', (error, stdout, stderr) => {
+    if (error) {
+      event.sender.send('blast-check-result', {
+        installed: false,
+        message: 'BLAST+ not found or not installed',
+        error: error.message
+      });
+    } else {
+      const versionMatch = stdout.match(/blastn: (\d+\.\d+\.\d+)/);
+      const version = versionMatch ? versionMatch[1] : 'Unknown version';
+      event.sender.send('blast-check-result', {
+        installed: true,
+        message: `BLAST+ installed successfully (version ${version})`,
+        version: version,
+        output: stdout
+      });
+    }
+  });
+});
+
+// IPC handler for system requirements check
+ipcMain.on('system-requirements-check', (event) => {
+  console.log('IPC: Checking system requirements...');
+  const os = require('os');
+  const { exec } = require('child_process');
+  
+  const systemInfo = {
+    platform: os.platform(),
+    arch: os.arch(),
+    release: os.release(),
+    nodeVersion: process.version,
+    totalMemory: (os.totalmem() / (1024**3)).toFixed(2) + ' GB',
+    freeMemory: (os.freemem() / (1024**3)).toFixed(2) + ' GB',
+    cpus: os.cpus().length
+  };
+  
+  // Check disk space
+  exec('df -h /', (error, stdout, stderr) => {
+    if (!error && stdout) {
+      const lines = stdout.split('\n');
+      if (lines.length > 1) {
+        const diskInfo = lines[1].split(/\s+/);
+        systemInfo.diskSpace = {
+          total: diskInfo[1],
+          used: diskInfo[2],
+          available: diskInfo[3],
+          usage: diskInfo[4]
+        };
+      }
+    }
+    
+    event.sender.send('system-requirements-result', {
+      systemInfo: systemInfo,
+      requirements: {
+        minimumMemory: '4 GB',
+        recommendedMemory: '8 GB',
+        minimumDiskSpace: '1 GB',
+        supportedPlatforms: ['Windows', 'macOS', 'Linux']
+      },
+      status: {
+        memoryOk: parseFloat(systemInfo.totalMemory) >= 4,
+        platformSupported: ['win32', 'darwin', 'linux'].includes(os.platform())
+      }
+    });
+  });
 });
 
 // IPC handler for focusing main window
@@ -3883,6 +3954,31 @@ function createProjectManagerMenu(projectManagerWindow) {
               label: 'Batch Delete',
               click: () => {
                 projectManagerWindow.webContents.send('menu-batch-delete');
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'System Tools',
+          submenu: [
+            {
+              label: 'Install BLAST+ Tools',
+              accelerator: 'CmdOrCtrl+Alt+B',
+              click: () => {
+                createBlastInstallerWindow();
+              }
+            },
+            {
+              label: 'Check BLAST Installation',
+              click: () => {
+                projectManagerWindow.webContents.send('check-blast-installation');
+              }
+            },
+            {
+              label: 'System Requirements Check',
+              click: () => {
+                projectManagerWindow.webContents.send('system-requirements-check');
               }
             }
           ]
@@ -6610,6 +6706,31 @@ function createMenu() {
               accelerator: 'CmdOrCtrl+Shift+E',
               click: () => {
                 createEvo2Window();
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'System Tools',
+          submenu: [
+            {
+              label: 'Install BLAST+ Tools',
+              accelerator: 'CmdOrCtrl+Alt+B',
+              click: () => {
+                createBlastInstallerWindow();
+              }
+            },
+            {
+              label: 'Check BLAST Installation',
+              click: () => {
+                mainWindow.webContents.send('check-blast-installation');
+              }
+            },
+            {
+              label: 'System Requirements Check',
+              click: () => {
+                mainWindow.webContents.send('system-requirements-check');
               }
             }
           ]
