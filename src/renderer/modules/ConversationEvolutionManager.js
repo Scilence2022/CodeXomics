@@ -86,19 +86,20 @@ class ConversationEvolutionManager {
      * 设置对话监听
      */
     setupConversationMonitoring() {
-        // 监听聊天消息
+        // 注意：ChatManager已经有内置的Evolution数据收集机制
+        // 我们不需要重写addMessageToChat方法，而是通过connectToChatBox()建立连接
+        console.log('🧬 Setting up conversation monitoring via ChatBox integration');
+        
+        // 确保这个实例在全局可用
+        if (typeof window !== 'undefined') {
+            window.evolutionManager = this;
+            window.conversationEvolutionManager = this;
+        }
+        
+        // 如果ChatManager可用，直接连接
         if (this.chatManager) {
-            // 重写addMessageToChat方法以监听对话
-            const originalAddMessage = this.chatManager.addMessageToChat.bind(this.chatManager);
-            this.chatManager.addMessageToChat = (message, sender, isError = false) => {
-                // 调用原始方法
-                const result = originalAddMessage(message, sender, isError);
-                
-                // 记录对话数据
-                this.recordConversationData(message, sender, isError);
-                
-                return result;
-            };
+            this.chatManager.connectToEvolutionManager(this);
+            console.log('🧬 Connected to ChatManager directly');
         }
     }
 

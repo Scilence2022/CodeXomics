@@ -286,11 +286,19 @@ class ChatManager {
     async initializeEvolutionIntegration() {
         try {
             // Check if ConversationEvolutionManager is available globally
-            if (typeof window !== 'undefined' && window.evolutionManager) {
-                this.evolutionManager = window.evolutionManager;
+            if (typeof window !== 'undefined' && 
+                (window.evolutionManager || window.conversationEvolutionManager)) {
+                this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
                 console.log('🧬 Evolution Manager connected to ChatBox');
             } else {
                 console.log('🧬 Evolution Manager not available yet, will connect when available');
+                // Set up a delayed check for when Evolution Manager becomes available
+                setTimeout(() => {
+                    if (window.evolutionManager || window.conversationEvolutionManager) {
+                        this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
+                        console.log('🧬 Evolution Manager connected to ChatBox (delayed)');
+                    }
+                }, 2000);
             }
             
             // Initialize current conversation data structure
