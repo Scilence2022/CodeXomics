@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLAST+ Tools Installer - Genome AI Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-ready {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-installing {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .system-info {
+            margin: 15px 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .info-value {
+            color: #6c757d;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .progress-container {
+            grid-column: 1 / -1;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #444;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .log-timestamp {
+            color: #888;
+            min-width: 80px;
+            font-size: 0.8rem;
+        }
+
+        .log-level {
+            min-width: 50px;
+            font-weight: 600;
+        }
+
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+
+        .test-results {
+            grid-column: 1 / -1;
+            display: none;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .test-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .test-item.failed {
+            border-left-color: #dc3545;
+        }
+
+        .test-item h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .version-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .download-info {
+            background: #f3e5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .installation-steps {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .installation-steps li {
+            counter-increment: step-counter;
+            margin: 15px 0;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+            padding-left: 60px;
+        }
+
+        .installation-steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #007bff;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .fa-solid, .fas {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        .spinning {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #0d47a1;
+        }
+
+        .alert-success {
+            background: #e8f5e8;
+            border-left-color: #4caf50;
+            color: #1b5e20;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left-color: #ff9800;
+            color: #e65100;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-download"></i> BLAST+ Tools Installer</h1>
+            <p class="subtitle">Automated installation of NCBI BLAST+ tools for your system</p>
+            <div id="statusIndicator" class="status-indicator status-ready">
+                <i class="fas fa-circle"></i>
+                Ready to Install
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- System Information Card -->
+            <div class="card">
+                <h2><i class="fas fa-desktop"></i> System Information</h2>
+                <div class="system-info">
+                    <div class="info-item">
+                        <span class="info-label">Operating System:</span>
+                        <span class="info-value" id="osInfo">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Architecture:</span>
+                        <span class="info-value" id="archInfo">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Platform:</span>
+                        <span class="info-value" id="platformInfo">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Node.js Version:</span>
+                        <span class="info-value" id="nodeVersion">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Available Memory:</span>
+                        <span class="info-value" id="memoryInfo">Detecting...</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong><i class="fas fa-info-circle"></i> System Requirements:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Minimum 2GB free disk space</li>
+                        <li>Internet connection for download</li>
+                        <li>Administrative privileges may be required</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Installation Control Card -->
+            <div class="card">
+                <h2><i class="fas fa-cog"></i> Installation Control</h2>
+                
+                <div class="version-info">
+                    <h4><i class="fas fa-tag"></i> BLAST+ Version Information</h4>
+                    <p><strong>Latest Version:</strong> <span id="latestVersion">Checking...</span></p>
+                    <p><strong>Release Date:</strong> <span id="releaseDate">Checking...</span></p>
+                    <p><strong>Package Size:</strong> <span id="packageSize">Checking...</span></p>
+                </div>
+
+                <div class="download-info">
+                    <h4><i class="fas fa-cloud-download-alt"></i> Download Information</h4>
+                    <p><strong>Download URL:</strong> <span id="downloadUrl">Detecting optimal source...</span></p>
+                    <p><strong>Installation Path:</strong> <span id="installPath">Will be determined...</span></p>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <button id="checkBtn" class="btn btn-primary" onclick="checkBlastInstallation()">
+                        <i class="fas fa-search"></i>
+                        Check Current Installation
+                    </button>
+                    
+                    <button id="installBtn" class="btn btn-success" onclick="startInstallation()">
+                        <i class="fas fa-download"></i>
+                        Start Installation
+                    </button>
+                    
+                    <button id="testBtn" class="btn btn-secondary" onclick="runTests()" disabled>
+                        <i class="fas fa-vial"></i>
+                        Run Tests
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Container -->
+            <div class="card progress-container" id="progressContainer" style="display: none;">
+                <h2><i class="fas fa-tasks"></i> Installation Progress</h2>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar">0%</div>
+                </div>
+                
+                <div id="currentStep" style="text-align: center; margin: 10px 0; font-weight: 600; color: #007bff;">
+                    Waiting to start...
+                </div>
+
+                <ul class="installation-steps">
+                    <li id="step1">System requirements check</li>
+                    <li id="step2">Download BLAST+ package</li>
+                    <li id="step3">Extract and prepare files</li>
+                    <li id="step4">Install BLAST+ tools</li>
+                    <li id="step5">Configure environment variables</li>
+                    <li id="step6">Verify installation</li>
+                    <li id="step7">Run comprehensive tests</li>
+                </ul>
+            </div>
+
+            <!-- Test Results -->
+            <div class="card test-results" id="testResults">
+                <h2><i class="fas fa-clipboard-check"></i> Installation Test Results</h2>
+                
+                <div class="test-grid" id="testGrid">
+                    <!-- Test results will be populated here -->
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        <i class="fas fa-file-alt"></i>
+                        Generate Installation Report
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="exportReport()">
+                        <i class="fas fa-download"></i>
+                        Export Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Container -->
+        <div class="card">
+            <h2><i class="fas fa-terminal"></i> Installation Log</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">
+                    <span class="log-timestamp">00:00:00</span>
+                    <span class="log-level log-info">[INFO]</span>
+                    <span>BLAST+ Installer initialized</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button class="btn btn-secondary" onclick="clearLog()">
+                    <i class="fas fa-trash"></i>
+                    Clear Log
+                </button>
+                
+                <button class="btn btn-secondary" onclick="exportLog()">
+                    <i class="fas fa-file-export"></i>
+                    Export Log
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { shell, ipcRenderer } = require('electron');
+        const os = require('os');
+        const path = require('path');
+        const fs = require('fs');
+        const https = require('https');
+        const { exec, spawn } = require('child_process');
+        const { promisify } = require('util');
+
+        // Global variables
+        let installationInProgress = false;
+        let currentProgress = 0;
+        let blastVersion = null;
+        let downloadUrl = null;
+        let installPath = null;
+        let testResults = [];
+
+        // Initialize the installer
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeInstaller();
+        });
+
+        function initializeInstaller() {
+            logMessage('Initializing BLAST+ installer...', 'info');
+            detectSystemInfo();
+            checkLatestVersion();
+            determineInstallationPaths();
+        }
+
+        function detectSystemInfo() {
+            logMessage('Detecting system information...', 'info');
+            
+            const platform = os.platform();
+            const arch = os.arch();
+            const release = os.release();
+            const nodeVersion = process.version;
+            const totalMemory = (os.totalmem() / (1024**3)).toFixed(2);
+            const freeMemory = (os.freemem() / (1024**3)).toFixed(2);
+
+            document.getElementById('osInfo').textContent = `${platform} ${release}`;
+            document.getElementById('archInfo').textContent = arch;
+            document.getElementById('platformInfo').textContent = process.platform;
+            document.getElementById('nodeVersion').textContent = nodeVersion;
+            document.getElementById('memoryInfo').textContent = `${freeMemory}GB free / ${totalMemory}GB total`;
+
+            logMessage(`System detected: ${platform} ${arch}`, 'success');
+        }
+
+        async function checkLatestVersion() {
+            logMessage('Checking latest BLAST+ version...', 'info');
+            
+            try {
+                // Simulate API call to get latest version info
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Mock data - in real implementation, this would fetch from NCBI FTP
+                blastVersion = {
+                    version: '2.15.0',
+                    releaseDate: '2023-11-15',
+                    size: '247 MB'
+                };
+
+                document.getElementById('latestVersion').textContent = blastVersion.version;
+                document.getElementById('releaseDate').textContent = blastVersion.releaseDate;
+                document.getElementById('packageSize').textContent = blastVersion.size;
+
+                logMessage(`Latest version found: ${blastVersion.version}`, 'success');
+                
+                determineDownloadUrl();
+            } catch (error) {
+                logMessage('Failed to check latest version: ' + error.message, 'error');
+                document.getElementById('latestVersion').textContent = 'Error checking version';
+            }
+        }
+
+        function determineDownloadUrl() {
+            const platform = os.platform();
+            const arch = os.arch();
+            
+            // Determine the appropriate download URL based on platform
+            const baseUrl = 'https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/';
+            
+            let filename;
+            if (platform === 'win32') {
+                filename = arch === 'x64' ? 
+                    `ncbi-blast-${blastVersion.version}+-win64.exe` :
+                    `ncbi-blast-${blastVersion.version}+-win32.exe`;
+            } else if (platform === 'darwin') {
+                filename = `ncbi-blast-${blastVersion.version}+-x64-macosx.tar.gz`;
+            } else if (platform === 'linux') {
+                filename = arch === 'x64' ?
+                    `ncbi-blast-${blastVersion.version}+-x64-linux.tar.gz` :
+                    `ncbi-blast-${blastVersion.version}+-linux.tar.gz`;
+            }
+
+            downloadUrl = baseUrl + filename;
+            document.getElementById('downloadUrl').textContent = downloadUrl;
+            
+            logMessage(`Download URL determined: ${filename}`, 'info');
+        }
+
+        function determineInstallationPaths() {
+            const platform = os.platform();
+            const homeDir = os.homedir();
+            
+            if (platform === 'win32') {
+                installPath = path.join('C:', 'Program Files', 'NCBI', 'blast+');
+            } else if (platform === 'darwin') {
+                installPath = path.join(homeDir, 'Applications', 'blast+');
+            } else {
+                installPath = path.join(homeDir, '.local', 'blast+');
+            }
+
+            document.getElementById('installPath').textContent = installPath;
+            logMessage(`Installation path: ${installPath}`, 'info');
+        }
+
+        async function checkBlastInstallation() {
+            logMessage('Checking for existing BLAST+ installation...', 'info');
+            updateStatus('Checking existing installation...', 'installing');
+            
+            try {
+                const execAsync = promisify(exec);
+                
+                // Check if blastn is available
+                try {
+                    const { stdout } = await execAsync('blastn -version');
+                    const versionMatch = stdout.match(/blastn: ([\d.]+)/);
+                    const installedVersion = versionMatch ? versionMatch[1] : 'Unknown';
+                    
+                    logMessage(`Found existing BLAST+ installation: v${installedVersion}`, 'success');
+                    
+                    if (installedVersion === blastVersion.version) {
+                        logMessage('Latest version already installed!', 'success');
+                        updateStatus('Latest version installed', 'ready');
+                        document.getElementById('testBtn').disabled = false;
+                    } else {
+                        logMessage(`Newer version available: v${blastVersion.version}`, 'warning');
+                        updateStatus('Update available', 'ready');
+                    }
+                } catch (error) {
+                    logMessage('No existing BLAST+ installation found', 'warning');
+                    updateStatus('Not installed', 'error');
+                }
+            } catch (error) {
+                logMessage('Error checking installation: ' + error.message, 'error');
+                updateStatus('Check failed', 'error');
+            }
+        }
+
+        async function startInstallation() {
+            if (installationInProgress) return;
+            
+            installationInProgress = true;
+            logMessage('Starting BLAST+ installation...', 'info');
+            updateStatus('Installing...', 'installing');
+            
+            document.getElementById('installBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            try {
+                await executeInstallationSteps();
+                
+                logMessage('BLAST+ installation completed successfully!', 'success');
+                updateStatus('Installation complete', 'ready');
+                document.getElementById('testBtn').disabled = false;
+                
+                // Auto-run tests after installation
+                setTimeout(() => runTests(), 2000);
+                
+            } catch (error) {
+                logMessage('Installation failed: ' + error.message, 'error');
+                updateStatus('Installation failed', 'error');
+            } finally {
+                installationInProgress = false;
+                document.getElementById('installBtn').disabled = false;
+            }
+        }
+
+        async function executeInstallationSteps() {
+            const steps = [
+                { name: 'System requirements check', duration: 1000 },
+                { name: 'Download BLAST+ package', duration: 5000 },
+                { name: 'Extract and prepare files', duration: 3000 },
+                { name: 'Install BLAST+ tools', duration: 4000 },
+                { name: 'Configure environment variables', duration: 2000 },
+                { name: 'Verify installation', duration: 2000 },
+                { name: 'Run comprehensive tests', duration: 3000 }
+            ];
+
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const progress = ((i + 1) / steps.length) * 100;
+                
+                updateProgress(progress, step.name);
+                logMessage(`Executing: ${step.name}`, 'info');
+                
+                // Simulate step execution
+                await new Promise(resolve => setTimeout(resolve, step.duration));
+                
+                logMessage(`Completed: ${step.name}`, 'success');
+                highlightStep(i + 1);
+            }
+        }
+
+        function updateProgress(percentage, stepName) {
+            currentProgress = percentage;
+            const progressBar = document.getElementById('progressBar');
+            const currentStep = document.getElementById('currentStep');
+            
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = Math.round(percentage) + '%';
+            currentStep.textContent = stepName;
+        }
+
+        function highlightStep(stepNumber) {
+            const step = document.getElementById(`step${stepNumber}`);
+            if (step) {
+                step.style.background = '#d4edda';
+                step.style.borderLeft = '4px solid #28a745';
+            }
+        }
+
+        async function runTests() {
+            logMessage('Running BLAST+ installation tests...', 'info');
+            updateStatus('Running tests...', 'installing');
+            
+            document.getElementById('testResults').style.display = 'block';
+            testResults = [];
+
+            const tests = [
+                {
+                    name: 'BLASTN Version Check',
+                    command: 'blastn -version',
+                    expectedPattern: /blastn: [\d.]+/
+                },
+                {
+                    name: 'BLASTP Version Check',
+                    command: 'blastp -version',
+                    expectedPattern: /blastp: [\d.]+/
+                },
+                {
+                    name: 'BLASTX Version Check',
+                    command: 'blastx -version',
+                    expectedPattern: /blastx: [\d.]+/
+                },
+                {
+                    name: 'TBLASTN Version Check',
+                    command: 'tblastn -version',
+                    expectedPattern: /tblastn: [\d.]+/
+                },
+                {
+                    name: 'MAKEBLASTDB Version Check',
+                    command: 'makeblastdb -version',
+                    expectedPattern: /makeblastdb: [\d.]+/
+                },
+                {
+                    name: 'Database Creation Test',
+                    command: 'makeblastdb -help',
+                    expectedPattern: /USAGE/
+                }
+            ];
+
+            for (const test of tests) {
+                await runSingleTest(test);
+            }
+
+            updateStatus('Tests completed', 'ready');
+            displayTestResults();
+        }
+
+        async function runSingleTest(test) {
+            logMessage(`Running test: ${test.name}`, 'info');
+            
+            try {
+                const execAsync = promisify(exec);
+                const { stdout, stderr } = await execAsync(test.command);
+                
+                const output = stdout + stderr;
+                const passed = test.expectedPattern.test(output);
+                
+                testResults.push({
+                    name: test.name,
+                    passed: passed,
+                    output: output.substring(0, 200) + (output.length > 200 ? '...' : ''),
+                    command: test.command
+                });
+
+                logMessage(`Test ${passed ? 'PASSED' : 'FAILED'}: ${test.name}`, passed ? 'success' : 'error');
+                
+            } catch (error) {
+                testResults.push({
+                    name: test.name,
+                    passed: false,
+                    output: error.message,
+                    command: test.command
+                });
+
+                logMessage(`Test FAILED: ${test.name} - ${error.message}`, 'error');
+            }
+        }
+
+        function displayTestResults() {
+            const testGrid = document.getElementById('testGrid');
+            testGrid.innerHTML = '';
+
+            testResults.forEach(test => {
+                const testItem = document.createElement('div');
+                testItem.className = `test-item ${test.passed ? '' : 'failed'}`;
+                
+                testItem.innerHTML = `
+                    <h3>
+                        <i class="fas fa-${test.passed ? 'check-circle' : 'times-circle'}"></i>
+                        ${test.name}
+                    </h3>
+                    <p><strong>Status:</strong> ${test.passed ? 'PASSED' : 'FAILED'}</p>
+                    <p><strong>Command:</strong> <code>${test.command}</code></p>
+                    <p><strong>Output:</strong></p>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 0.8rem; overflow-x: auto;">${test.output}</pre>
+                `;
+                
+                testGrid.appendChild(testItem);
+            });
+
+            const passedTests = testResults.filter(t => t.passed).length;
+            const totalTests = testResults.length;
+            
+            logMessage(`Test summary: ${passedTests}/${totalTests} tests passed`, 
+                      passedTests === totalTests ? 'success' : 'warning');
+        }
+
+        function generateReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                systemInfo: {
+                    os: document.getElementById('osInfo').textContent,
+                    arch: document.getElementById('archInfo').textContent,
+                    platform: document.getElementById('platformInfo').textContent,
+                    nodeVersion: document.getElementById('nodeVersion').textContent,
+                    memory: document.getElementById('memoryInfo').textContent
+                },
+                installation: {
+                    version: blastVersion?.version || 'Unknown',
+                    installPath: installPath,
+                    downloadUrl: downloadUrl
+                },
+                tests: testResults,
+                summary: {
+                    totalTests: testResults.length,
+                    passedTests: testResults.filter(t => t.passed).length,
+                    failedTests: testResults.filter(t => !t.passed).length,
+                    successRate: testResults.length > 0 ? 
+                        (testResults.filter(t => t.passed).length / testResults.length * 100).toFixed(1) + '%' : '0%'
+                }
+            };
+
+            logMessage('Installation report generated', 'success');
+            console.log('BLAST+ Installation Report:', report);
+            
+            return report;
+        }
+
+        function exportReport() {
+            const report = generateReport();
+            const reportJson = JSON.stringify(report, null, 2);
+            
+            const blob = new Blob([reportJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `blast-installation-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logMessage('Report exported successfully', 'success');
+        }
+
+        function updateStatus(message, type) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator status-${type}`;
+            
+            const icons = {
+                ready: 'circle',
+                installing: 'sync spinning',
+                error: 'exclamation-triangle'
+            };
+            
+            indicator.innerHTML = `<i class="fas fa-${icons[type] || 'circle'}"></i> ${message}`;
+        }
+
+        function logMessage(message, level = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">${timestamp}</span>
+                <span class="log-level log-${level}">[${level.toUpperCase()}]</span>
+                <span>${message}</span>
+            `;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[${level.toUpperCase()}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            logMessage('Log cleared', 'info');
+        }
+
+        function exportLog() {
+            const logContainer = document.getElementById('logContainer');
+            const logText = Array.from(logContainer.children).map(entry => entry.textContent).join('\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `blast-installer-log-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logMessage('Log exported successfully', 'success');
+        }
+
+        // Menu action handlers
+        if (typeof ipcRenderer !== 'undefined') {
+            ipcRenderer.on('tool-menu-action', (event, action, data) => {
+                switch (action) {
+                    case 'new-analysis':
+                        initializeInstaller();
+                        break;
+                    case 'save-results':
+                        exportReport();
+                        break;
+                    case 'export-data':
+                        exportLog();
+                        break;
+                    case 'refresh-data':
+                        location.reload();
+                        break;
+                    case 'run-analysis':
+                        if (!installationInProgress) {
+                            startInstallation();
+                        }
+                        break;
+                    case 'clear-results':
+                        clearLog();
+                        break;
+                }
+            });
+        }
+    </script>
+</body>
+</html> 

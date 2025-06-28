@@ -1315,6 +1315,31 @@ function createMenu() {
               }
             }
           ]
+        },
+        { type: 'separator' },
+        {
+          label: 'System Tools',
+          submenu: [
+            {
+              label: 'Install BLAST+ Tools',
+              accelerator: 'CmdOrCtrl+Alt+B',
+              click: () => {
+                createBlastInstallerWindow();
+              }
+            },
+            {
+              label: 'Check BLAST Installation',
+              click: () => {
+                mainWindow.webContents.send('check-blast-installation');
+              }
+            },
+            {
+              label: 'System Requirements Check',
+              click: () => {
+                mainWindow.webContents.send('system-requirements-check');
+              }
+            }
+          ]
         }
       ]
     },
@@ -3152,6 +3177,56 @@ function createEvo2Window() {
   }
 }
 
+// Create BLAST+ Installer Window
+function createBlastInstallerWindow() {
+  try {
+    const blastInstallerWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 1000,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: 'BLAST+ Tools Installer - Genome AI Studio',
+      icon: path.join(__dirname, '../assets/icon.png'),
+      show: false,
+      resizable: true,
+      minimizable: true,
+      maximizable: true
+    });
+
+    blastInstallerWindow.loadFile(path.join(__dirname, 'blast-installer.html'));
+
+    blastInstallerWindow.once('ready-to-show', () => {
+      blastInstallerWindow.show();
+      // Set specialized menu for BLAST installer window
+      createToolWindowMenu(blastInstallerWindow, 'BLAST+ Installer');
+    });
+
+    blastInstallerWindow.on('closed', () => {
+      // 清理菜单模板
+      toolMenuTemplates.delete(blastInstallerWindow.id);
+      
+      // 如果关闭的是当前活动窗口，恢复主窗口菜单
+      if (currentActiveWindow === blastInstallerWindow) {
+        currentActiveWindow = null;
+        const mainMenu = Menu.buildFromTemplate(createMenu());
+        Menu.setApplicationMenu(mainMenu);
+      }
+      console.log('BLAST+ Installer window closed');
+    });
+
+    console.log('BLAST+ Installer window created');
+
+  } catch (error) {
+    console.error('Failed to open BLAST+ Installer:', error);
+  }
+}
+
 // ========== IPC EVENT HANDLERS FOR TOOL WINDOWS ==========
 
 // IPC handlers for opening tool windows (for testing and external access)
@@ -3213,6 +3288,11 @@ ipcMain.on('open-kgml-viewer-window', () => {
 ipcMain.on('open-evo2-window', () => {
   console.log('IPC: Opening Evo2 Design window...');
   createEvo2Window();
+});
+
+ipcMain.on('open-blast-installer-window', () => {
+  console.log('IPC: Opening BLAST+ Installer window...');
+  createBlastInstallerWindow();
 });
 
 // IPC handler for focusing main window
