@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConversationEvolution Connection Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #5a67d8;
+        }
+        .button.danger {
+            background: #e53e3e;
+        }
+        .button.danger:hover {
+            background: #c53030;
+        }
+        .log {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 ConversationEvolution Connection Fix Test</h1>
+            <p>Diagnose and fix ChatManager ↔ ConversationEvolutionManager connection issues</p>
+        </div>
+
+        <div class="content">
+            <!-- System Status -->
+            <div class="section">
+                <h2>🔍 System Status</h2>
+                <div id="systemStatus">
+                    <div><span class="status warning">CHECKING</span> Analyzing system state...</div>
+                </div>
+                <button class="button" onclick="checkSystemStatus()">🔄 Refresh Status</button>
+                <button class="button" onclick="forceReconnection()">🔗 Force Reconnection</button>
+            </div>
+
+            <!-- Connection Diagnostics -->
+            <div class="section">
+                <h2>🔧 Connection Diagnostics</h2>
+                <div id="connectionDiagnostics">
+                    <p>Click "Run Diagnostics" to analyze the connection state.</p>
+                </div>
+                <button class="button" onclick="runConnectionDiagnostics()">🔍 Run Diagnostics</button>
+            </div>
+
+            <!-- Fix Actions -->
+            <div class="section">
+                <h2>🛠️ Fix Actions</h2>
+                <button class="button" onclick="fixEvolutionConnection()">🔧 Fix Evolution Connection</button>
+                <button class="button" onclick="testDataFlow()">📊 Test Data Flow</button>
+                <button class="button" onclick="simulateConversation()">💬 Simulate Conversation</button>
+                <button class="button danger" onclick="forceReset()">🚨 Force Reset</button>
+            </div>
+
+            <!-- Real-time Monitoring -->
+            <div class="section">
+                <h2>📊 Real-time Monitoring</h2>
+                <div class="metrics" id="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="connectionState">Unknown</div>
+                        <div class="metric-label">Connection State</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="eventCount">0</div>
+                        <div class="metric-label">Events Tracked</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="syncCount">0</div>
+                        <div class="metric-label">Sync Attempts</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="errorCount">0</div>
+                        <div class="metric-label">Errors</div>
+                    </div>
+                </div>
+                <button class="button" onclick="toggleMonitoring()">📊 Toggle Monitoring</button>
+            </div>
+
+            <!-- Debug Log -->
+            <div class="section">
+                <h2>📝 Debug Log</h2>
+                <div class="log" id="debugLog">Initializing debug log...\n</div>
+                <button class="button" onclick="clearLog()">🗑️ Clear Log</button>
+                <button class="button" onclick="exportLog()">💾 Export Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let monitoringInterval = null;
+        let logContainer = null;
+        let metrics = {
+            connectionAttempts: 0,
+            eventCount: 0,
+            syncCount: 0,
+            errorCount: 0
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            logContainer = document.getElementById('debugLog');
+            log('🚀 ConversationEvolution Connection Fix Test initialized');
+            checkSystemStatus();
+            startMonitoring();
+        });
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            if (logContainer) {
+                logContainer.textContent += logMessage;
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            console.log(message);
+        }
+
+        function checkSystemStatus() {
+            log('🔍 Checking system status...');
+            const statusDiv = document.getElementById('systemStatus');
+            
+            try {
+                const checks = [];
+                
+                // Check for ChatManager
+                if (typeof window !== 'undefined' && window.chatManager) {
+                    checks.push(`<div><span class="status success">✓</span> ChatManager: Available</div>`);
+                    log('✅ ChatManager is available');
+                } else {
+                    checks.push(`<div><span class="status error">✗</span> ChatManager: Not Available</div>`);
+                    log('❌ ChatManager is not available');
+                }
+                
+                // Check for ConversationEvolutionManager
+                if (window.conversationEvolutionManager) {
+                    checks.push(`<div><span class="status success">✓</span> ConversationEvolutionManager: Available</div>`);
+                    log('✅ ConversationEvolutionManager is available');
+                } else {
+                    checks.push(`<div><span class="status error">✗</span> ConversationEvolutionManager: Not Available</div>`);
+                    log('❌ ConversationEvolutionManager is not available');
+                }
+                
+                // Check for window.evolutionManager
+                if (window.evolutionManager) {
+                    checks.push(`<div><span class="status success">✓</span> window.evolutionManager: Available</div>`);
+                    log('✅ window.evolutionManager is available');
+                } else {
+                    checks.push(`<div><span class="status warning">⚠</span> window.evolutionManager: Not Available</div>`);
+                    log('⚠️ window.evolutionManager is not available');
+                }
+                
+                // Check connection between ChatManager and Evolution
+                if (window.chatManager && window.chatManager.evolutionManager) {
+                    checks.push(`<div><span class="status success">✓</span> ChatManager-Evolution Connection: Connected</div>`);
+                    log('✅ ChatManager is connected to Evolution Manager');
+                } else {
+                    checks.push(`<div><span class="status error">✗</span> ChatManager-Evolution Connection: Disconnected</div>`);
+                    log('❌ ChatManager is NOT connected to Evolution Manager');
+                }
+                
+                // Check current conversation data
+                if (window.chatManager && window.chatManager.currentConversationData) {
+                    const data = window.chatManager.currentConversationData;
+                    checks.push(`<div><span class="status success">✓</span> Current Conversation: ${data.events.length} events</div>`);
+                    log(`✅ Current conversation has ${data.events.length} events`);
+                } else {
+                    checks.push(`<div><span class="status warning">⚠</span> Current Conversation: No data</div>`);
+                    log('⚠️ No current conversation data');
+                }
+                
+                statusDiv.innerHTML = checks.join('');
+                
+            } catch (error) {
+                log(`❌ Error checking system status: ${error.message}`);
+                statusDiv.innerHTML = `<div><span class="status error">ERROR</span> ${error.message}</div>`;
+            }
+        }
+
+        function runConnectionDiagnostics() {
+            log('🔧 Running connection diagnostics...');
+            const diagnosticsDiv = document.getElementById('connectionDiagnostics');
+            
+            try {
+                const diagnostics = [];
+                
+                // Deep inspection of ChatManager
+                if (window.chatManager) {
+                    diagnostics.push(`<h3>ChatManager Analysis:</h3>`);
+                    diagnostics.push(`<p>Evolution Enabled: ${window.chatManager.evolutionEnabled}</p>`);
+                    diagnostics.push(`<p>Evolution Manager: ${!!window.chatManager.evolutionManager}</p>`);
+                    
+                    if (window.chatManager.currentConversationData) {
+                        const data = window.chatManager.currentConversationData;
+                        diagnostics.push(`<p>Conversation ID: ${data.id}</p>`);
+                        diagnostics.push(`<p>Start Time: ${data.startTime}</p>`);
+                        diagnostics.push(`<p>Events: ${data.events.length}</p>`);
+                        
+                        if (data.events.length > 0) {
+                            const lastEvent = data.events[data.events.length - 1];
+                            diagnostics.push(`<p>Last Event: ${lastEvent.type} at ${lastEvent.timestamp}</p>`);
+                        }
+                    }
+                }
+                
+                // Global references analysis
+                diagnostics.push(`<h3>Global References:</h3>`);
+                diagnostics.push(`<p>window.chatManager: ${typeof window.chatManager}</p>`);
+                diagnostics.push(`<p>window.evolutionManager: ${typeof window.evolutionManager}</p>`);
+                diagnostics.push(`<p>window.conversationEvolutionManager: ${typeof window.conversationEvolutionManager}</p>`);
+                
+                // Method availability
+                if (window.chatManager) {
+                    diagnostics.push(`<h3>ChatManager Methods:</h3>`);
+                    diagnostics.push(`<p>connectToEvolutionManager: ${typeof window.chatManager.connectToEvolutionManager}</p>`);
+                    diagnostics.push(`<p>syncCurrentConversationToEvolution: ${typeof window.chatManager.syncCurrentConversationToEvolution}</p>`);
+                    diagnostics.push(`<p>addToEvolutionData: ${typeof window.chatManager.addToEvolutionData}</p>`);
+                }
+                
+                if (window.conversationEvolutionManager) {
+                    diagnostics.push(`<h3>Evolution Manager Methods:</h3>`);
+                    diagnostics.push(`<p>addConversationData: ${typeof window.conversationEvolutionManager.addConversationData}</p>`);
+                    diagnostics.push(`<p>connectToChatBox: ${typeof window.conversationEvolutionManager.connectToChatBox}</p>`);
+                }
+                
+                diagnosticsDiv.innerHTML = diagnostics.join('');
+                log('✅ Connection diagnostics completed');
+                
+            } catch (error) {
+                log(`❌ Error running diagnostics: ${error.message}`);
+                diagnosticsDiv.innerHTML = `<div class="status error">ERROR: ${error.message}</div>`;
+            }
+        }
+
+        function fixEvolutionConnection() {
+            log('🔧 Attempting to fix Evolution connection...');
+            
+            try {
+                let fixed = false;
+                
+                // Step 1: Ensure both managers exist
+                if (!window.chatManager) {
+                    log('❌ ChatManager not available, cannot fix connection');
+                    return;
+                }
+                
+                if (!window.conversationEvolutionManager && !window.evolutionManager) {
+                    log('❌ Evolution Manager not available, cannot fix connection');
+                    return;
+                }
+                
+                // Step 2: Establish connection from ChatManager side
+                const evolutionManager = window.conversationEvolutionManager || window.evolutionManager;
+                if (evolutionManager && window.chatManager.connectToEvolutionManager) {
+                    window.chatManager.connectToEvolutionManager(evolutionManager);
+                    log('🔗 Connected ChatManager to Evolution Manager');
+                    fixed = true;
+                }
+                
+                // Step 3: Establish connection from Evolution Manager side
+                if (evolutionManager && evolutionManager.connectToChatBox) {
+                    evolutionManager.connectToChatBox();
+                    log('🔗 Connected Evolution Manager to ChatBox');
+                    fixed = true;
+                }
+                
+                // Step 4: Set up global references
+                if (!window.evolutionManager && window.conversationEvolutionManager) {
+                    window.evolutionManager = window.conversationEvolutionManager;
+                    log('🔧 Fixed window.evolutionManager reference');
+                    fixed = true;
+                }
+                
+                // Step 5: Force sync if there's data
+                if (window.chatManager.currentConversationData && 
+                    window.chatManager.currentConversationData.events.length > 0) {
+                    window.chatManager.syncCurrentConversationToEvolution();
+                    log('🔄 Forced sync of current conversation data');
+                    metrics.syncCount++;
+                }
+                
+                if (fixed) {
+                    log('✅ Evolution connection fix completed');
+                } else {
+                    log('⚠️ No fixes were needed or possible');
+                }
+                
+                // Refresh status
+                setTimeout(checkSystemStatus, 500);
+                
+            } catch (error) {
+                log(`❌ Error fixing Evolution connection: ${error.message}`);
+                metrics.errorCount++;
+            }
+        }
+
+        function testDataFlow() {
+            log('📊 Testing data flow...');
+            
+            try {
+                if (!window.chatManager) {
+                    log('❌ ChatManager not available for testing');
+                    return;
+                }
+                
+                // Test adding Evolution data
+                const testEvent = {
+                    type: 'test_event',
+                    content: 'Connection test event',
+                    metadata: { 
+                        source: 'connection_test',
+                        timestamp: new Date().toISOString()
+                    }
+                };
+                
+                window.chatManager.addToEvolutionData(testEvent);
+                log('📤 Test event added to Evolution data');
+                metrics.eventCount++;
+                
+                // Test sync
+                if (window.chatManager.syncCurrentConversationToEvolution) {
+                    window.chatManager.syncCurrentConversationToEvolution();
+                    log('🔄 Manual sync triggered');
+                    metrics.syncCount++;
+                }
+                
+                // Check if data reached Evolution Manager
+                setTimeout(() => {
+                    if (window.conversationEvolutionManager && 
+                        window.conversationEvolutionManager.storageManager) {
+                        log('✅ Data flow test completed');
+                    } else {
+                        log('⚠️ Cannot verify data reached Evolution Manager');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Error testing data flow: ${error.message}`);
+                metrics.errorCount++;
+            }
+        }
+
+        function simulateConversation() {
+            log('💬 Simulating conversation...');
+            
+            try {
+                if (!window.chatManager) {
+                    log('❌ ChatManager not available for simulation');
+                    return;
+                }
+                
+                // Simulate various conversation events
+                const events = [
+                    {
+                        type: 'message',
+                        content: 'Test user message',
+                        sender: 'user',
+                        metadata: { source: 'simulation' }
+                    },
+                    {
+                        type: 'thinking_process',
+                        content: 'AI thinking simulation...',
+                        metadata: { source: 'simulation' }
+                    },
+                    {
+                        type: 'message',
+                        content: 'Test AI response',
+                        sender: 'assistant',
+                        metadata: { source: 'simulation' }
+                    }
+                ];
+                
+                events.forEach((event, index) => {
+                    setTimeout(() => {
+                        window.chatManager.addToEvolutionData(event);
+                        log(`📝 Simulated ${event.type}: ${event.content}`);
+                        metrics.eventCount++;
+                    }, index * 500);
+                });
+                
+                // Force sync after all events
+                setTimeout(() => {
+                    if (window.chatManager.syncCurrentConversationToEvolution) {
+                        window.chatManager.syncCurrentConversationToEvolution();
+                        log('🔄 Forced sync after simulation');
+                        metrics.syncCount++;
+                    }
+                }, events.length * 500 + 1000);
+                
+            } catch (error) {
+                log(`❌ Error simulating conversation: ${error.message}`);
+                metrics.errorCount++;
+            }
+        }
+
+        function forceReconnection() {
+            log('🔗 Forcing reconnection...');
+            metrics.connectionAttempts++;
+            
+            try {
+                // Reset ChatManager evolution connection
+                if (window.chatManager) {
+                    window.chatManager.evolutionManager = null;
+                    log('🔄 Reset ChatManager evolution connection');
+                }
+                
+                // Re-run initialization
+                if (window.chatManager && window.chatManager.initializeEvolutionIntegration) {
+                    window.chatManager.initializeEvolutionIntegration();
+                    log('🔄 Re-initialized Evolution integration');
+                }
+                
+                // Force connection
+                setTimeout(() => {
+                    fixEvolutionConnection();
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Error forcing reconnection: ${error.message}`);
+                metrics.errorCount++;
+            }
+        }
+
+        function forceReset() {
+            log('🚨 Performing force reset...');
+            
+            try {
+                // Reset all tracking
+                metrics = {
+                    connectionAttempts: 0,
+                    eventCount: 0,
+                    syncCount: 0,
+                    errorCount: 0
+                };
+                
+                // Reset ChatManager data
+                if (window.chatManager) {
+                    window.chatManager.evolutionManager = null;
+                    if (window.chatManager.resetCurrentConversationData) {
+                        window.chatManager.resetCurrentConversationData();
+                        log('🔄 Reset current conversation data');
+                    }
+                }
+                
+                // Clear Evolution data
+                if (window.conversationEvolutionManager && 
+                    window.conversationEvolutionManager.storageManager) {
+                    log('🗑️ Cleared Evolution storage (if possible)');
+                }
+                
+                log('✅ Force reset completed');
+                
+                // Restart everything
+                setTimeout(() => {
+                    forceReconnection();
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Error during force reset: ${error.message}`);
+                metrics.errorCount++;
+            }
+        }
+
+        function startMonitoring() {
+            if (monitoringInterval) return;
+            
+            monitoringInterval = setInterval(() => {
+                updateMetrics();
+            }, 1000);
+            
+            log('📊 Real-time monitoring started');
+        }
+
+        function toggleMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                log('📊 Real-time monitoring stopped');
+            } else {
+                startMonitoring();
+            }
+        }
+
+        function updateMetrics() {
+            try {
+                // Connection state
+                let connectionState = 'Disconnected';
+                if (window.chatManager && window.chatManager.evolutionManager) {
+                    connectionState = 'Connected';
+                } else if (window.chatManager || window.conversationEvolutionManager) {
+                    connectionState = 'Partial';
+                }
+                
+                document.getElementById('connectionState').textContent = connectionState;
+                document.getElementById('eventCount').textContent = metrics.eventCount;
+                document.getElementById('syncCount').textContent = metrics.syncCount;
+                document.getElementById('errorCount').textContent = metrics.errorCount;
+                
+            } catch (error) {
+                // Silent error - don't spam logs
+            }
+        }
+
+        function clearLog() {
+            if (logContainer) {
+                logContainer.textContent = '';
+            }
+        }
+
+        function exportLog() {
+            const logContent = logContainer ? logContainer.textContent : '';
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `conversation-evolution-debug-${Date.now()}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('💾 Debug log exported');
+        }
+    </script>
+</body>
+</html> 

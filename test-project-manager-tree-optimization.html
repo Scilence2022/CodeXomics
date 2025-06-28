@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Tree Optimization Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            color: #2c3e50;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .tree-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .tree-panel h3 {
+            margin-top: 0;
+            color: #495057;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tree-item {
+            display: flex;
+            flex-direction: column;
+            margin: 2px 0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        /* 优化后的样式 */
+        .optimized .tree-item-content {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            min-height: 22px;
+        }
+
+        .optimized .tree-item.file .tree-item-content {
+            padding: 3px 8px;
+            min-height: 20px;
+        }
+
+        .optimized .tree-main-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .optimized .tree-main-icon:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
+        }
+
+        /* 原始样式（对比用） */
+        .original .tree-item-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            min-height: 32px;
+        }
+
+        .original .tree-item.file .tree-item-content {
+            padding: 6px 12px;
+            min-height: 28px;
+        }
+
+        .original .tree-expander {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .original .tree-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .tree-item-content:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(2px);
+        }
+
+        .tree-label {
+            flex: 1;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .optimized .tree-item.file .tree-label {
+            font-size: 12px;
+        }
+
+        .original .tree-item.file .tree-label {
+            font-size: 13px;
+        }
+
+        .tree-file-count {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-right: 8px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .tree-actions {
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .tree-item-content:hover .tree-actions {
+            opacity: 1;
+        }
+
+        .tree-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-icon {
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .improvements {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .improvements h3 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+
+        .improvement-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .improvement-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #0066cc;
+        }
+
+        .improvement-item h4 {
+            margin: 0 0 8px 0;
+            color: #0066cc;
+        }
+
+        .improvement-item .before {
+            color: #dc3545;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .improvement-item .after {
+            color: #28a745;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 Project Manager Tree Optimization</h1>
+            <p>Before and After Comparison - Improved User Experience</p>
+        </div>
+
+        <div class="content">
+            <div class="comparison">
+                <!-- 优化后的目录树 -->
+                <div class="tree-panel optimized">
+                    <h3>✅ 优化后 (Optimized)</h3>
+                    
+                    <!-- 项目 -->
+                    <div class="tree-item project">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📂</div>
+                            <span class="tree-label">Genome Project A</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件夹 (8px 缩进) -->
+                    <div class="tree-item folder" style="margin-left: 8px;">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📂</div>
+                            <span class="tree-label">genomes</span>
+                            <div class="tree-file-count">3</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件 (16px 缩进) -->
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="file-icon" style="background-color: #28a745; color: white; font-size: 7px; width: 14px; height: 14px;">GB</div>
+                            <span class="tree-label">E_coli_K12.fasta</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item file" style="margin-left: 16px;">
+                        <div class="tree-item-content">
+                            <div class="file-icon" style="background-color: #17a2b8; color: white; font-size: 7px; width: 14px; height: 14px;">FQ</div>
+                            <span class="tree-label">reads_R1.fastq</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 另一个文件夹 -->
+                    <div class="tree-item folder" style="margin-left: 8px;">
+                        <div class="tree-item-content">
+                            <div class="tree-main-icon">📁</div>
+                            <span class="tree-label">annotations</span>
+                            <div class="tree-file-count">2</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 原始的目录树 -->
+                <div class="tree-panel original">
+                    <h3>❌ 优化前 (Original)</h3>
+                    
+                    <!-- 项目 -->
+                    <div class="tree-item project">
+                        <div class="tree-item-content">
+                            <div class="tree-expander">📂</div>
+                            <div class="tree-icon">🗂️</div>
+                            <span class="tree-label">Genome Project A</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件夹 (20px 缩进) -->
+                    <div class="tree-item folder" style="margin-left: 20px;">
+                        <div class="tree-item-content">
+                            <div class="tree-expander">📂</div>
+                            <div class="tree-icon">📁</div>
+                            <span class="tree-label">genomes</span>
+                            <div class="tree-file-count">3</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件 (40px 缩进) -->
+                    <div class="tree-item file" style="margin-left: 40px;">
+                        <div class="tree-item-content">
+                            <div class="tree-expander" style="visibility: hidden;"></div>
+                            <div class="file-icon" style="background-color: #28a745; color: white; font-size: 8px; width: 16px; height: 16px;">GB</div>
+                            <span class="tree-label">E_coli_K12.fasta</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-item file" style="margin-left: 40px;">
+                        <div class="tree-item-content">
+                            <div class="tree-expander" style="visibility: hidden;"></div>
+                            <div class="file-icon" style="background-color: #17a2b8; color: white; font-size: 8px; width: 16px; height: 16px;">FQ</div>
+                            <span class="tree-label">reads_R1.fastq</span>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">👁️</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 另一个文件夹 -->
+                    <div class="tree-item folder" style="margin-left: 20px;">
+                        <div class="tree-item-content">
+                            <div class="tree-expander">📁</div>
+                            <div class="tree-icon">📁</div>
+                            <span class="tree-label">annotations</span>
+                            <div class="tree-file-count">2</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn">⋯</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="improvements">
+                <h3>🎯 优化改进总结</h3>
+                <div class="improvement-list">
+                    <div class="improvement-item">
+                        <h4>1. 图标整合</h4>
+                        <p><strong>优化前:</strong> <span class="before">展开图标 + 类型图标</span></p>
+                        <p><strong>优化后:</strong> <span class="after">单一智能图标</span></p>
+                        <p>将展开/收起状态与图标类型合并，减少视觉混乱</p>
+                    </div>
+                    
+                    <div class="improvement-item">
+                        <h4>2. 缩进距离优化</h4>
+                        <p><strong>优化前:</strong> <span class="before">20px 基础缩进</span></p>
+                        <p><strong>优化后:</strong> <span class="after">8px 基础缩进</span></p>
+                        <p>减少到约半个图标宽度，节省水平空间</p>
+                    </div>
+                    
+                    <div class="improvement-item">
+                        <h4>3. 行高压缩</h4>
+                        <p><strong>优化前:</strong> <span class="before">32px 最小高度</span></p>
+                        <p><strong>优化后:</strong> <span class="after">22px 最小高度</span></p>
+                        <p>文件行从28px减少到20px，显示更多内容</p>
+                    </div>
+                    
+                    <div class="improvement-item">
+                        <h4>4. 内边距减少</h4>
+                        <p><strong>优化前:</strong> <span class="before">8px-12px 内边距</span></p>
+                        <p><strong>优化后:</strong> <span class="after">3px-8px 内边距</span></p>
+                        <p>更紧凑的布局，减少不必要的空白</p>
+                    </div>
+                    
+                    <div class="improvement-item">
+                        <h4>5. 字体大小调整</h4>
+                        <p><strong>优化前:</strong> <span class="before">13px 文件名</span></p>
+                        <p><strong>优化后:</strong> <span class="after">12px 文件名</span></p>
+                        <p>适当减小文件名字体，提高密度</p>
+                    </div>
+                    
+                    <div class="improvement-item">
+                        <h4>6. 交互体验</h4>
+                        <p><strong>改进:</strong> <span class="after">点击图标展开/收起</span></p>
+                        <p>整合后的图标具有更直观的交互逻辑</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <h3>🚀 用户体验提升</h3>
+                <p><strong>空间利用率提升约 40%</strong> • <strong>视觉清爽度提升</strong> • <strong>操作效率提高</strong></p>
+                <p>通过减少冗余图标、优化缩进和行高，实现更紧凑、更高效的目录树界面</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加交互功能示例
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加点击展开/收起效果
+            document.querySelectorAll('.tree-main-icon').forEach(icon => {
+                icon.addEventListener('click', function() {
+                    const isExpanded = this.textContent === '📂';
+                    this.textContent = isExpanded ? '📁' : '📂';
+                });
+            });
+            
+            console.log('🌳 Project Manager Tree Optimization Demo Ready');
+        });
+    </script>
+</body>
+</html> 

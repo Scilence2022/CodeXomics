@@ -285,24 +285,64 @@ class ChatManager {
      */
     async initializeEvolutionIntegration() {
         try {
+            console.log('🧬 Initializing Evolution integration...');
+            
             // Check if ConversationEvolutionManager is available globally
-            if (typeof window !== 'undefined' && 
-                (window.evolutionManager || window.conversationEvolutionManager)) {
-                this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
-                console.log('🧬 Evolution Manager connected to ChatBox');
-            } else {
-                console.log('🧬 Evolution Manager not available yet, will connect when available');
-                // Set up a delayed check for when Evolution Manager becomes available
-                setTimeout(() => {
+            let evolutionManagerFound = false;
+            
+            if (typeof window !== 'undefined') {
+                if (window.evolutionManager) {
+                    this.evolutionManager = window.evolutionManager;
+                    evolutionManagerFound = true;
+                    console.log('🧬 Evolution Manager connected to ChatBox via window.evolutionManager');
+                } else if (window.conversationEvolutionManager) {
+                    this.evolutionManager = window.conversationEvolutionManager;
+                    evolutionManagerFound = true;
+                    console.log('🧬 Evolution Manager connected to ChatBox via window.conversationEvolutionManager');
+                }
+            }
+            
+            if (!evolutionManagerFound) {
+                console.log('🧬 Evolution Manager not available yet, setting up polling...');
+                
+                // Set up aggressive polling for Evolution Manager
+                let pollCount = 0;
+                const maxPolls = 50; // 10 seconds with 200ms intervals
+                
+                const pollForEvolutionManager = () => {
+                    pollCount++;
+                    
                     if (window.evolutionManager || window.conversationEvolutionManager) {
                         this.evolutionManager = window.evolutionManager || window.conversationEvolutionManager;
-                        console.log('🧬 Evolution Manager connected to ChatBox (delayed)');
+                        console.log(`🧬 Evolution Manager connected to ChatBox (poll ${pollCount})`);
+                        
+                        // Immediately sync current conversation if it exists
+                        if (this.currentConversationData && this.currentConversationData.events.length > 0) {
+                            console.log('🧬 Syncing existing conversation data to Evolution Manager');
+                            this.syncCurrentConversationToEvolution();
+                        }
+                        
+                        return;
                     }
-                }, 2000);
+                    
+                    if (pollCount < maxPolls) {
+                        setTimeout(pollForEvolutionManager, 200);
+                    } else {
+                        console.warn('🧬 Evolution Manager not found after polling timeout');
+                    }
+                };
+                
+                setTimeout(pollForEvolutionManager, 100);
             }
             
             // Initialize current conversation data structure
             this.resetCurrentConversationData();
+            
+            // If Evolution Manager is already connected, sync immediately
+            if (evolutionManagerFound && this.currentConversationData) {
+                console.log('🧬 Performing initial sync to Evolution Manager');
+                this.syncCurrentConversationToEvolution();
+            }
             
         } catch (error) {
             console.error('❌ Failed to initialize Evolution integration:', error);

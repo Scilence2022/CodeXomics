@@ -472,11 +472,11 @@
         .tree-item-content {
             display: flex;
             align-items: center;
-            padding: 8px 12px;
+            padding: 4px 8px; /* 减少内边距 */
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.2s ease;
-            min-height: 32px;
+            min-height: 22px; /* 减少最小高度 */
         }
 
         .tree-item-content:hover {
@@ -511,11 +511,28 @@
         .tree-icon {
             width: 16px;
             height: 16px;
-            margin-right: 8px;
+            margin-right: 6px; /* 减少右边距 */
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 12px;
+        }
+
+        /* 新增主图标样式 */
+        .tree-main-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .tree-main-icon:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
         }
 
         .tree-label {
@@ -577,14 +594,14 @@
         .tree-children {
             margin-left: 0;
             border-left: 1px solid rgba(102, 126, 234, 0.1);
-            margin-left: 8px;
-            padding-left: 4px;
+            margin-left: 4px; /* 减少默认子项缩进 */
+            padding-left: 2px;
         }
 
         /* 文件项特殊样式 */
         .tree-item.file .tree-item-content {
-            padding: 6px 12px;
-            min-height: 28px;
+            padding: 3px 8px; /* 减少文件项内边距 */
+            min-height: 20px; /* 减少文件项最小高度 */
         }
 
         .tree-item.file.selected > .tree-item-content {
@@ -594,7 +611,7 @@
 
         .tree-item.file .tree-label {
             font-weight: 400;
-            font-size: 13px;
+            font-size: 12px; /* 减小文件名字体 */
         }
 
         /* ===== 紧凑文件树样式 ===== */
@@ -607,13 +624,13 @@
         }
 
         .compact-tree-mode .tree-item-content {
-            padding: 4px 8px;
-            min-height: 22px;
+            padding: 2px 6px; /* 进一步减少紧凑模式内边距 */
+            min-height: 18px; /* 进一步减少紧凑模式高度 */
         }
 
         .compact-tree-mode .tree-item.file .tree-item-content {
-            padding: 3px 8px;
-            min-height: 20px;
+            padding: 2px 6px; /* 紧凑模式文件项内边距 */
+            min-height: 16px; /* 紧凑模式文件项高度 */
         }
 
         .compact-tree-mode .tree-expander {
@@ -626,7 +643,14 @@
         .compact-tree-mode .tree-icon {
             width: 12px;
             height: 12px;
-            margin-right: 5px;
+            margin-right: 4px; /* 减少紧凑模式图标间距 */
+            font-size: 10px;
+        }
+
+        .compact-tree-mode .tree-main-icon {
+            width: 12px;
+            height: 12px;
+            margin-right: 4px;
             font-size: 10px;
         }
 
@@ -638,13 +662,13 @@
         }
 
         .compact-tree-mode .tree-label {
-            font-size: 12px;
+            font-size: 11px; /* 减小紧凑模式标签字体 */
             margin-right: 4px;
             line-height: 1.2;
         }
 
         .compact-tree-mode .tree-item.file .tree-label {
-            font-size: 11px;
+            font-size: 10px; /* 进一步减小紧凑模式文件标签字体 */
         }
 
         .compact-tree-mode .tree-file-count {
@@ -671,7 +695,7 @@
         }
 
         .compact-tree-mode .tree-children {
-            margin-left: 6px;
+            margin-left: 4px; /* 减少紧凑模式子项缩进 */
             padding-left: 2px;
         }
 

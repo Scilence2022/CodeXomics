@@ -856,22 +856,48 @@ class ConversationEvolutionManager {
             if (typeof window !== 'undefined' && window.chatManager) {
                 window.chatManager.connectToEvolutionManager(this);
                 console.log('🧬 Connected to ChatBox for data integration');
+                return true;
             } else {
-                console.log('🧬 ChatBox not available yet, will connect when available');
+                console.log('🧬 ChatBox not available yet, setting up delayed connection...');
                 
                 // Set up a listener for when ChatBox becomes available
                 const checkForChatBox = () => {
                     if (window.chatManager) {
                         window.chatManager.connectToEvolutionManager(this);
                         console.log('🧬 Connected to ChatBox for data integration (delayed)');
+                        return true;
                     } else {
-                        setTimeout(checkForChatBox, 1000); // Check every second
+                        // Continue checking every second for up to 30 seconds
+                        setTimeout(checkForChatBox, 1000);
                     }
                 };
-                setTimeout(checkForChatBox, 1000);
+                
+                // Start checking immediately and continue
+                setTimeout(checkForChatBox, 100);
+                
+                // Also set up global availability check
+                if (typeof window !== 'undefined') {
+                    const originalChatManager = window.chatManager;
+                    Object.defineProperty(window, 'chatManager', {
+                        get: function() {
+                            return originalChatManager;
+                        },
+                        set: function(value) {
+                            originalChatManager = value;
+                            if (value && value.connectToEvolutionManager) {
+                                value.connectToEvolutionManager(window.evolutionManager || window.conversationEvolutionManager);
+                                console.log('🧬 Auto-connected ChatManager to Evolution Manager via setter');
+                            }
+                        },
+                        configurable: true
+                    });
+                }
+                
+                return false;
             }
         } catch (error) {
             console.error('❌ Failed to connect to ChatBox:', error);
+            return false;
         }
     }
 

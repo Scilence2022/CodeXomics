@@ -304,16 +304,22 @@ class ProjectManagerWindow {
             this.projects.forEach((project, projectId) => {
                 const isActive = this.currentProject && this.currentProject.id === projectId;
                 const isExpanded = this.expandedProjects && this.expandedProjects.has(projectId);
+                const hasChildren = project.folders && project.folders.length > 0;
+                
+                // 整合图标：展开状态 + 项目图标
+                let combinedIcon = '🗂️';
+                if (hasChildren) {
+                    combinedIcon = isExpanded ? '📂' : '📁';
+                }
                 
                 html += `
                     <div class="tree-item project ${isActive ? 'active' : ''}" 
                          data-project-id="${projectId}">
                         <div class="tree-item-content" onclick="projectManagerWindow.selectProject('${projectId}')">
-                            <div class="tree-expander" onclick="event.stopPropagation(); projectManagerWindow.toggleProjectExpansion('${projectId}')" 
-                                 style="visibility: ${project.folders && project.folders.length > 0 ? 'visible' : 'hidden'}">
-                                ${isExpanded ? '📂' : '📁'}
+                            <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleProjectExpansion('${projectId}')"
+                                 style="cursor: ${hasChildren ? 'pointer' : 'default'};">
+                                ${combinedIcon}
                             </div>
-                            <div class="tree-icon">🗂️</div>
                             <span class="tree-label" title="${project.description || project.name}">${project.name}</span>
                             <div class="tree-actions">
                                 <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showProjectContextMenu(event, '${projectId}')" title="More options">⋯</button>
@@ -340,12 +346,12 @@ class ProjectManagerWindow {
      */
     renderFolderTree(folders, files, level = 0) {
         let html = '';
-        // 根据当前模式决定缩进大小
-        let baseIndent = 20;
+        // 根据当前模式决定缩进大小 - 大幅减少缩进
+        let baseIndent = 8; // 减少到8px（约半个图标宽度）
         if (this.ultraCompactMode) {
-            baseIndent = 8;
+            baseIndent = 4;
         } else if (this.compactTreeMode) {
-            baseIndent = 12;
+            baseIndent = 6;
         }
         const indent = level * baseIndent;
         
@@ -368,16 +374,21 @@ class ProjectManagerWindow {
             
             const hasChildren = folderFiles.length > 0 || subFolders.length > 0;
             
+            // 整合图标：展开状态 + 文件夹图标
+            let combinedIcon = folder.icon || '📁';
+            if (hasChildren) {
+                combinedIcon = isExpanded ? '📂' : '📁';
+            }
+            
             html += `
                 <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
                      style="margin-left: ${indent}px;"
                      data-folder-path="${JSON.stringify(folder.path).replace(/"/g, '&quot;')}">
                     <div class="tree-item-content">
-                        <div class="tree-expander" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}')"
-                             style="visibility: ${hasChildren ? 'visible' : 'hidden'}">
-                            ${isExpanded ? '📂' : '📁'}
+                        <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}')"
+                             style="cursor: ${hasChildren ? 'pointer' : 'default'};">
+                            ${combinedIcon}
                         </div>
-                        <div class="tree-icon">${folder.icon || '📁'}</div>
                         <span class="tree-label" onclick="projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})">${folder.name}</span>
                         <div class="tree-file-count">${folderFiles.length}</div>
                         <div class="tree-actions">
@@ -403,14 +414,14 @@ class ProjectManagerWindow {
                     const fileIndent = (level + 1) * baseIndent;
                     
                     // 动态调整文件图标大小
-                    let iconSize = '16px';
-                    let fontSize = '8px';
+                    let iconSize = '14px'; // 稍微减小图标
+                    let fontSize = '7px';
                     if (this.ultraCompactMode) {
                         iconSize = '10px';
                         fontSize = '6px';
                     } else if (this.compactTreeMode) {
                         iconSize = '12px';
-                        fontSize = '7px';
+                        fontSize = '6px';
                     }
                     
                     html += `
@@ -420,7 +431,6 @@ class ProjectManagerWindow {
                             <div class="tree-item-content" 
                                  onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
                                  ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')">
-                                <div class="tree-expander" style="visibility: hidden;"></div>
                                 <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: white; font-size: ${fontSize}; width: ${iconSize}; height: ${iconSize}; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
                                 <span class="tree-label" title="${file.name}">${file.name}</span>
                                 <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
