@@ -13,15 +13,6 @@ class SequenceUtils {
         const end = this.genomeBrowser.currentPosition.end;
         const windowSize = end - start;
         
-        // Choose display method based on window size
-        if (windowSize <= 500) {
-            this.displayDetailedSequence(chromosome, sequence, start, end);
-        } else if (windowSize <= 2000) {
-            this.displaySequenceWithAnnotations(chromosome, sequence, start, end);
-        } else {
-            this.displaySequence(chromosome, sequence, start, end);
-        }
-        
         // Update sequence title
         const sequenceTitle = document.getElementById('sequenceTitle');
         if (sequenceTitle) {
@@ -44,6 +35,9 @@ class SequenceUtils {
         }
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
         
+        // Use VS Code-style editor for better performance and UX
+        this.displayVSCodeSequence(chromosome, sequence, start, end);
+        
         // Re-highlight selected gene sequence if there is one
         if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
             // Use setTimeout to ensure the DOM is updated before highlighting
@@ -51,6 +45,22 @@ class SequenceUtils {
                 this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
             }, 100);
         }
+    }
+    
+    /**
+     * Display sequence using VS Code-style editor
+     */
+    displayVSCodeSequence(chromosome, sequence, start, end) {
+        const container = document.getElementById('sequenceContent');
+        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+        
+        // Initialize VS Code editor if not already done
+        if (!this.vscodeEditor) {
+            this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
+        }
+        
+        // Update the editor with new sequence data
+        this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
     }
 
     measureCharacterWidth(container) {
