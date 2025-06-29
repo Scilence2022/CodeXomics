@@ -2933,6 +2933,10 @@ Data Management:
                 'search_gene_by_name', 'search_features', 'jump_to_gene', 
                 'navigate_to_position', 'search_by_position'
             ],
+            'SYSTEM STATUS': [
+                'get_genome_info', 'check_genomics_environment', 'get_file_info', 
+                'get_current_state', 'get_chromosome_list'
+            ],
             'SEQUENCE ANALYSIS': [
                 'get_coding_sequence', 'get_multiple_coding_sequences', 'get_sequence', 
                 'translate_dna', 'reverse_complement', 'compute_gc'
@@ -3059,6 +3063,22 @@ ANALYSIS FUNCTIONS:
 - Composition: compute_gc, sequence_statistics, codon_usage_analysis
 - Features: find_orfs, predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
+
+IMPORTANT PREREQUISITES:
+Before using get_coding_sequence or other gene-specific functions:
+1. Ensure genome data is loaded (GenBank/GFF files)
+2. Use search_gene_by_name to verify gene exists
+3. Check current genome state with get_genome_info
+
+WORKFLOW EXAMPLES:
+• Gene Analysis Workflow:
+  1. {"tool_name": "search_gene_by_name", "parameters": {"name": "lysC"}}
+  2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lysC"}}
+  3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
+
+• Data Verification:
+  1. {"tool_name": "get_genome_info", "parameters": {}}
+  2. {"tool_name": "get_file_info", "parameters": {}}
 
 EXAMPLES:
 • Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
@@ -4137,6 +4157,10 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.getGenomeInfo(parameters);
                     break;
                     
+                case 'check_genomics_environment':
+                    result = this.checkGenomicsEnvironment();
+                    break;
+                    
                 case 'fetch_protein_structure':
                     result = await this.fetchProteinStructure(parameters);
                     break;
@@ -5019,19 +5043,28 @@ ${this.getPluginSystemInfo()}`;
         if (!identifier) {
             throw new Error('Gene identifier (name or locus_tag) is required');
         }
-        
-        // Use MicrobeGenomicsFunctions to get the coding sequence
-        if (!window.MicrobeFns || !window.MicrobeFns.getCodingSequence) {
-            throw new Error('MicrobeGenomicsFunctions not available');
+
+        // 详细的环境检查
+        const environmentCheck = this.checkGenomicsEnvironment();
+        if (!environmentCheck.valid) {
+            throw new Error(environmentCheck.message);
         }
-        
+
         try {
             const result = window.MicrobeFns.getCodingSequence(identifier);
             
             if (!result.success) {
-                throw new Error(result.error);
+                // 提供更详细的错误信息和建议
+                let errorMessage = result.error;
+                if (result.error.includes('not found')) {
+                    errorMessage += `\n\nSuggestions:
+- Try using search_gene_by_name first to find the exact gene name
+- Check if the gene exists using search_features
+- Verify the genome data is loaded correctly`;
+                }
+                throw new Error(errorMessage);
             }
-            
+
             // Format the result based on requested format
             if (format === 'fasta') {
                 return {
@@ -5041,7 +5074,7 @@ ${this.getPluginSystemInfo()}`;
                     data: window.MicrobeFns.exportCodingSequenceFasta(identifier, includeProtein)
                 };
             }
-            
+
             // Return detailed object format
             const response = {
                 identifier: identifier,
@@ -5057,16 +5090,89 @@ ${this.getPluginSystemInfo()}`;
                 codingSequence: result.codingSequence,
                 proteinLength: result.proteinLength
             };
-            
+
             if (includeProtein) {
                 response.proteinSequence = result.proteinSequence;
             }
-            
+
             return response;
             
         } catch (error) {
             throw new Error(`Failed to get coding sequence for "${identifier}": ${error.message}`);
         }
+    }
+
+    /**
+     * Check if the genomics environment is properly set up
+     * @returns {Object} Validation result with details
+     */
+    checkGenomicsEnvironment() {
+        // Check if MicrobeGenomicsFunctions is available
+        if (!window.MicrobeFns) {
+            return {
+                valid: false,
+                message: 'MicrobeGenomicsFunctions not available. The genomics module may not be loaded properly.'
+            };
+        }
+
+        // Check if GenomeBrowser is initialized
+        if (!window.genomeBrowser) {
+            return {
+                valid: false,
+                message: 'GenomeBrowser not initialized. Please ensure the application is fully loaded.'
+            };
+        }
+
+        // Check if sequence data is loaded
+        if (!window.genomeBrowser.currentSequence || Object.keys(window.genomeBrowser.currentSequence).length === 0) {
+            return {
+                valid: false,
+                message: 'No genome sequence data loaded. Please load a genome file (GenBank, FASTA, etc.) first using the File menu or Project Manager.'
+            };
+        }
+
+        // Check if annotations are loaded
+        if (!window.genomeBrowser.currentAnnotations || Object.keys(window.genomeBrowser.currentAnnotations).length === 0) {
+            return {
+                valid: false,
+                message: 'No genome annotations loaded. Gene information requires GenBank files or GFF annotations.'
+            };
+        }
+
+        // Check current chromosome
+        const currentChromosome = window.genomeBrowser.currentChromosome;
+        if (!currentChromosome) {
+            return {
+                valid: false,
+                message: 'No chromosome selected. Please navigate to a chromosome first.'
+            };
+        }
+
+        // Verify chromosome data integrity
+        if (!window.genomeBrowser.currentSequence[currentChromosome]) {
+            return {
+                valid: false,
+                message: `Sequence data not available for chromosome "${currentChromosome}".`
+            };
+        }
+
+        if (!window.genomeBrowser.currentAnnotations[currentChromosome]) {
+            return {
+                valid: false,
+                message: `Annotation data not available for chromosome "${currentChromosome}".`
+            };
+        }
+
+        return {
+            valid: true,
+            message: 'Genomics environment is properly configured',
+            details: {
+                chromosomes: Object.keys(window.genomeBrowser.currentSequence),
+                currentChromosome: currentChromosome,
+                sequenceLength: window.genomeBrowser.currentSequence[currentChromosome]?.length,
+                annotationCount: window.genomeBrowser.currentAnnotations[currentChromosome]?.length
+            }
+        };
     }
 
     async getMultipleCodingSequences(params) {
