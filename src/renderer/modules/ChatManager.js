@@ -2508,15 +2508,25 @@ class ChatManager {
         // Get user-defined system prompt
         const userSystemPrompt = this.configManager.get('llm.systemPrompt', '');
         
+        // Get system message format preference (optimized or complete)
+        // Check both chatboxSettings and llm settings for backward compatibility
+        const useOptimizedPrompt = this.configManager.get('chatboxSettings.useOptimizedPrompt', 
+            this.configManager.get('llm.useOptimizedPrompt', true));
+        
         // If user has defined a custom system prompt, use it with variable substitution
         if (userSystemPrompt && userSystemPrompt.trim()) {
             const processedPrompt = this.processSystemPromptVariables(userSystemPrompt);
-            // Combine user prompt with complete tool context and information
-            return `${processedPrompt}\n\n${this.getCompleteToolContext()}`;
+            // Choose context based on optimization setting
+            const toolContext = useOptimizedPrompt ? this.getOptimizedToolContext() : this.getCompleteToolContext();
+            return `${processedPrompt}\n\n${toolContext}`;
         }
         
-        // Otherwise, use the default system message
-        return this.getBaseSystemMessage();
+        // For default system message, use optimized version by default
+        if (useOptimizedPrompt) {
+            return this.getOptimizedSystemMessage();
+        } else {
+            return this.getBaseSystemMessage();
+        }
     }
 
     /**
@@ -2912,6 +2922,108 @@ Data Management:
         } catch (error) {
             return 'MicrobeGenomics Functions: Available but details unavailable';
         }
+    }
+
+    /**
+     * Get core tools organized by category for streamlined prompts
+     */
+    getCoreToolsByCategory() {
+        const categories = {
+            'SEARCH & NAVIGATION': [
+                'search_gene_by_name', 'search_features', 'jump_to_gene', 
+                'navigate_to_position', 'search_by_position'
+            ],
+            'SEQUENCE ANALYSIS': [
+                'get_coding_sequence', 'get_multiple_coding_sequences', 'get_sequence', 
+                'translate_dna', 'reverse_complement', 'compute_gc'
+            ],
+            'GENOMIC FEATURES': [
+                'find_orfs', 'predict_promoter', 'predict_rbs', 'search_sequence_motif',
+                'find_restriction_sites', 'sequence_statistics'
+            ],
+            'PROTEIN STRUCTURE': [
+                'search_alphafold_by_gene', 'fetch_alphafold_structure', 'open_alphafold_viewer',
+                'search_protein_by_gene', 'open_protein_viewer'
+            ],
+            'BLAST & SIMILARITY': [
+                'blast_search', 'advanced_blast_search', 'batch_blast_search',
+                'blast_sequence_from_region'
+            ],
+            'PATHWAYS & NETWORKS': [
+                'show_metabolic_pathway', 'find_pathway_genes', 'analyze_interpro_domains'
+            ],
+            'AI & PREDICTION': [
+                'evo2_generate_sequence', 'evo2_predict_function', 'evo2_design_crispr'
+            ]
+        };
+
+        return Object.entries(categories)
+            .map(([category, tools]) => `${category}: ${tools.join(', ')}`)
+            .join('\n');
+    }
+
+    /**
+     * Get optimized tool context for system prompts
+     * Streamlined version with essential information only
+     */
+    getOptimizedToolContext() {
+        const context = this.getCurrentContext();
+        
+        // Get MCP server information (simplified)
+        const mcpServers = this.mcpServerManager.getServerStatus();
+        const connectedServers = mcpServers.filter(s => s.connected);
+        
+        // Core tool categories for better organization
+        const coreTools = this.getCoreToolsByCategory();
+        
+        return `
+Current State: ${context.genomeBrowser.currentState.currentChromosome || 'None'} | ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'} | ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None tracks'}
+
+Available Tools: ${context.genomeBrowser.toolSources.total} total (${context.genomeBrowser.toolSources.mcp} MCP + ${context.genomeBrowser.toolSources.local} local + ${context.genomeBrowser.toolSources.plugins} plugins)
+
+${connectedServers.length > 0 ? `Connected MCP: ${connectedServers.map(s => `${s.name}(${s.toolCount})`).join(', ')}` : 'No MCP servers connected'}
+
+CORE TOOL CATEGORIES:
+${coreTools}
+
+===FUNCTION CALLING FORMAT===
+ALWAYS respond with ONLY a JSON object for tool calls:
+{"tool_name": "tool_name", "parameters": {"param": "value"}}
+
+TOOL PRIORITY: 1) MCP tools 2) Specialized genomics 3) Local tools
+
+KEY TOOLS FOR COMMON TASKS:
+• Gene search: search_gene_by_name, search_features
+• Navigation: jump_to_gene, navigate_to_position  
+• Sequence: get_coding_sequence, get_sequence, translate_dna
+• Analysis: compute_gc, find_orfs, sequence_statistics
+• Structure: search_alphafold_by_gene, open_protein_viewer
+• BLAST: blast_search, advanced_blast_search
+• Pathways: show_metabolic_pathway, find_pathway_genes
+
+EXAMPLES:
+• Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
+• Get CDS: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "thrC"}}
+• AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
+• Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
+`;
+    }
+
+    /**
+     * Get optimized system message for better LLM performance
+     */
+    getOptimizedSystemMessage() {
+        return `You are an AI assistant for Genome AI Studio, a bioinformatics application. You have access to powerful genomic analysis tools.
+
+IMPORTANT: Task Completion Instructions
+When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
+
+${this.getOptimizedToolContext()}
+
+CRITICAL: Always respond with ONLY a JSON object when using tools. No explanatory text around the JSON.
+
+For the user request "Get AlphaFold structure for Ecoli gene thrC", the correct response would be:
+{"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}`;
     }
 
     /**

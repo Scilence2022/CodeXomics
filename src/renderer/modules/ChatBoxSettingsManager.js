@@ -34,6 +34,7 @@ class ChatBoxSettingsManager {
             debugMode: false,
             logToolCalls: false,
             enableAbortButton: true,
+            useOptimizedPrompt: true, // 新增：使用优化的系统提示
             
             // Window settings
             rememberPosition: true,
@@ -126,6 +127,7 @@ class ChatBoxSettingsManager {
             debugMode: false,
             logToolCalls: false,
             enableAbortButton: true,
+            useOptimizedPrompt: true,
             rememberPosition: true,
             rememberSize: true,
             startMinimized: false
@@ -413,6 +415,17 @@ class ChatBoxSettingsManager {
                                         Start minimized
                                     </label>
                                     <small class="help-text">Start chat window in minimized state</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>System Prompt</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
+                                        Use optimized system prompt
+                                    </label>
+                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage</small>
                                 </div>
                             </div>
                             
