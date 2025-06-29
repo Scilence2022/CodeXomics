@@ -129,6 +129,9 @@ class GenomeBrowser {
         this.trackStateManager = new TrackStateManager(this);  // Add track state manager
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
         
+        // Initialize Action Management System
+        this.initializeActionSystem();
+        
         // State
         this.currentChromosome = null;
         this.currentSequence = {};
@@ -338,7 +341,41 @@ class GenomeBrowser {
         
         // Initialize MCP server status check
         this.initializeMCPServerStatus();
+        
+        // Initialize Action Management System
+        this.initializeActionSystem();
     }
+    
+    /**
+     * Initialize Action Management System
+     */
+    initializeActionSystem() {
+        // Initialize Action Manager and Checkpoint Manager after DOM is ready
+        setTimeout(() => {
+            try {
+                if (typeof ActionManager !== 'undefined') {
+                    window.actionManager = new ActionManager(this);
+                    console.log('✅ ActionManager initialized');
+                } else {
+                    console.warn('⚠️ ActionManager class not available');
+                }
+                
+                if (typeof CheckpointManager !== 'undefined') {
+                    window.checkpointManager = new CheckpointManager(this);
+                    console.log('✅ CheckpointManager initialized');
+                } else {
+                    console.warn('⚠️ CheckpointManager class not available');
+                }
+                
+                // Action system initialized - menu items handled by main menu
+                
+            } catch (error) {
+                console.error('❌ Error initializing Action Management System:', error);
+            }
+        }, 500);
+    }
+    
+
 
     setupEventListeners() {
         // File operations - dropdown menu
@@ -1304,6 +1341,63 @@ class GenomeBrowser {
 
         ipcRenderer.on('menu-select-all', () => {
             this.handleMenuSelectAll();
+        });
+
+        // Handle Action menu items
+        ipcRenderer.on('action-copy-sequence', () => {
+            if (window.actionManager) {
+                window.actionManager.showSequenceSelectionModal('copy');
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('action-cut-sequence', () => {
+            if (window.actionManager) {
+                window.actionManager.showSequenceSelectionModal('cut');
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('action-paste-sequence', () => {
+            if (window.actionManager) {
+                window.actionManager.pasteSequence();
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('show-action-list', () => {
+            if (window.actionManager) {
+                window.actionManager.showActionList();
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('execute-all-actions', () => {
+            if (window.actionManager) {
+                window.actionManager.executeAllActions();
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('create-checkpoint', () => {
+            if (window.checkpointManager) {
+                window.checkpointManager.createManualCheckpoint();
+            } else {
+                this.showNotification('Checkpoint system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('rollback-checkpoint', () => {
+            if (window.checkpointManager) {
+                window.checkpointManager.showCheckpointList();
+            } else {
+                this.showNotification('Checkpoint system not initialized', 'error');
+            }
         });
 
         // Handle file status check from Project Manager

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Menu Visibility Test</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 20px;
+            background: #f8fafc;
+        }
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2563eb; margin-bottom: 20px; }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover { background: #2563eb; }
+        .output {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 2px;
+            display: inline-block;
+        }
+        .success { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        .info { background: #3b82f6; color: white; }
+        
+        /* Demo Action Button */
+        .demo-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #667eea 80%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .demo-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* Include the actual dropdown styles */
+        .file-menu-container {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .dropdown-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 220px;
+            z-index: 1050;
+            display: none;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .dropdown-menu.show {
+            display: block;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            text-align: left;
+            font-size: 14px;
+            color: #1f2937;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+        }
+        .dropdown-item:hover {
+            background: #f8fafc;
+            color: #1f2937;
+        }
+        .dropdown-item i {
+            color: #6b7280;
+            width: 16px;
+            text-align: center;
+        }
+        .dropdown-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 4px 0;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎯 Action Menu Visibility Test</h1>
+        <p>This test verifies that the Action menu is properly displayed and functional.</p>
+        
+        <div class="test-section">
+            <h3>Demo Action Menu</h3>
+            <p>This is a working demo of how the Action menu should look:</p>
+            
+            <div class="demo-header">
+                <div>
+                    <h2 style="margin: 0; font-size: 18px;">
+                        <i class="fas fa-dna"></i> Genome AI Studio Demo
+                    </h2>
+                </div>
+                <div class="demo-header-right">
+                    <div class="file-menu-container">
+                        <button id="demoActionBtn" class="dropdown-toggle">
+                            <i class="fas fa-play-circle"></i>
+                            Action
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="demoActionDropdown">
+                            <button class="dropdown-item">
+                                <i class="fas fa-copy"></i>
+                                Copy Sequence
+                            </button>
+                            <button class="dropdown-item">
+                                <i class="fas fa-cut"></i>
+                                Cut Sequence
+                            </button>
+                            <button class="dropdown-item">
+                                <i class="fas fa-paste"></i>
+                                Paste Sequence
+                            </button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item">
+                                <i class="fas fa-list"></i>
+                                Show Action List
+                            </button>
+                            <button class="dropdown-item">
+                                <i class="fas fa-play"></i>
+                                Execute All Actions
+                            </button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item">
+                                <i class="fas fa-save"></i>
+                                Create Checkpoint
+                            </button>
+                            <button class="dropdown-item">
+                                <i class="fas fa-undo"></i>
+                                Rollback to Checkpoint
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p><strong>👆 Click the "Action" button above to test the dropdown!</strong></p>
+        </div>
+        
+        <div class="test-section">
+            <h3>Real Application Test</h3>
+            <button class="btn" onclick="testRealApplication()">Test Real Action Menu</button>
+            <button class="btn" onclick="inspectElements()">Inspect Elements</button>
+            <button class="btn" onclick="testStyles()">Test CSS Styles</button>
+            <div id="realTest" class="output">Click "Test Real Action Menu" to check the actual implementation...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>DOM Inspection</h3>
+            <button class="btn" onclick="inspectDOM()">Inspect DOM</button>
+            <button class="btn" onclick="checkEventListeners()">Check Event Listeners</button>
+            <div id="domInspection" class="output">Click "Inspect DOM" to check element presence...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div id="testResults" class="output">No tests run yet...</div>
+        </div>
+    </div>
+
+    <script>
+        let testOutput = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            testOutput.push(entry);
+            console.log(entry);
+        }
+        
+        function updateOutput(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent += message + '\n';
+                element.scrollTop = element.scrollHeight;
+            }
+        }
+        
+        function clearOutput(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = '';
+            }
+        }
+        
+        // Setup demo Action menu
+        function setupDemoMenu() {
+            const demoBtn = document.getElementById('demoActionBtn');
+            const demoDropdown = document.getElementById('demoActionDropdown');
+            
+            if (demoBtn && demoDropdown) {
+                demoBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isVisible = demoDropdown.classList.contains('show');
+                    
+                    if (isVisible) {
+                        demoDropdown.classList.remove('show');
+                    } else {
+                        demoDropdown.classList.add('show');
+                    }
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!demoBtn.contains(e.target) && !demoDropdown.contains(e.target)) {
+                        demoDropdown.classList.remove('show');
+                    }
+                });
+                
+                // Close dropdown when clicking menu items
+                demoDropdown.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('dropdown-item')) {
+                        demoDropdown.classList.remove('show');
+                        alert(`Clicked: ${e.target.textContent.trim()}`);
+                    }
+                });
+            }
+        }
+        
+        function testRealApplication() {
+            clearOutput('realTest');
+            updateOutput('realTest', 'Testing real Action menu implementation...\n');
+            
+            // Check if running in the real application
+            if (window.genomeBrowser || window.genomeApp) {
+                updateOutput('realTest', '✅ Running in Genome AI Studio context');
+            } else {
+                updateOutput('realTest', '⚠️ Not running in Genome AI Studio (this is a standalone test)');
+            }
+            
+            // Check for real Action button
+            const realActionBtn = document.getElementById('actionBtn');
+            if (realActionBtn) {
+                updateOutput('realTest', '✅ Real Action button found');
+                updateOutput('realTest', `   - Visible: ${realActionBtn.offsetWidth > 0 && realActionBtn.offsetHeight > 0}`);
+                updateOutput('realTest', `   - Display: ${getComputedStyle(realActionBtn).display}`);
+                updateOutput('realTest', `   - Position: ${getComputedStyle(realActionBtn).position}`);
+            } else {
+                updateOutput('realTest', '❌ Real Action button NOT found');
+            }
+            
+            // Check for real dropdown
+            const realDropdown = document.getElementById('actionDropdownMenu');
+            if (realDropdown) {
+                updateOutput('realTest', '✅ Real Action dropdown found');
+                updateOutput('realTest', `   - Display: ${getComputedStyle(realDropdown).display}`);
+                updateOutput('realTest', `   - Z-index: ${getComputedStyle(realDropdown).zIndex}`);
+            } else {
+                updateOutput('realTest', '❌ Real Action dropdown NOT found');
+            }
+            
+            // Test click functionality
+            if (realActionBtn) {
+                updateOutput('realTest', '\n🖱️ Testing click functionality...');
+                realActionBtn.click();
+                
+                setTimeout(() => {
+                    if (realDropdown) {
+                        const isVisible = realDropdown.style.display === 'block' || 
+                                         realDropdown.classList.contains('show') ||
+                                         getComputedStyle(realDropdown).display === 'block';
+                        updateOutput('realTest', `   - Dropdown visible after click: ${isVisible}`);
+                    }
+                }, 100);
+            }
+        }
+        
+        function inspectElements() {
+            clearOutput('realTest');
+            updateOutput('realTest', 'Inspecting Action menu elements...\n');
+            
+            // Get all elements with action-related IDs
+            const actionElements = [
+                'actionBtn',
+                'actionDropdownMenu',
+                'copySequenceBtn',
+                'cutSequenceBtn',
+                'pasteSequenceBtn',
+                'showActionListBtn',
+                'executeActionsBtn',
+                'createCheckpointBtn',
+                'rollbackBtn'
+            ];
+            
+            actionElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    updateOutput('realTest', `✅ ${id}: Found`);
+                    updateOutput('realTest', `   - Tag: ${element.tagName}`);
+                    updateOutput('realTest', `   - Classes: ${element.className}`);
+                    updateOutput('realTest', `   - Text: ${element.textContent.trim().substring(0, 30)}...`);
+                } else {
+                    updateOutput('realTest', `❌ ${id}: Not found`);
+                }
+            });
+        }
+        
+        function testStyles() {
+            clearOutput('realTest');
+            updateOutput('realTest', 'Testing CSS styles...\n');
+            
+            // Check if our custom styles are loaded
+            const styleSheets = Array.from(document.styleSheets);
+            let foundActionStyles = false;
+            
+            styleSheets.forEach((sheet, index) => {
+                try {
+                    const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                    const actionRules = rules.filter(rule => 
+                        rule.selectorText && (
+                            rule.selectorText.includes('.dropdown-menu') ||
+                            rule.selectorText.includes('.dropdown-item') ||
+                            rule.selectorText.includes('.file-menu-container')
+                        )
+                    );
+                    
+                    if (actionRules.length > 0) {
+                        updateOutput('realTest', `✅ Found ${actionRules.length} action-related CSS rules in stylesheet ${index}`);
+                        foundActionStyles = true;
+                    }
+                } catch (e) {
+                    updateOutput('realTest', `⚠️ Could not access stylesheet ${index} (CORS?)`);
+                }
+            });
+            
+            if (!foundActionStyles) {
+                updateOutput('realTest', '❌ No action-related CSS rules found');
+            }
+            
+            // Test specific style rules
+            const testElement = document.createElement('div');
+            testElement.className = 'dropdown-menu';
+            document.body.appendChild(testElement);
+            
+            const styles = getComputedStyle(testElement);
+            updateOutput('realTest', '\nTesting .dropdown-menu styles:');
+            updateOutput('realTest', `   - Position: ${styles.position}`);
+            updateOutput('realTest', `   - Z-index: ${styles.zIndex}`);
+            updateOutput('realTest', `   - Display: ${styles.display}`);
+            updateOutput('realTest', `   - Background: ${styles.backgroundColor}`);
+            
+            document.body.removeChild(testElement);
+        }
+        
+        function inspectDOM() {
+            clearOutput('domInspection');
+            updateOutput('domInspection', 'Inspecting DOM structure...\n');
+            
+            // Find the header
+            const header = document.querySelector('.header');
+            if (header) {
+                updateOutput('domInspection', '✅ Header found');
+                
+                const headerRight = header.querySelector('.header-right');
+                if (headerRight) {
+                    updateOutput('domInspection', '✅ Header-right found');
+                    
+                    const fileMenuContainers = headerRight.querySelectorAll('.file-menu-container');
+                    updateOutput('domInspection', `✅ Found ${fileMenuContainers.length} file-menu-container(s)`);
+                    
+                    fileMenuContainers.forEach((container, index) => {
+                        const button = container.querySelector('button');
+                        if (button) {
+                            const buttonText = button.textContent.trim();
+                            updateOutput('domInspection', `   ${index + 1}. ${buttonText}`);
+                            
+                            if (buttonText.includes('Action')) {
+                                updateOutput('domInspection', '      🎯 This is the Action button!');
+                            }
+                        }
+                    });
+                } else {
+                    updateOutput('domInspection', '❌ Header-right not found');
+                }
+            } else {
+                updateOutput('domInspection', '❌ Header not found');
+            }
+        }
+        
+        function checkEventListeners() {
+            clearOutput('domInspection');
+            updateOutput('domInspection', 'Checking event listeners...\n');
+            
+            // Check if global managers are available
+            if (window.actionManager) {
+                updateOutput('domInspection', '✅ ActionManager instance found');
+                updateOutput('domInspection', `   - Actions count: ${window.actionManager.actions.length}`);
+            } else {
+                updateOutput('domInspection', '❌ ActionManager instance not found');
+            }
+            
+            if (window.checkpointManager) {
+                updateOutput('domInspection', '✅ CheckpointManager instance found');
+                updateOutput('domInspection', `   - Checkpoints count: ${window.checkpointManager.checkpoints.length}`);
+            } else {
+                updateOutput('domInspection', '❌ CheckpointManager instance not found');
+            }
+            
+            // Check if ActionManager and CheckpointManager classes are available
+            if (typeof ActionManager !== 'undefined') {
+                updateOutput('domInspection', '✅ ActionManager class available');
+            } else {
+                updateOutput('domInspection', '❌ ActionManager class not available');
+            }
+            
+            if (typeof CheckpointManager !== 'undefined') {
+                updateOutput('domInspection', '✅ CheckpointManager class available');
+            } else {
+                updateOutput('domInspection', '❌ CheckpointManager class not available');
+            }
+        }
+        
+        // Initialize demo menu when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDemoMenu();
+            updateOutput('testResults', 'Demo Action menu initialized and ready for testing.');
+            updateOutput('testResults', 'Use the buttons above to test different aspects of the implementation.');
+        });
+    </script>
+</body>
+</html> 

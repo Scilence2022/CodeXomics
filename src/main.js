@@ -1176,6 +1176,62 @@ function createMenu() {
       ]
     },
     {
+      label: 'Action',
+      submenu: [
+        {
+          label: 'Copy Sequence',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            sendToCurrentMainWindow('action-copy-sequence');
+          }
+        },
+        {
+          label: 'Cut Sequence',
+          accelerator: 'CmdOrCtrl+Shift+X',
+          click: () => {
+            sendToCurrentMainWindow('action-cut-sequence');
+          }
+        },
+        {
+          label: 'Paste Sequence',
+          accelerator: 'CmdOrCtrl+Shift+V',
+          click: () => {
+            sendToCurrentMainWindow('action-paste-sequence');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Show Action List',
+          accelerator: 'CmdOrCtrl+Shift+L',
+          click: () => {
+            sendToCurrentMainWindow('show-action-list');
+          }
+        },
+        {
+          label: 'Execute All Actions',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => {
+            sendToCurrentMainWindow('execute-all-actions');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Create Checkpoint',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => {
+            sendToCurrentMainWindow('create-checkpoint');
+          }
+        },
+        {
+          label: 'Rollback to Checkpoint',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            sendToCurrentMainWindow('rollback-checkpoint');
+          }
+        }
+      ]
+    },
+    {
       label: 'Tools',
       submenu: [
         {
