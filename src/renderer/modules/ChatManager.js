@@ -1234,7 +1234,36 @@ class ChatManager {
             loadedFiles: this.app.loadedFiles || [],
             sequenceLength: this.app.sequenceLength || 0,
             annotationsCount: (this.app.currentAnnotations || []).length,
-            userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length
+            userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length,
+            
+            // Enhanced: Add selected gene information
+            selectedGene: this.app.selectedGene ? {
+                geneName: this.app.selectedGene.gene?.qualifiers?.gene || 'Unknown',
+                locusTag: this.app.selectedGene.gene?.qualifiers?.locus_tag || 'Unknown',
+                product: this.app.selectedGene.gene?.qualifiers?.product || 'Unknown',
+                position: `${this.app.selectedGene.gene?.start}-${this.app.selectedGene.gene?.end}`,
+                strand: this.app.selectedGene.gene?.strand === -1 ? '-' : '+',
+                type: this.app.selectedGene.gene?.type || 'Unknown',
+                hasOperonInfo: !!this.app.selectedGene.operonInfo
+            } : null,
+            
+            // Enhanced: Add sequence selection information
+            sequenceSelection: this.app.sequenceSelection ? {
+                active: this.app.sequenceSelection.active,
+                start: this.app.sequenceSelection.start,
+                end: this.app.sequenceSelection.end,
+                length: this.app.sequenceSelection.active && this.app.sequenceSelection.start && this.app.sequenceSelection.end ? 
+                    this.app.sequenceSelection.end - this.app.sequenceSelection.start + 1 : null
+            } : null,
+            
+            // Enhanced: Add current viewing region details
+            viewingRegion: this.app.currentPosition ? {
+                chromosome: this.app.currentChromosome,
+                start: this.app.currentPosition.start,
+                end: this.app.currentPosition.end,
+                length: this.app.currentPosition.end - this.app.currentPosition.start + 1,
+                centerPosition: Math.floor((this.app.currentPosition.start + this.app.currentPosition.end) / 2)
+            } : null
         };
 
         console.log('ChatManager getCurrentState - final state:', state);
@@ -2935,7 +2964,8 @@ Data Management:
             ],
             'SYSTEM STATUS': [
                 'get_genome_info', 'check_genomics_environment', 'get_file_info', 
-                'get_current_state', 'get_chromosome_list'
+                'get_current_state', 'get_chromosome_list', 'get_selected_gene',
+                'get_current_region_details', 'get_sequence_selection'
             ],
             'SEQUENCE ANALYSIS': [
                 'get_coding_sequence', 'get_multiple_coding_sequences', 'get_sequence', 
@@ -2987,6 +3017,10 @@ Data Management:
 CURRENT GENOME STATE:
 - Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
 - Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
+- Selected Gene: ${context.genomeBrowser.currentState.selectedGene ? 
+    `${context.genomeBrowser.currentState.selectedGene.geneName} (${context.genomeBrowser.currentState.selectedGene.locusTag})` : 'None'}
+- Sequence Selection: ${context.genomeBrowser.currentState.sequenceSelection?.active ? 
+    `${context.genomeBrowser.currentState.sequenceSelection.start}-${context.genomeBrowser.currentState.sequenceSelection.end} (${context.genomeBrowser.currentState.sequenceSelection.length} bp)` : 'None'}
 - Visible Tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
 - Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
@@ -3076,13 +3110,28 @@ WORKFLOW EXAMPLES:
   2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lysC"}}
   3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
 
+• Selected Gene Analysis:
+  1. {"tool_name": "get_selected_gene", "parameters": {}}
+  2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "selectedGeneName"}}
+
+• Region Analysis:
+  1. {"tool_name": "get_current_region_details", "parameters": {}}
+  2. {"tool_name": "find_orfs", "parameters": {"sequence": "regionSequence"}}
+
+• Sequence Selection Analysis:
+  1. {"tool_name": "get_sequence_selection", "parameters": {}}
+  2. {"tool_name": "translate_dna", "parameters": {"sequence": "selectedSequence"}}
+
 • Data Verification:
   1. {"tool_name": "get_genome_info", "parameters": {}}
-  2. {"tool_name": "get_file_info", "parameters": {}}
+  2. {"tool_name": "get_current_state", "parameters": {}}
 
 EXAMPLES:
 • Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
 • Get CDS: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "thrC"}}
+• Selected gene: {"tool_name": "get_selected_gene", "parameters": {}}
+• Current region: {"tool_name": "get_current_region_details", "parameters": {}}
+• Sequence selection: {"tool_name": "get_sequence_selection", "parameters": {}}
 • AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
 • Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
 • BLAST: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGC...", "blastType": "blastn"}}`;
@@ -4161,6 +4210,18 @@ ${this.getPluginSystemInfo()}`;
                     result = this.checkGenomicsEnvironment();
                     break;
                     
+                case 'get_selected_gene':
+                    result = this.getSelectedGene();
+                    break;
+                    
+                case 'get_current_region_details':
+                    result = await this.getCurrentRegionDetails();
+                    break;
+                    
+                case 'get_sequence_selection':
+                    result = this.getSequenceSelection();
+                    break;
+                    
                 case 'fetch_protein_structure':
                     result = await this.fetchProteinStructure(parameters);
                     break;
@@ -5171,6 +5232,216 @@ ${this.getPluginSystemInfo()}`;
                 currentChromosome: currentChromosome,
                 sequenceLength: window.genomeBrowser.currentSequence[currentChromosome]?.length,
                 annotationCount: window.genomeBrowser.currentAnnotations[currentChromosome]?.length
+            }
+        };
+    }
+
+    /**
+     * Get detailed information about the currently selected gene
+     * @returns {Object} Selected gene information or null if no gene selected
+     */
+    getSelectedGene() {
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
+        }
+
+        if (!this.app.selectedGene) {
+            return {
+                selected: false,
+                message: 'No gene currently selected. Click on a gene in the genome view to select it.'
+            };
+        }
+
+        const gene = this.app.selectedGene.gene;
+        const operonInfo = this.app.selectedGene.operonInfo;
+
+        return {
+            selected: true,
+            geneName: gene.qualifiers?.gene || 'Unknown',
+            locusTag: gene.qualifiers?.locus_tag || 'Unknown',
+            product: gene.qualifiers?.product || 'Unknown',
+            chromosome: this.app.currentChromosome,
+            start: gene.start,
+            end: gene.end,
+            length: gene.end - gene.start + 1,
+            strand: gene.strand === -1 ? '-' : '+',
+            type: gene.type || 'Unknown',
+            
+            // Additional gene attributes
+            qualifiers: gene.qualifiers || {},
+            
+            // Operon information if available
+            operonInfo: operonInfo ? {
+                operonName: operonInfo.name,
+                operonStart: operonInfo.start,
+                operonEnd: operonInfo.end,
+                operonStrand: operonInfo.strand === -1 ? '-' : '+',
+                geneCount: operonInfo.genes?.length || 0,
+                genePosition: operonInfo.genes?.findIndex(g => g.start === gene.start && g.end === gene.end) + 1 || 'Unknown'
+            } : null
+        };
+    }
+
+    /**
+     * Get detailed information about the current viewing region
+     * @returns {Object} Current region details with features and statistics
+     */
+    async getCurrentRegionDetails() {
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
+        }
+
+        if (!this.app.currentChromosome || !this.app.currentPosition) {
+            return {
+                hasRegion: false,
+                message: 'No region currently selected. Navigate to a genomic position first.'
+            };
+        }
+
+        const chromosome = this.app.currentChromosome;
+        const start = this.app.currentPosition.start;
+        const end = this.app.currentPosition.end;
+        const length = end - start + 1;
+
+        // Get sequence for the region if available
+        let sequence = null;
+        let gcContent = null;
+        if (this.app.currentSequence && this.app.currentSequence[chromosome]) {
+            sequence = this.app.currentSequence[chromosome].substring(start - 1, end);
+            const gcCount = (sequence.match(/[GC]/gi) || []).length;
+            gcContent = (gcCount / sequence.length * 100).toFixed(2);
+        }
+
+        // Get features in the region
+        let featuresInRegion = [];
+        if (this.app.currentAnnotations && this.app.currentAnnotations[chromosome]) {
+            featuresInRegion = this.app.currentAnnotations[chromosome].filter(feature => 
+                feature.start <= end && feature.end >= start
+            ).map(feature => ({
+                type: feature.type,
+                name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
+                product: feature.qualifiers?.product || 'Unknown',
+                start: feature.start,
+                end: feature.end,
+                strand: feature.strand === -1 ? '-' : '+',
+                length: feature.end - feature.start + 1
+            }));
+        }
+
+        // Get user-defined features in the region
+        let userFeaturesInRegion = [];
+        if (this.app.userDefinedFeatures && this.app.userDefinedFeatures[chromosome]) {
+            userFeaturesInRegion = Object.values(this.app.userDefinedFeatures[chromosome]).filter(feature =>
+                feature.start <= end && feature.end >= start
+            ).map(feature => ({
+                type: feature.type,
+                name: feature.name,
+                description: feature.description || '',
+                start: feature.start,
+                end: feature.end,
+                strand: feature.strand === -1 ? '-' : '+',
+                length: feature.end - feature.start + 1
+            }));
+        }
+
+        return {
+            hasRegion: true,
+            chromosome: chromosome,
+            start: start,
+            end: end,
+            length: length,
+            centerPosition: Math.floor((start + end) / 2),
+            
+            // Sequence information
+            hasSequence: !!sequence,
+            gcContent: gcContent,
+            sequencePreview: sequence ? sequence.substring(0, 100) + (sequence.length > 100 ? '...' : '') : null,
+            
+            // Features information
+            featuresCount: featuresInRegion.length,
+            features: featuresInRegion,
+            userFeaturesCount: userFeaturesInRegion.length,
+            userFeatures: userFeaturesInRegion,
+            
+            // Statistics
+            statistics: {
+                totalFeatures: featuresInRegion.length + userFeaturesInRegion.length,
+                geneCount: featuresInRegion.filter(f => f.type === 'gene' || f.type === 'CDS').length,
+                rnaCount: featuresInRegion.filter(f => f.type.includes('RNA')).length
+            }
+        };
+    }
+
+    /**
+     * Get information about user's sequence selection
+     * @returns {Object} Sequence selection details
+     */
+    getSequenceSelection() {
+        if (!this.app) {
+            throw new Error('Genome browser not initialized');
+        }
+
+        if (!this.app.sequenceSelection || !this.app.sequenceSelection.active) {
+            return {
+                hasSelection: false,
+                message: 'No sequence currently selected. Select a sequence region in the genome view to analyze it.'
+            };
+        }
+
+        const selection = this.app.sequenceSelection;
+        const start = selection.start;
+        const end = selection.end;
+        const length = end - start + 1;
+
+        // Get the selected sequence if available
+        let selectedSequence = null;
+        let gcContent = null;
+        if (this.app.currentSequence && this.app.currentSequence[this.app.currentChromosome]) {
+            selectedSequence = this.app.currentSequence[this.app.currentChromosome].substring(start - 1, end);
+            const gcCount = (selectedSequence.match(/[GC]/gi) || []).length;
+            gcContent = (gcCount / selectedSequence.length * 100).toFixed(2);
+        }
+
+        // Find features that overlap with the selection
+        let overlappingFeatures = [];
+        if (this.app.currentAnnotations && this.app.currentAnnotations[this.app.currentChromosome]) {
+            overlappingFeatures = this.app.currentAnnotations[this.app.currentChromosome].filter(feature =>
+                feature.start <= end && feature.end >= start
+            ).map(feature => ({
+                type: feature.type,
+                name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown',
+                product: feature.qualifiers?.product || 'Unknown',
+                start: feature.start,
+                end: feature.end,
+                strand: feature.strand === -1 ? '-' : '+',
+                overlapStart: Math.max(feature.start, start),
+                overlapEnd: Math.min(feature.end, end),
+                overlapLength: Math.min(feature.end, end) - Math.max(feature.start, start) + 1
+            }));
+        }
+
+        return {
+            hasSelection: true,
+            chromosome: this.app.currentChromosome,
+            start: start,
+            end: end,
+            length: length,
+            
+            // Sequence information
+            sequence: selectedSequence,
+            gcContent: gcContent,
+            sequencePreview: selectedSequence ? selectedSequence.substring(0, 100) + (selectedSequence.length > 100 ? '...' : '') : null,
+            
+            // Overlapping features
+            overlappingFeaturesCount: overlappingFeatures.length,
+            overlappingFeatures: overlappingFeatures,
+            
+            // Analysis suggestions
+            suggestions: {
+                canTranslate: length >= 3 && length % 3 === 0,
+                canFindOrfs: length >= 90, // At least 30 codons
+                canAnalyzeGC: length >= 10,
+                canSearchMotifs: length >= 6
             }
         };
     }
