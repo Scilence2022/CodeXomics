@@ -683,6 +683,122 @@ class MicrobeGenomicsFunctions {
     }
 
     /* --------------------------------------------------------- */
+    /*  SEQUENCE EXTRACTION                                     */
+    /* --------------------------------------------------------- */
+
+    /**
+     * Get coding sequence (CDS) for a gene by name or locus tag
+     * @param {string} identifier - Gene name or locus tag
+     * @returns {Object|null} CDS information or null if not found
+     */
+    static getCodingSequence(identifier) {
+        const gb = window.genomeBrowser;
+        if (!gb) throw new Error('GenomeBrowser not initialised');
+        
+        // First, find the gene by name or locus tag
+        const geneResult = this.searchGeneByName(identifier);
+        if (!geneResult) {
+            return {
+                success: false,
+                error: `Gene "${identifier}" not found`,
+                identifier: identifier
+            };
+        }
+        
+        const { chromosome, feature } = geneResult;
+        
+        // Check if we have sequence data for this chromosome
+        if (!gb.currentSequence || !gb.currentSequence[chromosome]) {
+            return {
+                success: false,
+                error: `No sequence data available for chromosome ${chromosome}`,
+                identifier: identifier,
+                chromosome: chromosome
+            };
+        }
+        
+        // Get the genomic DNA sequence for the gene region
+        const fullSequence = gb.currentSequence[chromosome];
+        let geneSequence = fullSequence.substring(feature.start - 1, feature.end);
+        
+        // Determine gene name and locus tag for result
+        const geneName = feature.qualifiers?.gene || identifier;
+        const locusTag = feature.qualifiers?.locus_tag || identifier;
+        
+        // Handle strand direction
+        let codingSequence = geneSequence;
+        const isReverse = feature.strand === -1 || feature.strand === '-';
+        
+        if (isReverse) {
+            // For reverse strand genes, get reverse complement
+            codingSequence = this.reverseComplement(geneSequence);
+        }
+        
+        // Calculate additional information
+        const gcContent = this.computeGC(codingSequence);
+        const proteinSequence = this.translateDNA(codingSequence);
+        
+        return {
+            success: true,
+            identifier: identifier,
+            geneName: geneName,
+            locusTag: locusTag,
+            chromosome: chromosome,
+            start: feature.start,
+            end: feature.end,
+            strand: isReverse ? '-' : '+',
+            length: codingSequence.length,
+            codingSequence: codingSequence,
+            proteinSequence: proteinSequence,
+            gcContent: parseFloat(gcContent.toFixed(2)),
+            proteinLength: proteinSequence.length,
+            geneType: feature.type || 'CDS',
+            qualifiers: feature.qualifiers || {}
+        };
+    }
+
+    /**
+     * Get coding sequences for multiple genes
+     * @param {Array<string>} identifiers - Array of gene names or locus tags
+     * @returns {Array} Array of CDS results
+     */
+    static getMultipleCodingSequences(identifiers) {
+        if (!Array.isArray(identifiers)) {
+            throw new Error('Identifiers must be an array');
+        }
+        
+        return identifiers.map(identifier => this.getCodingSequence(identifier));
+    }
+
+    /**
+     * Export coding sequence in FASTA format
+     * @param {string} identifier - Gene name or locus tag
+     * @param {boolean} includeProtein - Whether to include protein translation
+     * @returns {string} FASTA formatted sequence(s)
+     */
+    static exportCodingSequenceFasta(identifier, includeProtein = false) {
+        const result = this.getCodingSequence(identifier);
+        
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        
+        let fasta = '';
+        
+        // DNA sequence
+        const dnaHeader = `>${result.geneName || result.locusTag}_CDS ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand) [${result.length} bp]`;
+        fasta += `${dnaHeader}\n${result.codingSequence}\n`;
+        
+        // Protein sequence if requested
+        if (includeProtein) {
+            const proteinHeader = `>${result.geneName || result.locusTag}_PROTEIN translated from ${result.chromosome}:${result.start}-${result.end} (${result.strand} strand) [${result.proteinLength} aa]`;
+            fasta += `\n${proteinHeader}\n${result.proteinSequence}\n`;
+        }
+        
+        return fasta;
+    }
+
+    /* --------------------------------------------------------- */
     /*  UTILITY METHODS                                         */
     /* --------------------------------------------------------- */
 

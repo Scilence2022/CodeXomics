@@ -3037,6 +3037,8 @@ MicrobeGenomicsFunctions Examples:
 - Codon usage: {"tool_name": "analyze_codon_usage", "parameters": {"dna": "ATGAAATAG"}}
 - Predict RBS: {"tool_name": "predict_rbs", "parameters": {"seq": "AGGAGG"}}
 - Predict terminator: {"tool_name": "predict_terminator", "parameters": {"seq": "ATGCGCTATCG"}}
+- Get coding sequence: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lacZ"}}
+- Get multiple CDS: {"tool_name": "get_multiple_coding_sequences", "parameters": {"identifiers": ["lacZ", "lacY", "lacA"]}}
 - Navigation controls: {"tool_name": "scroll_left", "parameters": {"bp": 1000}} or {"tool_name": "zoom_in", "parameters": {"factor": 2}}
 
 CRITICAL DISTINCTION - Search Functions:
@@ -3766,6 +3768,14 @@ ${this.getPluginSystemInfo()}`;
                     
                 case 'get_operons':
                     result = await this.getOperons(parameters);
+                    break;
+                    
+                case 'get_coding_sequence':
+                    result = await this.getCodingSequence(parameters);
+                    break;
+                    
+                case 'get_multiple_coding_sequences':
+                    result = await this.getMultipleCodingSequences(parameters);
                     break;
                     
                 case 'zoom_to_gene':
@@ -4847,6 +4857,126 @@ ${this.getPluginSystemInfo()}`;
     reverseComplement(sequence) {
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
         return sequence.split('').reverse().map(base => complement[base] || base).join('');
+    }
+
+    async getCodingSequence(params) {
+        const { identifier, includeProtein = true, format = 'object' } = params;
+        
+        if (!identifier) {
+            throw new Error('Gene identifier (name or locus_tag) is required');
+        }
+        
+        // Use MicrobeGenomicsFunctions to get the coding sequence
+        if (!window.MicrobeFns || !window.MicrobeFns.getCodingSequence) {
+            throw new Error('MicrobeGenomicsFunctions not available');
+        }
+        
+        try {
+            const result = window.MicrobeFns.getCodingSequence(identifier);
+            
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+            
+            // Format the result based on requested format
+            if (format === 'fasta') {
+                return {
+                    identifier: identifier,
+                    success: true,
+                    format: 'fasta',
+                    data: window.MicrobeFns.exportCodingSequenceFasta(identifier, includeProtein)
+                };
+            }
+            
+            // Return detailed object format
+            const response = {
+                identifier: identifier,
+                success: true,
+                geneName: result.geneName,
+                locusTag: result.locusTag,
+                chromosome: result.chromosome,
+                position: `${result.start}-${result.end}`,
+                strand: result.strand,
+                length: result.length,
+                gcContent: result.gcContent,
+                geneType: result.geneType,
+                codingSequence: result.codingSequence,
+                proteinLength: result.proteinLength
+            };
+            
+            if (includeProtein) {
+                response.proteinSequence = result.proteinSequence;
+            }
+            
+            return response;
+            
+        } catch (error) {
+            throw new Error(`Failed to get coding sequence for "${identifier}": ${error.message}`);
+        }
+    }
+
+    async getMultipleCodingSequences(params) {
+        const { identifiers, includeProtein = true, format = 'object' } = params;
+        
+        if (!identifiers || !Array.isArray(identifiers)) {
+            throw new Error('Identifiers array is required');
+        }
+        
+        if (identifiers.length === 0) {
+            throw new Error('At least one identifier is required');
+        }
+        
+        if (identifiers.length > 50) {
+            throw new Error('Maximum 50 identifiers allowed per request');
+        }
+        
+        // Use MicrobeGenomicsFunctions to get multiple coding sequences
+        if (!window.MicrobeFns || !window.MicrobeFns.getMultipleCodingSequences) {
+            throw new Error('MicrobeGenomicsFunctions not available');
+        }
+        
+        try {
+            const results = window.MicrobeFns.getMultipleCodingSequences(identifiers);
+            
+            const successful = results.filter(r => r.success);
+            const failed = results.filter(r => !r.success);
+            
+            const response = {
+                totalRequested: identifiers.length,
+                successful: successful.length,
+                failed: failed.length,
+                results: successful.map(result => ({
+                    identifier: result.identifier,
+                    geneName: result.geneName,
+                    locusTag: result.locusTag,
+                    chromosome: result.chromosome,
+                    position: `${result.start}-${result.end}`,
+                    strand: result.strand,
+                    length: result.length,
+                    gcContent: result.gcContent,
+                    geneType: result.geneType,
+                    codingSequence: format === 'sequence_only' ? result.codingSequence : result.codingSequence.substring(0, 100) + (result.codingSequence.length > 100 ? '...' : ''),
+                    proteinSequence: includeProtein ? (format === 'sequence_only' ? result.proteinSequence : result.proteinSequence.substring(0, 50) + (result.proteinSequence.length > 50 ? '...' : '')) : undefined,
+                    proteinLength: result.proteinLength
+                })),
+                errors: failed.map(f => ({ identifier: f.identifier, error: f.error }))
+            };
+            
+            // Add full sequences if requested
+            if (format === 'full_sequences') {
+                response.fullSequences = successful.map(result => ({
+                    identifier: result.identifier,
+                    geneName: result.geneName,
+                    codingSequence: result.codingSequence,
+                    proteinSequence: includeProtein ? result.proteinSequence : undefined
+                }));
+            }
+            
+            return response;
+            
+        } catch (error) {
+            throw new Error(`Failed to get multiple coding sequences: ${error.message}`);
+        }
     }
 
     async getOperons(params) {
