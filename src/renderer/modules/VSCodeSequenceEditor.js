@@ -17,7 +17,7 @@ class VSCodeSequenceEditor {
         this.selectionStart = -1;
         this.selectionEnd = -1;
         this.lineHeight = 20;
-        this.charWidth = 8;
+        this.charWidth = 9; // Adjusted for better monospace alignment
         this.basesPerLine = 80;
         this.scrollTop = 0;
         this.visibleLines = 20;
@@ -56,6 +56,10 @@ class VSCodeSequenceEditor {
         this.editorContainer = document.createElement('div');
         this.editorContainer.className = 'editor-container';
         
+        // Create position ruler
+        this.positionRuler = document.createElement('div');
+        this.positionRuler.className = 'position-ruler';
+        
         // Create line numbers panel
         this.lineNumbers = document.createElement('div');
         this.lineNumbers.className = 'line-numbers';
@@ -81,6 +85,7 @@ class VSCodeSequenceEditor {
         this.scrollbar.appendChild(scrollThumb);
         
         // Assemble editor
+        this.container.appendChild(this.positionRuler);
         this.editorContainer.appendChild(this.lineNumbers);
         this.editorContainer.appendChild(this.sequenceContent);
         this.sequenceContent.appendChild(this.cursor);
@@ -99,7 +104,8 @@ class VSCodeSequenceEditor {
             .vscode-sequence-editor {
                 width: 100%;
                 height: 100%;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+                min-height: 400px;
+                font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace;
                 font-size: 14px;
                 line-height: 20px;
                 background: #1e1e1e;
@@ -108,11 +114,12 @@ class VSCodeSequenceEditor {
                 overflow: hidden;
                 border: 1px solid #3c3c3c;
                 border-radius: 4px;
+                box-sizing: border-box;
             }
             
             .editor-container {
                 display: flex;
-                height: 100%;
+                height: calc(100% - 20px);
                 position: relative;
             }
             
@@ -153,15 +160,17 @@ class VSCodeSequenceEditor {
                 left: 10px;
                 right: 10px;
                 white-space: nowrap;
-                font-family: inherit;
-                font-size: inherit;
+                font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace;
+                font-size: 14px;
+                letter-spacing: 0px;
             }
             
             .sequence-base {
                 display: inline-block;
-                width: 8px;
+                width: 9px;
                 text-align: center;
                 position: relative;
+                font-family: inherit;
             }
             
             /* Base colors */
@@ -338,19 +347,43 @@ class VSCodeSequenceEditor {
         this.viewEnd = viewEnd;
         this.annotations = annotations;
         
+        // Measure character width with actual font
+        this.measureCharacterWidth();
         this.updateDimensions();
         this.render();
+    }
+    
+    measureCharacterWidth() {
+        // Create a test element to measure character width
+        const testElement = document.createElement('span');
+        testElement.textContent = 'ATCGATCGATCG'; // 12 characters
+        testElement.style.fontFamily = "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace";
+        testElement.style.fontSize = '14px';
+        testElement.style.visibility = 'hidden';
+        testElement.style.position = 'absolute';
+        testElement.style.whiteSpace = 'nowrap';
+        
+        this.sequenceContent.appendChild(testElement);
+        const width = testElement.offsetWidth / 12; // Divide by number of characters
+        this.sequenceContent.removeChild(testElement);
+        
+        this.charWidth = Math.ceil(width); // Round up for safety
     }
     
     updateDimensions() {
         const rect = this.container.getBoundingClientRect();
         this.containerWidth = rect.width;
-        this.containerHeight = rect.height;
+        this.containerHeight = Math.max(rect.height, 400); // Ensure minimum height
+        
+        // If container height is very small (like 0), use a reasonable default
+        if (this.containerHeight < 100) {
+            this.containerHeight = 500;
+        }
         
         // Calculate visible area
         const contentRect = this.sequenceContent.getBoundingClientRect();
-        this.contentWidth = contentRect.width - 20; // Account for padding
-        this.contentHeight = contentRect.height;
+        this.contentWidth = Math.max(contentRect.width - 20, 600); // Account for padding, minimum width
+        this.contentHeight = Math.max(this.containerHeight - 60, 340); // Account for ruler, borders, padding
         
         // Calculate bases per line based on available width
         this.basesPerLine = Math.floor(this.contentWidth / this.charWidth);
