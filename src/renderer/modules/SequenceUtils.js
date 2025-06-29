@@ -139,6 +139,9 @@ class SequenceUtils {
                 'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
         }
         
+        // Clean up the container to avoid style conflicts
+        this.cleanupContainer();
+        
         // Re-display sequence with new mode
         const chromosome = this.genomeBrowser.currentChromosome;
         const sequence = this.genomeBrowser.currentSequence;
@@ -146,10 +149,51 @@ class SequenceUtils {
             const start = this.genomeBrowser.currentPosition.start;
             const end = this.genomeBrowser.currentPosition.end;
             
-            if (this.displayMode === 'edit') {
-                this.displayVSCodeSequence(chromosome, sequence, start, end);
-            } else {
-                this.displayDetailedSequence(chromosome, sequence, start, end);
+            // Force re-render by calling displayEnhancedSequence
+            this.displayEnhancedSequence(chromosome, sequence);
+        }
+    }
+    
+    /**
+     * Clean up container styles to prevent mode interference
+     */
+    cleanupContainer() {
+        const container = document.getElementById('sequenceContent');
+        if (!container) return;
+        
+        // Remove any VS Code editor specific styles
+        container.style.removeProperty('font-family');
+        container.style.removeProperty('font-size');
+        container.style.removeProperty('line-height');
+        container.style.removeProperty('background');
+        container.style.removeProperty('color');
+        container.style.removeProperty('overflow');
+        container.style.removeProperty('position');
+        
+        // Reset container to default state
+        container.className = '';
+        
+        // Clear any inline styles that might interfere
+        const inlineStyles = container.querySelectorAll('[style]');
+        inlineStyles.forEach(element => {
+            // Only clear if it's not a sequence-specific style we want to keep
+            if (!element.classList.contains('sequence-line') && 
+                !element.classList.contains('sequence-position') && 
+                !element.classList.contains('gene-indicator-line')) {
+                element.removeAttribute('style');
+            }
+        });
+        
+        // If switching from edit mode, destroy VS Code editor instance
+        if (this.displayMode === 'view' && this.vscodeEditor) {
+            try {
+                if (this.vscodeEditor.destroy) {
+                    this.vscodeEditor.destroy();
+                }
+                this.vscodeEditor = null;
+            } catch (error) {
+                console.warn('Error destroying VS Code editor:', error);
+                this.vscodeEditor = null;
             }
         }
     }
@@ -160,6 +204,9 @@ class SequenceUtils {
     displayVSCodeSequence(chromosome, sequence, start, end) {
         const container = document.getElementById('sequenceContent');
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+        
+        // Clean container first
+        container.innerHTML = '';
         
         // Initialize VS Code editor if not already done
         if (!this.vscodeEditor) {
@@ -196,6 +243,15 @@ class SequenceUtils {
 
     displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
         const container = document.getElementById('sequenceContent');
+        
+        // Clean container and reset styles for view mode
+        container.innerHTML = '';
+        container.style.removeProperty('font-family');
+        container.style.removeProperty('background');
+        container.style.removeProperty('color');
+        container.style.removeProperty('overflow');
+        container.className = '';
+        
         const subsequence = fullSequence.substring(viewStart, viewEnd);
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
@@ -217,13 +273,13 @@ class SequenceUtils {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
             const lineStartPos = viewStart + i;
             
-            html += `<div class="sequence-line-group">`;
-            html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
+            html += `<div class="sequence-line-group" style="margin-bottom: 8px;">`;
+            html += `<div class="sequence-line" style="display: flex; margin-bottom: 4px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6;">`;
+            html += `<span class="sequence-position" style="width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;">${(lineStartPos + 1).toLocaleString()}</span>`;
+            html += `<div class="sequence-bases" style="flex: 1; word-break: break-all; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
             html += `</div>`;
             // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
+            html += `<div class="gene-indicator-line" style="height: 12px; margin-left: 115px; margin-bottom: 4px;">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
             html += `</div>`;
         }
         
@@ -235,7 +291,7 @@ class SequenceUtils {
         );
         
         if (cdsFeatures.length > 0) {
-            html += '<div class="protein-translations">';
+            html += '<div class="protein-translations" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;">';
             html += '<div class="sequence-info"><strong>Protein Translations:</strong></div>';
             
             cdsFeatures.forEach(cds => {
@@ -246,9 +302,9 @@ class SequenceUtils {
                 const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
                 const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
                 
-                html += `<div class="protein-sequence">`;
-                html += `<div class="protein-header">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):</div>`;
-                html += `<div class="protein-seq">${this.colorizeProteinSequence(proteinSequence)}</div>`;
+                html += `<div class="protein-sequence" style="margin-bottom: 15px;">`;
+                html += `<div class="protein-header" style="font-weight: bold; color: #495057; margin-bottom: 5px;">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):</div>`;
+                html += `<div class="protein-seq" style="font-family: 'Courier New', monospace; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px; word-break: break-all; line-height: 1.4;">${this.colorizeProteinSequence(proteinSequence)}</div>`;
                 html += `</div>`;
             });
             html += '</div>';

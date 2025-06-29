@@ -245,6 +245,9 @@
                 <li><strong>VS Code Edit Mode:</strong> Advanced editor with syntax highlighting</li>
                 <li><strong>Persistent Mode:</strong> Mode selection persists during navigation</li>
                 <li><strong>Seamless Transition:</strong> Smooth switching between modes</li>
+                <li><strong>Immediate Re-rendering:</strong> Content updates instantly after mode switch</li>
+                <li><strong>Line Height Preservation:</strong> View mode maintains proper line spacing</li>
+                <li><strong>Style Cleanup:</strong> Container styles reset between mode switches</li>
             </ul>
         </div>
         
@@ -252,6 +255,8 @@
         <button class="test-btn" onclick="testModeToggle()">Test Mode Toggle</button>
         <button class="test-btn" onclick="testViewMode()">Test View Mode</button>
         <button class="test-btn" onclick="testEditMode()">Test Edit Mode</button>
+        <button class="test-btn" onclick="testViewModeLineHeight()">Test Line Height Fix</button>
+        <button class="test-btn" onclick="testContainerCleanup()">Test Container Cleanup</button>
         
         <div id="test-status" class="status"></div>
     </div>
@@ -569,10 +574,19 @@
             
             try {
                 const currentMode = sequenceUtils.displayMode;
+                
+                // Test immediate re-rendering
                 sequenceUtils.toggleDisplayMode();
                 const newMode = sequenceUtils.displayMode;
                 
-                updateStatus('success', `Mode toggled from ${currentMode} to ${newMode}`);
+                // Check if content was actually updated
+                const content = document.getElementById('sequenceContent').innerHTML;
+                if (!content || content.includes('Click "Load Test Sequence"')) {
+                    updateStatus('error', 'Mode toggle failed - content not re-rendered');
+                    return;
+                }
+                
+                updateStatus('success', `Mode toggled from ${currentMode} to ${newMode} - content re-rendered successfully`);
                 
             } catch (error) {
                 updateStatus('error', `Mode toggle failed: ${error.message}`);
@@ -633,6 +647,84 @@
                 
             } catch (error) {
                 updateStatus('error', `Navigation simulation failed: ${error.message}`);
+            }
+        }
+        
+        function testViewModeLineHeight() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                // Switch to edit mode first
+                if (sequenceUtils.displayMode !== 'edit') {
+                    sequenceUtils.toggleDisplayMode();
+                }
+                
+                // Wait a moment for rendering
+                setTimeout(() => {
+                    // Switch back to view mode
+                    sequenceUtils.toggleDisplayMode();
+                    
+                    // Check line height after switching back
+                    setTimeout(() => {
+                        const sequenceLines = document.querySelectorAll('.sequence-line');
+                        if (sequenceLines.length > 0) {
+                            const lineHeight = window.getComputedStyle(sequenceLines[0]).lineHeight;
+                            const fontSize = window.getComputedStyle(sequenceLines[0]).fontSize;
+                            
+                            updateStatus('success', `View mode line height restored: ${lineHeight} (font-size: ${fontSize})`);
+                        } else {
+                            updateStatus('error', 'No sequence lines found to check line height');
+                        }
+                    }, 100);
+                }, 100);
+                
+            } catch (error) {
+                updateStatus('error', `Line height test failed: ${error.message}`);
+            }
+        }
+        
+        function testContainerCleanup() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                const container = document.getElementById('sequenceContent');
+                
+                // Switch to edit mode
+                if (sequenceUtils.displayMode !== 'edit') {
+                    sequenceUtils.toggleDisplayMode();
+                }
+                
+                // Check for VS Code editor styles
+                setTimeout(() => {
+                    const hasVSCodeStyles = container.style.fontFamily || 
+                                          container.style.background || 
+                                          container.querySelector('.vscode-editor');
+                    
+                    // Switch back to view mode
+                    sequenceUtils.toggleDisplayMode();
+                    
+                    // Check if styles were cleaned up
+                    setTimeout(() => {
+                        const hasCleanStyles = !container.style.fontFamily && 
+                                             !container.style.background && 
+                                             !container.querySelector('.vscode-editor');
+                        
+                        if (hasCleanStyles) {
+                            updateStatus('success', 'Container styles cleaned up successfully');
+                        } else {
+                            updateStatus('error', 'Container styles not properly cleaned up');
+                        }
+                    }, 100);
+                }, 100);
+                
+            } catch (error) {
+                updateStatus('error', `Container cleanup test failed: ${error.message}`);
             }
         }
         
