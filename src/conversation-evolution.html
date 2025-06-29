@@ -485,17 +485,193 @@
         // Render individual tab contents
         function renderConversationsTab() {
             const content = document.getElementById('tabContent');
-            content.innerHTML = `
-                <div class="conversation-list">
-                    <h3><i class="fas fa-comments"></i> Conversation History</h3>
-                    <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
-                    <div class="empty-state">
-                        <i class="fas fa-comments"></i>
-                        <p>No conversations recorded yet</p>
-                        <small>Conversations will appear here as you interact with the AI system</small>
+            
+            try {
+                // 获取对话统计信息
+                const conversations = evolutionManager?.getConversationHistory() || [];
+                const conversationCount = conversations.length;
+                
+                // 计算基本统计
+                const totalMessages = conversations.reduce((sum, conv) => {
+                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
+                    return sum + messageCount;
+                }, 0);
+                
+                const totalErrors = conversations.reduce((sum, conv) => {
+                    return sum + (conv.stats?.errorCount || 0);
+                }, 0);
+                
+                const recentConversations = conversations.slice(0, 3);
+                
+                content.innerHTML = `
+                    <div class="conversation-list">
+                        <h3><i class="fas fa-comments"></i> Conversation History</h3>
+                        <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number">${conversationCount}</div>
+                                <div class="stat-label">Total Conversations</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${totalMessages}</div>
+                                <div class="stat-label">Total Messages</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${totalErrors}</div>
+                                <div class="stat-label">Total Errors</div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="showHistoryManager()">
+                                <i class="fas fa-history"></i> History Manager
+                            </button>
+                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
+                                <i class="fas fa-search"></i> Search Conversations
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportHistory('json')">
+                                <i class="fas fa-download"></i> Export History
+                            </button>
+                        </div>
+                        
+                        ${conversationCount > 0 ? `
+                            <div class="recent-conversations">
+                                <h4>Recent Conversations</h4>
+                                ${recentConversations.map((conv, index) => {
+                                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
+                                    const errorCount = conv.stats?.errorCount || 0;
+                                    const category = conv.metadata?.category || 'standard';
+                                    
+                                    return `
+                                        <div class="conversation-item-mini" onclick="viewConversationDetails('${conv.id}')">
+                                            <div class="conv-mini-header">
+                                                <span class="conv-mini-title">Conversation ${index + 1}</span>
+                                                <span class="conv-mini-time">${new Date(conv.startTime).toLocaleDateString()}</span>
+                                            </div>
+                                            <div class="conv-mini-stats">
+                                                <span class="badge-mini">${messageCount} messages</span>
+                                                <span class="badge-mini">${errorCount} errors</span>
+                                                <span class="badge-mini badge-${category}">${category}</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : `
+                            <div class="empty-state">
+                                <i class="fas fa-comments"></i>
+                                <p>No conversations recorded yet</p>
+                                <small>Conversations will appear here as you interact with the AI system</small>
+                            </div>
+                        `}
                     </div>
-                </div>
-            `;
+                `;
+                
+                // 添加样式
+                if (!document.getElementById('conversationTabStyles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'conversationTabStyles';
+                    styles.textContent = `
+                        .stats-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                            gap: 16px;
+                            margin: 20px 0;
+                        }
+                        .stat-card {
+                            background: #333;
+                            border: 1px solid #555;
+                            border-radius: 8px;
+                            padding: 20px;
+                            text-align: center;
+                        }
+                        .stat-number {
+                            font-size: 32px;
+                            font-weight: bold;
+                            color: #4a9eff;
+                            margin-bottom: 8px;
+                        }
+                        .stat-label {
+                            color: #ccc;
+                            font-size: 14px;
+                        }
+                        .action-buttons {
+                            display: flex;
+                            gap: 12px;
+                            margin: 20px 0;
+                            flex-wrap: wrap;
+                        }
+                        .recent-conversations {
+                            margin-top: 30px;
+                        }
+                        .recent-conversations h4 {
+                            color: #fff;
+                            margin-bottom: 16px;
+                            border-bottom: 2px solid #4a9eff;
+                            padding-bottom: 8px;
+                        }
+                        .conversation-item-mini {
+                            background: #333;
+                            border: 1px solid #555;
+                            border-radius: 6px;
+                            padding: 12px;
+                            margin-bottom: 8px;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        }
+                        .conversation-item-mini:hover {
+                            background: #3a3a3a;
+                            border-color: #4a9eff;
+                        }
+                        .conv-mini-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 8px;
+                        }
+                        .conv-mini-title {
+                            color: #fff;
+                            font-weight: 500;
+                        }
+                        .conv-mini-time {
+                            color: #888;
+                            font-size: 12px;
+                        }
+                        .conv-mini-stats {
+                            display: flex;
+                            gap: 6px;
+                        }
+                        .badge-mini {
+                            display: inline-block;
+                            padding: 2px 6px;
+                            background: #555;
+                            color: #ccc;
+                            border-radius: 3px;
+                            font-size: 11px;
+                        }
+                        .badge-mini.badge-problematic { background: #ff6b6b; color: #fff; }
+                        .badge-mini.badge-plugin-generation { background: #4ecdc4; color: #fff; }
+                        .badge-mini.badge-extended { background: #45b7d1; color: #fff; }
+                        .badge-mini.badge-tool-intensive { background: #f9ca24; color: #333; }
+                    `;
+                    document.head.appendChild(styles);
+                }
+                
+            } catch (error) {
+                console.error('Error rendering conversations tab:', error);
+                content.innerHTML = `
+                    <div class="conversation-list">
+                        <h3><i class="fas fa-comments"></i> Conversation History</h3>
+                        <p>Track and analyze all conversations with the AI system to identify patterns and missing capabilities.</p>
+                        <div class="error-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Error loading conversation data</p>
+                            <small>${error.message}</small>
+                        </div>
+                    </div>
+                `;
+            }
         }
         
         function renderMissingFeaturesTab() {
@@ -827,6 +1003,200 @@
             }
         }
         
+        function showHistoryManager() {
+            console.log('📋 Showing history manager...');
+            
+            try {
+                const conversations = evolutionManager?.getConversationHistory() || [];
+                const conversationCount = conversations.length;
+                
+                // 计算统计信息
+                const totalMessages = conversations.reduce((sum, conv) => {
+                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
+                    return sum + messageCount;
+                }, 0);
+                
+                const totalErrors = conversations.reduce((sum, conv) => {
+                    return sum + (conv.stats?.errorCount || 0);
+                }, 0);
+                
+                const totalToolCalls = conversations.reduce((sum, conv) => {
+                    return sum + (conv.stats?.toolCallCount || 0);
+                }, 0);
+                
+                // 按分类统计
+                const categories = {};
+                conversations.forEach(conv => {
+                    const category = conv.metadata?.category || 'standard';
+                    categories[category] = (categories[category] || 0) + 1;
+                });
+                
+                const content = document.getElementById('tabContent');
+                content.innerHTML = `
+                    <div class="history-manager">
+                        <div class="section-header">
+                            <h3><i class="fas fa-history"></i> Conversation History Manager</h3>
+                            <button class="btn btn-secondary" onclick="renderCurrentTab()">
+                                <i class="fas fa-arrow-left"></i> Back to Overview
+                            </button>
+                        </div>
+                        
+                        <div class="stats-overview">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-number">${conversationCount}</div>
+                                    <div class="stat-label">Total Conversations</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number">${totalMessages}</div>
+                                    <div class="stat-label">Total Messages</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number">${totalErrors}</div>
+                                    <div class="stat-label">Total Errors</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number">${totalToolCalls}</div>
+                                    <div class="stat-label">Tool Calls</div>
+                                </div>
+                            </div>
+                            
+                            <div class="category-breakdown">
+                                <h4>Conversation Categories</h4>
+                                <div class="category-list">
+                                    ${Object.entries(categories).map(([category, count]) => `
+                                        <div class="category-item">
+                                            <span class="badge badge-${category}">${category}</span>
+                                            <span class="category-count">${count} conversations</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-groups">
+                            <div class="action-group">
+                                <h4><i class="fas fa-eye"></i> View & Browse</h4>
+                                <button class="btn btn-primary" onclick="showStoredConversations()">
+                                    <i class="fas fa-list"></i> View All Conversations
+                                </button>
+                                <button class="btn btn-secondary" onclick="showRecentConversations()">
+                                    <i class="fas fa-clock"></i> Recent Conversations
+                                </button>
+                            </div>
+                            
+                            <div class="action-group">
+                                <h4><i class="fas fa-search"></i> Search & Filter</h4>
+                                <button class="btn btn-primary" onclick="searchStoredConversations()">
+                                    <i class="fas fa-search"></i> Search Conversations
+                                </button>
+                                <button class="btn btn-secondary" onclick="filterByCategory()">
+                                    <i class="fas fa-filter"></i> Filter by Category
+                                </button>
+                            </div>
+                            
+                            <div class="action-group">
+                                <h4><i class="fas fa-download"></i> Export & Backup</h4>
+                                <button class="btn btn-primary" onclick="exportHistory('json')">
+                                    <i class="fas fa-file-code"></i> Export as JSON
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportHistory('csv')">
+                                    <i class="fas fa-file-csv"></i> Export as CSV
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportHistory('txt')">
+                                    <i class="fas fa-file-alt"></i> Export as Text
+                                </button>
+                            </div>
+                            
+                            <div class="action-group">
+                                <h4><i class="fas fa-cog"></i> Management</h4>
+                                <button class="btn btn-secondary" onclick="cleanupHistory()">
+                                    <i class="fas fa-broom"></i> Cleanup Old Data
+                                </button>
+                                <button class="btn btn-secondary" onclick="refreshData()">
+                                    <i class="fas fa-sync"></i> Refresh Data
+                                </button>
+                                <button class="btn btn-secondary" onclick="showStorageInfo()">
+                                    <i class="fas fa-info-circle"></i> Storage Info
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 添加历史管理器样式
+                if (!document.getElementById('historyManagerStyles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'historyManagerStyles';
+                    styles.textContent = `
+                        .history-manager {
+                            max-width: 1000px;
+                            margin: 0 auto;
+                        }
+                        .stats-overview {
+                            margin-bottom: 30px;
+                        }
+                        .category-breakdown {
+                            margin-top: 20px;
+                        }
+                        .category-breakdown h4 {
+                            color: #fff;
+                            margin-bottom: 12px;
+                        }
+                        .category-list {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                        }
+                        .category-item {
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            background: #333;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            border: 1px solid #555;
+                        }
+                        .category-count {
+                            color: #ccc;
+                            font-size: 12px;
+                        }
+                        .action-groups {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                            gap: 24px;
+                            margin-top: 24px;
+                        }
+                        .action-group {
+                            padding: 16px;
+                            background: #2a2a2a;
+                            border-radius: 8px;
+                            border: 1px solid #444;
+                        }
+                        .action-group h4 {
+                            margin: 0 0 16px 0;
+                            color: #fff;
+                            border-bottom: 2px solid #4a9eff;
+                            padding-bottom: 8px;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        .action-group .btn {
+                            width: 100%;
+                            margin-bottom: 8px;
+                            justify-content: flex-start;
+                        }
+                    `;
+                    document.head.appendChild(styles);
+                }
+                
+            } catch (error) {
+                console.error('Error showing history manager:', error);
+                showError('Failed to load history manager: ' + error.message);
+            }
+        }
+        
         function showStoredConversations() {
             console.log('👁️ Showing stored conversations...');
             
@@ -837,29 +1207,53 @@
                     limit: 50
                 }) || [];
                 
+                console.log('📊 Retrieved conversations:', conversations.length);
+                console.log('📝 Sample conversation structure:', conversations[0] ? Object.keys(conversations[0]) : 'No conversations');
+                
                 let conversationHTML = '';
                 if (conversations.length > 0) {
-                    conversationHTML = conversations.map((conv, index) => `
-                        <div class="conversation-item" onclick="viewConversationDetails('${conv.id}')">
-                            <div class="conv-header">
-                                <h5>Conversation ${index + 1}</h5>
-                                <span class="conv-time">${new Date(conv.startTime).toLocaleDateString()}</span>
+                    conversationHTML = conversations.map((conv, index) => {
+                        // 从events中提取消息
+                        const messages = conv.events ? conv.events.filter(event => 
+                            event.type === 'message' && event.content
+                        ) : [];
+                        
+                        // 获取消息计数
+                        const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
+                        
+                        // 获取错误计数
+                        const errorCount = conv.stats?.errorCount || 0;
+                        
+                        // 获取持续时间
+                        const duration = conv.duration || (conv.endTime && conv.startTime ? 
+                            Math.round((new Date(conv.endTime) - new Date(conv.startTime)) / 1000) + 's' : 'N/A');
+                        
+                        // 获取分类
+                        const category = conv.metadata?.category || 'standard';
+                        
+                        return `
+                            <div class="conversation-item" onclick="viewConversationDetails('${conv.id}')">
+                                <div class="conv-header">
+                                    <h5>Conversation ${index + 1}</h5>
+                                    <span class="conv-time">${new Date(conv.startTime).toLocaleDateString()}</span>
+                                </div>
+                                <div class="conv-stats">
+                                    <span class="badge">${messageCount} messages</span>
+                                    <span class="badge">${errorCount} errors</span>
+                                    <span class="badge">${duration}</span>
+                                    <span class="badge badge-${category}">${category}</span>
+                                </div>
+                                <div class="conv-preview">
+                                    ${messages.slice(0, 2).map(msg => `
+                                        <div class="message-preview">
+                                            <strong>${msg.sender}:</strong> ${(msg.content || '').substring(0, 100)}${(msg.content || '').length > 100 ? '...' : ''}
+                                        </div>
+                                    `).join('')}
+                                    ${messages.length === 0 ? '<div class="message-preview"><em>No messages found</em></div>' : ''}
+                                </div>
                             </div>
-                            <div class="conv-stats">
-                                <span class="badge">${conv.messageCount} messages</span>
-                                <span class="badge">${conv.stats.errorCount} errors</span>
-                                <span class="badge">${conv.duration || 'N/A'}</span>
-                                <span class="badge badge-${conv.metadata?.category || 'standard'}">${conv.metadata?.category || 'standard'}</span>
-                            </div>
-                            <div class="conv-preview">
-                                ${conv.messages.slice(0, 2).map(msg => `
-                                    <div class="message-preview">
-                                        <strong>${msg.sender}:</strong> ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     conversationHTML = `
                         <div class="empty-state">
@@ -874,7 +1268,7 @@
                 content.innerHTML = `
                     <div class="stored-conversations">
                         <div class="section-header">
-                            <h3><i class="fas fa-comments"></i> Stored Conversations</h3>
+                            <h3><i class="fas fa-comments"></i> Stored Conversations (${conversations.length})</h3>
                             <button class="btn btn-secondary" onclick="showHistoryManager()">
                                 <i class="fas fa-arrow-left"></i> Back to History Manager
                             </button>
@@ -979,27 +1373,44 @@
             
             let resultsHTML = '';
             if (results.length > 0) {
-                resultsHTML = results.map((conv, index) => `
-                    <div class="search-result" onclick="viewConversationDetails('${conv.id}')">
-                        <div class="result-header">
-                            <h5>Match ${index + 1}</h5>
-                            <span class="result-score">${conv.messageCount} messages</span>
+                resultsHTML = results.map((conv, index) => {
+                    // 从events中提取消息
+                    const messages = conv.events ? conv.events.filter(event => 
+                        event.type === 'message' && event.content
+                    ) : [];
+                    
+                    // 获取消息计数
+                    const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
+                    
+                    // 获取分类
+                    const category = conv.metadata?.category || 'standard';
+                    
+                    // 查找匹配的消息
+                    const matchingMessages = messages.filter(msg => 
+                        msg.content && msg.content.toLowerCase().includes(query.toLowerCase())
+                    );
+                    
+                    return `
+                        <div class="search-result" onclick="viewConversationDetails('${conv.id}')">
+                            <div class="result-header">
+                                <h5>Match ${index + 1}</h5>
+                                <span class="result-score">${messageCount} messages</span>
+                            </div>
+                            <div class="result-info">
+                                <span class="result-date">${new Date(conv.startTime).toLocaleString()}</span>
+                                <span class="result-category badge badge-${category}">${category}</span>
+                            </div>
+                            <div class="result-preview">
+                                ${matchingMessages.slice(0, 2).map(msg => `
+                                    <div class="match-preview">
+                                        <strong>${msg.sender}:</strong> ${highlightMatch(msg.content, query)}
+                                    </div>
+                                `).join('')}
+                                ${matchingMessages.length === 0 ? '<div class="match-preview"><em>No matching messages found</em></div>' : ''}
+                            </div>
                         </div>
-                        <div class="result-info">
-                            <span class="result-date">${new Date(conv.startTime).toLocaleString()}</span>
-                            <span class="result-category badge badge-${conv.metadata?.category || 'standard'}">${conv.metadata?.category || 'standard'}</span>
-                        </div>
-                        <div class="result-preview">
-                            ${conv.messages.filter(msg => 
-                                msg.content.toLowerCase().includes(query.toLowerCase())
-                            ).slice(0, 2).map(msg => `
-                                <div class="match-preview">
-                                    <strong>${msg.sender}:</strong> ${highlightMatch(msg.content, query)}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
                 resultsHTML = `
                     <div class="empty-state">

@@ -428,13 +428,26 @@ class ConversationEvolutionStorageManager {
         const searchQuery = caseSensitive ? query : query.toLowerCase();
         
         return this.historyData.conversations.filter(conversation => {
-            // 搜索消息内容
+            // 搜索消息内容 - 从events中提取消息
             if (searchFields.includes('messages')) {
-                const messageMatch = conversation.messages.some(msg => {
-                    const content = caseSensitive ? msg.content : msg.content.toLowerCase();
+                const messageEvents = conversation.events ? conversation.events.filter(event => 
+                    event.type === 'message' && event.content
+                ) : [];
+                
+                const messageMatch = messageEvents.some(event => {
+                    const content = caseSensitive ? event.content : event.content.toLowerCase();
                     return content.includes(searchQuery);
                 });
                 if (messageMatch) return true;
+                
+                // 也搜索旧格式的messages字段（向后兼容）
+                if (conversation.messages) {
+                    const legacyMessageMatch = conversation.messages.some(msg => {
+                        const content = caseSensitive ? msg.content : msg.content.toLowerCase();
+                        return content.includes(searchQuery);
+                    });
+                    if (legacyMessageMatch) return true;
+                }
             }
             
             // 搜索上下文
@@ -837,7 +850,12 @@ class ConversationEvolutionStorageManager {
         
         this.historyData.storageStats = {
             totalConversations: conversations.length,
-            totalMessages: conversations.reduce((sum, conv) => sum + conv.messageCount, 0),
+            totalMessages: conversations.reduce((sum, conv) => {
+                // 优先使用stats.messageCount，然后是messageCount，最后计算events长度
+                const messageCount = conv.stats?.messageCount || conv.messageCount || 
+                    (conv.events ? conv.events.filter(e => e.type === 'message').length : 0);
+                return sum + messageCount;
+            }, 0),
             totalAnalysisCount: this.historyData.analysisRecords.length,
             totalPluginsGenerated: this.historyData.pluginGenerationHistory.length,
             firstRecordDate: conversations.length > 0 ? 
