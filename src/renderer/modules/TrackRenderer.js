@@ -5797,7 +5797,7 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label for="sequenceIndicatorHeight">Indicator bar height (px):</label>
-                    <input type="number" id="sequenceIndicatorHeight" min="6" max="20" value="${settings.indicatorHeight || 12}">
+                    <input type="number" id="sequenceIndicatorHeight" min="6" max="20" value="${settings.indicatorHeight || 8}">
                     <div class="help-text">Height of the gene indicator bars below sequence lines.</div>
                 </div>
                 <div class="form-group">
