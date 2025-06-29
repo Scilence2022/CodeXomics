@@ -4782,18 +4782,59 @@ class TrackRenderer {
                         console.log(`🔍 Button ${index}:`, button.getAttribute('data-tab'), 'has active:', button.classList.contains('active'));
                     });
                     
-                    console.log('🔍 Active tab panel:', bodyElement.querySelector('.tab-panel.active'));
+                    console.log('🔍 Active tab panel (.tab-panel.active):', bodyElement.querySelector('.tab-panel.active'));
+                    console.log('🔍 Active tab panel (.sequence-settings-tabs .tab-panel.active):', bodyElement.querySelector('.sequence-settings-tabs .tab-panel.active'));
+                    console.log('🔍 Just active class (.active):', bodyElement.querySelectorAll('.active'));
+                    console.log('🔍 All tab panels:', bodyElement.querySelectorAll('.tab-panel'));
+                    console.log('🔍 Tab content div:', bodyElement.querySelector('.tab-content'));
+                    console.log('🔍 Sequence settings tabs div:', bodyElement.querySelector('.sequence-settings-tabs'));
+                    
+                    // Let's check what's actually inside the active panel
+                    const activePanelForDebug = bodyElement.querySelector('.tab-panel.active');
+                    if (activePanelForDebug) {
+                        console.log('🔍 Active panel content length:', activePanelForDebug.innerHTML.length);
+                        console.log('🔍 Active panel first 200 chars:', activePanelForDebug.innerHTML.substring(0, 200));
+                    }
+                    
                     console.log('🔍 Modal body innerHTML length:', bodyElement.innerHTML.length);
                     console.log('🔍 Modal body first 500 chars:', bodyElement.innerHTML.substring(0, 500));
                     
                     // Force show the active tab if it's hidden
-                    const activePanel = bodyElement.querySelector('.tab-panel.active');
+                    const activePanel = bodyElement.querySelector('.tab-panel.active') || bodyElement.querySelector('.tab-panel');
                     if (activePanel) {
                         console.log('🔧 Forcing active panel to show');
-                        activePanel.style.display = 'block !important';
-                        activePanel.style.visibility = 'visible';
-                        activePanel.style.opacity = '1';
+                        activePanel.style.cssText = 'visibility: visible !important; opacity: 1 !important; height: auto !important; overflow: visible !important; position: static !important; left: auto !important;';
+                        activePanel.classList.add('active');
+                        console.log('🔧 Applied inline styles to panel:', activePanel.id);
                     }
+                    
+                    // Debug modal positioning and visibility
+                    console.log('🔍 Modal element:', modal);
+                    console.log('🔍 Modal display:', getComputedStyle(modal).display);
+                    console.log('🔍 Modal visibility:', getComputedStyle(modal).visibility);
+                    console.log('🔍 Modal z-index:', getComputedStyle(modal).zIndex);
+                    console.log('🔍 Modal position:', getComputedStyle(modal).position);
+                    console.log('🔍 Modal top:', getComputedStyle(modal).top);
+                    console.log('🔍 Modal left:', getComputedStyle(modal).left);
+                    
+                    console.log('🔍 Body element:', bodyElement);
+                    console.log('🔍 Body display:', getComputedStyle(bodyElement).display);
+                    console.log('🔍 Body visibility:', getComputedStyle(bodyElement).visibility);
+                    console.log('🔍 Body height:', getComputedStyle(bodyElement).height);
+                    console.log('🔍 Body max-height:', getComputedStyle(bodyElement).maxHeight);
+                    console.log('🔍 Body overflow:', getComputedStyle(bodyElement).overflow);
+                    
+                    // Force modal body to have sufficient height - this was the key fix!
+                    console.log('🔧 Forcing modal body height...');
+                    bodyElement.style.cssText = 'height: auto !important; min-height: 400px !important; max-height: 600px !important; overflow-y: auto !important; display: block !important; visibility: visible !important; padding: 20px !important;';
+                    console.log('🔍 After forcing - Body height:', getComputedStyle(bodyElement).height);
+                    console.log('🔍 After forcing - Body overflow:', getComputedStyle(bodyElement).overflow);
+                    
+                    // Tab panels should now be visible with proper modal body height
+                    tabPanels.forEach((panel, index) => {
+                        console.log(`✅ Panel ${index} should now be visible`);
+                        console.log(`✅ Panel ${index} innerHTML length:`, panel.innerHTML.length);
+                    });
                     
                     // Manually set up tab functionality since script tags in innerHTML don't execute
                     console.log('🔧 Setting up tab button event listeners');
@@ -4821,6 +4862,45 @@ class TrackRenderer {
                             }
                         });
                     });
+                    
+                    // Set up color mode switching for sequence settings
+                    const colorModeSelect = bodyElement.querySelector('#sequenceColorMode');
+                    if (colorModeSelect) {
+                        console.log('🎨 Setting up color mode switching');
+                        
+                        const uniformSettings = bodyElement.querySelector('#uniformColorSettings');
+                        const geneColorSettings = bodyElement.querySelector('#geneColorSettings');
+                        const baseColorSettings = bodyElement.querySelector('#baseColorSettings');
+                        
+                        const switchColorMode = (mode) => {
+                            console.log('🎨 Switching to color mode:', mode);
+                            
+                            // Hide all color mode settings
+                            if (uniformSettings) uniformSettings.style.display = 'none';
+                            if (geneColorSettings) geneColorSettings.style.display = 'none';
+                            if (baseColorSettings) baseColorSettings.style.display = 'none';
+                            
+                            // Show the selected mode settings
+                            switch (mode) {
+                                case 'uniform':
+                                    if (uniformSettings) uniformSettings.style.display = 'block';
+                                    break;
+                                case 'geneColors':
+                                    if (geneColorSettings) geneColorSettings.style.display = 'block';
+                                    break;
+                                case 'baseColors':
+                                    if (baseColorSettings) baseColorSettings.style.display = 'block';
+                                    break;
+                            }
+                        };
+                        
+                        colorModeSelect.addEventListener('change', (e) => {
+                            switchColorMode(e.target.value);
+                        });
+                        
+                        // Initialize with current mode
+                        switchColorMode(colorModeSelect.value);
+                    }
                 }, 100);
                 break;
                 
@@ -5233,6 +5313,34 @@ class TrackRenderer {
                 
                 const showHoverEffectsEl = modal.querySelector('#sequenceShowHoverEffects');
                 if (showHoverEffectsEl) settings.showHoverEffects = showHoverEffectsEl.checked;
+                
+                // DNA Base Colors (View Mode)
+                const colorModeEl = modal.querySelector('#sequenceColorMode');
+                if (colorModeEl) settings.colorMode = colorModeEl.value;
+                
+                const uniformColorEl = modal.querySelector('#sequenceUniformColor');
+                if (uniformColorEl) settings.uniformColor = uniformColorEl.value;
+                
+                const intergenicColorEl = modal.querySelector('#sequenceIntergenicColor');
+                if (intergenicColorEl) settings.intergenicColor = intergenicColorEl.value;
+                
+                const geneColorOpacityEl = modal.querySelector('#sequenceGeneColorOpacity');
+                if (geneColorOpacityEl) settings.geneColorOpacity = parseFloat(geneColorOpacityEl.value) || 0.8;
+                
+                const colorAEl = modal.querySelector('#sequenceColorA');
+                if (colorAEl) settings.colorA = colorAEl.value;
+                
+                const colorTEl = modal.querySelector('#sequenceColorT');
+                if (colorTEl) settings.colorT = colorTEl.value;
+                
+                const colorGEl = modal.querySelector('#sequenceColorG');
+                if (colorGEl) settings.colorG = colorGEl.value;
+                
+                const colorCEl = modal.querySelector('#sequenceColorC');
+                if (colorCEl) settings.colorC = colorCEl.value;
+                
+                const colorNEl = modal.querySelector('#sequenceColorN');
+                if (colorNEl) settings.colorN = colorNEl.value;
                 
                 // Edit Mode settings (VS Code editor)
                 // Editor Layout
@@ -5772,6 +5880,78 @@ class TrackRenderer {
             </div>
             
             <div class="settings-section">
+                <h4>DNA Base Colors</h4>
+                <div class="form-group">
+                    <label for="sequenceColorMode">Color mode:</label>
+                    <select id="sequenceColorMode" class="select">
+                        <option value="uniform" ${(settings.colorMode || 'uniform') === 'uniform' ? 'selected' : ''}>Uniform color (single color for all bases)</option>
+                        <option value="geneColors" ${(settings.colorMode || 'uniform') === 'geneColors' ? 'selected' : ''}>Gene colors (use colors from Genes & Features Track)</option>
+                        <option value="baseColors" ${(settings.colorMode || 'uniform') === 'baseColors' ? 'selected' : ''}>Individual base colors (ATGCN)</option>
+                    </select>
+                    <div class="help-text">Choose how DNA bases are colored in the sequence view.</div>
+                </div>
+                
+                <!-- Uniform Color Settings -->
+                <div id="uniformColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'uniform' ? 'block' : 'none'};">
+                    <div class="form-group">
+                        <label for="sequenceUniformColor">Base color:</label>
+                        <input type="color" id="sequenceUniformColor" value="${settings.uniformColor || '#000000'}">
+                        <div class="help-text">Single color used for all DNA bases (default: black).</div>
+                    </div>
+                </div>
+                
+                <!-- Gene Colors Settings -->
+                <div id="geneColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'geneColors' ? 'block' : 'none'};">
+                    <div class="form-group">
+                        <div class="help-text">
+                            <i class="fas fa-info-circle"></i>
+                            DNA bases will be colored according to the gene they belong to, using the same colors as the Genes & Features Track. 
+                            Non-coding regions will use the uniform color below.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceIntergenicColor">Intergenic region color:</label>
+                        <input type="color" id="sequenceIntergenicColor" value="${settings.intergenicColor || '#666666'}">
+                        <div class="help-text">Color for bases in intergenic regions (between genes).</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceGeneColorOpacity">Gene color opacity:</label>
+                        <input type="number" id="sequenceGeneColorOpacity" min="0.3" max="1" step="0.1" value="${settings.geneColorOpacity || 0.8}">
+                        <div class="help-text">Transparency level for gene-based colors (0.3 = very transparent, 1.0 = opaque).</div>
+                    </div>
+                </div>
+                
+                <!-- Individual Base Colors Settings -->
+                <div id="baseColorSettings" class="color-mode-settings" style="display: ${(settings.colorMode || 'uniform') === 'baseColors' ? 'block' : 'none'};">
+                    <div class="form-group">
+                        <label for="sequenceColorA">Adenine (A) color:</label>
+                        <input type="color" id="sequenceColorA" value="${settings.colorA || '#FF0000'}">
+                        <div class="help-text">Color for adenine bases.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceColorT">Thymine (T) color:</label>
+                        <input type="color" id="sequenceColorT" value="${settings.colorT || '#0000FF'}">
+                        <div class="help-text">Color for thymine bases.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceColorG">Guanine (G) color:</label>
+                        <input type="color" id="sequenceColorG" value="${settings.colorG || '#00FF00'}">
+                        <div class="help-text">Color for guanine bases.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceColorC">Cytosine (C) color:</label>
+                        <input type="color" id="sequenceColorC" value="${settings.colorC || '#FFFF00'}">
+                        <div class="help-text">Color for cytosine bases.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sequenceColorN">Unknown (N) color:</label>
+                        <input type="color" id="sequenceColorN" value="${settings.colorN || '#888888'}">
+                        <div class="help-text">Color for unknown or ambiguous bases.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
                 <h4>Tooltips & Interaction</h4>
                 <div class="form-group">
                     <label>
@@ -6081,12 +6261,10 @@ class TrackRenderer {
                 </div>
                 
                 <div class="tab-content">
-                    <!-- View Mode Settings Tab -->
                     <div id="view-mode-tab" class="tab-panel ${currentViewMode === 'view' ? 'active' : ''}">
                         ${viewModeContent}
                     </div>
                     
-                    <!-- Edit Mode Settings Tab -->
                     <div id="edit-mode-tab" class="tab-panel ${currentViewMode === 'edit' ? 'active' : ''}">
                         ${editModeContent}
                     </div>

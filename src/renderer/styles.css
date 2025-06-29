@@ -32605,3 +32605,38 @@ path.svg-gene-element.selected {
     margin-top: 4px;
     font-style: italic;
 }
+
+/* Color mode settings specific styles */
+.sequence-settings-tabs .color-mode-settings {
+    margin-left: 20px;
+    padding: 10px;
+    border-left: 3px solid #007bff;
+    background: #f8f9fa;
+    border-radius: 0 4px 4px 0;
+    margin-top: 10px;
+}
+
+.sequence-settings-tabs .color-mode-settings .help-text i {
+    color: #17a2b8;
+    margin-right: 5px;
+}
+
+.sequence-settings-tabs .form-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    padding: 0;
+    border: 2px solid #ced4da;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.sequence-settings-tabs .form-group input[type="color"]:hover {
+    border-color: #007bff;
+}
+
+.sequence-settings-tabs .form-group input[type="color"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
