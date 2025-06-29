@@ -85,25 +85,51 @@ class ActionManager {
         document.getElementById('exportActionsBtn')?.addEventListener('click', () => this.exportActions());
         document.getElementById('importActionsBtn')?.addEventListener('click', () => this.importActions());
         
+        // Action List modal close handlers
+        const actionListModal = document.getElementById('actionListModal');
+        if (actionListModal) {
+            actionListModal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => this.closeActionList());
+            });
+            
+            // Close when clicking outside
+            actionListModal.addEventListener('click', (e) => {
+                if (e.target.id === 'actionListModal') {
+                    this.closeActionList();
+                }
+            });
+        }
+        
         // Sequence selection modal listeners
         document.getElementById('confirmSequenceSelection')?.addEventListener('click', () => this.confirmSequenceSelection());
-        document.getElementById('cancelSequenceSelection')?.addEventListener('click', () => this.closeSequenceSelectionModal());
         document.getElementById('chromosomeSelectSeq')?.addEventListener('change', () => this.updateSequencePreview());
         document.getElementById('startPositionSeq')?.addEventListener('input', () => this.updateSequencePreview());
         document.getElementById('endPositionSeq')?.addEventListener('input', () => this.updateSequencePreview());
         document.getElementById('strandSelectSeq')?.addEventListener('change', () => this.updateSequencePreview());
         
-        // Close modal when clicking outside
-        document.getElementById('sequenceSelectionModal')?.addEventListener('click', (e) => {
-            if (e.target.id === 'sequenceSelectionModal') {
-                this.closeSequenceSelectionModal();
-            }
-        });
+        // Sequence selection modal close handlers
+        const sequenceModal = document.getElementById('sequenceSelectionModal');
+        if (sequenceModal) {
+            sequenceModal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => this.closeSequenceSelectionModal());
+            });
+            
+            // Close when clicking outside
+            sequenceModal.addEventListener('click', (e) => {
+                if (e.target.id === 'sequenceSelectionModal') {
+                    this.closeSequenceSelectionModal();
+                }
+            });
+        }
         
-        // Close modal with Escape key
+        // Close modals with Escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.getElementById('sequenceSelectionModal')?.style.display === 'flex') {
-                this.closeSequenceSelectionModal();
+            if (e.key === 'Escape') {
+                if (document.getElementById('sequenceSelectionModal')?.classList.contains('show')) {
+                    this.closeSequenceSelectionModal();
+                } else if (document.getElementById('actionListModal')?.classList.contains('show')) {
+                    this.closeActionList();
+                }
             }
         });
     }
@@ -217,7 +243,10 @@ class ActionManager {
         document.getElementById('strandSelectSeq').value = '+'; // Default to forward strand
         
         // Show modal
-        document.getElementById('sequenceSelectionModal').style.display = 'flex';
+        const modal = document.getElementById('sequenceSelectionModal');
+        if (modal) {
+            modal.classList.add('show');
+        }
         
         // Update preview after setting values
         setTimeout(() => {
@@ -416,7 +445,7 @@ class ActionManager {
     closeSequenceSelectionModal() {
         const modal = document.getElementById('sequenceSelectionModal');
         if (modal) {
-            modal.style.display = 'none';
+            modal.classList.remove('show');
         }
         this.currentOperation = null;
     }
@@ -619,7 +648,20 @@ class ActionManager {
      */
     showActionList() {
         this.updateActionListUI();
-        document.getElementById('actionListModal').style.display = 'flex';
+        const modal = document.getElementById('actionListModal');
+        if (modal) {
+            modal.classList.add('show');
+        }
+    }
+    
+    /**
+     * Close action list modal
+     */
+    closeActionList() {
+        const modal = document.getElementById('actionListModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
     }
     
     /**
