@@ -87,10 +87,25 @@ class ActionManager {
         
         // Sequence selection modal listeners
         document.getElementById('confirmSequenceSelection')?.addEventListener('click', () => this.confirmSequenceSelection());
+        document.getElementById('cancelSequenceSelection')?.addEventListener('click', () => this.closeSequenceSelectionModal());
         document.getElementById('chromosomeSelectSeq')?.addEventListener('change', () => this.updateSequencePreview());
         document.getElementById('startPositionSeq')?.addEventListener('input', () => this.updateSequencePreview());
         document.getElementById('endPositionSeq')?.addEventListener('input', () => this.updateSequencePreview());
         document.getElementById('strandSelectSeq')?.addEventListener('change', () => this.updateSequencePreview());
+        
+        // Close modal when clicking outside
+        document.getElementById('sequenceSelectionModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'sequenceSelectionModal') {
+                this.closeSequenceSelectionModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('sequenceSelectionModal')?.style.display === 'flex') {
+                this.closeSequenceSelectionModal();
+            }
+        });
     }
     
     /**
@@ -122,50 +137,92 @@ class ActionManager {
      * Handle copy sequence action
      */
     handleCopySequence() {
-        this.showSequenceSelectionModal('Copy Sequence', 'copy');
+        this.showSequenceSelectionModal('copy');
     }
     
     /**
      * Handle cut sequence action
      */
     handleCutSequence() {
-        this.showSequenceSelectionModal('Cut Sequence', 'cut');
+        this.showSequenceSelectionModal('cut');
     }
     
     /**
      * Handle paste sequence action  
      */
     handlePasteSequence() {
-        if (!this.clipboard) {
+        if (!this.clipboard || !this.clipboard.sequence) {
             this.genomeBrowser.showNotification('No sequence in clipboard', 'warning');
             return;
         }
         
-        this.showSequenceSelectionModal('Paste Sequence', 'paste');
+        this.showSequenceSelectionModal('paste');
     }
     
     /**
      * Show sequence selection modal
      */
-    showSequenceSelectionModal(title, operation) {
+    showSequenceSelectionModal(operation) {
         this.currentOperation = operation;
         
-        // Update modal title
-        document.getElementById('sequenceSelectionTitle').textContent = title;
+        // Update modal title based on operation
+        const titleMap = {
+            'copy': 'Copy Sequence',
+            'cut': 'Cut Sequence', 
+            'paste': 'Paste Sequence'
+        };
+        document.getElementById('sequenceSelectionTitle').textContent = titleMap[operation] || 'Select Sequence';
         
         // Populate chromosome dropdown
         this.populateChromosomeSelect();
         
-        // Set default values based on current view
-        if (this.genomeBrowser.currentChromosome) {
-            document.getElementById('chromosomeSelectSeq').value = this.genomeBrowser.currentChromosome;
-            document.getElementById('startPositionSeq').value = this.genomeBrowser.currentPosition.start;
-            document.getElementById('endPositionSeq').value = this.genomeBrowser.currentPosition.end;
+        // Set default values - prioritize selected gene, then current view
+        let defaultChromosome = null;
+        let defaultStart = 1;
+        let defaultEnd = 1000;
+        
+        // Check if there's a selected gene first
+        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+            const gene = this.genomeBrowser.selectedGene.gene;
+            defaultChromosome = gene.chromosome || this.genomeBrowser.currentChromosome;
+            defaultStart = parseInt(gene.start) || 1;
+            defaultEnd = parseInt(gene.end) || defaultStart + 1000;
+            
+            console.log('Using selected gene for sequence selection:', {
+                chromosome: defaultChromosome,
+                start: defaultStart,
+                end: defaultEnd,
+                gene: gene.name || gene.locus_tag
+            });
+        } 
+        // Fall back to current genome view
+        else if (this.genomeBrowser.currentChromosome) {
+            defaultChromosome = this.genomeBrowser.currentChromosome;
+            defaultStart = this.genomeBrowser.currentPosition?.start || 1;
+            defaultEnd = this.genomeBrowser.currentPosition?.end || defaultStart + 1000;
+            
+            console.log('Using current view for sequence selection:', {
+                chromosome: defaultChromosome,
+                start: defaultStart,
+                end: defaultEnd
+            });
         }
+        
+        // Set form values
+        if (defaultChromosome) {
+            document.getElementById('chromosomeSelectSeq').value = defaultChromosome;
+        }
+        document.getElementById('startPositionSeq').value = defaultStart;
+        document.getElementById('endPositionSeq').value = defaultEnd;
+        document.getElementById('strandSelectSeq').value = '+'; // Default to forward strand
         
         // Show modal
         document.getElementById('sequenceSelectionModal').style.display = 'flex';
-        this.updateSequencePreview();
+        
+        // Update preview after setting values
+        setTimeout(() => {
+            this.updateSequencePreview();
+        }, 100);
     }
     
     /**
@@ -190,31 +247,69 @@ class ActionManager {
      */
     async updateSequencePreview() {
         const chromosome = document.getElementById('chromosomeSelectSeq').value;
-        const start = parseInt(document.getElementById('startPositionSeq').value);
-        const end = parseInt(document.getElementById('endPositionSeq').value);
+        const startInput = document.getElementById('startPositionSeq').value;
+        const endInput = document.getElementById('endPositionSeq').value;
         const strand = document.getElementById('strandSelectSeq').value;
         
         const previewDiv = document.getElementById('sequencePreview');
         
-        if (!chromosome || !start || !end || start >= end) {
-            previewDiv.textContent = 'Select chromosome and valid positions to preview sequence';
+        // Validate inputs
+        if (!chromosome || chromosome === '') {
+            previewDiv.textContent = 'Select a chromosome to preview sequence';
+            previewDiv.classList.remove('has-sequence');
+            return;
+        }
+        
+        if (!startInput || !endInput) {
+            previewDiv.textContent = 'Enter start and end positions to preview sequence';
+            previewDiv.classList.remove('has-sequence');
+            return;
+        }
+        
+        const start = parseInt(startInput);
+        const end = parseInt(endInput);
+        
+        if (isNaN(start) || isNaN(end)) {
+            previewDiv.textContent = 'Start and end positions must be valid numbers';
+            previewDiv.classList.remove('has-sequence');
+            return;
+        }
+        
+        if (start < 1) {
+            previewDiv.textContent = 'Start position must be greater than 0';
+            previewDiv.classList.remove('has-sequence');
+            return;
+        }
+        
+        if (start >= end) {
+            previewDiv.textContent = 'End position must be greater than start position';
             previewDiv.classList.remove('has-sequence');
             return;
         }
         
         try {
             const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
-            if (sequence) {
-                const preview = sequence.length > 100 ? 
+            if (sequence && sequence.length > 0) {
+                const length = sequence.length;
+                const preview = length > 100 ? 
                     sequence.substring(0, 100) + '...' : 
                     sequence;
-                previewDiv.textContent = `Length: ${sequence.length} bp\n${preview}`;
+                
+                previewDiv.innerHTML = `
+                    <div class="sequence-info">
+                        <strong>Length:</strong> ${length.toLocaleString()} bp | 
+                        <strong>Region:</strong> ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} | 
+                        <strong>Strand:</strong> ${strand}
+                    </div>
+                    <div class="sequence-preview">${preview}</div>
+                `;
                 previewDiv.classList.add('has-sequence');
             } else {
-                previewDiv.textContent = 'Unable to retrieve sequence for this region';
+                previewDiv.textContent = `Unable to retrieve sequence for ${chromosome}:${start}-${end}. Check if the region is valid.`;
                 previewDiv.classList.remove('has-sequence');
             }
         } catch (error) {
+            console.error('Error in updateSequencePreview:', error);
             previewDiv.textContent = 'Error retrieving sequence preview';
             previewDiv.classList.remove('has-sequence');
         }
@@ -225,13 +320,51 @@ class ActionManager {
      */
     async confirmSequenceSelection() {
         const chromosome = document.getElementById('chromosomeSelectSeq').value;
-        const start = parseInt(document.getElementById('startPositionSeq').value);
-        const end = parseInt(document.getElementById('endPositionSeq').value);
+        const startInput = document.getElementById('startPositionSeq').value;
+        const endInput = document.getElementById('endPositionSeq').value;
         const strand = document.getElementById('strandSelectSeq').value;
         
-        if (!chromosome || !start || !end || start >= end) {
-            this.genomeBrowser.showNotification('Please select valid chromosome and positions', 'error');
+        // Enhanced validation
+        if (!chromosome || chromosome === '') {
+            this.genomeBrowser.showNotification('Please select a chromosome', 'error');
             return;
+        }
+        
+        if (!startInput || startInput === '') {
+            this.genomeBrowser.showNotification('Please enter a start position', 'error');
+            return;
+        }
+        
+        if (!endInput || endInput === '') {
+            this.genomeBrowser.showNotification('Please enter an end position', 'error');
+            return;
+        }
+        
+        const start = parseInt(startInput);
+        const end = parseInt(endInput);
+        
+        if (isNaN(start) || isNaN(end)) {
+            this.genomeBrowser.showNotification('Start and end positions must be valid numbers', 'error');
+            return;
+        }
+        
+        if (start < 1) {
+            this.genomeBrowser.showNotification('Start position must be greater than 0', 'error');
+            return;
+        }
+        
+        if (start >= end) {
+            this.genomeBrowser.showNotification('End position must be greater than start position', 'error');
+            return;
+        }
+        
+        // Check if the region is within the chromosome bounds
+        if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
+            const chromosomeLength = this.genomeBrowser.currentSequence[chromosome].length;
+            if (end > chromosomeLength) {
+                this.genomeBrowser.showNotification(`End position (${end}) exceeds chromosome length (${chromosomeLength})`, 'error');
+                return;
+            }
         }
         
         const target = `${chromosome}:${start}-${end}(${strand})`;
@@ -261,20 +394,31 @@ class ActionManager {
                     this.addAction(
                         this.ACTION_TYPES.PASTE_SEQUENCE,
                         target,
-                        `Paste ${this.clipboard.sequence.length} bp to ${target}`,
+                        `Paste ${this.clipboard.sequence?.length || 0} bp to ${target}`,
                         { ...metadata, clipboardData: this.clipboard }
                     );
                     break;
             }
             
             // Close modal
-            document.getElementById('sequenceSelectionModal').style.display = 'none';
+            this.closeSequenceSelectionModal();
             this.genomeBrowser.showNotification(`${this.currentOperation} action queued successfully`, 'success');
             
         } catch (error) {
             console.error('Error confirming sequence selection:', error);
             this.genomeBrowser.showNotification('Error creating action', 'error');
         }
+    }
+    
+    /**
+     * Close sequence selection modal
+     */
+    closeSequenceSelectionModal() {
+        const modal = document.getElementById('sequenceSelectionModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        this.currentOperation = null;
     }
     
     /**
