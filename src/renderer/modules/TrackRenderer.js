@@ -4764,6 +4764,64 @@ class TrackRenderer {
                 console.log('⚙️ Generated sequence content length:', sequenceContent.length);
                 bodyElement.innerHTML = sequenceContent;
                 console.log('⚙️ Sequence settings loaded into modal body');
+                
+                // Debug: Check if tabs are actually in the DOM and set up tab functionality
+                setTimeout(() => {
+                    const tabButtons = bodyElement.querySelectorAll('.tab-button');
+                    const tabPanels = bodyElement.querySelectorAll('.tab-panel');
+                    console.log('🔍 Tab buttons found:', tabButtons.length);
+                    console.log('🔍 Tab panels found:', tabPanels.length);
+                    
+                    // Check each tab panel individually
+                    tabPanels.forEach((panel, index) => {
+                        console.log(`🔍 Panel ${index}:`, panel.id, 'has active:', panel.classList.contains('active'), 'display:', getComputedStyle(panel).display);
+                    });
+                    
+                    // Check each tab button
+                    tabButtons.forEach((button, index) => {
+                        console.log(`🔍 Button ${index}:`, button.getAttribute('data-tab'), 'has active:', button.classList.contains('active'));
+                    });
+                    
+                    console.log('🔍 Active tab panel:', bodyElement.querySelector('.tab-panel.active'));
+                    console.log('🔍 Modal body innerHTML length:', bodyElement.innerHTML.length);
+                    console.log('🔍 Modal body first 500 chars:', bodyElement.innerHTML.substring(0, 500));
+                    
+                    // Force show the active tab if it's hidden
+                    const activePanel = bodyElement.querySelector('.tab-panel.active');
+                    if (activePanel) {
+                        console.log('🔧 Forcing active panel to show');
+                        activePanel.style.display = 'block !important';
+                        activePanel.style.visibility = 'visible';
+                        activePanel.style.opacity = '1';
+                    }
+                    
+                    // Manually set up tab functionality since script tags in innerHTML don't execute
+                    console.log('🔧 Setting up tab button event listeners');
+                    tabButtons.forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const targetTab = button.getAttribute('data-tab');
+                            console.log('🔧 Tab clicked:', targetTab);
+                            
+                            // Remove active class from all buttons and panels
+                            tabButtons.forEach(btn => btn.classList.remove('active'));
+                            tabPanels.forEach(panel => panel.classList.remove('active'));
+                            
+                            // Add active class to clicked button
+                            button.classList.add('active');
+                            
+                            // Show corresponding panel
+                            const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
+                            if (targetPanel) {
+                                targetPanel.classList.add('active');
+                                targetPanel.style.display = 'block !important';
+                                console.log('🔧 Activated panel:', targetTab);
+                            } else {
+                                console.error('🔧 Target panel not found:', `${targetTab}-tab`);
+                            }
+                        });
+                    });
+                }, 100);
                 break;
                 
             default:
@@ -6034,94 +6092,6 @@ class TrackRenderer {
                     </div>
                 </div>
             </div>
-            
-            <style>
-                .sequence-settings-tabs {
-                    margin-top: 10px;
-                }
-                
-                .tab-buttons {
-                    display: flex;
-                    border-bottom: 2px solid #e9ecef;
-                    margin-bottom: 20px;
-                }
-                
-                .tab-button {
-                    background: #f8f9fa;
-                    border: none;
-                    padding: 12px 20px;
-                    cursor: pointer;
-                    border-radius: 6px 6px 0 0;
-                    margin-right: 4px;
-                    color: #6c757d;
-                    font-size: 14px;
-                    font-weight: 500;
-                    transition: all 0.2s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                
-                .tab-button:hover {
-                    background: #e9ecef;
-                    color: #495057;
-                }
-                
-                .tab-button.active {
-                    background: #007bff;
-                    color: white;
-                    border-bottom: 2px solid #007bff;
-                }
-                
-                .tab-panel {
-                    display: none;
-                }
-                
-                .tab-panel.active {
-                    display: block;
-                }
-                
-                .mode-indicator {
-                    background: #e3f2fd;
-                    border: 1px solid #bbdefb;
-                    border-radius: 6px;
-                    padding: 12px;
-                    margin-bottom: 20px;
-                    font-size: 13px;
-                    color: #1565c0;
-                }
-                
-                                 .mode-indicator i {
-                     margin-right: 8px;
-                 }
-             </style>
-             
-             <script>
-                 // Tab switching functionality
-                 setTimeout(() => {
-                     const tabButtons = document.querySelectorAll('.tab-button');
-                     const tabPanels = document.querySelectorAll('.tab-panel');
-                     
-                     tabButtons.forEach(button => {
-                         button.addEventListener('click', () => {
-                             const targetTab = button.getAttribute('data-tab');
-                             
-                             // Remove active class from all buttons and panels
-                             tabButtons.forEach(btn => btn.classList.remove('active'));
-                             tabPanels.forEach(panel => panel.classList.remove('active'));
-                             
-                             // Add active class to clicked button
-                             button.classList.add('active');
-                             
-                             // Show corresponding panel
-                             const targetPanel = document.getElementById(targetTab + '-tab');
-                             if (targetPanel) {
-                                 targetPanel.classList.add('active');
-                             }
-                         });
-                     });
-                 }, 100);
-             </script>
         `;
         
         console.log('🎨 Final result length:', result.length);

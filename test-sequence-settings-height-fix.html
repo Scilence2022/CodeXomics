@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Settings Height Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .test-title {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+            transition: background 0.2s;
+        }
+
+        .test-button:hover {
+            background: #2980b9;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80%;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .modal-body {
+            padding: 20px;
+            height: auto;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Sequence Settings Tabs Styles - Updated with fix */
+        .sequence-settings-tabs {
+            margin-top: 10px;
+        }
+
+        .sequence-settings-tabs .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .sequence-settings-tabs .tab-button {
+            background: #f8f9fa;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            margin-right: 4px;
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sequence-settings-tabs .tab-button:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .sequence-settings-tabs .tab-button.active {
+            background: #007bff;
+            color: white;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .sequence-settings-tabs .tab-panel {
+            display: none;
+            min-height: 300px;
+            padding: 15px;
+        }
+
+        .sequence-settings-tabs .tab-panel.active {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: auto !important;
+            min-height: 300px !important;
+            overflow: visible !important;
+            position: static !important;
+            left: auto !important;
+        }
+
+        /* Ensure tab content container is properly sized */
+        .sequence-settings-tabs .tab-content {
+            display: block !important;
+            min-height: 300px;
+            overflow: visible;
+        }
+
+        .sequence-settings-tabs .settings-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+
+        .sequence-settings-tabs .settings-section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .sequence-settings-tabs .form-group {
+            margin-bottom: 15px;
+        }
+
+        .sequence-settings-tabs .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .sequence-settings-tabs .form-group input,
+        .sequence-settings-tabs .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .sequence-settings-tabs .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .sequence-settings-tabs .form-group input[type="color"] {
+            width: 60px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .sequence-settings-tabs .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .test-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🔧 Sequence Settings Height Fix Test</h1>
+        
+        <p>This test verifies that the sequence settings tabs display properly with correct height and content visibility.</p>
+        
+        <button class="test-button" onclick="openSequenceSettings()">
+            📊 Open Sequence Settings
+        </button>
+        
+        <button class="test-button" onclick="runHeightTest()">
+            📏 Test Height Measurements
+        </button>
+        
+        <button class="test-button" onclick="clearLog()">
+            🗑️ Clear Log
+        </button>
+        
+        <div id="testLog" class="test-log"></div>
+    </div>
+
+    <!-- Modal -->
+    <div id="sequenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Sequence Track Settings</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('testLog');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+
+        function openSequenceSettings() {
+            log('🔧 Opening sequence settings modal...', 'info');
+            
+            const modal = document.getElementById('sequenceModal');
+            const modalBody = document.getElementById('modalBody');
+            
+            // Generate sequence settings content
+            const content = generateSequenceSettingsContent();
+            modalBody.innerHTML = content;
+            
+            log('📝 Generated content length: ' + content.length + ' characters', 'success');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Set up tab functionality
+            setTimeout(() => {
+                setupTabFunctionality();
+                runVisibilityTests();
+            }, 100);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('sequenceModal');
+            modal.classList.remove('show');
+            log('❌ Modal closed', 'info');
+        }
+
+        function generateSequenceSettingsContent() {
+            return '<div class="sequence-settings-tabs"><div class="tab-buttons"><button class="tab-button active" data-tab="view-mode">👁️ View Mode Settings</button><button class="tab-button" data-tab="edit-mode">✏️ Edit Mode Settings</button></div><div class="tab-content"><div id="view-mode-tab" class="tab-panel active"><div class="settings-section"><h4>Gene Indicator Bar Settings</h4><div class="form-group"><label for="geneIndicatorHeight">Gene indicator bar height (px):</label><input type="number" id="geneIndicatorHeight" min="2" max="20" value="6"><div class="help-text">Height of the gene indicator bar above the sequence.</div></div><div class="form-group"><label for="geneIndicatorOpacity">Gene indicator opacity:</label><input type="range" id="geneIndicatorOpacity" min="0.1" max="1" step="0.1" value="0.7"><div class="help-text">Transparency level of gene indicators (0.1 = very transparent, 1.0 = opaque).</div></div><div class="form-group"><label><input type="checkbox" id="showGeneIndicators" checked>Show gene indicators</label><div class="help-text">Display colored bars above sequence bases to indicate gene regions.</div></div></div><div class="settings-section"><h4>Gene Markers</h4><div class="form-group"><label><input type="checkbox" id="showGeneStartMarkers" checked>Show gene start markers</label><div class="help-text">Display vertical lines at gene start positions.</div></div><div class="form-group"><label><input type="checkbox" id="showGeneEndArrows" checked>Show gene end arrows</label><div class="help-text">Display directional arrows at gene end positions.</div></div><div class="form-group"><label for="geneMarkerWidth">Gene marker width (px):</label><input type="number" id="geneMarkerWidth" min="1" max="5" value="2"><div class="help-text">Width of gene start/end marker lines.</div></div></div></div><div id="edit-mode-tab" class="tab-panel"><div class="settings-section"><h4>Editor Layout</h4><div class="form-group"><label for="editorFontSize">Font size (px):</label><input type="number" id="editorFontSize" min="10" max="24" value="14"><div class="help-text">Font size for DNA bases in the editor.</div></div><div class="form-group"><label for="editorFontFamily">Font family:</label><select id="editorFontFamily"><option value="\'Courier New\', monospace">Courier New</option><option value="\'Monaco\', monospace">Monaco</option><option value="\'Consolas\', monospace">Consolas</option><option value="\'SF Mono\', monospace">SF Mono</option></select><div class="help-text">Monospace font family for consistent character spacing.</div></div><div class="form-group"><label for="editorBasesPerLine">Bases per line:</label><input type="number" id="editorBasesPerLine" min="50" max="200" value="80"><div class="help-text">Number of DNA bases to display per line.</div></div></div><div class="settings-section"><h4>Gene-Based Coloring</h4><div class="form-group"><label><input type="checkbox" id="editorUseGeneColors">Use gene colors for DNA bases</label><div class="help-text">Color DNA bases according to the gene they belong to instead of nucleotide type.</div></div><div class="form-group"><label for="editorGeneColorCDS">CDS gene color:</label><input type="color" id="editorGeneColorCDS" value="#4CAF50"><div class="help-text">Color for bases within CDS genes.</div></div><div class="form-group"><label for="editorGeneColorRNA">RNA gene color:</label><input type="color" id="editorGeneColorRNA" value="#2196F3"><div class="help-text">Color for bases within RNA genes (tRNA, rRNA, mRNA).</div></div></div></div></div></div>';
+        }
+
+        function setupTabFunctionality() {
+            log('🔧 Setting up tab functionality...', 'info');
+            
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            
+            log('📊 Found ' + tabButtons.length + ' tab buttons and ' + tabPanels.length + ' tab panels', 'info');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetTab = button.getAttribute('data-tab');
+                    log('🔄 Switching to tab: ' + targetTab, 'info');
+                    
+                    // Remove active class from all buttons and panels
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanels.forEach(panel => panel.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    // Show corresponding panel
+                    const targetPanel = document.querySelector('#' + targetTab + '-tab');
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                        log('✅ Activated panel: ' + targetTab, 'success');
+                        
+                        // Measure panel height
+                        const height = targetPanel.offsetHeight;
+                        const computedHeight = getComputedStyle(targetPanel).height;
+                        log('📏 Panel height: ' + height + 'px (computed: ' + computedHeight + ')', 'info');
+                    } else {
+                        log('❌ Target panel not found: ' + targetTab + '-tab', 'error');
+                    }
+                });
+            });
+        }
+
+        function runVisibilityTests() {
+            log('🔍 Running visibility tests...', 'info');
+            
+            const tabContent = document.querySelector('.tab-content');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            const activePanel = document.querySelector('.tab-panel.active');
+            
+            if (tabContent) {
+                const contentHeight = tabContent.offsetHeight;
+                const contentDisplay = getComputedStyle(tabContent).display;
+                log('📏 Tab content height: ' + contentHeight + 'px, display: ' + contentDisplay, 'info');
+            } else {
+                log('❌ Tab content container not found', 'error');
+            }
+            
+            tabPanels.forEach((panel, index) => {
+                const height = panel.offsetHeight;
+                const display = getComputedStyle(panel).display;
+                const visibility = getComputedStyle(panel).visibility;
+                const isActive = panel.classList.contains('active');
+                
+                log('📊 Panel ' + (index + 1) + ' (' + panel.id + '): height=' + height + 'px, display=' + display + ', visibility=' + visibility + ', active=' + isActive, 
+                    isActive && height > 0 ? 'success' : 'error');
+            });
+            
+            if (activePanel) {
+                const settingsSections = activePanel.querySelectorAll('.settings-section');
+                log('📝 Active panel contains ' + settingsSections.length + ' settings sections', 'success');
+            }
+        }
+
+        function runHeightTest() {
+            log('📏 Running comprehensive height test...', 'info');
+            
+            const modal = document.getElementById('sequenceModal');
+            const modalBody = document.getElementById('modalBody');
+            
+            if (!modal.classList.contains('show')) {
+                log('❌ Modal is not open. Please open the sequence settings first.', 'error');
+                return;
+            }
+            
+            // Test modal dimensions
+            const modalHeight = modal.offsetHeight;
+            const modalBodyHeight = modalBody.offsetHeight;
+            const modalBodyScrollHeight = modalBody.scrollHeight;
+            
+            log('📏 Modal height: ' + modalHeight + 'px', 'info');
+            log('📏 Modal body height: ' + modalBodyHeight + 'px', 'info');
+            log('📏 Modal body scroll height: ' + modalBodyScrollHeight + 'px', 'info');
+            
+            // Test tab container dimensions
+            const tabsContainer = document.querySelector('.sequence-settings-tabs');
+            const tabContent = document.querySelector('.tab-content');
+            const activePanel = document.querySelector('.tab-panel.active');
+            
+            if (tabsContainer) {
+                log('📏 Tabs container height: ' + tabsContainer.offsetHeight + 'px', 'info');
+            }
+            
+            if (tabContent) {
+                log('📏 Tab content height: ' + tabContent.offsetHeight + 'px', 'info');
+            }
+            
+            if (activePanel) {
+                log('📏 Active panel height: ' + activePanel.offsetHeight + 'px', 'success');
+                
+                // Test content within active panel
+                const settingsSections = activePanel.querySelectorAll('.settings-section');
+                let totalSectionHeight = 0;
+                settingsSections.forEach((section, index) => {
+                    const sectionHeight = section.offsetHeight;
+                    totalSectionHeight += sectionHeight;
+                    log('📏 Section ' + (index + 1) + ' height: ' + sectionHeight + 'px', 'info');
+                });
+                
+                log('📏 Total sections height: ' + totalSectionHeight + 'px', 'info');
+                
+                if (activePanel.offsetHeight >= 300) {
+                    log('✅ Active panel height is adequate (>= 300px)', 'success');
+                } else {
+                    log('❌ Active panel height is too small (< 300px)', 'error');
+                }
+            } else {
+                log('❌ No active panel found', 'error');
+            }
+        }
+
+        // Initialize
+        log('🚀 Sequence Settings Height Fix Test initialized', 'success');
+        log('📝 Click "Open Sequence Settings" to test the fix', 'info');
+    </script>
+</body>
+</html> 

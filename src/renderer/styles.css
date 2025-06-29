@@ -32470,3 +32470,138 @@ path.svg-gene-element.selected {
     background: var(--border-color);
     margin: 4px 0;
 }
+
+/* =====================================================
+   SEQUENCE TRACK SETTINGS STYLES
+   ===================================================== */
+
+.sequence-settings-tabs {
+    margin-top: 10px;
+}
+
+.sequence-settings-tabs .tab-buttons {
+    display: flex;
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.sequence-settings-tabs .tab-button {
+    background: #f8f9fa;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    margin-right: 4px;
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sequence-settings-tabs .tab-button:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.sequence-settings-tabs .tab-button.active {
+    background: #007bff;
+    color: white;
+    border-bottom: 2px solid #007bff;
+}
+
+.sequence-settings-tabs .tab-panel {
+    display: none;
+    min-height: 300px;
+    padding: 15px;
+}
+
+.sequence-settings-tabs .tab-panel.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    min-height: 300px !important;
+    overflow: visible !important;
+    position: static !important;
+    left: auto !important;
+}
+
+/* Ensure tab content container is properly sized */
+.sequence-settings-tabs .tab-content {
+    display: block !important;
+    min-height: 300px;
+    overflow: visible;
+}
+
+.sequence-settings-tabs .mode-indicator {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #1565c0;
+}
+
+.sequence-settings-tabs .mode-indicator i {
+    margin-right: 8px;
+}
+
+.sequence-settings-tabs .settings-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+.sequence-settings-tabs .settings-section h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.sequence-settings-tabs .form-group {
+    margin-bottom: 15px;
+}
+
+.sequence-settings-tabs .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.sequence-settings-tabs .form-group input,
+.sequence-settings-tabs .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sequence-settings-tabs .form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.sequence-settings-tabs .form-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sequence-settings-tabs .help-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+    font-style: italic;
+}
