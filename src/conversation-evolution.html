@@ -1003,200 +1003,6 @@
             }
         }
         
-        function showHistoryManager() {
-            console.log('📋 Showing history manager...');
-            
-            try {
-                const conversations = evolutionManager?.getConversationHistory() || [];
-                const conversationCount = conversations.length;
-                
-                // 计算统计信息
-                const totalMessages = conversations.reduce((sum, conv) => {
-                    const messageCount = conv.stats?.messageCount || conv.messageCount || 0;
-                    return sum + messageCount;
-                }, 0);
-                
-                const totalErrors = conversations.reduce((sum, conv) => {
-                    return sum + (conv.stats?.errorCount || 0);
-                }, 0);
-                
-                const totalToolCalls = conversations.reduce((sum, conv) => {
-                    return sum + (conv.stats?.toolCallCount || 0);
-                }, 0);
-                
-                // 按分类统计
-                const categories = {};
-                conversations.forEach(conv => {
-                    const category = conv.metadata?.category || 'standard';
-                    categories[category] = (categories[category] || 0) + 1;
-                });
-                
-                const content = document.getElementById('tabContent');
-                content.innerHTML = `
-                    <div class="history-manager">
-                        <div class="section-header">
-                            <h3><i class="fas fa-history"></i> Conversation History Manager</h3>
-                            <button class="btn btn-secondary" onclick="renderCurrentTab()">
-                                <i class="fas fa-arrow-left"></i> Back to Overview
-                            </button>
-                        </div>
-                        
-                        <div class="stats-overview">
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-number">${conversationCount}</div>
-                                    <div class="stat-label">Total Conversations</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-number">${totalMessages}</div>
-                                    <div class="stat-label">Total Messages</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-number">${totalErrors}</div>
-                                    <div class="stat-label">Total Errors</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-number">${totalToolCalls}</div>
-                                    <div class="stat-label">Tool Calls</div>
-                                </div>
-                            </div>
-                            
-                            <div class="category-breakdown">
-                                <h4>Conversation Categories</h4>
-                                <div class="category-list">
-                                    ${Object.entries(categories).map(([category, count]) => `
-                                        <div class="category-item">
-                                            <span class="badge badge-${category}">${category}</span>
-                                            <span class="category-count">${count} conversations</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="action-groups">
-                            <div class="action-group">
-                                <h4><i class="fas fa-eye"></i> View & Browse</h4>
-                                <button class="btn btn-primary" onclick="showStoredConversations()">
-                                    <i class="fas fa-list"></i> View All Conversations
-                                </button>
-                                <button class="btn btn-secondary" onclick="showRecentConversations()">
-                                    <i class="fas fa-clock"></i> Recent Conversations
-                                </button>
-                            </div>
-                            
-                            <div class="action-group">
-                                <h4><i class="fas fa-search"></i> Search & Filter</h4>
-                                <button class="btn btn-primary" onclick="searchStoredConversations()">
-                                    <i class="fas fa-search"></i> Search Conversations
-                                </button>
-                                <button class="btn btn-secondary" onclick="filterByCategory()">
-                                    <i class="fas fa-filter"></i> Filter by Category
-                                </button>
-                            </div>
-                            
-                            <div class="action-group">
-                                <h4><i class="fas fa-download"></i> Export & Backup</h4>
-                                <button class="btn btn-primary" onclick="exportHistory('json')">
-                                    <i class="fas fa-file-code"></i> Export as JSON
-                                </button>
-                                <button class="btn btn-secondary" onclick="exportHistory('csv')">
-                                    <i class="fas fa-file-csv"></i> Export as CSV
-                                </button>
-                                <button class="btn btn-secondary" onclick="exportHistory('txt')">
-                                    <i class="fas fa-file-alt"></i> Export as Text
-                                </button>
-                            </div>
-                            
-                            <div class="action-group">
-                                <h4><i class="fas fa-cog"></i> Management</h4>
-                                <button class="btn btn-secondary" onclick="cleanupHistory()">
-                                    <i class="fas fa-broom"></i> Cleanup Old Data
-                                </button>
-                                <button class="btn btn-secondary" onclick="refreshData()">
-                                    <i class="fas fa-sync"></i> Refresh Data
-                                </button>
-                                <button class="btn btn-secondary" onclick="showStorageInfo()">
-                                    <i class="fas fa-info-circle"></i> Storage Info
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // 添加历史管理器样式
-                if (!document.getElementById('historyManagerStyles')) {
-                    const styles = document.createElement('style');
-                    styles.id = 'historyManagerStyles';
-                    styles.textContent = `
-                        .history-manager {
-                            max-width: 1000px;
-                            margin: 0 auto;
-                        }
-                        .stats-overview {
-                            margin-bottom: 30px;
-                        }
-                        .category-breakdown {
-                            margin-top: 20px;
-                        }
-                        .category-breakdown h4 {
-                            color: #fff;
-                            margin-bottom: 12px;
-                        }
-                        .category-list {
-                            display: flex;
-                            flex-wrap: wrap;
-                            gap: 8px;
-                        }
-                        .category-item {
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            background: #333;
-                            padding: 8px 12px;
-                            border-radius: 6px;
-                            border: 1px solid #555;
-                        }
-                        .category-count {
-                            color: #ccc;
-                            font-size: 12px;
-                        }
-                        .action-groups {
-                            display: grid;
-                            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                            gap: 24px;
-                            margin-top: 24px;
-                        }
-                        .action-group {
-                            padding: 16px;
-                            background: #2a2a2a;
-                            border-radius: 8px;
-                            border: 1px solid #444;
-                        }
-                        .action-group h4 {
-                            margin: 0 0 16px 0;
-                            color: #fff;
-                            border-bottom: 2px solid #4a9eff;
-                            padding-bottom: 8px;
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                        }
-                        .action-group .btn {
-                            width: 100%;
-                            margin-bottom: 8px;
-                            justify-content: flex-start;
-                        }
-                    `;
-                    document.head.appendChild(styles);
-                }
-                
-            } catch (error) {
-                console.error('Error showing history manager:', error);
-                showError('Failed to load history manager: ' + error.message);
-            }
-        }
-        
         function showStoredConversations() {
             console.log('👁️ Showing stored conversations...');
             
@@ -1506,11 +1312,17 @@
         }
         
         // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', initializeEvolutionSystem);
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeEvolutionSystem();
+            // 在初始化后强制刷新一次数据
+            console.log('🔄 Performing initial data refresh on DOMContentLoaded...');
+            refreshData();
+        });
         
         // Handle window focus for data refresh
         window.addEventListener('focus', () => {
-            updateStats();
+            console.log('🔄 Window focused, refreshing data...');
+            refreshData();
         });
     </script>
 </body>

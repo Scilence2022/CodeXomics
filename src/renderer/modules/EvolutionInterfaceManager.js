@@ -1099,29 +1099,38 @@ class EvolutionInterfaceManager {
     }
 
     /**
-     * Update evolution statistics
+     * 更新进化系统统计信息
      */
-    updateEvolutionStats() {
+    async updateEvolutionStats() {
         console.log('📊 Updating evolution stats...');
         const statsElement = document.getElementById('evolutionStats');
-        console.log('📊 Stats element:', statsElement);
         
-        if (statsElement) {
-            if (this.evolutionManager) {
-                try {
-                    const stats = this.evolutionManager.getEvolutionStats();
-                    console.log('📊 Stats data:', stats);
-                    statsElement.textContent = `Conversations: ${stats.completedConversations}/${stats.totalConversations} | Missing Functions: ${stats.missingFunctions} | Generated Plugins: ${stats.successfulPlugins}/${stats.generatedPlugins}`;
-                } catch (error) {
-                    console.error('❌ Failed to get stats:', error);
-                    statsElement.textContent = 'Failed to load statistics';
-                }
-            } else {
-                console.log('⚠️ Evolution manager not available');
-                statsElement.textContent = 'System initializing...';
+        if (!statsElement) {
+            console.warn('📊 Stats element not found');
+            return;
+        }
+
+        if (this.evolutionManager && this.evolutionManager.storageManager) {
+            try {
+                // 强制从文件重新加载最新的历史数据
+                await this.evolutionManager.storageManager.loadHistoryData();
+                console.log('🔄 Forced data reload from storage.');
+
+                const stats = this.evolutionManager.getEvolutionStats();
+                console.log('📊 Stats data:', stats);
+                
+                statsElement.innerHTML = `
+                    <span title="Total conversations stored"><i class="fas fa-comments"></i> ${stats.totalConversations}</span> |
+                    <span title="Missing features identified"><i class="fas fa-exclamation-triangle"></i> ${stats.missingFunctions}</span> |
+                    <span title="Generated plugins (successful/total)"><i class="fas fa-puzzle-piece"></i> ${stats.successfulPlugins}/${stats.generatedPlugins}</span>
+                `;
+            } catch (error) {
+                console.error('❌ Error updating evolution stats:', error);
+                statsElement.textContent = 'Statistics unavailable';
             }
         } else {
-            console.error('❌ Stats element not found');
+            console.warn('📊 Evolution manager or storage manager not available for stats update');
+            statsElement.textContent = 'System initializing...';
         }
     }
 
@@ -1129,9 +1138,23 @@ class EvolutionInterfaceManager {
      * 刷新数据
      */
     async refreshData() {
-        await this.evolutionManager.loadEvolutionData();
-        this.renderCurrentTab();
-        this.updateEvolutionStats();
+        console.log('🔄 Refreshing all evolution data...');
+        try {
+            if (this.evolutionManager && this.evolutionManager.storageManager) {
+                await this.evolutionManager.storageManager.loadHistoryData();
+                console.log('✅ Data reloaded from storage');
+            }
+            
+            this.renderCurrentTab();
+            console.log('✅ Current tab rerendered');
+            
+            await this.updateEvolutionStats();
+            console.log('✅ Stats updated');
+            
+        } catch (error) {
+            console.error('❌ Failed to refresh data:', error);
+            this.showError('Failed to refresh data: ' + error.message);
+        }
     }
 
     /**

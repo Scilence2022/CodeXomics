@@ -595,19 +595,34 @@ class ConversationEvolutionManager {
     }
 
     /**
-     * 获取进化统计
+     * 获取进化系统统计信息
      */
     getEvolutionStats() {
-        return {
-            totalConversations: this.evolutionData.conversations.length,
-            completedConversations: this.evolutionData.conversations.filter(c => c.completed).length,
-            missingFunctions: this.evolutionData.missingFunctions.length,
-            generatedPlugins: this.evolutionData.generatedPlugins.length,
-            successfulPlugins: this.evolutionData.generatedPlugins.filter(p => p.status === 'tested').length,
-            lastEvolutionDate: this.evolutionData.evolutionHistory.length > 0 
-                ? this.evolutionData.evolutionHistory[this.evolutionData.evolutionHistory.length - 1].timestamp 
-                : null
-        };
+        if (!this.storageManager || !this.storageManager.historyData) {
+            return { totalConversations: 0, missingFunctions: 0, generatedPlugins: 0, successfulPlugins: 0 };
+        }
+        
+        try {
+            // 直接从 historyData 获取最新数据
+            const conversations = this.storageManager.historyData.conversations || [];
+            const analysisRecords = this.storageManager.historyData.analysisRecords || [];
+            const plugins = this.storageManager.historyData.pluginGenerationHistory || [];
+            
+            const stats = {
+                totalConversations: conversations.length,
+                completedConversations: conversations.length, // 简化
+                missingFunctions: analysisRecords.length,
+                generatedPlugins: plugins.length,
+                successfulPlugins: plugins.filter(p => p.status === 'success').length,
+            };
+            
+            console.log('📊 getEvolutionStats successfully calculated:', stats);
+            return stats;
+
+        } catch (error) {
+            console.error('❌ Error calculating evolution stats:', error);
+            return { totalConversations: 0, missingFunctions: 0, generatedPlugins: 0, successfulPlugins: 0 };
+        }
     }
 
     /**
