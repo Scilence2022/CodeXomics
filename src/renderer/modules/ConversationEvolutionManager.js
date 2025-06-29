@@ -39,19 +39,16 @@ class ConversationEvolutionManager {
         try {
             console.log('🚀 Initializing Conversation Evolution System...');
             
-            // 初始化存储管理器
+            // 1. 初始化存储管理器
             this.storageManager = new ConversationEvolutionStorageManager(this.configManager);
-            
-            // 初始化独立存储系统
-            await this.storageManager.initializeIndependentStorage();
+            // 2. 显式等待存储系统完成初始化（加载磁盘数据）
+            await this.storageManager.initializeStorage();
             
             // 获取LLM配置管理器
             if (this.chatManager && this.chatManager.llmConfigManager) {
-                // 使用现有的LLM配置管理器（集成模式）
                 this.llmConfigManager = this.chatManager.llmConfigManager;
                 console.log('📡 Using integrated LLM configuration manager');
             } else {
-                // 创建独立的LLM配置管理器（独立模式）
                 console.log('⚙️  Creating standalone LLMConfigManager for evolution system...');
                 this.llmConfigManager = new LLMConfigManager(this.configManager);
             }
@@ -64,17 +61,17 @@ class ConversationEvolutionManager {
             this.pluginGenerator = new AutoPluginGenerator(this);
             console.log('🔧 Auto plugin generator initialized');
             
-            // 加载进化数据
-            await this.loadEvolutionData();
+            // 3. 不再需要单独的加载步骤，因为 storageManager 已经加载了
+            // await this.loadEvolutionData();
             
-            // 设置对话监听（仅在集成模式下）
+            // 设置对话监听
             this.setupConversationMonitoring();
             
-            // Connect to ChatBox if available
+            // 连接到 ChatBox
             this.connectToChatBox();
             
             console.log('✅ Evolution system initialized successfully');
-            console.log('📊 Storage info:', this.storageManager.getStorageInfo());
+            console.log('📊 Initial storage info:', this.storageManager.getStorageInfo());
             
         } catch (error) {
             console.error('❌ Failed to initialize evolution system:', error);
@@ -626,30 +623,21 @@ class ConversationEvolutionManager {
     }
 
     /**
-     * 加载进化数据
+     * 加载进化数据 - 已废弃
+     * 数据加载现在由 `ConversationEvolutionStorageManager` 在其 `initializeStorage` 方法中处理
      */
     async loadEvolutionData() {
-        try {
-            const saved = this.configManager.get('evolution.data', null);
-            if (saved) {
-                this.evolutionData = { ...this.evolutionData, ...saved };
-                console.log('Evolution data loaded:', this.getEvolutionStats());
-            }
-        } catch (error) {
-            console.error('Failed to load evolution data:', error);
-        }
+        console.log('DEPRECATED: loadEvolutionData is no longer used. Data is loaded by StorageManager.');
+        // this.evolutionData = this.storageManager.historyData;
     }
 
     /**
-     * 保存进化数据
+     * 保存进化数据 - 已废弃
+     * 数据保存现在由 `ConversationEvolutionStorageManager` 的 `saveHistoryData` 方法处理
      */
     async saveEvolutionData() {
-        try {
-            await this.configManager.set('evolution.data', this.evolutionData);
-            console.log('Evolution data saved');
-        } catch (error) {
-            console.error('Failed to save evolution data:', error);
-        }
+        console.log('DEPRECATED: saveEvolutionData is no longer used. Use storageManager.saveHistoryData() instead.');
+        // await this.storageManager.saveHistoryData();
     }
 
     /**

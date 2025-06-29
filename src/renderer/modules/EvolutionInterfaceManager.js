@@ -1138,12 +1138,16 @@ class EvolutionInterfaceManager {
      * 刷新数据
      */
     async refreshData() {
+        if (!this.evolutionManager?.storageManager?.isInitialized) {
+            console.warn('🔄 Refresh skipped: storage manager not yet initialized.');
+            return;
+        }
+
         console.log('🔄 Refreshing all evolution data...');
         try {
-            if (this.evolutionManager && this.evolutionManager.storageManager) {
-                await this.evolutionManager.storageManager.loadHistoryData();
-                console.log('✅ Data reloaded from storage');
-            }
+            // storageManager.loadHistoryData() 现在是数据刷新的核心
+            await this.evolutionManager.storageManager.loadHistoryData();
+            console.log('✅ Data reloaded from storage');
             
             this.renderCurrentTab();
             console.log('✅ Current tab rerendered');

@@ -5,46 +5,149 @@
 class ConversationEvolutionStorageManager {
     constructor(configManager) {
         this.configManager = configManager;
-        
-        // 存储配置
-        this.storageConfig = {
-            maxConversations: 1000,
-            maxHistoryLength: 10000,
-            autoSave: true,
-            autoSaveInterval: 5000, // 5秒
-            enableBackup: true,
-            backupInterval: 86400000, // 24小时
-        };
-        
-        // 历史数据结构
-        this.historyData = {
-            conversations: [],
-            analysisRecords: [],
-            pluginGenerationHistory: [],
-            evolutionTimeline: [],
-            storageStats: {
-                totalConversations: 0,
-                totalMessages: 0,
-                totalAnalysisCount: 0,
-                totalPluginsGenerated: 0,
-                firstRecordDate: null,
-                lastUpdateDate: null,
-                storageSize: 0
-            }
-        };
-        
+        this.isInitialized = false;
+
+        // 默认数据结构，作为基准
+        this.defaultHistoryData = this.getDefaultEvolutionConfig().historyData;
+        this.storageConfig = this.getDefaultEvolutionConfig().storageConfig;
+        this.historyData = this.deepmerge({}, this.defaultHistoryData);
+
         // 防抖存储
         this._saveTimeout = null;
-        
+
         console.log('ConversationEvolutionStorageManager initialized');
-        this.initializeStorage();
+        // 构造函数中不再直接调用，改为外部显式调用
+        // this.initializeStorage(); 
+    }
+
+    /**
+     * 深度合并对象的辅助函数
+     */
+    isObject(item) {
+        return (item && typeof item === 'object' && !Array.isArray(item));
+    }
+
+    deepmerge(target, ...sources) {
+        if (!sources.length) return target;
+        const source = sources.shift();
+
+        if (this.isObject(target) && this.isObject(source)) {
+            for (const key in source) {
+                if (this.isObject(source[key])) {
+                    if (!target[key]) Object.assign(target, { [key]: {} });
+                    this.deepmerge(target[key], source[key]);
+                } else {
+                    Object.assign(target, { [key]: source[key] });
+                }
+            }
+        }
+        return this.deepmerge(target, ...sources);
+    }
+    
+    /**
+     * 初始化存储系统（核心入口）
+     */
+    async initializeStorage() {
+        if (this.isInitialized) {
+            console.log('🔄 Storage already initialized.');
+            return;
+        }
+        console.log('🚀 Initializing evolution storage system...');
+        try {
+            await this.loadHistoryData();
+            this.setupAutoBackup();
+            this.isInitialized = true;
+            console.log('✅ Evolution storage system initialized successfully');
+            console.log(`📊 Found ${this.historyData.conversations.length} conversations on disk.`);
+        } catch (error) {
+            console.error('❌ Failed to initialize evolution storage:', error);
+            // 即使初始化失败，也要确保有一个有效的空数据结构
+            this.historyData = this.deepmerge({}, this.defaultHistoryData);
+            this.isInitialized = true;
+        }
+    }
+    
+    /**
+     * 加载历史数据
+     */
+    async loadHistoryData() {
+        console.log('💾 Loading evolution history data from disk...');
+        try {
+            // 确保ConfigManager已准备好
+            await this.configManager.waitForInitialization();
+
+            const evolutionConfig = this.configManager.get('evolution', null);
+            
+            if (evolutionConfig && this.isObject(evolutionConfig)) {
+                console.log('✅ Found existing evolution configuration.');
+                // 使用深度合并，而不是直接赋值，防止数据结构不一致或丢失
+                this.historyData = this.deepmerge({}, this.defaultHistoryData, evolutionConfig.historyData || {});
+                this.storageConfig = this.deepmerge({}, this.storageConfig, evolutionConfig.storageConfig || {});
+                
+                // 数据校验和清理
+                if (!Array.isArray(this.historyData.conversations)) {
+                    console.warn('⚠️ Conversations data is not an array, resetting.');
+                    this.historyData.conversations = [];
+                }
+
+            } else {
+                console.log('⚠️ No existing evolution config found, starting with default structure.');
+                // 如果没有配置文件，则使用默认空数据，并触发一次保存以创建文件
+                this.historyData = this.deepmerge({}, this.defaultHistoryData);
+                await this.saveHistoryData();
+            }
+            
+            console.log(`👍 History data loaded. Conversations: ${this.historyData.conversations.length}`);
+            this.updateStorageStats();
+
+        } catch (error) {
+            console.error('❌ Failed to load evolution history:', error);
+            // 出错时回退到安全的默认值
+            this.historyData = this.deepmerge({}, this.defaultHistoryData);
+        }
+    }
+
+    /**
+     * 保存历史数据
+     */
+    async saveHistoryData() {
+        if (!this.isInitialized) {
+            console.warn('💾 Save attempt skipped: storage not initialized.');
+            return;
+        }
+        console.log('💾 Saving evolution history data to disk...');
+        try {
+            // 准备完整的evolution配置数据
+            const evolutionData = {
+                version: '1.0.1', // 版本号提升
+                lastModified: new Date().toISOString(),
+                storageConfig: this.storageConfig,
+                historyData: this.historyData,
+            };
+            
+            // 保存到独立的配置文件
+            await this.configManager.set('evolution', evolutionData);
+            // 确保立即写入磁盘
+            await this.configManager.saveConfig(); 
+            
+            console.log(`✅ History data saved. Conversations: ${this.historyData.conversations.length}`);
+            
+        } catch (error) {
+            console.error('❌ Failed to save evolution history:', error);
+            throw error;
+        }
     }
 
     /**
      * Add conversation record from ChatBox
      */
     addConversationRecord(conversationData) {
+        if (!this.isInitialized) {
+             console.warn('🔴 Add record failed: storage not initialized.');
+             return;
+        }
         try {
+            console.log('➕ Adding new conversation record:', conversationData.id);
             if (!this.historyData.conversations) {
                 this.historyData.conversations = [];
             }
@@ -74,7 +177,7 @@ class ConversationEvolutionStorageManager {
             // Auto-save
             this.debouncedSave();
 
-            console.log('🧬 Added conversation record:', conversationRecord.id);
+            console.log(`🧬 Added conversation record: ${conversationRecord.id}. Total now: ${this.historyData.conversations.length}`);
 
         } catch (error) {
             console.error('❌ Failed to add conversation record:', error);
@@ -140,20 +243,6 @@ class ConversationEvolutionStorageManager {
 
         // Calculate approximate storage size
         stats.storageSize = JSON.stringify(this.historyData).length;
-    }
-
-    /**
-     * 初始化存储系统
-     */
-    async initializeStorage() {
-        try {
-            await this.loadHistoryData();
-            this.setupAutoBackup();
-            this.updateStorageStats();
-            console.log('Evolution storage system initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize evolution storage:', error);
-        }
     }
 
     /**
@@ -945,131 +1034,6 @@ class ConversationEvolutionStorageManager {
     }
 
     /**
-     * 加载历史数据
-     */
-    async loadHistoryData() {
-        try {
-            // 尝试从新的独立配置文件加载
-            const evolutionConfig = this.configManager.get('evolution', null);
-            if (evolutionConfig && evolutionConfig.historyData) {
-                this.historyData = { ...this.historyData, ...evolutionConfig.historyData };
-                this.storageConfig = { ...this.storageConfig, ...evolutionConfig.storageConfig };
-                console.log('Evolution history data loaded from independent storage');
-                console.log(`Loaded ${this.historyData.conversations.length} conversations, ${this.historyData.analysisRecords.length} analysis records`);
-            } else {
-                // 回退到旧的存储位置（向后兼容）
-                const legacySaved = this.configManager.get('evolution.history', null);
-                if (legacySaved) {
-                    this.historyData = { ...this.historyData, ...legacySaved };
-                    console.log('Evolution history data loaded from legacy storage (will be migrated)');
-                    // 触发迁移
-                    await this.migrateToNewStorage();
-                } else {
-                    console.log('No existing evolution history data found, starting fresh');
-                }
-            }
-            
-            // 更新统计信息
-            this.updateStorageStats();
-        } catch (error) {
-            console.error('Failed to load evolution history:', error);
-        }
-    }
-
-    /**
-     * 保存历史数据
-     */
-    async saveHistoryData() {
-        try {
-            // 准备完整的evolution配置数据
-            const evolutionData = {
-                version: '1.0.0',
-                lastModified: new Date().toISOString(),
-                storageConfig: this.storageConfig,
-                historyData: this.historyData,
-                
-                // 添加元数据
-                metadata: {
-                    createdAt: this.historyData.storageStats.firstRecordDate || new Date().toISOString(),
-                    lastSaved: new Date().toISOString(),
-                    fileVersion: '1.0.0',
-                    totalRecords: this.historyData.conversations.length + 
-                                this.historyData.analysisRecords.length + 
-                                this.historyData.pluginGenerationHistory.length,
-                    dataIntegrity: this.calculateDataChecksum()
-                }
-            };
-            
-            // 保存到独立的配置文件
-            await this.configManager.set('evolution', evolutionData);
-            console.log('Evolution history data saved to independent storage');
-            console.log(`Saved: ${this.historyData.conversations.length} conversations, ${this.historyData.analysisRecords.length} analysis records, ${this.historyData.pluginGenerationHistory.length} plugin records`);
-            
-            // 清理旧的存储位置（如果存在）
-            if (this.configManager.get('evolution.history', null)) {
-                await this.configManager.set('evolution.history', null);
-                console.log('Legacy evolution history data cleaned up');
-            }
-            
-        } catch (error) {
-            console.error('Failed to save evolution history:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * 迁移到新的存储格式
-     */
-    async migrateToNewStorage() {
-        try {
-            console.log('Migrating evolution data to new independent storage format...');
-            await this.saveHistoryData();
-            console.log('Evolution data migration completed successfully');
-        } catch (error) {
-            console.error('Failed to migrate evolution data:', error);
-        }
-    }
-
-    /**
-     * 计算数据校验和
-     */
-    calculateDataChecksum() {
-        try {
-            const dataString = JSON.stringify({
-                conversationCount: this.historyData.conversations.length,
-                analysisCount: this.historyData.analysisRecords.length,
-                pluginCount: this.historyData.pluginGenerationHistory.length,
-                lastUpdate: this.historyData.storageStats.lastUpdateDate
-            });
-            
-            // 简单的哈希函数
-            let hash = 0;
-            for (let i = 0; i < dataString.length; i++) {
-                const char = dataString.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // 转换为32位整数
-            }
-            return hash.toString(16);
-        } catch (error) {
-            console.error('Failed to calculate data checksum:', error);
-            return 'unknown';
-        }
-    }
-
-    /**
-     * 防抖保存
-     */
-    async debouncedSave() {
-        if (this._saveTimeout) {
-            clearTimeout(this._saveTimeout);
-        }
-        
-        this._saveTimeout = setTimeout(async () => {
-            await this.saveHistoryData();
-        }, this.storageConfig.autoSaveInterval);
-    }
-
-    /**
      * 设置自动备份
      */
     setupAutoBackup() {
@@ -1083,41 +1047,10 @@ class ConversationEvolutionStorageManager {
      * 验证和初始化独立存储文件
      */
     async initializeIndependentStorage() {
-        try {
-            console.log('Initializing independent conversation evolution storage...');
-            
-            // 检查是否已存在evolution配置
-            const existingConfig = this.configManager.get('evolution', null);
-            
-            if (!existingConfig) {
-                console.log('No existing evolution config found, creating default configuration...');
-                
-                // 创建默认的evolution配置
-                const defaultEvolutionConfig = this.getDefaultEvolutionConfig();
-                
-                // 保存默认配置
-                await this.configManager.set('evolution', defaultEvolutionConfig);
-                
-                console.log('✅ Independent conversation evolution storage initialized successfully');
-                console.log('📁 Storage file: conversation-evolution-data.json');
-                console.log('📍 Location: /Users/song/.genome-browser/');
-                
-                // 显示配置摘要
-                this.displayStorageConfigSummary(defaultEvolutionConfig);
-                
-            } else {
-                console.log('✅ Evolution storage already initialized');
-                console.log('📁 Found existing conversation-evolution-data.json');
-                this.displayStorageConfigSummary(existingConfig);
-            }
-            
-            // 触发配置保存，确保文件创建
-            await this.configManager.saveConfig();
-            
-        } catch (error) {
-            console.error('❌ Failed to initialize independent storage:', error);
-            throw error;
-        }
+        // This method is now effectively replaced by initializeStorage and loadHistoryData
+        // We will call initializeStorage from ConversationEvolutionManager instead
+        console.log('DEPRECATED: initializeIndependentStorage should not be called directly. Use initializeStorage.');
+        return this.initializeStorage();
     }
 
     /**
@@ -1203,7 +1136,7 @@ class ConversationEvolutionStorageManager {
                     totalAnalysisCount: 0,
                     totalPluginsGenerated: 0,
                     firstRecordDate: null,
-                    lastUpdateDate: new Date().toISOString(),
+                    lastUpdateDate: null,
                     storageSize: 0
                 }
             },
