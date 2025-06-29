@@ -774,7 +774,10 @@
             } finally {
                 isEvolutionRunning = false;
                 document.getElementById('startEvolutionBtn').disabled = false;
-                renderCurrentTab();
+                // Only render if a tab is active
+                if (document.querySelector('.tab-btn.active')) {
+                    renderCurrentTab();
+                }
             }
         }
         
@@ -783,7 +786,10 @@
             if (interfaceManager && interfaceManager.refreshData) {
                 interfaceManager.refreshData();
             }
-            renderCurrentTab();
+            // Only re-render if we are on a main tab
+            if (document.querySelector('.tab-btn.active')) {
+                 renderCurrentTab();
+            }
             updateStats();
         }
         
@@ -860,405 +866,707 @@
         function showHistoryManager() {
             console.log('📋 Opening History Manager...');
             
-            const content = document.getElementById('tabContent');
-            const storageStats = evolutionManager?.getStorageStats() || null;
-            
-            let statsHTML = '';
-            if (storageStats) {
-                statsHTML = `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <h4>${storageStats.totalConversations}</h4>
-                            <p>Total Conversations</p>
-                        </div>
-                        <div class="stat-item">
-                            <h4>${storageStats.totalMessages}</h4>
-                            <p>Total Messages</p>
-                        </div>
-                        <div class="stat-item">
-                            <h4>${storageStats.totalAnalysisCount}</h4>
-                            <p>Analysis Records</p>
-                        </div>
-                        <div class="stat-item">
-                            <h4>${storageStats.totalPluginsGenerated}</h4>
-                            <p>Generated Plugins</p>
-                        </div>
-                        <div class="stat-item">
-                            <h4>${(storageStats.storageSize / 1024).toFixed(2)} KB</h4>
-                            <p>Storage Size</p>
-                        </div>
-                        <div class="stat-item">
-                            <h4>${storageStats.lastUpdateDate ? new Date(storageStats.lastUpdateDate).toLocaleDateString() : 'N/A'}</h4>
-                            <p>Last Updated</p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                statsHTML = '<p class="error-text">Storage statistics not available</p>';
+            // Create draggable window
+            createDraggableHistoryManager();
+        }
+        
+        function createDraggableHistoryManager() {
+            // Remove existing window if present
+            const existingWindow = document.getElementById('historyManagerWindow');
+            if (existingWindow) {
+                existingWindow.remove();
             }
             
-            content.innerHTML = `
-                <div class="history-manager">
-                    <h3><i class="fas fa-history"></i> History Manager</h3>
-                    <p>Manage and analyze conversation history stored by the Evolution System.</p>
-                    
-                    <div class="history-section">
-                        <h4>Storage Statistics</h4>
-                        ${statsHTML}
+            // Create draggable window
+            const windowDiv = document.createElement('div');
+            windowDiv.id = 'historyManagerWindow';
+            windowDiv.className = 'draggable-window';
+            
+            const conversations = evolutionManager?.getConversationHistory({
+                sortBy: 'startTime',
+                sortOrder: 'desc'
+            }) || [];
+            
+            const storageStats = evolutionManager?.getStorageStats() || {};
+            
+            windowDiv.innerHTML = `
+                <div class="window-header" id="historyWindowHeader">
+                    <div class="window-title">
+                        <i class="fas fa-history"></i>
+                        History Manager
+                    </div>
+                    <div class="window-controls">
+                        <button class="btn-icon" onclick="minimizeHistoryWindow()" title="Minimize">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="btn-icon" onclick="closeHistoryWindow()" title="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="window-content">
+                    <div class="history-toolbar">
+                        <div class="toolbar-section">
+                            <button class="btn btn-primary" onclick="selectAllConversations()">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button class="btn btn-secondary" onclick="deselectAllConversations()">
+                                <i class="fas fa-square"></i> Deselect All
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteSelectedConversations()" id="deleteSelectedBtn" disabled>
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                        <div class="toolbar-section">
+                            <button class="btn btn-success" onclick="markAsSuccessExample()" id="markSuccessBtn" disabled>
+                                <i class="fas fa-star"></i> Mark as Success Example
+                            </button>
+                            <button class="btn btn-info" onclick="viewSuccessExamples()">
+                                <i class="fas fa-eye"></i> View Examples
+                            </button>
+                        </div>
+                        <div class="toolbar-section">
+                            <input type="text" id="historySearchInput" placeholder="Search conversations..." class="search-input">
+                            <button class="btn btn-secondary" onclick="searchHistoryConversations()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="history-actions">
-                        <div class="action-group">
-                            <h4>Conversation History</h4>
-                            <button class="btn btn-primary" onclick="showStoredConversations()">
-                                <i class="fas fa-eye"></i> View All Conversations
-                            </button>
-                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
-                                <i class="fas fa-search"></i> Search Conversations
-                            </button>
-                        </div>
-                        
-                        <div class="action-group">
-                            <h4>Export & Backup</h4>
-                            <button class="btn btn-success" onclick="exportHistory('json')">
-                                <i class="fas fa-download"></i> Export as JSON
-                            </button>
-                            <button class="btn btn-success" onclick="exportHistory('csv')">
-                                <i class="fas fa-file-csv"></i> Export as CSV
-                            </button>
-                            <button class="btn btn-success" onclick="exportHistory('txt')">
-                                <i class="fas fa-file-alt"></i> Export as Text
-                            </button>
-                        </div>
-                        
-                        <div class="action-group">
-                            <h4>Maintenance</h4>
-                            <button class="btn btn-warning" onclick="cleanupHistory()">
-                                <i class="fas fa-broom"></i> Cleanup Old Data
-                            </button>
-                            <button class="btn btn-danger" onclick="clearAllHistory()">
-                                <i class="fas fa-trash"></i> Clear All History
-                            </button>
-                        </div>
+                    <div class="history-stats">
+                        <span class="stat-item">Total: ${conversations.length}</span>
+                        <span class="stat-item">Messages: ${storageStats.totalMessages || 0}</span>
+                        <span class="stat-item">Examples: <span id="exampleCount">0</span></span>
+                        <span class="stat-item">Selected: <span id="selectedCount">0</span></span>
+                    </div>
+                    
+                    <div class="conversation-list-container" id="conversationListContainer">
+                        ${renderConversationList(conversations)}
                     </div>
                 </div>
             `;
             
-            // Add CSS for stats grid
-            if (!document.getElementById('historyManagerStyles')) {
-                const styles = document.createElement('style');
-                styles.id = 'historyManagerStyles';
-                styles.textContent = `
-                    .stats-grid {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                        gap: 16px;
-                        margin: 16px 0;
-                    }
-                    .stat-item {
-                        text-align: center;
-                        padding: 16px;
-                        background: #2a2a2a;
-                        border-radius: 8px;
-                        border: 1px solid #444;
-                    }
-                    .stat-item h4 {
-                        margin: 0 0 8px 0;
-                        color: #4a9eff;
-                        font-size: 24px;
-                    }
-                    .stat-item p {
-                        margin: 0;
-                        color: #ccc;
-                        font-size: 14px;
-                    }
-                    .history-actions {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                        gap: 24px;
-                        margin-top: 24px;
-                    }
-                    .action-group {
-                        padding: 16px;
-                        background: #2a2a2a;
-                        border-radius: 8px;
-                        border: 1px solid #444;
-                    }
-                    .action-group h4 {
-                        margin: 0 0 16px 0;
-                        color: #fff;
-                        border-bottom: 2px solid #4a9eff;
-                        padding-bottom: 8px;
-                    }
-                    .action-group .btn {
-                        width: 100%;
-                        margin-bottom: 8px;
-                    }
-                    .error-text {
-                        color: #ff6b6b;
-                        font-style: italic;
-                    }
-                `;
-                document.head.appendChild(styles);
-            }
+            document.body.appendChild(windowDiv);
+            
+            // Make window draggable
+            makeDraggable(windowDiv, 'historyWindowHeader');
+            
+            // Load success examples count
+            updateSuccessExamplesCount();
+            
+            // Add window styles
+            addHistoryManagerStyles();
         }
         
-        function showStoredConversations() {
-            console.log('👁️ Showing stored conversations...');
+        function renderConversationList(conversations) {
+            if (conversations.length === 0) {
+                return `
+                    <div class="empty-conversation-list">
+                        <i class="fas fa-comments"></i>
+                        <p>No conversations found</p>
+                        <small>Conversations will appear here as you interact with the system</small>
+                    </div>
+                `;
+            }
             
-            try {
-                const conversations = evolutionManager?.getConversationHistory({
-                    sortBy: 'startTime',
-                    sortOrder: 'desc',
-                    limit: 50
-                }) || [];
+            return conversations.map((conv, index) => {
+                const messages = conv.events ? conv.events.filter(event => 
+                    event.type === 'message' && event.content
+                ) : [];
                 
-                console.log('📊 Retrieved conversations:', conversations.length);
-                console.log('📝 Sample conversation structure:', conversations[0] ? Object.keys(conversations[0]) : 'No conversations');
+                const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
+                const errorCount = conv.stats?.errorCount || 0;
+                const category = conv.metadata?.category || 'standard';
+                const isSuccessExample = conv.metadata?.isSuccessExample || false;
                 
-                let conversationHTML = '';
-                if (conversations.length > 0) {
-                    conversationHTML = conversations.map((conv, index) => {
-                        // 从events中提取消息
-                        const messages = conv.events ? conv.events.filter(event => 
-                            event.type === 'message' && event.content
-                        ) : [];
-                        
-                        // 获取消息计数
-                        const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
-                        
-                        // 获取错误计数
-                        const errorCount = conv.stats?.errorCount || 0;
-                        
-                        // 获取持续时间
-                        const duration = conv.duration || (conv.endTime && conv.startTime ? 
-                            Math.round((new Date(conv.endTime) - new Date(conv.startTime)) / 1000) + 's' : 'N/A');
-                        
-                        // 获取分类
-                        const category = conv.metadata?.category || 'standard';
-                        
-                        return `
-                            <div class="conversation-item" onclick="viewConversationDetails('${conv.id}')">
-                                <div class="conv-header">
-                                    <h5>Conversation ${index + 1}</h5>
-                                    <span class="conv-time">${new Date(conv.startTime).toLocaleDateString()}</span>
+                const duration = conv.duration || (conv.endTime && conv.startTime ? 
+                    Math.round((new Date(conv.endTime) - new Date(conv.startTime)) / 1000) + 's' : 'N/A');
+                
+                const previewMessages = messages.slice(0, 2).map(msg => 
+                    `<div class="message-preview"><strong>${msg.sender}:</strong> ${(msg.content || '').substring(0, 80)}${(msg.content || '').length > 80 ? '...' : ''}</div>`
+                ).join('');
+                
+                return `
+                    <div class="conversation-item ${isSuccessExample ? 'success-example' : ''}" data-conv-id="${conv.id}">
+                        <div class="conv-checkbox">
+                            <input type="checkbox" class="conv-select" data-conv-id="${conv.id}" onchange="updateSelectionCount()">
+                        </div>
+                        <div class="conv-content" onclick="expandConversation('${conv.id}')">
+                            <div class="conv-header">
+                                <div class="conv-info">
+                                    <h4>Conversation ${index + 1} ${isSuccessExample ? '⭐' : ''}</h4>
+                                    <span class="conv-date">${new Date(conv.startTime).toLocaleString()}</span>
                                 </div>
-                                <div class="conv-stats">
-                                    <span class="badge">${messageCount} messages</span>
-                                    <span class="badge">${errorCount} errors</span>
+                                <div class="conv-badges">
+                                    <span class="badge">${messageCount} msgs</span>
+                                    <span class="badge ${errorCount > 0 ? 'badge-error' : ''}">${errorCount} errors</span>
                                     <span class="badge">${duration}</span>
                                     <span class="badge badge-${category}">${category}</span>
                                 </div>
-                                <div class="conv-preview">
-                                    ${messages.slice(0, 2).map(msg => `
-                                        <div class="message-preview">
-                                            <strong>${msg.sender}:</strong> ${(msg.content || '').substring(0, 100)}${(msg.content || '').length > 100 ? '...' : ''}
-                                        </div>
-                                    `).join('')}
-                                    ${messages.length === 0 ? '<div class="message-preview"><em>No messages found</em></div>' : ''}
-                                </div>
                             </div>
-                        `;
-                    }).join('');
+                            <div class="conv-preview">
+                                ${previewMessages || '<div class="message-preview"><em>No messages found</em></div>'}
+                            </div>
+                        </div>
+                        <div class="conv-actions">
+                            <button class="btn-icon" onclick="editConversation('${conv.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon" onclick="duplicateConversation('${conv.id}')" title="Duplicate">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn-icon ${isSuccessExample ? 'active' : ''}" onclick="toggleSuccessExample('${conv.id}')" title="Toggle Success Example">
+                                <i class="fas fa-star"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" onclick="deleteConversation('${conv.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function makeDraggable(element, handleId) {
+            const handle = document.getElementById(handleId);
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+            
+            handle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = element.offsetLeft;
+                initialY = element.offsetTop;
+                
+                handle.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                element.style.left = (initialX + deltaX) + 'px';
+                element.style.top = (initialY + deltaY) + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.style.cursor = 'grab';
+                }
+            });
+        }
+        
+        function closeHistoryWindow() {
+            const window = document.getElementById('historyManagerWindow');
+            if (window) {
+                window.remove();
+            }
+        }
+        
+        function minimizeHistoryWindow() {
+            const window = document.getElementById('historyManagerWindow');
+            if (window) {
+                window.style.display = window.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        function selectAllConversations() {
+            const checkboxes = document.querySelectorAll('.conv-select');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateSelectionCount();
+        }
+        
+        function deselectAllConversations() {
+            const checkboxes = document.querySelectorAll('.conv-select');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelectionCount();
+        }
+        
+        function updateSelectionCount() {
+            const selected = document.querySelectorAll('.conv-select:checked');
+            const count = selected.length;
+            
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('deleteSelectedBtn').disabled = count === 0;
+            document.getElementById('markSuccessBtn').disabled = count === 0;
+        }
+        
+        function deleteSelectedConversations() {
+            const selected = document.querySelectorAll('.conv-select:checked');
+            if (selected.length === 0) return;
+            
+            const confirmed = confirm(`Are you sure you want to delete ${selected.length} selected conversation(s)?`);
+            if (!confirmed) return;
+            
+            const idsToDelete = Array.from(selected).map(cb => cb.dataset.convId);
+            
+            // Remove from storage
+            if (evolutionManager && evolutionManager.storageManager) {
+                idsToDelete.forEach(id => {
+                    evolutionManager.storageManager.historyData.conversations = 
+                        evolutionManager.storageManager.historyData.conversations.filter(conv => conv.id !== id);
+                });
+                evolutionManager.storageManager.saveHistoryData();
+            }
+            
+            // Refresh display
+            refreshHistoryManager();
+            console.log(`Deleted ${idsToDelete.length} conversations`);
+        }
+        
+        function markAsSuccessExample() {
+            const selected = document.querySelectorAll('.conv-select:checked');
+            if (selected.length === 0) return;
+            
+            const idsToMark = Array.from(selected).map(cb => cb.dataset.convId);
+            
+            // Mark as success examples
+            if (evolutionManager && evolutionManager.storageManager) {
+                idsToMark.forEach(id => {
+                    const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === id);
+                    if (conv) {
+                        if (!conv.metadata) conv.metadata = {};
+                        conv.metadata.isSuccessExample = true;
+                        conv.metadata.markedAsExampleAt = new Date().toISOString();
+                    }
+                });
+                evolutionManager.storageManager.saveHistoryData();
+            }
+            
+            // Update ChatBox prompts
+            updateChatBoxWithSuccessExamples();
+            
+            // Refresh display
+            refreshHistoryManager();
+            updateSuccessExamplesCount();
+            
+            console.log(`Marked ${idsToMark.length} conversations as success examples`);
+        }
+        
+        function toggleSuccessExample(convId) {
+            if (evolutionManager && evolutionManager.storageManager) {
+                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === convId);
+                if (conv) {
+                    if (!conv.metadata) conv.metadata = {};
+                    conv.metadata.isSuccessExample = !conv.metadata.isSuccessExample;
+                    
+                    if (conv.metadata.isSuccessExample) {
+                        conv.metadata.markedAsExampleAt = new Date().toISOString();
+                    } else {
+                        delete conv.metadata.markedAsExampleAt;
+                    }
+                    
+                    evolutionManager.storageManager.saveHistoryData();
+                    updateChatBoxWithSuccessExamples();
+                    refreshHistoryManager();
+                    updateSuccessExamplesCount();
+                }
+            }
+        }
+        
+        function deleteConversation(convId) {
+            const confirmed = confirm('Are you sure you want to delete this conversation?');
+            if (!confirmed) return;
+            
+            if (evolutionManager && evolutionManager.storageManager) {
+                evolutionManager.storageManager.historyData.conversations = 
+                    evolutionManager.storageManager.historyData.conversations.filter(conv => conv.id !== convId);
+                evolutionManager.storageManager.saveHistoryData();
+            }
+            
+            refreshHistoryManager();
+        }
+        
+        function editConversation(convId) {
+            // TODO: Implement conversation editing
+            alert(`Edit conversation ${convId} - Feature coming soon!`);
+        }
+        
+        function duplicateConversation(convId) {
+            if (evolutionManager && evolutionManager.storageManager) {
+                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === convId);
+                if (conv) {
+                    const duplicate = {
+                        ...conv,
+                        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        startTime: new Date().toISOString(),
+                        metadata: {
+                            ...conv.metadata,
+                            duplicatedFrom: convId,
+                            duplicatedAt: new Date().toISOString(),
+                            isSuccessExample: false
+                        }
+                    };
+                    
+                    evolutionManager.storageManager.historyData.conversations.unshift(duplicate);
+                    evolutionManager.storageManager.saveHistoryData();
+                    refreshHistoryManager();
+                }
+            }
+        }
+        
+        function expandConversation(convId) {
+            // TODO: Implement detailed conversation view
+            console.log('Expanding conversation:', convId);
+        }
+        
+        function searchHistoryConversations() {
+            const query = document.getElementById('historySearchInput').value.trim();
+            if (!query) {
+                refreshHistoryManager();
+                return;
+            }
+            
+            const results = evolutionManager?.searchConversations(query, {
+                fields: ['messages', 'context', 'analysis'],
+                caseSensitive: false
+            }) || [];
+            
+            const container = document.getElementById('conversationListContainer');
+            container.innerHTML = renderConversationList(results);
+        }
+        
+        function refreshHistoryManager() {
+            const conversations = evolutionManager?.getConversationHistory({
+                sortBy: 'startTime',
+                sortOrder: 'desc'
+            }) || [];
+            
+            const container = document.getElementById('conversationListContainer');
+            if (container) {
+                container.innerHTML = renderConversationList(conversations);
+            }
+        }
+        
+        function updateSuccessExamplesCount() {
+            if (evolutionManager && evolutionManager.storageManager) {
+                const examples = evolutionManager.storageManager.historyData.conversations.filter(
+                    conv => conv.metadata?.isSuccessExample
+                );
+                const countElement = document.getElementById('exampleCount');
+                if (countElement) {
+                    countElement.textContent = examples.length;
+                }
+            }
+        }
+        
+        function viewSuccessExamples() {
+            if (evolutionManager && evolutionManager.storageManager) {
+                const examples = evolutionManager.storageManager.historyData.conversations.filter(
+                    conv => conv.metadata?.isSuccessExample
+                );
+                
+                const container = document.getElementById('conversationListContainer');
+                container.innerHTML = renderConversationList(examples);
+            }
+        }
+        
+        function updateChatBoxWithSuccessExamples() {
+            if (!evolutionManager || !evolutionManager.storageManager) return;
+            
+            const examples = evolutionManager.storageManager.historyData.conversations.filter(
+                conv => conv.metadata?.isSuccessExample
+            );
+            
+            if (examples.length === 0) return;
+            
+            // Format examples for ChatBox
+            const examplePrompts = examples.map((conv, index) => {
+                const messages = conv.events ? conv.events.filter(event => 
+                    event.type === 'message' && event.content
+                ) : [];
+                
+                if (messages.length === 0) return '';
+                
+                const formattedMessages = messages.slice(0, 4).map(msg => 
+                    `${msg.sender}: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`
+                ).join('\n');
+                
+                return `Example ${index + 1}:\n${formattedMessages}\n`;
+            }).filter(example => example).join('\n---\n');
+            
+            // Save to config for ChatBox to use
+            if (window.configManager) {
+                const currentPrompt = window.configManager.get('chatbox.systemPrompt', '');
+                const exampleSection = `\n\n## Success Examples:\n${examplePrompts}`;
+                
+                // Check if examples already exist in prompt
+                const hasExamples = currentPrompt.includes('## Success Examples:');
+                
+                let newPrompt;
+                if (hasExamples) {
+                    // Replace existing examples
+                    newPrompt = currentPrompt.replace(/\n\n## Success Examples:[\s\S]*$/, exampleSection);
                 } else {
-                    conversationHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-comments"></i>
-                            <p>No stored conversations found</p>
-                            <small>Conversations will appear here after they are completed and saved</small>
-                        </div>
-                    `;
+                    // Add new examples
+                    newPrompt = currentPrompt + exampleSection;
                 }
                 
-                const content = document.getElementById('tabContent');
-                content.innerHTML = `
-                    <div class="stored-conversations">
-                        <div class="section-header">
-                            <h3><i class="fas fa-comments"></i> Stored Conversations (${conversations.length})</h3>
-                            <button class="btn btn-secondary" onclick="showHistoryManager()">
-                                <i class="fas fa-arrow-left"></i> Back to History Manager
-                            </button>
-                        </div>
-                        <div class="conversations-list">
-                            ${conversationHTML}
-                        </div>
-                    </div>
-                `;
-                
-                // Add conversation styles
-                if (!document.getElementById('conversationStyles')) {
-                    const styles = document.createElement('style');
-                    styles.id = 'conversationStyles';
-                    styles.textContent = `
-                        .conversation-item {
-                            background: #2a2a2a;
-                            border: 1px solid #444;
-                            border-radius: 8px;
-                            padding: 16px;
-                            margin-bottom: 12px;
-                            cursor: pointer;
-                            transition: all 0.2s ease;
-                        }
-                        .conversation-item:hover {
-                            background: #333;
-                            border-color: #4a9eff;
-                        }
-                        .conv-header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 8px;
-                        }
-                        .conv-header h5 {
-                            margin: 0;
-                            color: #fff;
-                        }
-                        .conv-time {
-                            color: #888;
-                            font-size: 14px;
-                        }
-                        .conv-stats {
-                            margin-bottom: 12px;
-                        }
-                        .badge {
-                            display: inline-block;
-                            padding: 4px 8px;
-                            background: #444;
-                            color: #ccc;
-                            border-radius: 4px;
-                            font-size: 12px;
-                            margin-right: 8px;
-                        }
-                        .badge-problematic { background: #ff6b6b; color: #fff; }
-                        .badge-plugin-generation { background: #4ecdc4; color: #fff; }
-                        .badge-extended { background: #45b7d1; color: #fff; }
-                        .badge-tool-intensive { background: #f9ca24; color: #333; }
-                        .message-preview {
-                            font-size: 13px;
-                            color: #ccc;
-                            margin-bottom: 4px;
-                            line-height: 1.4;
-                        }
-                        .section-header {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 20px;
-                        }
-                    `;
-                    document.head.appendChild(styles);
-                }
-                
-            } catch (error) {
-                console.error('Error showing stored conversations:', error);
-                showError('Failed to load stored conversations: ' + error.message);
+                window.configManager.set('chatbox.systemPrompt', newPrompt);
+                console.log(`Updated ChatBox with ${examples.length} success examples`);
             }
         }
         
-        function searchStoredConversations() {
-            console.log('🔍 Opening conversation search...');
-            const query = prompt('Enter search term (searches messages, context, and analysis):');
-            if (!query) return;
+        function addHistoryManagerStyles() {
+            if (document.getElementById('historyManagerStyles')) return;
             
-            try {
-                const results = evolutionManager?.searchConversations(query, {
-                    fields: ['messages', 'context', 'analysis'],
-                    caseSensitive: false
-                }) || [];
+            const styles = document.createElement('style');
+            styles.id = 'historyManagerStyles';
+            styles.textContent = `
+                .draggable-window {
+                    position: fixed;
+                    top: 10%;
+                    left: 15%;
+                    width: 70%;
+                    height: 75%;
+                    background: #2a2a2a;
+                    border: 1px solid #555;
+                    border-radius: 8px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                    z-index: 10000;
+                    display: flex;
+                    flex-direction: column;
+                }
                 
-                console.log(`Found ${results.length} conversations matching "${query}"`);
-                showSearchResults(query, results);
-            } catch (error) {
-                console.error('Search failed:', error);
-                showError('Search failed: ' + error.message);
-            }
-        }
-        
-        function showSearchResults(query, results) {
-            const content = document.getElementById('tabContent');
-            
-            let resultsHTML = '';
-            if (results.length > 0) {
-                resultsHTML = results.map((conv, index) => {
-                    // 从events中提取消息
-                    const messages = conv.events ? conv.events.filter(event => 
-                        event.type === 'message' && event.content
-                    ) : [];
-                    
-                    // 获取消息计数
-                    const messageCount = conv.stats?.messageCount || conv.messageCount || messages.length || 0;
-                    
-                    // 获取分类
-                    const category = conv.metadata?.category || 'standard';
-                    
-                    // 查找匹配的消息
-                    const matchingMessages = messages.filter(msg => 
-                        msg.content && msg.content.toLowerCase().includes(query.toLowerCase())
-                    );
-                    
-                    return `
-                        <div class="search-result" onclick="viewConversationDetails('${conv.id}')">
-                            <div class="result-header">
-                                <h5>Match ${index + 1}</h5>
-                                <span class="result-score">${messageCount} messages</span>
-                            </div>
-                            <div class="result-info">
-                                <span class="result-date">${new Date(conv.startTime).toLocaleString()}</span>
-                                <span class="result-category badge badge-${category}">${category}</span>
-                            </div>
-                            <div class="result-preview">
-                                ${matchingMessages.slice(0, 2).map(msg => `
-                                    <div class="match-preview">
-                                        <strong>${msg.sender}:</strong> ${highlightMatch(msg.content, query)}
-                                    </div>
-                                `).join('')}
-                                ${matchingMessages.length === 0 ? '<div class="match-preview"><em>No matching messages found</em></div>' : ''}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                resultsHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <p>No conversations found matching "${query}"</p>
-                        <small>Try a different search term or check your spelling</small>
-                    </div>
-                `;
-            }
-            
-            content.innerHTML = `
-                <div class="search-results">
-                    <div class="section-header">
-                        <h3><i class="fas fa-search"></i> Search Results for "${query}"</h3>
-                        <div>
-                            <button class="btn btn-secondary" onclick="searchStoredConversations()">
-                                <i class="fas fa-search"></i> New Search
-                            </button>
-                            <button class="btn btn-secondary" onclick="showHistoryManager()">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                        </div>
-                    </div>
-                    <p class="search-info">Found ${results.length} conversation(s) matching your search</p>
-                    <div class="results-list">
-                        ${resultsHTML}
-                    </div>
-                </div>
+                .window-header {
+                    background: linear-gradient(135deg, #34495e, #2c3e50);
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 8px 8px 0 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    cursor: grab;
+                    user-select: none;
+                }
+                
+                .window-header:active {
+                    cursor: grabbing;
+                }
+                
+                .window-title {
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .window-controls {
+                    display: flex;
+                    gap: 8px;
+                }
+                
+                .btn-icon {
+                    background: none;
+                    border: none;
+                    color: #ccc;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .btn-icon:hover {
+                    background: rgba(255,255,255,0.1);
+                    color: white;
+                }
+                
+                .btn-icon.active {
+                    color: #f39c12;
+                }
+                
+                .btn-icon.btn-danger:hover {
+                    background: #e74c3c;
+                    color: white;
+                }
+                
+                .window-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+                
+                .history-toolbar {
+                    padding: 16px;
+                    border-bottom: 1px solid #444;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+                
+                .toolbar-section {
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                }
+                
+                .search-input {
+                    padding: 8px 12px;
+                    background: #333;
+                    border: 1px solid #555;
+                    border-radius: 4px;
+                    color: #fff;
+                    width: 200px;
+                }
+                
+                .history-stats {
+                    padding: 8px 16px;
+                    background: #333;
+                    border-bottom: 1px solid #444;
+                    display: flex;
+                    gap: 20px;
+                    font-size: 13px;
+                    color: #ccc;
+                }
+                
+                .stat-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                
+                .conversation-list-container {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 16px;
+                }
+                
+                .conversation-item {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                    padding: 16px;
+                    background: #333;
+                    border: 1px solid #444;
+                    border-radius: 6px;
+                    margin-bottom: 12px;
+                    transition: all 0.2s;
+                }
+                
+                .conversation-item:hover {
+                    background: #3a3a3a;
+                    border-color: #555;
+                }
+                
+                .conversation-item.success-example {
+                    border-left: 4px solid #f39c12;
+                    background: #3a3a2a;
+                }
+                
+                .conv-checkbox {
+                    padding-top: 4px;
+                }
+                
+                .conv-content {
+                    flex: 1;
+                    cursor: pointer;
+                }
+                
+                .conv-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 8px;
+                }
+                
+                .conv-info h4 {
+                    margin: 0 0 4px 0;
+                    color: #fff;
+                    font-size: 16px;
+                }
+                
+                .conv-date {
+                    color: #888;
+                    font-size: 12px;
+                }
+                
+                .conv-badges {
+                    display: flex;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+                
+                .badge {
+                    padding: 2px 6px;
+                    background: #555;
+                    color: #ccc;
+                    border-radius: 3px;
+                    font-size: 11px;
+                }
+                
+                .badge-error {
+                    background: #e74c3c;
+                    color: white;
+                }
+                
+                .badge-problematic { background: #e74c3c; }
+                .badge-plugin-generation { background: #3498db; }
+                .badge-extended { background: #9b59b6; }
+                .badge-tool-intensive { background: #f39c12; }
+                
+                .conv-preview {
+                    color: #ccc;
+                    font-size: 13px;
+                    line-height: 1.4;
+                }
+                
+                .message-preview {
+                    margin-bottom: 4px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                
+                .conv-actions {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+                
+                .empty-conversation-list {
+                    text-align: center;
+                    padding: 60px 20px;
+                    color: #666;
+                }
+                
+                .empty-conversation-list i {
+                    font-size: 48px;
+                    margin-bottom: 16px;
+                    color: #444;
+                }
             `;
+            document.head.appendChild(styles);
         }
         
-        function highlightMatch(text, query) {
-            const regex = new RegExp(`(${query})`, 'gi');
-            return text.replace(regex, '<mark>$1</mark>');
-        }
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeEvolutionSystem();
+            // 在初始化后强制刷新一次数据
+            console.log('🔄 Performing initial data refresh on DOMContentLoaded...');
+            refreshData();
+        });
         
+        // Handle window focus for data refresh
+        window.addEventListener('focus', () => {
+            console.log('🔄 Window focused, refreshing data...');
+            refreshData();
+        });
+        
+        // Legacy functions for compatibility
         async function exportHistory(format = 'json') {
             console.log(`📤 Exporting history as ${format.toUpperCase()}...`);
             
             try {
-                if (evolutionManager && evolutionManager.exportConversationHistory) {
-                    await evolutionManager.exportConversationHistory(format);
+                if (evolutionManager && evolutionManager.storageManager && evolutionManager.storageManager.exportConversationHistory) {
+                    await evolutionManager.storageManager.exportConversationHistory(format);
                     console.log('✅ History exported successfully');
                 } else {
                     throw new Error('Export functionality not available');
@@ -1285,7 +1593,7 @@
                     });
                     
                     alert(`Cleanup completed: Removed ${result.removedConversations} conversations. ${result.remainingConversations} conversations remain.`);
-                    showHistoryManager(); // Refresh view
+                    refreshHistoryManager(); // Refresh view
                 } else {
                     throw new Error('Cleanup functionality not available');
                 }
@@ -1299,31 +1607,177 @@
             const confirmed = confirm('⚠️ This will permanently delete ALL conversation history. This action cannot be undone. Are you absolutely sure?');
             if (!confirmed) return;
             
-            const doubleConfirmed = confirm('🚨 FINAL WARNING: This will erase all stored conversations, analysis records, and plugin generation history. Type "DELETE ALL" to confirm.');
+            const doubleConfirmed = confirm('🚨 FINAL WARNING: This will erase all stored conversations, analysis records, and plugin generation history. Continue?');
             if (!doubleConfirmed) return;
             
             console.log('🗑️ Clearing all history data...');
-            alert('Clear all history functionality will be implemented in a future update.');
+            
+            if (evolutionManager && evolutionManager.storageManager) {
+                evolutionManager.storageManager.historyData.conversations = [];
+                evolutionManager.storageManager.historyData.analysisRecords = [];
+                evolutionManager.storageManager.historyData.pluginGenerationHistory = [];
+                evolutionManager.storageManager.historyData.evolutionTimeline = [];
+                evolutionManager.storageManager.updateStorageStats();
+                await evolutionManager.storageManager.saveHistoryData();
+                
+                refreshHistoryManager();
+                updateChatBoxWithSuccessExamples(); // Clear examples from ChatBox
+                
+                console.log('✅ All history data cleared');
+                alert('All history data has been cleared successfully.');
+            }
         }
         
         function viewConversationDetails(conversationId) {
             console.log('👁️ Viewing conversation details:', conversationId);
-            alert(`Detailed conversation view for ${conversationId} will be implemented in a future update.`);
+            
+            if (evolutionManager && evolutionManager.storageManager) {
+                const conv = evolutionManager.storageManager.historyData.conversations.find(c => c.id === conversationId);
+                if (conv) {
+                    // Create detailed view modal
+                    const modal = document.createElement('div');
+                    modal.className = 'conversation-detail-modal';
+                    modal.onclick = (e) => {
+                        if (e.target === modal) modal.remove();
+                    };
+                    
+                    const messages = conv.events ? conv.events.filter(event => 
+                        event.type === 'message' && event.content
+                    ) : [];
+                    
+                    modal.innerHTML = `
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Conversation Details</h3>
+                                <button onclick="this.closest('.conversation-detail-modal').remove()" class="btn-close">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="conv-meta">
+                                    <p><strong>ID:</strong> ${conv.id}</p>
+                                    <p><strong>Started:</strong> ${new Date(conv.startTime).toLocaleString()}</p>
+                                    <p><strong>Duration:</strong> ${conv.duration || 'N/A'}</p>
+                                    <p><strong>Messages:</strong> ${messages.length}</p>
+                                    <p><strong>Category:</strong> ${conv.metadata?.category || 'standard'}</p>
+                                    <p><strong>Success Example:</strong> ${conv.metadata?.isSuccessExample ? 'Yes ⭐' : 'No'}</p>
+                                </div>
+                                <div class="conv-messages">
+                                    <h4>Messages:</h4>
+                                    ${messages.map(msg => `
+                                        <div class="message-detail">
+                                            <div class="msg-header">
+                                                <strong>${msg.sender}</strong>
+                                                <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString()}</span>
+                                            </div>
+                                            <div class="msg-content">${msg.content}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    
+                    // Add modal styles
+                    if (!document.getElementById('modalStyles')) {
+                        const styles = document.createElement('style');
+                        styles.id = 'modalStyles';
+                        styles.textContent = `
+                            .conversation-detail-modal {
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                background: rgba(0,0,0,0.8);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                z-index: 20000;
+                            }
+                            .modal-content {
+                                background: #2a2a2a;
+                                border-radius: 8px;
+                                width: 80%;
+                                max-width: 800px;
+                                max-height: 80%;
+                                overflow: hidden;
+                                display: flex;
+                                flex-direction: column;
+                            }
+                            .modal-header {
+                                padding: 16px;
+                                border-bottom: 1px solid #444;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                background: #333;
+                            }
+                            .modal-header h3 {
+                                margin: 0;
+                                color: #fff;
+                            }
+                            .btn-close {
+                                background: none;
+                                border: none;
+                                color: #ccc;
+                                font-size: 24px;
+                                cursor: pointer;
+                                padding: 4px;
+                            }
+                            .btn-close:hover {
+                                color: #fff;
+                            }
+                            .modal-body {
+                                padding: 16px;
+                                overflow-y: auto;
+                                flex: 1;
+                            }
+                            .conv-meta {
+                                background: #333;
+                                padding: 16px;
+                                border-radius: 6px;
+                                margin-bottom: 16px;
+                            }
+                            .conv-meta p {
+                                margin: 8px 0;
+                                color: #ccc;
+                            }
+                            .conv-messages h4 {
+                                color: #4a9eff;
+                                margin-bottom: 16px;
+                            }
+                            .message-detail {
+                                background: #333;
+                                border: 1px solid #444;
+                                border-radius: 6px;
+                                padding: 12px;
+                                margin-bottom: 12px;
+                            }
+                            .msg-header {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-bottom: 8px;
+                            }
+                            .msg-header strong {
+                                color: #4a9eff;
+                            }
+                            .msg-time {
+                                color: #888;
+                                font-size: 12px;
+                            }
+                            .msg-content {
+                                color: #ccc;
+                                line-height: 1.4;
+                                white-space: pre-wrap;
+                            }
+                        `;
+                        document.head.appendChild(styles);
+                    }
+                }
+            }
         }
-        
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initializeEvolutionSystem();
-            // 在初始化后强制刷新一次数据
-            console.log('🔄 Performing initial data refresh on DOMContentLoaded...');
-            refreshData();
-        });
-        
-        // Handle window focus for data refresh
-        window.addEventListener('focus', () => {
-            console.log('🔄 Window focused, refreshing data...');
-            refreshData();
-        });
     </script>
 </body>
 </html> 

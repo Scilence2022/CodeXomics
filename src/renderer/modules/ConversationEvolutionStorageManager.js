@@ -16,8 +16,23 @@ class ConversationEvolutionStorageManager {
         this._saveTimeout = null;
 
         console.log('ConversationEvolutionStorageManager initialized');
+
+        // 正确初始化 debouncedSave 方法
+        this.debouncedSave = this.debounce(this.saveHistoryData.bind(this), 1500);
         // 构造函数中不再直接调用，改为外部显式调用
         // this.initializeStorage(); 
+    }
+
+    /**
+     * 防抖函数
+     */
+    debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
     }
 
     /**
@@ -233,14 +248,18 @@ class ConversationEvolutionStorageManager {
 
         const stats = this.historyData.storageStats;
         
-        stats.totalConversations++;
-        stats.totalMessages += conversationRecord.stats?.messageCount || 0;
+        // Correct way to update total conversations
+        stats.totalConversations = this.historyData.conversations.length;
+        
+        if (conversationRecord) {
+            stats.totalMessages += conversationRecord.stats?.messageCount || 0;
+            if (!stats.firstRecordDate) {
+                stats.firstRecordDate = conversationRecord.startTime;
+            }
+        }
+        
         stats.lastUpdateDate = new Date().toISOString();
         
-        if (!stats.firstRecordDate) {
-            stats.firstRecordDate = conversationRecord.startTime;
-        }
-
         // Calculate approximate storage size
         stats.storageSize = JSON.stringify(this.historyData).length;
     }
