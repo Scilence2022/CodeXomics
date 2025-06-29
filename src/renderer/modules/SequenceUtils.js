@@ -5,6 +5,10 @@ class SequenceUtils {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
         this._cachedCharWidth = null; // Cache for character width measurement
+        this.vscodeEditor = null;
+        
+        // Sequence display mode: 'view' for traditional display, 'edit' for VS Code editor
+        this.displayMode = 'view';
     }
 
     // Sequence display methods
@@ -35,8 +39,16 @@ class SequenceUtils {
         }
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
         
-        // Use VS Code-style editor for better performance and UX
-        this.displayVSCodeSequence(chromosome, sequence, start, end);
+        // Add mode toggle button if not already present
+        this.addModeToggleButton();
+        
+        // Display sequence based on current mode
+        if (this.displayMode === 'edit') {
+            this.displayVSCodeSequence(chromosome, sequence, start, end);
+        } else {
+            // Use traditional detailed sequence display as default
+            this.displayDetailedSequence(chromosome, sequence, start, end);
+        }
         
         // Re-highlight selected gene sequence if there is one
         if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
@@ -44,6 +56,101 @@ class SequenceUtils {
             setTimeout(() => {
                 this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
             }, 100);
+        }
+    }
+    
+    /**
+     * Add mode toggle button to sequence display header
+     */
+    addModeToggleButton() {
+        const sequenceTitle = document.getElementById('sequenceTitle');
+        if (!sequenceTitle) return;
+        
+        // Check if button already exists
+        if (document.getElementById('sequenceModeToggle')) return;
+        
+        const toggleButton = document.createElement('button');
+        toggleButton.id = 'sequenceModeToggle';
+        toggleButton.className = 'mode-toggle-btn';
+        toggleButton.innerHTML = this.displayMode === 'edit' ? 
+            '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+        toggleButton.title = this.displayMode === 'edit' ? 
+            'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+        
+        toggleButton.onclick = () => {
+            this.toggleDisplayMode();
+        };
+        
+        // Add button after the title
+        sequenceTitle.parentNode.insertBefore(toggleButton, sequenceTitle.nextSibling);
+        
+        // Add CSS for the button if not already present
+        this.addModeToggleCSS();
+    }
+    
+    /**
+     * Add CSS for mode toggle button
+     */
+    addModeToggleCSS() {
+        if (document.getElementById('sequenceModeToggleCSS')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'sequenceModeToggleCSS';
+        style.textContent = `
+            .mode-toggle-btn {
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                margin-left: 15px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+            
+            .mode-toggle-btn:hover {
+                background: #0056b3;
+                transform: translateY(-1px);
+            }
+            
+            .mode-toggle-btn:active {
+                transform: translateY(0);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    /**
+     * Toggle between view and edit modes
+     */
+    toggleDisplayMode() {
+        this.displayMode = this.displayMode === 'edit' ? 'view' : 'edit';
+        
+        // Update button text
+        const toggleButton = document.getElementById('sequenceModeToggle');
+        if (toggleButton) {
+            toggleButton.innerHTML = this.displayMode === 'edit' ? 
+                '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+            toggleButton.title = this.displayMode === 'edit' ? 
+                'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+        }
+        
+        // Re-display sequence with new mode
+        const chromosome = this.genomeBrowser.currentChromosome;
+        const sequence = this.genomeBrowser.currentSequence;
+        if (chromosome && sequence) {
+            const start = this.genomeBrowser.currentPosition.start;
+            const end = this.genomeBrowser.currentPosition.end;
+            
+            if (this.displayMode === 'edit') {
+                this.displayVSCodeSequence(chromosome, sequence, start, end);
+            } else {
+                this.displayDetailedSequence(chromosome, sequence, start, end);
+            }
         }
     }
     

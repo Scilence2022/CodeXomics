@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Display Mode Toggle Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .feature-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .feature-list h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 5px;
+        }
+        
+        /* Mock genome browser layout */
+        .mock-genome-browser {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mock-toolbar {
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .mock-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mock-genome-view {
+            height: 200px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        
+        .mock-sequence-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mock-sequence-header {
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        #sequenceTitle {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #sequenceContent {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        /* Traditional sequence display styles */
+        .detailed-sequence-view {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .sequence-info {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .sequence-line-group {
+            margin-bottom: 8px;
+        }
+        
+        .sequence-line {
+            display: flex;
+            margin-bottom: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .sequence-position {
+            width: 100px;
+            color: #6c757d;
+            font-weight: 600;
+            margin-right: 15px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        
+        .sequence-bases {
+            flex: 1;
+            word-break: break-all;
+        }
+        
+        .gene-indicator-line {
+            height: 12px;
+            margin-left: 115px;
+            margin-bottom: 4px;
+        }
+        
+        /* Base colors */
+        .base-a { color: #dc3545; font-weight: 600; }
+        .base-t { color: #007bff; font-weight: 600; }
+        .base-g { color: #28a745; font-weight: 600; }
+        .base-c { color: #fd7e14; font-weight: 600; }
+        .base-n { color: #6c757d; font-weight: 400; }
+        
+        .protein-translations {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .protein-sequence {
+            margin-bottom: 15px;
+        }
+        
+        .protein-header {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .protein-seq {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-title">Sequence Display Mode Toggle Test</div>
+        <div class="test-description">
+            This test verifies the sequence display mode toggle functionality between traditional view mode and VS Code-style edit mode.
+        </div>
+        
+        <div class="feature-list">
+            <h4>✨ Features to Test:</h4>
+            <ul>
+                <li><strong>Default View Mode:</strong> Traditional sequence display with gene annotations</li>
+                <li><strong>Mode Toggle Button:</strong> Switch between view and edit modes</li>
+                <li><strong>VS Code Edit Mode:</strong> Advanced editor with syntax highlighting</li>
+                <li><strong>Persistent Mode:</strong> Mode selection persists during navigation</li>
+                <li><strong>Seamless Transition:</strong> Smooth switching between modes</li>
+            </ul>
+        </div>
+        
+        <button class="test-btn" onclick="loadTestSequence()">Load Test Sequence</button>
+        <button class="test-btn" onclick="testModeToggle()">Test Mode Toggle</button>
+        <button class="test-btn" onclick="testViewMode()">Test View Mode</button>
+        <button class="test-btn" onclick="testEditMode()">Test Edit Mode</button>
+        
+        <div id="test-status" class="status"></div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-title">Mock Genome Browser</div>
+        
+        <div class="mock-genome-browser">
+            <div class="mock-toolbar">
+                <span>Genome Browser Toolbar</span>
+                <button class="test-btn" onclick="simulateNavigation()">Simulate Navigation</button>
+            </div>
+            
+            <div class="mock-content">
+                <div class="mock-genome-view">
+                    Genome Visualization Area
+                </div>
+                
+                <div class="mock-sequence-section">
+                    <div class="mock-sequence-header">
+                        <span id="sequenceTitle">Sequence Display</span>
+                    </div>
+                    <div id="sequenceContent">
+                        <div style="text-align: center; color: #666; padding: 50px;">
+                            Click "Load Test Sequence" to start testing
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="src/renderer/modules/VSCodeSequenceEditor.js"></script>
+    <script>
+        // Mock genome browser object
+        const mockGenomeBrowser = {
+            currentPosition: { start: 0, end: 1000 },
+            currentChromosome: 'test_chromosome',
+            currentSequence: '',
+            currentAnnotations: {
+                'test_chromosome': [
+                    {
+                        type: 'gene',
+                        start: 100,
+                        end: 500,
+                        strand: 1,
+                        qualifiers: { gene: 'testGene1', locus_tag: 'TG001' }
+                    },
+                    {
+                        type: 'CDS',
+                        start: 150,
+                        end: 450,
+                        strand: 1,
+                        qualifiers: { gene: 'testCDS1', product: 'test protein' }
+                    },
+                    {
+                        type: 'rRNA',
+                        start: 600,
+                        end: 800,
+                        strand: -1,
+                        qualifiers: { gene: 'rRNA1', product: '16S ribosomal RNA' }
+                    }
+                ]
+            },
+            shouldShowGeneType: () => true,
+            selectedGene: null,
+            highlightGeneSequence: () => {},
+            showNotification: (message, type) => {
+                updateStatus(type === 'success' ? 'success' : 'error', message);
+            }
+        };
+        
+        // Mock SequenceUtils class with mode toggle functionality
+        class MockSequenceUtils {
+            constructor(genomeBrowser) {
+                this.genomeBrowser = genomeBrowser;
+                this._cachedCharWidth = null;
+                this.vscodeEditor = null;
+                this.displayMode = 'view'; // Default to view mode
+            }
+            
+            displayEnhancedSequence(chromosome, sequence) {
+                const start = this.genomeBrowser.currentPosition.start;
+                const end = this.genomeBrowser.currentPosition.end;
+                const windowSize = end - start;
+                
+                // Update sequence title
+                const sequenceTitle = document.getElementById('sequenceTitle');
+                if (sequenceTitle) {
+                    sequenceTitle.textContent = `${chromosome}:${start + 1}-${end} (${windowSize} bp)`;
+                }
+                
+                // Add mode toggle button
+                this.addModeToggleButton();
+                
+                // Display sequence based on current mode
+                if (this.displayMode === 'edit') {
+                    this.displayVSCodeSequence(chromosome, sequence, start, end);
+                } else {
+                    this.displayDetailedSequence(chromosome, sequence, start, end);
+                }
+            }
+            
+            addModeToggleButton() {
+                const sequenceTitle = document.getElementById('sequenceTitle');
+                if (!sequenceTitle) return;
+                
+                // Check if button already exists
+                if (document.getElementById('sequenceModeToggle')) return;
+                
+                const toggleButton = document.createElement('button');
+                toggleButton.id = 'sequenceModeToggle';
+                toggleButton.className = 'mode-toggle-btn';
+                toggleButton.innerHTML = this.displayMode === 'edit' ? 
+                    '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+                toggleButton.title = this.displayMode === 'edit' ? 
+                    'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+                
+                toggleButton.onclick = () => {
+                    this.toggleDisplayMode();
+                };
+                
+                // Add button after the title
+                sequenceTitle.parentNode.insertBefore(toggleButton, sequenceTitle.nextSibling);
+                
+                // Add CSS for the button
+                this.addModeToggleCSS();
+            }
+            
+            addModeToggleCSS() {
+                if (document.getElementById('sequenceModeToggleCSS')) return;
+                
+                const style = document.createElement('style');
+                style.id = 'sequenceModeToggleCSS';
+                style.textContent = `
+                    .mode-toggle-btn {
+                        background: #007bff;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 6px 12px;
+                        margin-left: 15px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                    }
+                    
+                    .mode-toggle-btn:hover {
+                        background: #0056b3;
+                        transform: translateY(-1px);
+                    }
+                    
+                    .mode-toggle-btn:active {
+                        transform: translateY(0);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            toggleDisplayMode() {
+                this.displayMode = this.displayMode === 'edit' ? 'view' : 'edit';
+                
+                // Update button text
+                const toggleButton = document.getElementById('sequenceModeToggle');
+                if (toggleButton) {
+                    toggleButton.innerHTML = this.displayMode === 'edit' ? 
+                        '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+                    toggleButton.title = this.displayMode === 'edit' ? 
+                        'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+                }
+                
+                // Re-display sequence with new mode
+                const chromosome = this.genomeBrowser.currentChromosome;
+                const sequence = this.genomeBrowser.currentSequence;
+                if (chromosome && sequence) {
+                    if (this.displayMode === 'edit') {
+                        this.displayVSCodeSequence(chromosome, sequence, 0, sequence.length);
+                    } else {
+                        this.displayDetailedSequence(chromosome, sequence, 0, sequence.length);
+                    }
+                }
+                
+                updateStatus('success', `Switched to ${this.displayMode} mode`);
+            }
+            
+            displayVSCodeSequence(chromosome, sequence, start, end) {
+                const container = document.getElementById('sequenceContent');
+                const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+                
+                // Initialize VS Code editor if not already done
+                if (!this.vscodeEditor) {
+                    this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
+                }
+                
+                // Update the editor with new sequence data
+                this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+            }
+            
+            displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
+                const container = document.getElementById('sequenceContent');
+                const subsequence = fullSequence.substring(viewStart, viewEnd);
+                const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+                
+                const optimalLineLength = 60; // Fixed for demo
+                
+                let html = '<div class="detailed-sequence-view">';
+                html += '<div class="sequence-info"><strong>DNA Sequence (traditional view with annotations):</strong></div>';
+                
+                for (let i = 0; i < subsequence.length; i += optimalLineLength) {
+                    const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
+                    const lineStartPos = viewStart + i;
+                    
+                    html += `<div class="sequence-line-group">`;
+                    html += `<div class="sequence-line">`;
+                    html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
+                    html += `<div class="sequence-bases">${this.colorizeSequence(lineSubsequence)}</div>`;
+                    html += `</div>`;
+                    html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations)}</div>`;
+                    html += `</div>`;
+                }
+                
+                // Add protein translations
+                const cdsFeatures = annotations.filter(feature => feature.type === 'CDS');
+                if (cdsFeatures.length > 0) {
+                    html += '<div class="protein-translations">';
+                    html += '<div class="sequence-info"><strong>Protein Translations:</strong></div>';
+                    
+                    cdsFeatures.forEach(cds => {
+                        const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
+                        const product = cds.qualifiers.product || 'hypothetical protein';
+                        
+                        html += `<div class="protein-sequence">`;
+                        html += `<div class="protein-header">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand): ${product}</div>`;
+                        html += `<div class="protein-seq">MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKALPDAQFEVVHSLAKWKREQVYYLSTFNGVVNSLRQDDGSVADYNIQKESTLHLVLRLRGG</div>`;
+                        html += `</div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+            }
+            
+            colorizeSequence(sequence) {
+                return sequence.split('').map(base => {
+                    const lowerBase = base.toLowerCase();
+                    return `<span class="base-${lowerBase}">${base}</span>`;
+                }).join('');
+            }
+            
+            createGeneIndicatorBar(sequence, lineStartPos, annotations) {
+                let html = '';
+                const lineLength = sequence.length;
+                
+                annotations.forEach(feature => {
+                    if (feature.start <= lineStartPos + lineLength && feature.end >= lineStartPos) {
+                        const relativeStart = Math.max(0, feature.start - lineStartPos);
+                        const relativeEnd = Math.min(lineLength, feature.end - lineStartPos);
+                        const width = relativeEnd - relativeStart;
+                        
+                        if (width > 0) {
+                            const color = this.getFeatureColor(feature.type);
+                            html += `<div style="position: absolute; left: ${relativeStart * 9.5}px; width: ${width * 9.5}px; height: 8px; background: ${color}; opacity: 0.7; border-radius: 2px;" title="${feature.type}: ${feature.qualifiers.gene || 'Unknown'}"></div>`;
+                        }
+                    }
+                });
+                
+                return `<div style="position: relative; height: 12px;">${html}</div>`;
+            }
+            
+            getFeatureColor(type) {
+                const colors = {
+                    'gene': '#28a745',
+                    'CDS': '#007bff',
+                    'rRNA': '#dc3545',
+                    'tRNA': '#fd7e14',
+                    'promoter': '#6f42c1',
+                    'terminator': '#e83e8c'
+                };
+                return colors[type] || '#6c757d';
+            }
+        }
+        
+        let sequenceUtils = null;
+        
+        function loadTestSequence() {
+            try {
+                // Generate test sequence
+                const testSequence = 'ATCGATCGATCG'.repeat(100);
+                mockGenomeBrowser.currentSequence = testSequence;
+                mockGenomeBrowser.currentPosition = { start: 0, end: testSequence.length };
+                
+                // Initialize sequence utils
+                sequenceUtils = new MockSequenceUtils(mockGenomeBrowser);
+                
+                // Display sequence
+                sequenceUtils.displayEnhancedSequence('test_chromosome', testSequence);
+                
+                updateStatus('success', 'Test sequence loaded successfully! Default view mode active.');
+                
+            } catch (error) {
+                updateStatus('error', `Error loading test sequence: ${error.message}`);
+                console.error('Error:', error);
+            }
+        }
+        
+        function testModeToggle() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                const currentMode = sequenceUtils.displayMode;
+                sequenceUtils.toggleDisplayMode();
+                const newMode = sequenceUtils.displayMode;
+                
+                updateStatus('success', `Mode toggled from ${currentMode} to ${newMode}`);
+                
+            } catch (error) {
+                updateStatus('error', `Mode toggle failed: ${error.message}`);
+            }
+        }
+        
+        function testViewMode() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                if (sequenceUtils.displayMode !== 'view') {
+                    sequenceUtils.toggleDisplayMode();
+                }
+                updateStatus('success', 'View mode activated - traditional sequence display with annotations');
+                
+            } catch (error) {
+                updateStatus('error', `View mode test failed: ${error.message}`);
+            }
+        }
+        
+        function testEditMode() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                if (sequenceUtils.displayMode !== 'edit') {
+                    sequenceUtils.toggleDisplayMode();
+                }
+                updateStatus('success', 'Edit mode activated - VS Code-style editor with advanced features');
+                
+            } catch (error) {
+                updateStatus('error', `Edit mode test failed: ${error.message}`);
+            }
+        }
+        
+        function simulateNavigation() {
+            if (!sequenceUtils) {
+                updateStatus('error', 'Please load test sequence first');
+                return;
+            }
+            
+            try {
+                // Simulate navigation to different position
+                const newStart = Math.floor(Math.random() * 500);
+                const newEnd = newStart + 300;
+                
+                mockGenomeBrowser.currentPosition = { start: newStart, end: newEnd };
+                
+                // Re-display with current mode
+                sequenceUtils.displayEnhancedSequence('test_chromosome', mockGenomeBrowser.currentSequence);
+                
+                updateStatus('success', `Navigated to position ${newStart}-${newEnd}, mode preserved: ${sequenceUtils.displayMode}`);
+                
+            } catch (error) {
+                updateStatus('error', `Navigation simulation failed: ${error.message}`);
+            }
+        }
+        
+        function updateStatus(type, message) {
+            const statusElement = document.getElementById('test-status');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+        
+        // Auto-load test sequence
+        setTimeout(() => {
+            loadTestSequence();
+        }, 500);
+    </script>
+</body>
+</html> 
