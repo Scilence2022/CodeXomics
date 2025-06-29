@@ -36,6 +36,9 @@ class ChatBoxSettingsManager {
             enableAbortButton: true,
             useOptimizedPrompt: true, // 新增：使用优化的系统提示
             
+            // Tool priority settings
+            toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // 工具优先级顺序
+            
             // Window settings
             rememberPosition: true,
             rememberSize: true,
@@ -128,6 +131,7 @@ class ChatBoxSettingsManager {
             logToolCalls: false,
             enableAbortButton: true,
             useOptimizedPrompt: true,
+            toolPriority: ['local', 'genomics', 'plugins', 'mcp'],
             rememberPosition: true,
             rememberSize: true,
             startMinimized: false
@@ -233,6 +237,88 @@ class ChatBoxSettingsManager {
         modal.className = 'modal';
         
         modal.innerHTML = `
+            <style>
+                .priority-container {
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    background: #f8f9fa;
+                    padding: 10px;
+                    margin: 10px 0;
+                }
+                
+                .priority-item {
+                    display: flex;
+                    align-items: center;
+                    background: white;
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 12px;
+                    margin: 8px 0;
+                    cursor: move;
+                    transition: all 0.2s ease;
+                }
+                
+                .priority-item:hover {
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    transform: translateY(-1px);
+                }
+                
+                .priority-number {
+                    background: #007bff;
+                    color: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    font-weight: bold;
+                    margin-right: 12px;
+                    flex-shrink: 0;
+                }
+                
+                .priority-label {
+                    flex: 1;
+                    font-weight: 500;
+                    color: #333;
+                }
+                
+                .priority-controls {
+                    display: flex;
+                    gap: 4px;
+                }
+                
+                .priority-btn {
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    width: 28px;
+                    height: 28px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    font-size: 14px;
+                    color: #495057;
+                    transition: all 0.2s ease;
+                }
+                
+                .priority-btn:hover {
+                    background: #e9ecef;
+                    border-color: #adb5bd;
+                }
+                
+                .priority-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+                
+                .priority-item.dragging {
+                    opacity: 0.7;
+                    transform: rotate(5deg);
+                }
+            </style>
             <div class="modal-content llm-config-modal draggable-modal">
                 <div class="modal-header draggable-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
@@ -430,6 +516,48 @@ class ChatBoxSettingsManager {
                             </div>
                             
                             <div class="form-section">
+                                <h4>Tool Priority</h4>
+                                <div class="form-group">
+                                    <label>Tool selection priority order:</label>
+                                    <div id="toolPriorityContainer" class="priority-container">
+                                        <div class="priority-item" data-type="local">
+                                            <span class="priority-number">1</span>
+                                            <span class="priority-label">Local Tools</span>
+                                            <div class="priority-controls">
+                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                            </div>
+                                        </div>
+                                        <div class="priority-item" data-type="genomics">
+                                            <span class="priority-number">2</span>
+                                            <span class="priority-label">Genomics Tools</span>
+                                            <div class="priority-controls">
+                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                            </div>
+                                        </div>
+                                        <div class="priority-item" data-type="plugins">
+                                            <span class="priority-number">3</span>
+                                            <span class="priority-label">Plugin Tools</span>
+                                            <div class="priority-controls">
+                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                            </div>
+                                        </div>
+                                        <div class="priority-item" data-type="mcp">
+                                            <span class="priority-number">4</span>
+                                            <span class="priority-label">MCP Tools</span>
+                                            <div class="priority-controls">
+                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="help-text">Drag or use arrows to reorder tool selection priority</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
                                 <h4>Debug</h4>
                                 <div class="form-group">
                                     <label>
@@ -491,6 +619,9 @@ class ChatBoxSettingsManager {
         
         // Setup dragging functionality
         this.setupModalDragging(modal);
+        
+        // Setup tool priority functionality
+        this.setupToolPriorityHandlers(modal);
         
         return modal;
     }
@@ -580,10 +711,139 @@ class ChatBoxSettingsManager {
     }
 
     /**
+     * Setup tool priority handlers
+     */
+    setupToolPriorityHandlers(modal) {
+        const container = modal.querySelector('#toolPriorityContainer');
+        if (!container) return;
+
+        // Add global functions for priority buttons
+        window.movePriorityUp = (button) => {
+            const item = button.closest('.priority-item');
+            const prevItem = item.previousElementSibling;
+            if (prevItem) {
+                container.insertBefore(item, prevItem);
+                this.updatePriorityNumbers(container);
+            }
+        };
+
+        window.movePriorityDown = (button) => {
+            const item = button.closest('.priority-item');
+            const nextItem = item.nextElementSibling;
+            if (nextItem) {
+                container.insertBefore(nextItem, item);
+                this.updatePriorityNumbers(container);
+            }
+        };
+
+        // Add drag and drop functionality
+        const items = container.querySelectorAll('.priority-item');
+        items.forEach(item => {
+            item.draggable = true;
+            
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', '');
+                item.classList.add('dragging');
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                this.updatePriorityNumbers(container);
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const draggingItem = container.querySelector('.dragging');
+                if (draggingItem && draggingItem !== item) {
+                    const rect = item.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    
+                    if (e.clientY < midY) {
+                        container.insertBefore(draggingItem, item);
+                    } else {
+                        container.insertBefore(draggingItem, item.nextSibling);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Update priority numbers after reordering
+     */
+    updatePriorityNumbers(container) {
+        const items = container.querySelectorAll('.priority-item');
+        items.forEach((item, index) => {
+            const numberSpan = item.querySelector('.priority-number');
+            if (numberSpan) {
+                numberSpan.textContent = index + 1;
+            }
+            
+            // Update button states
+            const upBtn = item.querySelector('.priority-btn.up');
+            const downBtn = item.querySelector('.priority-btn.down');
+            
+            if (upBtn) upBtn.disabled = index === 0;
+            if (downBtn) downBtn.disabled = index === items.length - 1;
+        });
+    }
+
+    /**
+     * Get current tool priority order from UI
+     */
+    getToolPriorityFromUI(modal) {
+        const container = modal.querySelector('#toolPriorityContainer');
+        if (!container) return this.settings.toolPriority;
+        
+        const items = container.querySelectorAll('.priority-item');
+        return Array.from(items).map(item => item.dataset.type);
+    }
+
+    /**
+     * Set tool priority order in UI
+     */
+    setToolPriorityInUI(modal, priority) {
+        const container = modal.querySelector('#toolPriorityContainer');
+        if (!container || !Array.isArray(priority)) return;
+        
+        // Reorder items based on priority array
+        const items = Array.from(container.querySelectorAll('.priority-item'));
+        const orderedItems = [];
+        
+        priority.forEach(type => {
+            const item = items.find(item => item.dataset.type === type);
+            if (item) orderedItems.push(item);
+        });
+        
+        // Add any missing items at the end
+        items.forEach(item => {
+            if (!orderedItems.includes(item)) {
+                orderedItems.push(item);
+            }
+        });
+        
+        // Clear container and re-add in correct order
+        container.innerHTML = '';
+        orderedItems.forEach(item => container.appendChild(item));
+        
+        this.updatePriorityNumbers(container);
+    }
+
+    /**
      * Populate settings form with current values
      */
     populateSettingsForm(modal) {
         for (const [key, value] of Object.entries(this.settings)) {
+            if (key === 'toolPriority') {
+                // Handle tool priority specially
+                this.setToolPriorityInUI(modal, value);
+                continue;
+            }
+            
             const element = modal.querySelector(`#${key}`);
             if (element) {
                 if (element.type === 'checkbox') {
@@ -604,6 +864,12 @@ class ChatBoxSettingsManager {
         const newSettings = {};
         
         for (const key of Object.keys(this.settings)) {
+            if (key === 'toolPriority') {
+                // Handle tool priority specially
+                newSettings[key] = this.getToolPriorityFromUI(modal);
+                continue;
+            }
+            
             const element = modal.querySelector(`#${key}`);
             if (element) {
                 if (element.type === 'checkbox') {

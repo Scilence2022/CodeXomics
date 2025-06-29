@@ -2976,54 +2976,96 @@ Data Management:
         // Core tool categories for better organization
         const coreTools = this.getCoreToolsByCategory();
         
+        // Get current genome info if available
+        const genomeInfo = this.getGenomeInfoSummary();
+        
         return `
-Current State: ${context.genomeBrowser.currentState.currentChromosome || 'None'} | ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'} | ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None tracks'}
+CURRENT GENOME STATE:
+- Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
+- Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
+- Visible Tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
+- Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
+- Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
+${genomeInfo ? `- Genome: ${genomeInfo}` : ''}
 
-Available Tools: ${context.genomeBrowser.toolSources.total} total (${context.genomeBrowser.toolSources.mcp} MCP + ${context.genomeBrowser.toolSources.local} local + ${context.genomeBrowser.toolSources.plugins} plugins)
-
-${connectedServers.length > 0 ? `Connected MCP: ${connectedServers.map(s => `${s.name}(${s.toolCount})`).join(', ')}` : 'No MCP servers connected'}
+AVAILABLE TOOLS: ${context.genomeBrowser.toolSources.total} total
+- Local: ${context.genomeBrowser.toolSources.local}
+- Genomics: Available (MicrobeGenomicsFunctions)
+- Plugins: ${context.genomeBrowser.toolSources.plugins}
+- MCP: ${context.genomeBrowser.toolSources.mcp} ${connectedServers.length > 0 ? `(${connectedServers.map(s => s.name).join(', ')})` : '(disconnected)'}
 
 CORE TOOL CATEGORIES:
 ${coreTools}
-
-===FUNCTION CALLING FORMAT===
-ALWAYS respond with ONLY a JSON object for tool calls:
-{"tool_name": "tool_name", "parameters": {"param": "value"}}
-
-TOOL PRIORITY: 1) MCP tools 2) Specialized genomics 3) Local tools
-
-KEY TOOLS FOR COMMON TASKS:
-• Gene search: search_gene_by_name, search_features
-• Navigation: jump_to_gene, navigate_to_position  
-• Sequence: get_coding_sequence, get_sequence, translate_dna
-• Analysis: compute_gc, find_orfs, sequence_statistics
-• Structure: search_alphafold_by_gene, open_protein_viewer
-• BLAST: blast_search, advanced_blast_search
-• Pathways: show_metabolic_pathway, find_pathway_genes
-
-EXAMPLES:
-• Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
-• Get CDS: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "thrC"}}
-• AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
-• Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
 `;
+    }
+
+    /**
+     * Get tool priority string for system message
+     */
+    getToolPriorityString() {
+        // Get tool priority from settings
+        const toolPriority = this.configManager.get('chatboxSettings.toolPriority', 
+            ['local', 'genomics', 'plugins', 'mcp']);
+        
+        const priorityLabels = {
+            'local': 'Local Tools',
+            'genomics': 'Specialized Genomics Tools', 
+            'plugins': 'Plugin Tools',
+            'mcp': 'MCP Server Tools'
+        };
+        
+        const priorityList = toolPriority.map((type, index) => 
+            `${index + 1}) ${priorityLabels[type] || type}`
+        ).join('\n');
+        
+        return `TOOL SELECTION PRIORITY:\n${priorityList}`;
     }
 
     /**
      * Get optimized system message for better LLM performance
      */
     getOptimizedSystemMessage() {
-        return `You are an AI assistant for Genome AI Studio, a bioinformatics application. You have access to powerful genomic analysis tools.
+        const toolPriority = this.getToolPriorityString();
+        
+        return `You are an AI assistant for Genome AI Studio, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
 IMPORTANT: Task Completion Instructions
 When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
 
 ${this.getOptimizedToolContext()}
 
+===FUNCTION CALLING FORMAT===
 CRITICAL: Always respond with ONLY a JSON object when using tools. No explanatory text around the JSON.
+Format: {"tool_name": "tool_name", "parameters": {"param": "value"}}
 
-For the user request "Get AlphaFold structure for Ecoli gene thrC", the correct response would be:
-{"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}`;
+${toolPriority}
+
+COMMON TASK PATTERNS:
+• Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
+• Protein Structure: search_alphafold_by_gene → open_alphafold_viewer
+• Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
+• Navigation: jump_to_gene → navigate_to_position
+• BLAST Search: blast_search → analyze results
+• Pathway Analysis: show_metabolic_pathway → find_pathway_genes
+
+SEARCH FUNCTIONS GUIDE:
+- Gene names/products: search_gene_by_name, search_features
+- Genomic positions: search_by_position, get_nearby_features  
+- Sequence motifs: search_sequence_motif
+- Protein structures: search_alphafold_by_gene, search_protein_by_gene
+
+ANALYSIS FUNCTIONS:
+- Sequence: get_coding_sequence, translate_dna, reverse_complement
+- Composition: compute_gc, sequence_statistics, codon_usage_analysis
+- Features: find_orfs, predict_promoter, predict_rbs, find_restriction_sites
+- Comparison: blast_search, compare_regions, find_similar_sequences
+
+EXAMPLES:
+• Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
+• Get CDS: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "thrC"}}
+• AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
+• Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
+• BLAST: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGC...", "blastType": "blastn"}}`;
     }
 
     /**
