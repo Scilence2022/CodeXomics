@@ -21,6 +21,29 @@ class VSCodeSequenceEditor {
         this.basesPerLine = 80;
         this.scrollTop = 0;
         this.visibleLines = 20;
+        this.currentLine = -1; // Track current line for highlighting
+        
+        // Settings
+        this.settings = {
+            fontSize: 14,
+            fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace",
+            backgroundColor: '#1e1e1e',
+            textColor: '#d4d4d4',
+            baseColors: {
+                a: '#f92672',
+                t: '#66d9ef', 
+                g: '#a6e22e',
+                c: '#fd971f',
+                n: '#75715e'
+            },
+            lineHighlightColor: 'rgba(255, 255, 255, 0.05)',
+            cursorColor: '#ffffff',
+            selectionColor: 'rgba(38, 79, 120, 0.4)',
+            rulerColor: '#858585',
+            showFeatureBackgrounds: false,
+            showLineHighlight: true,
+            showCursorPosition: true
+        };
         
         // Virtual scrolling for performance
         this.virtualScrolling = true;
@@ -77,6 +100,10 @@ class VSCodeSequenceEditor {
         this.selection = document.createElement('div');
         this.selection.className = 'editor-selection';
         
+        // Create line highlight
+        this.lineHighlight = document.createElement('div');
+        this.lineHighlight.className = 'line-highlight';
+        
         // Create scrollbar
         this.scrollbar = document.createElement('div');
         this.scrollbar.className = 'editor-scrollbar';
@@ -88,6 +115,7 @@ class VSCodeSequenceEditor {
         this.container.appendChild(this.positionRuler);
         this.editorContainer.appendChild(this.lineNumbers);
         this.editorContainer.appendChild(this.sequenceContent);
+        this.sequenceContent.appendChild(this.lineHighlight);
         this.sequenceContent.appendChild(this.cursor);
         this.sequenceContent.appendChild(this.selection);
         this.editorContainer.appendChild(this.scrollbar);
@@ -105,11 +133,11 @@ class VSCodeSequenceEditor {
                 width: 100%;
                 height: 100%;
                 min-height: 400px;
-                font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace;
-                font-size: 14px;
+                font-family: ${this.settings.fontFamily};
+                font-size: ${this.settings.fontSize}px;
                 line-height: 20px;
-                background: #1e1e1e;
-                color: #d4d4d4;
+                background: ${this.settings.backgroundColor};
+                color: ${this.settings.textColor};
                 position: relative;
                 overflow: hidden;
                 border: 1px solid #3c3c3c;
@@ -160,8 +188,8 @@ class VSCodeSequenceEditor {
                 left: 10px;
                 right: 10px;
                 white-space: nowrap;
-                font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace;
-                font-size: 14px;
+                font-family: ${this.settings.fontFamily};
+                font-size: ${this.settings.fontSize}px;
                 letter-spacing: 0px;
             }
             
@@ -174,23 +202,35 @@ class VSCodeSequenceEditor {
             }
             
             /* Base colors */
-            .base-a { color: #f92672; }
-            .base-t { color: #66d9ef; }
-            .base-g { color: #a6e22e; }
-            .base-c { color: #fd971f; }
-            .base-n { color: #75715e; }
+            .base-a { color: ${this.settings.baseColors.a}; }
+            .base-t { color: ${this.settings.baseColors.t}; }
+            .base-g { color: ${this.settings.baseColors.g}; }
+            .base-c { color: ${this.settings.baseColors.c}; }
+            .base-n { color: ${this.settings.baseColors.n}; }
             
-            /* Feature highlighting */
-            .feature-gene { background: rgba(102, 217, 239, 0.2); }
-            .feature-cds { background: rgba(166, 226, 46, 0.2); }
-            .feature-rna { background: rgba(249, 38, 114, 0.2); }
-            .feature-promoter { background: rgba(253, 151, 31, 0.2); }
+            /* Feature highlighting - disabled by default */
+            .feature-gene.show-background { background: rgba(102, 217, 239, 0.2); }
+            .feature-cds.show-background { background: rgba(166, 226, 46, 0.2); }
+            .feature-rna.show-background { background: rgba(249, 38, 114, 0.2); }
+            .feature-promoter.show-background { background: rgba(253, 151, 31, 0.2); }
+            
+            /* Line highlighting */
+            .line-highlight {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background: rgba(255, 255, 255, 0.05);
+                z-index: 1;
+                pointer-events: none;
+                display: none;
+            }
             
             .editor-cursor {
                 position: absolute;
                 width: 2px;
                 height: 20px;
-                background: #ffffff;
+                background: ${this.settings.cursorColor};
                 animation: blink 1s infinite;
                 z-index: 10;
                 pointer-events: none;
@@ -203,7 +243,7 @@ class VSCodeSequenceEditor {
             
             .editor-selection {
                 position: absolute;
-                background: rgba(38, 79, 120, 0.4);
+                background: ${this.settings.selectionColor};
                 z-index: 5;
                 pointer-events: none;
             }
@@ -283,6 +323,30 @@ class VSCodeSequenceEditor {
                 font-size: 9px;
                 transform: translateX(-50%);
             }
+            
+            /* Cursor position indicator in ruler */
+            .cursor-position-indicator {
+                position: absolute;
+                top: 0;
+                width: 2px;
+                height: 20px;
+                background: #ffff00;
+                z-index: 10;
+                pointer-events: none;
+            }
+            
+            .cursor-position-label {
+                position: absolute;
+                top: -15px;
+                font-size: 10px;
+                color: #ffff00;
+                font-weight: bold;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.8);
+                padding: 1px 4px;
+                border-radius: 2px;
+                white-space: nowrap;
+            }
         `;
         
         if (!document.getElementById('vscode-sequence-editor-styles')) {
@@ -297,6 +361,7 @@ class VSCodeSequenceEditor {
         this.sequenceContent.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.sequenceContent.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.sequenceContent.addEventListener('wheel', this.handleWheel.bind(this));
+        this.sequenceContent.addEventListener('contextmenu', this.handleContextMenu.bind(this));
         
         // Focus events
         this.sequenceContent.addEventListener('focus', this.handleFocus.bind(this));
@@ -357,8 +422,8 @@ class VSCodeSequenceEditor {
         // Create a test element to measure character width
         const testElement = document.createElement('span');
         testElement.textContent = 'ATCGATCGATCG'; // 12 characters
-        testElement.style.fontFamily = "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace";
-        testElement.style.fontSize = '14px';
+        testElement.style.fontFamily = this.settings.fontFamily;
+        testElement.style.fontSize = this.settings.fontSize + 'px';
         testElement.style.visibility = 'hidden';
         testElement.style.position = 'absolute';
         testElement.style.whiteSpace = 'nowrap';
@@ -399,6 +464,7 @@ class VSCodeSequenceEditor {
     render() {
         this.renderLineNumbers();
         this.renderSequence();
+        this.renderLineHighlight();
         this.renderCursor();
         this.renderSelection();
         this.renderRuler();
@@ -453,16 +519,40 @@ class VSCodeSequenceEditor {
             baseElement.textContent = base;
             baseElement.dataset.position = globalPos;
             
-            // Add feature classes
+            // Add feature classes (only show background if enabled)
             const features = this.getFeatureAtPosition(globalPos);
             features.forEach(feature => {
                 baseElement.classList.add(`feature-${feature.type.toLowerCase()}`);
+                if (this.settings.showFeatureBackgrounds) {
+                    baseElement.classList.add('show-background');
+                }
             });
             
             line.appendChild(baseElement);
         }
         
         return line;
+    }
+    
+    renderLineHighlight() {
+        if (!this.settings.showLineHighlight) {
+            this.lineHighlight.style.display = 'none';
+            return;
+        }
+        
+        const { line } = this.getLineColumnFromPosition(this.cursorPosition);
+        const y = line * this.lineHeight - this.scrollTop;
+        
+        // Only show highlight if line is visible
+        if (y >= 0 && y < this.contentHeight) {
+            this.lineHighlight.style.top = y + 'px';
+            this.lineHighlight.style.background = this.settings.lineHighlightColor;
+            this.lineHighlight.style.display = 'block';
+            this.currentLine = line;
+        } else {
+            this.lineHighlight.style.display = 'none';
+            this.currentLine = -1;
+        }
     }
     
     renderCursor() {
@@ -525,24 +615,50 @@ class VSCodeSequenceEditor {
         }
         
         ruler.innerHTML = '';
+        ruler.style.background = this.settings.backgroundColor;
+        ruler.style.color = this.settings.rulerColor;
         
-        // Add ruler marks every 10 bases
-        const startPos = Math.floor(this.scrollTop / this.lineHeight) * this.basesPerLine;
-        const endPos = startPos + this.visibleLines * this.basesPerLine;
+        // Get cursor line for dynamic ruler positioning
+        const { line: cursorLine, column: cursorColumn } = this.getLineColumnFromPosition(this.cursorPosition);
+        const currentScrollLine = Math.floor(this.scrollTop / this.lineHeight);
         
-        for (let pos = startPos; pos <= endPos; pos += 10) {
-            if (pos % 50 === 0) {
+        // Determine which line to show in ruler (cursor line if visible, otherwise current scroll position)
+        let displayLine = currentScrollLine;
+        if (cursorLine >= currentScrollLine && cursorLine < currentScrollLine + this.visibleLines) {
+            displayLine = cursorLine;
+        }
+        
+        const lineStartPos = displayLine * this.basesPerLine;
+        const lineEndPos = Math.min(lineStartPos + this.basesPerLine, this.sequence.length);
+        
+        // Add ruler marks every 10 bases for the display line
+        for (let pos = lineStartPos; pos < lineEndPos; pos += 10) {
+            if (pos % 50 === 0 || pos === lineStartPos) {
                 const mark = document.createElement('div');
                 mark.className = 'ruler-mark';
-                mark.style.left = ((pos - startPos) % this.basesPerLine) * this.charWidth + 'px';
+                mark.style.left = ((pos - lineStartPos) * this.charWidth + 70) + 'px'; // Offset for line numbers
                 ruler.appendChild(mark);
                 
                 const label = document.createElement('div');
                 label.className = 'ruler-label';
                 label.textContent = (this.viewStart + pos + 1).toString();
-                label.style.left = ((pos - startPos) % this.basesPerLine) * this.charWidth + 'px';
+                label.style.left = ((pos - lineStartPos) * this.charWidth + 70) + 'px';
                 ruler.appendChild(label);
             }
+        }
+        
+        // Add cursor position indicator if enabled and cursor is on the display line
+        if (this.settings.showCursorPosition && cursorLine === displayLine) {
+            const cursorIndicator = document.createElement('div');
+            cursorIndicator.className = 'cursor-position-indicator';
+            cursorIndicator.style.left = (cursorColumn * this.charWidth + 70) + 'px';
+            ruler.appendChild(cursorIndicator);
+            
+            const cursorLabel = document.createElement('div');
+            cursorLabel.className = 'cursor-position-label';
+            cursorLabel.textContent = `${this.viewStart + this.cursorPosition + 1}`;
+            cursorLabel.style.left = (cursorColumn * this.charWidth + 70) + 'px';
+            ruler.appendChild(cursorLabel);
         }
     }
     
@@ -576,6 +692,89 @@ class VSCodeSequenceEditor {
         if (this.selectionStart === this.selectionEnd) {
             this.clearSelection();
         }
+    }
+    
+    handleContextMenu(e) {
+        e.preventDefault();
+        
+        // Create context menu
+        const menu = document.createElement('div');
+        menu.className = 'sequence-context-menu';
+        menu.style.cssText = `
+            position: fixed;
+            left: ${e.clientX}px;
+            top: ${e.clientY}px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            padding: 4px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            min-width: 150px;
+            color: #d4d4d4;
+            font-size: 13px;
+        `;
+        
+        const menuItems = [
+            { text: 'Copy', action: () => this.copy(), enabled: this.selectionStart !== this.selectionEnd },
+            { text: 'Select All', action: () => this.selectAll() },
+            { text: '---' },
+            { text: 'Go to Position...', action: () => this.goToPosition() },
+            { text: 'Search...', action: () => this.showSearch() },
+            { text: '---' },
+            { text: 'Settings...', action: () => this.showSettingsDialog() }
+        ];
+        
+        menuItems.forEach(item => {
+            if (item.text === '---') {
+                const separator = document.createElement('div');
+                separator.style.cssText = `
+                    height: 1px;
+                    background: #3c3c3c;
+                    margin: 4px 0;
+                `;
+                menu.appendChild(separator);
+            } else {
+                const menuItem = document.createElement('div');
+                menuItem.textContent = item.text;
+                menuItem.style.cssText = `
+                    padding: 6px 16px;
+                    cursor: ${item.enabled !== false ? 'pointer' : 'default'};
+                    color: ${item.enabled !== false ? '#d4d4d4' : '#666'};
+                `;
+                
+                if (item.enabled !== false) {
+                    menuItem.addEventListener('mouseenter', () => {
+                        menuItem.style.background = '#404040';
+                    });
+                    
+                    menuItem.addEventListener('mouseleave', () => {
+                        menuItem.style.background = 'transparent';
+                    });
+                    
+                    menuItem.addEventListener('click', () => {
+                        item.action();
+                        menu.remove();
+                    });
+                }
+                
+                menu.appendChild(menuItem);
+            }
+        });
+        
+        document.body.appendChild(menu);
+        
+        // Remove menu on click outside
+        const removeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', removeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', removeMenu);
+        }, 0);
     }
     
     handleWheel(e) {
@@ -880,6 +1079,238 @@ class VSCodeSequenceEditor {
             this.render();
             this.updateScrollbar();
         }
+    }
+    
+    // Settings methods
+    updateSettings(newSettings) {
+        this.settings = { ...this.settings, ...newSettings };
+        this.applySettings();
+        this.render();
+    }
+    
+    applySettings() {
+        // Update CSS variables and styles
+        this.updateEditorStyles();
+        
+        // Re-measure character width if font changed
+        if (this.sequence) {
+            this.measureCharacterWidth();
+            this.updateDimensions();
+        }
+    }
+    
+    updateEditorStyles() {
+        // Update the existing style element
+        const existingStyle = document.getElementById('vscode-sequence-editor-styles');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+        this.addEditorStyles();
+    }
+    
+    showSettingsDialog() {
+        const dialog = this.createSettingsDialog();
+        document.body.appendChild(dialog);
+        dialog.style.display = 'flex';
+    }
+    
+    createSettingsDialog() {
+        const modal = document.createElement('div');
+        modal.className = 'sequence-settings-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'settings-dialog';
+        dialog.style.cssText = `
+            background: #2d2d30;
+            color: #d4d4d4;
+            border-radius: 8px;
+            padding: 20px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        `;
+        
+        dialog.innerHTML = `
+            <h3 style="margin-top: 0; color: #ffffff; border-bottom: 1px solid #3c3c3c; padding-bottom: 10px;">Sequence Editor Settings</h3>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Font Family:</label>
+                <input type="text" id="fontFamily" value="${this.settings.fontFamily}" 
+                       style="width: 100%; padding: 8px; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3c3c3c; border-radius: 4px;">
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Font Size:</label>
+                <input type="number" id="fontSize" value="${this.settings.fontSize}" min="8" max="24"
+                       style="width: 100%; padding: 8px; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3c3c3c; border-radius: 4px;">
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Background Color:</label>
+                <input type="color" id="backgroundColor" value="${this.settings.backgroundColor}"
+                       style="width: 100%; height: 40px; padding: 4px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px;">
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Text Color:</label>
+                <input type="color" id="textColor" value="${this.settings.textColor}"
+                       style="width: 100%; height: 40px; padding: 4px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px;">
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #ffffff;">Base Colors:</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>A (Adenine):</label>
+                        <input type="color" id="baseA" value="${this.settings.baseColors.a}" style="width: 100%; height: 30px;">
+                    </div>
+                    <div>
+                        <label>T (Thymine):</label>
+                        <input type="color" id="baseT" value="${this.settings.baseColors.t}" style="width: 100%; height: 30px;">
+                    </div>
+                    <div>
+                        <label>G (Guanine):</label>
+                        <input type="color" id="baseG" value="${this.settings.baseColors.g}" style="width: 100%; height: 30px;">
+                    </div>
+                    <div>
+                        <label>C (Cytosine):</label>
+                        <input type="color" id="baseC" value="${this.settings.baseColors.c}" style="width: 100%; height: 30px;">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Line Highlight Color:</label>
+                <input type="color" id="lineHighlightColor" value="#ffffff" data-alpha="0.05"
+                       style="width: 100%; height: 40px; padding: 4px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px;">
+                <input type="range" id="lineHighlightOpacity" min="0" max="20" value="5" 
+                       style="width: 100%; margin-top: 5px;">
+                <small>Opacity: <span id="opacityValue">5%</span></small>
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #ffffff;">Display Options:</h4>
+                <label style="display: block; margin-bottom: 8px;">
+                    <input type="checkbox" id="showLineHighlight" ${this.settings.showLineHighlight ? 'checked' : ''}>
+                    Show line highlighting
+                </label>
+                <label style="display: block; margin-bottom: 8px;">
+                    <input type="checkbox" id="showFeatureBackgrounds" ${this.settings.showFeatureBackgrounds ? 'checked' : ''}>
+                    Show feature backgrounds
+                </label>
+                <label style="display: block; margin-bottom: 8px;">
+                    <input type="checkbox" id="showCursorPosition" ${this.settings.showCursorPosition ? 'checked' : ''}>
+                    Show cursor position in ruler
+                </label>
+            </div>
+            
+            <div style="text-align: right; border-top: 1px solid #3c3c3c; padding-top: 15px;">
+                <button id="resetSettings" style="background: #666; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Reset to Default</button>
+                <button id="cancelSettings" style="background: #666; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Cancel</button>
+                <button id="applySettings" style="background: #007acc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Apply</button>
+            </div>
+        `;
+        
+        modal.appendChild(dialog);
+        
+        // Event listeners for settings dialog
+        const opacitySlider = dialog.querySelector('#lineHighlightOpacity');
+        const opacityValue = dialog.querySelector('#opacityValue');
+        
+        opacitySlider.addEventListener('input', () => {
+            opacityValue.textContent = opacitySlider.value + '%';
+        });
+        
+        dialog.querySelector('#resetSettings').addEventListener('click', () => {
+            this.resetToDefaultSettings();
+            modal.remove();
+        });
+        
+        dialog.querySelector('#cancelSettings').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        dialog.querySelector('#applySettings').addEventListener('click', () => {
+            this.applySettingsFromDialog(dialog);
+            modal.remove();
+        });
+        
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        return modal;
+    }
+    
+    applySettingsFromDialog(dialog) {
+        const newSettings = {
+            fontFamily: dialog.querySelector('#fontFamily').value,
+            fontSize: parseInt(dialog.querySelector('#fontSize').value),
+            backgroundColor: dialog.querySelector('#backgroundColor').value,
+            textColor: dialog.querySelector('#textColor').value,
+            baseColors: {
+                a: dialog.querySelector('#baseA').value,
+                t: dialog.querySelector('#baseT').value,
+                g: dialog.querySelector('#baseG').value,
+                c: dialog.querySelector('#baseC').value,
+                n: this.settings.baseColors.n
+            },
+            lineHighlightColor: this.hexToRgba(dialog.querySelector('#lineHighlightColor').value, 
+                                              dialog.querySelector('#lineHighlightOpacity').value / 100),
+            showLineHighlight: dialog.querySelector('#showLineHighlight').checked,
+            showFeatureBackgrounds: dialog.querySelector('#showFeatureBackgrounds').checked,
+            showCursorPosition: dialog.querySelector('#showCursorPosition').checked
+        };
+        
+        this.updateSettings(newSettings);
+    }
+    
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    resetToDefaultSettings() {
+        const defaultSettings = {
+            fontSize: 14,
+            fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Ubuntu Mono', 'Courier New', monospace",
+            backgroundColor: '#1e1e1e',
+            textColor: '#d4d4d4',
+            baseColors: {
+                a: '#f92672',
+                t: '#66d9ef', 
+                g: '#a6e22e',
+                c: '#fd971f',
+                n: '#75715e'
+            },
+            lineHighlightColor: 'rgba(255, 255, 255, 0.05)',
+            cursorColor: '#ffffff',
+            selectionColor: 'rgba(38, 79, 120, 0.4)',
+            rulerColor: '#858585',
+            showFeatureBackgrounds: false,
+            showLineHighlight: true,
+            showCursorPosition: true
+        };
+        
+        this.updateSettings(defaultSettings);
     }
     
     // Cleanup
