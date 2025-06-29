@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Track Settings Debug Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            background: #f8f9fa;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            margin-right: 4px;
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-button.active {
+            background: #007bff;
+            color: white;
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sequence Track Settings Debug Test</h1>
+        <button class="test-button" onclick="openModal()">打开 Sequence Track Settings</button>
+        
+        <div id="trackSettingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="trackSettingsTitle">Sequence Track Settings</h2>
+                    <button onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="trackSettingsBody">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            console.log('🔧 Opening sequence settings modal...');
+            
+            const modal = document.getElementById('trackSettingsModal');
+            const bodyElement = modal.querySelector('#trackSettingsBody');
+            
+            const content = `
+                <div class="sequence-settings-tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" data-tab="view-mode">
+                            <i class="fas fa-eye"></i> View Mode Settings
+                        </button>
+                        <button class="tab-button" data-tab="edit-mode">
+                            <i class="fas fa-edit"></i> Edit Mode Settings
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div id="view-mode-tab" class="tab-panel active">
+                            <h3>View Mode Settings</h3>
+                            <p>Traditional sequence view settings would go here...</p>
+                            <div style="padding: 20px; background: #f8f9fa; border-radius: 6px; margin: 10px 0;">
+                                <h4>Gene Indicator Bar Settings</h4>
+                                <label><input type="checkbox" checked> Show gene indicator bars</label><br>
+                                <label>Height: <input type="number" value="12" min="6" max="20"></label>
+                            </div>
+                        </div>
+                        
+                        <div id="edit-mode-tab" class="tab-panel">
+                            <h3>Edit Mode Settings</h3>
+                            <p>VS Code-style editor settings would go here...</p>
+                            <div style="padding: 20px; background: #f8f9fa; border-radius: 6px; margin: 10px 0;">
+                                <h4>Gene-Based Coloring</h4>
+                                <label><input type="checkbox"> Use gene colors for DNA bases</label><br>
+                                <label>CDS color: <input type="color" value="#4CAF50"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            bodyElement.innerHTML = content;
+            console.log('✅ Content loaded, length:', content.length);
+            
+            // Add tab switching
+            setTimeout(() => {
+                const tabButtons = modal.querySelectorAll('.tab-button');
+                const tabPanels = modal.querySelectorAll('.tab-panel');
+                
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetTab = button.getAttribute('data-tab');
+                        console.log('🔄 Switching to tab:', targetTab);
+                        
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        tabPanels.forEach(panel => panel.classList.remove('active'));
+                        
+                        button.classList.add('active');
+                        const targetPanel = modal.querySelector('#' + targetTab + '-tab');
+                        if (targetPanel) {
+                            targetPanel.classList.add('active');
+                            console.log('✅ Tab switched successfully');
+                        }
+                    });
+                });
+                
+                console.log('✅ Tab switching enabled');
+            }, 100);
+            
+            modal.classList.add('show');
+            console.log('✅ Modal opened');
+        }
+
+        function closeModal() {
+            document.getElementById('trackSettingsModal').classList.remove('show');
+            console.log('ℹ️ Modal closed');
+        }
+    </script>
+</body>
+</html>

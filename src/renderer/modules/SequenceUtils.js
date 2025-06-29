@@ -44,7 +44,10 @@ class SequenceUtils {
         
         // Display sequence based on current mode
         if (this.displayMode === 'edit') {
-            this.displayVSCodeSequence(chromosome, sequence, start, end);
+            // For edit mode, we need to get the full sequence and pass current view positions
+            const editStart = this.genomeBrowser.currentPosition?.start || 0;
+            const editEnd = this.genomeBrowser.currentPosition?.end || Math.min(sequence.length, editStart + 10000);
+            this.displayVSCodeSequence(chromosome, sequence, editStart, editEnd);
         } else {
             // Use traditional detailed sequence display as default
             this.displayDetailedSequence(chromosome, sequence, start, end);
@@ -71,9 +74,9 @@ class SequenceUtils {
         
         const toggleButton = document.createElement('button');
         toggleButton.id = 'sequenceModeToggle';
-        toggleButton.className = 'mode-toggle-btn';
+        toggleButton.className = 'btn btn-sm'; // Use same style as Settings, Copy, Export buttons
         toggleButton.innerHTML = this.displayMode === 'edit' ? 
-            '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+            '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
         toggleButton.title = this.displayMode === 'edit' ? 
             'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
         
@@ -81,48 +84,20 @@ class SequenceUtils {
             this.toggleDisplayMode();
         };
         
-        // Add button after the title
-        sequenceTitle.parentNode.insertBefore(toggleButton, sequenceTitle.nextSibling);
+        // Find the sequence controls container and insert before Settings button
+        const sequenceControls = document.querySelector('.sequence-controls');
+        const settingsBtn = document.getElementById('sequenceSettingsBtn');
         
-        // Add CSS for the button if not already present
-        this.addModeToggleCSS();
+        if (sequenceControls && settingsBtn) {
+            // Insert before Settings button
+            sequenceControls.insertBefore(toggleButton, settingsBtn);
+        } else {
+            // Fallback: Add after the title if controls not found
+            sequenceTitle.parentNode.insertBefore(toggleButton, sequenceTitle.nextSibling);
+        }
     }
     
-    /**
-     * Add CSS for mode toggle button
-     */
-    addModeToggleCSS() {
-        if (document.getElementById('sequenceModeToggleCSS')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'sequenceModeToggleCSS';
-        style.textContent = `
-            .mode-toggle-btn {
-                background: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 12px;
-                margin-left: 15px;
-                font-size: 12px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-            }
-            
-            .mode-toggle-btn:hover {
-                background: #0056b3;
-                transform: translateY(-1px);
-            }
-            
-            .mode-toggle-btn:active {
-                transform: translateY(0);
-            }
-        `;
-        document.head.appendChild(style);
-    }
+
     
     /**
      * Toggle between view and edit modes
@@ -134,7 +109,7 @@ class SequenceUtils {
         const toggleButton = document.getElementById('sequenceModeToggle');
         if (toggleButton) {
             toggleButton.innerHTML = this.displayMode === 'edit' ? 
-                '📖 Switch to View Mode' : '✏️ Switch to Edit Mode';
+                '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
             toggleButton.title = this.displayMode === 'edit' ? 
                 'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
         }
@@ -144,10 +119,10 @@ class SequenceUtils {
         
         // Re-display sequence with new mode
         const chromosome = this.genomeBrowser.currentChromosome;
-        const sequence = this.genomeBrowser.currentSequence;
-        if (chromosome && sequence) {
-            const start = this.genomeBrowser.currentPosition.start;
-            const end = this.genomeBrowser.currentPosition.end;
+        const sequenceData = this.genomeBrowser.currentSequence;
+        if (chromosome && sequenceData && sequenceData[chromosome]) {
+            // Extract the actual sequence string from the sequence data object
+            const sequence = sequenceData[chromosome];
             
             // Force re-render by calling displayEnhancedSequence
             this.displayEnhancedSequence(chromosome, sequence);
@@ -161,30 +136,7 @@ class SequenceUtils {
         const container = document.getElementById('sequenceContent');
         if (!container) return;
         
-        // Remove any VS Code editor specific styles
-        container.style.removeProperty('font-family');
-        container.style.removeProperty('font-size');
-        container.style.removeProperty('line-height');
-        container.style.removeProperty('background');
-        container.style.removeProperty('color');
-        container.style.removeProperty('overflow');
-        container.style.removeProperty('position');
-        
-        // Reset container to default state
-        container.className = '';
-        
-        // Clear any inline styles that might interfere
-        const inlineStyles = container.querySelectorAll('[style]');
-        inlineStyles.forEach(element => {
-            // Only clear if it's not a sequence-specific style we want to keep
-            if (!element.classList.contains('sequence-line') && 
-                !element.classList.contains('sequence-position') && 
-                !element.classList.contains('gene-indicator-line')) {
-                element.removeAttribute('style');
-            }
-        });
-        
-        // If switching from edit mode, destroy VS Code editor instance
+        // If switching from edit mode, destroy VS Code editor instance first
         if (this.displayMode === 'view' && this.vscodeEditor) {
             try {
                 if (this.vscodeEditor.destroy) {
@@ -196,6 +148,37 @@ class SequenceUtils {
                 this.vscodeEditor = null;
             }
         }
+        
+        // Clear container content
+        container.innerHTML = '';
+        
+        // Remove any VS Code editor specific styles
+        container.style.removeProperty('font-family');
+        container.style.removeProperty('font-size');
+        container.style.removeProperty('line-height');
+        container.style.removeProperty('background');
+        container.style.removeProperty('color');
+        container.style.removeProperty('overflow');
+        container.style.removeProperty('position');
+        container.style.removeProperty('min-height');
+        container.style.removeProperty('height');
+        
+        // Reset container to default state
+        container.className = '';
+        
+        // Remove any VS Code editor specific classes from container
+        container.classList.remove('vscode-sequence-editor');
+        
+        // Clear any inline styles that might interfere
+        const inlineStyles = container.querySelectorAll('[style]');
+        inlineStyles.forEach(element => {
+            // Only clear if it's not a sequence-specific style we want to keep
+            if (!element.classList.contains('sequence-line') && 
+                !element.classList.contains('sequence-position') && 
+                !element.classList.contains('gene-indicator-line')) {
+                element.removeAttribute('style');
+            }
+        });
     }
     
     /**
@@ -205,16 +188,50 @@ class SequenceUtils {
         const container = document.getElementById('sequenceContent');
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         
+        // Debug logging
+        console.log('displayVSCodeSequence called with:', {
+            chromosome,
+            sequenceType: typeof sequence,
+            sequenceLength: sequence?.length,
+            start,
+            end
+        });
+        
+        // Ensure we have valid parameters
+        if (!sequence || typeof sequence !== 'string') {
+            console.error('Invalid sequence provided to VS Code editor:', sequence);
+            console.error('Expected string, got:', typeof sequence);
+            return;
+        }
+        
+        // Get current position from genomeBrowser if start/end not provided
+        if (start === undefined || end === undefined) {
+            start = this.genomeBrowser.currentPosition?.start || 0;
+            end = this.genomeBrowser.currentPosition?.end || Math.min(sequence.length, start + 10000);
+        }
+        
         // Clean container first
         container.innerHTML = '';
         
-        // Initialize VS Code editor if not already done
+        // Set minimum height to ensure proper sizing
+        container.style.minHeight = '400px';
+        container.style.height = '100%';
+        
+        // Initialize VS Code editor if not already done, or recreate if needed
         if (!this.vscodeEditor) {
             this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
         }
         
-        // Update the editor with new sequence data
-        this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+        // Use setTimeout to ensure container dimensions are properly calculated
+        setTimeout(() => {
+            // Force dimension recalculation
+            if (this.vscodeEditor) {
+                this.vscodeEditor.updateDimensions();
+                // Update the editor with new sequence data
+                // Pass the full sequence and let the editor handle the substring
+                this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+            }
+        }, 50); // Small delay to ensure container is properly sized
     }
 
     measureCharacterWidth(container) {
@@ -389,7 +406,6 @@ class SequenceUtils {
         let svgLayer = `<svg class="sequence-svg-background" style="position: absolute; top: 0; left: 0; width: ${lineWidth}px; height: ${lineHeight}px; z-index: 1; pointer-events: none;">`;
         
         // Add definitions for gradients
-        svgLayer += '<defs>';
         svgLayer += this.createSequenceSVGGradients();
         svgLayer += '</defs>';
         

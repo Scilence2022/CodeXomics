@@ -36,6 +36,29 @@ class VSCodeSequenceEditor {
                 c: '#fd971f',
                 n: '#75715e'
             },
+            // Gene-based coloring settings
+            useGeneColors: false,
+            geneColors: {
+                cds: '#4CAF50',
+                rna: '#2196F3',
+                promoter: '#FF9800',
+                terminator: '#F44336',
+                regulatory: '#9C27B0',
+                intergenic: '#9E9E9E'
+            },
+            // Editing settings
+            enableEditing: true,
+            autoValidate: true,
+            showModifications: true,
+            modificationColor: '#FFC107',
+            enableUndo: true,
+            // Analysis settings
+            showGCContent: false,
+            highlightPalindrome: false,
+            minPalindromeLength: 6,
+            showFrames: false,
+            showMinimap: false,
+            // Display settings
             lineHighlightColor: 'rgba(255, 255, 255, 0.05)',
             cursorColor: '#ffffff',
             selectionColor: 'rgba(38, 79, 120, 0.4)',
@@ -406,7 +429,23 @@ class VSCodeSequenceEditor {
     }
     
     updateSequence(chromosome, sequence, viewStart, viewEnd, annotations = []) {
+        // Validate input parameters
+        if (!sequence || typeof sequence !== 'string') {
+            console.error('Invalid sequence provided to VSCodeSequenceEditor:', sequence);
+            return;
+        }
+        
+        if (viewStart === undefined || viewEnd === undefined) {
+            console.error('Invalid view range provided:', viewStart, viewEnd);
+            return;
+        }
+        
         this.chromosome = chromosome;
+        
+        // Ensure viewStart and viewEnd are within bounds
+        viewStart = Math.max(0, Math.min(viewStart, sequence.length));
+        viewEnd = Math.max(viewStart, Math.min(viewEnd, sequence.length));
+        
         this.sequence = sequence.substring(viewStart, viewEnd);
         this.viewStart = viewStart;
         this.viewEnd = viewEnd;
@@ -440,19 +479,38 @@ class VSCodeSequenceEditor {
         this.containerWidth = rect.width;
         this.containerHeight = Math.max(rect.height, 400); // Ensure minimum height
         
+        // If container dimensions are not available yet, retry after a short delay
+        if (rect.width === 0 || rect.height === 0) {
+            setTimeout(() => {
+                this.updateDimensions();
+            }, 100);
+            return;
+        }
+        
         // If container height is very small (like 0), use a reasonable default
         if (this.containerHeight < 100) {
             this.containerHeight = 500;
         }
         
-        // Calculate visible area
+        // Ensure container has proper dimensions
+        this.container.style.minHeight = this.containerHeight + 'px';
+        this.container.style.height = '100%';
+        
+        // Calculate visible area - wait for sequenceContent to be available
+        if (!this.sequenceContent) {
+            setTimeout(() => {
+                this.updateDimensions();
+            }, 50);
+            return;
+        }
+        
         const contentRect = this.sequenceContent.getBoundingClientRect();
         this.contentWidth = Math.max(contentRect.width - 20, 600); // Account for padding, minimum width
         this.contentHeight = Math.max(this.containerHeight - 60, 340); // Account for ruler, borders, padding
         
         // Calculate bases per line based on available width
-        this.basesPerLine = Math.floor(this.contentWidth / this.charWidth);
-        this.visibleLines = Math.floor(this.contentHeight / this.lineHeight);
+        this.basesPerLine = Math.max(40, Math.floor(this.contentWidth / this.charWidth)); // Ensure minimum bases per line
+        this.visibleLines = Math.max(10, Math.floor(this.contentHeight / this.lineHeight)); // Ensure minimum visible lines
         
         // Calculate total lines
         this.totalLines = Math.ceil(this.sequence.length / this.basesPerLine);
@@ -519,8 +577,24 @@ class VSCodeSequenceEditor {
             baseElement.textContent = base;
             baseElement.dataset.position = globalPos;
             
-            // Add feature classes (only show background if enabled)
+            // Get features at this position
             const features = this.getFeatureAtPosition(globalPos);
+            
+            // Apply coloring based on settings
+            if (this.settings.useGeneColors && features.length > 0) {
+                // Use gene-based coloring
+                const primaryFeature = features[0]; // Use first feature found
+                const geneColor = this.getGeneColor(primaryFeature.type);
+                baseElement.style.color = geneColor;
+                baseElement.classList.add('gene-colored');
+            } else {
+                // Use nucleotide-based coloring
+                const baseColor = this.settings.baseColors[base.toLowerCase()] || this.settings.baseColors.n;
+                baseElement.style.color = baseColor;
+                baseElement.classList.add('nucleotide-colored');
+            }
+            
+            // Add feature classes (only show background if enabled)
             features.forEach(feature => {
                 baseElement.classList.add(`feature-${feature.type.toLowerCase()}`);
                 if (this.settings.showFeatureBackgrounds) {
@@ -606,12 +680,27 @@ class VSCodeSequenceEditor {
     }
     
     renderRuler() {
-        // Add position ruler at top
-        let ruler = this.container.querySelector('.position-ruler');
+        // Use the existing position ruler created in createEditorStructure
+        let ruler = this.positionRuler;
+        
+        // Fallback: if positionRuler doesn't exist, try to find it in DOM
+        if (!ruler) {
+            ruler = this.container.querySelector('.position-ruler');
+        }
+        
+        // If still not found, create it
         if (!ruler) {
             ruler = document.createElement('div');
             ruler.className = 'position-ruler';
-            this.container.insertBefore(ruler, this.editorContainer);
+            this.positionRuler = ruler;
+            
+            // Check if editorContainer exists and is a child of container
+            if (this.editorContainer && this.container.contains(this.editorContainer)) {
+                this.container.insertBefore(ruler, this.editorContainer);
+            } else {
+                // If editorContainer is not available, append ruler to container
+                this.container.appendChild(ruler);
+            }
         }
         
         ruler.innerHTML = '';
@@ -845,6 +934,29 @@ class VSCodeSequenceEditor {
         return this.annotations.filter(feature => 
             position >= feature.start && position <= feature.end
         );
+    }
+    
+    /**
+     * Get gene color for a feature type
+     */
+    getGeneColor(featureType) {
+        const typeMapping = {
+            'cds': 'cds',
+            'gene': 'cds',
+            'trna': 'rna',
+            'rrna': 'rna',
+            'mrna': 'rna',
+            'rna': 'rna',
+            'promoter': 'promoter',
+            'terminator': 'terminator',
+            'regulatory': 'regulatory',
+            'origin_of_replication': 'regulatory',
+            'enhancer': 'regulatory',
+            'misc_feature': 'regulatory'
+        };
+        
+        const colorKey = typeMapping[featureType.toLowerCase()] || 'intergenic';
+        return this.settings.geneColors[colorKey] || this.settings.geneColors.intergenic;
     }
     
     setCursorPosition(position) {
@@ -1317,19 +1429,45 @@ class VSCodeSequenceEditor {
     destroy() {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
+            this.resizeObserver = null;
         }
         
-        // Remove event listeners
-        this.sequenceContent.removeEventListener('mousedown', this.handleMouseDown);
-        this.sequenceContent.removeEventListener('mousemove', this.handleMouseMove);
-        this.sequenceContent.removeEventListener('mouseup', this.handleMouseUp);
-        this.sequenceContent.removeEventListener('wheel', this.handleWheel);
-        this.sequenceContent.removeEventListener('focus', this.handleFocus);
-        this.sequenceContent.removeEventListener('blur', this.handleBlur);
-        this.sequenceContent.removeEventListener('keydown', this.handleKeyDown);
-        this.scrollbar.removeEventListener('mousedown', this.handleScrollbarMouseDown);
+        // Remove event listeners if elements exist
+        if (this.sequenceContent) {
+            this.sequenceContent.removeEventListener('mousedown', this.handleMouseDown);
+            this.sequenceContent.removeEventListener('mousemove', this.handleMouseMove);
+            this.sequenceContent.removeEventListener('mouseup', this.handleMouseUp);
+            this.sequenceContent.removeEventListener('wheel', this.handleWheel);
+            this.sequenceContent.removeEventListener('contextmenu', this.handleContextMenu);
+            this.sequenceContent.removeEventListener('focus', this.handleFocus);
+            this.sequenceContent.removeEventListener('blur', this.handleBlur);
+            this.sequenceContent.removeEventListener('keydown', this.handleKeyDown);
+        }
         
-        this.container.innerHTML = '';
+        if (this.scrollbar) {
+            this.scrollbar.removeEventListener('mousedown', this.handleScrollbarMouseDown);
+        }
+        
+        // Clear container
+        if (this.container) {
+            this.container.innerHTML = '';
+            this.container.className = '';
+        }
+        
+        // Clear all element references
+        this.editorContainer = null;
+        this.positionRuler = null;
+        this.lineNumbers = null;
+        this.sequenceContent = null;
+        this.scrollbar = null;
+        this.cursor = null;
+        this.selection = null;
+        this.lineHighlight = null;
+        
+        // Clear data
+        this.sequence = '';
+        this.annotations = [];
+        this.chromosome = '';
     }
 }
 
