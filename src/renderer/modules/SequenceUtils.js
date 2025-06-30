@@ -196,7 +196,9 @@ class SequenceUtils {
             start,
             end,
             currentPosition: this.genomeBrowser.currentPosition,
-            annotationsCount: annotations.length
+            annotationsCount: annotations.length,
+            existingEditor: !!this.vscodeEditor,
+            containerHasVSCodeEditor: !!container.querySelector('.vscode-sequence-editor')
         });
         
         // Ensure we have valid parameters
@@ -228,32 +230,61 @@ class SequenceUtils {
             console.log('🔧 [SequenceUtils] Corrected range:', { start, end });
         }
         
-        // Clean container first
+        // Check if we have a valid existing editor that's properly initialized
+        const hasValidEditor = this.vscodeEditor && 
+                              this.vscodeEditor.container === container &&
+                              container.querySelector('.vscode-sequence-editor');
+        
+        if (hasValidEditor) {
+            // Editor exists and is properly attached, just update the sequence
+            console.log('🔧 [SequenceUtils] Updating existing VSCode editor with new sequence data');
+            
+            // Use setTimeout to ensure any ongoing operations complete
+            setTimeout(() => {
+                if (this.vscodeEditor) {
+                    this.vscodeEditor.updateDimensions();
+                    this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+                }
+            }, 10); // Shorter delay for updates
+            
+            return; // Exit early to avoid recreating editor
+        }
+        
+        // Need to create or recreate the editor
+        console.log('🔧 [SequenceUtils] Creating/recreating VSCode editor');
+        
+        // Clean up any existing editor first
+        if (this.vscodeEditor) {
+            try {
+                if (this.vscodeEditor.destroy) {
+                    this.vscodeEditor.destroy();
+                }
+            } catch (error) {
+                console.warn('⚠️ [SequenceUtils] Error destroying existing editor:', error);
+            }
+            this.vscodeEditor = null;
+        }
+        
+        // Clean container
         container.innerHTML = '';
         
         // Set minimum height to ensure proper sizing
         container.style.minHeight = '400px';
         container.style.height = '100%';
         
-        // Initialize VS Code editor if not already done, or recreate if needed
-        if (!this.vscodeEditor) {
-            console.log('🔧 [SequenceUtils] Creating new VSCode editor instance');
-            this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
-        } else {
-            console.log('🔧 [SequenceUtils] Reusing existing VSCode editor instance');
-        }
+        // Create new editor instance
+        console.log('🔧 [SequenceUtils] Creating new VSCode editor instance');
+        this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
         
         // Use setTimeout to ensure container dimensions are properly calculated
         setTimeout(() => {
-            // Force dimension recalculation
-            if (this.vscodeEditor) {
-                console.log('🔧 [SequenceUtils] Updating VSCode editor with sequence data');
+            // Double-check editor still exists after timeout
+            if (this.vscodeEditor && this.vscodeEditor.container === container) {
+                console.log('🔧 [SequenceUtils] Initializing new VSCode editor with sequence data');
                 this.vscodeEditor.updateDimensions();
-                // Update the editor with new sequence data
-                // Pass the full sequence and let the editor handle the substring
                 this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
             } else {
-                console.error('❌ [SequenceUtils] VSCode editor instance is null after timeout');
+                console.error('❌ [SequenceUtils] VSCode editor instance lost after timeout');
             }
         }, 50); // Small delay to ensure container is properly sized
     }

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Mode Duplicate Call Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-title {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .problem-analysis {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        
+        .solution-implemented {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #155724;
+        }
+        
+        .console-output {
+            background: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .before-after {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .before, .after {
+            padding: 15px;
+            border-radius: 6px;
+        }
+        
+        .before {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .after {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .test-steps {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #1565c0;
+        }
+        
+        .key-improvements {
+            background: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🔧 Edit Mode Duplicate Call Fix Test</h1>
+        
+        <div class="problem-analysis">
+            <h3>🔍 Problem Analysis</h3>
+            <p><strong>Root Cause Identified:</strong> The black screen issue was caused by duplicate calls to <code>displayVSCodeSequence</code>:</p>
+            <ol>
+                <li><strong>First call:</strong> Reused existing VSCode editor instance</li>
+                <li><strong>Second call:</strong> Created new VSCode editor instance (destroying the first)</li>
+            </ol>
+            
+            <p><strong>Console Evidence:</strong></p>
+            <ul>
+                <li><code>🔧 [SequenceUtils] Reusing existing VSCode editor instance</code></li>
+                <li><code>🔧 [SequenceUtils] Creating new VSCode editor instance</code></li>
+            </ul>
+            
+            <p><strong>Why This Caused Black Screen:</strong></p>
+            <ul>
+                <li>First call cleared container with <code>container.innerHTML = ''</code></li>
+                <li>Second call destroyed the partially initialized editor</li>
+                <li>DOM structure became inconsistent between calls</li>
+                <li>Editor lost its visual elements but instance remained</li>
+            </ul>
+        </div>
+        
+        <div class="solution-implemented">
+            <h3>✅ Solution Implemented</h3>
+            <p><strong>Smart Editor Instance Management:</strong></p>
+            <ul>
+                <li>Added validation to check if existing editor is properly attached</li>
+                <li>Early return for valid editors to prevent recreation</li>
+                <li>Proper cleanup before creating new instances</li>
+                <li>Enhanced debugging to track editor state</li>
+            </ul>
+            
+            <p><strong>Key Logic Changes:</strong></p>
+            <ul>
+                <li>Check: <code>this.vscodeEditor && this.vscodeEditor.container === container && container.querySelector('.vscode-sequence-editor')</code></li>
+                <li>If valid: Update sequence without recreation</li>
+                <li>If invalid: Properly destroy and recreate</li>
+            </ul>
+        </div>
+        
+        <div class="before-after">
+            <div class="before">
+                <h4>❌ Before Fix</h4>
+                <ul>
+                    <li>Always cleared container on each call</li>
+                    <li>No validation of existing editor state</li>
+                    <li>Duplicate calls caused DOM conflicts</li>
+                    <li>Editor instance became orphaned</li>
+                    <li>Black screen after position changes</li>
+                </ul>
+            </div>
+            
+            <div class="after">
+                <h4>✅ After Fix</h4>
+                <ul>
+                    <li>Smart validation of editor state</li>
+                    <li>Early return for valid editors</li>
+                    <li>Proper cleanup before recreation</li>
+                    <li>Consistent DOM structure</li>
+                    <li>Smooth position updates</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="key-improvements">
+            <h3>🚀 Key Improvements</h3>
+            
+            <h4>1. Smart Editor Validation</h4>
+            <pre>const hasValidEditor = this.vscodeEditor && 
+                      this.vscodeEditor.container === container &&
+                      container.querySelector('.vscode-sequence-editor');</pre>
+            
+            <h4>2. Early Return for Updates</h4>
+            <pre>if (hasValidEditor) {
+    // Just update sequence, don't recreate
+    setTimeout(() => {
+        this.vscodeEditor.updateDimensions();
+        this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+    }, 10);
+    return; // Exit early
+}</pre>
+            
+            <h4>3. Proper Cleanup Before Recreation</h4>
+            <pre>if (this.vscodeEditor) {
+    try {
+        if (this.vscodeEditor.destroy) {
+            this.vscodeEditor.destroy();
+        }
+    } catch (error) {
+        console.warn('⚠️ Error destroying existing editor:', error);
+    }
+    this.vscodeEditor = null;
+}</pre>
+            
+            <h4>4. Enhanced Debug Tracking</h4>
+            <pre>console.log('🔧 [SequenceUtils] displayVSCodeSequence called with:', {
+    // ... existing fields ...
+    existingEditor: !!this.vscodeEditor,
+    containerHasVSCodeEditor: !!container.querySelector('.vscode-sequence-editor')
+});</pre>
+        </div>
+        
+        <div class="test-steps">
+            <h3>📋 Testing Instructions</h3>
+            <ol>
+                <li><strong>Load GenomeExplorer</strong> with a genome file containing annotations</li>
+                <li><strong>Switch to Edit Mode</strong> - should display VSCode editor correctly</li>
+                <li><strong>Drag to change position</strong> - watch console for debug messages</li>
+                <li><strong>Verify sequence updates</strong> - should show new sequence content, not black screen</li>
+                <li><strong>Test multiple position changes</strong> - should remain stable</li>
+                <li><strong>Check console output</strong> - should see smart editor management messages</li>
+            </ol>
+        </div>
+        
+        <div class="console-output">
+            <h4>Expected Console Output (After Fix):</h4>
+🔧 [SequenceUtils] displayVSCodeSequence called with: {
+    chromosome: "COLI-K12",
+    sequenceType: "string",
+    sequenceLength: 4641652,
+    start: 2876025,
+    end: 2886025,
+    currentPosition: {start: 2876025, end: 2886025},
+    annotationsCount: 1028,
+    existingEditor: true,
+    containerHasVSCodeEditor: true
+}
+🔧 [SequenceUtils] Updating existing VSCode editor with new sequence data
+
+<strong>Key Differences:</strong>
+✅ Only ONE call to displayVSCodeSequence per position change
+✅ "Updating existing" instead of "Creating new" for subsequent calls
+✅ No container clearing for valid editors
+✅ Faster updates with shorter timeout (10ms vs 50ms)
+
+<strong>If Editor Needs Recreation:</strong>
+🔧 [SequenceUtils] Creating/recreating VSCode editor
+🔧 [SequenceUtils] Creating new VSCode editor instance
+🔧 [SequenceUtils] Initializing new VSCode editor with sequence data
+        </div>
+        
+        <div class="test-steps">
+            <h3>🎯 Success Criteria</h3>
+            <ul>
+                <li>✅ No black screen after position changes in Edit mode</li>
+                <li>✅ Smooth sequence content updates</li>
+                <li>✅ Single displayVSCodeSequence call per position change</li>
+                <li>✅ "Updating existing" messages in console (not "Creating new")</li>
+                <li>✅ Mode switching still works correctly</li>
+                <li>✅ No DOM conflicts or orphaned editors</li>
+            </ul>
+        </div>
+        
+        <div class="problem-analysis">
+            <h3>🔧 Technical Details</h3>
+            <p><strong>Files Modified:</strong></p>
+            <ul>
+                <li><code>src/renderer/modules/SequenceUtils.js</code> - Smart editor instance management</li>
+            </ul>
+            
+            <p><strong>Why This Fix Works:</strong></p>
+            <ul>
+                <li>Prevents unnecessary editor recreation</li>
+                <li>Maintains consistent DOM structure</li>
+                <li>Handles cleanup properly when recreation is needed</li>
+                <li>Provides detailed debugging for troubleshooting</li>
+                <li>Faster updates for position changes (10ms vs 50ms timeout)</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html> 
