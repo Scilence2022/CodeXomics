@@ -1851,9 +1851,9 @@ ipcMain.handle('bam-initialize', async (event, filePath) => {
 
 ipcMain.handle('bam-get-reads', async (event, params) => {
   try {
-    const { filePath, chromosome, start, end } = params;
+    const { filePath, chromosome, start, end, settings = {} } = params;
     
-    console.log(`Getting BAM reads for ${chromosome}:${start}-${end}`);
+    console.log(`Getting BAM reads for ${chromosome}:${start}-${end} (ignoreChromosome: ${settings.ignoreChromosome})`);
     
     // Get cached BAM file instance
     const bamFile = bamFiles.get(filePath);
@@ -1876,18 +1876,49 @@ ipcMain.handle('bam-get-reads', async (event, params) => {
       throw new Error(`Query range too large. Maximum range size is ${maxRangeSize} bases.`);
     }
     
-    // Get records from BAM file using the correct API
-    // Note: @gmod/bam uses 0-based half-open coordinates
-    console.log(`Fetching records for range ${chromosome}:${start}-${end}`);
-    const records = await bamFile.getRecordsForRange(chromosome, start, end);
+    let allRecords = [];
     
-    console.log(`Retrieved ${records.length} raw records from BAM file`);
+    if (settings.ignoreChromosome) {
+      // When ignoring chromosome, get all reads from all references that overlap the position range
+      console.log(`Fetching records from all chromosomes in position range ${start}-${end}`);
+      
+      try {
+        // Get the header to know available references
+        const header = await bamFile.getHeader();
+        const references = header.references || [];
+        
+        console.log(`Found ${references.length} references in BAM file`);
+        
+        // Query each reference for the position range
+        for (const ref of references) {
+          try {
+            const records = await bamFile.getRecordsForRange(ref.name, start, end);
+            console.log(`Retrieved ${records.length} records from ${ref.name}`);
+            allRecords = allRecords.concat(records);
+          } catch (refError) {
+            console.warn(`Error querying reference ${ref.name}:`, refError.message);
+            // Continue with other references
+          }
+        }
+      } catch (headerError) {
+        console.warn('Could not get BAM header, falling back to single chromosome query:', headerError.message);
+        // Fallback to single chromosome query
+        const records = await bamFile.getRecordsForRange(chromosome, start, end);
+        allRecords = records;
+      }
+    } else {
+      // Normal chromosome-specific query
+      console.log(`Fetching records for range ${chromosome}:${start}-${end}`);
+      allRecords = await bamFile.getRecordsForRange(chromosome, start, end);
+    }
+    
+    console.log(`Retrieved ${allRecords.length} raw records from BAM file`);
     
     // Convert records to our internal format with better error handling
     const reads = [];
-    for (let i = 0; i < records.length; i++) {
+    for (let i = 0; i < allRecords.length; i++) {
       try {
-        const record = records[i];
+        const record = allRecords[i];
         
         const read = {
           id: record.name || record.qname || `read_${i}`,
@@ -1911,7 +1942,7 @@ ipcMain.handle('bam-get-reads', async (event, params) => {
       }
     }
     
-    console.log(`Successfully converted ${reads.length} BAM reads`);
+    console.log(`Successfully converted ${reads.length} BAM reads (ignoreChromosome: ${settings.ignoreChromosome})`);
     
     return {
       success: true,

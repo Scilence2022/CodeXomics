@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Sequence Window Resize Fix</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .test-section h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .issue-description {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .fix-description {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Sequence Window Resize Fix Test</h1>
+        <p>Testing fixes for window resize issues in View Mode and SVG viewBox errors</p>
+    </div>
+
+    <div class="test-section">
+        <h3>🐛 Issue Description</h3>
+        <div class="issue-description">
+            <strong>Problem:</strong> When the window is too wide, the Sequence track window shows a white screen with errors:
+            <ul>
+                <li><code>SequenceUtils.js:667 Uncaught ReferenceError: viewEnd is not defined</code></li>
+                <li><code>Error: &lt;svg&gt; attribute viewBox: Trailing garbage, "0 0 2015 100%"</code></li>
+            </ul>
+        </div>
+        
+        <div class="fix-description">
+            <strong>Fixes Applied:</strong>
+            <ol>
+                <li><strong>SequenceUtils.js:</strong> Added calculation of <code>viewEnd</code> in <code>renderFullSequence()</code> method</li>
+                <li><strong>TrackRenderer.js:</strong> Fixed SVG viewBox height calculation to use numeric values instead of percentage strings</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 Fix 1: SequenceUtils viewEnd Variable</h3>
+        <div class="code-block">
+// Before (line 667 in renderFullSequence):
+this.addProteinTranslations(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
+// ❌ viewEnd was not defined
+
+// After:
+renderFullSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
+    // Calculate viewEnd based on subsequence length
+    const viewEnd = viewStart + subsequence.length - 1;
+    
+    // ... rest of method
+    this.addProteinTranslations(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
+    // ✅ viewEnd is now properly calculated
+}
+        </div>
+        <div class="status info">
+            <strong>Status:</strong> Fixed - viewEnd is now calculated as viewStart + subsequence.length - 1
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 Fix 2: SVG viewBox Height Calculation</h3>
+        <div class="code-block">
+// Before (multiple locations in TrackRenderer.js):
+svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+// ❌ getAttribute('height') could return "100%" string
+
+// After:
+const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || defaultHeight;
+svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
+// ✅ svgHeight is always a numeric value
+        </div>
+        <div class="status info">
+            <strong>Locations Fixed:</strong>
+            <ul>
+                <li>updateReadsTrackSVG() - default height: 150px</li>
+                <li>updateGCTrackSVG() - default height: 100px</li>
+                <li>updateOtherTracksSVG() for WIG tracks - default height: 30px</li>
+                <li>updateOtherTracksSVG() for variant tracks - default height: 30px</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🧪 Manual Testing Instructions</h3>
+        <ol>
+            <li><strong>Load a genome file</strong> with sequence data in GenomeExplorer</li>
+            <li><strong>Switch to View Mode</strong> in the sequence track</li>
+            <li><strong>Resize the window</strong> to be very wide (> 2000px width)</li>
+            <li><strong>Check the browser console</strong> for errors</li>
+            <li><strong>Verify sequence display</strong> works without white screen</li>
+            <li><strong>Test track settings</strong> application after window resize</li>
+        </ol>
+        
+        <div class="status success">
+            <strong>Expected Results:</strong>
+            <ul>
+                <li>No "viewEnd is not defined" errors</li>
+                <li>No SVG viewBox "Trailing garbage" errors</li>
+                <li>Sequence track displays properly at all window sizes</li>
+                <li>Track settings work correctly after resize</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Error Prevention</h3>
+        <div class="code-block">
+// SVG Height Calculation Strategy:
+1. getBoundingClientRect().height - Actual rendered height
+2. offsetHeight - Fallback element height  
+3. Default height - Safe fallback value
+
+// This ensures viewBox always gets numeric values:
+// ✅ "0 0 2015 150" (correct)
+// ❌ "0 0 2015 100%" (invalid)
+        </div>
+        
+        <div class="status info">
+            <strong>Additional Safety:</strong> All SVG resize operations now use consistent numeric height calculation to prevent similar issues in the future.
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Files Modified</h3>
+        <ul>
+            <li><code>src/renderer/modules/SequenceUtils.js</code> - Fixed viewEnd variable calculation</li>
+            <li><code>src/renderer/modules/TrackRenderer.js</code> - Fixed SVG viewBox height calculations (4 locations)</li>
+        </ul>
+        
+        <div class="status success">
+            <strong>Impact:</strong> Resolves white screen issues in wide window scenarios and prevents SVG rendering errors during window resize operations.
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 Sequence Window Resize Fix Test Page Loaded');
+        console.log('📋 Test Instructions:');
+        console.log('1. Load GenomeExplorer with sequence data');
+        console.log('2. Switch to View Mode');
+        console.log('3. Resize window to very wide (>2000px)');
+        console.log('4. Check for errors in console');
+        console.log('5. Verify sequence display works properly');
+        
+        // Monitor window resize for testing
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                console.log(`🔧 Window resized to: ${window.innerWidth} x ${window.innerHeight}`);
+                if (window.innerWidth > 2000) {
+                    console.log('⚠️ Wide window detected - this is where the bug would occur');
+                }
+            }, 250);
+        });
+        
+        console.log(`🔧 Current window size: ${window.innerWidth} x ${window.innerHeight}`);
+    </script>
+</body>
+</html> 

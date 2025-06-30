@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Aligned Reads Track - Ignore Chromosome Setting</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .test-step {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .feature-box {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        .feature-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .feature-title::before {
+            content: "🧬";
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧬 Aligned Reads Track: Ignore Chromosome Setting Test</h1>
+        <p>Testing the new functionality to display reads regardless of chromosome information</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Overview</h2>
+        <div class="feature-box">
+            <div class="feature-title">New Feature: Ignore Chromosome Information</div>
+            <p>This test verifies the new setting that allows reads to be displayed based solely on position, ignoring chromosome mismatch. This is useful for:</p>
+            <ul>
+                <li>Reads with missing chromosome information</li>
+                <li>Reads with incorrect chromosome labels</li>
+                <li>Cross-chromosome analysis</li>
+                <li>Debugging SAM/BAM files with inconsistent naming</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Implementation Changes</h2>
+        <div class="test-step">
+            <h3>1. TrackRenderer.js - Settings UI</h3>
+            <p>Added new checkbox setting in reads track settings modal:</p>
+            <div class="code-block">
+&lt;div class="form-group"&gt;
+    &lt;label&gt;
+        &lt;input type="checkbox" id="readsIgnoreChromosome" ${settings.ignoreChromosome ? 'checked' : ''}&gt;
+        Ignore chromosome information
+    &lt;/label&gt;
+    &lt;div class="help-text"&gt;Force display reads based on position only, ignoring chromosome mismatch.&lt;/div&gt;
+&lt;/div&gt;
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>2. Default Settings</h3>
+            <p>Added ignoreChromosome: false to default reads settings</p>
+            <div class="code-block">
+reads: {
+    // ... other settings
+    ignoreChromosome: false,
+    // ... other settings
+}
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>3. ReadsManager.js - Core Logic</h3>
+            <p>Modified chromosome filtering logic in three methods:</p>
+            <div class="code-block">
+// Before:
+if (rname === '*' || pos === '0' || rname !== chromosome) continue;
+
+// After:
+if (rname === '*' || pos === '0') continue;
+if (!settings.ignoreChromosome && rname !== chromosome) continue;
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>4. BAM File Support</h3>
+            <p>Enhanced BAM reading to query all references when ignoreChromosome is true</p>
+            <div class="code-block">
+if (settings.ignoreChromosome) {
+    // Query all chromosomes for the position range
+    const header = await bamFile.getHeader();
+    const references = header.references || [];
+    for (const ref of references) {
+        const records = await bamFile.getRecordsForRange(ref.name, start, end);
+        allRecords = allRecords.concat(records);
+    }
+}
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Testing Steps</h2>
+        
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="startTest()">Start Test</button>
+            <button class="btn btn-info" onclick="openReadsSettings()">Open Reads Settings</button>
+            <button class="btn btn-success" onclick="loadTestData()">Load Test SAM/BAM</button>
+            <button class="btn btn-warning" onclick="toggleIgnoreChromosome()">Toggle Ignore Chromosome</button>
+        </div>
+
+        <div id="testResults"></div>
+
+        <div class="test-step">
+            <h3>Step 1: Load SAM/BAM File</h3>
+            <p>Load a SAM or BAM file that contains reads with different chromosome names or missing chromosome information.</p>
+            <div class="status info">
+                <strong>Expected:</strong> Reads track shows "No reads in this region" if chromosome names don't match.
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 2: Open Reads Track Settings</h3>
+            <p>Click the settings button (⚙️) on the Aligned Reads track header.</p>
+            <div class="status info">
+                <strong>Expected:</strong> Settings modal opens with new "Ignore chromosome information" checkbox.
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 3: Enable Ignore Chromosome</h3>
+            <p>Check the "Ignore chromosome information" checkbox and click Apply.</p>
+            <div class="status info">
+                <strong>Expected:</strong> Reads now appear based on position only, regardless of chromosome names.
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 4: Verify Read Display</h3>
+            <p>Navigate to different positions and verify reads are shown based on position range.</p>
+            <div class="status info">
+                <strong>Expected:</strong> Reads with any chromosome name appear if their positions overlap the viewing region.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Verification Checklist</h2>
+        <div class="feature-box">
+            <div class="feature-title">Manual Verification Points</div>
+            <ul>
+                <li><input type="checkbox" id="check1"> Settings modal includes new "Ignore chromosome information" option</li>
+                <li><input type="checkbox" id="check2"> Setting defaults to unchecked (false)</li>
+                <li><input type="checkbox" id="check3"> When enabled, reads appear regardless of chromosome name</li>
+                <li><input type="checkbox" id="check4"> When disabled, only matching chromosome reads appear</li>
+                <li><input type="checkbox" id="check5"> Setting persists after applying and reopening modal</li>
+                <li><input type="checkbox" id="check6"> BAM files work correctly with the new setting</li>
+                <li><input type="checkbox" id="check7"> SAM files work correctly with the new setting</li>
+                <li><input type="checkbox" id="check8"> No console errors when toggling the setting</li>
+                <li><input type="checkbox" id="check9"> Performance remains acceptable with large files</li>
+                <li><input type="checkbox" id="check10"> Statistics display correctly shows read counts</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Behavior</h2>
+        <div class="feature-box">
+            <div class="feature-title">Normal Mode (ignoreChromosome: false)</div>
+            <p>Only reads with chromosome name matching the current chromosome are displayed.</p>
+            <div class="code-block">
+SAM File:
+read1    0    chr1    1000    60    100M    *    0    0    ATCG...    IIII...
+read2    0    chr2    1000    60    100M    *    0    0    ATCG...    IIII...
+read3    0    *       1000    60    100M    *    0    0    ATCG...    IIII...
+
+Viewing chr1:500-1500 → Only read1 displayed
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <div class="feature-title">Ignore Chromosome Mode (ignoreChromosome: true)</div>
+            <p>All reads overlapping the position range are displayed, regardless of chromosome name.</p>
+            <div class="code-block">
+SAM File:
+read1    0    chr1    1000    60    100M    *    0    0    ATCG...    IIII...
+read2    0    chr2    1000    60    100M    *    0    0    ATCG...    IIII...
+read3    0    *       1000    60    100M    *    0    0    ATCG...    IIII...
+
+Viewing chr1:500-1500 → read1 and read2 displayed (read3 skipped due to unmapped)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testStep = 0;
+        
+        function startTest() {
+            testStep = 0;
+            updateTestResults('🚀 Starting Aligned Reads Track Ignore Chromosome test...', 'info');
+            setTimeout(() => {
+                updateTestResults('✅ Test environment initialized. Please follow the manual testing steps above.', 'success');
+            }, 1000);
+        }
+        
+        function openReadsSettings() {
+            updateTestResults('🔧 Opening reads track settings modal...', 'info');
+            updateTestResults('📝 Look for the new "Ignore chromosome information" checkbox in the Advanced Options section.', 'info');
+        }
+        
+        function loadTestData() {
+            updateTestResults('📁 Loading test SAM/BAM file...', 'info');
+            updateTestResults('💡 Tip: Use a file with reads from multiple chromosomes to test the feature effectively.', 'warning');
+        }
+        
+        function toggleIgnoreChromosome() {
+            updateTestResults('🔄 Toggling ignore chromosome setting...', 'info');
+            updateTestResults('👀 Watch how the read display changes when this setting is enabled/disabled.', 'info');
+        }
+        
+        function updateTestResults(message, type) {
+            const resultsDiv = document.getElementById('testResults');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            resultsDiv.appendChild(statusDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Add event listeners for checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            for (let i = 1; i <= 10; i++) {
+                const checkbox = document.getElementById(`check${i}`);
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        const checkedCount = document.querySelectorAll('input[type="checkbox"]:checked').length;
+                        const totalCount = document.querySelectorAll('input[type="checkbox"]').length;
+                        updateTestResults(`✓ Verification progress: ${checkedCount}/${totalCount} items checked`, 'info');
+                        
+                        if (checkedCount === totalCount) {
+                            updateTestResults('🎉 All verification points completed! The ignore chromosome feature is working correctly.', 'success');
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

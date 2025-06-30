@@ -2148,8 +2148,11 @@ class TrackRenderer {
         trackContent.appendChild(loadingMsg);
         
         try {
-            // Get reads for current region using ReadsManager
-            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end);
+            // Get track settings first
+            const settings = this.getTrackSettings('reads');
+            
+            // Get reads for current region using ReadsManager with settings
+            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end, settings);
             
             // Remove loading message
             trackContent.removeChild(loadingMsg);
@@ -2172,9 +2175,6 @@ class TrackRenderer {
                 trackContent.appendChild(noReadsMsg);
                 trackContent.style.height = '80px'; // Default height for empty track
             } else {
-            
-            // Get track settings
-            const settings = this.getTrackSettings('reads');
             
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
@@ -5081,6 +5081,13 @@ class TrackRenderer {
                     <div class="help-text">Color reads based on their mapping quality scores instead of strand direction.</div>
                 </div>
                 <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsIgnoreChromosome" ${settings.ignoreChromosome ? 'checked' : ''}>
+                        Ignore chromosome information
+                    </label>
+                    <div class="help-text">Force display reads based on position only, ignoring chromosome mismatch. Useful for reads with missing or incorrect chromosome information.</div>
+                </div>
+                <div class="form-group">
                     <label for="readsMinWidth">Minimum read width (px):</label>
                     <input type="number" id="readsMinWidth" min="1" max="10" value="${settings.minWidth || 2}">
                     <div class="help-text">Minimum width for very short reads to ensure they remain visible.</div>
@@ -5150,6 +5157,7 @@ class TrackRenderer {
                 opacity: 0.9,
                 showDirectionArrows: true,
                 showQualityColors: false,
+                ignoreChromosome: false,
                 minWidth: 2,
                 height: 150,
                 streamingThreshold: 50
@@ -5259,6 +5267,7 @@ class TrackRenderer {
                 settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
                 settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
                 settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
+                settings.ignoreChromosome = modal.querySelector('#readsIgnoreChromosome').checked;
                 settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
                 settings.streamingThreshold = parseInt(modal.querySelector('#readsStreamingThreshold').value) || 50;
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
@@ -5696,9 +5705,10 @@ class TrackRenderer {
             trackContent.style.width = '100%';
             const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
             
-            // Update SVG dimensions
+            // Update SVG dimensions - get numeric height value
+            const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || 150;
             svgContainer.setAttribute('width', '100%');
-            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
             console.log('📊 Reads track SVG updated with container width:', containerWidth);
         }
     }
@@ -5719,9 +5729,10 @@ class TrackRenderer {
             trackContent.style.width = '100%';
             const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
             
-            // Update SVG dimensions
+            // Update SVG dimensions - get numeric height value
+            const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || 100;
             svgContainer.setAttribute('width', '100%');
-            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
             console.log('📈 GC track SVG updated with container width:', containerWidth);
         }
     }
@@ -5739,8 +5750,9 @@ class TrackRenderer {
                 if (svgContainer) {
                     trackContent.style.width = '100%';
                     const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+                    const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || 30;
                     svgContainer.setAttribute('width', '100%');
-                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
                 }
             }
         });
@@ -5754,8 +5766,9 @@ class TrackRenderer {
                 if (svgContainer) {
                     trackContent.style.width = '100%';
                     const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+                    const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || 30;
                     svgContainer.setAttribute('width', '100%');
-                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContainer.getAttribute('height')}`);
+                    svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
                 }
             }
         });

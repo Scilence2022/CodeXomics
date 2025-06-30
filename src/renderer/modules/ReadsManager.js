@@ -72,7 +72,7 @@ class ReadsManager {
     /**
      * Get reads for a specific region (main entry point)
      */
-    async getReadsForRegion(chromosome, start, end) {
+    async getReadsForRegion(chromosome, start, end, settings = {}) {
         if (!this.rawReadsData && !this.isStreaming && !this.isBamMode) {
             console.warn('No SAM/BAM data loaded');
             return [];
@@ -96,13 +96,13 @@ class ReadsManager {
         let reads;
         if (this.isBamMode && this.bamReader) {
             // Use BAM reader for binary BAM files
-            reads = await this.loadReadsForRegionBAM(chromosome, start, end);
+            reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings);
         } else if (this.isStreaming) {
             // Use streaming mode for very large files
-            reads = await this.loadReadsForRegionStream(chromosome, start, end);
+            reads = await this.loadReadsForRegionStream(chromosome, start, end, settings);
         } else {
             // Use in-memory mode for normal files
-            reads = await this.loadReadsForRegion(chromosome, start, end);
+            reads = await this.loadReadsForRegion(chromosome, start, end, settings);
         }
         
         // Cache the results
@@ -125,7 +125,7 @@ class ReadsManager {
     /**
      * Load reads for a specific region from the raw SAM data
      */
-    async loadReadsForRegion(chromosome, start, end) {
+    async loadReadsForRegion(chromosome, start, end, settings = {}) {
         // Expand the search region to include some buffer for better caching
         const bufferSize = this.regionSize;
         const searchStart = Math.max(0, start - bufferSize);
@@ -150,8 +150,11 @@ class ReadsManager {
             
             const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
             
-            // Skip unmapped reads or reads not on this chromosome
-            if (rname === '*' || pos === '0' || rname !== chromosome) continue;
+            // Skip unmapped reads
+            if (rname === '*' || pos === '0') continue;
+            
+            // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
+            if (!settings.ignoreChromosome && rname !== chromosome) continue;
             
             const readStart = parseInt(pos) - 1; // Convert to 0-based
             const readEnd = readStart + seq.length;
@@ -186,7 +189,7 @@ class ReadsManager {
         }
         
         this.stats.loadedRegions++;
-        console.log(`Loaded ${reads.length} reads for expanded region ${chromosome}:${searchStart}-${searchEnd}`);
+        console.log(`Loaded ${reads.length} reads for expanded region ${chromosome}:${searchStart}-${searchEnd} (ignoreChromosome: ${settings.ignoreChromosome})`);
         
         return reads;
     }
@@ -389,11 +392,12 @@ class ReadsManager {
     /**
      * Load reads for a specific region using BAM reader
      */
-    async loadReadsForRegionBAM(chromosome, start, end) {
+    async loadReadsForRegionBAM(chromosome, start, end, settings = {}) {
         console.log(`[ReadsManager] loadReadsForRegionBAM called with:`, {
             chromosome, start, end,
             currentFile: this.currentFile,
-            isBamMode: this.isBamMode
+            isBamMode: this.isBamMode,
+            ignoreChromosome: settings.ignoreChromosome
         });
         
         if (!this.bamReader) {
@@ -409,10 +413,10 @@ class ReadsManager {
             
             this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start}-${end}...`);
             
-            // Get reads using BAM reader
-            const reads = await this.bamReader.getReadsForRegion(chromosome, searchStart, searchEnd);
+            // Get reads using BAM reader with settings
+            const reads = await this.bamReader.getReadsForRegion(chromosome, searchStart, searchEnd, settings);
             
-            console.log(`[ReadsManager] Retrieved ${reads.length} reads from BAM file`);
+            console.log(`[ReadsManager] Retrieved ${reads.length} reads from BAM file (ignoreChromosome: ${settings.ignoreChromosome})`);
             
             this.stats.loadedRegions++;
             return reads;
@@ -426,11 +430,12 @@ class ReadsManager {
     /**
      * Load reads for a specific region using file streaming (for very large files)
      */
-    async loadReadsForRegionStream(chromosome, start, end) {
+    async loadReadsForRegionStream(chromosome, start, end, settings = {}) {
         console.log(`[ReadsManager] loadReadsForRegionStream called with:`, {
             chromosome, start, end,
             currentFile: this.currentFile,
-            isStreaming: this.isStreaming
+            isStreaming: this.isStreaming,
+            ignoreChromosome: settings.ignoreChromosome
         });
         
         if (!this.currentFile) {
@@ -459,8 +464,11 @@ class ReadsManager {
                     
                     const [qname, flag, rname, pos, mapq, cigar, rnext, pnext, tlen, seq, qual] = fields;
                     
-                    // Skip unmapped reads or reads not on this chromosome
-                    if (rname === '*' || pos === '0' || rname !== chromosome) continue;
+                    // Skip unmapped reads
+                    if (rname === '*' || pos === '0') continue;
+                    
+                    // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
+                    if (!settings.ignoreChromosome && rname !== chromosome) continue;
                     
                     const readStart = parseInt(pos) - 1; // Convert to 0-based
                     const readEnd = readStart + seq.length;
@@ -492,7 +500,7 @@ class ReadsManager {
                     ipcRenderer.removeListener('file-stream-complete', completeHandler);
                 }
                 
-                console.log(`Loaded ${reads.length} reads for region ${chromosome}:${start}-${end} from streaming`);
+                console.log(`Loaded ${reads.length} reads for region ${chromosome}:${start}-${end} from streaming (ignoreChromosome: ${settings.ignoreChromosome})`);
                 resolve(reads);
             };
             

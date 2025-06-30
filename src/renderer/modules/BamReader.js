@@ -69,9 +69,10 @@ class BamReader {
      * @param {string} chromosome - Chromosome name
      * @param {number} start - Start position (0-based)
      * @param {number} end - End position (0-based, exclusive)
+     * @param {Object} settings - Optional settings including ignoreChromosome
      * @returns {Promise<Array>} Array of BAM records
      */
-    async getReadsForRegion(chromosome, start, end) {
+    async getReadsForRegion(chromosome, start, end, settings = {}) {
         try {
             if (!this.isInitialized) {
                 throw new Error('BAM reader not initialized. Call initialize() first.');
@@ -101,7 +102,7 @@ class BamReader {
                 // Don't throw error, just warn - some files might have different naming
             }
 
-            console.log(`BamReader: Reading region ${chromosome}:${start}-${end}`);
+            console.log(`BamReader: Reading region ${chromosome}:${start}-${end} (ignoreChromosome: ${settings.ignoreChromosome})`);
 
             // Call main process to get reads
             const { ipcRenderer } = require('electron');
@@ -109,7 +110,8 @@ class BamReader {
                 filePath: this.filePath,
                 chromosome: chromosome,
                 start: start,
-                end: end
+                end: end,
+                settings: settings
             });
 
             if (!result.success) {
@@ -117,7 +119,7 @@ class BamReader {
             }
 
             const reads = result.reads || [];
-            console.log(`BamReader: Retrieved ${reads.length} reads for region ${chromosome}:${start}-${end}`);
+            console.log(`BamReader: Retrieved ${reads.length} reads for region ${chromosome}:${start}-${end} (ignoreChromosome: ${settings.ignoreChromosome})`);
 
             return reads;
 
