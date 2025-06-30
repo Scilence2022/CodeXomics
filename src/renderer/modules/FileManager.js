@@ -698,24 +698,37 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (typeof BamReader === 'undefined') {
                 console.log('Loading BamReader module...');
                 
-                // For ES6 modules in Electron renderer, we need to use dynamic import
+                // Load BamReader as a regular script (not ES6 module) for Electron compatibility
                 try {
-                    const bamReaderModule = await import('./modules/BamReader.js');
-                    window.BamReader = bamReaderModule.default || bamReaderModule.BamReader;
-                } catch (importError) {
-                    console.warn('ES6 import failed, trying script tag approach:', importError);
-                    
-                    // Fallback to script tag for compatibility
                     const script = document.createElement('script');
-                    script.type = 'module';
                     script.src = './modules/BamReader.js';
                     document.head.appendChild(script);
                     
                     // Wait for BamReader to be available
                     await new Promise((resolve, reject) => {
-                        script.onload = resolve;
-                        script.onerror = reject;
+                        const timeout = setTimeout(() => {
+                            reject(new Error('BamReader loading timeout'));
+                        }, 10000);
+                        
+                        script.onload = () => {
+                            clearTimeout(timeout);
+                            // Wait a bit more for the class to be available
+                            setTimeout(() => {
+                                if (typeof BamReader !== 'undefined') {
+                                    resolve();
+                                } else {
+                                    reject(new Error('BamReader class not available after loading'));
+                                }
+                            }, 100);
+                        };
+                        script.onerror = (error) => {
+                            clearTimeout(timeout);
+                            reject(error);
+                        };
                     });
+                } catch (importError) {
+                    console.error('Failed to load BamReader:', importError);
+                    throw new Error(`Failed to load BamReader module: ${importError.message}`);
                 }
             }
 
@@ -778,16 +791,23 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             // Provide helpful error message
             let errorMessage = error.message;
             
-            if (error.message.includes('Cannot resolve module')) {
+            if (error.message.includes('Cannot resolve module') || 
+                error.message.includes('BamReader is not defined') ||
+                error.message.includes('Failed to load BamReader') ||
+                error.message.includes('@gmod/bam')) {
                 errorMessage = `BAM file support requires @gmod/bam library. Please ensure the application is properly installed with all dependencies.
-                
-Try reinstalling dependencies:
-npm install
+
+Common fixes:
+1. Restart the application completely
+2. Try reinstalling dependencies: npm install
+3. Check if @gmod/bam is properly installed in node_modules
 
 If the issue persists, you can convert your BAM file to SAM format using samtools:
 samtools view -h your_file.bam > your_file.sam
 
-Then load the SAM file instead.`;
+Then load the SAM file instead.
+
+Technical details: ${error.message}`;
             } else if (error.message.includes('BAI index')) {
                 errorMessage = `BAM file loaded but no BAI index found. For better performance with large BAM files, create an index:
 

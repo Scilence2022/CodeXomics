@@ -3,8 +3,25 @@
  * Directly uses @gmod/bam API for optimal performance and compatibility
  */
 
-import { BamFile } from '@gmod/bam';
-import { LocalFile } from 'generic-filehandle2';
+// In Electron renderer process, we can use require() for Node.js modules
+let BamFile, LocalFile;
+
+try {
+    // Import @gmod/bam in Electron renderer process
+    const bamModule = require('@gmod/bam');
+    BamFile = bamModule.BamFile;
+    
+    // Import generic-filehandle2 if needed
+    try {
+        const fileHandleModule = require('generic-filehandle2');
+        LocalFile = fileHandleModule.LocalFile;
+    } catch (fileHandleError) {
+        console.warn('generic-filehandle2 not available, using built-in file handling');
+    }
+} catch (error) {
+    console.error('Failed to import @gmod/bam:', error);
+    throw new Error('@gmod/bam library is required but not available. Please ensure it is installed.');
+}
 
 class BamReader {
     constructor() {
@@ -42,6 +59,11 @@ class BamReader {
             
             if (!filePath || typeof filePath !== 'string') {
                 throw new Error('Invalid file path provided');
+            }
+
+            // Check if BamFile is available
+            if (!BamFile) {
+                throw new Error('@gmod/bam BamFile class is not available. Please ensure @gmod/bam is properly installed.');
             }
 
             // Reset state
