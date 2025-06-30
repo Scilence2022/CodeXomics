@@ -412,10 +412,16 @@ class ReadsManager {
             const searchStart = Math.max(0, start - bufferSize);
             const searchEnd = end + bufferSize;
             
+            // Convert to 0-based coordinates for BAM reader (BAM uses 0-based, GenomeExplorer uses 1-based)
+            const bamSearchStart = Math.max(0, searchStart - 1);
+            const bamSearchEnd = searchEnd - 1;
+            
+            console.log(`🔍 [ReadsManager] Converting coordinates: ${searchStart}-${searchEnd} (1-based) → ${bamSearchStart}-${bamSearchEnd + 1} (0-based for BAM)`);
+            
             this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}...`);
             
-            // Get reads using BAM reader with settings - use new API method name
-            const reads = await this.bamReader.getRecordsForRange(chromosome, searchStart, searchEnd, settings);
+            // Get reads using BAM reader with settings - use 0-based coordinates
+            const reads = await this.bamReader.getRecordsForRange(chromosome, bamSearchStart, bamSearchEnd + 1, settings);
             
             console.log(`✅ [ReadsManager] Retrieved ${reads.length.toLocaleString()} reads from BAM file (ignoreChromosome: ${settings.ignoreChromosome})`);
             
