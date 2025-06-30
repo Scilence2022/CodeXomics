@@ -429,27 +429,62 @@ class VSCodeSequenceEditor {
     }
     
     updateSequence(chromosome, sequence, viewStart, viewEnd, annotations = []) {
+        // Enhanced debugging
+        console.log('🔧 [VSCode Editor] updateSequence called with:', {
+            chromosome,
+            sequenceType: typeof sequence,
+            sequenceLength: sequence?.length,
+            viewStart,
+            viewEnd,
+            annotationsCount: annotations?.length || 0
+        });
+        
         // Validate input parameters
         if (!sequence || typeof sequence !== 'string') {
-            console.error('Invalid sequence provided to VSCodeSequenceEditor:', sequence);
+            console.error('❌ [VSCode Editor] Invalid sequence provided:', sequence);
+            console.error('Expected string, got:', typeof sequence);
             return;
         }
         
         if (viewStart === undefined || viewEnd === undefined) {
-            console.error('Invalid view range provided:', viewStart, viewEnd);
+            console.error('❌ [VSCode Editor] Invalid view range provided:', viewStart, viewEnd);
             return;
         }
         
         this.chromosome = chromosome;
         
         // Ensure viewStart and viewEnd are within bounds
+        const originalViewStart = viewStart;
+        const originalViewEnd = viewEnd;
         viewStart = Math.max(0, Math.min(viewStart, sequence.length));
         viewEnd = Math.max(viewStart, Math.min(viewEnd, sequence.length));
         
+        console.log('🔧 [VSCode Editor] View range bounds check:', {
+            originalStart: originalViewStart,
+            originalEnd: originalViewEnd,
+            boundedStart: viewStart,
+            boundedEnd: viewEnd,
+            sequenceLength: sequence.length
+        });
+        
+        // Extract subsequence
         this.sequence = sequence.substring(viewStart, viewEnd);
         this.viewStart = viewStart;
         this.viewEnd = viewEnd;
         this.annotations = annotations;
+        
+        console.log('🔧 [VSCode Editor] Extracted subsequence:', {
+            subsequenceLength: this.sequence.length,
+            firstBases: this.sequence.substring(0, 50),
+            isEmpty: this.sequence.length === 0
+        });
+        
+        // Check if subsequence is empty
+        if (this.sequence.length === 0) {
+            console.warn('⚠️ [VSCode Editor] Empty subsequence extracted - this may cause black screen');
+            // Set a minimal sequence to prevent complete failure
+            this.sequence = 'N'.repeat(100); // Fallback sequence
+        }
         
         // Measure character width with actual font
         this.measureCharacterWidth();

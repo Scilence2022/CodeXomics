@@ -188,18 +188,20 @@ class SequenceUtils {
         const container = document.getElementById('sequenceContent');
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         
-        // Debug logging
-        console.log('displayVSCodeSequence called with:', {
+        // Enhanced debug logging
+        console.log('🔧 [SequenceUtils] displayVSCodeSequence called with:', {
             chromosome,
             sequenceType: typeof sequence,
             sequenceLength: sequence?.length,
             start,
-            end
+            end,
+            currentPosition: this.genomeBrowser.currentPosition,
+            annotationsCount: annotations.length
         });
         
         // Ensure we have valid parameters
         if (!sequence || typeof sequence !== 'string') {
-            console.error('Invalid sequence provided to VS Code editor:', sequence);
+            console.error('❌ [SequenceUtils] Invalid sequence provided to VS Code editor:', sequence);
             console.error('Expected string, got:', typeof sequence);
             return;
         }
@@ -208,6 +210,22 @@ class SequenceUtils {
         if (start === undefined || end === undefined) {
             start = this.genomeBrowser.currentPosition?.start || 0;
             end = this.genomeBrowser.currentPosition?.end || Math.min(sequence.length, start + 10000);
+            console.log('🔧 [SequenceUtils] Using fallback positions:', { start, end });
+        }
+        
+        // Validate the range
+        if (start >= end || start < 0 || end > sequence.length) {
+            console.warn('⚠️ [SequenceUtils] Invalid range detected:', {
+                start,
+                end,
+                sequenceLength: sequence.length,
+                rangeSize: end - start
+            });
+            
+            // Fix the range
+            start = Math.max(0, start);
+            end = Math.min(sequence.length, Math.max(start + 1000, end));
+            console.log('🔧 [SequenceUtils] Corrected range:', { start, end });
         }
         
         // Clean container first
@@ -219,17 +237,23 @@ class SequenceUtils {
         
         // Initialize VS Code editor if not already done, or recreate if needed
         if (!this.vscodeEditor) {
+            console.log('🔧 [SequenceUtils] Creating new VSCode editor instance');
             this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
+        } else {
+            console.log('🔧 [SequenceUtils] Reusing existing VSCode editor instance');
         }
         
         // Use setTimeout to ensure container dimensions are properly calculated
         setTimeout(() => {
             // Force dimension recalculation
             if (this.vscodeEditor) {
+                console.log('🔧 [SequenceUtils] Updating VSCode editor with sequence data');
                 this.vscodeEditor.updateDimensions();
                 // Update the editor with new sequence data
                 // Pass the full sequence and let the editor handle the substring
                 this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+            } else {
+                console.error('❌ [SequenceUtils] VSCode editor instance is null after timeout');
             }
         }, 50); // Small delay to ensure container is properly sized
     }
