@@ -960,7 +960,7 @@ class SequenceUtils {
             return '<div style="height: 0px;"></div>';
         }
         
-        const barHeight = settings.indicatorHeight || 12; // Use settings or default
+        const barHeight = settings.indicatorHeight || 8; // Use settings or default
         const lineWidth = sequence.length * charWidth;
         
         // Create SVG for the indicator bar
@@ -1191,7 +1191,7 @@ class SequenceUtils {
         // Return default settings if trackRenderer not available
         return {
             showIndicators: true,
-            indicatorHeight: 12,
+            indicatorHeight: 8,
             indicatorOpacity: 0.7,
             showStartMarkers: true,
             showEndArrows: true,

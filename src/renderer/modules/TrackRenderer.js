@@ -5270,7 +5270,7 @@ class TrackRenderer {
                 if (showIndicatorsEl) settings.showIndicators = showIndicatorsEl.checked;
                 
                 const indicatorHeightEl = modal.querySelector('#sequenceIndicatorHeight');
-                if (indicatorHeightEl) settings.indicatorHeight = parseInt(indicatorHeightEl.value) || 12;
+                if (indicatorHeightEl) settings.indicatorHeight = parseInt(indicatorHeightEl.value) || 8;
                 
                 const indicatorOpacityEl = modal.querySelector('#sequenceIndicatorOpacity');
                 if (indicatorOpacityEl) settings.indicatorOpacity = parseFloat(indicatorOpacityEl.value) || 0.7;
