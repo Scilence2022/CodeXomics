@@ -5323,6 +5323,19 @@ class TrackRenderer {
                 const showHoverEffectsEl = modal.querySelector('#sequenceShowHoverEffects');
                 if (showHoverEffectsEl) settings.showHoverEffects = showHoverEffectsEl.checked;
                 
+                // Position & Size Corrections
+                const horizontalOffsetEl = modal.querySelector('#sequenceHorizontalOffset');
+                if (horizontalOffsetEl) settings.horizontalOffset = parseFloat(horizontalOffsetEl.value) || 0;
+                
+                const verticalOffsetEl = modal.querySelector('#sequenceVerticalOffset');
+                if (verticalOffsetEl) settings.verticalOffset = parseFloat(verticalOffsetEl.value) || 0;
+                
+                const heightCorrectionEl = modal.querySelector('#sequenceHeightCorrection');
+                if (heightCorrectionEl) settings.heightCorrection = parseInt(heightCorrectionEl.value) || 100;
+                
+                const widthCorrectionEl = modal.querySelector('#sequenceWidthCorrection');
+                if (widthCorrectionEl) settings.widthCorrection = parseInt(widthCorrectionEl.value) || 100;
+                
                 // DNA Base Colors (View Mode)
                 const colorModeEl = modal.querySelector('#sequenceColorMode');
                 if (colorModeEl) settings.colorMode = colorModeEl.value;
@@ -5827,6 +5840,28 @@ class TrackRenderer {
                     <label for="sequenceIndicatorOpacity">Indicator opacity (0-1):</label>
                     <input type="number" id="sequenceIndicatorOpacity" min="0.3" max="1" step="0.1" value="${settings.indicatorOpacity || 0.7}">
                     <div class="help-text">Transparency level of gene indicator bars.</div>
+                </div>
+                
+                <h5 style="margin-top: 20px; margin-bottom: 10px; color: #495057; font-size: 14px;">Position & Size Corrections</h5>
+                <div class="form-group">
+                    <label for="sequenceHorizontalOffset">Horizontal offset (px):</label>
+                    <input type="number" id="sequenceHorizontalOffset" min="-50" max="50" step="0.5" value="${settings.horizontalOffset || 0}">
+                    <div class="help-text">Horizontal position adjustment for gene indicators (positive = right, negative = left).</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceVerticalOffset">Vertical offset (px):</label>
+                    <input type="number" id="sequenceVerticalOffset" min="-20" max="20" step="0.5" value="${settings.verticalOffset || 0}">
+                    <div class="help-text">Vertical position adjustment for gene indicators (positive = down, negative = up).</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceHeightCorrection">Height correction (%):</label>
+                    <input type="number" id="sequenceHeightCorrection" min="50" max="200" step="5" value="${settings.heightCorrection || 100}">
+                    <div class="help-text">Height scaling for gene indicators (100% = normal, 150% = 1.5x height, 75% = 0.75x height).</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceWidthCorrection">Width correction (%):</label>
+                    <input type="number" id="sequenceWidthCorrection" min="50" max="200" step="5" value="${settings.widthCorrection || 100}">
+                    <div class="help-text">Width scaling for gene indicators (100% = normal, 120% = 1.2x width, 80% = 0.8x width).</div>
                 </div>
             </div>
             

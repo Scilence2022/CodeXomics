@@ -14,6 +14,9 @@ class SequenceUtils {
         // Sequence content display mode for View Mode
         this.sequenceContentMode = 'dna-only'; // 'auto', 'dna-only', 'protein-only', 'both'
         
+        // Sequence line height configuration (in pixels)
+        this.lineHeight = 28; // Default increased from 24px to 28px for better readability
+        
         // Performance optimization caches
         this.renderCache = new Map(); // Cache for rendered sequence lines
         this.featureCache = new Map(); // Cache for feature lookups
@@ -154,6 +157,9 @@ class SequenceUtils {
             this.addSequenceContentModeSelector();
         }
         
+        // Update CSS variables for line height
+        this.updateSequenceLineHeightCSS();
+        
         // Display sequence based on current mode
         if (this.displayMode === 'edit') {
             // For edit mode, we need to get the full sequence and pass current view positions
@@ -246,6 +252,99 @@ class SequenceUtils {
         selectorContainer.appendChild(label);
         selectorContainer.appendChild(selector);
         sequenceControls.appendChild(selectorContainer);
+        
+        // Add line height selector
+        this.addLineHeightSelector(sequenceControls);
+    }
+    
+    /**
+     * Update CSS variables for sequence line height
+     */
+    updateSequenceLineHeightCSS() {
+        const root = document.documentElement;
+        const lineHeightRatio = Math.max(1.2, this.lineHeight / 16);
+        
+        root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`);
+        root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString());
+    }
+    
+    /**
+     * Add line height selector to sequence controls
+     */
+    addLineHeightSelector(sequenceControls) {
+        // Check if selector already exists
+        if (document.getElementById('sequenceLineHeightSelector')) {
+            return;
+        }
+        
+        const lineHeightContainer = document.createElement('div');
+        lineHeightContainer.className = 'sequence-line-height-container';
+        lineHeightContainer.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            margin-left: 10px;
+            gap: 8px;
+        `;
+        
+        const label = document.createElement('label');
+        label.textContent = 'Line Height:';
+        label.style.cssText = `
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+        `;
+        
+        const selector = document.createElement('select');
+        selector.id = 'sequenceLineHeightSelector';
+        selector.className = 'sequence-line-height-select';
+        selector.style.cssText = `
+            padding: 4px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            background-color: white;
+            color: #495057;
+            cursor: pointer;
+            min-width: 80px;
+        `;
+        
+        const heightOptions = [
+            { value: 20, text: 'Compact' },
+            { value: 24, text: 'Normal' },
+            { value: 28, text: 'Comfortable' },
+            { value: 32, text: 'Spacious' },
+            { value: 36, text: 'Extra Large' }
+        ];
+        
+        heightOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            optionElement.selected = option.value === this.lineHeight;
+            selector.appendChild(optionElement);
+        });
+        
+        selector.addEventListener('change', (e) => {
+            this.lineHeight = parseInt(e.target.value);
+            
+            // Update CSS variables for new line height
+            this.updateSequenceLineHeightCSS();
+            
+            // Clear render cache to force re-render with new line height
+            this.clearRenderCache();
+            
+            // Re-render the sequence with new line height
+            const chromosome = this.genomeBrowser.currentChromosome;
+            const sequenceData = this.genomeBrowser.currentSequence;
+            if (chromosome && sequenceData && sequenceData[chromosome]) {
+                const sequence = sequenceData[chromosome];
+                this.displayEnhancedSequence(chromosome, sequence);
+            }
+        });
+        
+        lineHeightContainer.appendChild(label);
+        lineHeightContainer.appendChild(selector);
+        sequenceControls.appendChild(lineHeightContainer);
     }
     
     /**
@@ -395,6 +494,12 @@ class SequenceUtils {
         const selectorContainer = document.querySelector('.sequence-content-mode-container');
         if (selectorContainer) {
             selectorContainer.remove();
+        }
+        
+        // Also remove line height selector
+        const lineHeightContainer = document.querySelector('.sequence-line-height-container');
+        if (lineHeightContainer) {
+            lineHeightContainer.remove();
         }
     }
     
@@ -844,10 +949,12 @@ class SequenceUtils {
         lineGroup.className = 'sequence-line-group';
         lineGroup.style.marginBottom = '8px';
         
-        // Create sequence line with fixed height to prevent compression
+        // Create sequence line with configurable height to prevent compression
         const sequenceLine = document.createElement('div');
         sequenceLine.className = 'sequence-line';
-        sequenceLine.style.cssText = 'display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.8; min-height: 24px; padding: 4px 0;';
+        // Use configurable line height with appropriate line-height ratio
+        const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
+        sequenceLine.style.cssText = `display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
         
         // Position label
         const positionSpan = document.createElement('span');
@@ -864,7 +971,7 @@ class SequenceUtils {
         sequenceLine.appendChild(positionSpan);
         sequenceLine.appendChild(basesDiv);
         
-        // Gene indicator line - calculate precise alignment
+        // Gene indicator line - calculate precise alignment with corrections
         const indicatorLine = document.createElement('div');
         indicatorLine.className = 'gene-indicator-line';
         // Calculate exact left margin to align with sequence bases
@@ -873,9 +980,18 @@ class SequenceUtils {
         const alignmentOffset = positionWidth + marginRight;
         // Add horizontal offset to compensate for character centering (~0.8 characters)
         const horizontalAdjustment = charWidth * 0.8;
-        const finalLeftMargin = alignmentOffset - horizontalAdjustment;
         
-        indicatorLine.style.cssText = `height: 12px; margin-left: ${finalLeftMargin}px; margin-bottom: 2px; margin-top: -2px;`;
+        // Apply position and size corrections from settings
+        const horizontalOffset = sequenceSettings.horizontalOffset || 0;
+        const verticalOffset = sequenceSettings.verticalOffset || 0;
+        const heightCorrection = (sequenceSettings.heightCorrection || 100) / 100;
+        
+        const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
+        const correctedHeight = 12 * heightCorrection;
+        const correctedMarginTop = -2 + verticalOffset;
+        const correctedMarginBottom = 2 - verticalOffset;
+        
+        indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
         indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
         
         lineGroup.appendChild(sequenceLine);
@@ -957,7 +1073,8 @@ class SequenceUtils {
         this.performanceStats.cacheMisses++;
         
         const barHeight = settings.indicatorHeight || 8;
-        const lineWidth = sequence.length * charWidth;
+        const widthCorrection = (settings.widthCorrection || 100) / 100;
+        const lineWidth = sequence.length * charWidth * widthCorrection;
         const lineEndAbs = lineStartAbs + sequence.length;
         
         // Pre-filter overlapping genes
@@ -1194,10 +1311,12 @@ class SequenceUtils {
                 lineGroup.className = 'sequence-line-group';
                 lineGroup.style.marginBottom = '8px';
                 
-                // Create sequence line with same styling as DNA and fixed height
+                // Create sequence line with same styling as DNA and configurable height
                 const sequenceLine = document.createElement('div');
                 sequenceLine.className = 'sequence-line';
-                sequenceLine.style.cssText = 'display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.8; min-height: 24px; padding: 4px 0;';
+                // Use configurable line height with appropriate line-height ratio (same as DNA)
+                const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
+                sequenceLine.style.cssText = `display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
                 
                 // Position label (amino acid position)
                 const positionSpan = document.createElement('span');
@@ -1531,10 +1650,12 @@ class SequenceUtils {
         const geneStartInLine = visibleStart1Based - lineStart1Based;
         const geneEndInLine = visibleEnd1Based - lineStart1Based;
         
-        // Convert to pixel positions with character centering
+        // Convert to pixel positions with character centering and apply width correction
         // Add 0.5 * charWidth to center the indicator on the character
-        const startX = geneStartInLine * charWidth + (charWidth * 0.5);
-        const endX = (geneEndInLine + 1) * charWidth + (charWidth * 0.5);
+        const widthCorrection = (settings.widthCorrection || 100) / 100;
+        const correctedCharWidth = charWidth * widthCorrection;
+        const startX = geneStartInLine * correctedCharWidth + (correctedCharWidth * 0.5);
+        const endX = (geneEndInLine + 1) * correctedCharWidth + (correctedCharWidth * 0.5);
         const width = endX - startX;
         
         if (width <= 0) return '';
@@ -1542,10 +1663,14 @@ class SequenceUtils {
         const isForward = gene.strand !== -1;
         const geneType = gene.type.toLowerCase();
         
+        // Apply height correction to barHeight
+        const heightCorrection = (settings.heightCorrection || 100) / 100;
+        const correctedBarHeight = barHeight * heightCorrection;
+        
         let indicator = '';
         
-        // Gene body shape
-        indicator += this.createGeneBodyShape(gene, startX, width, barHeight, geneColor, geneType, settings);
+        // Gene body shape with corrected height
+        indicator += this.createGeneBodyShape(gene, startX, width, correctedBarHeight, geneColor, geneType, settings);
         
         // For forward genes: start marker at left, end arrow at right
         // For reverse genes: start marker at right, end arrow at left
@@ -1554,8 +1679,8 @@ class SequenceUtils {
             if (settings.showStartMarkers !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
                 const markerWidth = settings.startMarkerWidth || 6;
                 const markerHeightPercent = settings.startMarkerHeight || 200;
-                const markerHeight = (barHeight * markerHeightPercent / 100);
-                const markerOffset = (barHeight - markerHeight) / 2;
+                const markerHeight = (correctedBarHeight * markerHeightPercent / 100);
+                const markerOffset = (correctedBarHeight - markerHeight) / 2;
                 indicator += `<line x1="${startX}" y1="${markerOffset}" x2="${startX}" y2="${markerOffset + markerHeight}" 
                                    stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
                                    ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
@@ -1563,7 +1688,7 @@ class SequenceUtils {
             
             // End marker (arrow) - only if gene actually ends in this line and enabled
             if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
-                indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene, settings);
+                indicator += this.createGeneEndArrow(endX, correctedBarHeight, geneColor, isForward, gene, settings);
             }
         } else {
             // For reverse genes: start marker at right (gene's actual start), end arrow at left (transcription direction)
@@ -1571,8 +1696,8 @@ class SequenceUtils {
             if (settings.showStartMarkers !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
                 const markerWidth = settings.startMarkerWidth || 6;
                 const markerHeightPercent = settings.startMarkerHeight || 200;
-                const markerHeight = (barHeight * markerHeightPercent / 100);
-                const markerOffset = (barHeight - markerHeight) / 2;
+                const markerHeight = (correctedBarHeight * markerHeightPercent / 100);
+                const markerOffset = (correctedBarHeight - markerHeight) / 2;
                 // For reverse genes, the start marker should be at the RIGHT end (where gene actually starts)
                 indicator += `<line x1="${endX}" y1="${markerOffset}" x2="${endX}" y2="${markerOffset + markerHeight}" 
                                    stroke="${this.darkenHexColor(geneColor, 30)}" stroke-width="${markerWidth}" opacity="0.9"
@@ -1582,7 +1707,7 @@ class SequenceUtils {
             // End marker (arrow) - only if gene actually ends in this line and enabled
             if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
                 // For reverse genes, the end arrow should be at the LEFT end (transcription direction)
-                indicator += this.createGeneEndArrow(startX, barHeight, geneColor, isForward, gene, settings);
+                indicator += this.createGeneEndArrow(startX, correctedBarHeight, geneColor, isForward, gene, settings);
             }
         }
         
@@ -1733,7 +1858,12 @@ class SequenceUtils {
             showTerminator: true,
             showRegulatory: true,
             showTooltips: true,
-            showHoverEffects: true
+            showHoverEffects: true,
+            // Position & Size Corrections
+            horizontalOffset: 0,
+            verticalOffset: 0,
+            heightCorrection: 100,
+            widthCorrection: 100
         };
     }
 

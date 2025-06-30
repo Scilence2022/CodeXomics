@@ -32688,3 +32688,86 @@ path.svg-gene-element.selected {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     outline: none;
 }
+
+/* =====================================================
+   ENHANCED SEQUENCE LINE HEIGHT SUPPORT
+   ===================================================== */
+
+/* Enhanced Sequence Line Height Support - Added for configurable line heights */
+.sequence-line {
+    display: flex !important;
+    align-items: flex-start !important;
+    flex-shrink: 0 !important;
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    padding: 4px 0 !important;
+    margin-bottom: 8px !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+}
+
+.detailed-sequence-view .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+}
+
+.protein-only-mode .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+}
+
+.sequence-line-group {
+    flex-shrink: 0 !important;
+    margin-bottom: 8px !important;
+}
+
+.sequence-line-group .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+}
+
+/* Ensure position labels maintain consistent width */
+.sequence-position {
+    width: 100px !important;
+    flex-shrink: 0 !important;
+    margin-right: 15px !important;
+    text-align: right !important;
+}
+
+/* Ensure sequence bases container doesn't compress */
+.sequence-bases {
+    flex: 1 !important;
+    word-break: break-all !important;
+    line-height: 1.6 !important;
+}
+
+/* Gene indicator alignment support */
+.gene-indicator-line {
+    height: 12px !important;
+    margin-bottom: 2px !important;
+    margin-top: -2px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Virtual scrolling container support */
+.virtualized .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+}
+
+/* Protein sequence section support */
+.protein-sequence-section .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+}
+
+/* Prevent flexbox compression at all levels */
+.detailed-sequence-view,
+.protein-only-mode,
+.sequence-line-group,
+.sequence-line {
+    flex-shrink: 0 !important;
+}
