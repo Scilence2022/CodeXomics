@@ -65,64 +65,90 @@ class SequenceEditor {
             return;
         }
         
-        // Make sequence content editable when in edit mode
-        const sequenceContent = this.vscodeEditor.sequenceContent;
-        
-        // Override the render method to support editing
-        const originalRender = this.vscodeEditor.render.bind(this.vscodeEditor);
-        this.vscodeEditor.render = () => {
-            originalRender();
-            if (this.isEditMode) {
-                this.applyEditingEnhancements();
-            }
-        };
-        
-        // Override keyboard handling
-        const originalKeyHandler = this.vscodeEditor.handleKeyDown.bind(this.vscodeEditor);
-        this.vscodeEditor.handleKeyDown = (e) => {
-            if (this.isEditMode) {
-                if (this.handleEditingKeydown(e)) {
-                    return; // Event handled by editing system
-                }
-            }
-            originalKeyHandler(e);
-        };
-        
         console.log('✅ [SequenceEditor] VSCode editor enhanced with editing capabilities');
     }
     
     /**
-     * Apply editing enhancements to rendered sequence
+     * Create a real text editor overlay for sequence editing
      */
-    applyEditingEnhancements() {
-        const sequenceLines = this.vscodeEditor.sequenceContent.querySelectorAll('.sequence-line');
+    createEditingTextArea() {
+        // Remove any existing editing area
+        this.removeEditingTextArea();
         
-        sequenceLines.forEach((line, lineIndex) => {
-            const bases = line.querySelectorAll('.sequence-base');
-            bases.forEach((base, baseIndex) => {
-                const absolutePosition = lineIndex * this.vscodeEditor.basesPerLine + baseIndex;
-                
-                // Make base editable
-                if (!base.hasAttribute('contenteditable')) {
-                    base.setAttribute('contenteditable', 'true');
-                    base.setAttribute('spellcheck', 'false');
-                    
-                    // Add event listeners
-                    base.addEventListener('input', (e) => this.handleBaseEdit(e, absolutePosition));
-                    base.addEventListener('keydown', (e) => this.handleBaseKeydown(e, absolutePosition));
-                    base.addEventListener('paste', (e) => this.handleBasePaste(e, absolutePosition));
-                    base.addEventListener('focus', (e) => this.handleBaseFocus(e, absolutePosition));
-                    base.addEventListener('blur', (e) => this.handleBaseBlur(e, absolutePosition));
-                }
-                
-                // Highlight modifications
-                if (this.modifications.has(absolutePosition)) {
-                    base.classList.add('sequence-modified');
-                    const mod = this.modifications.get(absolutePosition);
-                    base.title = `Original: ${mod.original} → Modified: ${mod.modified}`;
-                }
-            });
-        });
+        // Create editing container
+        this.editingContainer = document.createElement('div');
+        this.editingContainer.id = 'sequenceEditingContainer';
+        this.editingContainer.className = 'sequence-editing-container';
+        
+        // Create the text area for editing
+        this.editingTextArea = document.createElement('textarea');
+        this.editingTextArea.id = 'sequenceEditingTextArea';
+        this.editingTextArea.className = 'sequence-editing-textarea';
+        this.editingTextArea.spellcheck = false;
+        this.editingTextArea.value = this.formatSequenceForEditing(this.currentSequence);
+        
+        // Setup event listeners
+        this.editingTextArea.addEventListener('input', (e) => this.handleTextAreaInput(e));
+        this.editingTextArea.addEventListener('keydown', (e) => this.handleTextAreaKeydown(e));
+        this.editingTextArea.addEventListener('paste', (e) => this.handleTextAreaPaste(e));
+        this.editingTextArea.addEventListener('focus', (e) => this.handleTextAreaFocus(e));
+        this.editingTextArea.addEventListener('blur', (e) => this.handleTextAreaBlur(e));
+        
+        // Add instructions
+        const instructions = document.createElement('div');
+        instructions.className = 'editing-instructions';
+        instructions.innerHTML = `
+            <p><strong>Sequence Editing Mode</strong></p>
+            <p>• Edit the sequence directly in the text area below</p>
+            <p>• Valid bases: A, T, G, C, N (and ambiguous codes)</p>
+            <p>• Use Ctrl+S to save, Ctrl+Z to undo, Escape to cancel</p>
+        `;
+        
+        this.editingContainer.appendChild(instructions);
+        this.editingContainer.appendChild(this.editingTextArea);
+        
+        // Insert editing container over the VSCode editor
+        const sequenceContent = document.getElementById('sequenceContent');
+        if (sequenceContent) {
+            sequenceContent.appendChild(this.editingContainer);
+        }
+        
+        // Focus the text area
+        setTimeout(() => {
+            this.editingTextArea.focus();
+        }, 100);
+        
+        console.log('✅ [SequenceEditor] Text editing area created');
+    }
+    
+    /**
+     * Remove the editing text area
+     */
+    removeEditingTextArea() {
+        if (this.editingContainer) {
+            this.editingContainer.remove();
+            this.editingContainer = null;
+            this.editingTextArea = null;
+        }
+    }
+    
+    /**
+     * Format sequence for editing (add line breaks every 80 characters)
+     */
+    formatSequenceForEditing(sequence) {
+        const lineLength = 80;
+        const lines = [];
+        for (let i = 0; i < sequence.length; i += lineLength) {
+            lines.push(sequence.substring(i, i + lineLength));
+        }
+        return lines.join('\n');
+    }
+    
+    /**
+     * Parse edited sequence from text area (remove line breaks and whitespace)
+     */
+    parseEditedSequence(text) {
+        return text.replace(/\s+/g, '').toUpperCase();
     }
     
     /**
@@ -358,6 +384,17 @@ class SequenceEditor {
      * Undo the last change
      */
     undo() {
+        if (this.isEditMode && this.editingTextArea) {
+            // Use browser's built-in undo for text area
+            document.execCommand('undo');
+            // Trigger input event to update our tracking
+            setTimeout(() => {
+                this.handleTextAreaInput({ target: this.editingTextArea });
+            }, 10);
+            return;
+        }
+        
+        // Legacy undo for base-by-base editing
         if (this.undoStack.length === 0) {
             this.genomeBrowser.showNotification('Nothing to undo', 'info');
             return;
@@ -389,6 +426,17 @@ class SequenceEditor {
      * Redo the last undone change
      */
     redo() {
+        if (this.isEditMode && this.editingTextArea) {
+            // Use browser's built-in redo for text area
+            document.execCommand('redo');
+            // Trigger input event to update our tracking
+            setTimeout(() => {
+                this.handleTextAreaInput({ target: this.editingTextArea });
+            }, 10);
+            return;
+        }
+        
+        // Legacy redo for base-by-base editing
         if (this.redoStack.length === 0) {
             this.genomeBrowser.showNotification('Nothing to redo', 'info');
             return;
@@ -433,16 +481,18 @@ class SequenceEditor {
         this.hasUnsavedChanges = false;
         this.editingStartTime = Date.now();
         
+        // Create text editing area
+        this.createEditingTextArea();
+        
         // Update UI
         this.showEditingToolbar();
         this.updateStatusBar();
-        this.vscodeEditor.render();
         
         // Add editing styles
         this.addEditingStyles();
         
-        this.genomeBrowser.showNotification('Edit mode enabled. Click on bases to edit them.', 'info');
-        console.log('✅ [SequenceEditor] Edit mode enabled');
+        this.genomeBrowser.showNotification('Edit mode enabled. Edit sequence in the text area below.', 'info');
+        console.log('✅ [SequenceEditor] Edit mode enabled with text area');
     }
     
     /**
@@ -464,6 +514,7 @@ class SequenceEditor {
         this.isEditMode = false;
         
         // Clean up
+        this.removeEditingTextArea();
         this.hideEditingToolbar();
         this.removeEditingStyles();
         this.clearAutoSave();
@@ -951,6 +1002,72 @@ class SequenceEditor {
                 border-bottom: 2px solid #F44336;
                 text-decoration: line-through;
             }
+            
+            /* Text editing area styles */
+            .sequence-editing-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1000;
+                background: rgba(30, 30, 30, 0.95);
+                backdrop-filter: blur(2px);
+                padding: 20px;
+                overflow: auto;
+            }
+            
+            .editing-instructions {
+                background: #2d2d30;
+                border: 1px solid #3c3c3c;
+                border-radius: 4px;
+                padding: 15px;
+                margin-bottom: 15px;
+                color: #d4d4d4;
+            }
+            
+            .editing-instructions p {
+                margin: 5px 0;
+            }
+            
+            .sequence-editing-textarea {
+                width: 100%;
+                height: 60vh;
+                min-height: 400px;
+                background: #1e1e1e;
+                color: #d4d4d4;
+                border: 1px solid #3c3c3c;
+                border-radius: 4px;
+                padding: 15px;
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 14px;
+                line-height: 1.4;
+                resize: vertical;
+                outline: none;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            
+            .sequence-editing-textarea:focus {
+                border-color: #007acc;
+                box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
+            }
+            
+            .validation-warning {
+                margin-bottom: 15px;
+            }
+            
+            .validation-warning .alert {
+                background: rgba(255, 193, 7, 0.1);
+                border: 1px solid #FFC107;
+                border-radius: 4px;
+                padding: 10px;
+                color: #FFC107;
+            }
+            
+            .validation-warning ul {
+                margin: 5px 0 0 20px;
+            }
         `;
         
         document.head.appendChild(style);
@@ -1180,6 +1297,165 @@ class SequenceEditor {
         this.vscodeEditor.render();
     }
     
+    /**
+     * Handle text area input
+     */
+    handleTextAreaInput(e) {
+        const currentText = e.target.value;
+        const cleanSequence = this.parseEditedSequence(currentText);
+        
+        // Update current sequence
+        this.currentSequence = cleanSequence;
+        
+        // Check if changed from original
+        if (cleanSequence !== this.originalSequence) {
+            this.hasUnsavedChanges = true;
+            this.calculateModifications();
+        } else {
+            this.hasUnsavedChanges = false;
+            this.modifications.clear();
+        }
+        
+        // Update status
+        this.updateStatusBar();
+        
+        // Validate sequence
+        const validation = this.validateSequence(cleanSequence);
+        if (!validation.isValid) {
+            this.showValidationWarning(validation.errors);
+        } else {
+            this.clearValidationWarning();
+        }
+        
+        // Auto-save
+        this.scheduleAutoSave();
+        
+        console.log(`🔧 [SequenceEditor] Sequence updated: ${cleanSequence.length} bases`);
+    }
+    
+    /**
+     * Handle text area keydown
+     */
+    handleTextAreaKeydown(e) {
+        // Handle keyboard shortcuts
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key) {
+                case 's':
+                    e.preventDefault();
+                    this.saveChanges();
+                    break;
+                case 'z':
+                    if (!e.shiftKey) {
+                        e.preventDefault();
+                        this.undo();
+                    }
+                    break;
+                case 'y':
+                    e.preventDefault();
+                    this.redo();
+                    break;
+                case 'a':
+                    // Allow Ctrl+A for select all
+                    break;
+                default:
+                    break;
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.disableEditMode();
+        }
+    }
+    
+    /**
+     * Handle text area paste
+     */
+    handleTextAreaPaste(e) {
+        // Allow paste but validate after
+        setTimeout(() => {
+            this.handleTextAreaInput(e);
+        }, 10);
+    }
+    
+    /**
+     * Handle text area focus
+     */
+    handleTextAreaFocus(e) {
+        this.isTextAreaFocused = true;
+    }
+    
+    /**
+     * Handle text area blur
+     */
+    handleTextAreaBlur(e) {
+        this.isTextAreaFocused = false;
+    }
+    
+    /**
+     * Calculate modifications between original and current sequence
+     */
+    calculateModifications() {
+        this.modifications.clear();
+        
+        const original = this.originalSequence;
+        const current = this.currentSequence;
+        
+        // Simple approach: compare character by character
+        const maxLength = Math.max(original.length, current.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+            const origBase = original[i] || '';
+            const currBase = current[i] || '';
+            
+            if (origBase !== currBase) {
+                let type = 'substitution';
+                if (origBase === '') {
+                    type = 'insertion';
+                } else if (currBase === '') {
+                    type = 'deletion';
+                }
+                
+                this.modifications.set(i, {
+                    original: origBase,
+                    modified: currBase,
+                    type: type,
+                    timestamp: Date.now()
+                });
+            }
+        }
+    }
+    
+    /**
+     * Show validation warning
+     */
+    showValidationWarning(errors) {
+        if (!this.validationWarning) {
+            this.validationWarning = document.createElement('div');
+            this.validationWarning.className = 'validation-warning';
+            if (this.editingContainer) {
+                this.editingContainer.insertBefore(this.validationWarning, this.editingTextArea);
+            }
+        }
+        
+        this.validationWarning.innerHTML = `
+            <div class="alert alert-warning">
+                <strong>⚠️ Validation Issues:</strong>
+                <ul>
+                    ${errors.map(error => `<li>${error}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    /**
+     * Clear validation warning
+     */
+    clearValidationWarning() {
+        if (this.validationWarning) {
+            this.validationWarning.remove();
+            this.validationWarning = null;
+        }
+    }
+    
     destroy() {
         console.log('🔧 [SequenceEditor] Destroying sequence editor...');
         
@@ -1187,6 +1463,7 @@ class SequenceEditor {
         this.clearAutoSave();
         
         // Remove UI elements
+        this.removeEditingTextArea();
         if (this.editingToolbar) {
             this.editingToolbar.remove();
         }

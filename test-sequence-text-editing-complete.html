@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Text Editing - Complete Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            background: #252526;
+        }
+        
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        
+        .test-step {
+            margin: 10px 0;
+            padding: 8px;
+            background: #2d2d30;
+            border-radius: 3px;
+        }
+        
+        .test-expected {
+            color: #FFC107;
+            font-style: italic;
+        }
+        
+        .test-button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: #005a9e;
+        }
+        
+        .test-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .test-pass {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .test-fail {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #F44336;
+            color: #F44336;
+        }
+        
+        .sequence-display {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            padding: 10px;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+        
+        .mock-container {
+            position: relative;
+            height: 400px;
+            border: 2px solid #3c3c3c;
+            border-radius: 4px;
+            margin: 10px 0;
+            background: #252526;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 Sequence Text Editing - Complete Test</h1>
+    <p>This test verifies the complete text-based sequence editing functionality in Edit Mode.</p>
+
+    <div class="test-section">
+        <div class="test-title">📋 Test Overview</div>
+        <p><strong>New Feature:</strong> Text-based sequence editing with textarea overlay</p>
+        <p><strong>Key Changes:</strong></p>
+        <ul>
+            <li>✅ Text area overlay for direct sequence editing</li>
+            <li>✅ Real-time change tracking and validation</li>
+            <li>✅ Keyboard shortcuts (Ctrl+S, Ctrl+Z, Ctrl+Y, Escape)</li>
+            <li>✅ Action system integration for final submission</li>
+            <li>✅ Automatic modification detection</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">🔧 Test Setup</div>
+        <div id="mockContainer" class="mock-container">
+            <div id="sequenceContent" style="position: relative; width: 100%; height: 100%; padding: 20px;">
+                <p>Mock Sequence Display Area</p>
+                <p>Original sequence will be shown here when Edit Mode is activated</p>
+            </div>
+        </div>
+        
+        <button class="test-button" onclick="initializeTest()">Initialize Test Environment</button>
+        <button class="test-button" onclick="enableEditMode()">Enable Edit Mode</button>
+        <button class="test-button" onclick="disableEditMode()">Disable Edit Mode</button>
+        <button class="test-button" onclick="testKeyboardShortcuts()">Test Keyboard Shortcuts</button>
+        
+        <div id="testStatus" class="test-status" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">📝 Editing Tests</div>
+        
+        <div class="test-step">
+            <strong>Test 1: Text Area Creation</strong>
+            <div class="test-expected">Expected: Text area overlay appears with formatted sequence</div>
+            <button class="test-button" onclick="testTextAreaCreation()">Run Test</button>
+            <div id="test1Result"></div>
+        </div>
+        
+        <div class="test-step">
+            <strong>Test 2: Sequence Editing</strong>
+            <div class="test-expected">Expected: Can edit sequence directly in text area</div>
+            <button class="test-button" onclick="testSequenceEditing()">Run Test</button>
+            <div id="test2Result"></div>
+        </div>
+        
+        <div class="test-step">
+            <strong>Test 3: Change Detection</strong>
+            <div class="test-expected">Expected: Modifications are tracked and status updated</div>
+            <button class="test-button" onclick="testChangeDetection()">Run Test</button>
+            <div id="test3Result"></div>
+        </div>
+        
+        <div class="test-step">
+            <strong>Test 4: Validation</strong>
+            <div class="test-expected">Expected: Invalid bases show warning messages</div>
+            <button class="test-button" onclick="testValidation()">Run Test</button>
+            <div id="test4Result"></div>
+        </div>
+        
+        <div class="test-step">
+            <strong>Test 5: Save Action</strong>
+            <div class="test-expected">Expected: Creates action in Action Management System</div>
+            <button class="test-button" onclick="testSaveAction()">Run Test</button>
+            <div id="test5Result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">⌨️ Keyboard Shortcuts</div>
+        <ul>
+            <li><strong>Ctrl+S:</strong> Save changes</li>
+            <li><strong>Ctrl+Z:</strong> Undo</li>
+            <li><strong>Ctrl+Y:</strong> Redo</li>
+            <li><strong>Escape:</strong> Exit edit mode</li>
+            <li><strong>Ctrl+A:</strong> Select all text</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">📊 Current Status</div>
+        <div id="currentStatus">
+            <p><strong>Edit Mode:</strong> <span id="editModeStatus">Disabled</span></p>
+            <p><strong>Has Changes:</strong> <span id="changesStatus">No</span></p>
+            <p><strong>Sequence Length:</strong> <span id="lengthStatus">0</span></p>
+            <p><strong>Modifications:</strong> <span id="modificationsStatus">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Mock data and objects
+        let mockSequenceEditor = null;
+        let mockActionManager = null;
+ 
