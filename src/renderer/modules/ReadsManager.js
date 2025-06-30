@@ -393,15 +393,16 @@ class ReadsManager {
      * Load reads for a specific region using BAM reader
      */
     async loadReadsForRegionBAM(chromosome, start, end, settings = {}) {
-        console.log(`[ReadsManager] loadReadsForRegionBAM called with:`, {
+        console.log(`🧬 [ReadsManager] loadReadsForRegionBAM called with:`, {
             chromosome, start, end,
             currentFile: this.currentFile,
             isBamMode: this.isBamMode,
-            ignoreChromosome: settings.ignoreChromosome
+            ignoreChromosome: settings.ignoreChromosome,
+            hasIndex: this.bamReader?.isIndexed()
         });
         
         if (!this.bamReader) {
-            console.error('[ReadsManager] No BAM reader available');
+            console.error('❌ [ReadsManager] No BAM reader available');
             throw new Error('No BAM reader available');
         }
 
@@ -411,18 +412,18 @@ class ReadsManager {
             const searchStart = Math.max(0, start - bufferSize);
             const searchEnd = end + bufferSize;
             
-            this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start}-${end}...`);
+            this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}...`);
             
-            // Get reads using BAM reader with settings
-            const reads = await this.bamReader.getReadsForRegion(chromosome, searchStart, searchEnd, settings);
+            // Get reads using BAM reader with settings - use new API method name
+            const reads = await this.bamReader.getRecordsForRange(chromosome, searchStart, searchEnd, settings);
             
-            console.log(`[ReadsManager] Retrieved ${reads.length} reads from BAM file (ignoreChromosome: ${settings.ignoreChromosome})`);
+            console.log(`✅ [ReadsManager] Retrieved ${reads.length.toLocaleString()} reads from BAM file (ignoreChromosome: ${settings.ignoreChromosome})`);
             
             this.stats.loadedRegions++;
             return reads;
             
         } catch (error) {
-            console.error('[ReadsManager] Error loading BAM reads:', error);
+            console.error('❌ [ReadsManager] Error loading BAM reads:', error);
             throw error;
         }
     }

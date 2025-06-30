@@ -215,107 +215,53 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async loadFileStream(filePath) {
-        // Use streaming mode for very large SAM files to completely avoid memory accumulation
-        return new Promise(async (resolve, reject) => {
-            try {
-                let estimatedReads = 0;
-                let processedLines = 0;
-                let headerProcessed = false;
-                
-                // Set up event listeners for streaming
-                const linesHandler = (event, { lines, lineCount }) => {
-                    // Process lines to count reads and gather basic info, but don't accumulate data
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed) continue;
-                        
-                        processedLines++;
-                        
-                        // Count non-header lines to estimate reads
-                        if (!trimmed.startsWith('@')) {
-                            estimatedReads++;
-                        }
-                        
-                        // Process header information early (but don't store line data)
-                        if (!headerProcessed && trimmed.startsWith('@')) {
-                            // Could extract reference information here if needed
-                        }
-                    }
-                    
-                    // Update status periodically
-                    if (processedLines % 10000 === 0) {
-                        this.genomeBrowser.updateStatus(`Processing SAM file... ${processedLines} lines (${estimatedReads} reads estimated)`);
-                    }
-                };
-                
-                const progressHandler = (event, progressData) => {
-                    const { progress, totalRead, fileSize } = progressData;
-                    const readMB = (totalRead / (1024 * 1024)).toFixed(1);
-                    const totalMB = (fileSize / (1024 * 1024)).toFixed(1);
-                    this.genomeBrowser.updateStatus(`Analyzing large SAM file... ${progress}% (${readMB}/${totalMB} MB)`);
-                };
-                
-                const completeHandler = (event, { totalLines, totalBytes }) => {
-                    // Remove event listeners
-                    ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-                    ipcRenderer.removeListener('file-read-progress', progressHandler);
-                    ipcRenderer.removeListener('file-stream-complete', completeHandler);
-                    
-                    console.log(`Stream analysis complete: ${totalLines} lines, ${(totalBytes / (1024 * 1024)).toFixed(1)} MB`);
-                    
-                    // Don't store the data - just set up streaming mode
-                    this.currentFile.data = null; // Explicitly set to null to save memory
-                    
-                    // Initialize ReadsManager in streaming mode
-                    this.genomeBrowser.updateStatus('Initializing streaming reads system...');
-                    console.log(`[FileManager] Initializing ReadsManager with file path: ${filePath}`);
-                    this.genomeBrowser.readsManager.initializeWithStreamingSAM(filePath)
-                        .then(() => {
-                            // Set estimated read count for statistics
-                            this.genomeBrowser.readsManager.stats.totalReads = estimatedReads;
-                            
-                            // Clear old reads to save memory
-                            this.genomeBrowser.currentReads = {};
-                            
-                            console.log(`Large SAM file initialized in streaming mode - estimated ${estimatedReads} reads`);
-                            
-                            this.genomeBrowser.updateStatus(`Initialized large SAM file with streaming mode (${estimatedReads} reads estimated)`);
-                            
-                            // Auto-enable reads track
-                            this.autoEnableTracksForFileType('.sam');
-                            
-                            // If we already have sequence data, refresh the view
-                            const currentChr = document.getElementById('chromosomeSelect').value;
-                            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-                                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-                            }
-                            
-                            resolve();
-                        })
-                        .catch(reject);
-                };
-                
-                // Set up event listeners
-                ipcRenderer.on('file-lines-chunk', linesHandler);
-                ipcRenderer.on('file-read-progress', progressHandler);
-                ipcRenderer.on('file-stream-complete', completeHandler);
-                
-                // Start streaming - this will only analyze the file, not store it
-                this.genomeBrowser.updateStatus('Starting analysis of large SAM file (streaming mode)...');
-                const result = await ipcRenderer.invoke('read-file-stream', filePath);
-                
-                if (!result.success) {
-                    // Remove event listeners on error
-                    ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-                    ipcRenderer.removeListener('file-read-progress', progressHandler);
-                    ipcRenderer.removeListener('file-stream-complete', completeHandler);
-                    throw new Error(result.error);
-                }
-                
-            } catch (error) {
-                reject(error);
+        // Skip full file analysis for SAM files - initialize streaming mode directly
+        try {
+            console.log('🚀 Initializing large SAM file in streaming mode (skipping full analysis)...');
+            
+            // Get basic file information without reading content
+            const fileStats = await ipcRenderer.invoke('get-file-info', filePath);
+            if (!fileStats.success) {
+                throw new Error(fileStats.error);
             }
-        });
+            
+            const fileSizeMB = (fileStats.info.size / (1024 * 1024)).toFixed(1);
+            
+            this.genomeBrowser.updateStatus(`🧬 Initializing large SAM file (${fileSizeMB} MB) in streaming mode...`);
+            
+            // Don't store the data - just set up streaming mode
+            this.currentFile.data = null; // Explicitly set to null to save memory
+            
+            // Initialize ReadsManager in streaming mode without pre-analysis
+            console.log(`[FileManager] Initializing ReadsManager with streaming SAM: ${filePath}`);
+            await this.genomeBrowser.readsManager.initializeWithStreamingSAM(filePath);
+            
+            // Provide a rough estimate based on file size for UI purposes
+            const estimatedReads = Math.floor(fileStats.info.size / 200); // Rough estimate: ~200 bytes per SAM line
+            this.genomeBrowser.readsManager.stats.totalReads = estimatedReads;
+            
+            // Clear old reads to save memory
+            this.genomeBrowser.currentReads = {};
+            
+            console.log(`✅ Large SAM file ready for on-demand streaming queries`);
+            console.log(`   📁 File: ${fileSizeMB} MB`);
+            console.log(`   📊 Estimated reads: ${estimatedReads.toLocaleString()}`);
+            console.log(`   🔍 Mode: On-demand streaming (no pre-loading)`);
+            
+            this.genomeBrowser.updateStatus(`✅ SAM file ready: ${fileSizeMB} MB (streaming mode - reads loaded on-demand)`);
+            
+            // Auto-enable reads track
+            this.autoEnableTracksForFileType('.sam');
+            
+            // If we already have sequence data, refresh the view
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+            
+        } catch (error) {
+            throw new Error(`Failed to initialize streaming SAM file: ${error.message}`);
+        }
     }
 
     async parseFile() {
@@ -762,30 +708,48 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 });
             }
 
-            this.genomeBrowser.updateStatus('Initializing BAM file reader...');
+            this.genomeBrowser.updateStatus('🧬 Initializing BAM file reader...');
             
             // Create BAM reader instance
             const bamReader = new BamReader();
             
-            // Initialize the BAM reader with file path
-            await bamReader.initialize(this.currentFile.path);
+            // Initialize the BAM reader with file path - this is fast and only reads header + detects index
+            console.log('🚀 Starting fast BAM initialization (header + index detection only)...');
+            const initResult = await bamReader.initialize(this.currentFile.path);
+            
+            if (!initResult.success) {
+                throw new Error(initResult.error || 'Failed to initialize BAM file');
+            }
             
             // Store BAM reader for later use
             this.genomeBrowser.bamReader = bamReader;
             
-            // Get header and reference information
-            const header = bamReader.getHeader();
+            // Get basic information (no expensive operations)
             const stats = bamReader.getStats();
             
-            console.log(`BAM file loaded successfully: ${stats.references.length} references, ~${stats.totalReads} reads`);
+            console.log(`✅ BAM file initialized successfully:`);
+            console.log(`   📊 References: ${stats.references.length}`);
+            console.log(`   💾 File size: ${bamReader.getFormattedFileSize()}`);
+            console.log(`   🔍 Index: ${stats.hasIndex ? `${stats.indexType.toUpperCase()} (${bamReader.getFormattedIndexSize()})` : 'Not available'}`);
             
-            // Initialize ReadsManager with BAM data
+            // Initialize ReadsManager with BAM data (no expensive operations)
             await this.genomeBrowser.readsManager.initializeWithBAMReader(bamReader);
             
             // Clear old reads to save memory
             this.genomeBrowser.currentReads = {};
             
-            this.genomeBrowser.updateStatus(`Loaded BAM file with ${stats.references.length} references (~${stats.totalReads} reads)`);
+            // Create informative status message
+            const statusMessage = stats.hasIndex ? 
+                `✅ BAM file ready: ${stats.references.length} chromosomes (indexed - fast queries enabled)` :
+                `⚠️ BAM file ready: ${stats.references.length} chromosomes (no index - queries may be slower)`;
+            
+            this.genomeBrowser.updateStatus(statusMessage);
+            
+            // Show index recommendation if no index found
+            if (!stats.hasIndex) {
+                console.warn('💡 Recommendation: Create an index for faster queries:');
+                console.warn('   samtools index your_file.bam');
+            }
             
             // Auto-enable reads track
             this.autoEnableTracksForFileType('.bam');
@@ -797,7 +761,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             }
             
         } catch (error) {
-            console.error('Error parsing BAM file:', error);
+            console.error('❌ Error parsing BAM file:', error);
             
             // Provide helpful error message
             let errorMessage = error.message;

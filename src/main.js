@@ -1733,26 +1733,65 @@ ipcMain.handle('read-file', async (event, filePath) => {
 // BAM file handlers
 let bamFiles = new Map(); // Cache BAM file instances
 
-ipcMain.handle('bam-initialize', async (event, filePath) => {
+ipcMain.handle('bam-initialize', async (event, filePath, options = {}) => {
   try {
-    console.log('Initializing BAM file:', filePath);
+    console.log('🧬 Initializing BAM file:', filePath);
     
     // Import BAM libraries - use the newer bamPath approach to avoid buffer issues
     const { BamFile } = require('@gmod/bam');
     
-    // Check if BAI index exists
-    let baiPath = null;
-    const standardBaiPath = filePath + '.bai';
-    if (fs.existsSync(standardBaiPath)) {
-      baiPath = standardBaiPath;
-      console.log('Found BAI index:', baiPath);
+    // Enhanced index detection with multiple strategies
+    let indexPath = null;
+    let indexType = null;
+    let hasIndex = false;
+    let indexSize = 0;
+    
+    // Strategy 1: Use explicitly provided index path
+    if (options.indexPath && fs.existsSync(options.indexPath)) {
+      indexPath = options.indexPath;
+      indexType = options.indexPath.endsWith('.csi') ? 'csi' : 'bai';
+      hasIndex = true;
+      console.log('✅ Using provided index file:', indexPath);
     } else {
-      const altBaiPath = filePath.replace('.bam', '.bai');
-      if (fs.existsSync(altBaiPath)) {
-        baiPath = altBaiPath;
-        console.log('Found BAI index:', altBaiPath);
-      } else {
-        console.warn('No BAI index found. Performance may be slower for large files.');
+      // Strategy 2: Auto-detect standard index files
+      const indexCandidates = [
+        { path: filePath + '.bai', type: 'bai' },           // standard: file.bam.bai
+        { path: filePath.replace('.bam', '.bai'), type: 'bai' }, // alternative: file.bai
+        { path: filePath + '.csi', type: 'csi' },           // CSI index: file.bam.csi
+        { path: filePath.replace('.bam', '.csi'), type: 'csi' }  // alternative CSI: file.csi
+      ];
+      
+      for (const candidate of indexCandidates) {
+        if (fs.existsSync(candidate.path)) {
+          indexPath = candidate.path;
+          indexType = candidate.type;
+          hasIndex = true;
+          console.log(`✅ Auto-detected ${indexType.toUpperCase()} index:`, indexPath);
+          break;
+        }
+      }
+      
+      if (!hasIndex) {
+        console.warn('⚠️  No index file found. Checked locations:');
+        indexCandidates.forEach(candidate => {
+          console.warn(`   - ${candidate.path} (${candidate.type.toUpperCase()})`);
+        });
+        console.warn('   💡 Consider creating an index with: samtools index file.bam');
+        
+        if (options.requireIndex) {
+          throw new Error('Index file is required but not found. Please create an index file first.');
+        }
+      }
+    }
+    
+    // Get index file size if available
+    if (hasIndex && indexPath) {
+      try {
+        const indexStats = fs.statSync(indexPath);
+        indexSize = indexStats.size;
+        console.log(`📊 Index file size: ${(indexSize / (1024 * 1024)).toFixed(2)} MB`);
+      } catch (error) {
+        console.warn('⚠️  Could not get index file size:', error.message);
       }
     }
     
@@ -1762,16 +1801,25 @@ ipcMain.handle('bam-initialize', async (event, filePath) => {
       bamPath: filePath
     };
     
-    // Add BAI path if available
-    if (baiPath) {
-      bamFileConfig.baiPath = baiPath;
+    // Add index path if available
+    if (hasIndex && indexPath) {
+      if (indexType === 'bai') {
+        bamFileConfig.baiPath = indexPath;
+      } else if (indexType === 'csi') {
+        bamFileConfig.csiPath = indexPath;
+      }
     }
     
-    // Optional: Add cache configuration
-    bamFileConfig.cacheSize = 100;
+    // Enhanced cache configuration for better performance
+    bamFileConfig.cacheSize = hasIndex ? 200 : 50; // Larger cache if indexed
     bamFileConfig.yieldThreadTime = 100;
     
-    console.log('Creating BAM file instance with config:', bamFileConfig);
+    console.log('🔧 Creating BAM file instance with config:', {
+      bamPath: filePath,
+      indexPath: hasIndex ? indexPath : 'none',
+      indexType: hasIndex ? indexType : 'none',
+      cacheSize: bamFileConfig.cacheSize
+    });
     const bamFile = new BamFile(bamFileConfig);
     
     // Get header first - this is required before any other operations
@@ -1783,39 +1831,19 @@ ipcMain.handle('bam-initialize', async (event, filePath) => {
     // Get file size
     const stats = fs.statSync(filePath);
     
-    // Try to estimate total reads more safely
+    // Skip expensive read counting - BAM files can be queried efficiently on-demand
+    // Only provide a rough estimate based on file size if needed for UI display
     let totalReads = 0;
-    if (baiPath && header.references && header.references.length > 0) {
-      // Try to get counts for first few references only to avoid errors
-      const maxRefsToCheck = Math.min(3, header.references.length);
-      console.log(`Checking read counts for ${maxRefsToCheck} references...`);
-      
-      for (let i = 0; i < maxRefsToCheck; i++) {
-        const ref = header.references[i];
-        try {
-          const count = await bamFile.lineCount(ref.name);
-          if (count && count > 0) {
-            totalReads += count;
-            console.log(`Reference ${ref.name}: ${count} reads`);
-          }
-        } catch (error) {
-          console.warn(`Error counting reads for ${ref.name}:`, error.message);
-          // Continue with other references
-        }
-      }
-      
-      // If we got some counts but not all refs, estimate the rest
-      if (totalReads > 0 && maxRefsToCheck < header.references.length) {
-        const avgPerRef = totalReads / maxRefsToCheck;
-        totalReads += avgPerRef * (header.references.length - maxRefsToCheck);
-        console.log(`Estimated total reads: ${Math.floor(totalReads)}`);
-      }
-    }
-    
-    // If we couldn't get counts from index, estimate based on file size
-    if (totalReads === 0) {
-      totalReads = Math.floor(stats.size / 100); // Rough estimate: ~100 bytes per read
-      console.log(`Estimated reads from file size: ${totalReads}`);
+    if (hasIndex) {
+      // For indexed files, we don't need to count reads upfront
+      // The index allows efficient random access to any region
+      console.log('📊 Index available - reads will be counted on-demand during queries');
+      totalReads = 0; // Will be populated during actual queries
+    } else {
+      // For non-indexed files, provide a rough estimate for UI purposes only
+      totalReads = Math.floor(stats.size / 100); // Very rough estimate: ~100 bytes per read
+      console.log(`📊 No index - estimated reads from file size: ${totalReads.toLocaleString()}`);
+      console.log('💡 Note: Create an index for accurate statistics and faster queries');
     }
     
     // Cache the BAM file instance
@@ -1826,13 +1854,20 @@ ipcMain.handle('bam-initialize', async (event, filePath) => {
       header: header,
       references: header.references || [],
       totalReads: Math.floor(totalReads),
-      fileSize: stats.size
+      fileSize: stats.size,
+      hasIndex: hasIndex,
+      indexPath: indexPath,
+      indexType: indexType,
+      indexSize: indexSize
     };
     
-    console.log('BAM initialization successful:', {
+    console.log('✅ BAM initialization successful:', {
       references: result.references.length,
-      totalReads: result.totalReads,
-      fileSize: `${(result.fileSize / (1024 * 1024)).toFixed(2)} MB`
+      totalReads: result.totalReads.toLocaleString(),
+      fileSize: `${(result.fileSize / (1024 * 1024)).toFixed(2)} MB`,
+      hasIndex: hasIndex,
+      indexType: hasIndex ? indexType.toUpperCase() : 'none',
+      indexSize: hasIndex ? `${(indexSize / (1024 * 1024)).toFixed(2)} MB` : 'N/A'
     });
     
     return result;
