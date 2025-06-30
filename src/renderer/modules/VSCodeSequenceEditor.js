@@ -612,8 +612,9 @@ class VSCodeSequenceEditor {
             baseElement.textContent = base;
             baseElement.dataset.position = globalPos;
             
-            // Get features at this position
-            const features = this.getFeatureAtPosition(globalPos);
+            // Get features at this position (convert to 1-based coordinate)
+            const genomicPosition = globalPos + 1; // Convert 0-based to 1-based
+            const features = this.getFeatureAtPosition(genomicPosition);
             
             // Apply coloring based on settings
             if (this.settings.useGeneColors && features.length > 0) {
@@ -622,6 +623,11 @@ class VSCodeSequenceEditor {
                 const geneColor = this.getGeneColor(primaryFeature.type);
                 baseElement.style.color = geneColor;
                 baseElement.classList.add('gene-colored');
+                
+                // Debug logging for gene-based coloring (only for first few positions to avoid spam)
+                if (genomicPosition <= this.viewStart + 10) {
+                    console.log(`🎨 [VSCode Editor] Gene coloring applied: pos=${genomicPosition}, feature=${primaryFeature.type}, color=${geneColor}`);
+                }
             } else {
                 // Use nucleotide-based coloring
                 const baseColor = this.settings.baseColors[base.toLowerCase()] || this.settings.baseColors.n;
@@ -1230,9 +1236,17 @@ class VSCodeSequenceEditor {
     
     // Settings methods
     updateSettings(newSettings) {
+        console.log('🔧 [VSCode Editor] updateSettings called with:', newSettings);
+        console.log('🔧 [VSCode Editor] Current useGeneColors:', this.settings.useGeneColors);
+        
         this.settings = { ...this.settings, ...newSettings };
+        
+        console.log('📝 [VSCode Editor] Settings updated. New useGeneColors:', this.settings.useGeneColors);
+        
         this.applySettings();
         this.render();
+        
+        console.log('✅ [VSCode Editor] Settings applied and rendered');
     }
     
     applySettings() {

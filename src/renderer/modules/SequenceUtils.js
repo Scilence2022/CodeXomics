@@ -10,6 +10,109 @@ class SequenceUtils {
         
         // Sequence display mode: 'view' for traditional display, 'edit' for VS Code editor
         this.displayMode = 'view';
+        
+        // Performance optimization caches
+        this.renderCache = new Map(); // Cache for rendered sequence lines
+        this.featureCache = new Map(); // Cache for feature lookups
+        this.colorCache = new Map(); // Cache for color calculations
+        this.svgCache = new Map(); // Cache for SVG indicators
+        this.lastRenderParams = null; // Track last render parameters
+        
+        // Virtual scrolling parameters
+        this.virtualScrolling = {
+            enabled: false,
+            visibleLines: 20,
+            bufferLines: 5,
+            lineHeight: 32,
+            scrollTop: 0
+        };
+        
+        // Performance monitoring
+        this.performanceStats = {
+            renderTime: 0,
+            cacheHits: 0,
+            cacheMisses: 0,
+            lastRenderStart: 0
+        };
+        
+        // Drag optimization
+        this.dragOptimization = {
+            isDragging: false,
+            pendingRender: null,
+            renderThrottle: 100, // ms
+            lastRenderTime: 0
+        };
+        
+        // Listen for drag events to optimize rendering
+        this.setupDragOptimization();
+    }
+
+    /**
+     * Setup drag optimization listeners
+     */
+    setupDragOptimization() {
+        // Listen for drag start/end events from NavigationManager
+        document.addEventListener('dragstart', () => {
+            this.dragOptimization.isDragging = true;
+            console.log('🔧 [SequenceUtils] Drag started - enabling render optimization');
+        });
+        
+        document.addEventListener('dragend', () => {
+            this.dragOptimization.isDragging = false;
+            console.log('🔧 [SequenceUtils] Drag ended - disabling render optimization');
+            
+            // Execute any pending render
+            if (this.dragOptimization.pendingRender) {
+                console.log('🔧 [SequenceUtils] Executing pending render after drag');
+                this.dragOptimization.pendingRender();
+                this.dragOptimization.pendingRender = null;
+            }
+        });
+        
+        // Listen for custom drag events from NavigationManager
+        document.addEventListener('genomeViewDragStart', () => {
+            this.dragOptimization.isDragging = true;
+            console.log('🔧 [SequenceUtils] Genome view drag started');
+        });
+        
+        document.addEventListener('genomeViewDragEnd', () => {
+            this.dragOptimization.isDragging = false;
+            console.log('🔧 [SequenceUtils] Genome view drag ended');
+            
+            // Execute any pending render
+            if (this.dragOptimization.pendingRender) {
+                console.log('🔧 [SequenceUtils] Executing pending render after genome drag');
+                this.dragOptimization.pendingRender();
+                this.dragOptimization.pendingRender = null;
+            }
+        });
+    }
+    
+    /**
+     * Check if rendering should be throttled during drag
+     */
+    shouldThrottleRender() {
+        if (!this.dragOptimization.isDragging) return false;
+        
+        const now = Date.now();
+        const timeSinceLastRender = now - this.dragOptimization.lastRenderTime;
+        
+        return timeSinceLastRender < this.dragOptimization.renderThrottle;
+    }
+    
+    /**
+     * Throttled render wrapper for drag optimization
+     */
+    throttledRender(renderFunction) {
+        if (this.shouldThrottleRender()) {
+            console.log('🔧 [SequenceUtils] Render throttled during drag - queuing for later');
+            this.dragOptimization.pendingRender = renderFunction;
+            return false; // Render was throttled
+        }
+        
+        this.dragOptimization.lastRenderTime = Date.now();
+        renderFunction();
+        return true; // Render was executed
     }
 
     // Sequence display methods
@@ -428,6 +531,24 @@ class SequenceUtils {
     }
 
     displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
+        // Use throttled render for drag optimization
+        const renderFunction = () => {
+            this.performDetailedSequenceRender(chromosome, fullSequence, viewStart, viewEnd);
+        };
+        
+        // If not throttled, render immediately; otherwise queue for later
+        if (!this.throttledRender(renderFunction)) {
+            console.log('🔧 [SequenceUtils] Sequence render throttled during drag');
+        }
+    }
+    
+    /**
+     * Perform the actual detailed sequence render
+     */
+    performDetailedSequenceRender(chromosome, fullSequence, viewStart, viewEnd) {
+        // Start performance monitoring
+        this.performanceStats.lastRenderStart = performance.now();
+        
         const container = document.getElementById('sequenceContent');
         
         // Clean container and reset styles for view mode
@@ -442,490 +563,459 @@ class SequenceUtils {
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
 
+        // Check if we should invalidate cache
+        if (this.shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations)) {
+            this.clearRenderCache();
+            console.log('🔧 [SequenceUtils] Cache invalidated due to parameter changes');
+        }
+
         const containerWidth = container.offsetWidth || 800;
-        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
+        const charWidth = this.measureCharacterWidth(container);
         const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 30; // 40 for padding/margins
-        // Ensure at least some bases are shown, e.g., 10, and remove upper cap to fill width
+        const availableWidth = containerWidth - positionWidth - 30;
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
         
         // Get sequence track settings
         const sequenceSettings = this.getSequenceTrackSettings();
         
+        // Pre-compute feature lookups for better performance
+        const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd);
+        
+        // Enable virtual scrolling for large sequences
+        const totalLines = Math.ceil(subsequence.length / optimalLineLength);
+        const enableVirtualScrolling = totalLines > 50;
+        
+        if (enableVirtualScrolling) {
+            this.renderVirtualizedSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup);
+        } else {
+            this.renderFullSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup);
+        }
+        
+        // Update render parameters
+        this.updateLastRenderParams(chromosome, viewStart, viewEnd, annotations);
+        
+        // Log performance stats
+        this.performanceStats.renderTime = performance.now() - this.performanceStats.lastRenderStart;
+        console.log('🔧 [SequenceUtils] Render completed:', {
+            renderTime: this.performanceStats.renderTime.toFixed(2) + 'ms',
+            cacheHits: this.performanceStats.cacheHits,
+            cacheMisses: this.performanceStats.cacheMisses,
+            totalLines: totalLines,
+            virtualScrolling: enableVirtualScrolling
+        });
+    }
+    
+    /**
+     * Build optimized feature lookup table
+     */
+    buildFeatureLookup(annotations, viewStart, viewEnd) {
+        const lookupKey = `${viewStart}:${viewEnd}:${this.getAnnotationHash(annotations)}`;
+        
+        if (this.featureCache.has(lookupKey)) {
+            this.performanceStats.cacheHits++;
+            return this.featureCache.get(lookupKey);
+        }
+        
+        this.performanceStats.cacheMisses++;
+        
+        const lookup = new Map();
+        
+        // Only process annotations that overlap with the view range
+        const relevantAnnotations = annotations.filter(f => 
+            f.end >= viewStart && f.start <= viewEnd && 
+            this.genomeBrowser.shouldShowGeneType(f.type)
+        );
+        
+        // Build position-based lookup
+        for (let pos = viewStart; pos <= viewEnd; pos++) {
+            const overlapping = relevantAnnotations.filter(f => pos >= f.start && pos <= f.end);
+            if (overlapping.length > 0) {
+                // Sort by priority
+                const sorted = overlapping.sort((a, b) => {
+                    const typeOrder = { 'CDS': 1, 'mRNA': 2, 'tRNA': 2, 'rRNA': 2, 'promoter': 3, 'terminator': 3, 'regulatory': 3, 'gene': 4 };
+                    return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
+                });
+                lookup.set(pos, sorted[0]);
+            }
+        }
+        
+        this.featureCache.set(lookupKey, lookup);
+        return lookup;
+    }
+    
+    /**
+     * Render full sequence (for smaller sequences)
+     */
+    renderFullSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
         let html = '<div class="detailed-sequence-view">';
         html += '<div class="sequence-info"><strong>DNA Sequence (colored by features):</strong></div>';
         
+        // Use document fragment for better performance
+        const fragment = document.createDocumentFragment();
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'detailed-sequence-view';
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'sequence-info';
+        infoDiv.innerHTML = '<strong>DNA Sequence (colored by features):</strong>';
+        tempDiv.appendChild(infoDiv);
+        
+        // Batch DOM operations
+        const linesToRender = [];
         for (let i = 0; i < subsequence.length; i += optimalLineLength) {
             const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
             const lineStartPos = viewStart + i;
-            
-            html += `<div class="sequence-line-group" style="margin-bottom: 8px;">`;
-            html += `<div class="sequence-line" style="display: flex; margin-bottom: 4px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6;">`;
-            html += `<span class="sequence-position" style="width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;">${(lineStartPos + 1).toLocaleString()}</span>`;
-            html += `<div class="sequence-bases" style="flex: 1; word-break: break-all; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
-            html += `</div>`;
-            // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line" style="height: 12px; margin-left: 115px; margin-bottom: 4px;">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
-            html += `</div>`;
+            linesToRender.push({ lineSubsequence, lineStartPos, index: i });
         }
         
-        // Add protein translations for CDS regions
+        // Render lines in batches to avoid blocking the UI
+        this.renderSequenceLinesBatch(tempDiv, linesToRender, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup, 0);
+        
+        // Add protein translations
+        this.addProteinTranslations(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
+        
+        container.appendChild(tempDiv);
+    }
+    
+    /**
+     * Render sequence lines in batches to avoid UI blocking
+     */
+    renderSequenceLinesBatch(container, linesToRender, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup, batchStart) {
+        // Skip rendering if we're dragging (optimization)
+        if (this.dragOptimization.isDragging) {
+            console.log('🔧 [SequenceUtils] Skipping batch render during drag');
+            return;
+        }
+        
+        const batchSize = 10; // Render 10 lines at a time
+        const batchEnd = Math.min(batchStart + batchSize, linesToRender.length);
+        
+        for (let i = batchStart; i < batchEnd; i++) {
+            const { lineSubsequence, lineStartPos } = linesToRender[i];
+            const lineElement = this.renderSequenceLine(lineSubsequence, lineStartPos, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup);
+            container.appendChild(lineElement);
+        }
+        
+        // Continue with next batch if there are more lines
+        if (batchEnd < linesToRender.length) {
+            // Use requestAnimationFrame to avoid blocking the UI
+            requestAnimationFrame(() => {
+                // Check again if we're still not dragging before continuing
+                if (!this.dragOptimization.isDragging) {
+                    this.renderSequenceLinesBatch(container, linesToRender, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup, batchEnd);
+                } else {
+                    console.log('🔧 [SequenceUtils] Stopping batch render due to drag start');
+                }
+            });
+        }
+    }
+    
+    /**
+     * Render individual sequence line with caching
+     */
+    renderSequenceLine(lineSubsequence, lineStartPos, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup) {
+        const cacheKey = this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome);
+        
+        if (this.renderCache.has(cacheKey)) {
+            this.performanceStats.cacheHits++;
+            return this.renderCache.get(cacheKey).cloneNode(true);
+        }
+        
+        this.performanceStats.cacheMisses++;
+        
+        const lineGroup = document.createElement('div');
+        lineGroup.className = 'sequence-line-group';
+        lineGroup.style.marginBottom = '8px';
+        
+        // Create sequence line
+        const sequenceLine = document.createElement('div');
+        sequenceLine.className = 'sequence-line';
+        sequenceLine.style.cssText = 'display: flex; margin-bottom: 4px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
+        
+        // Position label
+        const positionSpan = document.createElement('span');
+        positionSpan.className = 'sequence-position';
+        positionSpan.style.cssText = 'width: 100px; color: #6c757d; font-weight: 600; margin-right: 15px; text-align: right; flex-shrink: 0;';
+        positionSpan.textContent = (lineStartPos + 1).toLocaleString();
+        
+        // Sequence bases
+        const basesDiv = document.createElement('div');
+        basesDiv.className = 'sequence-bases';
+        basesDiv.style.cssText = 'flex: 1; word-break: break-all; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
+        basesDiv.innerHTML = this.colorizeSequenceWithFeaturesOptimized(lineSubsequence, lineStartPos, featureLookup, operons);
+        
+        sequenceLine.appendChild(positionSpan);
+        sequenceLine.appendChild(basesDiv);
+        
+        // Gene indicator line
+        const indicatorLine = document.createElement('div');
+        indicatorLine.className = 'gene-indicator-line';
+        indicatorLine.style.cssText = 'height: 12px; margin-left: 115px; margin-bottom: 4px;';
+        indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
+        
+        lineGroup.appendChild(sequenceLine);
+        lineGroup.appendChild(indicatorLine);
+        
+        // Cache the rendered line
+        this.renderCache.set(cacheKey, lineGroup.cloneNode(true));
+        
+        return lineGroup;
+    }
+    
+    /**
+     * Optimized sequence colorization with feature lookup
+     */
+    colorizeSequenceWithFeaturesOptimized(sequence, lineStartAbs, featureLookup, operons) {
+        const baseFontSize = '14px';
+        const fragments = [];
+        
+        for (let i = 0; i < sequence.length; i++) {
+            const base = sequence[i];
+            const absPos = lineStartAbs + i + 1;
+            const baseTextColor = this.getBaseColor(base);
+            
+            let featureHexColor = null;
+            let featureTitle = '';
+            
+            // Use optimized feature lookup
+            const mainFeature = featureLookup.get(absPos);
+            if (mainFeature) {
+                const operonInfo = operons && mainFeature.type !== 'promoter' && mainFeature.type !== 'terminator' ? 
+                    this.genomeBrowser.getGeneOperonInfo(mainFeature, operons) : null;
+                featureHexColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(mainFeature.type);
+                featureTitle = `${mainFeature.qualifiers.gene || mainFeature.qualifiers.locus_tag || mainFeature.type} (${mainFeature.start}-${mainFeature.end})`;
+            }
+            
+            // Use cached color calculations
+            const colorKey = `${base}:${featureHexColor || 'none'}`;
+            let style;
+            
+            if (this.colorCache.has(colorKey)) {
+                style = this.colorCache.get(colorKey);
+                this.performanceStats.cacheHits++;
+            } else {
+                style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top;`;
+                if (featureHexColor) {
+                    const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.1);
+                    style += ` background-color: ${backgroundColorRgba};`;
+                } else {
+                    style += ` background-color: transparent;`;
+                }
+                this.colorCache.set(colorKey, style);
+                this.performanceStats.cacheMisses++;
+            }
+            
+            const className = `base-${base.toLowerCase()}`;
+            const titleAttr = featureTitle ? ` title="${featureTitle}"` : '';
+            fragments.push(`<span class="${className}" style="${style}"${titleAttr}>${base}</span>`);
+        }
+        
+        return fragments.join('');
+    }
+    
+    /**
+     * Optimized gene indicator bar creation
+     */
+    createGeneIndicatorBarOptimized(sequence, lineStartAbs, annotations, operons, charWidth, simplified = false, settings = {}) {
+        // Check if indicators should be shown
+        if (settings.showIndicators === false) {
+            return '<div style="height: 0px;"></div>';
+        }
+        
+        const cacheKey = `indicator:${lineStartAbs}:${sequence.length}:${this.getAnnotationHash(annotations)}`;
+        
+        if (this.svgCache.has(cacheKey)) {
+            this.performanceStats.cacheHits++;
+            return this.svgCache.get(cacheKey);
+        }
+        
+        this.performanceStats.cacheMisses++;
+        
+        const barHeight = settings.indicatorHeight || 8;
+        const lineWidth = sequence.length * charWidth;
+        const lineEndAbs = lineStartAbs + sequence.length;
+        
+        // Pre-filter overlapping genes
+        const overlappingGenes = annotations.filter(gene => {
+            if (gene.start > lineEndAbs || gene.end < lineStartAbs + 1) return false;
+            if (!this.genomeBrowser.shouldShowGeneType(gene.type)) return false;
+            
+            const geneType = gene.type.toLowerCase();
+            if (geneType === 'cds' && settings.showCDS === false) return false;
+            if (['trna', 'rrna', 'mrna'].includes(geneType) && settings.showRNA === false) return false;
+            if (geneType === 'promoter' && settings.showPromoter === false) return false;
+            if (geneType === 'terminator' && settings.showTerminator === false) return false;
+            if (geneType === 'regulatory' && settings.showRegulatory === false) return false;
+            
+            return true;
+        });
+        
+        if (overlappingGenes.length === 0) {
+            const result = `<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;"></svg>`;
+            this.svgCache.set(cacheKey, result);
+            return result;
+        }
+        
+        // Build SVG content
+        const svgParts = [`<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`];
+        
+        overlappingGenes.forEach(gene => {
+            const indicator = this.createGeneIndicator(gene, lineStartAbs, lineEndAbs, charWidth, barHeight, operons, settings);
+            if (indicator) svgParts.push(indicator);
+        });
+        
+        svgParts.push('</svg>');
+        
+        const result = svgParts.join('');
+        this.svgCache.set(cacheKey, result);
+        return result;
+    }
+    
+    /**
+     * Render virtualized sequence for large sequences
+     */
+    renderVirtualizedSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
+        console.log('🔧 [SequenceUtils] Using virtualized rendering for large sequence');
+        
+        const totalLines = Math.ceil(subsequence.length / optimalLineLength);
+        const containerHeight = Math.min(600, totalLines * this.virtualScrolling.lineHeight);
+        
+        // Create virtualized container
+        const virtualContainer = document.createElement('div');
+        virtualContainer.className = 'detailed-sequence-view virtualized';
+        virtualContainer.style.cssText = `
+            height: ${containerHeight}px;
+            overflow-y: auto;
+            position: relative;
+        `;
+        
+        // Info header
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'sequence-info';
+        infoDiv.innerHTML = '<strong>DNA Sequence (colored by features) - Virtualized View:</strong>';
+        virtualContainer.appendChild(infoDiv);
+        
+        // Viewport for visible lines
+        const viewport = document.createElement('div');
+        viewport.className = 'virtual-viewport';
+        viewport.style.cssText = `
+            height: ${totalLines * this.virtualScrolling.lineHeight}px;
+            position: relative;
+        `;
+        
+        // Visible content container
+        const visibleContent = document.createElement('div');
+        visibleContent.className = 'virtual-visible-content';
+        visibleContent.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+        `;
+        
+        viewport.appendChild(visibleContent);
+        virtualContainer.appendChild(viewport);
+        
+        // Initial render
+        this.updateVirtualizedContent(visibleContent, 0, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines);
+        
+        // Scroll handler for virtual scrolling
+        let scrollTimeout;
+        virtualContainer.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const scrollTop = virtualContainer.scrollTop;
+                this.updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines);
+            }, 16); // ~60fps
+        });
+        
+        container.appendChild(virtualContainer);
+        
+        // Add protein translations below
+        this.addProteinTranslations(container, chromosome, subsequence, viewStart, viewStart + subsequence.length, annotations);
+    }
+    
+    /**
+     * Update virtualized content based on scroll position
+     */
+    updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines) {
+        const lineHeight = this.virtualScrolling.lineHeight;
+        const visibleLines = this.virtualScrolling.visibleLines;
+        const bufferLines = this.virtualScrolling.bufferLines;
+        
+        const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
+        const endLine = Math.min(totalLines, startLine + visibleLines + bufferLines * 2);
+        
+        // Clear existing content
+        visibleContent.innerHTML = '';
+        
+        // Render visible lines
+        for (let lineIndex = startLine; lineIndex < endLine; lineIndex++) {
+            const i = lineIndex * optimalLineLength;
+            if (i >= subsequence.length) break;
+            
+            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
+            const lineStartPos = viewStart + i;
+            
+            const lineElement = this.renderSequenceLine(lineSubsequence, lineStartPos, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup);
+            lineElement.style.position = 'absolute';
+            lineElement.style.top = `${lineIndex * lineHeight}px`;
+            lineElement.style.left = '0';
+            lineElement.style.right = '0';
+            
+            visibleContent.appendChild(lineElement);
+        }
+        
+        console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}`);
+    }
+    
+    /**
+     * Add protein translations section
+     */
+    addProteinTranslations(container, chromosome, subsequence, viewStart, viewEnd, annotations) {
         const cdsFeatures = annotations.filter(feature => 
             feature.type === 'CDS' &&
             feature.start <= viewEnd && feature.end >= viewStart &&
             this.genomeBrowser.shouldShowGeneType('CDS')
         );
         
-        if (cdsFeatures.length > 0) {
-            html += '<div class="protein-translations" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;">';
-            html += '<div class="sequence-info"><strong>Protein Translations:</strong></div>';
+        if (cdsFeatures.length === 0) return;
+        
+        const translationsDiv = document.createElement('div');
+        translationsDiv.className = 'protein-translations';
+        translationsDiv.style.cssText = 'margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;';
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'sequence-info';
+        headerDiv.innerHTML = '<strong>Protein Translations:</strong>';
+        translationsDiv.appendChild(headerDiv);
+        
+        cdsFeatures.forEach(cds => {
+            const fullSequence = this.genomeBrowser.currentSequence[chromosome];
+            const dnaForTranslation = fullSequence.substring(cds.start - 1, cds.end);
+            const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
+            const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
             
-            cdsFeatures.forEach(cds => {
-                const cdsDnaStart = Math.max(cds.start, viewStart);
-                const cdsDnaEnd = Math.min(cds.end, viewEnd);
-                const dnaForTranslation = fullSequence.substring(cds.start -1, cds.end);
-
-                const proteinSequence = this.translateDNA(dnaForTranslation, cds.strand);
-                const geneName = cds.qualifiers.gene || cds.qualifiers.locus_tag || 'Unknown';
-                
-                html += `<div class="protein-sequence" style="margin-bottom: 15px;">`;
-                html += `<div class="protein-header" style="font-weight: bold; color: #495057; margin-bottom: 5px;">${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):</div>`;
-                html += `<div class="protein-seq" style="font-family: 'Courier New', monospace; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px; word-break: break-all; line-height: 1.4;">${this.colorizeProteinSequence(proteinSequence)}</div>`;
-                html += `</div>`;
-            });
-            html += '</div>';
-        }
-        html += '</div>';
-        container.innerHTML = html;
-    }
-
-    displaySequenceWithAnnotations(chromosome, fullSequence, viewStart, viewEnd) {
-        const container = document.getElementById('sequenceContent');
-        const subsequence = fullSequence.substring(viewStart, viewEnd);
-        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
-
-        const containerWidth = container.offsetWidth || 800;
-        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
-        const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 30;
-        // Remove upper cap to fill width
-        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
-        
-        // Get sequence track settings
-        const sequenceSettings = this.getSequenceTrackSettings();
-        
-        let html = '';
-        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
-            const lineStartPos = viewStart + i;
-            html += `<div class="sequence-line-group">`;
-            html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons)}</div>`;
-            html += `</div>`;
-            // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings)}</div>`;
-            html += `</div>`;
-        }
-        container.innerHTML = html;
-    }
-
-    displaySequence(chromosome, fullSequence, viewStart, viewEnd) {
-        const container = document.getElementById('sequenceContent');
-        const subsequence = fullSequence.substring(viewStart, viewEnd);
-        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations) : [];
-
-        const containerWidth = container.offsetWidth || 800;
-        const charWidth = this.measureCharacterWidth(container); // Use measured width instead of hardcoded 12
-        const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 30;
-        // Remove upper cap to fill width
-        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
-
-        // Get sequence track settings
-        const sequenceSettings = this.getSequenceTrackSettings();
-
-        let html = '';
-        for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-            const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
-            const lineStartPos = viewStart + i;
-            html += `<div class="sequence-line-group">`;
-            html += `<div class="sequence-line">`;
-            html += `<span class="sequence-position">${(lineStartPos + 1).toLocaleString()}</span>`;
-            html += `<div class="sequence-bases" style="font-family: 'Courier New', monospace; font-size: 14px;">${this.colorizeSequenceWithFeatures(lineSubsequence, lineStartPos, annotations, operons, true)}</div>`;
-            html += `</div>`;
-            // Add gene feature indicator bar below the sequence
-            html += `<div class="gene-indicator-line">${this.createGeneIndicatorBar(lineSubsequence, lineStartPos, annotations, operons, charWidth, true, sequenceSettings)}</div>`;
-            html += `</div>`;
-        }
-        container.innerHTML = html;
-    }
-
-    /**
-     * Create SVG-enhanced sequence display with professional gene feature backgrounds
-     */
-    createSVGEnhancedSequence(sequence, lineStartAbs, annotations, operons, charWidth, lineLength, simplified = false) {
-        const baseFontSize = 14;
-        const lineHeight = 20; // Height for the SVG background layer
-        const lineWidth = sequence.length * charWidth;
-        
-        // Create SVG background layer
-        let svgLayer = `<svg class="sequence-svg-background" style="position: absolute; top: 0; left: 0; width: ${lineWidth}px; height: ${lineHeight}px; z-index: 1; pointer-events: none;">`;
-        
-        // Add definitions for gradients
-        svgLayer += this.createSequenceSVGGradients();
-        svgLayer += '</defs>';
-        
-        // Group features by position to create proper layering
-        const featureSegments = this.createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified);
-        
-        // Draw feature backgrounds as SVG shapes
-        featureSegments.forEach(segment => {
-            if (segment.feature) {
-                const x = segment.startIndex * charWidth;
-                const width = (segment.endIndex - segment.startIndex + 1) * charWidth;
-                svgLayer += this.createSequenceFeatureSVG(segment.feature, x, width, lineHeight, operons);
-            }
+            const proteinDiv = document.createElement('div');
+            proteinDiv.className = 'protein-sequence';
+            proteinDiv.style.marginBottom = '15px';
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'protein-header';
+            headerDiv.style.cssText = 'font-weight: bold; color: #495057; margin-bottom: 5px;';
+            headerDiv.textContent = `${geneName} (${cds.start}-${cds.end}, ${cds.strand === -1 ? '-' : '+'} strand):`;
+            
+            const seqDiv = document.createElement('div');
+            seqDiv.className = 'protein-seq';
+            seqDiv.style.cssText = 'font-family: "Courier New", monospace; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px; word-break: break-all; line-height: 1.4;';
+            seqDiv.innerHTML = this.colorizeProteinSequence(proteinSequence);
+            
+            proteinDiv.appendChild(headerDiv);
+            proteinDiv.appendChild(seqDiv);
+            translationsDiv.appendChild(proteinDiv);
         });
         
-        svgLayer += '</svg>';
-        
-        // Create text layer with sequence bases
-        let textLayer = `<div class="sequence-text-layer" style="position: relative; z-index: 2; font-size: 0;">`;
-        
-        for (let i = 0; i < sequence.length; i++) {
-            const base = sequence[i];
-            const baseTextColor = this.getBaseColor(base);
-            
-            const style = `color: ${baseTextColor}; font-size: ${baseFontSize}px; display: inline-block; padding: 0; margin: 0; vertical-align: top; width: ${charWidth}px; text-align: center;`;
-            textLayer += `<span class="base-${base.toLowerCase()}" style="${style}">${base}</span>`;
-        }
-        
-        textLayer += '</div>';
-        
-        return svgLayer + textLayer;
-    }
-
-    /**
-     * Create feature segments for a sequence line
-     */
-    createFeatureSegments(sequence, lineStartAbs, annotations, operons, simplified = false) {
-        const segments = [];
-        
-        for (let i = 0; i < sequence.length; i++) {
-            const absPos = lineStartAbs + i + 1;
-            let feature = null;
-            
-            if (!simplified) {
-                const overlappingFeatures = annotations.filter(f => 
-                    absPos >= f.start && absPos <= f.end && 
-                    this.genomeBrowser.shouldShowGeneType(f.type)
-                );
-                
-                if (overlappingFeatures.length > 0) {
-                    // Sort by priority
-                    const sortedFeatures = overlappingFeatures.sort((a, b) => {
-                        const typeOrder = { 'CDS': 1, 'mRNA': 2, 'tRNA': 2, 'rRNA': 2, 'promoter': 3, 'terminator': 3, 'regulatory': 3, 'gene': 4 };
-                        return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
-                    });
-                    feature = sortedFeatures[0];
-                }
-            } else {
-                const overlapping = annotations.find(f => absPos >= f.start && absPos <= f.end);
-                if (overlapping) feature = { type: 'simplified', ...overlapping };
-            }
-            
-            segments.push({
-                startIndex: i,
-                endIndex: i,
-                feature: feature
-            });
-        }
-        
-        // Merge consecutive segments with the same feature
-        const mergedSegments = [];
-        let currentSegment = null;
-        
-        segments.forEach(segment => {
-            if (!currentSegment || !this.featuresEqual(currentSegment.feature, segment.feature)) {
-                if (currentSegment) mergedSegments.push(currentSegment);
-                currentSegment = { ...segment };
-            } else {
-                currentSegment.endIndex = segment.endIndex;
-            }
-        });
-        
-        if (currentSegment) mergedSegments.push(currentSegment);
-        
-        return mergedSegments;
-    }
-
-    /**
-     * Check if two features are equal for merging purposes
-     */
-    featuresEqual(feature1, feature2) {
-        if (!feature1 && !feature2) return true;
-        if (!feature1 || !feature2) return false;
-        return feature1.start === feature2.start && 
-               feature1.end === feature2.end && 
-               feature1.type === feature2.type;
-    }
-
-    /**
-     * Create SVG gradients for sequence features
-     */
-    createSequenceSVGGradients() {
-        const gradients = [
-            { id: 'seq-cds-gradient', color1: '#8e44ad', color2: '#a569bd' },
-            { id: 'seq-mrna-gradient', color1: '#16a085', color2: '#48c9b0' },
-            { id: 'seq-trna-gradient', color1: '#27ae60', color2: '#58d68d' },
-            { id: 'seq-rrna-gradient', color1: '#2980b9', color2: '#5dade2' },
-            { id: 'seq-promoter-gradient', color1: '#f1c40f', color2: '#f7dc6f' },
-            { id: 'seq-terminator-gradient', color1: '#d35400', color2: '#ec7063' },
-            { id: 'seq-regulatory-gradient', color1: '#c0392b', color2: '#e74c3c' },
-            { id: 'seq-simplified-gradient', color1: '#95a5a6', color2: '#bdc3c7' }
-        ];
-
-        let defsContent = '';
-        gradients.forEach(gradientDef => {
-            defsContent += `<linearGradient id="${gradientDef.id}" x1="0%" y1="0%" x2="100%" y2="100%">`;
-            defsContent += `<stop offset="0%" stop-color="${gradientDef.color1}" />`;
-            defsContent += `<stop offset="100%" stop-color="${gradientDef.color2}" />`;
-            defsContent += `</linearGradient>`;
-        });
-        
-        return defsContent;
-    }
-
-    /**
-     * Create SVG feature shape for sequence background
-     */
-    createSequenceFeatureSVG(feature, x, width, height, operons) {
-        const operonInfo = this.genomeBrowser.getGeneOperonInfo(feature, operons);
-        const isForward = feature.strand !== -1;
-        const geneType = feature.type.toLowerCase();
-        
-        // Use operon color if available, otherwise use type-specific gradient
-        let fillColor = `url(#seq-${geneType}-gradient)`;
-        if (operonInfo && operonInfo.color) {
-            // Create a subtle background with operon color
-            fillColor = this.hexToRgba(operonInfo.color, 0.3);
-        }
-        
-        let shape = '';
-        const margin = 1; // Small margin to prevent overlap
-        
-        if (geneType === 'promoter') {
-            // Arrow shape for promoters
-            const arrowSize = Math.min(height * 0.3, 4);
-            const direction = isForward ? 1 : -1;
-            shape = `<path d="M ${x + margin} ${margin} 
-                            L ${x + width - arrowSize - margin} ${margin} 
-                            L ${x + width - margin} ${height/2} 
-                            L ${x + width - arrowSize - margin} ${height - margin} 
-                            L ${x + margin} ${height - margin} Z" 
-                            fill="${fillColor}" 
-                            stroke="${this.darkenHexColor(operonInfo?.color || '#f1c40f', 20)}" 
-                            stroke-width="0.5" 
-                            opacity="0.7"/>`;
-        } else if (geneType === 'terminator') {
-            // Rectangle with rounded ends for terminators
-            shape = `<rect x="${x + margin}" y="${margin}" 
-                           width="${width - 2*margin}" height="${height - 2*margin}" 
-                           rx="3" ry="3" 
-                           fill="${fillColor}" 
-                           stroke="${this.darkenHexColor(operonInfo?.color || '#d35400', 20)}" 
-                           stroke-width="0.5" 
-                           opacity="0.7"/>`;
-        } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
-            // Wavy-edged rectangle for RNA types
-            const waveHeight = 2;
-            shape = `<path d="M ${x + margin} ${margin + waveHeight} 
-                            Q ${x + width/4} ${margin} ${x + width/2} ${margin + waveHeight/2}
-                            Q ${x + 3*width/4} ${margin} ${x + width - margin} ${margin + waveHeight}
-                            L ${x + width - margin} ${height - margin - waveHeight}
-                            Q ${x + 3*width/4} ${height - margin} ${x + width/2} ${height - margin - waveHeight/2}
-                            Q ${x + width/4} ${height - margin} ${x + margin} ${height - margin - waveHeight} Z" 
-                            fill="${fillColor}" 
-                            stroke="${this.darkenHexColor(operonInfo?.color || this.getFeatureTypeColor(feature.type), 20)}" 
-                            stroke-width="0.5" 
-                            opacity="0.7"/>`;
-        } else {
-            // Default rectangle for CDS and other features
-            shape = `<rect x="${x + margin}" y="${margin}" 
-                           width="${width - 2*margin}" height="${height - 2*margin}" 
-                           fill="${fillColor}" 
-                           stroke="${this.darkenHexColor(operonInfo?.color || this.getFeatureTypeColor(feature.type), 20)}" 
-                           stroke-width="0.5" 
-                           opacity="0.6"/>`;
-        }
-        
-        // Add feature tooltip
-        const featureTitle = `${feature.qualifiers?.gene || feature.qualifiers?.locus_tag || feature.type} (${feature.start}-${feature.end})`;
-        return `<g title="${featureTitle}">${shape}</g>`;
-    }
-
-    /**
-     * Darken a hex color by a percentage
-     */
-    darkenHexColor(hex, percent) {
-        if (!hex || hex === 'transparent') return '#666666';
-        if (!hex.startsWith('#')) return hex;
-        
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        
-        const factor = (100 - percent) / 100;
-        const newR = Math.round(r * factor);
-        const newG = Math.round(g * factor);
-        const newB = Math.round(b * factor);
-        
-        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-    }
-
-    colorizeSequence(sequence, lineStartAbs, annotations, operons, simplified = false) { // old method, to be replaced by colorizeSequenceWithFeatures
-        return sequence.split('').map((base, index) => {
-            const absPos = lineStartAbs + index + 1; // 1-based absolute position
-            let bgColor = 'transparent';
-            let featureTitle = '';
-
-            if (!simplified) {
-                for (const feature of annotations) {
-                    if (this.genomeBrowser.shouldShowGeneType(feature.type) && absPos >= feature.start && absPos <= feature.end) {
-                        const operonInfo = operons ? this.genomeBrowser.getGeneOperonInfo(feature, operons) : null;
-                        bgColor = operonInfo ? operonInfo.color : '#dddddd'; // Default feature color if no operon
-                        featureTitle = `${feature.qualifiers.gene || feature.qualifiers.locus_tag || feature.type} (${feature.start}-${feature.end})`;
-                        break; 
-                    }
-                }
-            } else {
-                 for (const feature of annotations) {
-                    if (absPos >= feature.start && absPos <= feature.end) {
-                        bgColor = '#e0e0e0'; // Simplified grey for any feature
-                        break;
-                    }
-                }
-            }
-
-            const className = `base-${base.toLowerCase()}`;
-            const style = bgColor !== 'transparent' ? `style="background-color: ${bgColor}; color: ${this.getContrastingTextColor(bgColor)};"` : '';
-            const titleAttr = featureTitle ? `title="${featureTitle}"` : '';
-            return `<span class="${className}" ${style} ${titleAttr}>${base}</span>`;
-        }).join('');
-    }
-
-    colorizeSequenceWithFeatures(sequence, lineStartAbs, annotations, operons, simplified = false) {
-        let html = '';
-        const baseFontSize = '14px'; // Define a base font size to be applied to individual bases
-
-        for (let i = 0; i < sequence.length; i++) {
-            const base = sequence[i];
-            const absPos = lineStartAbs + i + 1; // 1-based absolute position
-            let featureHexColor = null; 
-            let featureTitle = '';
-            const baseTextColor = this.getBaseColor(base); 
-
-            const overlappingFeatures = annotations.filter(f => absPos >= f.start && absPos <= f.end && this.genomeBrowser.shouldShowGeneType(f.type));
-
-            if (overlappingFeatures.length > 0) {
-                const sortedFeatures = overlappingFeatures.sort((a,b) => {
-                    const typeOrder = { 'CDS': 1, 'mRNA': 2, 'tRNA': 2, 'rRNA': 2, 'promoter': 3, 'terminator': 3, 'regulatory': 3, 'gene': 4 };
-                    return (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
-                });
-                const mainFeature = sortedFeatures[0];
-                const operonInfo = operons && mainFeature.type !== 'promoter' && mainFeature.type !== 'terminator' ? this.genomeBrowser.getGeneOperonInfo(mainFeature, operons) : null;
-                featureHexColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(mainFeature.type);
-                featureTitle = `${mainFeature.qualifiers.gene || mainFeature.qualifiers.locus_tag || mainFeature.type} (${mainFeature.start}-${mainFeature.end})`;
-            }
-
-            let style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top;`; // Reset font-size, ensure no gaps
-            if (featureHexColor) {
-                const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.1);
-                style += ` background-color: ${backgroundColorRgba};`;
-            } else {
-                style += ` background-color: transparent;`;
-            }
-
-            const className = `base-${base.toLowerCase()}`;
-            const titleAttr = featureTitle ? `title="${featureTitle}"` : '';
-            html += `<span class="${className}" style="${style}" ${titleAttr}>${base}</span>`;
-        }
-        return html;
-    }
-
-    getBaseColor(base) {
-        switch (base.toUpperCase()) {
-            case 'A': return '#2ecc71'; // Green
-            case 'T': return '#e74c3c'; // Red
-            case 'G': return '#f39c12'; // Orange
-            case 'C': return '#3498db'; // Blue
-            default: return '#7f8c8d'; // Grey for N etc.
-        }
-    }
-
-    getFeatureTypeColor(type) {
-        // Provide default colors for feature types if not in operon
-        switch (type) {
-            case 'CDS': return '#8e44ad'; // Purple
-            case 'mRNA': return '#16a085'; // Teal
-            case 'tRNA': return '#27ae60'; // Green variant
-            case 'rRNA': return '#2980b9'; // Blue variant
-            case 'promoter': return '#f1c40f'; // Yellow
-            case 'terminator': return '#d35400'; // Orange-Red
-            case 'regulatory': return '#c0392b'; // Dark Red
-            case 'gene': return '#bdc3c7'; // Light grey for general gene features
-            default: return '#95a5a6'; // Default grey for other features
-        }
-    }
-
-    getContrastingTextColor(backgroundColor) {
-        if (!backgroundColor || backgroundColor === 'transparent') return '#333333'; // Default text color if no background
-        const color = (backgroundColor.charAt(0) === '#') ? backgroundColor.substring(1, 7) : backgroundColor;
-        const r = parseInt(color.substring(0, 2), 16); // hexToR
-        const g = parseInt(color.substring(2, 4), 16); // hexToG
-        const b = parseInt(color.substring(4, 6), 16); // hexToB
-        const uicolors = [r / 255, g / 255, b / 255];
-        const c = uicolors.map((col) => {
-            if (col <= 0.03928) {
-                return col / 12.92;
-            }
-            return Math.pow((col + 0.055) / 1.055, 2.4);
-        });
-        const L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
-        return (L > 0.179) ? '#000000' : '#FFFFFF';
-    }
-
-    // Add back the colorizeProteinSequence method
-    colorizeProteinSequence(sequence) {
-        const aaColors = {
-            'A': '#ff6b6b', 'R': '#4ecdc4', 'N': '#45b7d1', 'D': '#f9ca24',
-            'C': '#f0932b', 'Q': '#eb4d4b', 'E': '#6c5ce7', 'G': '#a29bfe',
-            'H': '#fd79a8', 'I': '#00b894', 'L': '#00cec9', 'K': '#0984e3',
-            'M': '#e17055', 'F': '#81ecec', 'P': '#fab1a0', 'S': '#00b894',
-            'T': '#55a3ff', 'W': '#fd79a8', 'Y': '#fdcb6e', 'V': '#6c5ce7',
-            '*': '#2d3436'
-        };
-        
-        return sequence.split('').map(aa => {
-            const color = aaColors[aa] || '#74b9ff';
-            return `<span style="color: ${color}; font-weight: bold;">${aa}</span>`;
-        }).join('');
-    }
-
-    // Helper function to convert hex color to RGBA
-    hexToRgba(hex, alpha) {
-        if (!hex) return 'transparent'; // Fallback for safety
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-
-        if (typeof alpha === 'number' && alpha >= 0 && alpha <= 1) {
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-        return `rgb(${r}, ${g}, ${b})`; // Fallback to RGB if alpha is invalid
+        container.appendChild(translationsDiv);
     }
 
     // Biological utilities
@@ -1251,7 +1341,7 @@ class SequenceUtils {
                                fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
             }
         } else if (geneType === 'terminator') {
-            // Rounded rectangle for terminator
+            // Rectangle with rounded ends for terminator
             shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" rx="3" ry="3" 
                            fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         } else if (['trna', 'rrna', 'mrna'].includes(geneType)) {
@@ -1264,7 +1354,7 @@ class SequenceUtils {
                             L ${x} ${height - 3} Z" 
                             fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         } else {
-            // Simple rectangle for CDS and others
+            // Default rectangle for CDS and others
             shape = `<rect x="${x}" y="3" width="${width}" height="${height - 6}" 
                            fill="${color}" opacity="${opacity}" ${tooltipAttr} class="${hoverClass}"/>`;
         }
@@ -1375,6 +1465,62 @@ class SequenceUtils {
             showRegulatory: true,
             showTooltips: true,
             showHoverEffects: true
+        };
+    }
+
+    /**
+     * Clear all performance caches
+     */
+    clearRenderCache() {
+        this.renderCache.clear();
+        this.featureCache.clear();
+        this.colorCache.clear();
+        this.svgCache.clear();
+        console.log('🔧 [SequenceUtils] Performance caches cleared');
+    }
+    
+    /**
+     * Get cache key for sequence line
+     */
+    getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome) {
+        return `${chromosome}:${lineStartPos}:${lineSubsequence.length}:${lineSubsequence.substring(0, 10)}`;
+    }
+    
+    /**
+     * Check if render parameters have changed significantly
+     */
+    shouldInvalidateCache(chromosome, viewStart, viewEnd, annotations) {
+        if (!this.lastRenderParams) return true;
+        
+        const params = this.lastRenderParams;
+        return (
+            params.chromosome !== chromosome ||
+            params.viewStart !== viewStart ||
+            params.viewEnd !== viewEnd ||
+            params.annotationCount !== annotations.length ||
+            params.annotationHash !== this.getAnnotationHash(annotations)
+        );
+    }
+    
+    /**
+     * Get simple hash for annotations to detect changes
+     */
+    getAnnotationHash(annotations) {
+        if (!annotations || annotations.length === 0) return '0';
+        return annotations.length + ':' + annotations.slice(0, 3).map(a => `${a.start}-${a.end}-${a.type}`).join(',');
+    }
+    
+    /**
+     * Update last render parameters
+     */
+    updateLastRenderParams(chromosome, viewStart, viewEnd, annotations) {
+        this.lastRenderParams = {
+            chromosome,
+            viewStart,
+            viewEnd,
+            annotationCount: annotations.length,
+            annotationHash: this.getAnnotationHash(annotations),
+            timestamp: Date.now()
         };
     }
 }

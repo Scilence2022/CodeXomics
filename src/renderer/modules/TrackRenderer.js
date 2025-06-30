@@ -5496,7 +5496,8 @@ class TrackRenderer {
         
         // Special handling for sequence track VSCodeSequenceEditor
         if (trackType === 'sequence' && this.genomeBrowser.sequenceUtils && this.genomeBrowser.sequenceUtils.vscodeEditor) {
-            console.log('Applying sequence settings to VSCodeSequenceEditor...');
+            console.log('🔧 [TrackRenderer] Applying sequence settings to VSCodeSequenceEditor...');
+            console.log('🔧 [TrackRenderer] Settings to apply:', settings);
             this.applySequenceSettingsToVSCodeEditor(settings);
         }
         
@@ -5514,9 +5515,12 @@ class TrackRenderer {
     applySequenceSettingsToVSCodeEditor(settings) {
         const vscodeEditor = this.genomeBrowser.sequenceUtils.vscodeEditor;
         if (!vscodeEditor) {
-            console.warn('VSCodeSequenceEditor not available for settings application');
+            console.warn('⚠️ [TrackRenderer] VSCodeSequenceEditor not available for settings application');
             return;
         }
+        
+        console.log('🔧 [TrackRenderer] Mapping settings for VSCodeSequenceEditor...');
+        console.log('🔧 [TrackRenderer] editorUseGeneColors from settings:', settings.editorUseGeneColors);
         
         // Map TrackRenderer settings to VSCodeSequenceEditor settings
         const editorSettings = {
@@ -5571,8 +5575,14 @@ class TrackRenderer {
             showFrames: settings.editorShowFrames === true
         };
         
-        console.log('Applying VSCodeSequenceEditor settings:', editorSettings);
+        console.log('📤 [TrackRenderer] Applying VSCodeSequenceEditor settings:', editorSettings);
+        console.log('📤 [TrackRenderer] Key setting - useGeneColors:', editorSettings.useGeneColors);
         vscodeEditor.updateSettings(editorSettings);
+        
+        // Verify settings were applied
+        setTimeout(() => {
+            console.log('✅ [TrackRenderer] VSCodeSequenceEditor settings after update:', vscodeEditor.settings.useGeneColors);
+        }, 100);
     }
 
     /**

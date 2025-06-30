@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene-Based Coloring Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .success { color: #4CAF50; }
+        .warning { color: #FF9800; }
+        .error { color: #f44336; }
+        .info { color: #2196F3; }
+        .btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover { background: #005a9e; }
+        .btn-warning { background: #FF9800; }
+        .btn-success { background: #4CAF50; }
+        .btn-danger { background: #f44336; }
+        
+        .editor-container {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            height: 400px;
+            margin: 10px 0;
+            position: relative;
+            background: #1e1e1e;
+        }
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .setting-group {
+            margin: 10px 0;
+        }
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .setting-group input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Gene-Based Coloring Fix Test</h1>
+            <p>Testing and fixing the Gene-Based Coloring functionality in Edit Mode</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <button class="btn" onclick="initializeTest()">Initialize Test Environment</button>
+            <button class="btn btn-warning" onclick="testGeneBasedColoring()">Test Gene-Based Coloring</button>
+            <button class="btn btn-success" onclick="applyTestSettings()">Apply Test Settings</button>
+            <button class="btn btn-danger" onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Settings Panel</h3>
+            <div class="settings-panel">
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="useGeneColorsCheckbox"> 
+                        Use Gene-Based Coloring
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label>CDS Color:</label>
+                    <input type="color" id="cdsColor" value="#4CAF50">
+                    <span class="color-preview" id="cdsPreview"></span>
+                </div>
+                <div class="setting-group">
+                    <label>RNA Color:</label>
+                    <input type="color" id="rnaColor" value="#2196F3">
+                    <span class="color-preview" id="rnaPreview"></span>
+                </div>
+                <div class="setting-group">
+                    <label>Promoter Color:</label>
+                    <input type="color" id="promoterColor" value="#FF9800">
+                    <span class="color-preview" id="promoterPreview"></span>
+                </div>
+                <div class="setting-group">
+                    <label>Intergenic Color:</label>
+                    <input type="color" id="intergenicColor" value="#9E9E9E">
+                    <span class="color-preview" id="intergenicPreview"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Mock Editor</h3>
+            <div class="editor-container" id="mockEditor">
+                <!-- Mock editor content will be inserted here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Log</h3>
+            <div class="log" id="testLog"></div>
+        </div>
+    </div>
+
+    <script>
+        let mockEditor = null;
+        let testSequence = 'ATGCGATCGATCGTAGCTAGCTAGATGCGATCGATCGTAGCTAGCTAG';
+        let mockAnnotations = [
+            { start: 1, end: 15, type: 'CDS', qualifiers: { gene: 'testGene1' } },
+            { start: 20, end: 30, type: 'tRNA', qualifiers: { gene: 'testRNA1' } },
+            { start: 35, end: 45, type: 'promoter', qualifiers: { gene: 'testPromoter1' } }
+        ];
+
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type;
+            logElement.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+        }
+
+        // Mock VSCodeSequenceEditor class for testing
+        class MockVSCodeSequenceEditor {
+            constructor(container) {
+                this.container = container;
+                this.sequence = testSequence;
+                this.annotations = mockAnnotations;
+                this.viewStart = 0;
+                this.viewEnd = testSequence.length;
+                this.settings = {
+                    useGeneColors: false,
+                    geneColors: {
+                        cds: '#4CAF50',
+                        rna: '#2196F3',
+                        promoter: '#FF9800',
+                        terminator: '#F44336',
+                        regulatory: '#9C27B0',
+                        intergenic: '#9E9E9E'
+                    },
+                    baseColors: {
+                        a: '#f92672',
+                        t: '#66d9ef',
+                        g: '#a6e22e',
+                        c: '#fd971f',
+                        n: '#75715e'
+                    }
+                };
+                this.render();
+            }
+
+            updateSettings(newSettings) {
+                log(`🔧 UpdateSettings called with: ${JSON.stringify(newSettings)}`, 'info');
+                this.settings = { ...this.settings, ...newSettings };
+                log(`📝 New settings applied: useGeneColors=${this.settings.useGeneColors}`, 'success');
+                this.render();
+            }
+
+            getFeatureAtPosition(position) {
+                return this.annotations.filter(feature => 
+                    position >= feature.start && position <= feature.end
+                );
+            }
+
+            getGeneColor(featureType) {
+                const typeMapping = {
+                    'cds': 'cds',
+                    'gene': 'cds',
+                    'trna': 'rna',
+                    'rrna': 'rna',
+                    'mrna': 'rna',
+                    'rna': 'rna',
+                    'promoter': 'promoter',
+                    'terminator': 'terminator',
+                    'regulatory': 'regulatory'
+                };
+                
+                const colorKey = typeMapping[featureType.toLowerCase()] || 'intergenic';
+                return this.settings.geneColors[colorKey] || this.settings.geneColors.intergenic;
+            }
+
+            render() {
+                this.container.innerHTML = '';
+                
+                // Create sequence line
+                const sequenceLine = document.createElement('div');
+                sequenceLine.style.cssText = `
+                    font-family: 'Courier New', monospace;
+                    font-size: 14px;
+                    line-height: 20px;
+                    padding: 10px;
+                    background: #1e1e1e;
+                    color: #d4d4d4;
+                    height: 100%;
+                    overflow: auto;
+                `;
+
+                // Create position numbers
+                const positionLine = document.createElement('div');
+                positionLine.style.cssText = `
+                    color: #858585;
+                    font-size: 12px;
+                    margin-bottom: 5px;
+                `;
+                let positionText = '';
+                for (let i = 0; i < this.sequence.length; i += 10) {
+                    positionText += (i + 1).toString().padEnd(10, ' ');
+                }
+                positionLine.textContent = positionText;
+                sequenceLine.appendChild(positionLine);
+
+                // Create sequence with coloring
+                const sequenceDiv = document.createElement('div');
+                let sequenceHTML = '';
+                
+                for (let i = 0; i < this.sequence.length; i++) {
+                    const base = this.sequence[i];
+                    const position = i + 1; // 1-based position
+                    const features = this.getFeatureAtPosition(position);
+                    
+                    let color;
+                    if (this.settings.useGeneColors && features.length > 0) {
+                        // Use gene-based coloring
+                        const primaryFeature = features[0];
+                        color = this.getGeneColor(primaryFeature.type);
+                        // Only log occasionally to avoid spam
+                        if (i % 10 === 0) {
+                            log(`🎨 Position ${position}: Using gene color ${color} for ${primaryFeature.type}`, 'info');
+                        }
+                    } else {
+                        // Use nucleotide-based coloring
+                        color = this.settings.baseColors[base.toLowerCase()] || this.settings.baseColors.n;
+                    }
+                    
+                    sequenceHTML += `<span style="color: ${color}; background: ${features.length > 0 ? 'rgba(255,255,255,0.1)' : 'transparent'}">${base}</span>`;
+                }
+                
+                sequenceDiv.innerHTML = sequenceHTML;
+                sequenceLine.appendChild(sequenceDiv);
+
+                // Add feature legend
+                const legendDiv = document.createElement('div');
+                legendDiv.style.cssText = `
+                    margin-top: 10px;
+                    padding-top: 10px;
+                    border-top: 1px solid #444;
+                    font-size: 12px;
+                    color: #aaa;
+                `;
+                legendDiv.innerHTML = `
+                    <div>Features: CDS (1-15), tRNA (20-30), Promoter (35-45)</div>
+                    <div>Gene Coloring: ${this.settings.useGeneColors ? 'ON' : 'OFF'}</div>
+                `;
+                sequenceLine.appendChild(legendDiv);
+
+                this.container.appendChild(sequenceLine);
+            }
+        }
+
+        // Mock TrackRenderer methods for testing
+        class MockTrackRenderer {
+            constructor() {
+                this.trackSettings = {};
+            }
+
+            applySequenceSettingsToVSCodeEditor(settings) {
+                log(`🔧 applySequenceSettingsToVSCodeEditor called`, 'info');
+                log(`   - editorUseGeneColors: ${settings.editorUseGeneColors}`, 'info');
+                
+                if (!mockEditor) {
+                    log('❌ No VSCodeSequenceEditor instance available', 'error');
+                    return;
+                }
+
+                // Map TrackRenderer settings to VSCodeSequenceEditor settings
+                const editorSettings = {
+                    useGeneColors: settings.editorUseGeneColors || false,
+                    geneColors: {
+                        cds: settings.editorGeneColorCDS || '#4CAF50',
+                        rna: settings.editorGeneColorRNA || '#2196F3',
+                        promoter: settings.editorGeneColorPromoter || '#FF9800',
+                        terminator: settings.editorGeneColorTerminator || '#F44336',
+                        regulatory: settings.editorGeneColorRegulatory || '#9C27B0',
+                        intergenic: settings.editorGeneColorIntergenic || '#9E9E9E'
+                    }
+                };
+
+                log(`📤 Applying editor settings: useGeneColors=${editorSettings.useGeneColors}`, 'success');
+                mockEditor.updateSettings(editorSettings);
+            }
+
+            collectSettingsFromModal() {
+                // Simulate collecting settings from the UI
+                const settings = {
+                    editorUseGeneColors: document.getElementById('useGeneColorsCheckbox').checked,
+                    editorGeneColorCDS: document.getElementById('cdsColor').value,
+                    editorGeneColorRNA: document.getElementById('rnaColor').value,
+                    editorGeneColorPromoter: document.getElementById('promoterColor').value,
+                    editorGeneColorIntergenic: document.getElementById('intergenicColor').value
+                };
+
+                log(`📋 Collected settings: useGeneColors=${settings.editorUseGeneColors}`, 'info');
+                return settings;
+            }
+        }
+
+        let mockTrackRenderer = null;
+
+        function initializeTest() {
+            log('🚀 Initializing test environment...', 'info');
+            
+            // Create mock editor
+            const editorContainer = document.getElementById('mockEditor');
+            mockEditor = new MockVSCodeSequenceEditor(editorContainer);
+            log('✅ Mock VSCodeSequenceEditor created', 'success');
+            
+            // Create mock track renderer
+            mockTrackRenderer = new MockTrackRenderer();
+            log('✅ Mock TrackRenderer created', 'success');
+            
+            // Setup UI event listeners
+            setupUIEventListeners();
+            log('✅ UI event listeners setup', 'success');
+            
+            // Update color previews
+            updateColorPreviews();
+            log('✅ Test environment initialized successfully', 'success');
+        }
+
+        function setupUIEventListeners() {
+            // Color input change handlers
+            ['cdsColor', 'rnaColor', 'promoterColor', 'intergenicColor'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateColorPreviews);
+            });
+            
+            // Checkbox change handler
+            document.getElementById('useGeneColorsCheckbox').addEventListener('change', function() {
+                log(`🔄 Gene coloring checkbox changed to: ${this.checked}`, 'info');
+            });
+        }
+
+        function updateColorPreviews() {
+            document.getElementById('cdsPreview').style.backgroundColor = document.getElementById('cdsColor').value;
+            document.getElementById('rnaPreview').style.backgroundColor = document.getElementById('rnaColor').value;
+            document.getElementById('promoterPreview').style.backgroundColor = document.getElementById('promoterColor').value;
+            document.getElementById('intergenicPreview').style.backgroundColor = document.getElementById('intergenicColor').value;
+        }
+
+        function testGeneBasedColoring() {
+            log('🧪 Testing Gene-Based Coloring functionality...', 'warning');
+            
+            if (!mockEditor || !mockTrackRenderer) {
+                log('❌ Test environment not initialized. Please click "Initialize Test Environment" first.', 'error');
+                return;
+            }
+            
+            // Test 1: Check if useGeneColors setting is properly applied
+            log('📝 Test 1: Checking useGeneColors setting application...', 'info');
+            
+            // Enable gene colors via UI
+            document.getElementById('useGeneColorsCheckbox').checked = true;
+            
+            // Simulate settings collection and application
+            const settings = mockTrackRenderer.collectSettingsFromModal();
+            mockTrackRenderer.applySequenceSettingsToVSCodeEditor(settings);
+            
+            // Verify if gene coloring is active
+            if (mockEditor.settings.useGeneColors) {
+                log('✅ Test 1 PASSED: Gene coloring is now active', 'success');
+            } else {
+                log('❌ Test 1 FAILED: Gene coloring is not active despite settings', 'error');
+            }
+            
+            // Test 2: Check color mapping
+            log('📝 Test 2: Checking gene color mapping...', 'info');
+            const cdsColor = mockEditor.getGeneColor('CDS');
+            const expectedCdsColor = document.getElementById('cdsColor').value;
+            
+            if (cdsColor === expectedCdsColor) {
+                log(`✅ Test 2 PASSED: CDS color correctly mapped (${cdsColor})`, 'success');
+            } else {
+                log(`❌ Test 2 FAILED: CDS color mismatch. Expected: ${expectedCdsColor}, Got: ${cdsColor}`, 'error');
+            }
+            
+            // Test 3: Check feature detection
+            log('📝 Test 3: Checking feature detection...', 'info');
+            const featuresAt10 = mockEditor.getFeatureAtPosition(10);
+            if (featuresAt10.length > 0) {
+                log(`✅ Test 3 PASSED: Found ${featuresAt10.length} feature(s) at position 10`, 'success');
+            } else {
+                log('❌ Test 3 FAILED: No features found at position 10 (should be in CDS)', 'error');
+            }
+            
+            log('🎯 Gene-Based Coloring test completed', 'warning');
+        }
+
+        function applyTestSettings() {
+            if (!mockEditor || !mockTrackRenderer) {
+                log('❌ Test environment not initialized', 'error');
+                return;
+            }
+            
+            log('⚙️ Applying test settings...', 'warning');
+            const settings = mockTrackRenderer.collectSettingsFromModal();
+            mockTrackRenderer.applySequenceSettingsToVSCodeEditor(settings);
+            log('✅ Test settings applied successfully', 'success');
+        }
+
+        // Initialize color previews on load
+        window.addEventListener('load', function() {
+            updateColorPreviews();
+            log('🌟 Gene-Based Coloring Fix Test loaded successfully', 'success');
+            log('📝 Click "Initialize Test Environment" to start testing', 'info');
+        });
+    </script>
+</body>
+</html> 

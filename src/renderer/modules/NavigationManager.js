@@ -573,6 +573,11 @@ class NavigationManager {
         // Update all detailed rulers after re-render
         this.updateDetailedRulers();
         
+        // Dispatch custom drag end event for performance optimization
+        document.dispatchEvent(new CustomEvent('genomeViewDragEnd', {
+            detail: { chromosome, finalPosition: this.genomeBrowser.currentPosition }
+        }));
+        
         console.log('🔧 [DRAG-END] Re-render completed');
         console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
     }
@@ -622,6 +627,12 @@ class NavigationManager {
             this.cacheOriginalTransforms(element);
             
             document.body.style.userSelect = 'none';
+            
+            // Dispatch custom drag start event for performance optimization
+            document.dispatchEvent(new CustomEvent('genomeViewDragStart', {
+                detail: { chromosome, element }
+            }));
+            
             e.preventDefault();
         };
 
