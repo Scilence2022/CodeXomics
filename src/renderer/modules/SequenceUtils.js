@@ -512,21 +512,28 @@ class SequenceUtils {
             return this._cachedCharWidth;
         }
         
-        // Create a temporary element to measure character width
+        // Create a temporary element to measure character width with exact same styles as sequence
         const testElement = document.createElement('span');
-        testElement.textContent = 'ATCG'; // Use representative DNA bases
+        testElement.textContent = 'ATCGATCGATCGATCG'; // Use longer string for more accurate measurement
         testElement.style.fontFamily = "'Courier New', monospace";
         testElement.style.fontSize = '14px';
-        testElement.style.fontWeight = '600';
+        testElement.style.fontWeight = 'normal'; // Match sequence base styling
+        testElement.style.display = 'inline-block';
+        testElement.style.padding = '0';
+        testElement.style.margin = '0';
+        testElement.style.verticalAlign = 'top';
         testElement.style.visibility = 'hidden';
         testElement.style.position = 'absolute';
         testElement.style.whiteSpace = 'nowrap';
         
         container.appendChild(testElement);
-        const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
+        const measuredWidth = testElement.getBoundingClientRect().width / 16; // More accurate with getBoundingClientRect
         container.removeChild(testElement);
         
-        this._cachedCharWidth = 9.5; //width; //Math.ceil(width); // Round up to be conservative and cache result
+        // Use measured width instead of hardcoded value for better accuracy
+        this._cachedCharWidth = Math.max(8, measuredWidth); // Ensure minimum width
+        console.log('🔧 [SequenceUtils] Measured character width:', this._cachedCharWidth, 'px');
+        
         return this._cachedCharWidth;
     }
 
@@ -747,10 +754,14 @@ class SequenceUtils {
         sequenceLine.appendChild(positionSpan);
         sequenceLine.appendChild(basesDiv);
         
-        // Gene indicator line
+        // Gene indicator line with improved alignment
         const indicatorLine = document.createElement('div');
         indicatorLine.className = 'gene-indicator-line';
-        indicatorLine.style.cssText = 'height: 12px; margin-left: 115px; margin-bottom: 4px;';
+        // Fix: Adjust margin-left to account for position label width + margin + horizontal offset
+        // Position span: 100px width + 15px margin-right = 115px
+        // Add 0.8 * charWidth offset to align with sequence bases
+        const indicatorMarginLeft = 115 + (0.8 * charWidth);
+        indicatorLine.style.cssText = `height: 12px; margin-left: ${indicatorMarginLeft}px; margin-bottom: 4px; margin-top: -2px;`;
         indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
         
         lineGroup.appendChild(sequenceLine);
@@ -856,7 +867,8 @@ class SequenceUtils {
             return result;
         }
         
-        // Build SVG content
+        // Build SVG content with improved positioning
+        // Note: The horizontal offset is already applied in createGeneIndicator, so SVG margin stays at 0
         const svgParts = [`<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`];
         
         overlappingGenes.forEach(gene => {
@@ -1259,13 +1271,16 @@ class SequenceUtils {
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
         const geneColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type);
         
-        // Calculate positions relative to the sequence line
+        // Calculate positions relative to the sequence line with improved alignment
+        // Fix: Adjust for 1-based to 0-based conversion and add horizontal offset
         const geneStartInLine = Math.max(gene.start, lineStartAbs + 1) - lineStartAbs - 1;
         const geneEndInLine = Math.min(gene.end, lineEndAbs) - lineStartAbs - 1;
         
-        // Convert to pixel positions
-        const startX = geneStartInLine * charWidth;
-        const endX = (geneEndInLine + 1) * charWidth;
+        // Convert to pixel positions with alignment correction
+        // Fix: Add 0.8 character offset to align with DNA sequence (left shift)
+        const horizontalOffset = -0.8 * charWidth; // Left shift by 0.8 characters
+        const startX = geneStartInLine * charWidth + horizontalOffset;
+        const endX = (geneEndInLine + 1) * charWidth + horizontalOffset;
         const width = endX - startX;
         
         if (width <= 0) return '';
