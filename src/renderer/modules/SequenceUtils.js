@@ -512,28 +512,21 @@ class SequenceUtils {
             return this._cachedCharWidth;
         }
         
-        // Create a temporary element to measure character width with exact same styles as sequence
+        // Create a temporary element to measure character width
         const testElement = document.createElement('span');
-        testElement.textContent = 'ATCGATCGATCGATCG'; // Use longer string for more accurate measurement
+        testElement.textContent = 'ATCG'; // Use representative DNA bases
         testElement.style.fontFamily = "'Courier New', monospace";
         testElement.style.fontSize = '14px';
-        testElement.style.fontWeight = 'normal'; // Match sequence base styling
-        testElement.style.display = 'inline-block';
-        testElement.style.padding = '0';
-        testElement.style.margin = '0';
-        testElement.style.verticalAlign = 'top';
+        testElement.style.fontWeight = '600';
         testElement.style.visibility = 'hidden';
         testElement.style.position = 'absolute';
         testElement.style.whiteSpace = 'nowrap';
         
         container.appendChild(testElement);
-        const measuredWidth = testElement.getBoundingClientRect().width / 16; // More accurate with getBoundingClientRect
+        const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
         container.removeChild(testElement);
         
-        // Use measured width instead of hardcoded value for better accuracy
-        this._cachedCharWidth = Math.max(8, measuredWidth); // Ensure minimum width
-        console.log('🔧 [SequenceUtils] Measured character width:', this._cachedCharWidth, 'px');
-        
+        this._cachedCharWidth = 9.5; //width; //Math.ceil(width); // Round up to be conservative and cache result
         return this._cachedCharWidth;
     }
 
@@ -754,14 +747,18 @@ class SequenceUtils {
         sequenceLine.appendChild(positionSpan);
         sequenceLine.appendChild(basesDiv);
         
-        // Gene indicator line with improved alignment
+        // Gene indicator line - calculate precise alignment
         const indicatorLine = document.createElement('div');
         indicatorLine.className = 'gene-indicator-line';
-        // Fix: Adjust margin-left to account for position label width + margin + horizontal offset
-        // Position span: 100px width + 15px margin-right = 115px
-        // Add 0.8 * charWidth offset to align with sequence bases
-        const indicatorMarginLeft = 115 + (0.8 * charWidth);
-        indicatorLine.style.cssText = `height: 12px; margin-left: ${indicatorMarginLeft}px; margin-bottom: 4px; margin-top: -2px;`;
+        // Calculate exact left margin to align with sequence bases
+        const positionWidth = 100; // position span width
+        const marginRight = 15;    // margin-right of position span
+        const alignmentOffset = positionWidth + marginRight;
+        // Add horizontal offset to compensate for character centering (~0.8 characters)
+        const horizontalAdjustment = charWidth * 0.8;
+        const finalLeftMargin = alignmentOffset - horizontalAdjustment;
+        
+        indicatorLine.style.cssText = `height: 12px; margin-left: ${finalLeftMargin}px; margin-bottom: 2px; margin-top: -2px;`;
         indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
         
         lineGroup.appendChild(sequenceLine);
@@ -867,8 +864,7 @@ class SequenceUtils {
             return result;
         }
         
-        // Build SVG content with improved positioning
-        // Note: The horizontal offset is already applied in createGeneIndicator, so SVG margin stays at 0
+        // Build SVG content
         const svgParts = [`<svg class="gene-indicator-svg" style="width: ${lineWidth}px; height: ${barHeight}px; margin-left: 0;">`];
         
         overlappingGenes.forEach(gene => {
@@ -1271,16 +1267,28 @@ class SequenceUtils {
         const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
         const geneColor = operonInfo ? operonInfo.color : this.getFeatureTypeColor(gene.type);
         
-        // Calculate positions relative to the sequence line with improved alignment
-        // Fix: Adjust for 1-based to 0-based conversion and add horizontal offset
-        const geneStartInLine = Math.max(gene.start, lineStartAbs + 1) - lineStartAbs - 1;
-        const geneEndInLine = Math.min(gene.end, lineEndAbs) - lineStartAbs - 1;
+        // Calculate positions relative to the sequence line with precise alignment
+        // Gene coordinates are 1-based, sequence display is 0-based
+        // lineStartAbs is 0-based position of the first character in the line
         
-        // Convert to pixel positions with alignment correction
-        // Fix: Add 0.8 character offset to align with DNA sequence (left shift)
-        const horizontalOffset = -0.8 * charWidth; // Left shift by 0.8 characters
-        const startX = geneStartInLine * charWidth + horizontalOffset;
-        const endX = (geneEndInLine + 1) * charWidth + horizontalOffset;
+        // Calculate the actual start and end positions within this line
+        const geneStart1Based = gene.start;
+        const geneEnd1Based = gene.end;
+        const lineStart1Based = lineStartAbs + 1; // Convert to 1-based
+        const lineEnd1Based = lineEndAbs;         // lineEndAbs is already 1-based equivalent
+        
+        // Find the portion of the gene that overlaps with this line
+        const visibleStart1Based = Math.max(geneStart1Based, lineStart1Based);
+        const visibleEnd1Based = Math.min(geneEnd1Based, lineEnd1Based);
+        
+        // Convert to 0-based positions relative to the start of this line
+        const geneStartInLine = visibleStart1Based - lineStart1Based;
+        const geneEndInLine = visibleEnd1Based - lineStart1Based;
+        
+        // Convert to pixel positions with character centering
+        // Add 0.5 * charWidth to center the indicator on the character
+        const startX = geneStartInLine * charWidth + (charWidth * 0.5);
+        const endX = (geneEndInLine + 1) * charWidth + (charWidth * 0.5);
         const width = endX - startX;
         
         if (width <= 0) return '';
@@ -1297,7 +1305,7 @@ class SequenceUtils {
         // For reverse genes: start marker at right, end arrow at left
         if (isForward) {
             // Start marker (vertical line) - only if gene actually starts in this line and enabled
-            if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+            if (settings.showStartMarkers !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
                 const markerWidth = settings.startMarkerWidth || 6;
                 const markerHeightPercent = settings.startMarkerHeight || 200;
                 const markerHeight = (barHeight * markerHeightPercent / 100);
@@ -1308,13 +1316,13 @@ class SequenceUtils {
             }
             
             // End marker (arrow) - only if gene actually ends in this line and enabled
-            if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+            if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
                 indicator += this.createGeneEndArrow(endX, barHeight, geneColor, isForward, gene, settings);
             }
         } else {
             // For reverse genes: start marker at right (gene's actual start), end arrow at left (transcription direction)
             // Start marker (vertical line) - only if gene actually starts in this line and enabled
-            if (settings.showStartMarkers !== false && gene.start >= lineStartAbs + 1 && gene.start <= lineEndAbs) {
+            if (settings.showStartMarkers !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
                 const markerWidth = settings.startMarkerWidth || 6;
                 const markerHeightPercent = settings.startMarkerHeight || 200;
                 const markerHeight = (barHeight * markerHeightPercent / 100);
@@ -1326,7 +1334,7 @@ class SequenceUtils {
             }
             
             // End marker (arrow) - only if gene actually ends in this line and enabled
-            if (settings.showEndArrows !== false && gene.end >= lineStartAbs + 1 && gene.end <= lineEndAbs) {
+            if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
                 // For reverse genes, the end arrow should be at the LEFT end (transcription direction)
                 indicator += this.createGeneEndArrow(startX, barHeight, geneColor, isForward, gene, settings);
             }
