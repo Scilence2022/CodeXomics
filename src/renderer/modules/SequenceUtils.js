@@ -1523,6 +1523,108 @@ class SequenceUtils {
             timestamp: Date.now()
         };
     }
+
+    // Color and styling utility methods
+    
+    /**
+     * Get color for DNA base
+     */
+    getBaseColor(base) {
+        const colors = {
+            'A': '#FF6B6B', // Red
+            'T': '#4ECDC4', // Teal
+            'G': '#45B7D1', // Blue
+            'C': '#96CEB4', // Green
+            'N': '#95A5A6'  // Gray for unknown
+        };
+        return colors[base.toUpperCase()] || colors['N'];
+    }
+    
+    /**
+     * Get color for feature type
+     */
+    getFeatureTypeColor(featureType) {
+        const colors = {
+            'CDS': '#4CAF50',        // Green
+            'mRNA': '#2196F3',       // Blue
+            'tRNA': '#2196F3',       // Blue
+            'rRNA': '#2196F3',       // Blue
+            'promoter': '#FF9800',   // Orange
+            'terminator': '#E91E63', // Pink
+            'regulatory': '#9C27B0', // Purple
+            'gene': '#607D8B',       // Blue Gray
+            'misc_feature': '#795548' // Brown
+        };
+        return colors[featureType] || colors['misc_feature'];
+    }
+    
+    /**
+     * Convert hex color to rgba
+     */
+    hexToRgba(hex, alpha = 1) {
+        // Remove # if present
+        hex = hex.replace('#', '');
+        
+        // Parse hex values
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    /**
+     * Darken a hex color by a percentage
+     */
+    darkenHexColor(hex, percent) {
+        // Remove # if present
+        hex = hex.replace('#', '');
+        
+        // Parse hex values
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        // Darken by reducing each component
+        const factor = (100 - percent) / 100;
+        const newR = Math.round(r * factor);
+        const newG = Math.round(g * factor);
+        const newB = Math.round(b * factor);
+        
+        // Convert back to hex
+        const toHex = (n) => {
+            const hex = n.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        
+        return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+    }
+    
+    /**
+     * Colorize protein sequence
+     */
+    colorizeProteinSequence(proteinSequence) {
+        const aminoAcidColors = {
+            // Hydrophobic
+            'A': '#FFE4B5', 'V': '#FFE4B5', 'L': '#FFE4B5', 'I': '#FFE4B5', 'M': '#FFE4B5',
+            'F': '#FFE4B5', 'W': '#FFE4B5', 'P': '#FFE4B5',
+            // Polar
+            'S': '#E6F3FF', 'T': '#E6F3FF', 'Y': '#E6F3FF', 'N': '#E6F3FF', 'Q': '#E6F3FF',
+            'C': '#E6F3FF',
+            // Positively charged
+            'K': '#FFE6E6', 'R': '#FFE6E6', 'H': '#FFE6E6',
+            // Negatively charged
+            'D': '#E6FFE6', 'E': '#E6FFE6',
+            // Special
+            'G': '#F0F0F0', // Glycine - flexible
+            '*': '#FF6B6B'  // Stop codon - red
+        };
+        
+        return proteinSequence.split('').map(aa => {
+            const color = aminoAcidColors[aa] || '#F0F0F0';
+            return `<span style="background-color: ${color}; padding: 1px 2px; margin: 0 1px; border-radius: 2px;">${aa}</span>`;
+        }).join('');
+    }
 }
 
 // Export for use in other modules
