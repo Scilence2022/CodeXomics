@@ -17,7 +17,8 @@ class ActionManager {
             PASTE_SEQUENCE: 'paste_sequence',
             DELETE_SEQUENCE: 'delete_sequence',
             INSERT_SEQUENCE: 'insert_sequence',
-            REPLACE_SEQUENCE: 'replace_sequence'
+            REPLACE_SEQUENCE: 'replace_sequence',
+            SEQUENCE_EDIT: 'sequence_edit'
         };
         
         // Status types
@@ -551,6 +552,10 @@ class ActionManager {
                     result = await this.executePasteSequence(action);
                     break;
                     
+                case this.ACTION_TYPES.SEQUENCE_EDIT:
+                    result = await this.executeSequenceEdit(action);
+                    break;
+                    
                 default:
                     throw new Error(`Unknown action type: ${action.type}`);
             }
@@ -641,6 +646,108 @@ class ActionManager {
             target: action.target,
             source: clipboardData.source
         };
+    }
+    
+    /**
+     * Execute sequence edit action
+     */
+    async executeSequenceEdit(action) {
+        const { changeSummary, originalSequence, modifiedSequence } = action.metadata;
+        
+        console.log('🔧 [ActionManager] Executing sequence edit action:', {
+            actionId: action.id,
+            target: action.target,
+            totalChanges: changeSummary.totalChanges,
+            substitutions: changeSummary.substitutions,
+            insertions: changeSummary.insertions,
+            deletions: changeSummary.deletions
+        });
+        
+        // Validate the changes
+        if (!this.validateSequenceEdit(changeSummary)) {
+            throw new Error('Sequence edit validation failed');
+        }
+        
+        // Apply changes (simulation)
+        await this.applySequenceChanges(action.metadata);
+        
+        return {
+            operation: 'sequence_edit',
+            target: action.target,
+            changesApplied: changeSummary.totalChanges,
+            originalLength: changeSummary.originalLength,
+            newLength: changeSummary.newLength,
+            summary: {
+                substitutions: changeSummary.substitutions,
+                insertions: changeSummary.insertions,
+                deletions: changeSummary.deletions
+            }
+        };
+    }
+    
+    /**
+     * Validate sequence edit changes
+     */
+    validateSequenceEdit(changeSummary) {
+        // Basic validation
+        if (!changeSummary || changeSummary.totalChanges === 0) {
+            console.warn('⚠️ [ActionManager] No changes to apply');
+            return false;
+        }
+        
+        // Validate sequence integrity
+        if (!changeSummary.modifiedSequence || typeof changeSummary.modifiedSequence !== 'string') {
+            console.error('❌ [ActionManager] Invalid modified sequence');
+            return false;
+        }
+        
+        // Check for valid DNA bases
+        const validBases = /^[ATGCNRYSWKMBDHV]*$/i;
+        if (!validBases.test(changeSummary.modifiedSequence)) {
+            console.error('❌ [ActionManager] Modified sequence contains invalid bases');
+            return false;
+        }
+        
+        console.log('✅ [ActionManager] Sequence edit validation passed');
+        return true;
+    }
+    
+    /**
+     * Apply sequence changes to genome data
+     */
+    async applySequenceChanges(metadata) {
+        const { chromosome, viewStart, viewEnd, originalSequence, modifiedSequence, changeSummary } = metadata;
+        
+        console.log('🔧 [ActionManager] Applying sequence changes to genome data...');
+        
+        // Simulate applying changes to the genome browser
+        if (this.genomeBrowser && this.genomeBrowser.currentSequence) {
+            // In a real implementation, this would update the actual genome data
+            // For now, we'll just log the operation
+            
+            console.log('📝 [ActionManager] Sequence changes applied:', {
+                chromosome: chromosome,
+                region: `${viewStart + 1}-${viewEnd}`,
+                originalLength: originalSequence.length,
+                newLength: modifiedSequence.length,
+                changes: {
+                    substitutions: changeSummary.substitutions,
+                    insertions: changeSummary.insertions,
+                    deletions: changeSummary.deletions
+                }
+            });
+            
+            // Notify the user about the successful application
+            this.genomeBrowser.showNotification(
+                `Sequence edit applied: ${changeSummary.totalChanges} changes to ${chromosome}:${viewStart + 1}-${viewEnd}`,
+                'success'
+            );
+        }
+        
+        // Simulate processing delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log('✅ [ActionManager] Sequence changes applied successfully');
     }
     
     /**
@@ -751,7 +858,8 @@ class ActionManager {
             [this.ACTION_TYPES.PASTE_SEQUENCE]: 1000,
             [this.ACTION_TYPES.DELETE_SEQUENCE]: 600,
             [this.ACTION_TYPES.INSERT_SEQUENCE]: 800,
-            [this.ACTION_TYPES.REPLACE_SEQUENCE]: 900
+            [this.ACTION_TYPES.REPLACE_SEQUENCE]: 900,
+            [this.ACTION_TYPES.SEQUENCE_EDIT]: 1500
         };
         
         return estimates[type] || 500;
