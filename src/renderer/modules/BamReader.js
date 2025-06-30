@@ -1,14 +1,16 @@
 /**
  * BamReader - Enhanced BAM file parser using @gmod/bam library
- * Handles binary BAM files with automatic BAI index detection and provides an interface compatible with the existing SAM parsing system
+ * Directly uses @gmod/bam API for optimal performance and compatibility
  */
 
-// BAM reading is handled through IPC calls to the main process
+import { BamFile } from '@gmod/bam';
+import { LocalFile } from 'generic-filehandle2';
 
 class BamReader {
     constructor() {
         this.filePath = null;
         this.indexPath = null;
+        this.bamFile = null;
         this.isInitialized = false;
         this.hasIndex = false;
         this.indexType = null; // 'bai' or 'csi'
@@ -44,28 +46,50 @@ class BamReader {
 
             // Reset state
             this.reset();
+            this.filePath = filePath;
 
-            // Call main process to initialize BAM file with index detection
-            const { ipcRenderer } = require('electron');
-            const result = await ipcRenderer.invoke('bam-initialize', filePath, options);
-            
-            if (!result.success) {
-                throw new Error(result.error);
+            // Detect index files
+            await this.detectIndexFiles(filePath, options);
+
+            // Create BAM file instance using @gmod/bam directly
+            const bamFileConfig = {
+                bamPath: filePath
+            };
+
+            // Add index configuration if available
+            if (this.hasIndex && this.indexPath) {
+                if (this.indexType === 'bai') {
+                    bamFileConfig.baiPath = this.indexPath;
+                } else if (this.indexType === 'csi') {
+                    bamFileConfig.csiPath = this.indexPath;
+                }
             }
 
-            // Store BAM file information
-            this.filePath = filePath;
-            this.indexPath = result.indexPath;
-            this.hasIndex = result.hasIndex;
-            this.indexType = result.indexType;
-            this.header = result.header;
-            this.references = result.references || [];
-            this.totalReads = result.totalReads;
-            this.fileSize = result.fileSize;
-            this.indexSize = result.indexSize || 0;
+            // Enhanced cache configuration for better performance
+            bamFileConfig.cacheSize = this.hasIndex ? 200 : 50; // Larger cache if indexed
+            bamFileConfig.yieldThreadTime = 100;
+
+            console.log('🔧 Creating BAM file instance with @gmod/bam:', {
+                bamPath: filePath,
+                indexPath: this.hasIndex ? this.indexPath : 'none',
+                indexType: this.hasIndex ? this.indexType : 'none',
+                cacheSize: bamFileConfig.cacheSize
+            });
+
+            // Create BamFile instance
+            this.bamFile = new BamFile(bamFileConfig);
+
+            // Get header - this is fast and required
+            console.log('📋 Reading BAM header...');
+            this.header = await this.bamFile.getHeader();
+            this.references = this.header.references || [];
+            
+            // Get file size information
+            await this.getFileSizeInfo();
+
             this.isInitialized = true;
 
-            console.log('✅ BamReader: Successfully initialized BAM file (fast mode)');
+            console.log('✅ BamReader: Successfully initialized BAM file (direct @gmod/bam API)');
             console.log(`  📊 References: ${this.references.length}`);
             console.log(`  📈 Total reads: ${this.totalReads > 0 ? this.totalReads.toLocaleString() : 'Will be counted on-demand'}`);
             console.log(`  💾 File size: ${this.getFormattedFileSize()}`);
@@ -100,7 +124,110 @@ class BamReader {
     }
 
     /**
-     * Read BAM records for a specific genomic region (similar to @gmod/bam getRecordsForRange)
+     * Detect and validate index files
+     * @private
+     */
+    async detectIndexFiles(filePath, options = {}) {
+        // Strategy 1: Use explicitly provided index path
+        if (options.indexPath) {
+            if (await this.fileExists(options.indexPath)) {
+                this.indexPath = options.indexPath;
+                this.indexType = options.indexPath.endsWith('.csi') ? 'csi' : 'bai';
+                this.hasIndex = true;
+                console.log('✅ Using provided index file:', this.indexPath);
+                await this.getIndexSize();
+                return;
+            } else {
+                console.warn('⚠️ Provided index file not found:', options.indexPath);
+            }
+        }
+
+        // Strategy 2: Auto-detect standard index files
+        const indexCandidates = [
+            { path: filePath + '.bai', type: 'bai' },           // standard: file.bam.bai
+            { path: filePath.replace('.bam', '.bai'), type: 'bai' }, // alternative: file.bai
+            { path: filePath + '.csi', type: 'csi' },           // CSI index: file.bam.csi
+            { path: filePath.replace('.bam', '.csi'), type: 'csi' }  // alternative CSI: file.csi
+        ];
+
+        for (const candidate of indexCandidates) {
+            if (await this.fileExists(candidate.path)) {
+                this.indexPath = candidate.path;
+                this.indexType = candidate.type;
+                this.hasIndex = true;
+                console.log(`✅ Auto-detected ${this.indexType.toUpperCase()} index:`, this.indexPath);
+                await this.getIndexSize();
+                return;
+            }
+        }
+
+        if (!this.hasIndex) {
+            console.warn('⚠️  No index file found. Checked locations:');
+            indexCandidates.forEach(candidate => {
+                console.warn(`   - ${candidate.path} (${candidate.type.toUpperCase()})`);
+            });
+            console.warn('   💡 Consider creating an index with: samtools index file.bam');
+
+            if (options.requireIndex) {
+                throw new Error('Index file is required but not found. Please create an index file first.');
+            }
+        }
+    }
+
+    /**
+     * Check if file exists (works in both Node.js and browser environments)
+     * @private
+     */
+    async fileExists(filePath) {
+        try {
+            // In Electron renderer process, we can use Node.js fs
+            const fs = require('fs');
+            return fs.existsSync(filePath);
+        } catch (error) {
+            // Fallback for browser environment
+            try {
+                const response = await fetch(filePath, { method: 'HEAD' });
+                return response.ok;
+            } catch (fetchError) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Get file size information
+     * @private
+     */
+    async getFileSizeInfo() {
+        try {
+            const fs = require('fs');
+            const stats = fs.statSync(this.filePath);
+            this.fileSize = stats.size;
+        } catch (error) {
+            console.warn('⚠️ Could not get file size:', error.message);
+            this.fileSize = 0;
+        }
+    }
+
+    /**
+     * Get index file size
+     * @private
+     */
+    async getIndexSize() {
+        if (!this.indexPath) return;
+        
+        try {
+            const fs = require('fs');
+            const stats = fs.statSync(this.indexPath);
+            this.indexSize = stats.size;
+        } catch (error) {
+            console.warn('⚠️ Could not get index file size:', error.message);
+            this.indexSize = 0;
+        }
+    }
+
+    /**
+     * Read BAM records for a specific genomic region using @gmod/bam directly
      * @param {string} chromosome - Chromosome name
      * @param {number} start - Start position (0-based)
      * @param {number} end - End position (0-based, exclusive)
@@ -111,7 +238,7 @@ class BamReader {
         const startTime = performance.now();
         
         try {
-            if (!this.isInitialized) {
+            if (!this.isInitialized || !this.bamFile) {
                 throw new Error('BAM reader not initialized. Call initialize() first.');
             }
 
@@ -143,21 +270,33 @@ class BamReader {
 
             console.log(`🔍 BamReader: Querying region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} ${this.hasIndex ? '(indexed)' : '(sequential scan)'}`);
 
-            // Call main process to get reads
-            const { ipcRenderer } = require('electron');
-            const result = await ipcRenderer.invoke('bam-get-reads', {
-                filePath: this.filePath,
-                chromosome: chromosome,
-                start: start,
-                end: end,
-                settings: settings
-            });
+            let allRecords = [];
 
-            if (!result.success) {
-                throw new Error(result.error);
+            if (settings.ignoreChromosome) {
+                // When ignoring chromosome, get all reads from all references that overlap the position range
+                console.log(`Fetching records from all chromosomes in position range ${start}-${end}`);
+                
+                for (const ref of this.references) {
+                    try {
+                        const records = await this.bamFile.getRecordsForRange(ref.name, start, end);
+                        console.log(`Retrieved ${records.length} records from ${ref.name}`);
+                        allRecords = allRecords.concat(records);
+                    } catch (refError) {
+                        console.warn(`Error querying reference ${ref.name}:`, refError.message);
+                        // Continue with other references
+                    }
+                }
+            } else {
+                // Normal chromosome-specific query using @gmod/bam directly
+                console.log(`Fetching records for range ${chromosome}:${start}-${end}`);
+                allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
             }
 
-            const reads = result.reads || [];
+            console.log(`Retrieved ${allRecords.length} raw records from BAM file`);
+
+            // Convert records to our internal format
+            const reads = this.convertRecordsToReads(allRecords, chromosome);
+            
             const queryTime = performance.now() - startTime;
             
             // Update performance statistics
@@ -172,6 +311,42 @@ class BamReader {
             console.error(`❌ BamReader: Failed to get reads for region (${queryTime.toFixed(1)}ms):`, error);
             throw new Error(`Failed to read BAM region: ${error.message}`);
         }
+    }
+
+    /**
+     * Convert @gmod/bam records to our internal format
+     * @private
+     */
+    convertRecordsToReads(records, chromosome) {
+        const reads = [];
+        
+        for (let i = 0; i < records.length; i++) {
+            try {
+                const record = records[i];
+                
+                const read = {
+                    id: record.name || record.qname || `read_${i}`,
+                    chromosome: record.refName || chromosome,
+                    start: record.start,
+                    end: record.end,
+                    strand: (record.strand === 1 || record.strand === '+') ? '+' : '-',
+                    mappingQuality: record.mq || record.mapq || 0,
+                    cigar: record.CIGAR || record.cigar || '',
+                    sequence: record.seq || '',
+                    quality: record.qual || '',
+                    flags: record.flags || 0,
+                    templateLength: record.template_length || record.tlen || 0,
+                    tags: record.tags || {}
+                };
+                
+                reads.push(read);
+            } catch (recordError) {
+                console.warn(`Error processing record ${i}:`, recordError.message);
+                // Continue processing other records
+            }
+        }
+        
+        return reads;
     }
 
     /**
@@ -277,7 +452,7 @@ class BamReader {
      * @returns {boolean} Initialization status
      */
     isReady() {
-        return this.isInitialized;
+        return this.isInitialized && this.bamFile !== null;
     }
 
     /**
@@ -294,6 +469,7 @@ class BamReader {
     reset() {
         this.filePath = null;
         this.indexPath = null;
+        this.bamFile = null;
         this.isInitialized = false;
         this.hasIndex = false;
         this.indexType = null;
@@ -365,8 +541,7 @@ class BamReader {
     }
 
     /**
-     * Stream reads for large regions (future enhancement)
-     * Currently returns all reads at once
+     * Stream reads for large regions using @gmod/bam
      * @param {string} chromosome - Chromosome name
      * @param {number} start - Start position
      * @param {number} end - End position
@@ -392,8 +567,8 @@ class BamReader {
         const indexUsage = stats.queryCount > 0 ? (stats.queriesWithIndex / stats.queryCount * 100).toFixed(1) : 0;
         
         return `
-📊 BAM Reader Performance Report
-================================
+📊 BAM Reader Performance Report (Direct @gmod/bam API)
+=====================================================
 Total Queries: ${stats.queryCount}
 Average Query Time: ${stats.averageQueryTime.toFixed(2)}ms
 Total Query Time: ${(stats.totalQueryTime / 1000).toFixed(2)}s
@@ -406,7 +581,7 @@ File Information:
 - BAM file: ${this.getFormattedFileSize()}
 - Index file: ${this.hasIndex ? this.getFormattedIndexSize() : 'Not available'}
 - References: ${this.references.length}
-- Total reads: ${this.totalReads.toLocaleString()}
+- Implementation: Direct @gmod/bam API calls
         `.trim();
     }
 }

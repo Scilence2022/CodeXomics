@@ -694,27 +694,38 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     async parseBAM() {
         try {
-            // Import BamReader if not already loaded
+            // Import BamReader module (ES6 module)
             if (typeof BamReader === 'undefined') {
                 console.log('Loading BamReader module...');
-                const script = document.createElement('script');
-                script.src = './modules/BamReader.js';
-                document.head.appendChild(script);
                 
-                // Wait for BamReader to be available
-                await new Promise((resolve, reject) => {
-                    script.onload = resolve;
-                    script.onerror = reject;
-                });
+                // For ES6 modules in Electron renderer, we need to use dynamic import
+                try {
+                    const bamReaderModule = await import('./modules/BamReader.js');
+                    window.BamReader = bamReaderModule.default || bamReaderModule.BamReader;
+                } catch (importError) {
+                    console.warn('ES6 import failed, trying script tag approach:', importError);
+                    
+                    // Fallback to script tag for compatibility
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = './modules/BamReader.js';
+                    document.head.appendChild(script);
+                    
+                    // Wait for BamReader to be available
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                    });
+                }
             }
 
-            this.genomeBrowser.updateStatus('🧬 Initializing BAM file reader...');
+            this.genomeBrowser.updateStatus('🧬 Initializing BAM file reader (direct @gmod/bam API)...');
             
             // Create BAM reader instance
             const bamReader = new BamReader();
             
-            // Initialize the BAM reader with file path - this is fast and only reads header + detects index
-            console.log('🚀 Starting fast BAM initialization (header + index detection only)...');
+            // Initialize the BAM reader with file path - direct @gmod/bam usage
+            console.log('🚀 Starting fast BAM initialization with direct @gmod/bam API...');
             const initResult = await bamReader.initialize(this.currentFile.path);
             
             if (!initResult.success) {
@@ -727,10 +738,11 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             // Get basic information (no expensive operations)
             const stats = bamReader.getStats();
             
-            console.log(`✅ BAM file initialized successfully:`);
+            console.log(`✅ BAM file initialized successfully with direct @gmod/bam API:`);
             console.log(`   📊 References: ${stats.references.length}`);
             console.log(`   💾 File size: ${bamReader.getFormattedFileSize()}`);
             console.log(`   🔍 Index: ${stats.hasIndex ? `${stats.indexType.toUpperCase()} (${bamReader.getFormattedIndexSize()})` : 'Not available'}`);
+            console.log(`   🔧 Implementation: Direct @gmod/bam API calls (no IPC)`);
             
             // Initialize ReadsManager with BAM data (no expensive operations)
             await this.genomeBrowser.readsManager.initializeWithBAMReader(bamReader);
@@ -740,8 +752,8 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             
             // Create informative status message
             const statusMessage = stats.hasIndex ? 
-                `✅ BAM file ready: ${stats.references.length} chromosomes (indexed - fast queries enabled)` :
-                `⚠️ BAM file ready: ${stats.references.length} chromosomes (no index - queries may be slower)`;
+                `✅ BAM file ready: ${stats.references.length} chromosomes (indexed - direct @gmod/bam API)` :
+                `⚠️ BAM file ready: ${stats.references.length} chromosomes (no index - direct @gmod/bam API)`;
             
             this.genomeBrowser.updateStatus(statusMessage);
             
@@ -766,11 +778,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             // Provide helpful error message
             let errorMessage = error.message;
             
-            if (error.message.includes('Failed to load BAM parsing library')) {
-                errorMessage = `BAM file support requires additional libraries. Please ensure the application is properly installed with all dependencies.
+            if (error.message.includes('Cannot resolve module')) {
+                errorMessage = `BAM file support requires @gmod/bam library. Please ensure the application is properly installed with all dependencies.
                 
-If the issue persists, you can convert your BAM file to SAM format using samtools:
+Try reinstalling dependencies:
+npm install
 
+If the issue persists, you can convert your BAM file to SAM format using samtools:
 samtools view -h your_file.bam > your_file.sam
 
 Then load the SAM file instead.`;
