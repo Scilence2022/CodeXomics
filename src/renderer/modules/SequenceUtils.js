@@ -647,18 +647,10 @@ class SequenceUtils {
      * Render full sequence (for smaller sequences)
      */
     renderFullSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
-        let html = '<div class="detailed-sequence-view">';
-        html += '<div class="sequence-info"><strong>DNA Sequence (colored by features):</strong></div>';
-        
         // Use document fragment for better performance
         const fragment = document.createDocumentFragment();
         const tempDiv = document.createElement('div');
         tempDiv.className = 'detailed-sequence-view';
-        
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'sequence-info';
-        infoDiv.innerHTML = '<strong>DNA Sequence (colored by features):</strong>';
-        tempDiv.appendChild(infoDiv);
         
         // Batch DOM operations
         const linesToRender = [];
@@ -896,12 +888,6 @@ class SequenceUtils {
             overflow-y: auto;
             position: relative;
         `;
-        
-        // Info header
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'sequence-info';
-        infoDiv.innerHTML = '<strong>DNA Sequence (colored by features) - Virtualized View:</strong>';
-        virtualContainer.appendChild(infoDiv);
         
         // Viewport for visible lines
         const viewport = document.createElement('div');
