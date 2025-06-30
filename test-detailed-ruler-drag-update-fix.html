@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Ruler Drag Update Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pass { background: #4caf50; }
+        .status-fail { background: #f44336; }
+        .status-warning { background: #ff9800; }
+        .status-info { background: #2196f3; }
+        .test-instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .test-results {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .ruler-demo {
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .ruler-demo::before {
+            content: 'Detailed Ruler Simulation';
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            font-size: 11px;
+            color: #6c757d;
+        }
+        .position-display {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🔧 Detailed Ruler Drag Update Fix Test</h1>
+            <p>Testing the fix for second ruler (detailed ruler) not updating during genome browser drag operations</p>
+        </div>
+
+        <div class="test-instructions">
+            <h3>📋 Test Instructions</h3>
+            <ol>
+                <li>Load a genome file in the main application</li>
+                <li>Ensure both the navigation bar (first ruler) and detailed rulers (second rulers) are visible</li>
+                <li>Perform drag operations on the genome tracks</li>
+                <li>Verify that both rulers update dynamically during and after drag operations</li>
+                <li>Check console logs for ruler update messages</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-info"></span>Fix Implementation Details</h3>
+            <div class="test-results">
+<strong>Modified Files:</strong>
+- src/renderer/modules/NavigationManager.js
+
+<strong>Changes Made:</strong>
+
+1. Added updateDetailedRulers() method:
+   - Finds all .detailed-ruler-container elements
+   - Calls their stored _setupCanvas function to redraw
+   - Includes error handling and logging
+
+2. Updated handleDocumentMouseMove():
+   - Added call to updateDetailedRulers() during drag
+   - Provides real-time ruler updates during drag operations
+
+3. Updated handleDocumentMouseUp():
+   - Added call to updateDetailedRulers() after re-render
+   - Ensures rulers are updated after drag completion
+
+<strong>Key Features:</strong>
+- Real-time ruler updates during drag
+- Proper error handling for missing _setupCanvas functions
+- Comprehensive logging for debugging
+- Maintains consistency with existing navigation bar updates
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-info"></span>Expected Behavior</h3>
+            <div class="ruler-demo"></div>
+            <div class="position-display">
+                <strong>Before Fix:</strong> Only first ruler (navigation bar) updates during drag<br>
+                <strong>After Fix:</strong> Both first ruler AND detailed rulers update dynamically
+            </div>
+            <ul>
+                <li><strong>During Drag:</strong> All rulers should update in real-time as you drag</li>
+                <li><strong>After Drag:</strong> All rulers should show the final position accurately</li>
+                <li><strong>Console Logs:</strong> Should show "RULER-UPDATE" messages for detailed rulers</li>
+                <li><strong>Visual Consistency:</strong> All rulers should display the same genomic range</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-warning"></span>Test Scenarios</h3>
+            <ol>
+                <li><strong>Single Track Drag:</strong> Drag a single gene track and verify ruler updates</li>
+                <li><strong>Multiple Track Drag:</strong> Test with multiple visible tracks</li>
+                <li><strong>Large Genome Movement:</strong> Test with significant position changes</li>
+                <li><strong>Small Adjustments:</strong> Test with minor position adjustments</li>
+                <li><strong>Edge Cases:</strong> Test dragging to chromosome boundaries</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-info"></span>Console Log Examples</h3>
+            <div class="test-results">
+Expected console output during drag operations:
+
+🔧 [DRAG-MOVE] Movement calculation:
+  - Mouse deltaX: 50 px
+  - Element width: 800 px
+  - Current range: 10000 bp
+  - Genome movement: 625 bp
+
+🔧 [RULER-UPDATE] Found 2 detailed rulers to update
+🔧 [RULER-UPDATE] Updating detailed ruler 1
+🔧 [RULER-UPDATE] Updating detailed ruler 2
+
+🔧 [DRAG-END] === DRAG ENDING ===
+🔧 [DRAG-END] Starting re-render...
+🔧 [RULER-UPDATE] Found 2 detailed rulers to update
+🔧 [RULER-UPDATE] Updating detailed ruler 1
+🔧 [RULER-UPDATE] Updating detailed ruler 2
+🔧 [DRAG-END] Re-render completed
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-pass"></span>Validation Checklist</h3>
+            <ul>
+                <li>□ First ruler (navigation bar) updates during drag</li>
+                <li>□ Second ruler (detailed rulers) update during drag</li>
+                <li>□ All rulers show consistent position information</li>
+                <li>□ Console shows ruler update messages</li>
+                <li>□ No JavaScript errors in console</li>
+                <li>□ Smooth visual updates without flickering</li>
+                <li>□ Final position matches across all rulers</li>
+                <li>□ Works with different genome file types</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3><span class="status-indicator status-info"></span>Technical Details</h3>
+            <div class="test-results">
+<strong>updateDetailedRulers() Method:</strong>
+- Searches for all elements with class 'detailed-ruler-container'
+- Accesses the stored _setupCanvas function on each element
+- Calls _setupCanvas() to trigger ruler redraw
+- Includes comprehensive error handling and logging
+
+<strong>Integration Points:</strong>
+- Called during handleDocumentMouseMove() for real-time updates
+- Called during handleDocumentMouseUp() for final position sync
+- Works with existing TrackRenderer.createDetailedRuler() system
+- Maintains compatibility with ResizeObserver-based updates
+
+<strong>Performance Considerations:</strong>
+- Minimal overhead during drag operations
+- Efficient DOM queries using querySelector
+- Error handling prevents crashes from missing functions
+- Logging can be disabled in production if needed
+            </div>
+        </div>
+
+        <div class="test-instructions">
+            <h3>🎯 Success Criteria</h3>
+            <p><strong>The fix is successful if:</strong></p>
+            <ul>
+                <li>Both navigation bar and detailed rulers update during drag operations</li>
+                <li>All rulers display consistent genomic position information</li>
+                <li>Console logs show successful ruler updates</li>
+                <li>No visual glitches or performance issues</li>
+                <li>Works consistently across different genome files and track configurations</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simulate test status updates
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Detailed Ruler Drag Update Fix Test loaded');
+            console.log('📋 Ready to test ruler update functionality');
+            
+            // Add some interactive demo functionality
+            const rulerDemo = document.querySelector('.ruler-demo');
+            let isDragging = false;
+            let startX = 0;
+            let currentPosition = 0;
+            
+            rulerDemo.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX;
+                rulerDemo.style.cursor = 'grabbing';
+                console.log('🔧 [DEMO] Drag started');
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                currentPosition += deltaX;
+                startX = e.clientX;
+                
+                // Update position display
+                const positionDisplay = document.querySelector('.position-display');
+                positionDisplay.innerHTML = `
+                    <strong>Demo Position:</strong> ${currentPosition}px offset<br>
+                    <strong>Status:</strong> Dragging (both rulers should update in real app)
+                `;
+                
+                console.log('🔧 [DEMO] Position update:', currentPosition);
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (!isDragging) return;
+                
+                isDragging = false;
+                rulerDemo.style.cursor = 'grab';
+                
+                const positionDisplay = document.querySelector('.position-display');
+                positionDisplay.innerHTML = `
+                    <strong>Final Position:</strong> ${currentPosition}px offset<br>
+                    <strong>Status:</strong> Drag completed (rulers should show final position)
+                `;
+                
+                console.log('🔧 [DEMO] Drag completed at position:', currentPosition);
+            });
+            
+            rulerDemo.style.cursor = 'grab';
+        });
+    </script>
+</body>
+</html> 

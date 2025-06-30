@@ -495,6 +495,9 @@ class NavigationManager {
         if (this.genomeBrowser.genomeNavigationBar) {
             this.genomeBrowser.genomeNavigationBar.update();
         }
+        
+        // Update detailed rulers during drag for real-time position display
+        this.updateDetailedRulers();
     }
 
     handleDocumentMouseUp(e) {
@@ -567,8 +570,30 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(chromosome, sequence);
         this.genomeBrowser.genomeNavigationBar.update();
         
+        // Update all detailed rulers after re-render
+        this.updateDetailedRulers();
+        
         console.log('🔧 [DRAG-END] Re-render completed');
         console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
+    }
+
+    // Update all detailed rulers to reflect the new position
+    updateDetailedRulers() {
+        const detailedRulers = document.querySelectorAll('.detailed-ruler-container');
+        console.log('🔧 [RULER-UPDATE] Found', detailedRulers.length, 'detailed rulers to update');
+        
+        detailedRulers.forEach((rulerContainer, index) => {
+            if (rulerContainer._setupCanvas && typeof rulerContainer._setupCanvas === 'function') {
+                console.log('🔧 [RULER-UPDATE] Updating detailed ruler', index + 1);
+                try {
+                    rulerContainer._setupCanvas();
+                } catch (error) {
+                    console.warn('🔧 [RULER-UPDATE] Error updating detailed ruler', index + 1, ':', error);
+                }
+            } else {
+                console.warn('🔧 [RULER-UPDATE] No _setupCanvas function found for detailed ruler', index + 1);
+            }
+        });
     }
 
     // Draggable functionality for tracks
