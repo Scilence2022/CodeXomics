@@ -32,10 +32,6 @@ class SequenceEditor {
         this.editingToolbar = null;
         this.statusBar = null;
         
-        // Event listeners
-        this.boundKeyHandler = this.handleEditingKeydown.bind(this);
-        this.boundInputHandler = this.handleSequenceInput.bind(this);
-        
         this.initializeEditingSystem();
     }
     
