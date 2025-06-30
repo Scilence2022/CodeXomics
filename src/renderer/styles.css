@@ -31189,6 +31189,54 @@ path.svg-gene-element.selected {
     }
 }
 
+/* Fix for sequence line height compression issues in View Mode */
+.detailed-sequence-view .sequence-line,
+.protein-only-mode .sequence-line,
+.sequence-line-group .sequence-line {
+    display: flex !important;
+    margin-bottom: 8px !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+    line-height: 1.8 !important;
+    min-height: 24px !important;
+    padding: 4px 0 !important;
+    flex-shrink: 0 !important; /* Prevent compression */
+    box-sizing: border-box !important;
+    align-items: center !important;
+}
+
+/* Ensure sequence line groups maintain proper spacing */
+.sequence-line-group {
+    margin-bottom: 8px !important;
+    flex-shrink: 0 !important; /* Prevent compression */
+}
+
+/* Prevent sequence content container from compressing */
+.sequence-content {
+    min-height: 200px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Ensure virtualized sequence containers maintain proper height */
+.detailed-sequence-view.virtualized,
+.virtual-viewport,
+.virtual-visible-content {
+    flex-shrink: 0 !important;
+}
+
+/* Fix for position labels to maintain consistent width */
+.sequence-position {
+    width: 100px !important;
+    flex-shrink: 0 !important;
+    min-width: 100px !important;
+}
+
+/* Ensure sequence bases container maintains proper layout */
+.sequence-bases {
+    flex: 1 !important;
+    min-height: 18px !important;
+}
+
 /* CRISPR Guide RNA Design Tool Styles */
 .crispr-design-tabs {
     width: 100%;

@@ -12,7 +12,7 @@ class SequenceUtils {
         this.displayMode = 'view';
         
         // Sequence content display mode for View Mode
-        this.sequenceContentMode = 'auto'; // 'auto', 'dna-only', 'protein-only', 'both'
+        this.sequenceContentMode = 'dna-only'; // 'auto', 'dna-only', 'protein-only', 'both'
         
         // Performance optimization caches
         this.renderCache = new Map(); // Cache for rendered sequence lines
@@ -844,10 +844,10 @@ class SequenceUtils {
         lineGroup.className = 'sequence-line-group';
         lineGroup.style.marginBottom = '8px';
         
-        // Create sequence line
+        // Create sequence line with fixed height to prevent compression
         const sequenceLine = document.createElement('div');
         sequenceLine.className = 'sequence-line';
-        sequenceLine.style.cssText = 'display: flex; margin-bottom: 4px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
+        sequenceLine.style.cssText = 'display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.8; min-height: 24px; padding: 4px 0;';
         
         // Position label
         const positionSpan = document.createElement('span');
@@ -1194,10 +1194,10 @@ class SequenceUtils {
                 lineGroup.className = 'sequence-line-group';
                 lineGroup.style.marginBottom = '8px';
                 
-                // Create sequence line with same styling as DNA
+                // Create sequence line with same styling as DNA and fixed height
                 const sequenceLine = document.createElement('div');
                 sequenceLine.className = 'sequence-line';
-                sequenceLine.style.cssText = 'display: flex; margin-bottom: 4px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
+                sequenceLine.style.cssText = 'display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.8; min-height: 24px; padding: 4px 0;';
                 
                 // Position label (amino acid position)
                 const positionSpan = document.createElement('span');
