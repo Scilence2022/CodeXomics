@@ -2128,6 +2128,62 @@ ipcMain.handle('send-to-main-window', async (event, channel, data) => {
   }
 });
 
+// Handle opening debug tools
+ipcMain.handle('openDebugTool', async (event, fileName) => {
+  try {
+    console.log('🔧 Opening debug tool:', fileName);
+    
+    // Create new window for debug tool
+    const debugWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 800,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      title: `Debug Tool - ${fileName}`,
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      show: false
+    });
+
+    // Construct path to debug tool file
+    const debugToolPath = path.join(__dirname, '..', fileName);
+    
+    // Check if file exists
+    if (!fs.existsSync(debugToolPath)) {
+      throw new Error(`Debug tool file not found: ${debugToolPath}`);
+    }
+    
+    // Load the debug tool HTML
+    debugWindow.loadFile(debugToolPath);
+
+    // Show window when ready
+    debugWindow.once('ready-to-show', () => {
+      debugWindow.show();
+      debugWindow.focus();
+    });
+
+    // Handle window closed
+    debugWindow.on('closed', () => {
+      console.log('🔧 Debug tool window closed:', fileName);
+    });
+
+    // Set parent window for proper window management
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      debugWindow.setParentWindow(mainWindow);
+    }
+
+    return { success: true, fileName };
+  } catch (error) {
+    console.error('❌ Failed to open debug tool:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Create Circos Window Function
 function createCircosWindow() {
   try {

@@ -62,6 +62,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Communication with main window
   sendToMainWindow: (channel, data) => ipcRenderer.invoke('send-to-main-window', channel, data),
   
+  // Debug Tools API
+  openDebugTool: (fileName) => ipcRenderer.invoke('openDebugTool', fileName),
+  
   // Window management
   closeWindow: () => ipcRenderer.send('close-resource-manager'),
   

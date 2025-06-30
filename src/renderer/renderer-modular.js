@@ -741,40 +741,56 @@ class GenomeBrowser {
         return modal;
     }
 
-    openDebugTool(toolType) {
+    async openDebugTool(toolType) {
         // Close the debug tools modal
         const modal = document.getElementById('debugToolsModal');
         if (modal) {
             modal.classList.remove('show');
         }
 
-        // Open the specific debug tool
-        let toolPath;
+        // Handle built-in tools
+        if (toolType === 'performance') {
+            this.openPerformanceMonitor();
+            return;
+        }
+        if (toolType === 'console') {
+            this.openConsoleLogger();
+            return;
+        }
+
+        // For file-based tools, use IPC to open them
+        let fileName;
         switch (toolType) {
             case 'bam-query':
-                toolPath = './test-bam-query-debugging.html';
+                fileName = 'test-bam-query-debugging.html';
                 break;
             case 'bam-coordinate-fix':
-                toolPath = './test-bam-coordinate-fix-validation.html';
+                fileName = 'test-bam-coordinate-fix-validation.html';
                 break;
-            case 'performance':
-                this.openPerformanceMonitor();
-                return;
-            case 'console':
-                this.openConsoleLogger();
-                return;
             default:
                 console.error('Unknown debug tool:', toolType);
                 return;
         }
 
-        // Open debug tool in a new window
-        const debugWindow = window.open(toolPath, 'debugTool', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-        if (debugWindow) {
-            debugWindow.focus();
-        } else {
-            // Fallback: open in iframe modal
-            this.openDebugToolInModal(toolPath, toolType);
+        try {
+            // Use IPC to open debug tool in new window
+            if (window.electronAPI && window.electronAPI.openDebugTool) {
+                await window.electronAPI.openDebugTool(fileName);
+            } else {
+                // Fallback: try direct file access
+                const toolPath = `../../${fileName}`;
+                const debugWindow = window.open(toolPath, 'debugTool', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                if (debugWindow) {
+                    debugWindow.focus();
+                } else {
+                    // Final fallback: open in iframe modal
+                    this.openDebugToolInModal(toolPath, toolType);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to open debug tool:', error);
+            // Show error message to user
+            alert(`Failed to open debug tool: ${error.message}\n\nPlease check the console for more details.`);
         }
     }
 
