@@ -542,6 +542,9 @@ class GenomeBrowser {
         // General Settings modal
         document.getElementById('settingsBtn')?.addEventListener('click', () => this.showGeneralSettingsModal());
         
+        // Debug Tools modal
+        document.getElementById('debugToolsBtn')?.addEventListener('click', () => this.showDebugToolsModal());
+        
         // Smart Execution Demo button
         document.getElementById('smartExecutionDemoBtn')?.addEventListener('click', () => this.showSmartExecutionDemo());
     }
@@ -598,6 +601,267 @@ class GenomeBrowser {
         } else {
             console.error('General Settings modal not found');
         }
+    }
+
+    showDebugToolsModal() {
+        // Create debug tools modal if it doesn't exist
+        let modal = document.getElementById('debugToolsModal');
+        if (!modal) {
+            modal = this.createDebugToolsModal();
+            document.body.appendChild(modal);
+        }
+        
+        // Show modal
+        modal.classList.add('show');
+    }
+
+    createDebugToolsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'debugToolsModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content debug-tools-modal">
+                <div class="modal-header">
+                    <h2><i class="fas fa-bug"></i> Debug Tools</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="debug-tools-grid">
+                        <div class="debug-tool-card">
+                            <div class="debug-tool-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h3>BAM Query Debugging</h3>
+                            <p>Debug BAM file queries and coordinate system issues</p>
+                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('bam-query')">
+                                Open Tool
+                            </button>
+                        </div>
+                        
+                        <div class="debug-tool-card">
+                            <div class="debug-tool-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <h3>BAM Coordinate Fix</h3>
+                            <p>Validate BAM coordinate conversion fixes</p>
+                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('bam-coordinate-fix')">
+                                Open Tool
+                            </button>
+                        </div>
+                        
+                        <div class="debug-tool-card">
+                            <div class="debug-tool-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3>Performance Monitor</h3>
+                            <p>Monitor system performance and memory usage</p>
+                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('performance')">
+                                Open Tool
+                            </button>
+                        </div>
+                        
+                        <div class="debug-tool-card">
+                            <div class="debug-tool-icon">
+                                <i class="fas fa-list"></i>
+                            </div>
+                            <h3>Console Logger</h3>
+                            <p>Enhanced console logging and error tracking</p>
+                            <button class="btn btn-primary" onclick="window.genomeBrowser.openDebugTool('console')">
+                                Open Tool
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .debug-tools-modal {
+                max-width: 800px;
+                width: 90%;
+            }
+            
+            .debug-tools-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            
+            .debug-tool-card {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+                background: #f8f9fa;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            
+            .debug-tool-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            
+            .debug-tool-icon {
+                font-size: 48px;
+                color: #007bff;
+                margin-bottom: 15px;
+            }
+            
+            .debug-tool-card h3 {
+                margin: 10px 0;
+                color: #333;
+            }
+            
+            .debug-tool-card p {
+                color: #666;
+                margin-bottom: 15px;
+                font-size: 14px;
+            }
+            
+            .debug-tool-card .btn {
+                width: 100%;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add event listeners
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+
+        return modal;
+    }
+
+    openDebugTool(toolType) {
+        // Close the debug tools modal
+        const modal = document.getElementById('debugToolsModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+
+        // Open the specific debug tool
+        let toolPath;
+        switch (toolType) {
+            case 'bam-query':
+                toolPath = './test-bam-query-debugging.html';
+                break;
+            case 'bam-coordinate-fix':
+                toolPath = './test-bam-coordinate-fix-validation.html';
+                break;
+            case 'performance':
+                this.openPerformanceMonitor();
+                return;
+            case 'console':
+                this.openConsoleLogger();
+                return;
+            default:
+                console.error('Unknown debug tool:', toolType);
+                return;
+        }
+
+        // Open debug tool in a new window
+        const debugWindow = window.open(toolPath, 'debugTool', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        if (debugWindow) {
+            debugWindow.focus();
+        } else {
+            // Fallback: open in iframe modal
+            this.openDebugToolInModal(toolPath, toolType);
+        }
+    }
+
+    openDebugToolInModal(toolPath, toolType) {
+        // Create iframe modal for debug tool
+        let modal = document.getElementById('debugToolIframeModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'debugToolIframeModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content debug-tool-iframe-modal">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-bug"></i> Debug Tool</h2>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <iframe id="debugToolIframe" style="width: 100%; height: 600px; border: none;"></iframe>
+                    </div>
+                </div>
+            `;
+
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .debug-tool-iframe-modal {
+                    max-width: 95%;
+                    width: 1200px;
+                    max-height: 90%;
+                }
+                
+                .debug-tool-iframe-modal .modal-body {
+                    padding: 0;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Add event listeners
+            modal.querySelector('.modal-close').addEventListener('click', () => {
+                modal.classList.remove('show');
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        // Load the debug tool
+        const iframe = modal.querySelector('#debugToolIframe');
+        iframe.src = toolPath;
+        
+        // Show modal
+        modal.classList.add('show');
+    }
+
+    openPerformanceMonitor() {
+        // Create a simple performance monitor
+        console.log('🔧 Performance Monitor');
+        console.log('Memory Usage:', performance.memory ? {
+            used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+            total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
+            limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB'
+        } : 'Not available');
+        
+        // Show alert with basic performance info
+        alert(`Performance Monitor\n\nMemory Usage: ${performance.memory ? 
+            Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB' : 
+            'Not available'}\n\nCheck console for detailed information.`);
+    }
+
+    openConsoleLogger() {
+        // Enhanced console logging
+        console.log('🔧 Enhanced Console Logger Activated');
+        console.log('Current time:', new Date().toISOString());
+        console.log('User agent:', navigator.userAgent);
+        console.log('GenomeExplorer state:', {
+            currentChromosome: this.currentChromosome,
+            currentSequence: this.currentSequence ? 'Loaded' : 'Not loaded',
+            trackRenderer: !!this.trackRenderer,
+            readsManager: !!this.readsManager
+        });
+        
+        alert('Console Logger activated!\n\nCheck the browser console for detailed logging information.');
     }
 
     setupMCPModalListeners() {
