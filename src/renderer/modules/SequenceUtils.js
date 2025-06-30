@@ -57,10 +57,10 @@ class SequenceUtils {
     }
 
     /**
-     * Setup drag optimization listeners
+     * Setup drag optimization listeners with enhanced stability
      */
     setupDragOptimization() {
-        // Listen for drag start/end events from NavigationManager
+        // Listen for standard drag events
         document.addEventListener('dragstart', () => {
             this.dragOptimization.isDragging = true;
             console.log('🔧 [SequenceUtils] Drag started - enabling render optimization');
@@ -71,16 +71,13 @@ class SequenceUtils {
             console.log('🔧 [SequenceUtils] Drag ended - disabling render optimization');
             
             // Execute any pending render
-            if (this.dragOptimization.pendingRender) {
-                console.log('🔧 [SequenceUtils] Executing pending render after drag');
-                this.dragOptimization.pendingRender();
-                this.dragOptimization.pendingRender = null;
-            }
+            this.executePendingRender('dragend');
         });
         
-        // Listen for custom drag events from NavigationManager
+        // Listen for custom drag events from NavigationManager (more reliable for genome view dragging)
         document.addEventListener('genomeViewDragStart', () => {
             this.dragOptimization.isDragging = true;
+            this.dragOptimization.lastRenderTime = Date.now();
             console.log('🔧 [SequenceUtils] Genome view drag started');
         });
         
@@ -88,13 +85,95 @@ class SequenceUtils {
             this.dragOptimization.isDragging = false;
             console.log('🔧 [SequenceUtils] Genome view drag ended');
             
-            // Execute any pending render
-            if (this.dragOptimization.pendingRender) {
-                console.log('🔧 [SequenceUtils] Executing pending render after genome drag');
-                this.dragOptimization.pendingRender();
-                this.dragOptimization.pendingRender = null;
+            // Execute any pending render with retry mechanism
+            this.executePendingRender('genomeViewDragEnd');
+        });
+        
+        // Enhanced safety: Listen for mouse up events to catch missed drag ends
+        document.addEventListener('mouseup', () => {
+            if (this.dragOptimization.isDragging) {
+                console.log('🔧 [SequenceUtils] Force ending drag on mouseup (safety net)');
+                this.dragOptimization.isDragging = false;
+                this.executePendingRender('mouseup-fallback');
             }
         });
+        
+        // Periodic check to ensure drag state doesn't get stuck with enhanced recovery
+        setInterval(() => {
+            if (this.dragOptimization.isDragging) {
+                const now = Date.now();
+                const timeSinceDrag = now - this.dragOptimization.lastRenderTime;
+                
+                // If dragging for more than 5 seconds, force reset with fallback render
+                if (timeSinceDrag > 5000) {
+                    console.warn('⚠️ [SequenceUtils] Force resetting stuck drag state after 5s timeout');
+                    this.dragOptimization.isDragging = false;
+                    this.executePendingRender('timeout-reset');
+                    
+                    // Additional fallback if pending render fails
+                    setTimeout(() => {
+                        if (!this.dragOptimization.pendingRender) {
+                            this.forceSequenceRerender();
+                        }
+                    }, 100);
+                }
+            }
+        }, 1000);
+    }
+    
+    /**
+     * Execute pending render with enhanced error handling and recovery
+     */
+    executePendingRender(trigger) {
+        if (this.dragOptimization.pendingRender) {
+            console.log(`🔧 [SequenceUtils] Executing pending render (triggered by: ${trigger})`);
+            try {
+                const renderFunction = this.dragOptimization.pendingRender;
+                this.dragOptimization.pendingRender = null; // Clear immediately to prevent re-entry
+                
+                renderFunction();
+                console.log('✅ [SequenceUtils] Pending render executed successfully');
+            } catch (error) {
+                console.error('❌ [SequenceUtils] Error executing pending render:', error);
+                console.error('🔧 [SequenceUtils] Error details:', {
+                    trigger,
+                    errorMessage: error.message,
+                    stack: error.stack
+                });
+                
+                // Try to recover by forcing a re-render with delay to avoid infinite loops
+                setTimeout(() => {
+                    this.forceSequenceRerender();
+                }, 50);
+            }
+        } else if (trigger === 'genomeViewDragEnd') {
+            // Special case: if drag end but no pending render, ensure we still have content
+            console.log('🔧 [SequenceUtils] Drag ended but no pending render - checking for blank content');
+            const container = document.getElementById('sequenceContent');
+            if (container && container.children.length === 0) {
+                console.warn('⚠️ [SequenceUtils] Blank content detected after drag - forcing rerender');
+                this.forceSequenceRerender();
+            }
+        }
+    }
+    
+    /**
+     * Force a sequence re-render as fallback
+     */
+    forceSequenceRerender() {
+        console.log('🔧 [SequenceUtils] Force re-rendering sequence as fallback');
+        try {
+            const chromosome = this.genomeBrowser.currentChromosome;
+            const sequenceData = this.genomeBrowser.currentSequence;
+            if (chromosome && sequenceData && sequenceData[chromosome]) {
+                const sequence = sequenceData[chromosome];
+                // Clear caches to force fresh render
+                this.clearRenderCache();
+                this.displayEnhancedSequence(chromosome, sequence);
+            }
+        } catch (error) {
+            console.error('❌ [SequenceUtils] Error in force re-render:', error);
+        }
     }
     
     /**
@@ -261,15 +340,34 @@ class SequenceUtils {
     }
     
     /**
-     * Update CSS variables for sequence line height and spacing
+     * Update CSS variables for sequence line height and spacing with enhanced verification
      */
     updateSequenceLineHeightCSS() {
+        console.log('🔧 [SequenceUtils] updateSequenceLineHeightCSS called - using fixed CSS values to prevent window resize issues');
+        console.log('ℹ️ [SequenceUtils] Line height is now fixed at 28px with 1.8 ratio regardless of window size');
+        
+        // For backward compatibility, we still set the CSS variables but they won't be used
+        // The actual styling is now handled by fixed CSS rules in styles.css
         const root = document.documentElement;
         const lineHeightRatio = Math.max(1.2, this.lineHeight / 16);
         
+        // Set CSS variables for compatibility but they are overridden by fixed CSS rules
         root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`);
         root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString());
         root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`);
+        
+        // Log for debugging purposes
+        console.log('🔧 [SequenceUtils] CSS variables set for compatibility (not used by actual CSS):', {
+            lineHeight: this.lineHeight + 'px',
+            lineRatio: lineHeightRatio,
+            lineSpacing: this.lineSpacing + 'px',
+            actualCSSValues: {
+                lineHeight: '28px (fixed)',
+                lineRatio: '1.8 (fixed)',
+                lineSpacing: '8px (fixed)'
+            },
+            note: 'Fixed values in CSS override these variables to prevent window resize issues'
+        });
     }
     
     /**
@@ -291,7 +389,8 @@ class SequenceUtils {
         `;
         
         const label = document.createElement('label');
-        label.textContent = 'Line Height:';
+        label.textContent = 'Line Height (Fixed):';
+        label.title = 'Line height is now fixed at 28px to prevent window resize issues';
         label.style.cssText = `
             font-size: 12px;
             color: #6c757d;
@@ -329,21 +428,39 @@ class SequenceUtils {
         });
         
         selector.addEventListener('change', (e) => {
+            // Show notification that line height is now fixed
+            const notification = document.createElement('div');
+            notification.textContent = 'Line height is now fixed at 28px to prevent window resize issues. This setting is for compatibility only.';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ffc107;
+                color: #212529;
+                padding: 12px 16px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                max-width: 300px;
+                font-size: 13px;
+                line-height: 1.4;
+            `;
+            document.body.appendChild(notification);
+            
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+            
+            // Update internal value for compatibility but don't change actual display
             this.lineHeight = parseInt(e.target.value);
             
-            // Update CSS variables for new line height
+            // Update CSS variables for compatibility (though they won't affect display)
             this.updateSequenceLineHeightCSS();
             
-            // Clear render cache to force re-render with new line height
-            this.clearRenderCache();
-            
-            // Re-render the sequence with new line height
-            const chromosome = this.genomeBrowser.currentChromosome;
-            const sequenceData = this.genomeBrowser.currentSequence;
-            if (chromosome && sequenceData && sequenceData[chromosome]) {
-                const sequence = sequenceData[chromosome];
-                this.displayEnhancedSequence(chromosome, sequence);
-            }
+            console.log('ℹ️ [SequenceUtils] Line height selector changed but display remains fixed at 28px');
         });
         
         lineHeightContainer.appendChild(label);
@@ -365,7 +482,8 @@ class SequenceUtils {
         }
         
         const spacingLabel = document.createElement('label');
-        spacingLabel.textContent = 'Spacing:';
+        spacingLabel.textContent = 'Spacing (Fixed):';
+        spacingLabel.title = 'Line spacing is now fixed at 8px to prevent window resize issues';
         spacingLabel.style.cssText = `
             font-size: 12px;
             color: #6c757d;
@@ -405,10 +523,39 @@ class SequenceUtils {
         });
         
         spacingSelector.addEventListener('change', (e) => {
+            // Show notification that line spacing is now fixed
+            const notification = document.createElement('div');
+            notification.textContent = 'Line spacing is now fixed at 8px to prevent window resize issues. This setting is for compatibility only.';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ffc107;
+                color: #212529;
+                padding: 12px 16px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                max-width: 300px;
+                font-size: 13px;
+                line-height: 1.4;
+            `;
+            document.body.appendChild(notification);
+            
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+            
+            // Update internal value for compatibility but don't change actual display
             this.lineSpacing = parseInt(e.target.value);
             
-            // Update CSS variables for new line spacing
+            // Update CSS variables for compatibility (though they won't affect display)
             this.updateSequenceLineHeightCSS();
+            
+            console.log('ℹ️ [SequenceUtils] Line spacing selector changed but display remains fixed at 8px');
             
             // Clear render cache to force re-render with new line spacing
             this.clearRenderCache();
@@ -495,7 +642,10 @@ class SequenceUtils {
      * Toggle between view and edit modes
      */
     toggleDisplayMode() {
+        const previousMode = this.displayMode;
         this.displayMode = this.displayMode === 'edit' ? 'view' : 'edit';
+        
+        console.log(`🔧 [SequenceUtils] Toggling display mode: ${previousMode} → ${this.displayMode}`);
         
         // Update button text
         const toggleButton = document.getElementById('sequenceModeToggle');
@@ -516,17 +666,66 @@ class SequenceUtils {
         }
         
         // Clean up the container to avoid style conflicts
-        this.cleanupContainer();
+        try {
+            this.cleanupContainer();
+        } catch (error) {
+            console.error('❌ [SequenceUtils] Error during container cleanup:', error);
+            // Try to recover by forcing a hard reset
+            const container = document.getElementById('sequenceContent');
+            if (container) {
+                container.innerHTML = '';
+                container.className = this.displayMode === 'view' ? 'sequence-content' : '';
+            }
+        }
+        
+        // Clear any pending drag operations to prevent conflicts
+        if (this.dragOptimization.pendingRender) {
+            console.log('🔧 [SequenceUtils] Clearing pending render due to mode switch');
+            this.dragOptimization.pendingRender = null;
+        }
+        this.dragOptimization.isDragging = false;
         
         // Re-display sequence with new mode
         const chromosome = this.genomeBrowser.currentChromosome;
         const sequenceData = this.genomeBrowser.currentSequence;
+        
         if (chromosome && sequenceData && sequenceData[chromosome]) {
             // Extract the actual sequence string from the sequence data object
             const sequence = sequenceData[chromosome];
             
-            // Force re-render by calling displayEnhancedSequence
-            this.displayEnhancedSequence(chromosome, sequence);
+            console.log(`🔧 [SequenceUtils] Re-rendering sequence in ${this.displayMode} mode`);
+            
+            try {
+                // Force re-render by calling displayEnhancedSequence
+                this.displayEnhancedSequence(chromosome, sequence);
+                console.log(`✅ [SequenceUtils] Successfully switched to ${this.displayMode} mode`);
+            } catch (error) {
+                console.error(`❌ [SequenceUtils] Error switching to ${this.displayMode} mode:`, error);
+                
+                // Try to recover by reverting to previous mode
+                console.warn(`⚠️ [SequenceUtils] Attempting to revert to ${previousMode} mode`);
+                this.displayMode = previousMode;
+                
+                // Update button to reflect reverted state
+                if (toggleButton) {
+                    toggleButton.innerHTML = this.displayMode === 'edit' ? 
+                        '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
+                    toggleButton.title = this.displayMode === 'edit' ? 
+                        'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+                }
+                
+                // Try to render in the original mode
+                try {
+                    this.displayEnhancedSequence(chromosome, sequence);
+                    console.log(`✅ [SequenceUtils] Successfully reverted to ${previousMode} mode`);
+                } catch (revertError) {
+                    console.error('❌ [SequenceUtils] Error reverting to previous mode:', revertError);
+                    // Force a complete reset as last resort
+                    this.forceSequenceRerender();
+                }
+            }
+        } else {
+            console.warn('⚠️ [SequenceUtils] No sequence data available for mode switch');
         }
     }
     
@@ -633,6 +832,15 @@ class SequenceUtils {
         const container = document.getElementById('sequenceContent');
         if (!container) return;
         
+        console.log('🔧 [SequenceUtils] Cleaning up container for mode:', this.displayMode);
+        
+        // Store current CSS variables before cleanup to preserve View Mode settings
+        const preservedVars = {
+            lineHeight: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-height'),
+            lineRatio: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-ratio'),
+            lineSpacing: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-spacing')
+        };
+        
         // If switching from edit mode, destroy VS Code editor and SequenceEditor instances first
         if (this.displayMode === 'view' && this.vscodeEditor) {
             try {
@@ -649,8 +857,9 @@ class SequenceUtils {
                     this.vscodeEditor.destroy();
                 }
                 this.vscodeEditor = null;
+                console.log('✅ [SequenceUtils] VSCode editor and SequenceEditor destroyed');
             } catch (error) {
-                console.warn('Error destroying editors:', error);
+                console.warn('⚠️ [SequenceUtils] Error destroying editors:', error);
                 this.vscodeEditor = null;
                 this.sequenceEditor = null;
             }
@@ -659,33 +868,72 @@ class SequenceUtils {
         // Clear container content
         container.innerHTML = '';
         
-        // Remove any VS Code editor specific styles
-        container.style.removeProperty('font-family');
-        container.style.removeProperty('font-size');
-        container.style.removeProperty('line-height');
-        container.style.removeProperty('background');
-        container.style.removeProperty('color');
-        container.style.removeProperty('overflow');
-        container.style.removeProperty('position');
-        container.style.removeProperty('min-height');
-        container.style.removeProperty('height');
+        // Mode-specific cleanup with better style preservation
+        if (this.displayMode === 'view') {
+            // For Edit Mode -> View Mode: Remove only Edit Mode specific styles
+            const editModeStyles = [
+                'font-family', 'font-size', 'background', 'color', 
+                'overflow', 'position', 'min-height', 'height'
+            ];
+            
+            editModeStyles.forEach(prop => {
+                container.style.removeProperty(prop);
+            });
+            
+            // Reset container class to default sequence content
+            container.className = 'sequence-content';
+            
+            // Remove VS Code editor specific classes
+            container.classList.remove('vscode-sequence-editor');
+            
+            // Immediately restore View Mode CSS variables with verification
+            this.updateSequenceLineHeightCSS();
+            
+            // Force style recalculation and verify
+            setTimeout(() => {
+                const currentVars = {
+                    lineHeight: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-height'),
+                    lineRatio: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-ratio'),
+                    lineSpacing: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-spacing')
+                };
+                
+                console.log('✅ [SequenceUtils] View Mode CSS variables verification:', {
+                    expected: { lineHeight: this.lineHeight + 'px', lineSpacing: this.lineSpacing + 'px' },
+                    actual: currentVars
+                });
+            }, 10);
+            
+        } else if (this.displayMode === 'edit') {
+            // For View Mode -> Edit Mode: Clean all styles to prepare for VS Code editor
+            const allModeStyles = [
+                'font-family', 'font-size', 'line-height', 'background', 
+                'color', 'overflow', 'position', 'min-height', 'height'
+            ];
+            
+            allModeStyles.forEach(prop => {
+                container.style.removeProperty(prop);
+            });
+            
+            // Reset container to neutral state for VS Code editor
+            container.className = '';
+        }
         
-        // Reset container to default state
-        container.className = '';
-        
-        // Remove any VS Code editor specific classes from container
-        container.classList.remove('vscode-sequence-editor');
-        
-        // Clear any inline styles that might interfere
+        // Clear any problematic inline styles from child elements
         const inlineStyles = container.querySelectorAll('[style]');
         inlineStyles.forEach(element => {
             // Only clear if it's not a sequence-specific style we want to keep
             if (!element.classList.contains('sequence-line') && 
                 !element.classList.contains('sequence-position') && 
-                !element.classList.contains('gene-indicator-line')) {
+                !element.classList.contains('gene-indicator-line') &&
+                !element.classList.contains('sequence-bases')) {
                 element.removeAttribute('style');
             }
         });
+        
+        // Clear render cache to ensure fresh rendering
+        this.clearRenderCache();
+        
+        console.log('✅ [SequenceUtils] Container cleanup completed for', this.displayMode, 'mode');
     }
     
     /**

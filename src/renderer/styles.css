@@ -32693,40 +32693,45 @@ path.svg-gene-element.selected {
    ENHANCED SEQUENCE LINE HEIGHT SUPPORT
    ===================================================== */
 
-/* Enhanced Sequence Line Height Support - Added for configurable line heights */
+/* Enhanced Sequence Line Height Support - Fixed line height regardless of window size */
 .sequence-line {
     display: flex !important;
     align-items: flex-start !important;
     flex-shrink: 0 !important;
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed pixel value - no CSS variables to prevent window resize effects */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables to prevent window resize effects */
     padding: 4px 0 !important;
-    margin-bottom: var(--sequence-line-spacing, 8px) !important;
+    margin-bottom: 8px !important; /* Fixed spacing - no CSS variables to prevent window resize effects */
     font-family: 'Courier New', monospace !important;
     font-size: 14px !important;
+    box-sizing: border-box !important; /* Ensure consistent box model */
 }
 
 .detailed-sequence-view .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed height - no CSS variables */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables */
     flex-shrink: 0 !important;
+    box-sizing: border-box !important;
 }
 
 .protein-only-mode .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed height - no CSS variables */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables */
     flex-shrink: 0 !important;
+    box-sizing: border-box !important;
 }
 
 .sequence-line-group {
     flex-shrink: 0 !important;
-    margin-bottom: var(--sequence-line-spacing, 8px) !important;
+    margin-bottom: 8px !important; /* Fixed spacing - no CSS variables */
+    box-sizing: border-box !important;
 }
 
 .sequence-line-group .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed height - no CSS variables */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables */
     flex-shrink: 0 !important;
+    box-sizing: border-box !important;
 }
 
 /* Ensure position labels maintain consistent width */
@@ -32754,14 +32759,16 @@ path.svg-gene-element.selected {
 
 /* Virtual scrolling container support */
 .virtualized .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed height - no CSS variables */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables */
+    box-sizing: border-box !important;
 }
 
 /* Protein sequence section support */
 .protein-sequence-section .sequence-line {
-    min-height: var(--sequence-line-height, 28px) !important;
-    line-height: var(--sequence-line-ratio, 1.8) !important;
+    min-height: 28px !important; /* Fixed height - no CSS variables */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables */
+    box-sizing: border-box !important;
 }
 
 /* Prevent flexbox compression at all levels */
@@ -32770,4 +32777,144 @@ path.svg-gene-element.selected {
 .sequence-line-group,
 .sequence-line {
     flex-shrink: 0 !important;
+}
+
+/* =====================================================
+   ENHANCED SEQUENCE MODE ISOLATION STYLES
+   Added to fix style interference between View/Edit modes
+   ===================================================== */
+
+/* View Mode Style Protection - Ensure View Mode styles are preserved */
+.sequence-content:not(.vscode-sequence-editor) {
+    /* Force View Mode specific styles */
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: inherit !important;
+    overflow-y: auto !important;
+    position: relative !important;
+}
+
+/* Edit Mode Style Isolation - Prevent Edit Mode styles from bleeding into View Mode */
+.sequence-content.vscode-sequence-editor {
+    /* Allow VS Code editor to override all styles */
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    background: inherit;
+    color: inherit;
+    overflow: inherit;
+    position: inherit;
+}
+
+/* Sequence Line Style Enforcement for View Mode - Fixed height regardless of window size */
+.sequence-content:not(.vscode-sequence-editor) .sequence-line {
+    display: flex !important;
+    align-items: flex-start !important;
+    flex-shrink: 0 !important;
+    min-height: 28px !important; /* Fixed pixel value - no CSS variables to prevent window resize effects */
+    line-height: 1.8 !important; /* Fixed ratio - no CSS variables to prevent window resize effects */
+    padding: 4px 0 !important;
+    margin-bottom: 8px !important; /* Fixed spacing - no CSS variables to prevent window resize effects */
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
+}
+
+/* Enhanced View Mode Container Protection */
+.sequence-content:not(.vscode-sequence-editor) .sequence-position {
+    width: 100px !important;
+    flex-shrink: 0 !important;
+    margin-right: 15px !important;
+    text-align: right !important;
+    color: #6c757d !important;
+    font-weight: 600 !important;
+}
+
+.sequence-content:not(.vscode-sequence-editor) .sequence-bases {
+    flex: 1 !important;
+    word-break: break-all !important;
+    line-height: 1.6 !important;
+}
+
+/* Edit Mode CSS Variable Reset - Prevent View Mode variables from affecting Edit Mode */
+.sequence-content.vscode-sequence-editor {
+    --sequence-line-height: initial;
+    --sequence-line-ratio: initial; 
+    --sequence-line-spacing: initial;
+}
+
+/* Transition management during mode switches */
+.sequence-content.mode-switching {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* =====================================================
+   WINDOW RESIZE PROTECTION FOR SEQUENCE LINE HEIGHT
+   Ensure fixed line height across all screen sizes
+   ===================================================== */
+
+/* Small screens (768px and below) - maintain fixed line height */
+@media (max-width: 768px) {
+    .sequence-line,
+    .detailed-sequence-view .sequence-line,
+    .protein-only-mode .sequence-line,
+    .sequence-line-group .sequence-line,
+    .virtualized .sequence-line,
+    .protein-sequence-section .sequence-line,
+    .sequence-content:not(.vscode-sequence-editor) .sequence-line {
+        min-height: 28px !important; /* Force fixed height on small screens */
+        line-height: 1.8 !important; /* Force fixed ratio on small screens */
+        padding: 4px 0 !important;
+        margin-bottom: 8px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .sequence-line-group {
+        margin-bottom: 8px !important; /* Force fixed spacing on small screens */
+    }
+}
+
+/* Very small screens (480px and below) - maintain fixed line height */
+@media (max-width: 480px) {
+    .sequence-line,
+    .detailed-sequence-view .sequence-line,
+    .protein-only-mode .sequence-line,
+    .sequence-line-group .sequence-line,
+    .virtualized .sequence-line,
+    .protein-sequence-section .sequence-line,
+    .sequence-content:not(.vscode-sequence-editor) .sequence-line {
+        min-height: 28px !important; /* Force fixed height on very small screens */
+        line-height: 1.8 !important; /* Force fixed ratio on very small screens */
+        padding: 4px 0 !important;
+        margin-bottom: 8px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .sequence-line-group {
+        margin-bottom: 8px !important; /* Force fixed spacing on very small screens */
+    }
+}
+
+/* Large screens (1024px and above) - maintain fixed line height */
+@media (min-width: 1024px) {
+    .sequence-line,
+    .detailed-sequence-view .sequence-line,
+    .protein-only-mode .sequence-line,
+    .sequence-line-group .sequence-line,
+    .virtualized .sequence-line,
+    .protein-sequence-section .sequence-line,
+    .sequence-content:not(.vscode-sequence-editor) .sequence-line {
+        min-height: 28px !important; /* Force fixed height on large screens */
+        line-height: 1.8 !important; /* Force fixed ratio on large screens */
+        padding: 4px 0 !important;
+        margin-bottom: 8px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .sequence-line-group {
+        margin-bottom: 8px !important; /* Force fixed spacing on large screens */
+    }
 }
