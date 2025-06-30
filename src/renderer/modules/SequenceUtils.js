@@ -17,6 +17,9 @@ class SequenceUtils {
         // Sequence line height configuration (in pixels)
         this.lineHeight = 28; // Default increased from 24px to 28px for better readability
         
+        // Sequence line spacing configuration (margin between lines in pixels)
+        this.lineSpacing = 8; // Default spacing between sequence lines
+        
         // Performance optimization caches
         this.renderCache = new Map(); // Cache for rendered sequence lines
         this.featureCache = new Map(); // Cache for feature lookups
@@ -258,7 +261,7 @@ class SequenceUtils {
     }
     
     /**
-     * Update CSS variables for sequence line height
+     * Update CSS variables for sequence line height and spacing
      */
     updateSequenceLineHeightCSS() {
         const root = document.documentElement;
@@ -266,6 +269,7 @@ class SequenceUtils {
         
         root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`);
         root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString());
+        root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`);
     }
     
     /**
@@ -344,7 +348,82 @@ class SequenceUtils {
         
         lineHeightContainer.appendChild(label);
         lineHeightContainer.appendChild(selector);
+        
+        // Add line spacing selector
+        this.addLineSpacingSelector(lineHeightContainer);
+        
         sequenceControls.appendChild(lineHeightContainer);
+    }
+    
+    /**
+     * Add line spacing selector to line height container
+     */
+    addLineSpacingSelector(lineHeightContainer) {
+        // Check if selector already exists
+        if (document.getElementById('sequenceLineSpacingSelector')) {
+            return;
+        }
+        
+        const spacingLabel = document.createElement('label');
+        spacingLabel.textContent = 'Spacing:';
+        spacingLabel.style.cssText = `
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+            margin-left: 15px;
+        `;
+        
+        const spacingSelector = document.createElement('select');
+        spacingSelector.id = 'sequenceLineSpacingSelector';
+        spacingSelector.className = 'sequence-line-spacing-select';
+        spacingSelector.style.cssText = `
+            padding: 4px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            background-color: white;
+            color: #495057;
+            cursor: pointer;
+            min-width: 70px;
+        `;
+        
+        const spacingOptions = [
+            { value: 2, text: 'Tight' },
+            { value: 4, text: 'Close' },
+            { value: 6, text: 'Normal' },
+            { value: 8, text: 'Relaxed' },
+            { value: 12, text: 'Loose' },
+            { value: 16, text: 'Wide' }
+        ];
+        
+        spacingOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            optionElement.selected = option.value === this.lineSpacing;
+            spacingSelector.appendChild(optionElement);
+        });
+        
+        spacingSelector.addEventListener('change', (e) => {
+            this.lineSpacing = parseInt(e.target.value);
+            
+            // Update CSS variables for new line spacing
+            this.updateSequenceLineHeightCSS();
+            
+            // Clear render cache to force re-render with new line spacing
+            this.clearRenderCache();
+            
+            // Re-render the sequence with new line spacing
+            const chromosome = this.genomeBrowser.currentChromosome;
+            const sequenceData = this.genomeBrowser.currentSequence;
+            if (chromosome && sequenceData && sequenceData[chromosome]) {
+                const sequence = sequenceData[chromosome];
+                this.displayEnhancedSequence(chromosome, sequence);
+            }
+        });
+        
+        lineHeightContainer.appendChild(spacingLabel);
+        lineHeightContainer.appendChild(spacingSelector);
     }
     
     /**
@@ -496,7 +575,7 @@ class SequenceUtils {
             selectorContainer.remove();
         }
         
-        // Also remove line height selector
+        // Also remove line height and spacing selectors
         const lineHeightContainer = document.querySelector('.sequence-line-height-container');
         if (lineHeightContainer) {
             lineHeightContainer.remove();
@@ -947,7 +1026,7 @@ class SequenceUtils {
         
         const lineGroup = document.createElement('div');
         lineGroup.className = 'sequence-line-group';
-        lineGroup.style.marginBottom = '8px';
+        lineGroup.style.marginBottom = `${this.lineSpacing}px`;
         
         // Create sequence line with configurable height to prevent compression
         const sequenceLine = document.createElement('div');
@@ -1309,7 +1388,7 @@ class SequenceUtils {
                 
                 const lineGroup = document.createElement('div');
                 lineGroup.className = 'sequence-line-group';
-                lineGroup.style.marginBottom = '8px';
+                lineGroup.style.marginBottom = `${this.lineSpacing}px`;
                 
                 // Create sequence line with same styling as DNA and configurable height
                 const sequenceLine = document.createElement('div');

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Line Spacing Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-header {
+            color: #2c3e50;
+            border-bottom: 3px solid #28a745;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .spacing-controls {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+        }
+        
+        .control-section h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        .control-group label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #495057;
+        }
+        
+        .control-group input,
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .control-group .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 3px;
+        }
+        
+        .apply-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .apply-btn:hover {
+            background: #218838;
+        }
+        
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 10px;
+            transition: background-color 0.2s;
+        }
+        
+        .reset-btn:hover {
+            background: #545b62;
+        }
+        
+        .demo-section {
+            background: #ffffff;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .sequence-line-group {
+            font-family: 'Courier New', monospace;
+        }
+
+        .sequence-line {
+            display: flex;
+            font-size: 14px;
+            align-items: flex-start;
+        }
+
+        .sequence-position {
+            display: inline-block;
+            width: 100px;
+            color: #666;
+            text-align: right;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .sequence-bases {
+            flex: 1;
+        }
+        
+        .feature-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-info h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list strong {
+            color: #2c3e50;
+        }
+        
+        .test-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .test-instructions h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .current-values {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .comparison-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-demo {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .comparison-demo h5 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-header">📏 Sequence Line Spacing Configuration Test</h1>
+        
+        <div class="feature-info">
+            <h4>🆕 New Line Spacing Feature</h4>
+            <ul class="feature-list">
+                <li><strong>Independent Control:</strong> Adjust line spacing separately from line height</li>
+                <li><strong>Six Spacing Options:</strong> Tight (2px), Close (4px), Normal (6px), Relaxed (8px), Loose (12px), Wide (16px)</li>
+                <li><strong>Real-time Preview:</strong> See changes immediately as you adjust settings</li>
+                <li><strong>Unified Application:</strong> Works for both DNA and protein sequence views</li>
+            </ul>
+        </div>
+        
+        <div class="spacing-controls">
+            <h3>🎚️ Spacing Controls</h3>
+            
+            <div class="control-section">
+                <h4>Line Display Settings</h4>
+                <div class="control-row">
+                    <div class="control-group">
+                        <label for="lineHeight">Line Height</label>
+                        <select id="lineHeight">
+                            <option value="20">Compact (20px)</option>
+                            <option value="24">Normal (24px)</option>
+                            <option value="28" selected>Comfortable (28px)</option>
+                            <option value="32">Spacious (32px)</option>
+                            <option value="36">Extra Large (36px)</option>
+                        </select>
+                        <div class="help-text">Height of each sequence line</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="lineSpacing">Line Spacing</label>
+                        <select id="lineSpacing">
+                            <option value="2">Tight (2px)</option>
+                            <option value="4">Close (4px)</option>
+                            <option value="6">Normal (6px)</option>
+                            <option value="8" selected>Relaxed (8px)</option>
+                            <option value="12">Loose (12px)</option>
+                            <option value="16">Wide (16px)</option>
+                        </select>
+                        <div class="help-text">Space between sequence lines</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="apply-btn" onclick="applySettings()">Apply Settings</button>
+                <button class="reset-btn" onclick="resetSettings()">Reset to Default</button>
+            </div>
+            
+            <div class="current-values" id="currentValues">
+                Current: Line Height = 28px, Line Spacing = 8px
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <div class="comparison-demo">
+                <h5>🔧 Adjustable Demo</h5>
+                <div id="adjustable-demo">
+                    <!-- Adjustable demo content will be inserted here -->
+                </div>
+            </div>
+            <div class="comparison-demo">
+                <h5>📐 Reference (Fixed)</h5>
+                <div id="reference-demo">
+                    <!-- Reference demo content will be inserted here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>📊 Full Sequence Demo - Line Spacing Effects</h3>
+            <div id="full-sequence-demo">
+                <!-- Full demo content will be inserted here -->
+            </div>
+        </div>
+        
+        <div class="test-instructions">
+            <h4>📋 Testing Instructions</h4>
+            <ol>
+                <li><strong>Line Height:</strong> Adjust the height of individual sequence lines (20px - 36px)</li>
+                <li><strong>Line Spacing:</strong> Adjust the gap between sequence lines (2px - 16px)</li>
+                <li><strong>Compare Effects:</strong> Notice how spacing affects readability and density</li>
+                <li><strong>Extreme Values:</strong> Test minimum (Tight) and maximum (Wide) spacing</li>
+                <li><strong>Combined Settings:</strong> Try different combinations of height and spacing</li>
+                <li><strong>Use Cases:</strong>
+                    <ul>
+                        <li>Tight spacing for compact display with many sequences</li>
+                        <li>Wide spacing for better readability and accessibility</li>
+                        <li>Normal spacing for balanced appearance</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Settings object
+        let settings = {
+            lineHeight: 28,
+            lineSpacing: 8
+        };
+        
+        function applySettings() {
+            // Get values from controls
+            settings.lineHeight = parseInt(document.getElementById('lineHeight').value);
+            settings.lineSpacing = parseInt(document.getElementById('lineSpacing').value);
+            
+            // Update display
+            updateCurrentValues();
+            generateDemos();
+        }
+        
+        function resetSettings() {
+            // Reset controls to default
+            document.getElementById('lineHeight').value = 28;
+            document.getElementById('lineSpacing').value = 8;
+            
+            // Apply reset
+            applySettings();
+        }
+        
+        function updateCurrentValues() {
+            const display = document.getElementById('currentValues');
+            display.textContent = `Current: Line Height = ${settings.lineHeight}px, Line Spacing = ${settings.lineSpacing}px`;
+        }
+        
+        function createSequenceLineGroup(sequence, position, lineHeight, lineSpacing, isReference = false) {
+            const lineGroup = document.createElement('div');
+            lineGroup.className = 'sequence-line-group';
+            lineGroup.style.marginBottom = `${lineSpacing}px`;
+            
+            const sequenceLine = document.createElement('div');
+            sequenceLine.className = 'sequence-line';
+            sequenceLine.style.cssText = `
+                display: flex;
+                min-height: ${lineHeight}px;
+                line-height: ${Math.max(1.2, lineHeight / 16)};
+                padding: 4px 0;
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                ${isReference ? 'background: #f0f0f0; border-left: 3px solid #6c757d;' : ''}
+            `;
+            
+            const positionSpan = document.createElement('span');
+            positionSpan.className = 'sequence-position';
+            positionSpan.textContent = position;
+            
+            const basesDiv = document.createElement('div');
+            basesDiv.className = 'sequence-bases';
+            basesDiv.textContent = sequence;
+            
+            sequenceLine.appendChild(positionSpan);
+            sequenceLine.appendChild(basesDiv);
+            lineGroup.appendChild(sequenceLine);
+            
+            return lineGroup;
+        }
+        
+        function generateDemos() {
+            // Sample sequences
+            const sequences = [
+                { seq: 'ATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC', pos: '1' },
+                { seq: 'GCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGC', pos: '61' },
+                { seq: 'TACGCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAA', pos: '121' },
+                { seq: 'AAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAA', pos: '181' }
+            ];
+            
+            // Generate adjustable demo
+            const adjustableDemo = document.getElementById('adjustable-demo');
+            adjustableDemo.innerHTML = '';
+            sequences.forEach(item => {
+                adjustableDemo.appendChild(createSequenceLineGroup(item.seq, item.pos, settings.lineHeight, settings.lineSpacing));
+            });
+            
+            // Generate reference demo (fixed settings)
+            const referenceDemo = document.getElementById('reference-demo');
+            referenceDemo.innerHTML = '';
+            sequences.slice(0, 4).forEach(item => {
+                referenceDemo.appendChild(createSequenceLineGroup(item.seq, item.pos, 28, 8, true));
+            });
+            
+            // Generate full sequence demo
+            const fullDemo = document.getElementById('full-sequence-demo');
+            fullDemo.innerHTML = '';
+            const fullSequences = [
+                { seq: 'ATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCC', pos: '1' },
+                { seq: 'GCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGC', pos: '61' },
+                { seq: 'TACGCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAA', pos: '121' },
+                { seq: 'AAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAA', pos: '181' },
+                { seq: 'CGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCAT', pos: '241' },
+                { seq: 'GTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCG', pos: '301' },
+                { seq: 'TAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGT', pos: '361' },
+                { seq: 'AAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTAAAGCCATGCGTA', pos: '421' }
+            ];
+            
+            fullSequences.forEach(item => {
+                fullDemo.appendChild(createSequenceLineGroup(item.seq, item.pos, settings.lineHeight, settings.lineSpacing));
+            });
+        }
+        
+        // Initialize demos
+        updateCurrentValues();
+        generateDemos();
+        
+        // Add event listeners for real-time updates
+        document.getElementById('lineHeight').addEventListener('change', applySettings);
+        document.getElementById('lineSpacing').addEventListener('change', applySettings);
+    </script>
+</body>
+</html> 

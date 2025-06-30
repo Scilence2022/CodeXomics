@@ -32701,7 +32701,7 @@ path.svg-gene-element.selected {
     min-height: var(--sequence-line-height, 28px) !important;
     line-height: var(--sequence-line-ratio, 1.8) !important;
     padding: 4px 0 !important;
-    margin-bottom: 8px !important;
+    margin-bottom: var(--sequence-line-spacing, 8px) !important;
     font-family: 'Courier New', monospace !important;
     font-size: 14px !important;
 }
@@ -32720,7 +32720,7 @@ path.svg-gene-element.selected {
 
 .sequence-line-group {
     flex-shrink: 0 !important;
-    margin-bottom: 8px !important;
+    margin-bottom: var(--sequence-line-spacing, 8px) !important;
 }
 
 .sequence-line-group .sequence-line {
