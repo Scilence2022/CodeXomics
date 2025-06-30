@@ -19,6 +19,7 @@ class SequenceUtils {
         
         // Sequence line spacing configuration (margin between lines in pixels)
         this.lineSpacing = 8; // Default spacing between sequence lines
+        this.minLineSpacing = 12; // Minimum line spacing to maintain readability (configurable in settings)
         
         // Performance optimization caches
         this.renderCache = new Map(); // Cache for rendered sequence lines
@@ -54,6 +55,9 @@ class SequenceUtils {
         
         // Listen for drag events to optimize rendering
         this.setupDragOptimization();
+        
+        // Load minimum line spacing from settings
+        this.loadMinLineSpacingFromSettings();
     }
 
     /**
@@ -343,31 +347,70 @@ class SequenceUtils {
      * Update CSS variables for sequence line height and spacing with enhanced verification
      */
     updateSequenceLineHeightCSS() {
-        console.log('🔧 [SequenceUtils] updateSequenceLineHeightCSS called - using fixed CSS values to prevent window resize issues');
-        console.log('ℹ️ [SequenceUtils] Line height is now fixed at 28px with 1.8 ratio regardless of window size');
-        
-        // For backward compatibility, we still set the CSS variables but they won't be used
-        // The actual styling is now handled by fixed CSS rules in styles.css
         const root = document.documentElement;
         const lineHeightRatio = Math.max(1.2, this.lineHeight / 16);
         
-        // Set CSS variables for compatibility but they are overridden by fixed CSS rules
-        root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`);
-        root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString());
-        root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`);
+        // Ensure line spacing doesn't go below minimum value
+        const effectiveLineSpacing = Math.max(this.lineSpacing, this.minLineSpacing);
         
-        // Log for debugging purposes
-        console.log('🔧 [SequenceUtils] CSS variables set for compatibility (not used by actual CSS):', {
+        // Force remove existing variables first to ensure fresh application
+        root.style.removeProperty('--sequence-line-height');
+        root.style.removeProperty('--sequence-line-ratio');
+        root.style.removeProperty('--sequence-line-spacing');
+        
+        // Apply new values with forced reapplication and minimum spacing protection
+        root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
+        root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString(), 'important');
+        root.style.setProperty('--sequence-line-spacing', `${effectiveLineSpacing}px`, 'important');
+        
+        // Debug: Log the applied values
+        console.log('🔧 [SequenceUtils] CSS variables updated:', {
             lineHeight: this.lineHeight + 'px',
             lineRatio: lineHeightRatio,
             lineSpacing: this.lineSpacing + 'px',
-            actualCSSValues: {
-                lineHeight: '28px (fixed)',
-                lineRatio: '1.8 (fixed)',
-                lineSpacing: '8px (fixed)'
-            },
-            note: 'Fixed values in CSS override these variables to prevent window resize issues'
+            effectiveLineSpacing: effectiveLineSpacing + 'px',
+            minLineSpacing: this.minLineSpacing + 'px',
+            currentMode: this.displayMode
         });
+        
+        // Force multiple style recalculations to ensure proper application
+        document.body.offsetHeight;
+        root.offsetHeight;
+        
+        // Verify the values were applied correctly with timeout-based verification
+        setTimeout(() => {
+            const appliedLineHeight = getComputedStyle(root).getPropertyValue('--sequence-line-height');
+            const appliedLineRatio = getComputedStyle(root).getPropertyValue('--sequence-line-ratio');
+            const appliedLineSpacing = getComputedStyle(root).getPropertyValue('--sequence-line-spacing');
+            
+            const verification = {
+                applied: {
+                    lineHeight: appliedLineHeight.trim(),
+                    lineRatio: appliedLineRatio.trim(),
+                    lineSpacing: appliedLineSpacing.trim()
+                },
+                expected: {
+                    lineHeight: this.lineHeight + 'px',
+                    lineRatio: lineHeightRatio.toString(),
+                    lineSpacing: this.lineSpacing + 'px'
+                }
+            };
+            
+            console.log('✅ [SequenceUtils] CSS variables verification:', verification);
+            
+            // Check if reapplication is needed
+            const heightMatch = verification.applied.lineHeight === verification.expected.lineHeight;
+            const spacingMatch = verification.applied.lineSpacing === verification.expected.lineSpacing;
+            
+            if (!heightMatch || !spacingMatch) {
+                console.warn('⚠️ [SequenceUtils] CSS variables mismatch detected - reapplying');
+                root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
+                root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`, 'important');
+                
+                // Force another style recalculation
+                document.body.offsetHeight;
+            }
+        }, 50);
     }
     
     /**
@@ -389,8 +432,7 @@ class SequenceUtils {
         `;
         
         const label = document.createElement('label');
-        label.textContent = 'Line Height (Fixed):';
-        label.title = 'Line height is now fixed at 28px to prevent window resize issues';
+        label.textContent = 'Line Height:';
         label.style.cssText = `
             font-size: 12px;
             color: #6c757d;
@@ -428,39 +470,21 @@ class SequenceUtils {
         });
         
         selector.addEventListener('change', (e) => {
-            // Show notification that line height is now fixed
-            const notification = document.createElement('div');
-            notification.textContent = 'Line height is now fixed at 28px to prevent window resize issues. This setting is for compatibility only.';
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #ffc107;
-                color: #212529;
-                padding: 12px 16px;
-                border-radius: 6px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 9999;
-                max-width: 300px;
-                font-size: 13px;
-                line-height: 1.4;
-            `;
-            document.body.appendChild(notification);
-            
-            // Remove notification after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-            
-            // Update internal value for compatibility but don't change actual display
             this.lineHeight = parseInt(e.target.value);
             
-            // Update CSS variables for compatibility (though they won't affect display)
+            // Update CSS variables for new line height
             this.updateSequenceLineHeightCSS();
             
-            console.log('ℹ️ [SequenceUtils] Line height selector changed but display remains fixed at 28px');
+            // Clear render cache to force re-render with new line height
+            this.clearRenderCache();
+            
+            // Re-render the sequence with new line height
+            const chromosome = this.genomeBrowser.currentChromosome;
+            const sequenceData = this.genomeBrowser.currentSequence;
+            if (chromosome && sequenceData && sequenceData[chromosome]) {
+                const sequence = sequenceData[chromosome];
+                this.displayEnhancedSequence(chromosome, sequence);
+            }
         });
         
         lineHeightContainer.appendChild(label);
@@ -482,8 +506,7 @@ class SequenceUtils {
         }
         
         const spacingLabel = document.createElement('label');
-        spacingLabel.textContent = 'Spacing (Fixed):';
-        spacingLabel.title = 'Line spacing is now fixed at 8px to prevent window resize issues';
+        spacingLabel.textContent = 'Spacing:';
         spacingLabel.style.cssText = `
             font-size: 12px;
             color: #6c757d;
@@ -523,39 +546,10 @@ class SequenceUtils {
         });
         
         spacingSelector.addEventListener('change', (e) => {
-            // Show notification that line spacing is now fixed
-            const notification = document.createElement('div');
-            notification.textContent = 'Line spacing is now fixed at 8px to prevent window resize issues. This setting is for compatibility only.';
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #ffc107;
-                color: #212529;
-                padding: 12px 16px;
-                border-radius: 6px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 9999;
-                max-width: 300px;
-                font-size: 13px;
-                line-height: 1.4;
-            `;
-            document.body.appendChild(notification);
-            
-            // Remove notification after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-            
-            // Update internal value for compatibility but don't change actual display
             this.lineSpacing = parseInt(e.target.value);
             
-            // Update CSS variables for compatibility (though they won't affect display)
+            // Update CSS variables for new line spacing
             this.updateSequenceLineHeightCSS();
-            
-            console.log('ℹ️ [SequenceUtils] Line spacing selector changed but display remains fixed at 8px');
             
             // Clear render cache to force re-render with new line spacing
             this.clearRenderCache();
@@ -2351,6 +2345,59 @@ class SequenceUtils {
             return `<span style="background-color: ${color}; padding: 1px 2px; margin: 0 1px; border-radius: 2px;">${aa}</span>`;
         }).join('');
     }
+    
+    /**
+     * Set minimum line spacing value to prevent overly tight spacing
+     * @param {number} minSpacing - Minimum spacing in pixels (default: 6)
+     */
+    setMinimumLineSpacing(minSpacing = 6) {
+        const oldMin = this.minLineSpacing;
+        this.minLineSpacing = Math.max(2, Math.floor(minSpacing)); // Ensure at least 2px minimum
+        
+        console.log(`🔧 [SequenceUtils] Minimum line spacing updated: ${oldMin}px → ${this.minLineSpacing}px`);
+        
+        // If current spacing is below new minimum, adjust it
+        if (this.lineSpacing < this.minLineSpacing) {
+            this.lineSpacing = this.minLineSpacing;
+            this.updateSequenceLineHeightCSS();
+            
+            // Update the UI selector if it exists
+            const spacingSelector = document.getElementById('sequenceLineSpacingSelector');
+            if (spacingSelector) {
+                spacingSelector.value = this.lineSpacing;
+            }
+            
+                         console.log(`🔧 [SequenceUtils] Line spacing adjusted to meet minimum: ${this.lineSpacing}px`);
+         }
+     }
+     
+     /**
+      * Load minimum line spacing from general settings
+      */
+     loadMinLineSpacingFromSettings() {
+         // Try to get settings from GeneralSettingsManager
+         if (window.genomeBrowser && window.genomeBrowser.generalSettingsManager) {
+             const settingsManager = window.genomeBrowser.generalSettingsManager;
+             if (settingsManager.getSetting) {
+                 const minSpacing = settingsManager.getSetting('minLineSpacing', 12);
+                 if (minSpacing !== this.minLineSpacing) {
+                     console.log(`🔧 [SequenceUtils] Loading minimum line spacing from settings: ${minSpacing}px`);
+                     this.setMinimumLineSpacing(minSpacing);
+                 }
+             }
+         } else {
+             // Fallback: try to get from localStorage
+             try {
+                 const generalSettings = JSON.parse(localStorage.getItem('generalSettings') || '{}');
+                 if (generalSettings.minLineSpacing && generalSettings.minLineSpacing !== this.minLineSpacing) {
+                     console.log(`🔧 [SequenceUtils] Loading minimum line spacing from localStorage: ${generalSettings.minLineSpacing}px`);
+                     this.setMinimumLineSpacing(generalSettings.minLineSpacing);
+                 }
+             } catch (error) {
+                 console.warn('⚠️ [SequenceUtils] Could not load minimum line spacing from localStorage:', error);
+             }
+         }
+     }
 }
 
 // Export for use in other modules

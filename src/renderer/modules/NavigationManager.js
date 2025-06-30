@@ -518,6 +518,21 @@ class NavigationManager {
         
         this.resetVisualDragUpdates(element);
 
+        // Dispatch custom drag end event immediately after resetting state
+        document.dispatchEvent(new CustomEvent('genomeViewDragEnd', {
+            detail: { 
+                chromosome, 
+                element, 
+                hasDragged,
+                finalPosition: this.genomeBrowser.currentPosition 
+            }
+        }));
+        console.log('🔧 [DRAG-END] genomeViewDragEnd event dispatched with details:', {
+            chromosome,
+            hasDragged,
+            finalPosition: this.genomeBrowser.currentPosition
+        });
+
         if (!hasDragged) {
             this.dragState.hasDragged = false;
             console.log('🔧 [DRAG-END] No significant drag detected, no position change');
@@ -572,11 +587,6 @@ class NavigationManager {
         
         // Update all detailed rulers after re-render
         this.updateDetailedRulers();
-        
-        // Dispatch custom drag end event for performance optimization
-        document.dispatchEvent(new CustomEvent('genomeViewDragEnd', {
-            detail: { chromosome, finalPosition: this.genomeBrowser.currentPosition }
-        }));
         
         console.log('🔧 [DRAG-END] Re-render completed');
         console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);

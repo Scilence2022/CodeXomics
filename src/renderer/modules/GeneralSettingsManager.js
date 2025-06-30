@@ -18,6 +18,7 @@ class GeneralSettingsManager {
             sequenceFont: 'monaco',
             compactMode: false,
             showWelcomeScreen: true,
+            minLineSpacing: 12, // Minimum line spacing for sequence display
             
             // Performance
             maxSequenceLength: 5000000,
@@ -147,6 +148,22 @@ class GeneralSettingsManager {
             });
         }
 
+        // Minimum line spacing setting
+        const minLineSpacingInput = document.getElementById('minLineSpacing');
+        if (minLineSpacingInput) {
+            minLineSpacingInput.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 2 && value <= 20) {
+                    this.updateSetting('minLineSpacing', value);
+                    this.applyMinLineSpacing(value);
+                } else {
+                    // Reset to valid range
+                    e.target.value = Math.max(2, Math.min(20, value));
+                    this.showNotification('Minimum line spacing must be between 2px and 20px', 'warning');
+                }
+            });
+        }
+
         // Performance settings
         const maxSequenceLengthSelect = document.getElementById('maxSequenceLength');
         if (maxSequenceLengthSelect) {
@@ -226,6 +243,31 @@ class GeneralSettingsManager {
                 this.resetAllSettings();
             });
         }
+
+        // Save settings button
+        const saveSettingsBtn = document.getElementById('saveGeneralSettings');
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', () => {
+                this.saveAllSettings();
+            });
+        }
+
+        // Modal close handlers
+        const modal = document.getElementById('generalSettingsModal');
+        if (modal) {
+            modal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.remove('show');
+                });
+            });
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+        }
     }
 
     /**
@@ -297,6 +339,10 @@ class GeneralSettingsManager {
         const showWelcomeCheckbox = document.getElementById('showWelcomeScreen');
         if (showWelcomeCheckbox) showWelcomeCheckbox.checked = this.settings.showWelcomeScreen;
 
+        // Minimum line spacing
+        const minLineSpacingInput = document.getElementById('minLineSpacing');
+        if (minLineSpacingInput) minLineSpacingInput.value = this.settings.minLineSpacing;
+
         // Performance settings
         const maxSequenceLengthSelect = document.getElementById('maxSequenceLength');
         if (maxSequenceLengthSelect) {
@@ -349,6 +395,36 @@ class GeneralSettingsManager {
     }
 
     /**
+     * Save all settings and close modal
+     */
+    async saveAllSettings() {
+        try {
+            // Apply all current settings
+            this.applySettings();
+            
+            // Save to config manager
+            if (this.configManager) {
+                await this.configManager.set('generalSettings', this.settings);
+                await this.configManager.saveConfig();
+            }
+            
+            // Close modal
+            const modal = document.getElementById('generalSettingsModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            
+            // Show success notification
+            this.showNotification('Settings saved successfully!', 'success');
+            
+            console.log('✅ [GeneralSettings] All settings saved successfully');
+        } catch (error) {
+            console.error('❌ [GeneralSettings] Failed to save settings:', error);
+            this.showNotification('Failed to save settings. Please try again.', 'error');
+        }
+    }
+
+    /**
      * Apply all settings to the application
      */
     applySettings() {
@@ -360,6 +436,7 @@ class GeneralSettingsManager {
         this.applyCompactMode(this.settings.compactMode);
         this.applyTrackHeight(this.settings.trackHeight);
         this.applyAnimations(this.settings.enableAnimations);
+        this.applyMinLineSpacing(this.settings.minLineSpacing);
     }
 
     /**
@@ -446,6 +523,33 @@ class GeneralSettingsManager {
         } else {
             body.classList.remove('compact-mode');
         }
+    }
+
+    /**
+     * Apply minimum line spacing setting
+     */
+    applyMinLineSpacing(minSpacing) {
+        // Apply minimum line spacing to SequenceUtils if available
+        if (window.genomeBrowser && window.genomeBrowser.sequenceUtils) {
+            const sequenceUtils = window.genomeBrowser.sequenceUtils;
+            if (sequenceUtils.setMinimumLineSpacing) {
+                sequenceUtils.setMinimumLineSpacing(minSpacing);
+                console.log(`🔧 [GeneralSettings] Applied minimum line spacing: ${minSpacing}px`);
+            }
+        }
+        
+        // Also set CSS custom property for immediate effect
+        document.documentElement.style.setProperty('--min-sequence-line-spacing', `${minSpacing}px`);
+        
+        // Update all existing sequence lines
+        const sequenceLines = document.querySelectorAll('.sequence-line');
+        sequenceLines.forEach(line => {
+            const currentMargin = getComputedStyle(line).marginBottom;
+            const currentValue = parseInt(currentMargin);
+            if (currentValue < minSpacing) {
+                line.style.marginBottom = `${minSpacing}px`;
+            }
+        });
     }
 
     /**
