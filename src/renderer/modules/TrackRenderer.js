@@ -2518,10 +2518,14 @@ class TrackRenderer {
         
         try {
             // Load reads using the specific BAM reader
+            // Ensure start position is never negative (BAM coordinates are 0-based)
+            const bamStart = Math.max(0, viewport.start - 1);
+            const bamEnd = Math.max(bamStart + 1, viewport.end - 1);
+            
             const reads = await bamFile.reader.getRecordsForRange(
                 chromosome, 
-                viewport.start - 1, 
-                viewport.end - 1, 
+                bamStart, 
+                bamEnd, 
                 { ignoreChromosome: false }
             );
             
