@@ -103,8 +103,61 @@ class BamReader {
 
             // Get header - this is fast and required
             console.log('📋 Reading BAM header...');
-            this.header = await this.bamFile.getHeader();
-            this.references = this.header.references || [];
+            try {
+                this.header = await this.bamFile.getHeader();
+                console.log('✅ BAM header read successfully');
+                console.log('🔍 Header content:', {
+                    hasReferences: !!this.header.references,
+                    referencesCount: this.header.references ? this.header.references.length : 0,
+                    headerKeys: Object.keys(this.header || {}),
+                    firstFewRefs: this.header.references ? this.header.references.slice(0, 3).map(r => ({ name: r.name, length: r.length })) : []
+                });
+                
+                this.references = this.header.references || [];
+                
+                if (this.references.length === 0) {
+                    console.error('❌ CRITICAL ISSUE: BAM file has no references in header!');
+                    console.error('This could indicate:');
+                    console.error('  1. Corrupted BAM file');
+                    console.error('  2. Incomplete BAM file');
+                    console.error('  3. BAM file created without proper header');
+                    console.error('  4. Issue with @gmod/bam library');
+                    console.error('Raw header object:', this.header);
+                    
+                    // Try to get more information about the file
+                    try {
+                        const fs = require('fs');
+                        const stats = fs.statSync(this.filePath);
+                        console.error(`File size: ${stats.size} bytes`);
+                        
+                        // Read first few bytes to check BAM magic
+                        const buffer = Buffer.alloc(4);
+                        const fd = fs.openSync(this.filePath, 'r');
+                        fs.readSync(fd, buffer, 0, 4, 0);
+                        fs.closeSync(fd);
+                        
+                        const magic = buffer.toString('ascii');
+                        console.error(`File magic: "${magic}" (should be "BAM\\1" for BAM files)`);
+                        
+                        if (magic !== 'BAM\u0001') {
+                            console.error('❌ File does not appear to be a valid BAM file!');
+                        }
+                    } catch (fileCheckError) {
+                        console.error('Could not perform file validation:', fileCheckError.message);
+                    }
+                }
+                
+            } catch (headerError) {
+                console.error('❌ Failed to read BAM header:', headerError);
+                console.error('Header error details:', {
+                    message: headerError.message,
+                    stack: headerError.stack,
+                    filePath: this.filePath,
+                    hasIndex: this.hasIndex,
+                    indexPath: this.indexPath
+                });
+                throw new Error(`Failed to read BAM header: ${headerError.message}`);
+            }
             
             // Get file size information
             await this.getFileSizeInfo();
@@ -113,6 +166,9 @@ class BamReader {
 
             console.log('✅ BamReader: Successfully initialized BAM file (direct @gmod/bam API)');
             console.log(`  📊 References: ${this.references.length}`);
+            if (this.references.length > 0) {
+                console.log(`  📋 Sample references:`, this.references.slice(0, 5).map(ref => `${ref.name} (${ref.length}bp)`));
+            }
             console.log(`  📈 Total reads: ${this.totalReads > 0 ? this.totalReads.toLocaleString() : 'Will be counted on-demand'}`);
             console.log(`  💾 File size: ${this.getFormattedFileSize()}`);
             console.log(`  🔍 Index: ${this.hasIndex ? `${this.indexType.toUpperCase()} (${this.getFormattedIndexSize()})` : 'Not available'}`);
@@ -124,6 +180,11 @@ class BamReader {
             } else {
                 console.log('🚀 BamReader: Index available - fast random access enabled');
                 console.log('   📊 Read counts will be determined during actual queries');
+            }
+            
+            // Final validation
+            if (this.references.length === 0) {
+                console.warn('⚠️ WARNING: BAM file initialized but has no references. This may cause issues with read queries.');
             }
 
             return {
