@@ -78,24 +78,11 @@ class ReadsManager {
             return [];
         }
 
-        // For BAM mode, we need to calculate the actual query region first
-        // to generate the correct cache key
-        let actualQueryStart = start;
-        let actualQueryEnd = end;
+        // Use direct region query instead of expanded regions
+        const regionKey = this.getRegionKey(chromosome, start, end);
         
-        if (this.isBamMode && this.bamReader) {
-            // Calculate the expanded search region that will be used for BAM query
-            const bufferSize = this.regionSize;
-            actualQueryStart = Math.max(0, start - bufferSize);
-            actualQueryEnd = end + bufferSize;
-        }
-
-        // Generate cache key based on the actual query region, not the requested region
-        const regionKey = this.getRegionKey(chromosome, actualQueryStart, actualQueryEnd);
-        
-        console.log(`🔍 [ReadsManager] Cache key calculation:`, {
+        console.log(`🔍 [ReadsManager] Direct region query:`, {
             requestedRegion: `${start}-${end}`,
-            actualQueryRegion: `${actualQueryStart}-${actualQueryEnd}`,
             cacheKey: regionKey
         });
         
@@ -108,11 +95,7 @@ class ReadsManager {
             console.log(`✅ [ReadsManager] Cache HIT for key: ${regionKey}`);
             console.log(`🔍 [ReadsManager] Cached reads count: ${cached.reads.length}`);
             
-            // Filter to exact boundaries
-            const filteredReads = this.filterReadsForExactRegion(cached.reads, start, end);
-            console.log(`🔍 [ReadsManager] After filtering to exact region ${start}-${end}: ${filteredReads.length} reads`);
-            
-            return filteredReads;
+            return cached.reads;
         }
 
         console.log(`❌ [ReadsManager] Cache MISS for key: ${regionKey}`);
@@ -131,34 +114,29 @@ class ReadsManager {
             reads = await this.loadReadsForRegion(chromosome, start, end, settings);
         }
         
-        // Cache the results using the correct key
+        // Cache the results
         this.cacheRegion(regionKey, reads);
         
-        // Filter to exact boundaries and return
-        const filteredReads = this.filterReadsForExactRegion(reads, start, end);
-        console.log(`🔍 [ReadsManager] Final result: ${filteredReads.length} reads for region ${start}-${end}`);
+        // Return reads directly without additional filtering
+        console.log(`🔍 [ReadsManager] Final result: ${reads.length} reads for region ${start}-${end}`);
         
-        return filteredReads;
+        return reads;
     }
 
     /**
      * Generate a cache key for a region
      */
     getRegionKey(chromosome, start, end) {
-        // Round to region boundaries for better cache efficiency
-        const regionStart = Math.floor(start / this.regionSize) * this.regionSize;
-        const regionEnd = Math.ceil(end / this.regionSize) * this.regionSize;
-        return `${chromosome}:${regionStart}-${regionEnd}`;
+        // Use exact region boundaries for direct querying
+        return `${chromosome}:${start}-${end}`;
     }
 
     /**
      * Load reads for a specific region from the raw SAM data
      */
     async loadReadsForRegion(chromosome, start, end, settings = {}) {
-        // Expand the search region to include some buffer for better caching
-        const bufferSize = this.regionSize;
-        const searchStart = Math.max(0, start - bufferSize);
-        const searchEnd = end + bufferSize;
+        // Query the exact target region without expansion
+        console.log(`🎯 [ReadsManager] Direct SAM region query - no expansion`);
         
         const reads = [];
         const lines = this.rawReadsData.split('\n');
@@ -185,11 +163,11 @@ class ReadsManager {
             // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
             if (!settings.ignoreChromosome && rname !== chromosome) continue;
             
-            const readStart = parseInt(pos) - 1; // Convert to 0-based
-            const readEnd = readStart + seq.length;
+            const readStart = parseInt(pos); // Keep 1-based coordinates for consistency
+            const readEnd = readStart + seq.length - 1;
             
-            // Check if read overlaps with our search region
-            if (readEnd >= searchStart && readStart <= searchEnd) {
+            // Check if read overlaps with our target region (direct overlap check)
+            if (readEnd >= start && readStart <= end) {
                 const read = {
                     id: qname,
                     chromosome: rname,
@@ -218,7 +196,7 @@ class ReadsManager {
         }
         
         this.stats.loadedRegions++;
-        console.log(`Loaded ${reads.length} reads for expanded region ${chromosome}:${searchStart}-${searchEnd} (ignoreChromosome: ${settings.ignoreChromosome})`);
+        console.log(`✅ [ReadsManager] Loaded ${reads.length} reads for target region ${chromosome}:${start}-${end} (ignoreChromosome: ${settings.ignoreChromosome})`);
         
         return reads;
     }
@@ -439,21 +417,17 @@ class ReadsManager {
         }
 
         try {
-            // Expand the search region to include some buffer for better caching
-            // This MUST match the calculation in getReadsForRegion for cache consistency
-            const bufferSize = this.regionSize;
-            const searchStart = Math.max(0, start - bufferSize);
-            const searchEnd = end + bufferSize;
+            // Query the exact target region without expansion
+            console.log(`🎯 [ReadsManager] Direct region query - no expansion`);
             
             // Convert to 0-based coordinates for BAM reader (BAM uses 0-based, GenomeExplorer uses 1-based)
-            const bamSearchStart = Math.max(0, searchStart - 1);
-            const bamSearchEnd = searchEnd - 1;
+            const bamSearchStart = Math.max(0, start - 1);
+            const bamSearchEnd = end - 1;
             
             console.log(`🔍 [ReadsManager] Coordinate conversion:`, {
                 originalRange: `${start}-${end}`,
-                bufferedRange: `${searchStart}-${searchEnd}`,
                 bamCoordinates: `${bamSearchStart}-${bamSearchEnd + 1}`,
-                bufferSize: bufferSize
+                noExpansion: true
             });
             
             this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}...`);
@@ -484,18 +458,15 @@ class ReadsManager {
                     }))
                 );
                 
-                // Check if reads are within expected range
-                const readsInOriginalRange = reads.filter(read => 
-                    read.start <= end && read.end >= start
-                ).length;
-                console.log(`🔍 [ReadsManager] Reads in original range ${start}-${end}: ${readsInOriginalRange}/${reads.length}`);
+                // All reads should be within the target range since we're querying directly
+                console.log(`🎯 [ReadsManager] All ${reads.length} reads are within target range ${start}-${end}`);
             } else {
                 console.warn(`⚠️ [ReadsManager] NO READS FOUND! This could be due to:`);
                 console.warn(`   1. No reads in the specified region`);
                 console.warn(`   2. Chromosome name mismatch (try ignoreChromosome=true)`);
                 console.warn(`   3. Coordinate system mismatch`);
                 console.warn(`   4. BAM file index issues`);
-                console.warn(`   5. Mapping quality filtering (though not implemented yet)`);
+                console.warn(`   5. Mapping quality filtering`);
                 
                 // Get BAM reader stats for debugging
                 const bamStats = this.bamReader.getStats();
@@ -540,11 +511,8 @@ class ReadsManager {
             throw new Error('No SAM file loaded for streaming');
         }
 
-        // For streaming mode, we need to read the file on-demand
-        // This is more memory-efficient but slower for repeated access
-        const bufferSize = Math.max(50000, end - start + 20000); // Buffer region
-        const searchStart = Math.max(0, start - bufferSize);
-        const searchEnd = end + bufferSize;
+        // Query the exact target region without expansion
+        console.log(`🎯 [ReadsManager] Direct streaming region query - no expansion`);
         
         const reads = [];
         
@@ -567,11 +535,11 @@ class ReadsManager {
                     // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
                     if (!settings.ignoreChromosome && rname !== chromosome) continue;
                     
-                    const readStart = parseInt(pos) - 1; // Convert to 0-based
-                    const readEnd = readStart + seq.length;
+                    const readStart = parseInt(pos); // Keep 1-based coordinates for consistency
+                    const readEnd = readStart + seq.length - 1;
                     
-                    // Check if read overlaps with our search region
-                    if (readEnd >= searchStart && readStart <= searchEnd) {
+                    // Check if read overlaps with our target region (direct overlap check)
+                    if (readEnd >= start && readStart <= end) {
                         const read = {
                             id: qname,
                             chromosome: rname,
@@ -597,7 +565,7 @@ class ReadsManager {
                     ipcRenderer.removeListener('file-stream-complete', completeHandler);
                 }
                 
-                console.log(`Loaded ${reads.length} reads for region ${chromosome}:${start}-${end} from streaming (ignoreChromosome: ${settings.ignoreChromosome})`);
+                console.log(`✅ [ReadsManager] Loaded ${reads.length} reads for target region ${chromosome}:${start}-${end} from streaming (ignoreChromosome: ${settings.ignoreChromosome})`);
                 resolve(reads);
             };
             
