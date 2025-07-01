@@ -2151,13 +2151,52 @@ class TrackRenderer {
             // Get track settings first
             const settings = this.getTrackSettings('reads');
             
+            console.log(`🎯 [TrackRenderer] === READS TRACK CREATION DEBUG START ===`);
+            console.log(`🎯 [TrackRenderer] Creating reads track for region ${chromosome}:${viewport.start}-${viewport.end}`);
+            console.log(`🎯 [TrackRenderer] Track settings:`, settings);
+            
             // Get reads for current region using ReadsManager with settings
             const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end, settings);
             
             // Remove loading message
             trackContent.removeChild(loadingMsg);
             
-            console.log(`Displaying ${visibleReads.length} reads in region ${viewport.start}-${viewport.end}`);
+            console.log(`🎯 [TrackRenderer] Retrieved ${visibleReads.length} reads for display in region ${viewport.start}-${viewport.end}`);
+            
+            // Check if we have any potential filtering issues
+            if (visibleReads.length === 0) {
+                console.warn(`⚠️ [TrackRenderer] NO READS TO DISPLAY! Debugging info:`);
+                console.warn(`   - Chromosome: ${chromosome}`);
+                console.warn(`   - Region: ${viewport.start}-${viewport.end}`);
+                console.warn(`   - Settings:`, settings);
+                console.warn(`   - ReadsManager mode: ${this.genomeBrowser.readsManager.isBamMode ? 'BAM' : 'SAM'}`);
+                console.warn(`   - Current file: ${this.genomeBrowser.readsManager.currentFile}`);
+            } else {
+                // Log sample reads and their properties
+                console.log(`🎯 [TrackRenderer] Sample reads (first 3):`, 
+                    visibleReads.slice(0, 3).map(read => ({
+                        id: read.id,
+                        chromosome: read.chromosome,
+                        position: `${read.start}-${read.end}`,
+                        strand: read.strand,
+                        mappingQuality: read.mappingQuality,
+                        flags: read.flags
+                    }))
+                );
+                
+                // Check mapping quality distribution
+                const mappingQualities = visibleReads.map(read => read.mappingQuality || 0);
+                const minMQ = Math.min(...mappingQualities);
+                const maxMQ = Math.max(...mappingQualities);
+                const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
+                
+                console.log(`🎯 [TrackRenderer] Mapping quality stats:`, {
+                    min: minMQ,
+                    max: maxMQ,
+                    average: avgMQ.toFixed(1),
+                    count: visibleReads.length
+                });
+            }
             
             if (visibleReads.length === 0) {
                 const noReadsMsg = document.createElement('div');
@@ -5097,6 +5136,32 @@ class TrackRenderer {
                     <input type="number" id="readsStreamingThreshold" min="10" max="1000" value="${settings.streamingThreshold || 50}">
                     <div class="help-text">File size threshold in MB above which SAM files will be loaded using streaming mode for better memory management.</div>
                 </div>
+                <div class="form-group">
+                    <label for="readsMinMappingQuality">Minimum mapping quality:</label>
+                    <input type="number" id="readsMinMappingQuality" min="0" max="60" value="${settings.minMappingQuality || 0}">
+                    <div class="help-text">Minimum mapping quality (MAPQ) required for reads to be displayed. Set to 0 to show all reads regardless of quality.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowUnmapped" ${settings.showUnmapped ? 'checked' : ''}>
+                        Show unmapped reads
+                    </label>
+                    <div class="help-text">Include unmapped reads in the display (reads with mapping quality 0 and unmapped flag).</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowSecondary" ${settings.showSecondary !== false ? 'checked' : ''}>
+                        Show secondary alignments
+                    </label>
+                    <div class="help-text">Include secondary alignments (reads with flag 256).</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowSupplementary" ${settings.showSupplementary !== false ? 'checked' : ''}>
+                        Show supplementary alignments
+                    </label>
+                    <div class="help-text">Include supplementary alignments (reads with flag 2048).</div>
+                </div>
             </div>
         `;
     }
@@ -5160,7 +5225,11 @@ class TrackRenderer {
                 ignoreChromosome: false,
                 minWidth: 2,
                 height: 150,
-                streamingThreshold: 50
+                streamingThreshold: 50,
+                minMappingQuality: 0,
+                showUnmapped: false,
+                showSecondary: true,
+                showSupplementary: true
             }
         };
         
@@ -5270,6 +5339,10 @@ class TrackRenderer {
                 settings.ignoreChromosome = modal.querySelector('#readsIgnoreChromosome').checked;
                 settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
                 settings.streamingThreshold = parseInt(modal.querySelector('#readsStreamingThreshold').value) || 50;
+                settings.minMappingQuality = parseInt(modal.querySelector('#readsMinMappingQuality').value) || 0;
+                settings.showUnmapped = modal.querySelector('#readsShowUnmapped').checked;
+                settings.showSecondary = modal.querySelector('#readsShowSecondary').checked;
+                settings.showSupplementary = modal.querySelector('#readsShowSupplementary').checked;
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
                 break;
                 

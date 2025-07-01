@@ -260,6 +260,18 @@ class BamReader {
         const startTime = performance.now();
         
         try {
+            console.log(`🔍 [BamReader] === BAM QUERY DEBUG START ===`);
+            console.log(`🔍 [BamReader] Query parameters:`, {
+                chromosome,
+                start,
+                end,
+                settings,
+                isInitialized: this.isInitialized,
+                hasIndex: this.hasIndex,
+                indexType: this.indexType,
+                bamFilePath: this.filePath
+            });
+            
             if (!this.isInitialized || !this.bamFile) {
                 throw new Error('BAM reader not initialized. Call initialize() first.');
             }
@@ -281,56 +293,130 @@ class BamReader {
                 throw new Error('End position must be greater than start position');
             }
 
+            // Log available references for debugging
+            console.log(`🔍 [BamReader] Available references (${this.references.length}):`, 
+                this.references.slice(0, 10).map(ref => `${ref.name} (${ref.length}bp)`));
+
             // Check if chromosome exists in references (only warn, don't fail)
             const referenceExists = this.references.some(ref => ref.name === chromosome);
             if (!referenceExists && this.references.length > 0) {
-                console.warn(`🔍 BamReader: Chromosome '${chromosome}' not found in BAM references`);
+                console.warn(`⚠️ [BamReader] Chromosome '${chromosome}' not found in BAM references`);
                 // List available chromosomes for debugging
                 const availableChromosomes = this.references.slice(0, 5).map(ref => ref.name).join(', ');
                 console.warn(`   Available chromosomes (first 5): ${availableChromosomes}${this.references.length > 5 ? '...' : ''}`);
+                
+                // If chromosome doesn't exist and we're not ignoring chromosome, this might be the issue
+                if (!settings.ignoreChromosome) {
+                    console.error(`❌ [BamReader] POTENTIAL ISSUE: Chromosome '${chromosome}' not found and ignoreChromosome is false`);
+                }
+            } else {
+                console.log(`✅ [BamReader] Chromosome '${chromosome}' found in references`);
             }
 
-            console.log(`🔍 BamReader: Querying region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} ${this.hasIndex ? '(indexed)' : '(sequential scan)'}`);
+            console.log(`🔍 [BamReader] Querying region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} ${this.hasIndex ? '(indexed)' : '(sequential scan)'}`);
 
             let allRecords = [];
 
             if (settings.ignoreChromosome) {
-                // When ignoring chromosome, get all reads from all references that overlap the position range
-                console.log(`Fetching records from all chromosomes in position range ${start}-${end}`);
+                console.log(`🔍 [BamReader] IGNORE CHROMOSOME MODE: Fetching records from all chromosomes in position range ${start}-${end}`);
                 
                 for (const ref of this.references) {
                     try {
+                        console.log(`🔍 [BamReader] Querying reference: ${ref.name}`);
                         const records = await this.bamFile.getRecordsForRange(ref.name, start, end);
-                        console.log(`Retrieved ${records.length} records from ${ref.name}`);
+                        console.log(`🔍 [BamReader] Retrieved ${records.length} records from ${ref.name}`);
                         allRecords = allRecords.concat(records);
+                        
+                        // Log sample records for debugging
+                        if (records.length > 0) {
+                            const sampleRecord = records[0];
+                            console.log(`🔍 [BamReader] Sample record from ${ref.name}:`, {
+                                name: sampleRecord.name || sampleRecord.qname,
+                                refName: sampleRecord.refName,
+                                start: sampleRecord.start,
+                                end: sampleRecord.end,
+                                mappingQuality: sampleRecord.mq || sampleRecord.mapq,
+                                flags: sampleRecord.flags
+                            });
+                        }
                     } catch (refError) {
-                        console.warn(`Error querying reference ${ref.name}:`, refError.message);
+                        console.warn(`⚠️ [BamReader] Error querying reference ${ref.name}:`, refError.message);
                         // Continue with other references
                     }
                 }
             } else {
                 // Normal chromosome-specific query using @gmod/bam directly
-                console.log(`Fetching records for range ${chromosome}:${start}-${end}`);
-                allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
+                console.log(`🔍 [BamReader] NORMAL MODE: Fetching records for range ${chromosome}:${start}-${end}`);
+                try {
+                    allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
+                    console.log(`🔍 [BamReader] Direct query returned ${allRecords.length} records`);
+                    
+                    // Log sample records for debugging
+                    if (allRecords.length > 0) {
+                        const sampleRecord = allRecords[0];
+                        console.log(`🔍 [BamReader] Sample record:`, {
+                            name: sampleRecord.name || sampleRecord.qname,
+                            refName: sampleRecord.refName,
+                            start: sampleRecord.start,
+                            end: sampleRecord.end,
+                            mappingQuality: sampleRecord.mq || sampleRecord.mapq,
+                            flags: sampleRecord.flags,
+                            strand: sampleRecord.strand
+                        });
+                    }
+                } catch (queryError) {
+                    console.error(`❌ [BamReader] Error in direct query:`, queryError);
+                    throw queryError;
+                }
             }
 
-            console.log(`Retrieved ${allRecords.length} raw records from BAM file`);
+            console.log(`🔍 [BamReader] Retrieved ${allRecords.length} raw records from BAM file`);
+
+            // Log detailed statistics about the raw records
+            if (allRecords.length > 0) {
+                const mappingQualities = allRecords.map(r => r.mq || r.mapq || 0);
+                const minMQ = Math.min(...mappingQualities);
+                const maxMQ = Math.max(...mappingQualities);
+                const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
+                
+                console.log(`🔍 [BamReader] Raw records mapping quality stats:`, {
+                    min: minMQ,
+                    max: maxMQ,
+                    average: avgMQ.toFixed(1),
+                    count: allRecords.length
+                });
+                
+                // Check for unmapped reads
+                const unmappedCount = allRecords.filter(r => (r.flags & 4) !== 0).length;
+                console.log(`🔍 [BamReader] Unmapped reads: ${unmappedCount}/${allRecords.length}`);
+                
+                // Check for secondary alignments
+                const secondaryCount = allRecords.filter(r => (r.flags & 256) !== 0).length;
+                console.log(`🔍 [BamReader] Secondary alignments: ${secondaryCount}/${allRecords.length}`);
+                
+                // Check for supplementary alignments
+                const supplementaryCount = allRecords.filter(r => (r.flags & 2048) !== 0).length;
+                console.log(`🔍 [BamReader] Supplementary alignments: ${supplementaryCount}/${allRecords.length}`);
+            }
 
             // Convert records to our internal format
-            const reads = this.convertRecordsToReads(allRecords, chromosome);
+            console.log(`🔍 [BamReader] Converting ${allRecords.length} records to internal format...`);
+            const reads = this.convertRecordsToReads(allRecords, chromosome, settings);
             
             const queryTime = performance.now() - startTime;
             
             // Update performance statistics
             this.updatePerformanceStats(queryTime);
             
-            console.log(`✅ BamReader: Retrieved ${reads.length.toLocaleString()} reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} in ${queryTime.toFixed(1)}ms`);
+            console.log(`✅ [BamReader] Retrieved ${reads.length.toLocaleString()} reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} in ${queryTime.toFixed(1)}ms`);
+            console.log(`🔍 [BamReader] === BAM QUERY DEBUG END ===`);
 
             return reads;
 
         } catch (error) {
             const queryTime = performance.now() - startTime;
-            console.error(`❌ BamReader: Failed to get reads for region (${queryTime.toFixed(1)}ms):`, error);
+            console.error(`❌ [BamReader] Failed to get reads for region (${queryTime.toFixed(1)}ms):`, error);
+            console.error(`❌ [BamReader] Error stack:`, error.stack);
             throw new Error(`Failed to read BAM region: ${error.message}`);
         }
     }
@@ -339,12 +425,89 @@ class BamReader {
      * Convert @gmod/bam records to our internal format
      * @private
      */
-    convertRecordsToReads(records, chromosome) {
+    convertRecordsToReads(records, chromosome, settings = {}) {
         const reads = [];
+        let filteredCount = 0;
+        let unmappedCount = 0;
+        let secondaryCount = 0;
+        let supplementaryCount = 0;
+        let lowQualityCount = 0;
+        
+        console.log(`🔍 [BamReader] === RECORD CONVERSION DEBUG START ===`);
+        console.log(`🔍 [BamReader] Converting ${records.length} records with settings:`, settings);
         
         for (let i = 0; i < records.length; i++) {
             try {
                 const record = records[i];
+                
+                // Debug the first few records in detail
+                if (i < 3) {
+                    console.log(`🔍 [BamReader] Record ${i} details:`, {
+                        name: record.name || record.qname,
+                        refName: record.refName,
+                        start: record.start,
+                        end: record.end,
+                        flags: record.flags,
+                        mappingQuality: record.mq || record.mapq,
+                        strand: record.strand,
+                        cigar: record.CIGAR || record.cigar,
+                        seq: record.seq ? record.seq.substring(0, 20) + '...' : 'N/A'
+                    });
+                }
+                
+                // Get mapping quality first
+                const mappingQuality = record.mq || record.mapq || 0;
+                
+                // Check for unmapped reads (flag 4)
+                if ((record.flags & 4) !== 0) {
+                    unmappedCount++;
+                    if (i < 5) {
+                        console.log(`🔍 [BamReader] Found unmapped read: ${record.name || record.qname}`);
+                    }
+                    // Skip unmapped reads unless explicitly requested
+                    if (!settings.showUnmapped) {
+                        continue;
+                    }
+                }
+                
+                // Check for secondary alignments (flag 256)
+                if ((record.flags & 256) !== 0) {
+                    secondaryCount++;
+                    if (i < 5) {
+                        console.log(`🔍 [BamReader] Found secondary alignment: ${record.name || record.qname}`);
+                    }
+                    // Skip secondary alignments if not requested
+                    if (settings.showSecondary === false) {
+                        continue;
+                    }
+                }
+                
+                // Check for supplementary alignments (flag 2048)
+                if ((record.flags & 2048) !== 0) {
+                    supplementaryCount++;
+                    if (i < 5) {
+                        console.log(`🔍 [BamReader] Found supplementary alignment: ${record.name || record.qname}`);
+                    }
+                    // Skip supplementary alignments if not requested
+                    if (settings.showSupplementary === false) {
+                        continue;
+                    }
+                }
+                
+                // Check mapping quality filtering
+                const minMappingQuality = settings.minMappingQuality || 0;
+                if (mappingQuality < minMappingQuality) {
+                    lowQualityCount++;
+                    if (i < 5) {  // Log first few low quality reads
+                        console.log(`🔍 [BamReader] Filtering low mapping quality read: ${record.name || record.qname} (MQ=${mappingQuality} < ${minMappingQuality})`);
+                    }
+                    continue;
+                }
+                
+                // Count low quality reads for statistics (but don't filter them if minMappingQuality is 0)
+                if (mappingQuality < 1) {
+                    lowQualityCount++;
+                }
                 
                 const read = {
                     id: record.name || record.qname || `read_${i}`,
@@ -352,7 +515,7 @@ class BamReader {
                     start: record.start,
                     end: record.end,
                     strand: (record.strand === 1 || record.strand === '+') ? '+' : '-',
-                    mappingQuality: record.mq || record.mapq || 0,
+                    mappingQuality: mappingQuality,
                     cigar: record.CIGAR || record.cigar || '',
                     sequence: record.seq || '',
                     quality: record.qual || '',
@@ -363,10 +526,45 @@ class BamReader {
                 
                 reads.push(read);
             } catch (recordError) {
-                console.warn(`Error processing record ${i}:`, recordError.message);
+                console.warn(`⚠️ [BamReader] Error processing record ${i}:`, recordError.message);
+                filteredCount++;
                 // Continue processing other records
             }
         }
+        
+        const totalFiltered = records.length - reads.length;
+        
+        console.log(`🔍 [BamReader] Conversion summary:`, {
+            totalRecords: records.length,
+            convertedReads: reads.length,
+            totalFiltered: totalFiltered,
+            unmappedFound: unmappedCount,
+            secondaryAlignments: secondaryCount,
+            supplementaryAlignments: supplementaryCount,
+            lowQualityReads: lowQualityCount,
+            conversionErrors: filteredCount,
+            filterSettings: {
+                minMappingQuality: settings.minMappingQuality || 0,
+                showUnmapped: settings.showUnmapped || false,
+                showSecondary: settings.showSecondary !== false,
+                showSupplementary: settings.showSupplementary !== false
+            }
+        });
+        
+        // Log sample of final converted reads
+        if (reads.length > 0) {
+            console.log(`🔍 [BamReader] Sample converted reads (first 3):`, 
+                reads.slice(0, 3).map(read => ({
+                    id: read.id,
+                    chromosome: read.chromosome,
+                    position: `${read.start}-${read.end}`,
+                    strand: read.strand,
+                    mappingQuality: read.mappingQuality
+                }))
+            );
+        }
+        
+        console.log(`🔍 [BamReader] === RECORD CONVERSION DEBUG END ===`);
         
         return reads;
     }

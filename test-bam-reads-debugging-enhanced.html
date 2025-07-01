@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced BAM Reads Debugging Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .results {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-width: 300px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Enhanced BAM Reads Debugging Test</h1>
+            <p>Comprehensive debugging tool for BAM reads loading issues with detailed console output and filtering analysis</p>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Current Status</h2>
+            <div id="statusInfo" class="status info">
+                Loading genome browser state...
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="test-section">
+                <h3>🔍 Debug Current State</h3>
+                <div class="test-controls">
+                    <button class="btn-primary" onclick="debugCurrentState()">Debug Current State</button>
+                    <button class="btn-warning" onclick="debugBAMReader()">Debug BAM Reader</button>
+                    <button class="btn-success" onclick="debugReadsManager()">Debug ReadsManager</button>
+                </div>
+                <div class="results" id="debugResults"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>🎯 Manual Query Test</h3>
+                <div class="input-group">
+                    <label for="chromosome">Chromosome:</label>
+                    <input type="text" id="chromosome" value="NC_000913.3" placeholder="e.g., NC_000913.3">
+                </div>
+                <div class="input-group">
+                    <label for="startPos">Start Position:</label>
+                    <input type="number" id="startPos" value="1" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="endPos">End Position:</label>
+                    <input type="number" id="endPos" value="1000" min="1">
+                </div>
+                
+                <h4>Filtering Options</h4>
+                <div class="input-group">
+                    <label for="minMappingQuality">Minimum Mapping Quality:</label>
+                    <input type="number" id="minMappingQuality" value="0" min="0" max="60">
+                </div>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="ignoreChromosome"> Ignore Chromosome</label>
+                    <label><input type="checkbox" id="showUnmapped"> Show Unmapped</label>
+                    <label><input type="checkbox" id="showSecondary" checked> Show Secondary</label>
+                    <label><input type="checkbox" id="showSupplementary" checked> Show Supplementary</label>
+                </div>
+                
+                <div class="test-controls">
+                    <button class="btn-primary" onclick="testManualQuery()">Test Query</button>
+                    <button class="btn-warning" onclick="testWithDifferentSettings()">Test Different Settings</button>
+                </div>
+                <div class="results" id="manualResults"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Comprehensive Analysis</h3>
+            <div class="test-controls">
+                <button class="btn-success" onclick="runComprehensiveAnalysis()">Run Full Analysis</button>
+                <button class="btn-warning" onclick="testKnownPositions()">Test Known Positions</button>
+                <button class="btn-danger" onclick="clearAllLogs()">Clear All Logs</button>
+            </div>
+            <div class="results" id="analysisResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Real-time Console Monitor</h3>
+            <p>Monitor console output in real-time (check browser developer tools for full details)</p>
+            <div class="test-controls">
+                <button class="btn-primary" onclick="startConsoleMonitoring()">Start Monitoring</button>
+                <button class="btn-warning" onclick="stopConsoleMonitoring()">Stop Monitoring</button>
+            </div>
+            <div class="results" id="consoleMonitor"></div>
+        </div>
+    </div>
+
+    <script>
+        let consoleMonitorInterval = null;
+        let originalConsoleLog = console.log;
+        let originalConsoleWarn = console.warn;
+        let originalConsoleError = console.error;
+        let capturedLogs = [];
+
+        function log(message, elementId = 'debugResults') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent += `${new Date().toLocaleTimeString()}: ${message}\n`;
+                element.scrollTop = element.scrollHeight;
+            }
+            console.log(message);
+        }
+
+        function clearLog(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = '';
+            }
+        }
+
+        function clearAllLogs() {
+            ['debugResults', 'manualResults', 'analysisResults', 'consoleMonitor'].forEach(clearLog);
+            capturedLogs = [];
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('statusInfo');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+
+        async function debugCurrentState() {
+            clearLog('debugResults');
+            log('=== Current State Debug ===', 'debugResults');
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                if (!browser) {
+                    log('❌ genomeBrowser not found', 'debugResults');
+                    updateStatus('GenomeBrowser not found', 'error');
+                    return;
+                }
+
+                log('✅ GenomeBrowser found', 'debugResults');
+                
+                // Check viewport
+                const viewport = browser.getCurrentViewport ? browser.getCurrentViewport() : null;
+                if (viewport) {
+                    log(`Current viewport: ${viewport.chromosome}:${viewport.start}-${viewport.end}`, 'debugResults');
+                } else {
+                    log('❌ No viewport information', 'debugResults');
+                }
+
+                // Check ReadsManager
+                if (browser.readsManager) {
+                    log('✅ ReadsManager found', 'debugResults');
+                    log(`Current file: ${browser.readsManager.currentFile || 'None'}`, 'debugResults');
+                    log(`Is BAM mode: ${browser.readsManager.isBamMode}`, 'debugResults');
+                    log(`Has BAM reader: ${!!browser.readsManager.bamReader}`, 'debugResults');
+                    
+                    if (browser.readsManager.bamReader) {
+                        const bamReader = browser.readsManager.bamReader;
+                        log(`BAM file: ${bamReader.filePath}`, 'debugResults');
+                        log(`Has index: ${bamReader.hasIndex}`, 'debugResults');
+                        log(`Is initialized: ${bamReader.isInitialized}`, 'debugResults');
+                        
+                        const stats = bamReader.getStats();
+                        log(`Total reads estimate: ${stats.totalReads}`, 'debugResults');
+                        
+                        const references = bamReader.getReferences();
+                        log(`References: ${references.length}`, 'debugResults');
+                        references.slice(0, 5).forEach(ref => {
+                            log(`  - ${ref.name} (${ref.length} bp)`, 'debugResults');
+                        });
+                    }
+                } else {
+                    log('❌ No ReadsManager found', 'debugResults');
+                    updateStatus('ReadsManager not found', 'error');
+                }
+                
+                updateStatus('Debug completed - check results', 'info');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'debugResults');
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function debugBAMReader() {
+            clearLog('debugResults');
+            log('=== BAM Reader Debug ===', 'debugResults');
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                const bamReader = browser?.readsManager?.bamReader;
+                
+                if (!bamReader) {
+                    log('❌ No BAM reader available', 'debugResults');
+                    return;
+                }
+                
+                log('✅ BAM Reader found', 'debugResults');
+                log(`File path: ${bamReader.filePath}`, 'debugResults');
+                log(`Initialized: ${bamReader.isInitialized}`, 'debugResults');
+                log(`Has index: ${bamReader.hasIndex}`, 'debugResults');
+                log(`Index type: ${bamReader.indexType}`, 'debugResults');
+                log(`Index path: ${bamReader.indexPath}`, 'debugResults');
+                
+                const stats = bamReader.getStats();
+                log('BAM Statistics:', 'debugResults');
+                log(`  Total reads: ${stats.totalReads}`, 'debugResults');
+                log(`  File size: ${stats.fileSize} bytes`, 'debugResults');
+                log(`  Index size: ${stats.indexSize} bytes`, 'debugResults');
+                log(`  References: ${stats.references}`, 'debugResults');
+                
+                const references = bamReader.getReferences();
+                log(`Available references (${references.length}):`, 'debugResults');
+                references.forEach((ref, index) => {
+                    if (index < 10) {  // Show first 10
+                        log(`  ${index + 1}. ${ref.name} (${ref.length.toLocaleString()} bp)`, 'debugResults');
+                    }
+                });
+                if (references.length > 10) {
+                    log(`  ... and ${references.length - 10} more`, 'debugResults');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'debugResults');
+            }
+        }
+
+        async function debugReadsManager() {
+            clearLog('debugResults');
+            log('=== ReadsManager Debug ===', 'debugResults');
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                const readsManager = browser?.readsManager;
+                
+                if (!readsManager) {
+                    log('❌ No ReadsManager available', 'debugResults');
+                    return;
+                }
+                
+                log('✅ ReadsManager found', 'debugResults');
+                log(`Current file: ${readsManager.currentFile}`, 'debugResults');
+                log(`Is BAM mode: ${readsManager.isBamMode}`, 'debugResults');
+                log(`Is streaming: ${readsManager.isStreaming}`, 'debugResults');
+                log(`Region size: ${readsManager.regionSize}`, 'debugResults');
+                log(`Cache size: ${readsManager.cache.size}`, 'debugResults');
+                log(`Max cache size: ${readsManager.maxCacheSize}`, 'debugResults');
+                
+                log('Statistics:', 'debugResults');
+                log(`  Total reads: ${readsManager.stats.totalReads}`, 'debugResults');
+                log(`  Loaded regions: ${readsManager.stats.loadedRegions}`, 'debugResults');
+                log(`  Cache hits: ${readsManager.stats.cacheHits}`, 'debugResults');
+                log(`  Cache misses: ${readsManager.stats.cacheMisses}`, 'debugResults');
+                
+                // Test current viewport if available
+                const viewport = browser.getCurrentViewport ? browser.getCurrentViewport() : null;
+                if (viewport && readsManager.bamReader) {
+                    log('--- Testing current viewport query ---', 'debugResults');
+                    try {
+                        const startTime = performance.now();
+                        const reads = await readsManager.getReadsForRegion(
+                            viewport.chromosome,
+                            viewport.start,
+                            viewport.end
+                        );
+                        const queryTime = performance.now() - startTime;
+                        
+                        log(`ReadsManager query result: ${reads.length} reads in ${queryTime.toFixed(1)}ms`, 'debugResults');
+                        
+                        if (reads.length > 0) {
+                            log(`Sample reads:`, 'debugResults');
+                            reads.slice(0, 3).forEach(read => {
+                                log(`  ${read.id}: ${read.chromosome}:${read.start}-${read.end} (MQ=${read.mappingQuality})`, 'debugResults');
+                            });
+                        }
+                        
+                    } catch (error) {
+                        log(`❌ Query error: ${error.message}`, 'debugResults');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'debugResults');
+            }
+        }
+
+        async function testManualQuery() {
+            clearLog('manualResults');
+            log('=== Manual Query Test ===', 'manualResults');
+            
+            const chromosome = document.getElementById('chromosome').value;
+            const start = parseInt(document.getElementById('startPos').value);
+            const end = parseInt(document.getElementById('endPos').value);
+            const minMappingQuality = parseInt(document.getElementById('minMappingQuality').value);
+            const ignoreChromosome = document.getElementById('ignoreChromosome').checked;
+            const showUnmapped = document.getElementById('showUnmapped').checked;
+            const showSecondary = document.getElementById('showSecondary').checked;
+            const showSupplementary = document.getElementById('showSupplementary').checked;
+            
+            const settings = {
+                ignoreChromosome,
+                minMappingQuality,
+                showUnmapped,
+                showSecondary,
+                showSupplementary
+            };
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                if (!browser?.readsManager?.bamReader) {
+                    log('❌ No BAM reader available', 'manualResults');
+                    return;
+                }
+                
+                log(`Query: ${chromosome}:${start}-${end}`, 'manualResults');
+                log(`Settings: ${JSON.stringify(settings, null, 2)}`, 'manualResults');
+                
+                // Test ReadsManager query
+                log('--- ReadsManager query ---', 'manualResults');
+                try {
+                    const startTime1 = performance.now();
+                    const readsManagerResult = await browser.readsManager.getReadsForRegion(chromosome, start, end, settings);
+                    const time1 = performance.now() - startTime1;
+                    log(`ReadsManager: ${readsManagerResult.length} reads in ${time1.toFixed(1)}ms`, 'manualResults');
+                    
+                    if (readsManagerResult.length > 0) {
+                        log('Sample reads from ReadsManager:', 'manualResults');
+                        readsManagerResult.slice(0, 3).forEach(read => {
+                            log(`  ${read.id}: ${read.chromosome}:${read.start}-${read.end} (${read.strand}) MQ=${read.mappingQuality}`, 'manualResults');
+                        });
+                    }
+                } catch (error) {
+                    log(`❌ ReadsManager error: ${error.message}`, 'manualResults');
+                }
+                
+                // Test direct BAM reader query
+                log('--- Direct BAM reader query ---', 'manualResults');
+                try {
+                    const bamReader = browser.readsManager.bamReader;
+                    const startTime2 = performance.now();
+                    const directResult = await bamReader.getRecordsForRange(chromosome, start - 1, end, settings);
+                    const time2 = performance.now() - startTime2;
+                    log(`Direct BAM: ${directResult.length} reads in ${time2.toFixed(1)}ms`, 'manualResults');
+                    
+                    if (directResult.length > 0) {
+                        log('Sample reads from direct BAM query:', 'manualResults');
+                        directResult.slice(0, 3).forEach(read => {
+                            log(`  ${read.id}: ${read.chromosome}:${read.start}-${read.end} (${read.strand}) MQ=${read.mappingQuality}`, 'manualResults');
+                        });
+                    }
+                } catch (error) {
+                    log(`❌ Direct BAM error: ${error.message}`, 'manualResults');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'manualResults');
+            }
+        }
+
+        async function testWithDifferentSettings() {
+            clearLog('manualResults');
+            log('=== Testing Different Settings ===', 'manualResults');
+            
+            const chromosome = document.getElementById('chromosome').value;
+            const start = parseInt(document.getElementById('startPos').value);
+            const end = parseInt(document.getElementById('endPos').value);
+            
+            const testSettings = [
+                { name: 'Default', settings: {} },
+                { name: 'Show All', settings: { minMappingQuality: 0, showUnmapped: true, showSecondary: true, showSupplementary: true } },
+                { name: 'High Quality Only', settings: { minMappingQuality: 30, showUnmapped: false, showSecondary: false, showSupplementary: false } },
+                { name: 'Ignore Chromosome', settings: { ignoreChromosome: true } },
+                { name: 'Primary Only', settings: { showSecondary: false, showSupplementary: false, showUnmapped: false } }
+            ];
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                if (!browser?.readsManager?.bamReader) {
+                    log('❌ No BAM reader available', 'manualResults');
+                    return;
+                }
+                
+                for (const test of testSettings) {
+                    log(`--- Testing: ${test.name} ---`, 'manualResults');
+                    log(`Settings: ${JSON.stringify(test.settings)}`, 'manualResults');
+                    
+                    try {
+                        const startTime = performance.now();
+                        const reads = await browser.readsManager.bamReader.getRecordsForRange(
+                            chromosome, start - 1, end, test.settings
+                        );
+                        const queryTime = performance.now() - startTime;
+                        
+                        log(`Result: ${reads.length} reads in ${queryTime.toFixed(1)}ms`, 'manualResults');
+                        
+                        if (reads.length > 0) {
+                            const mappingQualities = reads.map(r => r.mappingQuality || 0);
+                            const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
+                            log(`  Average MQ: ${avgMQ.toFixed(1)}`, 'manualResults');
+                            log(`  MQ range: ${Math.min(...mappingQualities)} - ${Math.max(...mappingQualities)}`, 'manualResults');
+                        }
+                        
+                    } catch (error) {
+                        log(`❌ Error: ${error.message}`, 'manualResults');
+                    }
+                    
+                    log('', 'manualResults'); // Empty line for separation
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'manualResults');
+            }
+        }
+
+        async function testKnownPositions() {
+            clearLog('analysisResults');
+            log('=== Testing Known Positions ===', 'analysisResults');
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                if (!browser?.readsManager?.bamReader) {
+                    log('❌ No BAM reader available', 'analysisResults');
+                    return;
+                }
+                
+                const bamReader = browser.readsManager.bamReader;
+                const chromosome = 'NC_000913.3';  // E. coli reference
+                const knownPositions = [29, 659, 1000, 5000, 10000]; // Test various positions
+                
+                for (const pos of knownPositions) {
+                    log(`--- Testing position ${pos} ---`, 'analysisResults');
+                    
+                    // Test small range around position
+                    const start = Math.max(1, pos - 50);
+                    const end = pos + 50;
+                    
+                    try {
+                        const reads = await bamReader.getRecordsForRange(chromosome, start - 1, end, {});
+                        log(`Range ${start}-${end}: ${reads.length} reads`, 'analysisResults');
+                        
+                        if (reads.length > 0) {
+                            reads.slice(0, 2).forEach(read => {
+                                log(`  ${read.id}: ${read.start}-${read.end} MQ=${read.mappingQuality}`, 'analysisResults');
+                            });
+                        }
+                    } catch (error) {
+                        log(`❌ Error testing position ${pos}: ${error.message}`, 'analysisResults');
+                    }
+                }
+                
+                // Test larger ranges
+                log('--- Testing larger ranges ---', 'analysisResults');
+                const ranges = [
+                    [1, 100],
+                    [1, 1000],
+                    [1, 10000],
+                    [10000, 20000]
+                ];
+                
+                for (const [start, end] of ranges) {
+                    try {
+                        const reads = await bamReader.getRecordsForRange(chromosome, start - 1, end, {});
+                        log(`Range ${start}-${end}: ${reads.length} reads`, 'analysisResults');
+                    } catch (error) {
+                        log(`❌ Error testing range ${start}-${end}: ${error.message}`, 'analysisResults');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'analysisResults');
+            }
+        }
+
+        async function runComprehensiveAnalysis() {
+            clearLog('analysisResults');
+            log('=== Comprehensive Analysis ===', 'analysisResults');
+            
+            try {
+                const browser = window.parent?.genomeBrowser;
+                if (!browser) {
+                    log('❌ No genome browser available', 'analysisResults');
+                    return;
+                }
+                
+                // Run all debug functions
+                log('1. Debugging current state...', 'analysisResults');
+                await debugCurrentState();
+                
+                log('2. Debugging BAM reader...', 'analysisResults');
+                await debugBAMReader();
+                
+                log('3. Debugging ReadsManager...', 'analysisResults');
+                await debugReadsManager();
+                
+                log('4. Testing known positions...', 'analysisResults');
+                await testKnownPositions();
+                
+                log('✅ Comprehensive analysis completed!', 'analysisResults');
+                log('Check all result sections for detailed information.', 'analysisResults');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'analysisResults');
+            }
+        }
+
+        function startConsoleMonitoring() {
+            if (consoleMonitorInterval) {
+                stopConsoleMonitoring();
+            }
+            
+            // Override console methods to capture logs
+            console.log = function(...args) {
+                capturedLogs.push({ type: 'log', time: new Date(), args });
+                originalConsoleLog.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                capturedLogs.push({ type: 'warn', time: new Date(), args });
+                originalConsoleWarn.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                capturedLogs.push({ type: 'error', time: new Date(), args });
+                originalConsoleError.apply(console, args);
+            };
+            
+            // Update monitor display
+            consoleMonitorInterval = setInterval(() => {
+                const monitor = document.getElementById('consoleMonitor');
+                if (monitor && capturedLogs.length > 0) {
+                    const recentLogs = capturedLogs.slice(-20); // Show last 20 logs
+                    monitor.textContent = recentLogs.map(log => 
+                        `[${log.time.toLocaleTimeString()}] ${log.type.toUpperCase()}: ${log.args.join(' ')}`
+                    ).join('\n');
+                    monitor.scrollTop = monitor.scrollHeight;
+                }
+            }, 1000);
+            
+            log('Console monitoring started', 'consoleMonitor');
+        }
+
+        function stopConsoleMonitoring() {
+            if (consoleMonitorInterval) {
+                clearInterval(consoleMonitorInterval);
+                consoleMonitorInterval = null;
+            }
+            
+            // Restore original console methods
+            console.log = originalConsoleLog;
+            console.warn = originalConsoleWarn;
+            console.error = originalConsoleError;
+            
+            log('Console monitoring stopped', 'consoleMonitor');
+        }
+
+        // Auto-run debug on load
+        setTimeout(() => {
+            if (window.parent?.genomeBrowser) {
+                debugCurrentState();
+                updateStatus('Ready for debugging', 'info');
+            } else {
+                updateStatus('Waiting for genome browser...', 'warning');
+            }
+        }, 1000);
+    </script>
+</body>
+</html> 

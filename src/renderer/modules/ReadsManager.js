@@ -393,12 +393,15 @@ class ReadsManager {
      * Load reads for a specific region using BAM reader
      */
     async loadReadsForRegionBAM(chromosome, start, end, settings = {}) {
+        console.log(`🧬 [ReadsManager] === READS MANAGER BAM LOADING DEBUG START ===`);
         console.log(`🧬 [ReadsManager] loadReadsForRegionBAM called with:`, {
             chromosome, start, end,
             currentFile: this.currentFile,
             isBamMode: this.isBamMode,
             ignoreChromosome: settings.ignoreChromosome,
-            hasIndex: this.bamReader?.isIndexed()
+            hasIndex: this.bamReader?.isIndexed(),
+            bamReaderInitialized: this.bamReader?.isInitialized,
+            settings: settings
         });
         
         if (!this.bamReader) {
@@ -416,20 +419,77 @@ class ReadsManager {
             const bamSearchStart = Math.max(0, searchStart - 1);
             const bamSearchEnd = searchEnd - 1;
             
-            console.log(`🔍 [ReadsManager] Converting coordinates: ${searchStart}-${searchEnd} (1-based) → ${bamSearchStart}-${bamSearchEnd + 1} (0-based for BAM)`);
+            console.log(`🔍 [ReadsManager] Coordinate conversion:`, {
+                originalRange: `${start}-${end}`,
+                bufferedRange: `${searchStart}-${searchEnd}`,
+                bamCoordinates: `${bamSearchStart}-${bamSearchEnd + 1}`,
+                bufferSize: bufferSize
+            });
             
             this.genomeBrowser.updateStatus(`Loading BAM reads for region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}...`);
             
             // Get reads using BAM reader with settings - use 0-based coordinates
+            console.log(`🔍 [ReadsManager] Calling bamReader.getRecordsForRange with:`, {
+                chromosome,
+                start: bamSearchStart,
+                end: bamSearchEnd + 1,
+                settings
+            });
+            
             const reads = await this.bamReader.getRecordsForRange(chromosome, bamSearchStart, bamSearchEnd + 1, settings);
             
-            console.log(`✅ [ReadsManager] Retrieved ${reads.length.toLocaleString()} reads from BAM file (ignoreChromosome: ${settings.ignoreChromosome})`);
+            console.log(`✅ [ReadsManager] Retrieved ${reads.length.toLocaleString()} reads from BAM file`);
+            console.log(`🔍 [ReadsManager] Settings used: ignoreChromosome=${settings.ignoreChromosome}`);
+            
+            // Log sample reads for debugging
+            if (reads.length > 0) {
+                console.log(`🔍 [ReadsManager] Sample reads (first 3):`, 
+                    reads.slice(0, 3).map(read => ({
+                        id: read.id,
+                        chromosome: read.chromosome,
+                        position: `${read.start}-${read.end}`,
+                        strand: read.strand,
+                        mappingQuality: read.mappingQuality,
+                        flags: read.flags
+                    }))
+                );
+                
+                // Check if reads are within expected range
+                const readsInOriginalRange = reads.filter(read => 
+                    read.start <= end && read.end >= start
+                ).length;
+                console.log(`🔍 [ReadsManager] Reads in original range ${start}-${end}: ${readsInOriginalRange}/${reads.length}`);
+            } else {
+                console.warn(`⚠️ [ReadsManager] NO READS FOUND! This could be due to:`);
+                console.warn(`   1. No reads in the specified region`);
+                console.warn(`   2. Chromosome name mismatch (try ignoreChromosome=true)`);
+                console.warn(`   3. Coordinate system mismatch`);
+                console.warn(`   4. BAM file index issues`);
+                console.warn(`   5. Mapping quality filtering (though not implemented yet)`);
+                
+                // Get BAM reader stats for debugging
+                const bamStats = this.bamReader.getStats();
+                console.warn(`🔍 [ReadsManager] BAM file stats:`, {
+                    totalReads: bamStats.totalReads,
+                    hasIndex: bamStats.hasIndex,
+                    indexType: bamStats.indexType,
+                    referencesCount: bamStats.references
+                });
+                
+                // Get available chromosomes
+                const references = this.bamReader.getReferences();
+                console.warn(`🔍 [ReadsManager] Available chromosomes:`, 
+                    references.slice(0, 10).map(ref => ref.name)
+                );
+            }
             
             this.stats.loadedRegions++;
+            console.log(`🧬 [ReadsManager] === READS MANAGER BAM LOADING DEBUG END ===`);
             return reads;
             
         } catch (error) {
             console.error('❌ [ReadsManager] Error loading BAM reads:', error);
+            console.error('❌ [ReadsManager] Error stack:', error.stack);
             throw error;
         }
     }
