@@ -432,6 +432,24 @@ class BamReader {
             }
 
             console.log(`🔍 [BamReader] Retrieved ${allRecords.length} raw records from BAM file`);
+            
+            // Warn if we got an unexpectedly large number of records for a small region
+            const regionSize = end - start;
+            const recordsPerBp = allRecords.length / regionSize;
+            if (recordsPerBp > 100) {
+                console.warn(`⚠️ [BamReader] Very high read density: ${recordsPerBp.toFixed(1)} reads/bp for region ${chromosome}:${start}-${end}`);
+                console.warn(`   This might indicate an issue with the BAM file or query region`);
+                console.warn(`   Consider using a more specific region or checking the BAM file integrity`);
+            }
+            
+            // Limit the number of records for visualization performance
+            const MAX_RECORDS_FOR_VISUALIZATION = 50000; // Reasonable limit for visualization
+            if (allRecords.length > MAX_RECORDS_FOR_VISUALIZATION) {
+                console.warn(`⚠️ [BamReader] Too many records (${allRecords.length}) for efficient visualization`);
+                console.warn(`   Limiting to first ${MAX_RECORDS_FOR_VISUALIZATION} records`);
+                console.warn(`   Consider zooming to a smaller region for detailed view`);
+                allRecords = allRecords.slice(0, MAX_RECORDS_FOR_VISUALIZATION);
+            }
 
             // Log detailed statistics about the raw records
             if (allRecords.length > 0) {
@@ -460,9 +478,31 @@ class BamReader {
                 console.log(`🔍 [BamReader] Supplementary alignments: ${supplementaryCount}/${allRecords.length}`);
             }
 
-            // Convert records to our internal format
+            // Convert records to our internal format with chunked processing for large datasets
             console.log(`🔍 [BamReader] Converting ${allRecords.length} records to internal format...`);
-            const reads = this.convertRecordsToReads(allRecords, chromosome, settings);
+            
+            // For very large datasets, use chunked processing to avoid stack overflow
+            const CHUNK_SIZE = 10000; // Process 10k records at a time
+            let reads = [];
+            
+            if (allRecords.length > CHUNK_SIZE) {
+                console.log(`🔍 [BamReader] Large dataset detected (${allRecords.length} records), using chunked processing...`);
+                
+                for (let i = 0; i < allRecords.length; i += CHUNK_SIZE) {
+                    const chunk = allRecords.slice(i, i + CHUNK_SIZE);
+                    const chunkReads = this.convertRecordsToReads(chunk, chromosome, settings, i);
+                    reads = reads.concat(chunkReads);
+                    
+                    // Log progress every few chunks
+                    if ((i / CHUNK_SIZE) % 10 === 0) {
+                        console.log(`🔍 [BamReader] Processed ${i + chunk.length}/${allRecords.length} records (${((i + chunk.length) / allRecords.length * 100).toFixed(1)}%)`);
+                    }
+                }
+                
+                console.log(`✅ [BamReader] Chunked processing complete: ${reads.length} reads from ${allRecords.length} records`);
+            } else {
+                reads = this.convertRecordsToReads(allRecords, chromosome, settings);
+            }
             
             const queryTime = performance.now() - startTime;
             
@@ -485,8 +525,12 @@ class BamReader {
     /**
      * Convert @gmod/bam records to our internal format
      * @private
+     * @param {Array} records - Array of BAM records
+     * @param {string} chromosome - Chromosome name
+     * @param {Object} settings - Conversion settings
+     * @param {number} offset - Offset for record numbering (for chunked processing)
      */
-    convertRecordsToReads(records, chromosome, settings = {}) {
+    convertRecordsToReads(records, chromosome, settings = {}, offset = 0) {
         const reads = [];
         let filteredCount = 0;
         let unmappedCount = 0;
@@ -571,10 +615,10 @@ class BamReader {
                 }
                 
                 const read = {
-                    id: record.name || record.qname || `read_${i}`,
+                    id: record.name || record.qname || `read_${offset + i}`,
                     chromosome: record.refName || chromosome,
-                    start: record.start,
-                    end: record.end,
+                    start: record.start + 1,  // Convert from 0-based to 1-based coordinates
+                    end: record.end + 1,      // Convert from 0-based to 1-based coordinates
                     strand: (record.strand === 1 || record.strand === '+') ? '+' : '-',
                     mappingQuality: mappingQuality,
                     cigar: record.CIGAR || record.cigar || '',

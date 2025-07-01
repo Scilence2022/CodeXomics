@@ -2235,7 +2235,7 @@ class TrackRenderer {
             // Create SVG-based read visualization instead of HTML divs
             this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
             
-            // Add reads statistics with cache info
+            // Add reads statistics with cache info and sampling info
             const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
             const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
             const stats = this.genomeBrowser.readsManager.getCacheStats();
@@ -2245,6 +2245,20 @@ class TrackRenderer {
                 const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
                 statsText += ` (${hiddenReadsTotal} hidden)`;
             }
+            
+            // Add sampling information if available and enabled
+            if (visibleReads._samplingInfo && settings.showSamplingInfo) {
+                const samplingInfo = visibleReads._samplingInfo;
+                const samplingPercent = Math.round((samplingInfo.sampledCount / samplingInfo.originalCount) * 100);
+                statsText += ` | Sampled: ${samplingInfo.sampledCount}/${samplingInfo.originalCount} (${samplingPercent}%)`;
+                
+                if (samplingInfo.mode === 'percentage') {
+                    statsText += ` [${samplingInfo.percentage}% mode]`;
+                } else {
+                    statsText += ` [max ${samplingInfo.fixedCount} mode]`;
+                }
+            }
+            
             statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
             
                 const statsElement = this.createStatsElement(statsText, 'reads-stats');
@@ -5071,6 +5085,46 @@ class TrackRenderer {
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Read Sampling (Performance)</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsEnableSampling" ${settings.enableSampling !== false ? 'checked' : ''}>
+                        Enable read sampling for large datasets
+                    </label>
+                    <div class="help-text">Automatically sample reads when the number exceeds the threshold to improve performance.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsSamplingThreshold">Sampling threshold:</label>
+                    <input type="number" id="readsSamplingThreshold" min="1000" max="100000" step="1000" value="${settings.samplingThreshold || 10000}">
+                    <div class="help-text">Number of reads above which sampling will be applied. Default: 10,000 reads.</div>
+                </div>
+                <div class="form-group">
+                    <label for="readsSamplingMode">Sampling mode:</label>
+                    <select id="readsSamplingMode">
+                        <option value="percentage" ${(settings.samplingMode || 'percentage') === 'percentage' ? 'selected' : ''}>Percentage-based</option>
+                        <option value="fixed" ${settings.samplingMode === 'fixed' ? 'selected' : ''}>Fixed count</option>
+                    </select>
+                    <div class="help-text">Choose whether to sample by percentage or fixed number of reads.</div>
+                </div>
+                <div class="form-group" id="readsSamplingPercentageGroup" style="display: ${(settings.samplingMode || 'percentage') === 'percentage' ? 'block' : 'none'}">
+                    <label for="readsSamplingPercentage">Sampling percentage (%):</label>
+                    <input type="number" id="readsSamplingPercentage" min="1" max="100" value="${settings.samplingPercentage || 20}">
+                    <div class="help-text">Percentage of reads to randomly sample when threshold is exceeded. Default: 20%.</div>
+                </div>
+                <div class="form-group" id="readsSamplingCountGroup" style="display: ${settings.samplingMode === 'fixed' ? 'block' : 'none'}">
+                    <label for="readsSamplingCount">Maximum reads to display:</label>
+                    <input type="number" id="readsSamplingCount" min="1000" max="50000" step="1000" value="${settings.samplingCount || 5000}">
+                    <div class="help-text">Maximum number of reads to display when sampling is active. Default: 5,000 reads.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowSamplingInfo" ${settings.showSamplingInfo !== false ? 'checked' : ''}>
+                        Show sampling information in track statistics
+                    </label>
+                    <div class="help-text">Display information about sampling in the track statistics panel.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Colors & Styles</h4>
                 <div class="form-group">
                     <label for="readsForwardColor">Forward reads fill color:</label>
@@ -5163,6 +5217,28 @@ class TrackRenderer {
                     <div class="help-text">Include supplementary alignments (reads with flag 2048).</div>
                 </div>
             </div>
+            
+            <script>
+                // Add event listener for sampling mode change
+                document.addEventListener('DOMContentLoaded', function() {
+                    const samplingModeSelect = document.getElementById('readsSamplingMode');
+                    if (samplingModeSelect) {
+                        samplingModeSelect.addEventListener('change', function() {
+                            const mode = this.value;
+                            const percentageGroup = document.getElementById('readsSamplingPercentageGroup');
+                            const countGroup = document.getElementById('readsSamplingCountGroup');
+                            
+                            if (mode === 'percentage') {
+                                percentageGroup.style.display = 'block';
+                                countGroup.style.display = 'none';
+                            } else {
+                                percentageGroup.style.display = 'none';
+                                countGroup.style.display = 'block';
+                            }
+                        });
+                    }
+                });
+            </script>
         `;
     }
     
@@ -5229,7 +5305,14 @@ class TrackRenderer {
                 minMappingQuality: 0,
                 showUnmapped: false,
                 showSecondary: true,
-                showSupplementary: true
+                showSupplementary: true,
+                // Sampling settings
+                enableSampling: true,
+                samplingThreshold: 10000,
+                samplingMode: 'percentage',
+                samplingPercentage: 20,
+                samplingCount: 5000,
+                showSamplingInfo: true
             }
         };
         
@@ -5344,6 +5427,13 @@ class TrackRenderer {
                 settings.showSecondary = modal.querySelector('#readsShowSecondary').checked;
                 settings.showSupplementary = modal.querySelector('#readsShowSupplementary').checked;
                 settings.height = parseInt(modal.querySelector('#readsTrackHeight').value) || 150;
+                // Sampling settings
+                settings.enableSampling = modal.querySelector('#readsEnableSampling').checked;
+                settings.samplingThreshold = parseInt(modal.querySelector('#readsSamplingThreshold').value) || 10000;
+                settings.samplingMode = modal.querySelector('#readsSamplingMode').value || 'percentage';
+                settings.samplingPercentage = parseInt(modal.querySelector('#readsSamplingPercentage').value) || 20;
+                settings.samplingCount = parseInt(modal.querySelector('#readsSamplingCount').value) || 5000;
+                settings.showSamplingInfo = modal.querySelector('#readsShowSamplingInfo').checked;
                 break;
                 
             case 'sequence':

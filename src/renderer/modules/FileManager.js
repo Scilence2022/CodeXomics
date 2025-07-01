@@ -105,14 +105,16 @@ class FileManager {
                 data: null // Will be populated during streaming or regular reading
             };
 
-            // Use streaming for files > threshold or any SAM files > threshold to avoid memory issues
+            // Use streaming for files > threshold, but ONLY for SAM files (not BAM files)
+            // BAM files should always use loadFileRegular() -> parseBAM() -> BamReader
             // SAM files can be extremely large and benefit from streaming even at smaller sizes
-            const shouldUseStreaming = (fileSizeMB > streamingThreshold) || (extension === '.sam' && fileSizeMB > streamingThreshold);
+            const shouldUseStreaming = (extension === '.sam' && fileSizeMB > streamingThreshold);
             
             if (shouldUseStreaming) {
-                console.log(`Using streaming mode for large file: ${fileSizeMB.toFixed(1)} MB`);
+                console.log(`Using streaming mode for large SAM file: ${fileSizeMB.toFixed(1)} MB`);
                 await this.loadFileStream(filePath);
             } else {
+                console.log(`Using regular loading for ${extension} file: ${fileSizeMB.toFixed(1)} MB`);
                 await this.loadFileRegular(filePath);
             }
             

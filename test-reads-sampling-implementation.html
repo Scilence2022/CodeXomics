@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reads Sampling Implementation Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            text-align: center; 
+            color: #2c3e50; 
+            border-bottom: 2px solid #3498db; 
+            padding-bottom: 10px; 
+            margin-bottom: 30px; 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .test-section h3 { 
+            color: #2980b9; 
+            margin-top: 0; 
+        }
+        .button { 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        .button:hover { 
+            background: #2980b9; 
+        }
+        .button.success { 
+            background: #27ae60; 
+        }
+        .button.warning { 
+            background: #f39c12; 
+        }
+        .button.danger { 
+            background: #e74c3c; 
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+        }
+        .result.success { 
+            background: #d5f4e6; 
+            border: 1px solid #27ae60; 
+            color: #27ae60; 
+        }
+        .result.error { 
+            background: #fdf2f2; 
+            border: 1px solid #e74c3c; 
+            color: #e74c3c; 
+        }
+        .result.info { 
+            background: #e8f4fd; 
+            border: 1px solid #3498db; 
+            color: #2980b9; 
+        }
+        .settings-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        .checkbox-group {
+            flex-direction: row;
+            align-items: center;
+        }
+        .stats-display {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Reads Sampling Implementation Test</h1>
+            <p>Testing random sampling mechanism for large read datasets</p>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Sampling Configuration</h3>
+            <div class="settings-form">
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="enableSampling" checked>
+                    <label for="enableSampling">Enable Sampling</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="samplingThreshold">Sampling Threshold:</label>
+                    <input type="number" id="samplingThreshold" value="10000" min="1000" max="100000" step="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="samplingMode">Sampling Mode:</label>
+                    <select id="samplingMode">
+                        <option value="percentage">Percentage-based</option>
+                        <option value="fixed">Fixed count</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="percentageGroup">
+                    <label for="samplingPercentage">Sampling Percentage (%):</label>
+                    <input type="number" id="samplingPercentage" value="20" min="1" max="100">
+                </div>
+                
+                <div class="form-group" id="countGroup" style="display: none;">
+                    <label for="samplingCount">Maximum Reads:</label>
+                    <input type="number" id="samplingCount" value="5000" min="1000" max="50000" step="1000">
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showSamplingInfo" checked>
+                    <label for="showSamplingInfo">Show Sampling Info</label>
+                </div>
+            </div>
+            
+            <button class="button" onclick="updateSamplingSettings()">Update Settings</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Scenarios</h3>
+            <button class="button" onclick="testSmallDataset()">Small Dataset (&lt; 10k reads)</button>
+            <button class="button warning" onclick="testLargeDataset()">Large Dataset (50k reads)</button>
+            <button class="button danger" onclick="testMassiveDataset()">Massive Dataset (200k reads)</button>
+            <button class="button" onclick="testPercentageSampling()">Test Percentage Sampling</button>
+            <button class="button" onclick="testFixedCountSampling()">Test Fixed Count Sampling</button>
+            <button class="button success" onclick="testSamplingConsistency()">Test Sampling Consistency</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Sampling Statistics</h3>
+            <div id="samplingStats" class="stats-display">
+                No sampling tests performed yet...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚡ Performance Analysis</h3>
+            <div id="performanceResults"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock ReadsManager with sampling functionality
+        class MockReadsManager {
+            constructor() {
+                this.mockData = [];
+                this.stats = {
+                    totalReads: 0,
+                    sampledReads: 0,
+                    samplingTime: 0
+                };
+            }
+
+            // Generate mock read data
+            generateMockReads(count, chromosome = 'NC_000913.3', startPos = 1000000, endPos = 2000000) {
+                const reads = [];
+                const range = endPos - startPos;
+                
+                for (let i = 0; i < count; i++) {
+                    const readStart = startPos + Math.floor(Math.random() * range);
+                    const readLength = 50 + Math.floor(Math.random() * 100); // 50-150bp reads
+                    
+                    reads.push({
+                        id: `read_${i + 1}`,
+                        chromosome: chromosome,
+                        start: readStart,
+                        end: readStart + readLength - 1,
+                        strand: Math.random() > 0.5 ? '+' : '-',
+                        mappingQuality: Math.floor(Math.random() * 60),
+                        sequence: 'A'.repeat(readLength),
+                        quality: '~'.repeat(readLength)
+                    });
+                }
+                
+                return reads;
+            }
+
+            // Apply sampling logic (copied from ReadsManager.js)
+            applySampling(reads, settings = {}) {
+                const startTime = performance.now();
+                
+                // Check if sampling is enabled and threshold is exceeded
+                if (!settings.enableSampling || reads.length <= (settings.samplingThreshold || 10000)) {
+                    return reads;
+                }
+
+                const threshold = settings.samplingThreshold || 10000;
+                const mode = settings.samplingMode || 'percentage';
+                const percentage = settings.samplingPercentage || 20;
+                const fixedCount = settings.samplingCount || 5000;
+
+                console.log(`🎲 [MockReadsManager] Sampling activated: ${reads.length} reads exceed threshold of ${threshold}`);
+
+                let targetCount;
+                if (mode === 'percentage') {
+                    targetCount = Math.max(1, Math.floor(reads.length * percentage / 100));
+                } else {
+                    targetCount = Math.min(fixedCount, reads.length);
+                }
+
+                // Ensure we don't sample more than available
+                targetCount = Math.min(targetCount, reads.length);
+
+                console.log(`🎲 [MockReadsManager] Sampling ${targetCount} reads from ${reads.length} (mode: ${mode}${mode === 'percentage' ? `, ${percentage}%` : `, max: ${fixedCount}`})`);
+
+                // Fisher-Yates shuffle algorithm for random sampling
+                const sampledReads = [...reads]; // Create a copy
+                
+                // Shuffle the array
+                for (let i = sampledReads.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [sampledReads[i], sampledReads[j]] = [sampledReads[j], sampledReads[i]];
+                }
+
+                // Return the first targetCount elements
+                const result = sampledReads.slice(0, targetCount);
+                
+                // Store sampling information for statistics
+                result._samplingInfo = {
+                    originalCount: reads.length,
+                    sampledCount: targetCount,
+                    mode: mode,
+                    threshold: threshold,
+                    percentage: mode === 'percentage' ? percentage : null,
+                    fixedCount: mode === 'fixed' ? fixedCount : null
+                };
+
+                const endTime = performance.now();
+                this.stats.samplingTime = endTime - startTime;
+                this.stats.totalReads = reads.length;
+                this.stats.sampledReads = targetCount;
+
+                console.log(`✅ [MockReadsManager] Sampling complete: ${result.length} reads selected in ${this.stats.samplingTime.toFixed(2)}ms`);
+                
+                return result;
+            }
+
+            // Simulate getReadsForRegion with sampling
+            async getReadsForRegion(chromosome, start, end, settings = {}) {
+                const reads = this.generateMockReads(this.mockData.length || 50000, chromosome, start, end);
+                return this.applySampling(reads, settings);
+            }
+        }
+
+        // Initialize mock reads manager
+        const mockReadsManager = new MockReadsManager();
+        let currentSettings = {
+            enableSampling: true,
+            samplingThreshold: 10000,
+            samplingMode: 'percentage',
+            samplingPercentage: 20,
+            samplingCount: 5000,
+            showSamplingInfo: true
+        };
+
+        // Update settings from form
+        function updateSamplingSettings() {
+            currentSettings = {
+                enableSampling: document.getElementById('enableSampling').checked,
+                samplingThreshold: parseInt(document.getElementById('samplingThreshold').value),
+                samplingMode: document.getElementById('samplingMode').value,
+                samplingPercentage: parseInt(document.getElementById('samplingPercentage').value),
+                samplingCount: parseInt(document.getElementById('samplingCount').value),
+                showSamplingInfo: document.getElementById('showSamplingInfo').checked
+            };
+            
+            addResult('Settings updated successfully!', 'success');
+            updateStatsDisplay();
+        }
+
+        // Handle sampling mode change
+        document.getElementById('samplingMode').addEventListener('change', function() {
+            const mode = this.value;
+            const percentageGroup = document.getElementById('percentageGroup');
+            const countGroup = document.getElementById('countGroup');
+            
+            if (mode === 'percentage') {
+                percentageGroup.style.display = 'block';
+                countGroup.style.display = 'none';
+            } else {
+                percentageGroup.style.display = 'none';
+                countGroup.style.display = 'block';
+            }
+        });
+
+        // Test functions
+        async function testSmallDataset() {
+            addResult('Testing small dataset (5,000 reads)...', 'info');
+            
+            mockReadsManager.mockData = Array(5000).fill(null);
+            const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 1000000, 1100000, currentSettings);
+            
+            const expected = 5000; // Should not be sampled
+            const actual = reads.length;
+            
+            if (actual === expected) {
+                addResult(`✅ Small dataset test PASSED: ${actual} reads (no sampling applied)`, 'success');
+            } else {
+                addResult(`❌ Small dataset test FAILED: Expected ${expected}, got ${actual}`, 'error');
+            }
+            
+            updateStatsDisplay();
+        }
+
+        async function testLargeDataset() {
+            addResult('Testing large dataset (50,000 reads)...', 'info');
+            
+            mockReadsManager.mockData = Array(50000).fill(null);
+            const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 1000000, 1200000, currentSettings);
+            
+            const originalCount = 50000;
+            const actualCount = reads.length;
+            const samplingInfo = reads._samplingInfo;
+            
+            if (currentSettings.enableSampling && samplingInfo) {
+                const expectedCount = currentSettings.samplingMode === 'percentage' 
+                    ? Math.floor(originalCount * currentSettings.samplingPercentage / 100)
+                    : Math.min(currentSettings.samplingCount, originalCount);
+                
+                if (actualCount === expectedCount) {
+                    addResult(`✅ Large dataset test PASSED: ${actualCount}/${originalCount} reads sampled (${Math.round(actualCount/originalCount*100)}%)`, 'success');
+                } else {
+                    addResult(`❌ Large dataset test FAILED: Expected ~${expectedCount}, got ${actualCount}`, 'error');
+                }
+            } else {
+                addResult(`ℹ️ Large dataset test: ${actualCount} reads (sampling disabled)`, 'info');
+            }
+            
+            updateStatsDisplay();
+        }
+
+        async function testMassiveDataset() {
+            addResult('Testing massive dataset (200,000 reads)...', 'info');
+            
+            const startTime = performance.now();
+            mockReadsManager.mockData = Array(200000).fill(null);
+            const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 500000, 1500000, currentSettings);
+            const endTime = performance.now();
+            
+            const processingTime = endTime - startTime;
+            const originalCount = 200000;
+            const actualCount = reads.length;
+            
+            addResult(`✅ Massive dataset processed in ${processingTime.toFixed(2)}ms`, 'success');
+            addResult(`   Original: ${originalCount.toLocaleString()} reads`, 'info');
+            addResult(`   Final: ${actualCount.toLocaleString()} reads`, 'info');
+            addResult(`   Reduction: ${Math.round((1 - actualCount/originalCount) * 100)}%`, 'info');
+            
+            updateStatsDisplay();
+        }
+
+        async function testPercentageSampling() {
+            addResult('Testing percentage-based sampling...', 'info');
+            
+            const testSettings = { ...currentSettings, samplingMode: 'percentage', samplingPercentage: 15 };
+            mockReadsManager.mockData = Array(30000).fill(null);
+            const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 1000000, 1100000, testSettings);
+            
+            const originalCount = 30000;
+            const expectedCount = Math.floor(originalCount * 15 / 100);
+            const actualCount = reads.length;
+            const tolerance = Math.ceil(expectedCount * 0.01); // 1% tolerance
+            
+            if (Math.abs(actualCount - expectedCount) <= tolerance) {
+                addResult(`✅ Percentage sampling test PASSED: ${actualCount}/${originalCount} reads (${Math.round(actualCount/originalCount*100)}%)`, 'success');
+            } else {
+                addResult(`❌ Percentage sampling test FAILED: Expected ~${expectedCount}, got ${actualCount}`, 'error');
+            }
+            
+            updateStatsDisplay();
+        }
+
+        async function testFixedCountSampling() {
+            addResult('Testing fixed count sampling...', 'info');
+            
+            const testSettings = { ...currentSettings, samplingMode: 'fixed', samplingCount: 8000 };
+            mockReadsManager.mockData = Array(40000).fill(null);
+            const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 1000000, 1100000, testSettings);
+            
+            const originalCount = 40000;
+            const expectedCount = 8000;
+            const actualCount = reads.length;
+            
+            if (actualCount === expectedCount) {
+                addResult(`✅ Fixed count sampling test PASSED: ${actualCount}/${originalCount} reads`, 'success');
+            } else {
+                addResult(`❌ Fixed count sampling test FAILED: Expected ${expectedCount}, got ${actualCount}`, 'error');
+            }
+            
+            updateStatsDisplay();
+        }
+
+        async function testSamplingConsistency() {
+            addResult('Testing sampling consistency and randomness...', 'info');
+            
+            const testCount = 5;
+            const results = [];
+            
+            for (let i = 0; i < testCount; i++) {
+                mockReadsManager.mockData = Array(25000).fill(null);
+                const reads = await mockReadsManager.getReadsForRegion('NC_000913.3', 1000000, 1100000, currentSettings);
+                results.push(reads.length);
+            }
+            
+            const avgCount = results.reduce((a, b) => a + b, 0) / results.length;
+            const variance = results.reduce((sum, count) => sum + Math.pow(count - avgCount, 2), 0) / results.length;
+            const stdDev = Math.sqrt(variance);
+            const coefficientOfVariation = (stdDev / avgCount) * 100;
+            
+            addResult(`📊 Consistency test results (${testCount} runs):`, 'info');
+            addResult(`   Counts: [${results.join(', ')}]`, 'info');
+            addResult(`   Average: ${avgCount.toFixed(1)}`, 'info');
+            addResult(`   Std Dev: ${stdDev.toFixed(1)}`, 'info');
+            addResult(`   CV: ${coefficientOfVariation.toFixed(2)}%`, 'info');
+            
+            // Check if results are reasonably consistent (CV < 5% is good for random sampling)
+            if (coefficientOfVariation < 5) {
+                addResult(`✅ Sampling consistency GOOD (CV < 5%)`, 'success');
+            } else if (coefficientOfVariation < 10) {
+                addResult(`⚠️ Sampling consistency ACCEPTABLE (CV < 10%)`, 'warning');
+            } else {
+                addResult(`❌ Sampling consistency POOR (CV >= 10%)`, 'error');
+            }
+            
+            updateStatsDisplay();
+        }
+
+        // Utility functions
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateStatsDisplay() {
+            const statsDiv = document.getElementById('samplingStats');
+            const stats = mockReadsManager.stats;
+            
+            const statsText = `
+Current Settings:
+  • Sampling Enabled: ${currentSettings.enableSampling}
+  • Threshold: ${currentSettings.samplingThreshold.toLocaleString()} reads
+  • Mode: ${currentSettings.samplingMode}
+  • Percentage: ${currentSettings.samplingPercentage}%
+  • Fixed Count: ${currentSettings.samplingCount.toLocaleString()}
+  • Show Info: ${currentSettings.showSamplingInfo}
+
+Last Sampling Operation:
+  • Original Reads: ${stats.totalReads.toLocaleString()}
+  • Sampled Reads: ${stats.sampledReads.toLocaleString()}
+  • Reduction: ${stats.totalReads > 0 ? Math.round((1 - stats.sampledReads/stats.totalReads) * 100) : 0}%
+  • Processing Time: ${stats.samplingTime.toFixed(2)}ms
+  • Memory Saved: ~${stats.totalReads > 0 ? Math.round(((stats.totalReads - stats.sampledReads) * 200) / 1024) : 0}KB
+            `;
+            
+            statsDiv.textContent = statsText;
+        }
+
+        // Initialize
+        updateSamplingSettings();
+        addResult('🚀 Reads Sampling Test Suite initialized', 'success');
+        addResult('Configure settings above and run tests to validate sampling functionality', 'info');
+    </script>
+</body>
+</html> 

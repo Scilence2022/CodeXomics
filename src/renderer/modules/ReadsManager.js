@@ -117,10 +117,12 @@ class ReadsManager {
         // Cache the results
         this.cacheRegion(regionKey, reads);
         
-        // Return reads directly without additional filtering
-        console.log(`🔍 [ReadsManager] Final result: ${reads.length} reads for region ${start}-${end}`);
+        // Apply sampling if enabled and threshold is exceeded
+        const sampledReads = this.applySampling(reads, settings);
         
-        return reads;
+        console.log(`🔍 [ReadsManager] Final result: ${sampledReads.length} reads for region ${start}-${end}${sampledReads.length !== reads.length ? ` (sampled from ${reads.length})` : ''}`);
+        
+        return sampledReads;
     }
 
     /**
@@ -129,6 +131,61 @@ class ReadsManager {
     getRegionKey(chromosome, start, end) {
         // Use exact region boundaries for direct querying
         return `${chromosome}:${start}-${end}`;
+    }
+
+    /**
+     * Apply read sampling based on settings
+     */
+    applySampling(reads, settings = {}) {
+        // Check if sampling is enabled and threshold is exceeded
+        if (!settings.enableSampling || reads.length <= (settings.samplingThreshold || 10000)) {
+            return reads;
+        }
+
+        const threshold = settings.samplingThreshold || 10000;
+        const mode = settings.samplingMode || 'percentage';
+        const percentage = settings.samplingPercentage || 20;
+        const fixedCount = settings.samplingCount || 5000;
+
+        console.log(`🎲 [ReadsManager] Sampling activated: ${reads.length} reads exceed threshold of ${threshold}`);
+
+        let targetCount;
+        if (mode === 'percentage') {
+            targetCount = Math.max(1, Math.floor(reads.length * percentage / 100));
+        } else {
+            targetCount = Math.min(fixedCount, reads.length);
+        }
+
+        // Ensure we don't sample more than available
+        targetCount = Math.min(targetCount, reads.length);
+
+        console.log(`🎲 [ReadsManager] Sampling ${targetCount} reads from ${reads.length} (mode: ${mode}${mode === 'percentage' ? `, ${percentage}%` : `, max: ${fixedCount}`})`);
+
+        // Fisher-Yates shuffle algorithm for random sampling
+        const sampledReads = [...reads]; // Create a copy
+        
+        // Shuffle the array
+        for (let i = sampledReads.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [sampledReads[i], sampledReads[j]] = [sampledReads[j], sampledReads[i]];
+        }
+
+        // Return the first targetCount elements
+        const result = sampledReads.slice(0, targetCount);
+        
+        // Store sampling information for statistics
+        result._samplingInfo = {
+            originalCount: reads.length,
+            sampledCount: targetCount,
+            mode: mode,
+            threshold: threshold,
+            percentage: mode === 'percentage' ? percentage : null,
+            fixedCount: mode === 'fixed' ? fixedCount : null
+        };
+
+        console.log(`✅ [ReadsManager] Sampling complete: ${result.length} reads selected`);
+        
+        return result;
     }
 
     /**

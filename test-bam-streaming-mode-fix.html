@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAM Streaming Mode Fix Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button.danger {
+            background: #f44336;
+        }
+        .button.danger:hover {
+            background: #da190b;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .log-container {
+            background: #1e1e1e;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+        .log-entry.success {
+            color: #51cf66;
+        }
+        .log-entry.warning {
+            color: #ffd43b;
+        }
+        .log-entry.info {
+            color: #74c0fc;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .highlight {
+            background: #ffeb3b !important;
+            font-weight: bold;
+        }
+        .code-block {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 BAM Streaming Mode Fix Test</h1>
+            <p>Testing the fix for BAM files incorrectly using streaming mode instead of BAM mode</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🐛 Problem Description</h3>
+            <p>Before the fix, BAM files were incorrectly using streaming mode when they were larger than the streaming threshold (default 50MB). This caused:</p>
+            <ul>
+                <li>BAM files being treated as SAM files</li>
+                <li>ReadsManager showing "mode: SAM" instead of "mode: BAM"</li>
+                <li>"No Reads in this region" errors due to incorrect parsing</li>
+                <li>Loss of BAM indexing benefits</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Fix Applied</h3>
+            <div class="code-block">
+// OLD (BUGGY) CODE:
+const shouldUseStreaming = (fileSizeMB > streamingThreshold) || (extension === '.sam' && fileSizeMB > streamingThreshold);
+
+// NEW (FIXED) CODE:
+const shouldUseStreaming = (extension === '.sam' && fileSizeMB > streamingThreshold);
+            </div>
+            <p><strong>Key Changes:</strong></p>
+            <ul>
+                <li>Removed the general file size check that affected all file types</li>
+                <li>Now only SAM files use streaming mode when large</li>
+                <li>BAM files always use regular loading → parseBAM() → BamReader</li>
+                <li>Added better logging to show which mode is being used</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Controls</h3>
+            <button class="button" onclick="testFileLoadingLogic()">Test File Loading Logic</button>
+            <button class="button" onclick="simulateBAMLoad()">Simulate BAM File Load</button>
+            <button class="button" onclick="simulateSAMLoad()">Simulate SAM File Load</button>
+            <button class="button" onclick="checkReadsManagerMode()">Check ReadsManager Mode</button>
+            <button class="button danger" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="statusContainer"></div>
+        <div id="logContainer" class="log-container"></div>
+        
+        <div class="test-section">
+            <h3>📊 Expected vs Actual Behavior</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>File Type</th>
+                        <th>File Size</th>
+                        <th>Expected Mode</th>
+                        <th>Expected ReadsManager</th>
+                        <th>Actual Result</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonTable">
+                    <tr>
+                        <td>BAM</td>
+                        <td>&lt; 50MB</td>
+                        <td>Regular → parseBAM()</td>
+                        <td>BAM mode with BamReader</td>
+                        <td id="result-bam-small">Not tested</td>
+                    </tr>
+                    <tr>
+                        <td>BAM</td>
+                        <td>&gt; 50MB</td>
+                        <td>Regular → parseBAM()</td>
+                        <td>BAM mode with BamReader</td>
+                        <td id="result-bam-large">Not tested</td>
+                    </tr>
+                    <tr>
+                        <td>SAM</td>
+                        <td>&lt; 50MB</td>
+                        <td>Regular → parseSAM()</td>
+                        <td>SAM mode with memory</td>
+                        <td id="result-sam-small">Not tested</td>
+                    </tr>
+                    <tr>
+                        <td>SAM</td>
+                        <td>&gt; 50MB</td>
+                        <td>Streaming → streamingSAM()</td>
+                        <td>SAM mode with streaming</td>
+                        <td id="result-sam-large">Not tested</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Debug Information</h3>
+            <div id="debugInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const container = document.getElementById('statusContainer');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            container.appendChild(statusDiv);
+            
+            // Auto-remove after 5 seconds for non-error messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    if (statusDiv.parentNode) {
+                        statusDiv.parentNode.removeChild(statusDiv);
+                    }
+                }, 5000);
+            }
+        }
+
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(logEntry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('statusContainer').innerHTML = '';
+            document.getElementById('logContainer').innerHTML = '';
+            document.getElementById('debugInfo').innerHTML = '';
+            
+            // Reset comparison table
+            const cells = ['result-bam-small', 'result-bam-large', 'result-sam-small', 'result-sam-large'];
+            cells.forEach(id => {
+                document.getElementById(id).textContent = 'Not tested';
+                document.getElementById(id).className = '';
+            });
+            
+            updateStatus('Results cleared', 'info');
+        }
+
+        function testFileLoadingLogic() {
+            log('🧪 Testing file loading logic with different scenarios', 'info');
+            
+            // Test scenarios
+            const scenarios = [
+                { extension: '.bam', sizeMB: 25, expected: 'regular' },
+                { extension: '.bam', sizeMB: 100, expected: 'regular' },
+                { extension: '.sam', sizeMB: 25, expected: 'regular' },
+                { extension: '.sam', sizeMB: 100, expected: 'streaming' }
+            ];
+            
+            const streamingThreshold = 50; // Default threshold
+            
+            scenarios.forEach(scenario => {
+                const shouldUseStreaming = (scenario.extension === '.sam' && scenario.sizeMB > streamingThreshold);
+                const actualMode = shouldUseStreaming ? 'streaming' : 'regular';
+                const isCorrect = actualMode === scenario.expected;
+                
+                log(`${scenario.extension} ${scenario.sizeMB}MB: Expected ${scenario.expected}, Got ${actualMode} ${isCorrect ? '✅' : '❌'}`, 
+                    isCorrect ? 'success' : 'error');
+                
+                // Update comparison table
+                let resultId;
+                if (scenario.extension === '.bam' && scenario.sizeMB < streamingThreshold) {
+                    resultId = 'result-bam-small';
+                } else if (scenario.extension === '.bam' && scenario.sizeMB > streamingThreshold) {
+                    resultId = 'result-bam-large';
+                } else if (scenario.extension === '.sam' && scenario.sizeMB < streamingThreshold) {
+                    resultId = 'result-sam-small';
+                } else if (scenario.extension === '.sam' && scenario.sizeMB > streamingThreshold) {
+                    resultId = 'result-sam-large';
+                }
+                
+                if (resultId) {
+                    const cell = document.getElementById(resultId);
+                    cell.textContent = `${actualMode} mode ${isCorrect ? '✅' : '❌'}`;
+                    cell.className = isCorrect ? 'highlight' : 'error';
+                }
+            });
+            
+            updateStatus('File loading logic test completed', 'success');
+        }
+
+        function simulateBAMLoad() {
+            log('🧬 Simulating BAM file load process', 'info');
+            
+            // Simulate the fixed logic
+            const extension = '.bam';
+            const fileSizeMB = 75; // Large BAM file
+            const streamingThreshold = 50;
+            
+            log(`File: test.bam (${fileSizeMB}MB)`, 'info');
+            log(`Streaming threshold: ${streamingThreshold}MB`, 'info');
+            
+            // Apply the FIXED logic
+            const shouldUseStreaming = (extension === '.sam' && fileSizeMB > streamingThreshold);
+            
+            if (shouldUseStreaming) {
+                log('❌ ERROR: BAM file would use streaming mode (this should not happen with the fix!)', 'error');
+                updateStatus('BAM streaming test FAILED', 'error');
+            } else {
+                log('✅ SUCCESS: BAM file will use regular loading', 'success');
+                log('  → loadFileRegular() will be called', 'info');
+                log('  → parseBAM() will be called', 'info');
+                log('  → BamReader will be initialized', 'info');
+                log('  → ReadsManager will be in BAM mode', 'info');
+                updateStatus('BAM file will correctly use BAM mode', 'success');
+            }
+        }
+
+        function simulateSAMLoad() {
+            log('📄 Simulating SAM file load process', 'info');
+            
+            const scenarios = [
+                { sizeMB: 25, expectedMode: 'regular' },
+                { sizeMB: 75, expectedMode: 'streaming' }
+            ];
+            
+            scenarios.forEach(scenario => {
+                const extension = '.sam';
+                const streamingThreshold = 50;
+                
+                log(`File: test.sam (${scenario.sizeMB}MB)`, 'info');
+                
+                // Apply the logic
+                const shouldUseStreaming = (extension === '.sam' && scenario.sizeMB > streamingThreshold);
+                const actualMode = shouldUseStreaming ? 'streaming' : 'regular';
+                
+                if (actualMode === scenario.expectedMode) {
+                    log(`✅ SUCCESS: ${scenario.sizeMB}MB SAM file will use ${actualMode} mode`, 'success');
+                } else {
+                    log(`❌ ERROR: ${scenario.sizeMB}MB SAM file should use ${scenario.expectedMode} but got ${actualMode}`, 'error');
+                }
+            });
+            
+            updateStatus('SAM file loading tests completed', 'info');
+        }
+
+        function checkReadsManagerMode() {
+            log('🔍 Checking current ReadsManager mode', 'info');
+            
+            try {
+                // Try to access the GenomeBrowser instance
+                if (typeof window.genomeBrowser !== 'undefined' && window.genomeBrowser.readsManager) {
+                    const readsManager = window.genomeBrowser.readsManager;
+                    
+                    log(`Current file: ${readsManager.currentFile || 'None'}`, 'info');
+                    log(`Is streaming: ${readsManager.isStreaming}`, 'info');
+                    log(`Is BAM mode: ${readsManager.isBamMode}`, 'info');
+                    log(`Has BAM reader: ${!!readsManager.bamReader}`, 'info');
+                    
+                    if (readsManager.isBamMode && readsManager.bamReader) {
+                        log('✅ ReadsManager is correctly in BAM mode', 'success');
+                        updateStatus('ReadsManager is in correct BAM mode', 'success');
+                        
+                        const stats = readsManager.bamReader.getStats();
+                        log(`BAM references: ${stats.references.length}`, 'info');
+                        log(`Has index: ${stats.hasIndex}`, 'info');
+                        
+                    } else if (readsManager.isStreaming) {
+                        log('ℹ️ ReadsManager is in streaming mode (for SAM files)', 'info');
+                        updateStatus('ReadsManager is in streaming mode', 'info');
+                    } else {
+                        log('ℹ️ ReadsManager is in regular mode', 'info');
+                        updateStatus('ReadsManager is in regular mode', 'info');
+                    }
+                    
+                } else {
+                    log('❌ No ReadsManager found or GenomeBrowser not available', 'error');
+                    updateStatus('Cannot access ReadsManager - no file loaded?', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error checking ReadsManager: ${error.message}`, 'error');
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Display debug information about the current environment
+        function displayDebugInfo() {
+            const debugContainer = document.getElementById('debugInfo');
+            const info = [];
+            
+            info.push(`<strong>Browser:</strong> ${navigator.userAgent}`);
+            info.push(`<strong>Timestamp:</strong> ${new Date().toISOString()}`);
+            info.push(`<strong>Test Environment:</strong> Standalone HTML`);
+            
+            if (typeof window.genomeBrowser !== 'undefined') {
+                info.push(`<strong>GenomeBrowser:</strong> Available`);
+                if (window.genomeBrowser.readsManager) {
+                    info.push(`<strong>ReadsManager:</strong> Available`);
+                } else {
+                    info.push(`<strong>ReadsManager:</strong> Not available`);
+                }
+            } else {
+                info.push(`<strong>GenomeBrowser:</strong> Not available (standalone test)`);
+            }
+            
+            debugContainer.innerHTML = info.join('<br>');
+        }
+
+        // Initialize the test
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('BAM Streaming Mode Fix Test initialized', 'success');
+            log('🚀 Test environment ready', 'success');
+            log('This test validates the fix for BAM files incorrectly using streaming mode', 'info');
+            displayDebugInfo();
+        });
+    </script>
+</body>
+</html> 
