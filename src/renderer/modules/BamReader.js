@@ -432,7 +432,7 @@ class BamReader {
             }
 
             console.log(`🔍 [BamReader] Retrieved ${allRecords.length} raw records from BAM file`);
-            
+
             // Warn if we got an unexpectedly large number of records for a small region
             const regionSize = end - start;
             const recordsPerBp = allRecords.length / regionSize;
@@ -671,8 +671,8 @@ class BamReader {
                     console.log(`🔍 [BamReader] Record ${i} details:`, {
                         name: record.name || record.qname,
                         refName: record.refName,
-                        start: record.start,
-                        end: record.end,
+                    start: record.start,
+                    end: record.end,
                         flags: record.flags,
                         mappingQuality: record.mq || record.mapq,
                         strand: record.strand,

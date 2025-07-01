@@ -641,14 +641,14 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             }
             
             this.genomeBrowser.updateStatus(`✅ VCF file loaded: ${result.metadata.name} (${result.metadata.variantCount} variants)`);
-            
-            // Auto-enable variants track
-            this.autoEnableTracksForFileType('.vcf');
-            
-            // If we already have sequence data, refresh the view
-            const currentChr = document.getElementById('chromosomeSelect').value;
-            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+        
+        // Auto-enable variants track
+        this.autoEnableTracksForFileType('.vcf');
+        
+        // If we already have sequence data, refresh the view
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
             
         } catch (error) {
@@ -733,12 +733,12 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (bamFiles.length === 1) {
                 // Store BAM reader for backward compatibility
                 this.genomeBrowser.bamReader = bamFiles[0].reader;
-                
+            
                 // Initialize ReadsManager with first BAM file
                 await this.genomeBrowser.readsManager.initializeWithBAMReader(bamFiles[0].reader);
-                
-                // Clear old reads to save memory
-                this.genomeBrowser.currentReads = {};
+            
+            // Clear old reads to save memory
+            this.genomeBrowser.currentReads = {};
             }
             
             // Create informative status message

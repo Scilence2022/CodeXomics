@@ -133,7 +133,7 @@ class TrackRenderer {
         
         if (isRenameable && fileId) {
             // Create editable title for file-specific tracks
-            titleElement.textContent = title;
+        titleElement.textContent = title;
             titleElement.style.cursor = 'pointer';
             titleElement.title = 'Click to rename';
             
@@ -278,12 +278,12 @@ class TrackRenderer {
             });
         } else {
             // Regular track - show hide icon
-            closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-            closeBtn.title = 'Hide Track';
-            closeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeTrack(trackType);
-            });
+        closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+        closeBtn.title = 'Hide Track';
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTrack(trackType);
+        });
         }
         
         buttonsContainer.appendChild(settingsBtn);
@@ -2244,6 +2244,102 @@ class TrackRenderer {
         });
     }
 
+    /**
+     * Create multiple variant tracks for multiple VCF files
+     */
+    createMultipleVariantTracks(chromosome, vcfFiles) {
+        const tracksContainer = document.createElement('div');
+        tracksContainer.className = 'multi-variant-tracks-container';
+        
+        for (let i = 0; i < vcfFiles.length; i++) {
+            const vcfFile = vcfFiles[i];
+            
+            if (this.genomeBrowser.multiFileManager.getTrackVisibility(vcfFile.trackId)) {
+                const track = this.createSingleVariantTrack(chromosome, vcfFile);
+                if (track) {
+                    tracksContainer.appendChild(track);
+                    
+                    // Add splitter between variant tracks (except after the last one)
+                    if (i < vcfFiles.length - 1) {
+                        const nextVcfFile = vcfFiles[i + 1];
+                        if (this.genomeBrowser.multiFileManager.getTrackVisibility(nextVcfFile.trackId)) {
+                            const splitter = this.genomeBrowser.createTrackSplitter(
+                                `variant-${vcfFile.metadata.id}`, 
+                                `variant-${nextVcfFile.metadata.id}`
+                            );
+                            splitter.classList.add('multi-file-splitter');
+                            splitter.setAttribute('data-file-type', 'variant');
+                            tracksContainer.appendChild(splitter);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return tracksContainer;
+    }
+
+    /**
+     * Create single variant track with file-specific header
+     */
+    createSingleVariantTrack(chromosome, vcfFile) {
+        const viewport = this.getCurrentViewport();
+        
+        // Create track base
+        const track = document.createElement('div');
+        track.className = 'variant-track';
+        track.dataset.fileId = vcfFile.metadata.id;
+        
+        // Create file-specific header with rename capability
+        const trackHeader = this.createTrackHeader(
+            vcfFile.metadata.name, 
+            'variants', 
+            vcfFile.metadata.id, 
+            true // isRenameable
+        );
+        track.appendChild(trackHeader);
+        
+        // Create track content
+        const trackContent = this.createTrackContent(this.trackConfig.variants?.defaultHeight || 80, chromosome);
+        track.appendChild(trackContent);
+        
+        try {
+            // Get variants for this specific file
+            const variants = vcfFile.data[chromosome] || [];
+            const visibleVariants = this.filterFeaturesByViewport(variants, viewport);
+            
+            console.log(`Displaying ${visibleVariants.length} variants from ${vcfFile.metadata.name} in region ${viewport.start}-${viewport.end}`);
+            
+            if (visibleVariants.length === 0) {
+                const noVariantsMsg = this.createNoDataMessage(
+                    `No variants found in this region for ${vcfFile.metadata.name}`,
+                    'no-variants-message'
+                );
+                trackContent.appendChild(noVariantsMsg);
+            } else {
+                this.renderVariantElements(trackContent, visibleVariants, viewport);
+                
+                // Add file-specific statistics
+                const statsText = `${vcfFile.metadata.name}: ${visibleVariants.length} variants`;
+                const statsElement = this.createStatsElement(statsText, 'variant-track-stats');
+                trackContent.appendChild(statsElement);
+            }
+            
+        } catch (error) {
+            console.error(`Error loading variants for ${vcfFile.metadata.name}:`, error);
+            const errorMsg = this.createNoDataMessage(
+                `Error loading variants: ${error.message}`,
+                'variant-error-message'
+            );
+            trackContent.appendChild(errorMsg);
+        }
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'variants');
+        
+        return track;
+    }
+
     async createReadsTrack(chromosome) {
         // Check if we have multiple BAM files
         const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
@@ -2392,14 +2488,14 @@ class TrackRenderer {
                 // Use traditional limited rows approach
                 const maxRows = settings.maxRows || 20;
                 const limitedReadRows = readRows.slice(0, maxRows);
-                
-                // Calculate adaptive track height
-                let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
-                trackHeight = Math.max(trackHeight, settings.height || 150);
-                trackContent.style.height = `${trackHeight}px`;
-                
+            
+            // Calculate adaptive track height
+            let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+            trackHeight = Math.max(trackHeight, settings.height || 150);
+            trackContent.style.height = `${trackHeight}px`;
+            
                 // Create SVG-based read visualization
-                this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
             }
             
             // Add reads statistics with cache info and sampling info
@@ -2415,14 +2511,14 @@ class TrackRenderer {
                 // Traditional mode statistics
                 const maxRows = settings.maxRows || 20;
                 const limitedReadRows = readRows.slice(0, maxRows);
-                const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
-                const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
-                
+            const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
+            const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
+            
                 statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
-                if (hiddenRowsCount > 0) {
-                    const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
-                    statsText += ` (${hiddenReadsTotal} hidden)`;
-                }
+            if (hiddenRowsCount > 0) {
+                const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
+                statsText += ` (${hiddenReadsTotal} hidden)`;
+            }
             }
             
             // Add sampling information if available and enabled
@@ -2440,8 +2536,8 @@ class TrackRenderer {
             
             statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
             
-            const statsElement = this.createStatsElement(statsText, 'reads-stats');
-            trackContent.appendChild(statsElement);
+                const statsElement = this.createStatsElement(statsText, 'reads-stats');
+                trackContent.appendChild(statsElement);
             }
             
         } catch (error) {
@@ -2480,11 +2576,27 @@ class TrackRenderer {
         const tracksContainer = document.createElement('div');
         tracksContainer.className = 'multi-reads-tracks-container';
         
-        for (const bamFile of bamFiles) {
+        for (let i = 0; i < bamFiles.length; i++) {
+            const bamFile = bamFiles[i];
+            
             if (this.genomeBrowser.multiFileManager.getTrackVisibility(bamFile.trackId)) {
                 const track = await this.createSingleReadsTrack(chromosome, bamFile);
                 if (track) {
                     tracksContainer.appendChild(track);
+                    
+                    // Add splitter between reads tracks (except after the last one)
+                    if (i < bamFiles.length - 1) {
+                        const nextBamFile = bamFiles[i + 1];
+                        if (this.genomeBrowser.multiFileManager.getTrackVisibility(nextBamFile.trackId)) {
+                            const splitter = this.genomeBrowser.createTrackSplitter(
+                                `reads-${bamFile.metadata.id}`, 
+                                `reads-${nextBamFile.metadata.id}`
+                            );
+                            splitter.classList.add('multi-file-splitter');
+                            splitter.setAttribute('data-file-type', 'reads');
+                            tracksContainer.appendChild(splitter);
+                        }
+                    }
                 }
             }
         }
@@ -5982,7 +6094,7 @@ class TrackRenderer {
                     <label for="readsMinMappingQuality">Minimum mapping quality:</label>
                     <input type="number" id="readsMinMappingQuality" min="0" max="60" value="${settings.minMappingQuality || 0}">
                     <div class="help-text">Minimum mapping quality (MAPQ) required for reads to be displayed. Set to 0 to show all reads regardless of quality.</div>
-                </div>
+            </div>
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="readsShowUnmapped" ${settings.showUnmapped ? 'checked' : ''}>
@@ -6221,7 +6333,7 @@ class TrackRenderer {
                 if (settings.enableVerticalScroll) {
                     settings.maxVisibleRows = parseInt(modal.querySelector('#readsMaxVisibleRows').value) || 10;
                 } else {
-                    settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
+                settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
                 }
                 settings.forwardColor = modal.querySelector('#readsForwardColor').value;
                 settings.reverseColor = modal.querySelector('#readsReverseColor').value;

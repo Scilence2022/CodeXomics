@@ -28137,6 +28137,133 @@ path.svg-gene-element.selected {
     .track-splitter::after {
         display: none; /* Hide tooltip on mobile */
     }
+    
+    .track-splitter.multi-file-splitter {
+        margin: 4px 0;
+    }
+}
+
+/* Multi-file splitters - specific styling for splitters between files of the same type */
+.track-splitter.multi-file-splitter {
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef, #f8f9fa);
+    border-left: 2px solid #007bff;
+    border-right: 2px solid #007bff;
+    margin: 3px 0;
+}
+
+.track-splitter.multi-file-splitter:hover {
+    background: linear-gradient(to bottom, #e9ecef, #dee2e6, #e9ecef);
+    border-left: 2px solid #0056b3;
+    border-right: 2px solid #0056b3;
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.2);
+}
+
+.track-splitter.multi-file-splitter.resizing {
+    background: linear-gradient(to bottom, #dee2e6, #ced4da, #dee2e6);
+    border-left: 2px solid #004085;
+    border-right: 2px solid #004085;
+    box-shadow: 0 3px 10px rgba(0, 123, 255, 0.4);
+}
+
+.track-splitter.multi-file-splitter .track-splitter-handle {
+    color: #007bff;
+    font-weight: bold;
+    opacity: 0.8;
+}
+
+.track-splitter.multi-file-splitter:hover .track-splitter-handle {
+    color: #0056b3;
+    opacity: 1;
+}
+
+.track-splitter.multi-file-splitter.resizing .track-splitter-handle {
+    color: #004085;
+    opacity: 1;
+}
+
+/* Different colors for different file types */
+.track-splitter.multi-file-splitter[data-file-type="reads"] {
+    border-left-color: #28a745;
+    border-right-color: #28a745;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"]:hover {
+    border-left-color: #1e7e34;
+    border-right-color: #1e7e34;
+    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.2);
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"].resizing {
+    border-left-color: #155724;
+    border-right-color: #155724;
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.4);
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"] .track-splitter-handle {
+    color: #28a745;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"]:hover .track-splitter-handle {
+    color: #1e7e34;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"].resizing .track-splitter-handle {
+    color: #155724;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"] {
+    border-left-color: #dc3545;
+    border-right-color: #dc3545;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"]:hover {
+    border-left-color: #c82333;
+    border-right-color: #c82333;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.2);
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"].resizing {
+    border-left-color: #bd2130;
+    border-right-color: #bd2130;
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.4);
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"] .track-splitter-handle {
+    color: #dc3545;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"]:hover .track-splitter-handle {
+    color: #c82333;
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"].resizing .track-splitter-handle {
+    color: #bd2130;
+}
+
+/* Multi-file splitter tooltips */
+.track-splitter.multi-file-splitter::after {
+    content: 'Multi-file splitter - Double-click to auto-adjust';
+}
+
+.track-splitter.multi-file-splitter[data-file-type="reads"]::after {
+    content: 'BAM/SAM files splitter - Double-click to auto-adjust';
+}
+
+.track-splitter.multi-file-splitter[data-file-type="variant"]::after {
+    content: 'VCF files splitter - Double-click to auto-adjust';
+}
+
+/* Multi-file tracks containers */
+.multi-reads-tracks-container,
+.multi-variant-tracks-container {
+    position: relative;
+    width: 100%;
+}
+
+/* Ensure proper spacing for multi-file containers */
+.multi-reads-tracks-container .reads-track,
+.multi-variant-tracks-container .variant-track {
+    margin-bottom: 0;
 }
 
 /* New Track Drag and Drop Styles */
