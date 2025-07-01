@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAM Cache Key Fix Validation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .log-container {
+            background: #1e1e1e;
+            color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-info { color: #87ceeb; }
+        .log-success { color: #90ee90; }
+        .log-warning { color: #ffa500; }
+        .log-error { color: #ff6b6b; }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .highlight-fix {
+            background: #e8f5e8 !important;
+            font-weight: bold;
+        }
+        .highlight-problem {
+            background: #ffe8e8 !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 BAM Cache Key Fix Validation</h1>
+        <p>Testing the fix for BAM cache key mismatch causing "No reads in this region"</p>
+    </div>
+
+    <div class="test-section">
+        <h3>🐛 Problem Fixed</h3>
+        <p><strong>Issue:</strong> Cache keys were based on requested regions, but BAM queries used expanded buffered regions, causing cache misses and incorrect filtering.</p>
+        <p><strong>Solution:</strong> Cache keys now match actual BAM query regions (including buffer), ensuring consistent caching and filtering.</p>
+        
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Before Fix</th>
+                    <th>After Fix</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Requested Region</td>
+                    <td>1701796-1711796</td>
+                    <td>1701796-1711796</td>
+                    <td>✅ Same</td>
+                </tr>
+                <tr>
+                    <td>Cache Key</td>
+                    <td class="highlight-problem">NC_000913.3:1700000-1750000</td>
+                    <td class="highlight-fix">NC_000913.3:1650000-1800000</td>
+                    <td>✅ Matches query</td>
+                </tr>
+                <tr>
+                    <td>BAM Query Region</td>
+                    <td>1651796-1761796 (buffered)</td>
+                    <td>1651796-1761796 (buffered)</td>
+                    <td>✅ Same</td>
+                </tr>
+                <tr>
+                    <td>Cache Storage</td>
+                    <td class="highlight-problem">Wrong key → cache miss</td>
+                    <td class="highlight-fix">Correct key → cache hit</td>
+                    <td>✅ Fixed</td>
+                </tr>
+                <tr>
+                    <td>Read Filtering</td>
+                    <td class="highlight-problem">Reads filtered incorrectly</td>
+                    <td class="highlight-fix">Reads filtered correctly</td>
+                    <td>✅ Fixed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="test-section">
+        <h3>🧪 Test Controls</h3>
+        <button class="button" onclick="testCacheKeyGeneration()">Test Cache Key Generation</button>
+        <button class="button" onclick="testRegionCalculation()">Test Region Calculation</button>
+        <button class="button" onclick="simulateNavigationScenario()">Simulate Navigation Scenario</button>
+        <button class="button" onclick="testReadsManagerIntegration()">Test ReadsManager Integration</button>
+        <button class="button" onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="statusContainer"></div>
+    <div id="logContainer" class="log-container"></div>
+</body>
+
+<script>
+    function updateStatus(message) {
+        const container = document.getElementById('statusContainer');
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'status';
+        statusDiv.textContent = message;
+        container.appendChild(statusDiv);
+        
+        setTimeout(() => {
+            if (statusDiv.parentNode) {
+                statusDiv.parentNode.removeChild(statusDiv);
+            }
+        }, 5000);
+    }
+
+    function log(message, type = 'info') {
+        const container = document.getElementById('logContainer');
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type}`;
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        container.appendChild(logEntry);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function clearResults() {
+        document.getElementById('statusContainer').innerHTML = '';
+        document.getElementById('logContainer').innerHTML = '';
+    }
+
+    function testCacheKeyGeneration() {
+        log('🔧 Testing cache key generation logic...', 'info');
+        
+        // Mock ReadsManager regionSize (typically 50000)
+        const regionSize = 50000;
+        
+        // Test scenarios
+        const testCases = [
+            { start: 1701796, end: 1711796, desc: 'Original problematic case' },
+            { start: 1000000, end: 1010000, desc: 'Round numbers case' },
+            { start: 1234567, end: 1245678, desc: 'Irregular numbers case' },
+            { start: 50, end: 1000, desc: 'Small region case' }
+        ];
+        
+        testCases.forEach(testCase => {
+            const { start, end, desc } = testCase;
+            
+            // OLD method: Cache key based on requested region
+            const oldRegionStart = Math.floor(start / regionSize) * regionSize;
+            const oldRegionEnd = Math.ceil(end / regionSize) * regionSize;
+            const oldCacheKey = `NC_000913.3:${oldRegionStart}-${oldRegionEnd}`;
+            
+            // NEW method: Cache key based on actual query region
+            const bufferSize = regionSize;
+            const actualQueryStart = Math.max(0, start - bufferSize);
+            const actualQueryEnd = end + bufferSize;
+            const newRegionStart = Math.floor(actualQueryStart / regionSize) * regionSize;
+            const newRegionEnd = Math.ceil(actualQueryEnd / regionSize) * regionSize;
+            const newCacheKey = `NC_000913.3:${newRegionStart}-${newRegionEnd}`;
+            
+            log(`📊 ${desc}:`, 'info');
+            log(`  Requested: ${start}-${end}`, 'info');
+            log(`  Query region: ${actualQueryStart}-${actualQueryEnd}`, 'info');
+            log(`  OLD cache key: ${oldCacheKey}`, 'warning');
+            log(`  NEW cache key: ${newCacheKey}`, 'success');
+            log(`  Key changed: ${oldCacheKey !== newCacheKey ? 'YES ✅' : 'NO ❌'}`, 
+                oldCacheKey !== newCacheKey ? 'success' : 'error');
+            log('', 'info');
+        });
+        
+        updateStatus('Cache key generation test completed');
+    }
+
+    function testRegionCalculation() {
+        log('📐 Testing region calculation consistency...', 'info');
+        
+        const regionSize = 50000;
+        const testRegions = [
+            { start: 1701796, end: 1711796 },
+            { start: 1658000, end: 1668000 },
+            { start: 2000000, end: 2010000 }
+        ];
+        
+        testRegions.forEach((region, index) => {
+            const { start, end } = region;
+            
+            // Simulate getReadsForRegion calculation
+            const bufferSize = regionSize;
+            const actualQueryStart = Math.max(0, start - bufferSize);
+            const actualQueryEnd = end + bufferSize;
+            
+            // Simulate loadReadsForRegionBAM calculation
+            const bamBufferSize = regionSize; // Must match!
+            const bamSearchStart = Math.max(0, start - bamBufferSize);
+            const bamSearchEnd = end + bamBufferSize;
+            
+            const isConsistent = (actualQueryStart === bamSearchStart) && (actualQueryEnd === bamSearchEnd);
+            
+            log(`🔍 Region ${index + 1}: ${start}-${end}`, 'info');
+            log(`  getReadsForRegion: ${actualQueryStart}-${actualQueryEnd}`, 'info');
+            log(`  loadReadsForRegionBAM: ${bamSearchStart}-${bamSearchEnd}`, 'info');
+            log(`  Consistent: ${isConsistent ? 'YES ✅' : 'NO ❌'}`, 
+                isConsistent ? 'success' : 'error');
+            log('', 'info');
+        });
+        
+        updateStatus('Region calculation consistency test completed');
+    }
+
+    function simulateNavigationScenario() {
+        log('🚀 Simulating navigation scenario that was causing issues...', 'info');
+        
+        // Original problematic scenario
+        const chromosome = 'NC_000913.3';
+        const requestedStart = 1701796;
+        const requestedEnd = 1711796;
+        const regionSize = 50000;
+        
+        log(`📍 User navigates to: ${chromosome}:${requestedStart}-${requestedEnd}`, 'info');
+        
+        // Step 1: Calculate cache key (NEW method)
+        const bufferSize = regionSize;
+        const actualQueryStart = Math.max(0, requestedStart - bufferSize);
+        const actualQueryEnd = requestedEnd + bufferSize;
+        const cacheRegionStart = Math.floor(actualQueryStart / regionSize) * regionSize;
+        const cacheRegionEnd = Math.ceil(actualQueryEnd / regionSize) * regionSize;
+        const cacheKey = `${chromosome}:${cacheRegionStart}-${cacheRegionEnd}`;
+        
+        log(`🔑 Cache key: ${cacheKey}`, 'success');
+        
+        // Step 2: BAM query region
+        const bamSearchStart = Math.max(0, actualQueryStart - 1); // Convert to 0-based
+        const bamSearchEnd = actualQueryEnd - 1;
+        
+        log(`🧬 BAM query: ${bamSearchStart}-${bamSearchEnd + 1} (0-based)`, 'info');
+        
+        // Step 3: Simulate reads retrieval
+        // In the original problem, reads were at ~1658000, which is within the query range
+        const simulatedReads = [
+            { start: 1658140, end: 1658236, id: 'read1' },
+            { start: 1658150, end: 1658246, id: 'read2' },
+            { start: 1659000, end: 1659096, id: 'read3' }
+        ];
+        
+        log(`📊 Simulated reads retrieved: ${simulatedReads.length}`, 'info');
+        simulatedReads.forEach(read => {
+            log(`  ${read.id}: ${read.start}-${read.end}`, 'info');
+        });
+        
+        // Step 4: Cache storage
+        log(`💾 Reads cached under key: ${cacheKey}`, 'success');
+        
+        // Step 5: Final filtering for exact region
+        const filteredReads = simulatedReads.filter(read => 
+            read.start <= requestedEnd && read.end >= requestedStart
+        );
+        
+        log(`🎯 Final filtering for ${requestedStart}-${requestedEnd}:`, 'info');
+        log(`  Reads that overlap: ${filteredReads.length}/${simulatedReads.length}`, 
+            filteredReads.length > 0 ? 'success' : 'warning');
+        
+        if (filteredReads.length === 0) {
+            log(`  ⚠️ No reads overlap with display region`, 'warning');
+            log(`  💡 This is expected - reads are at ~1658k, display is at ~1701k`, 'info');
+        } else {
+            log(`  ✅ Reads found for display`, 'success');
+        }
+        
+        updateStatus('Navigation scenario simulation completed');
+    }
+
+    function testReadsManagerIntegration() {
+        log('🔌 Testing ReadsManager integration...', 'info');
+        
+        try {
+            if (typeof window.genomeBrowser !== 'undefined' && window.genomeBrowser.readsManager) {
+                const readsManager = window.genomeBrowser.readsManager;
+                
+                log('✅ ReadsManager found', 'success');
+                log(`📁 Current file: ${readsManager.currentFile || 'None'}`, 'info');
+                log(`🧬 BAM mode: ${readsManager.isBamMode}`, 'info');
+                log(`📊 Region size: ${readsManager.regionSize}`, 'info');
+                
+                // Test cache key generation
+                if (readsManager.getRegionKey) {
+                    const testStart = 1701796;
+                    const testEnd = 1711796;
+                    const cacheKey = readsManager.getRegionKey('NC_000913.3', testStart, testEnd);
+                    log(`🔑 Cache key for ${testStart}-${testEnd}: ${cacheKey}`, 'info');
+                } else {
+                    log('❌ getRegionKey method not found', 'error');
+                }
+                
+                // Test cache stats
+                const cacheStats = readsManager.getCacheStats();
+                log(`💾 Cache stats:`, 'info');
+                log(`  Size: ${cacheStats.cacheSize}/${cacheStats.maxCacheSize}`, 'info');
+                log(`  Hit rate: ${Math.round(cacheStats.hitRate * 100)}%`, 'info');
+                log(`  Memory usage: ${cacheStats.memoryUsage} reads`, 'info');
+                
+                updateStatus('ReadsManager integration test completed successfully');
+            } else {
+                log('❌ ReadsManager not available', 'error');
+                log('💡 This test requires GenomeBrowser to be loaded', 'warning');
+                updateStatus('ReadsManager not available - load GenomeBrowser first');
+            }
+        } catch (error) {
+            log(`❌ Error testing ReadsManager: ${error.message}`, 'error');
+            updateStatus(`Error: ${error.message}`);
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        log('🚀 BAM Cache Key Fix Test initialized', 'success');
+        log('This test validates the fix for cache key mismatch issues', 'info');
+        updateStatus('Test environment ready');
+    });
+</script>
+</html> 

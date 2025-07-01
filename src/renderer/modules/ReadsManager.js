@@ -78,7 +78,26 @@ class ReadsManager {
             return [];
         }
 
-        const regionKey = this.getRegionKey(chromosome, start, end);
+        // For BAM mode, we need to calculate the actual query region first
+        // to generate the correct cache key
+        let actualQueryStart = start;
+        let actualQueryEnd = end;
+        
+        if (this.isBamMode && this.bamReader) {
+            // Calculate the expanded search region that will be used for BAM query
+            const bufferSize = this.regionSize;
+            actualQueryStart = Math.max(0, start - bufferSize);
+            actualQueryEnd = end + bufferSize;
+        }
+
+        // Generate cache key based on the actual query region, not the requested region
+        const regionKey = this.getRegionKey(chromosome, actualQueryStart, actualQueryEnd);
+        
+        console.log(`🔍 [ReadsManager] Cache key calculation:`, {
+            requestedRegion: `${start}-${end}`,
+            actualQueryRegion: `${actualQueryStart}-${actualQueryEnd}`,
+            cacheKey: regionKey
+        });
         
         // Check cache first
         if (this.cache.has(regionKey)) {
@@ -86,10 +105,17 @@ class ReadsManager {
             const cached = this.cache.get(regionKey);
             cached.lastAccessed = Date.now();
             
+            console.log(`✅ [ReadsManager] Cache HIT for key: ${regionKey}`);
+            console.log(`🔍 [ReadsManager] Cached reads count: ${cached.reads.length}`);
+            
             // Filter to exact boundaries
-            return this.filterReadsForExactRegion(cached.reads, start, end);
+            const filteredReads = this.filterReadsForExactRegion(cached.reads, start, end);
+            console.log(`🔍 [ReadsManager] After filtering to exact region ${start}-${end}: ${filteredReads.length} reads`);
+            
+            return filteredReads;
         }
 
+        console.log(`❌ [ReadsManager] Cache MISS for key: ${regionKey}`);
         this.stats.cacheMisses++;
         
         // Use appropriate loading method based on mode
@@ -105,11 +131,14 @@ class ReadsManager {
             reads = await this.loadReadsForRegion(chromosome, start, end, settings);
         }
         
-        // Cache the results
+        // Cache the results using the correct key
         this.cacheRegion(regionKey, reads);
         
         // Filter to exact boundaries and return
-        return this.filterReadsForExactRegion(reads, start, end);
+        const filteredReads = this.filterReadsForExactRegion(reads, start, end);
+        console.log(`🔍 [ReadsManager] Final result: ${filteredReads.length} reads for region ${start}-${end}`);
+        
+        return filteredReads;
     }
 
     /**
@@ -411,6 +440,7 @@ class ReadsManager {
 
         try {
             // Expand the search region to include some buffer for better caching
+            // This MUST match the calculation in getReadsForRegion for cache consistency
             const bufferSize = this.regionSize;
             const searchStart = Math.max(0, start - bufferSize);
             const searchEnd = end + bufferSize;
