@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reads Track Header Sampling Control Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 30px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-section h3 { color: #2980b9; margin-top: 0; }
+        .button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .button:hover { background: #2980b9; }
+        .button.success { background: #27ae60; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .result.success { background: #d5f4e6; border: 1px solid #27ae60; color: #27ae60; }
+        .result.error { background: #fdf2f2; border: 1px solid #e74c3c; color: #e74c3c; }
+        .result.info { background: #e8f4fd; border: 1px solid #3498db; color: #2980b9; }
+        
+        .mock-track { border: 1px solid #ddd; border-radius: 5px; margin: 15px 0; background: white; }
+        .track-header { background: #f8f9fa; padding: 8px 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; border-radius: 5px 5px 0 0; }
+        .track-title { font-weight: bold; color: #2c3e50; }
+        .track-sampling-control { display: inline-flex; align-items: center; margin-left: 15px; gap: 5px; font-size: 12px; color: #666; }
+        .track-sampling-input { width: 45px; height: 20px; padding: 2px 4px; border: 1px solid #ddd; border-radius: 3px; font-size: 11px; text-align: center; background: white; }
+        .track-buttons { display: flex; gap: 5px; }
+        .track-btn { background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .track-btn:hover { background: #5a6268; }
+        .track-content { padding: 20px; min-height: 100px; background: #fafafa; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Reads Track Header Sampling Control Test</h1>
+            <p>Testing the new sampling percentage control in Aligned Reads track header</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Interactive Tests</h3>
+            <button class="button" onclick="createMockReadsTrack()">Create Mock Reads Track</button>
+            <button class="button" onclick="testSamplingInput()">Test Sampling Input</button>
+            <button class="button" onclick="testInputValidation()">Test Input Validation</button>
+            <button class="button" onclick="testSettingsSync()">Test Settings Sync</button>
+            <button class="button success" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Mock Track Display</h3>
+            <div id="mockTrackContainer"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let mockSettings = {
+            reads: {
+                samplingPercentage: 20,
+                enableSampling: true,
+                samplingMode: 'percentage',
+                height: 150,
+                readHeight: 14
+            }
+        };
+
+        class MockTrackRenderer {
+            getTrackSettings(trackType) {
+                return mockSettings[trackType] || {};
+            }
+
+            saveTrackSettings(trackType, settings) {
+                mockSettings[trackType] = { ...mockSettings[trackType], ...settings };
+                addResult(`💾 Settings saved for ${trackType}: samplingPercentage=${settings.samplingPercentage}%`, 'info');
+            }
+
+            updateSamplingPercentage(percentage) {
+                addResult(`🎲 updateSamplingPercentage called with ${percentage}%`, 'info');
+                
+                const currentSettings = this.getTrackSettings('reads');
+                currentSettings.samplingPercentage = percentage;
+                currentSettings.enableSampling = true;
+                currentSettings.samplingMode = 'percentage';
+                
+                this.saveTrackSettings('reads', currentSettings);
+                this.updateSamplingInputValue();
+                this.showSamplingUpdateFeedback(percentage);
+            }
+
+            updateSamplingInputValue() {
+                const samplingInput = document.querySelector('.track-sampling-input');
+                if (samplingInput) {
+                    const currentSettings = this.getTrackSettings('reads');
+                    const currentPercentage = currentSettings.samplingPercentage || 20;
+                    if (parseInt(samplingInput.value) !== currentPercentage) {
+                        samplingInput.value = currentPercentage;
+                        addResult(`🎲 Updated sampling input value to ${currentPercentage}%`, 'success');
+                    }
+                }
+            }
+
+            showSamplingUpdateFeedback(percentage) {
+                const existingFeedback = document.querySelector('.sampling-feedback');
+                if (existingFeedback) existingFeedback.remove();
+                
+                const feedback = document.createElement('div');
+                feedback.className = 'sampling-feedback';
+                feedback.textContent = `Sampling updated to ${percentage}%`;
+                feedback.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white;
+                    padding: 8px 16px; border-radius: 4px; font-size: 12px; z-index: 10000;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2); animation: fadeInOut 2s ease-in-out;
+                `;
+                
+                if (!document.querySelector('#sampling-feedback-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'sampling-feedback-styles';
+                    style.textContent = `
+                        @keyframes fadeInOut {
+                            0% { opacity: 0; transform: translateY(-10px); }
+                            20%, 80% { opacity: 1; transform: translateY(0); }
+                            100% { opacity: 0; transform: translateY(-10px); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                document.body.appendChild(feedback);
+                setTimeout(() => { if (feedback.parentNode) feedback.remove(); }, 2000);
+            }
+        }
+
+        const mockTrackRenderer = new MockTrackRenderer();
+
+        function createMockReadsTrack() {
+            addResult('Creating mock Aligned Reads track with sampling control...', 'info');
+            
+            const container = document.getElementById('mockTrackContainer');
+            container.innerHTML = '';
+            
+            const track = document.createElement('div');
+            track.className = 'mock-track reads-track';
+            
+            const trackHeader = createTrackHeader('Aligned Reads', 'reads');
+            track.appendChild(trackHeader);
+            
+            const trackContent = document.createElement('div');
+            trackContent.className = 'track-content';
+            trackContent.textContent = 'Mock reads track content - sampling control is in the header above';
+            track.appendChild(trackContent);
+            
+            container.appendChild(track);
+            addResult('✅ Mock reads track created with sampling control', 'success');
+        }
+
+        function createTrackHeader(title, trackType) {
+            const trackHeader = document.createElement('div');
+            trackHeader.className = 'track-header';
+            
+            const titleElement = document.createElement('span');
+            titleElement.className = 'track-title';
+            titleElement.textContent = title;
+            trackHeader.appendChild(titleElement);
+            
+            if (trackType === 'reads') {
+                const samplingContainer = document.createElement('div');
+                samplingContainer.className = 'track-sampling-control';
+                
+                const samplingLabel = document.createElement('span');
+                samplingLabel.textContent = 'Sample:';
+                samplingLabel.style.cssText = 'font-size: 11px; color: #888;';
+                
+                const samplingInput = document.createElement('input');
+                samplingInput.type = 'number';
+                samplingInput.min = '1';
+                samplingInput.max = '100';
+                samplingInput.step = '1';
+                samplingInput.className = 'track-sampling-input';
+                
+                const samplingPercent = document.createElement('span');
+                samplingPercent.textContent = '%';
+                samplingPercent.style.cssText = 'font-size: 11px; color: #888;';
+                
+                const currentSettings = mockTrackRenderer.getTrackSettings('reads');
+                samplingInput.value = currentSettings.samplingPercentage || 20;
+                
+                samplingInput.addEventListener('input', (e) => {
+                    const percentage = parseInt(e.target.value);
+                    if (percentage >= 1 && percentage <= 100) {
+                        mockTrackRenderer.updateSamplingPercentage(percentage);
+                    }
+                });
+                
+                samplingInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') e.target.blur();
+                });
+                
+                samplingInput.addEventListener('change', (e) => {
+                    let percentage = parseInt(e.target.value);
+                    if (isNaN(percentage) || percentage < 1) {
+                        percentage = 1;
+                        e.target.value = 1;
+                    } else if (percentage > 100) {
+                        percentage = 100;
+                        e.target.value = 100;
+                    }
+                    mockTrackRenderer.updateSamplingPercentage(percentage);
+                });
+                
+                samplingContainer.appendChild(samplingLabel);
+                samplingContainer.appendChild(samplingInput);
+                samplingContainer.appendChild(samplingPercent);
+                trackHeader.appendChild(samplingContainer);
+            }
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'track-buttons';
+            
+            const settingsBtn = document.createElement('button');
+            settingsBtn.className = 'track-btn';
+            settingsBtn.innerHTML = '⚙️';
+            settingsBtn.title = 'Track Settings';
+            settingsBtn.addEventListener('click', () => addResult('Settings button clicked', 'info'));
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'track-btn';
+            closeBtn.innerHTML = '👁️‍🗨️';
+            closeBtn.title = 'Hide Track';
+            closeBtn.addEventListener('click', () => addResult('Close button clicked', 'info'));
+            
+            buttonsContainer.appendChild(settingsBtn);
+            buttonsContainer.appendChild(closeBtn);
+            trackHeader.appendChild(buttonsContainer);
+            
+            return trackHeader;
+        }
+
+        function testSamplingInput() {
+            addResult('Testing sampling input functionality...', 'info');
+            
+            const samplingInput = document.querySelector('.track-sampling-input');
+            if (!samplingInput) {
+                addResult('❌ No sampling input found. Create mock track first.', 'error');
+                return;
+            }
+            
+            const testValues = [10, 25, 50, 75, 100];
+            let testIndex = 0;
+            
+            function runNextTest() {
+                if (testIndex < testValues.length) {
+                    const value = testValues[testIndex];
+                    samplingInput.value = value;
+                    samplingInput.dispatchEvent(new Event('change'));
+                    addResult(`📊 Tested value: ${value}%`, 'info');
+                    testIndex++;
+                    setTimeout(runNextTest, 1000);
+                } else {
+                    addResult('✅ Sampling input test completed', 'success');
+                }
+            }
+            
+            runNextTest();
+        }
+
+        function testInputValidation() {
+            addResult('Testing input validation...', 'info');
+            
+            const samplingInput = document.querySelector('.track-sampling-input');
+            if (!samplingInput) {
+                addResult('❌ No sampling input found. Create mock track first.', 'error');
+                return;
+            }
+            
+            const invalidValues = [-5, 0, 150, 'abc'];
+            
+            invalidValues.forEach((value, index) => {
+                setTimeout(() => {
+                    addResult(`🧪 Testing invalid value: ${value}`, 'info');
+                    samplingInput.value = value;
+                    samplingInput.dispatchEvent(new Event('change'));
+                    
+                    const correctedValue = parseInt(samplingInput.value);
+                    if (correctedValue >= 1 && correctedValue <= 100) {
+                        addResult(`✅ Invalid value ${value} corrected to ${correctedValue}`, 'success');
+                    } else {
+                        addResult(`❌ Invalid value ${value} not properly corrected`, 'error');
+                    }
+                }, index * 500);
+            });
+            
+            setTimeout(() => {
+                addResult('✅ Input validation test completed', 'success');
+            }, invalidValues.length * 500 + 200);
+        }
+
+        function testSettingsSync() {
+            addResult('Testing settings synchronization...', 'info');
+            
+            const samplingInput = document.querySelector('.track-sampling-input');
+            if (!samplingInput) {
+                addResult('❌ No sampling input found. Create mock track first.', 'error');
+                return;
+            }
+            
+            const testValue = 35;
+            samplingInput.value = testValue;
+            samplingInput.dispatchEvent(new Event('change'));
+            
+            setTimeout(() => {
+                const currentSettings = mockTrackRenderer.getTrackSettings('reads');
+                if (currentSettings.samplingPercentage === testValue) {
+                    addResult(`✅ Settings updated correctly: ${testValue}%`, 'success');
+                } else {
+                    addResult(`❌ Settings not updated. Expected: ${testValue}%, Got: ${currentSettings.samplingPercentage}%`, 'error');
+                }
+                
+                const programmaticValue = 60;
+                mockSettings.reads.samplingPercentage = programmaticValue;
+                mockTrackRenderer.updateSamplingInputValue();
+                
+                setTimeout(() => {
+                    const inputValue = parseInt(samplingInput.value);
+                    if (inputValue === programmaticValue) {
+                        addResult(`✅ Input synchronized correctly: ${programmaticValue}%`, 'success');
+                    } else {
+                        addResult(`❌ Input not synchronized. Expected: ${programmaticValue}%, Got: ${inputValue}%`, 'error');
+                    }
+                    
+                    addResult('✅ Settings synchronization test completed', 'success');
+                }, 100);
+            }, 100);
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('mockTrackContainer').innerHTML = '';
+            addResult('🧹 Results and mock tracks cleared', 'info');
+        }
+
+        addResult('🚀 Reads Track Header Sampling Control Test Suite initialized', 'success');
+        addResult('Click "Create Mock Reads Track" to start testing', 'info');
+    </script>
+</body>
+</html>

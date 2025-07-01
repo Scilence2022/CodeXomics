@@ -128,6 +128,82 @@ class TrackRenderer {
         titleElement.textContent = title;
         trackHeader.appendChild(titleElement);
         
+        // Add sampling percentage control for reads track
+        if (trackType === 'reads') {
+            const samplingContainer = document.createElement('div');
+            samplingContainer.className = 'track-sampling-control';
+            samplingContainer.style.cssText = `
+                display: inline-flex;
+                align-items: center;
+                margin-left: 15px;
+                gap: 5px;
+                font-size: 12px;
+                color: #666;
+            `;
+            
+            const samplingLabel = document.createElement('span');
+            samplingLabel.textContent = 'Sample:';
+            samplingLabel.style.cssText = 'font-size: 11px; color: #888;';
+            
+            const samplingInput = document.createElement('input');
+            samplingInput.type = 'number';
+            samplingInput.min = '1';
+            samplingInput.max = '100';
+            samplingInput.step = '1';
+            samplingInput.className = 'track-sampling-input';
+            samplingInput.style.cssText = `
+                width: 45px;
+                height: 20px;
+                padding: 2px 4px;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+                font-size: 11px;
+                text-align: center;
+                background: white;
+            `;
+            
+            const samplingPercent = document.createElement('span');
+            samplingPercent.textContent = '%';
+            samplingPercent.style.cssText = 'font-size: 11px; color: #888;';
+            
+            // Get current sampling percentage from settings
+            const currentSettings = this.getTrackSettings('reads');
+            samplingInput.value = currentSettings.samplingPercentage || 20;
+            
+            // Add event listener for real-time updates
+            samplingInput.addEventListener('input', (e) => {
+                const percentage = parseInt(e.target.value);
+                if (percentage >= 1 && percentage <= 100) {
+                    this.updateSamplingPercentage(percentage);
+                }
+            });
+            
+            // Add enter key handler
+            samplingInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.target.blur(); // Remove focus to trigger change
+                }
+            });
+            
+            // Add change handler for when user finishes editing
+            samplingInput.addEventListener('change', (e) => {
+                let percentage = parseInt(e.target.value);
+                if (isNaN(percentage) || percentage < 1) {
+                    percentage = 1;
+                    e.target.value = 1;
+                } else if (percentage > 100) {
+                    percentage = 100;
+                    e.target.value = 100;
+                }
+                this.updateSamplingPercentage(percentage);
+            });
+            
+            samplingContainer.appendChild(samplingLabel);
+            samplingContainer.appendChild(samplingInput);
+            samplingContainer.appendChild(samplingPercent);
+            trackHeader.appendChild(samplingContainer);
+        }
+        
         // Create buttons container
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'track-buttons';
@@ -275,6 +351,11 @@ class TrackRenderer {
      * Restore header visibility state after track recreation
      */
     restoreHeaderState(trackElement, trackType) {
+        // Update sampling input value for reads track
+        if (trackType === 'reads') {
+            this.updateSamplingInputValue(trackElement);
+        }
+        
         if (!this.headerStates.has(trackType)) return;
         
         const shouldBeHidden = this.headerStates.get(trackType);
@@ -299,6 +380,21 @@ class TrackRenderer {
             }
             
             console.log(`Restored hidden header state for ${trackType}`);
+        }
+    }
+    
+    /**
+     * Update sampling input value to match current settings
+     */
+    updateSamplingInputValue(trackElement) {
+        const samplingInput = trackElement.querySelector('.track-sampling-input');
+        if (samplingInput) {
+            const currentSettings = this.getTrackSettings('reads');
+            const currentPercentage = currentSettings.samplingPercentage || 20;
+            if (parseInt(samplingInput.value) !== currentPercentage) {
+                samplingInput.value = currentPercentage;
+                console.log(`🎲 Updated sampling input value to ${currentPercentage}%`);
+            }
         }
     }
     
@@ -5768,6 +5864,91 @@ class TrackRenderer {
         setTimeout(() => {
             console.log('✅ [TrackRenderer] VSCodeSequenceEditor settings after update:', vscodeEditor.settings.useGeneColors);
         }, 100);
+    }
+
+    /**
+     * Update sampling percentage for reads track
+     */
+    updateSamplingPercentage(percentage) {
+        console.log(`🎲 [TrackRenderer] Updating sampling percentage to ${percentage}%`);
+        
+        try {
+            // Get current settings
+            const currentSettings = this.getTrackSettings('reads');
+            
+            // Update sampling settings
+            currentSettings.samplingPercentage = percentage;
+            currentSettings.enableSampling = true; // Ensure sampling is enabled
+            currentSettings.samplingMode = 'percentage'; // Set to percentage mode
+            
+            // Save the updated settings
+            this.saveTrackSettings('reads', currentSettings);
+            
+            // Check if reads track is currently visible
+            const readsTrack = document.querySelector('.reads-track');
+            if (readsTrack) {
+                // Refresh the reads track immediately
+                console.log(`🎲 [TrackRenderer] Refreshing reads track with new sampling: ${percentage}%`);
+                this.refreshViewAfterSettingsChange(true); // Force full redraw for reads track
+                
+                // Show a brief feedback message
+                this.showSamplingUpdateFeedback(percentage);
+            }
+        } catch (error) {
+            console.error('Error updating sampling percentage:', error);
+        }
+    }
+    
+    /**
+     * Show brief feedback when sampling percentage is updated
+     */
+    showSamplingUpdateFeedback(percentage) {
+        // Remove any existing feedback
+        const existingFeedback = document.querySelector('.sampling-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+        
+        // Create feedback element
+        const feedback = document.createElement('div');
+        feedback.className = 'sampling-feedback';
+        feedback.textContent = `Sampling updated to ${percentage}%`;
+        feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            animation: fadeInOut 2s ease-in-out;
+        `;
+        
+        // Add CSS animation
+        if (!document.querySelector('#sampling-feedback-styles')) {
+            const style = document.createElement('style');
+            style.id = 'sampling-feedback-styles';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translateY(-10px); }
+                    20%, 80% { opacity: 1; transform: translateY(0); }
+                    100% { opacity: 0; transform: translateY(-10px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(feedback);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (feedback.parentNode) {
+                feedback.remove();
+            }
+        }, 2000);
     }
 
     /**
