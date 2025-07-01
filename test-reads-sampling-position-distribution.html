@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reads Sampling Position Distribution Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 30px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-section h3 { color: #2980b9; margin-top: 0; }
+        .button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .button:hover { background: #2980b9; }
+        .button.success { background: #27ae60; }
+        .button.warning { background: #f39c12; }
+        .button.danger { background: #e74c3c; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .result.success { background: #d5f4e6; border: 1px solid #27ae60; color: #27ae60; }
+        .result.error { background: #fdf2f2; border: 1px solid #e74c3c; color: #e74c3c; }
+        .result.info { background: #e8f4fd; border: 1px solid #3498db; color: #2980b9; }
+        .result.warning { background: #fef9e7; border: 1px solid #f39c12; color: #f39c12; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #3498db; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Reads Sampling Position Distribution Test</h1>
+            <p>Testing random sampling to ensure uniform genomic position distribution</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Scenarios</h3>
+            <button class="button" onclick="testUniformDistribution()">Test Uniform Distribution</button>
+            <button class="button warning" onclick="testSkewedDistribution()">Test Skewed Distribution</button>
+            <button class="button danger" onclick="testClusteredDistribution()">Test Clustered Distribution</button>
+            <button class="button success" onclick="testReservoirVsFisherYates()">Compare Reservoir vs Fisher-Yates</button>
+            <button class="button" onclick="testLargeRegion()">Test Large Region Coverage</button>
+            <button class="button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Statistics Summary</h3>
+            <div id="statisticsGrid" class="stats-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock ReadsManager with improved sampling
+        class MockReadsManager {
+            constructor() {
+                this.stats = { totalTests: 0, passedTests: 0, averageCoverage: 0 };
+            }
+
+            generateReads(count, startPos, endPos, distributionType = 'uniform') {
+                const reads = [];
+                const range = endPos - startPos;
+                
+                for (let i = 0; i < count; i++) {
+                    let position;
+                    
+                    switch (distributionType) {
+                        case 'uniform':
+                            position = startPos + Math.floor(Math.random() * range);
+                            break;
+                        case 'skewed':
+                            if (Math.random() < 0.8) {
+                                position = startPos + Math.floor(Math.random() * range * 0.2);
+                            } else {
+                                position = startPos + Math.floor(Math.random() * range);
+                            }
+                            break;
+                        case 'clustered':
+                            const clusterSize = range / 10;
+                            const cluster = Math.floor(Math.random() * 3);
+                            const clusterStart = startPos + (cluster * range / 3) + (range / 6);
+                            position = clusterStart + Math.floor(Math.random() * clusterSize);
+                            break;
+                        default:
+                            position = startPos + Math.floor(Math.random() * range);
+                    }
+                    
+                    const readLength = 50 + Math.floor(Math.random() * 100);
+                    reads.push({
+                        id: `read_${i + 1}`,
+                        chromosome: 'chr1',
+                        start: position,
+                        end: position + readLength - 1,
+                        strand: Math.random() > 0.5 ? '+' : '-',
+                        mappingQuality: Math.floor(Math.random() * 60),
+                        sequence: 'A'.repeat(readLength),
+                        quality: '~'.repeat(readLength)
+                    });
+                }
+                
+                reads.sort((a, b) => a.start - b.start);
+                return reads;
+            }
+
+            reservoirSampling(reads, targetCount) {
+                if (reads.length <= targetCount) return reads;
+                
+                const positions = reads.map(read => read.start).sort((a, b) => a - b);
+                const minPos = positions[0];
+                const maxPos = positions[positions.length - 1];
+                
+                const sampledReads = [];
+                
+                for (let i = 0; i < reads.length; i++) {
+                    if (sampledReads.length < targetCount) {
+                        sampledReads.push(reads[i]);
+                    } else {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        if (j < targetCount) {
+                            sampledReads[j] = reads[i];
+                        }
+                    }
+                }
+                
+                if (sampledReads.length > 0) {
+                    const sampledPositions = sampledReads.map(read => read.start).sort((a, b) => a - b);
+                    const sampledMinPos = sampledPositions[0];
+                    const sampledMaxPos = sampledPositions[sampledPositions.length - 1];
+                    const coverage = (sampledMaxPos - sampledMinPos) / (maxPos - minPos);
+                    
+                    sampledReads._samplingInfo = {
+                        originalCount: reads.length,
+                        sampledCount: sampledReads.length,
+                        positionCoverage: coverage,
+                        algorithm: 'reservoir'
+                    };
+                }
+                
+                return sampledReads;
+            }
+
+            fisherYatesSampling(reads, targetCount) {
+                if (reads.length <= targetCount) return reads;
+                
+                const positions = reads.map(read => read.start).sort((a, b) => a - b);
+                const minPos = positions[0];
+                const maxPos = positions[positions.length - 1];
+                
+                const sampledReads = [...reads];
+                
+                for (let i = sampledReads.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [sampledReads[i], sampledReads[j]] = [sampledReads[j], sampledReads[i]];
+                }
+                
+                const result = sampledReads.slice(0, targetCount);
+                
+                if (result.length > 0) {
+                    const sampledPositions = result.map(read => read.start).sort((a, b) => a - b);
+                    const sampledMinPos = sampledPositions[0];
+                    const sampledMaxPos = sampledPositions[sampledPositions.length - 1];
+                    const coverage = (sampledMaxPos - sampledMinPos) / (maxPos - minPos);
+                    
+                    result._samplingInfo = {
+                        originalCount: reads.length,
+                        sampledCount: result.length,
+                        positionCoverage: coverage,
+                        algorithm: 'fisher-yates'
+                    };
+                }
+                
+                return result;
+            }
+        }
+
+        const mockReadsManager = new MockReadsManager();
+
+        async function testUniformDistribution() {
+            addResult('Testing uniform distribution sampling...', 'info');
+            
+            const originalReads = mockReadsManager.generateReads(50000, 1000000, 2000000, 'uniform');
+            const sampledReads = mockReadsManager.reservoirSampling(originalReads, 5000);
+            
+            const coverage = sampledReads._samplingInfo.positionCoverage;
+            const isGoodCoverage = coverage > 0.9;
+            
+            if (isGoodCoverage) {
+                addResult(`✅ Uniform distribution test PASSED: Coverage ${(coverage * 100).toFixed(1)}%`, 'success');
+            } else {
+                addResult(`❌ Uniform distribution test FAILED: Coverage ${(coverage * 100).toFixed(1)}%`, 'error');
+            }
+            
+            updateStats('uniform', coverage, isGoodCoverage);
+        }
+
+        async function testSkewedDistribution() {
+            addResult('Testing skewed distribution sampling...', 'info');
+            
+            const originalReads = mockReadsManager.generateReads(50000, 1000000, 2000000, 'skewed');
+            const sampledReads = mockReadsManager.reservoirSampling(originalReads, 5000);
+            
+            const coverage = sampledReads._samplingInfo.positionCoverage;
+            const isGoodCoverage = coverage > 0.8;
+            
+            if (isGoodCoverage) {
+                addResult(`✅ Skewed distribution test PASSED: Coverage ${(coverage * 100).toFixed(1)}%`, 'success');
+            } else {
+                addResult(`❌ Skewed distribution test FAILED: Coverage ${(coverage * 100).toFixed(1)}%`, 'error');
+            }
+            
+            updateStats('skewed', coverage, isGoodCoverage);
+        }
+
+        async function testClusteredDistribution() {
+            addResult('Testing clustered distribution sampling...', 'info');
+            
+            const originalReads = mockReadsManager.generateReads(50000, 1000000, 2000000, 'clustered');
+            const sampledReads = mockReadsManager.reservoirSampling(originalReads, 5000);
+            
+            const coverage = sampledReads._samplingInfo.positionCoverage;
+            const isGoodCoverage = coverage > 0.7;
+            
+            if (isGoodCoverage) {
+                addResult(`✅ Clustered distribution test PASSED: Coverage ${(coverage * 100).toFixed(1)}%`, 'success');
+            } else {
+                addResult(`❌ Clustered distribution test FAILED: Coverage ${(coverage * 100).toFixed(1)}%`, 'error');
+            }
+            
+            updateStats('clustered', coverage, isGoodCoverage);
+        }
+
+        async function testReservoirVsFisherYates() {
+            addResult('Comparing Reservoir vs Fisher-Yates sampling...', 'info');
+            
+            const originalReads = mockReadsManager.generateReads(30000, 1000000, 2000000, 'uniform');
+            
+            const reservoirSampled = mockReadsManager.reservoirSampling(originalReads, 3000);
+            const fisherYatesSampled = mockReadsManager.fisherYatesSampling(originalReads, 3000);
+            
+            const reservoirCoverage = reservoirSampled._samplingInfo.positionCoverage;
+            const fisherYatesCoverage = fisherYatesSampled._samplingInfo.positionCoverage;
+            
+            addResult(`📊 Reservoir Sampling: Coverage ${(reservoirCoverage * 100).toFixed(1)}%`, 'info');
+            addResult(`📊 Fisher-Yates Sampling: Coverage ${(fisherYatesCoverage * 100).toFixed(1)}%`, 'info');
+            
+            if (reservoirCoverage > fisherYatesCoverage) {
+                addResult(`✅ Reservoir sampling provides better coverage (+${((reservoirCoverage - fisherYatesCoverage) * 100).toFixed(1)}%)`, 'success');
+            } else if (fisherYatesCoverage > reservoirCoverage) {
+                addResult(`⚠️ Fisher-Yates provides better coverage (+${((fisherYatesCoverage - reservoirCoverage) * 100).toFixed(1)}%)`, 'warning');
+            } else {
+                addResult(`📊 Both algorithms provide similar coverage`, 'info');
+            }
+        }
+
+        async function testLargeRegion() {
+            addResult('Testing large genomic region coverage...', 'info');
+            
+            const originalReads = mockReadsManager.generateReads(100000, 500000, 3000000, 'uniform');
+            const sampledReads = mockReadsManager.reservoirSampling(originalReads, 8000);
+            
+            const coverage = sampledReads._samplingInfo.positionCoverage;
+            const regionSize = 3000000 - 500000;
+            
+            addResult(`📏 Region size: ${(regionSize / 1000000).toFixed(1)} Mb`, 'info');
+            addResult(`📊 Original reads: ${originalReads.length.toLocaleString()}`, 'info');
+            addResult(`📊 Sampled reads: ${sampledReads.length.toLocaleString()}`, 'info');
+            addResult(`📊 Position coverage: ${(coverage * 100).toFixed(1)}%`, 'info');
+            
+            const isGoodCoverage = coverage > 0.9;
+            if (isGoodCoverage) {
+                addResult(`✅ Large region test PASSED: Excellent coverage maintained`, 'success');
+            } else {
+                addResult(`❌ Large region test FAILED: Poor coverage for large region`, 'error');
+            }
+            
+            updateStats('large-region', coverage, isGoodCoverage);
+        }
+
+        function updateStats(testType, coverage, passed) {
+            mockReadsManager.stats.totalTests++;
+            if (passed) mockReadsManager.stats.passedTests++;
+            mockReadsManager.stats.averageCoverage = 
+                (mockReadsManager.stats.averageCoverage * (mockReadsManager.stats.totalTests - 1) + coverage) / 
+                mockReadsManager.stats.totalTests;
+            
+            const statsGrid = document.getElementById('statisticsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${mockReadsManager.stats.totalTests}</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${mockReadsManager.stats.passedTests}</div>
+                    <div class="stat-label">Passed Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${Math.round((mockReadsManager.stats.passedTests / mockReadsManager.stats.totalTests) * 100)}%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${(mockReadsManager.stats.averageCoverage * 100).toFixed(1)}%</div>
+                    <div class="stat-label">Average Coverage</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${(coverage * 100).toFixed(1)}%</div>
+                    <div class="stat-label">Latest Coverage</div>
+                </div>
+            `;
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('statisticsGrid').innerHTML = '';
+            mockReadsManager.stats = { totalTests: 0, passedTests: 0, averageCoverage: 0 };
+            addResult('🧹 Results cleared', 'info');
+        }
+
+        addResult('🚀 Position Distribution Test Suite initialized', 'success');
+        addResult('Run tests to validate that sampling maintains uniform genomic position distribution', 'info');
+    </script>
+</body>
+</html>

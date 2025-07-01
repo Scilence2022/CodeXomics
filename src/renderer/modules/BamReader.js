@@ -442,13 +442,11 @@ class BamReader {
                 console.warn(`   Consider using a more specific region or checking the BAM file integrity`);
             }
             
-            // Limit the number of records for visualization performance
-            const MAX_RECORDS_FOR_VISUALIZATION = 50000; // Reasonable limit for visualization
-            if (allRecords.length > MAX_RECORDS_FOR_VISUALIZATION) {
-                console.warn(`⚠️ [BamReader] Too many records (${allRecords.length}) for efficient visualization`);
-                console.warn(`   Limiting to first ${MAX_RECORDS_FOR_VISUALIZATION} records`);
-                console.warn(`   Consider zooming to a smaller region for detailed view`);
-                allRecords = allRecords.slice(0, MAX_RECORDS_FOR_VISUALIZATION);
+            // Note: Removed hard limit here - let ReadsManager handle sampling instead
+            // This ensures random sampling is applied to the complete dataset, not a truncated one
+            if (allRecords.length > 100000) {
+                console.log(`ℹ️ [BamReader] Large dataset detected (${allRecords.length} records)`);
+                console.log(`   Random sampling will be applied by ReadsManager if enabled`);
             }
 
             // Log detailed statistics about the raw records

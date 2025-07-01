@@ -104,7 +104,7 @@ class ReadsManager {
         // Use appropriate loading method based on mode
         let reads;
         if (this.isBamMode && this.bamReader) {
-            // Use BAM reader for binary BAM files
+            // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
             reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings);
         } else if (this.isStreaming) {
             // Use streaming mode for very large files
@@ -114,11 +114,11 @@ class ReadsManager {
             reads = await this.loadReadsForRegion(chromosome, start, end, settings);
         }
         
-        // Cache the results
-        this.cacheRegion(regionKey, reads);
-        
         // Apply sampling if enabled and threshold is exceeded
         const sampledReads = this.applySampling(reads, settings);
+        
+        // Cache the sampled results (to avoid caching huge datasets)
+        this.cacheRegion(regionKey, sampledReads);
         
         console.log(`🔍 [ReadsManager] Final result: ${sampledReads.length} reads for region ${start}-${end}${sampledReads.length !== reads.length ? ` (sampled from ${reads.length})` : ''}`);
         
@@ -161,31 +161,62 @@ class ReadsManager {
 
         console.log(`🎲 [ReadsManager] Sampling ${targetCount} reads from ${reads.length} (mode: ${mode}${mode === 'percentage' ? `, ${percentage}%` : `, max: ${fixedCount}`})`);
 
-        // Fisher-Yates shuffle algorithm for random sampling
-        const sampledReads = [...reads]; // Create a copy
+        // Analyze position distribution before sampling
+        const positions = reads.map(read => read.start).sort((a, b) => a - b);
+        const minPos = positions[0];
+        const maxPos = positions[positions.length - 1];
+        console.log(`🎲 [ReadsManager] Original position range: ${minPos}-${maxPos}`);
+
+        // Use reservoir sampling algorithm for better distribution
+        // This ensures each read has equal probability of being selected regardless of position
+        const sampledReads = [];
         
-        // Shuffle the array
-        for (let i = sampledReads.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [sampledReads[i], sampledReads[j]] = [sampledReads[j], sampledReads[i]];
+        for (let i = 0; i < reads.length; i++) {
+            if (sampledReads.length < targetCount) {
+                // Fill the reservoir
+                sampledReads.push(reads[i]);
+            } else {
+                // Randomly replace elements in the reservoir
+                const j = Math.floor(Math.random() * (i + 1));
+                if (j < targetCount) {
+                    sampledReads[j] = reads[i];
+                }
+            }
         }
 
-        // Return the first targetCount elements
-        const result = sampledReads.slice(0, targetCount);
+        // Verify position distribution after sampling
+        if (sampledReads.length > 0) {
+            const sampledPositions = sampledReads.map(read => read.start).sort((a, b) => a - b);
+            const sampledMinPos = sampledPositions[0];
+            const sampledMaxPos = sampledPositions[sampledPositions.length - 1];
+            console.log(`🎲 [ReadsManager] Sampled position range: ${sampledMinPos}-${sampledMaxPos}`);
+            
+            // Check distribution quality
+            const originalSpan = maxPos - minPos;
+            const sampledSpan = sampledMaxPos - sampledMinPos;
+            const coverageRatio = sampledSpan / originalSpan;
+            console.log(`🎲 [ReadsManager] Position coverage ratio: ${(coverageRatio * 100).toFixed(1)}%`);
+            
+            if (coverageRatio < 0.8) {
+                console.warn(`⚠️ [ReadsManager] Low position coverage after sampling (${(coverageRatio * 100).toFixed(1)}%)`);
+                console.warn(`   This may indicate non-uniform read distribution in the original data`);
+            }
+        }
         
         // Store sampling information for statistics
-        result._samplingInfo = {
+        sampledReads._samplingInfo = {
             originalCount: reads.length,
             sampledCount: targetCount,
             mode: mode,
             threshold: threshold,
             percentage: mode === 'percentage' ? percentage : null,
-            fixedCount: mode === 'fixed' ? fixedCount : null
+            fixedCount: mode === 'fixed' ? fixedCount : null,
+            positionCoverage: sampledReads.length > 0 ? (sampledMaxPos - sampledMinPos) / (maxPos - minPos) : 0
         };
 
-        console.log(`✅ [ReadsManager] Sampling complete: ${result.length} reads selected`);
+        console.log(`✅ [ReadsManager] Reservoir sampling complete: ${sampledReads.length} reads selected`);
         
-        return result;
+        return sampledReads;
     }
 
     /**
@@ -515,8 +546,18 @@ class ReadsManager {
                     }))
                 );
                 
-                // All reads should be within the target range since we're querying directly
-                console.log(`🎯 [ReadsManager] All ${reads.length} reads are within target range ${start}-${end}`);
+                // Check if reads are distributed across the region
+                const positions = reads.map(read => read.start).sort((a, b) => a - b);
+                const minPos = positions[0];
+                const maxPos = positions[positions.length - 1];
+                console.log(`🎯 [ReadsManager] Reads position distribution: ${minPos}-${maxPos} (target: ${start}-${end})`);
+                
+                // Sample positions to check distribution
+                if (reads.length > 10) {
+                    const sampleIndices = [0, Math.floor(reads.length * 0.25), Math.floor(reads.length * 0.5), Math.floor(reads.length * 0.75), reads.length - 1];
+                    const samplePositions = sampleIndices.map(i => positions[i]);
+                    console.log(`🎯 [ReadsManager] Sample positions (0%, 25%, 50%, 75%, 100%):`, samplePositions);
+                }
             } else {
                 console.warn(`⚠️ [ReadsManager] NO READS FOUND! This could be due to:`);
                 console.warn(`   1. No reads in the specified region`);
