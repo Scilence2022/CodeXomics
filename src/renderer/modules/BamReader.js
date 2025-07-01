@@ -104,7 +104,7 @@ class BamReader {
             // Get header - this is fast and required
             console.log('📋 Reading BAM header...');
             try {
-                this.header = await this.bamFile.getHeader();
+            this.header = await this.bamFile.getHeader();
                 console.log('✅ BAM header read successfully');
                 console.log('🔍 Header content:', {
                     hasReferences: !!this.header.references,
@@ -113,7 +113,7 @@ class BamReader {
                     firstFewRefs: this.header.references ? this.header.references.slice(0, 3).map(r => ({ name: r.name, length: r.length })) : []
                 });
                 
-                this.references = this.header.references || [];
+            this.references = this.header.references || [];
                 
                 if (this.references.length === 0) {
                     console.error('❌ CRITICAL ISSUE: BAM file has no references in header!');
@@ -409,7 +409,7 @@ class BamReader {
                 // Normal chromosome-specific query using @gmod/bam directly
                 console.log(`🔍 [BamReader] NORMAL MODE: Fetching records for range ${chromosome}:${start}-${end}`);
                 try {
-                    allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
+                allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
                     console.log(`🔍 [BamReader] Direct query returned ${allRecords.length} records`);
                     
                     // Log sample records for debugging
@@ -442,58 +442,181 @@ class BamReader {
                 console.warn(`   Consider using a more specific region or checking the BAM file integrity`);
             }
             
-            // Note: Removed hard limit here - let ReadsManager handle sampling instead
-            // This ensures random sampling is applied to the complete dataset, not a truncated one
-            if (allRecords.length > 100000) {
+            // Apply early sampling for extremely large datasets to prevent stack overflow
+            const EXTREME_DATASET_THRESHOLD = 200000; // 200k records threshold
+            const EARLY_SAMPLE_SIZE = 100000; // Sample down to 100k records
+            
+            if (allRecords.length > EXTREME_DATASET_THRESHOLD) {
+                console.warn(`⚠️ [BamReader] Extremely large dataset detected (${allRecords.length} records)`);
+                console.warn(`   Applying early random sampling to prevent memory/stack overflow`);
+                console.warn(`   Sampling ${EARLY_SAMPLE_SIZE} records from ${allRecords.length} for processing`);
+                
+                // Apply position-aware stratified sampling to reduce bias
+                console.log(`🎯 [BamReader] Applying position-aware stratified sampling...`);
+                
+                // First, analyze position distribution
+                const positions = allRecords.map(r => r.start).sort((a, b) => a - b);
+                const minPos = positions[0];
+                const maxPos = positions[positions.length - 1];
+                const positionRange = maxPos - minPos;
+                
+                console.log(`📊 [BamReader] Position range: ${minPos}-${maxPos} (span: ${positionRange})`);
+                
+                // Divide into position-based strata for more uniform sampling
+                const NUM_STRATA = 100; // Divide region into 100 strata
+                const strataSize = Math.ceil(positionRange / NUM_STRATA);
+                const strata = new Array(NUM_STRATA).fill(null).map(() => []);
+                
+                // Assign records to strata based on position
+                for (const record of allRecords) {
+                    const strataIndex = Math.min(
+                        Math.floor((record.start - minPos) / strataSize),
+                        NUM_STRATA - 1
+                    );
+                    strata[strataIndex].push(record);
+                }
+                
+                // Calculate target samples per stratum
+                const sampledRecords = [];
+                const targetPerStratum = Math.ceil(EARLY_SAMPLE_SIZE / NUM_STRATA);
+                
+                for (let s = 0; s < NUM_STRATA; s++) {
+                    const stratumRecords = strata[s];
+                    if (stratumRecords.length === 0) continue;
+                    
+                    // Sample from this stratum
+                    const sampleCount = Math.min(targetPerStratum, stratumRecords.length);
+                    
+                    // Use Fisher-Yates shuffle for small arrays (more uniform than reservoir)
+                    const shuffled = [...stratumRecords];
+                    for (let i = 0; i < sampleCount; i++) {
+                        const j = i + Math.floor(Math.random() * (shuffled.length - i));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    
+                    sampledRecords.push(...shuffled.slice(0, sampleCount));
+                    
+                    // Stop if we've reached our target
+                    if (sampledRecords.length >= EARLY_SAMPLE_SIZE) break;
+                }
+                
+                // If we have fewer samples than target, fill with remaining records
+                if (sampledRecords.length < EARLY_SAMPLE_SIZE) {
+                    const remaining = allRecords.filter(r => !sampledRecords.includes(r));
+                    const needed = EARLY_SAMPLE_SIZE - sampledRecords.length;
+                    
+                    // Shuffle remaining records and take what we need
+                    for (let i = 0; i < Math.min(needed, remaining.length); i++) {
+                        const j = i + Math.floor(Math.random() * (remaining.length - i));
+                        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+                    }
+                    
+                    sampledRecords.push(...remaining.slice(0, needed));
+                }
+                
+                // Final shuffle to remove any ordering bias
+                for (let i = 0; i < sampledRecords.length; i++) {
+                    const j = i + Math.floor(Math.random() * (sampledRecords.length - i));
+                    [sampledRecords[i], sampledRecords[j]] = [sampledRecords[j], sampledRecords[i]];
+                }
+                
+                // Replace original array with sampled records
+                allRecords = sampledRecords.slice(0, EARLY_SAMPLE_SIZE);
+                
+                // Verify position coverage
+                const sampledPositions = allRecords.map(r => r.start).sort((a, b) => a - b);
+                const sampledMinPos = sampledPositions[0];
+                const sampledMaxPos = sampledPositions[sampledPositions.length - 1];
+                const coverageRatio = (sampledMaxPos - sampledMinPos) / positionRange;
+                
+                console.log(`✅ [BamReader] Stratified sampling complete: ${allRecords.length} records selected`);
+                console.log(`📊 [BamReader] Position coverage: ${(coverageRatio * 100).toFixed(1)}% (${sampledMinPos}-${sampledMaxPos})`);
+                
+                console.log(`✅ [BamReader] Early sampling complete: ${allRecords.length} records selected`);
+                console.log(`   Note: Additional sampling may be applied by ReadsManager if configured`);
+            } else if (allRecords.length > 100000) {
                 console.log(`ℹ️ [BamReader] Large dataset detected (${allRecords.length} records)`);
                 console.log(`   Random sampling will be applied by ReadsManager if enabled`);
             }
 
-            // Log detailed statistics about the raw records
+            // Log detailed statistics about the raw records using memory-efficient approach
             if (allRecords.length > 0) {
-                const mappingQualities = allRecords.map(r => r.mq || r.mapq || 0);
-                const minMQ = Math.min(...mappingQualities);
-                const maxMQ = Math.max(...mappingQualities);
-                const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
+                // Calculate statistics in a single pass to avoid stack overflow with large datasets
+                let minMQ = Infinity;
+                let maxMQ = -Infinity;
+                let totalMQ = 0;
+                let unmappedCount = 0;
+                let secondaryCount = 0;
+                let supplementaryCount = 0;
+                
+                // Process records in chunks to avoid memory issues with very large datasets
+                const STATS_CHUNK_SIZE = 10000;
+                for (let i = 0; i < allRecords.length; i += STATS_CHUNK_SIZE) {
+                    const chunk = allRecords.slice(i, i + STATS_CHUNK_SIZE);
+                    
+                    for (const record of chunk) {
+                        // Mapping quality stats
+                        const mq = record.mq || record.mapq || 0;
+                        minMQ = Math.min(minMQ, mq);
+                        maxMQ = Math.max(maxMQ, mq);
+                        totalMQ += mq;
+                        
+                        // Flag statistics
+                        if ((record.flags & 4) !== 0) unmappedCount++;
+                        if ((record.flags & 256) !== 0) secondaryCount++;
+                        if ((record.flags & 2048) !== 0) supplementaryCount++;
+                    }
+                    
+                    // Log progress for very large datasets
+                    if (allRecords.length > 100000 && (i / STATS_CHUNK_SIZE) % 50 === 0) {
+                        console.log(`📊 [BamReader] Processing statistics: ${i + chunk.length}/${allRecords.length} records (${((i + chunk.length) / allRecords.length * 100).toFixed(1)}%)`);
+                    }
+                }
+                
+                const avgMQ = totalMQ / allRecords.length;
                 
                 console.log(`🔍 [BamReader] Raw records mapping quality stats:`, {
-                    min: minMQ,
-                    max: maxMQ,
+                    min: minMQ === Infinity ? 0 : minMQ,
+                    max: maxMQ === -Infinity ? 0 : maxMQ,
                     average: avgMQ.toFixed(1),
                     count: allRecords.length
                 });
                 
-                // Check for unmapped reads
-                const unmappedCount = allRecords.filter(r => (r.flags & 4) !== 0).length;
                 console.log(`🔍 [BamReader] Unmapped reads: ${unmappedCount}/${allRecords.length}`);
-                
-                // Check for secondary alignments
-                const secondaryCount = allRecords.filter(r => (r.flags & 256) !== 0).length;
                 console.log(`🔍 [BamReader] Secondary alignments: ${secondaryCount}/${allRecords.length}`);
-                
-                // Check for supplementary alignments
-                const supplementaryCount = allRecords.filter(r => (r.flags & 2048) !== 0).length;
                 console.log(`🔍 [BamReader] Supplementary alignments: ${supplementaryCount}/${allRecords.length}`);
             }
 
-            // Convert records to our internal format with chunked processing for large datasets
+            // Convert records to our internal format with memory-efficient chunked processing
             console.log(`🔍 [BamReader] Converting ${allRecords.length} records to internal format...`);
             
             // For very large datasets, use chunked processing to avoid stack overflow
-            const CHUNK_SIZE = 10000; // Process 10k records at a time
+            const CHUNK_SIZE = 5000; // Reduced chunk size for better memory management
             let reads = [];
             
             if (allRecords.length > CHUNK_SIZE) {
-                console.log(`🔍 [BamReader] Large dataset detected (${allRecords.length} records), using chunked processing...`);
+                console.log(`🔍 [BamReader] Large dataset detected (${allRecords.length} records), using memory-efficient chunked processing...`);
+                
+                // Pre-allocate array capacity to avoid repeated reallocation
+                reads = new Array();
                 
                 for (let i = 0; i < allRecords.length; i += CHUNK_SIZE) {
-                    const chunk = allRecords.slice(i, i + CHUNK_SIZE);
+                    const chunkEnd = Math.min(i + CHUNK_SIZE, allRecords.length);
+                    const chunk = allRecords.slice(i, chunkEnd);
                     const chunkReads = this.convertRecordsToReads(chunk, chromosome, settings, i);
-                    reads = reads.concat(chunkReads);
                     
-                    // Log progress every few chunks
+                    // Use push.apply for better performance than concat
+                    reads.push(...chunkReads);
+                    
+                    // Log progress every 10 chunks for large datasets
                     if ((i / CHUNK_SIZE) % 10 === 0) {
-                        console.log(`🔍 [BamReader] Processed ${i + chunk.length}/${allRecords.length} records (${((i + chunk.length) / allRecords.length * 100).toFixed(1)}%)`);
+                        console.log(`🔍 [BamReader] Processed ${chunkEnd}/${allRecords.length} records (${((chunkEnd) / allRecords.length * 100).toFixed(1)}%)`);
+                    }
+                    
+                    // Force garbage collection hint for very large datasets
+                    if (allRecords.length > 100000 && (i / CHUNK_SIZE) % 20 === 0) {
+                        // Small delay to allow garbage collection
+                        await new Promise(resolve => setTimeout(resolve, 1));
                     }
                 }
                 

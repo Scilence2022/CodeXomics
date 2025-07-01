@@ -184,7 +184,8 @@ class ReadsManager {
             }
         }
 
-        // Verify position distribution after sampling
+        // Verify position distribution after sampling and store sampling information
+        let positionCoverage = 0;
         if (sampledReads.length > 0) {
             const sampledPositions = sampledReads.map(read => read.start).sort((a, b) => a - b);
             const sampledMinPos = sampledPositions[0];
@@ -201,6 +202,9 @@ class ReadsManager {
                 console.warn(`⚠️ [ReadsManager] Low position coverage after sampling (${(coverageRatio * 100).toFixed(1)}%)`);
                 console.warn(`   This may indicate non-uniform read distribution in the original data`);
             }
+            
+            // Calculate position coverage for sampling info
+            positionCoverage = (sampledMaxPos - sampledMinPos) / (maxPos - minPos);
         }
         
         // Store sampling information for statistics
@@ -211,7 +215,7 @@ class ReadsManager {
             threshold: threshold,
             percentage: mode === 'percentage' ? percentage : null,
             fixedCount: mode === 'fixed' ? fixedCount : null,
-            positionCoverage: sampledReads.length > 0 ? (sampledMaxPos - sampledMinPos) / (maxPos - minPos) : 0
+            positionCoverage: positionCoverage
         };
 
         console.log(`✅ [ReadsManager] Reservoir sampling complete: ${sampledReads.length} reads selected`);
