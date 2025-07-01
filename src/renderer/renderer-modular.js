@@ -128,6 +128,7 @@ class GenomeBrowser {
         this.readsManager = new ReadsManager(this); // Initialize reads manager
         this.trackStateManager = new TrackStateManager(this);  // Add track state manager
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
+        this.multiFileManager = new MultiFileManager(this); // Initialize multi-file manager
         
         // Initialize Action Management System
         this.initializeActionSystem();

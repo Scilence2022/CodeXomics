@@ -625,49 +625,36 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     }
 
     async parseVCF() {
-        const lines = this.currentFile.data.split('\n');
-        const variants = {};
-        
-        for (const line of lines) {
-            const trimmed = line.trim();
+        try {
+            // Add to multi-file manager
+            const result = await this.genomeBrowser.multiFileManager.addVcfFile(
+                this.currentFile.path || this.currentFile.info.path,
+                this.currentFile.data
+            );
             
-            // Skip header lines and empty lines
-            if (trimmed.startsWith('#') || !trimmed) continue;
+            console.log(`✅ VCF file added to multi-file manager: ${result.fileId}`);
             
-            const fields = trimmed.split('\t');
-            if (fields.length < 8) continue;
-            
-            const [chrom, pos, id, ref, alt, qual, filter, info] = fields;
-            
-            if (!variants[chrom]) {
-                variants[chrom] = [];
+            // For backward compatibility, also update currentVariants if this is the first VCF file
+            const vcfFiles = this.genomeBrowser.multiFileManager.getVcfFiles();
+            if (vcfFiles.length === 1) {
+                this.genomeBrowser.currentVariants = vcfFiles[0].data;
             }
             
-            const variant = {
-                chromosome: chrom,
-                start: parseInt(pos) - 1, // Convert to 0-based
-                end: parseInt(pos) - 1 + ref.length,
-                id: id === '.' ? null : id,
-                ref: ref,
-                alt: alt,
-                quality: qual === '.' ? null : parseFloat(qual),
-                filter: filter,
-                info: info
-            };
+            this.genomeBrowser.updateStatus(`✅ VCF file loaded: ${result.metadata.name} (${result.metadata.variantCount} variants)`);
             
-            variants[chrom].push(variant);
-        }
-        
-        this.genomeBrowser.currentVariants = variants;
-        this.genomeBrowser.updateStatus(`Loaded VCF file with variants for ${Object.keys(variants).length} chromosome(s)`);
-        
-        // Auto-enable variants track
-        this.autoEnableTracksForFileType('.vcf');
-        
-        // If we already have sequence data, refresh the view
-        const currentChr = document.getElementById('chromosomeSelect').value;
-        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-            this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            // Auto-enable variants track
+            this.autoEnableTracksForFileType('.vcf');
+            
+            // If we already have sequence data, refresh the view
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+            
+        } catch (error) {
+            console.error('❌ VCF parsing failed:', error);
+            this.genomeBrowser.updateStatus(`Failed to load VCF file: ${error.message}`, 'error');
+            throw error;
         }
     }
 
@@ -734,41 +721,31 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 }
             }
 
-            this.genomeBrowser.updateStatus('🧬 Initializing BAM file reader (direct @gmod/bam API)...');
+            this.genomeBrowser.updateStatus('🧬 Initializing BAM file with multi-file support...');
             
-            // Create BAM reader instance
-            const bamReader = new BamReader();
+            // Add to multi-file manager
+            const result = await this.genomeBrowser.multiFileManager.addBamFile(this.currentFile.path);
             
-            // Initialize the BAM reader with file path - direct @gmod/bam usage
-            console.log('🚀 Starting fast BAM initialization with direct @gmod/bam API...');
-            const initResult = await bamReader.initialize(this.currentFile.path);
+            console.log(`✅ BAM file added to multi-file manager: ${result.fileId}`);
             
-            if (!initResult.success) {
-                throw new Error(initResult.error || 'Failed to initialize BAM file');
+            // For backward compatibility, also initialize single-file mode if this is the first BAM file
+            const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
+            if (bamFiles.length === 1) {
+                // Store BAM reader for backward compatibility
+                this.genomeBrowser.bamReader = bamFiles[0].reader;
+                
+                // Initialize ReadsManager with first BAM file
+                await this.genomeBrowser.readsManager.initializeWithBAMReader(bamFiles[0].reader);
+                
+                // Clear old reads to save memory
+                this.genomeBrowser.currentReads = {};
             }
             
-            // Store BAM reader for later use
-            this.genomeBrowser.bamReader = bamReader;
-            
-            // Get basic information (no expensive operations)
-            const stats = bamReader.getStats();
-            
-            console.log(`✅ BAM file initialized successfully with direct @gmod/bam API:`);
-            console.log(`   📊 References: ${stats.references.length}`);
-            console.log(`   💾 File size: ${bamReader.getFormattedFileSize()}`);
-            console.log(`   🔍 Index: ${stats.hasIndex ? `${stats.indexType.toUpperCase()} (${bamReader.getFormattedIndexSize()})` : 'Not available'}`);
-            console.log(`   🔧 Implementation: Direct @gmod/bam API calls (no IPC)`);
-            
-            // Initialize ReadsManager with BAM data (no expensive operations)
-            await this.genomeBrowser.readsManager.initializeWithBAMReader(bamReader);
-            
-            // Clear old reads to save memory
-            this.genomeBrowser.currentReads = {};
-            
             // Create informative status message
+            const stats = result.metadata.stats;
             const statusMessage = stats.hasIndex ? 
-                `✅ BAM file ready: ${stats.references.length} chromosomes (indexed - direct @gmod/bam API)` :
-                `⚠️ BAM file ready: ${stats.references.length} chromosomes (no index - direct @gmod/bam API)`;
+                `✅ BAM file loaded: ${result.metadata.name} (${stats.references.length} chromosomes, indexed)` :
+                `⚠️ BAM file loaded: ${result.metadata.name} (${stats.references.length} chromosomes, no index)`;
             
             this.genomeBrowser.updateStatus(statusMessage);
             

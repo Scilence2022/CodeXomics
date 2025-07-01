@@ -118,14 +118,33 @@ class TrackRenderer {
     /**
      * Create standardized track header
      */
-    createTrackHeader(title, trackType) {
+    createTrackHeader(title, trackType, fileId = null, isRenameable = false) {
         const trackHeader = document.createElement('div');
         trackHeader.className = 'track-header';
+        
+        // Store fileId for later reference
+        if (fileId) {
+            trackHeader.dataset.fileId = fileId;
+        }
         
         // Create title element
         const titleElement = document.createElement('span');
         titleElement.className = 'track-title';
-        titleElement.textContent = title;
+        
+        if (isRenameable && fileId) {
+            // Create editable title for file-specific tracks
+            titleElement.textContent = title;
+            titleElement.style.cursor = 'pointer';
+            titleElement.title = 'Click to rename';
+            
+            titleElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.makeTrackTitleEditable(titleElement, fileId);
+            });
+        } else {
+            titleElement.textContent = title;
+        }
+        
         trackHeader.appendChild(titleElement);
         
         // Add sampling percentage control for reads track
@@ -248,12 +267,24 @@ class TrackRenderer {
         // Close button
         const closeBtn = document.createElement('button');
         closeBtn.className = 'track-btn track-close-btn';
-        closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-        closeBtn.title = 'Hide Track';
-        closeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.closeTrack(trackType);
-        });
+        
+        if (fileId) {
+            // File-specific track - show remove icon and update functionality
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.title = 'Remove Track and File';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeFileTrack(fileId, trackType);
+            });
+        } else {
+            // Regular track - show hide icon
+            closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            closeBtn.title = 'Hide Track';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTrack(trackType);
+            });
+        }
         
         buttonsContainer.appendChild(settingsBtn);
         buttonsContainer.appendChild(toggleBtn);
@@ -2106,6 +2137,22 @@ class TrackRenderer {
     }
 
     createVariantTrack(chromosome) {
+        // Check if we have multiple VCF files
+        const vcfFiles = this.genomeBrowser.multiFileManager.getVcfFiles();
+        
+        if (vcfFiles.length > 1) {
+            // Create multiple variant tracks
+            return this.createMultipleVariantTracks(chromosome, vcfFiles);
+        } else if (vcfFiles.length === 1) {
+            // Create single variant track with file-specific header
+            return this.createSingleVariantTrack(chromosome, vcfFiles[0]);
+        } else {
+            // Fallback to legacy mode
+            return this.createLegacyVariantTrack(chromosome);
+        }
+    }
+
+    createLegacyVariantTrack(chromosome) {
         const { track, trackContent } = this.createTrackBase('variants', chromosome);
         const viewport = this.getCurrentViewport();
         
@@ -2198,6 +2245,22 @@ class TrackRenderer {
     }
 
     async createReadsTrack(chromosome) {
+        // Check if we have multiple BAM files
+        const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
+        
+        if (bamFiles.length > 1) {
+            // Create multiple reads tracks
+            return this.createMultipleReadsTracks(chromosome, bamFiles);
+        } else if (bamFiles.length === 1) {
+            // Create single reads track with file-specific header
+            return this.createSingleReadsTrack(chromosome, bamFiles[0]);
+        } else {
+            // Fallback to legacy mode
+            return this.createLegacyReadsTrack(chromosome);
+        }
+    }
+
+    async createLegacyReadsTrack(chromosome) {
         const { track, trackContent } = this.createTrackBase('reads', chromosome);
         const viewport = this.getCurrentViewport();
         
@@ -2402,6 +2465,112 @@ class TrackRenderer {
             `;
             trackContent.appendChild(errorMsg);
             trackContent.style.height = '80px'; // Default height for error track
+        }
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'reads');
+        
+        return track;
+    }
+
+    /**
+     * Create multiple reads tracks for multiple BAM files
+     */
+    async createMultipleReadsTracks(chromosome, bamFiles) {
+        const tracksContainer = document.createElement('div');
+        tracksContainer.className = 'multi-reads-tracks-container';
+        
+        for (const bamFile of bamFiles) {
+            if (this.genomeBrowser.multiFileManager.getTrackVisibility(bamFile.trackId)) {
+                const track = await this.createSingleReadsTrack(chromosome, bamFile);
+                if (track) {
+                    tracksContainer.appendChild(track);
+                }
+            }
+        }
+        
+        return tracksContainer;
+    }
+
+    /**
+     * Create single reads track with file-specific header
+     */
+    async createSingleReadsTrack(chromosome, bamFile) {
+        const viewport = this.getCurrentViewport();
+        
+        // Create track base
+        const track = document.createElement('div');
+        track.className = 'reads-track';
+        track.dataset.fileId = bamFile.metadata.id;
+        
+        // Create file-specific header with rename capability
+        const trackHeader = this.createTrackHeader(
+            bamFile.metadata.name, 
+            'reads', 
+            bamFile.metadata.id, 
+            true // isRenameable
+        );
+        track.appendChild(trackHeader);
+        
+        // Create track content
+        const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
+        track.appendChild(trackContent);
+        
+        try {
+            // Load reads using the specific BAM reader
+            const reads = await bamFile.reader.getRecordsForRange(
+                chromosome, 
+                viewport.start - 1, 
+                viewport.end - 1, 
+                { ignoreChromosome: false }
+            );
+            
+            if (reads.length === 0) {
+                const noReadsMsg = this.createNoDataMessage(
+                    `No reads found in this region for ${bamFile.metadata.name}`,
+                    'no-reads-message'
+                );
+                trackContent.appendChild(noReadsMsg);
+            } else {
+                // Get track settings
+                const settings = this.getTrackSettings('reads');
+                
+                // Arrange reads in rows
+                const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
+                
+                // Calculate track height and spacing
+                const readHeight = parseInt(settings.readHeight) || 8;
+                const rowSpacing = parseInt(settings.rowSpacing) || 2;
+                const topPadding = parseInt(settings.topPadding) || 10;
+                const bottomPadding = parseInt(settings.bottomPadding) || 10;
+                
+                const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
+                trackContent.style.height = `${trackHeight}px`;
+                
+                // Check if vertical scrolling is needed
+                const maxVisibleRows = parseInt(settings.maxVisibleRows) || 50;
+                const enableVerticalScroll = settings.enableVerticalScroll !== false;
+                
+                if (enableVerticalScroll && readRows.length > maxVisibleRows) {
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
+                } else {
+                    // Render all reads normally
+                    this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                }
+                
+                // Add file-specific statistics
+                const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
+                const statsElement = this.createStatsElement(statsText, 'reads-track-stats');
+                trackContent.appendChild(statsElement);
+            }
+            
+        } catch (error) {
+            console.error(`Error loading reads for ${bamFile.metadata.name}:`, error);
+            const errorMsg = this.createNoDataMessage(
+                `Error loading reads: ${error.message}`,
+                'reads-error-message'
+            );
+            trackContent.appendChild(errorMsg);
         }
         
         // Restore header state if it was previously hidden
@@ -5232,6 +5401,109 @@ class TrackRenderer {
                 sidebarCheckbox.checked = false;
                 sidebarCheckbox.dispatchEvent(new Event('change'));
             }
+        }
+    }
+
+    /**
+     * Make track title editable for renaming
+     */
+    makeTrackTitleEditable(titleElement, fileId) {
+        const currentName = titleElement.textContent;
+        
+        // Create input element
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentName;
+        input.className = 'track-title-input';
+        input.style.cssText = `
+            background: white;
+            border: 1px solid #007bff;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 14px;
+            font-weight: 600;
+            width: 200px;
+            color: #495057;
+        `;
+        
+        // Replace title with input
+        titleElement.parentNode.replaceChild(input, titleElement);
+        input.focus();
+        input.select();
+        
+        const finishEdit = (save = true) => {
+            const newName = input.value.trim();
+            
+            if (save && newName && newName !== currentName) {
+                try {
+                    // Update file name in multi-file manager
+                    this.genomeBrowser.multiFileManager.renameFile(fileId, newName);
+                    titleElement.textContent = newName;
+                    console.log(`File renamed: ${currentName} -> ${newName}`);
+                } catch (error) {
+                    console.error('Error renaming file:', error);
+                    alert(`Failed to rename file: ${error.message}`);
+                    titleElement.textContent = currentName;
+                }
+            } else {
+                titleElement.textContent = currentName;
+            }
+            
+            // Replace input with title
+            input.parentNode.replaceChild(titleElement, input);
+        };
+        
+        // Handle events
+        input.addEventListener('blur', () => finishEdit(true));
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                finishEdit(true);
+            } else if (e.key === 'Escape') {
+                finishEdit(false);
+            }
+        });
+    }
+
+    /**
+     * Remove file-specific track and cleanup
+     */
+    async removeFileTrack(fileId, trackType) {
+        const metadata = this.genomeBrowser.multiFileManager.getFileMetadata(fileId);
+        if (!metadata) {
+            console.error(`File not found: ${fileId}`);
+            return;
+        }
+        
+        const confirmMessage = `Remove "${metadata.name}" and its track?\n\nThis will:\n- Remove the file from memory\n- Close the associated track\n- Clear all related data\n\nThis action cannot be undone.`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        try {
+            console.log(`Removing file track: ${fileId} (${metadata.name})`);
+            
+            // Remove file from multi-file manager
+            await this.genomeBrowser.multiFileManager.removeFile(fileId);
+            
+            // Find and remove the track element
+            const trackElement = document.querySelector(`[data-file-id="${fileId}"]`)?.closest('[class*="-track"]');
+            if (trackElement) {
+                trackElement.remove();
+            }
+            
+            // Update status
+            this.genomeBrowser.updateStatus(`Removed file: ${metadata.name}`);
+            
+            // Refresh view if needed
+            const currentChr = document.getElementById('chromosomeSelect').value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            }
+            
+        } catch (error) {
+            console.error('Error removing file track:', error);
+            alert(`Failed to remove file: ${error.message}`);
         }
     }
     
