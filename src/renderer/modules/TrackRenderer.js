@@ -2470,6 +2470,11 @@ class TrackRenderer {
             });
         });
 
+        // Add drag-to-follow functionality if enabled
+        if (settings.enableDragFollow !== false) {
+            this.addReadsTrackDragFollow(svg, start, end, range, containerWidth);
+        }
+
         trackContent.appendChild(svg);
     }
 
@@ -5264,6 +5269,13 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label>
+                        <input type="checkbox" id="readsEnableDragFollow" ${settings.enableDragFollow !== false ? 'checked' : ''}>
+                        Enable drag-to-follow interaction
+                    </label>
+                    <div class="help-text">When enabled, dragging on the reads track will move the current view to follow the mouse cursor, providing intuitive navigation.</div>
+                </div>
+                <div class="form-group">
+                    <label>
                         <input type="checkbox" id="readsShowQualityColors" ${settings.showQualityColors ? 'checked' : ''}>
                         Color by mapping quality
                     </label>
@@ -5514,6 +5526,7 @@ class TrackRenderer {
                 settings.borderWidth = parseFloat(modal.querySelector('#readsBorderWidth').value) || 0;
                 settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
                 settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
+                settings.enableDragFollow = modal.querySelector('#readsEnableDragFollow').checked;
                 settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
                 settings.ignoreChromosome = modal.querySelector('#readsIgnoreChromosome').checked;
                 settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
@@ -6678,6 +6691,139 @@ class TrackRenderer {
         console.log('🎨 Final result preview:', result.substring(0, 200) + '...');
         
         return result;
+    }
+
+    /**
+     * Add drag-to-follow functionality to reads track SVG
+     * @param {SVGElement} svg - The SVG container
+     * @param {number} start - Start position of current view
+     * @param {number} end - End position of current view  
+     * @param {number} range - Range of current view
+     * @param {number} containerWidth - Width of container in pixels
+     */
+    addReadsTrackDragFollow(svg, start, end, range, containerWidth) {
+        console.log('🖱️ [TrackRenderer] Adding drag-to-follow functionality to reads track');
+        
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartViewStart = start;
+        let dragStartViewEnd = end;
+        
+        // Create invisible overlay for drag detection
+        const dragOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        dragOverlay.setAttribute('x', '0');
+        dragOverlay.setAttribute('y', '0');
+        dragOverlay.setAttribute('width', '100%');
+        dragOverlay.setAttribute('height', '100%');
+        dragOverlay.setAttribute('fill', 'transparent');
+        dragOverlay.setAttribute('class', 'reads-drag-overlay');
+        dragOverlay.style.cursor = 'grab';
+        
+        // Insert overlay as first child so it doesn't interfere with read interactions
+        svg.insertBefore(dragOverlay, svg.firstChild);
+        
+        // Mouse down - start drag
+        const handleMouseDown = (e) => {
+            // Only handle left mouse button
+            if (e.button !== 0) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartViewStart = start;
+            dragStartViewEnd = end;
+            
+            // Change cursor to grabbing
+            dragOverlay.style.cursor = 'grabbing';
+            svg.style.cursor = 'grabbing';
+            
+            // Add visual feedback
+            svg.style.opacity = '0.8';
+            
+            console.log('🖱️ [Reads Drag] Started drag at X:', dragStartX, 'View:', dragStartViewStart, '-', dragStartViewEnd);
+        };
+        
+        // Mouse move - update view position
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const deltaX = e.clientX - dragStartX;
+            const basePairsPerPixel = range / containerWidth;
+            const deltaBasePairs = Math.round(deltaX * basePairsPerPixel);
+            
+            // Calculate new view positions (inverted - drag right moves view left)
+            const newStart = Math.max(1, dragStartViewStart - deltaBasePairs);
+            const newEnd = newStart + range;
+            
+            // Throttle updates to avoid too many navigation calls
+            if (Math.abs(deltaBasePairs) > Math.max(1, range * 0.01)) { // Update when moved > 1% of view
+                console.log('🖱️ [Reads Drag] Moving view by', -deltaBasePairs, 'bp to', newStart, '-', newEnd);
+                
+                // Update the genome browser view using MicrobeGenomicsFunctions
+                if (window.MicrobeGenomicsFunctions) {
+                    MicrobeGenomicsFunctions.navigateTo(this.genomeBrowser.currentChromosome, newStart, newEnd);
+                } else {
+                    console.warn('MicrobeGenomicsFunctions not available for navigation');
+                }
+                
+                // Update tracking variables for next delta calculation
+                dragStartX = e.clientX;
+                dragStartViewStart = newStart;
+                dragStartViewEnd = newEnd;
+                start = newStart;
+                end = newEnd;
+            }
+        };
+        
+        // Mouse up - end drag
+        const handleMouseUp = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isDragging = false;
+            
+            // Restore cursor and visual feedback
+            dragOverlay.style.cursor = 'grab';
+            svg.style.cursor = 'default';
+            svg.style.opacity = '1';
+            
+            console.log('🖱️ [Reads Drag] Ended drag');
+        };
+        
+        // Mouse leave - cancel drag if mouse leaves SVG area
+        const handleMouseLeave = (e) => {
+            if (isDragging) {
+                console.log('🖱️ [Reads Drag] Mouse left SVG area, ending drag');
+                handleMouseUp(e);
+            }
+        };
+        
+        // Add event listeners
+        dragOverlay.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        svg.addEventListener('mouseleave', handleMouseLeave);
+        
+        // Store cleanup function on SVG for potential removal
+        svg._dragFollowCleanup = () => {
+            dragOverlay.removeEventListener('mousedown', handleMouseDown);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            svg.removeEventListener('mouseleave', handleMouseLeave);
+            
+            if (dragOverlay.parentNode) {
+                dragOverlay.parentNode.removeChild(dragOverlay);
+            }
+        };
+        
+        console.log('✅ [TrackRenderer] Drag-to-follow functionality added to reads track');
     }
 
 }
