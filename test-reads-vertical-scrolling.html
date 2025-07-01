@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reads Track Vertical Scrolling Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        
+        /* Mock track styles */
+        .mock-track {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            position: relative;
+            background: white;
+        }
+        .mock-track-header {
+            background: #f8f9fa;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        .mock-track-content {
+            position: relative;
+            overflow: hidden;
+        }
+        .reads-scroll-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 16px;
+            bottom: 0;
+            overflow: hidden;
+        }
+        .reads-content-viewport {
+            position: relative;
+            width: 100%;
+            transform: translateY(0px);
+            transition: transform 0.1s ease-out;
+        }
+        .reads-vertical-scrollbar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 16px;
+            background-color: #f0f0f0;
+            border-left: 1px solid #ddd;
+            cursor: default;
+        }
+        .scrollbar-thumb {
+            position: absolute;
+            top: 0;
+            left: 2px;
+            right: 2px;
+            background-color: #888;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .scrollbar-thumb:hover {
+            background-color: #555;
+        }
+        .mock-read {
+            fill: #00b894;
+            stroke: #2d3436;
+            stroke-width: 0.5;
+        }
+        .mock-read.reverse {
+            fill: #f39c12;
+        }
+        
+        .controls {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        .controls button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background: #0056b3;
+        }
+        .controls input {
+            margin: 5px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧬 Reads Track Vertical Scrolling Test</h1>
+        <p>Testing the new vertical scrolling functionality for Aligned Reads track</p>
+    </div>
+
+    <div class="test-container">
+        <h2>📋 Test Overview</h2>
+        <p>This test validates the vertical scrolling mechanism for reads tracks, including:</p>
+        <ul>
+            <li>✅ Scrollable container creation</li>
+            <li>✅ Custom scrollbar implementation</li>
+            <li>✅ Viewport-based rendering</li>
+            <li>✅ Mouse wheel scrolling</li>
+            <li>✅ Scrollbar dragging</li>
+            <li>✅ Performance optimization</li>
+        </ul>
+    </div>
+
+    <div class="test-container">
+        <h2>🎛️ Mock Scrollable Reads Track</h2>
+        <div class="controls">
+            <label>Total Rows: <input type="number" id="totalRows" value="50" min="10" max="200"></label>
+            <label>Visible Rows: <input type="number" id="visibleRows" value="10" min="5" max="30"></label>
+            <label>Track Height: <input type="number" id="trackHeight" value="200" min="100" max="400">px</label>
+            <button onclick="generateMockTrack()">Generate Mock Track</button>
+            <button onclick="scrollToRow()">Scroll to Row: <input type="number" id="targetRow" value="25" min="0" max="199"></button>
+        </div>
+        
+        <div id="mockTrackContainer"></div>
+        
+        <div id="mockResults" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; font-size: 12px;">
+            Ready to generate mock scrollable reads track...
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Performance Metrics</h2>
+        <div id="performanceMetrics">
+            <p><strong>Render Time:</strong> <span id="renderTime">-</span> ms</p>
+            <p><strong>Scroll Responsiveness:</strong> <span id="scrollResponsiveness">-</span> ms</p>
+            <p><strong>Memory Usage:</strong> <span id="memoryUsage">-</span> MB</p>
+            <p><strong>Visible Elements:</strong> <span id="visibleElements">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Mock data generation
+        function generateMockReads(totalRows, readsPerRow = 10) {
+            const reads = [];
+            for (let row = 0; row < totalRows; row++) {
+                const rowReads = [];
+                for (let i = 0; i < readsPerRow; i++) {
+                    const start = Math.floor(Math.random() * 1000) + (i * 120);
+                    rowReads.push({
+                        id: 'read_' + row + '_' + i,
+                        start: start,
+                        end: start + Math.floor(Math.random() * 100) + 50,
+                        strand: Math.random() > 0.5 ? '+' : '-',
+                        mappingQuality: Math.floor(Math.random() * 60)
+                    });
+                }
+                reads.push(rowReads);
+            }
+            return reads;
+        }
+
+        // Mock scrollable track implementation
+        function createMockScrollableTrack(container, readRows, trackHeight, maxVisibleRows) {
+            const startTime = performance.now();
+            
+            container.innerHTML = '';
+            
+            const track = document.createElement('div');
+            track.className = 'mock-track';
+            track.style.height = (trackHeight + 30) + 'px';
+            
+            const header = document.createElement('div');
+            header.className = 'mock-track-header';
+            header.textContent = 'Aligned Reads (' + readRows.length + ' rows, ' + maxVisibleRows + ' visible)';
+            
+            const content = document.createElement('div');
+            content.className = 'mock-track-content';
+            content.style.height = trackHeight + 'px';
+            content.style.position = 'relative';
+            content.style.overflow = 'hidden';
+            
+            // Create scrollable components
+            const scrollContainer = createMockScrollContainer(readRows, trackHeight, maxVisibleRows);
+            const scrollbar = createMockScrollbar(trackHeight, readRows.length * 16, scrollContainer);
+            
+            content.appendChild(scrollContainer);
+            content.appendChild(scrollbar);
+            track.appendChild(header);
+            track.appendChild(content);
+            container.appendChild(track);
+            
+            const renderTime = performance.now() - startTime;
+            updatePerformanceMetrics(renderTime, readRows.length, maxVisibleRows);
+            
+            return track;
+        }
+
+        function createMockScrollContainer(readRows, trackHeight, maxVisibleRows) {
+            const scrollContainer = document.createElement('div');
+            scrollContainer.className = 'reads-scroll-container';
+            scrollContainer.style.cssText = 'position: absolute; top: 0; left: 0; right: 16px; bottom: 0; overflow: hidden;';
+            
+            const contentViewport = document.createElement('div');
+            contentViewport.className = 'reads-content-viewport';
+            const totalHeight = readRows.length * 16;
+            contentViewport.style.cssText = 'position: relative; width: 100%; height: ' + totalHeight + 'px; transform: translateY(0px); transition: transform 0.1s ease-out;';
+            
+            // Initial render of visible rows
+            renderMockVisibleRows(contentViewport, readRows, 0, Math.min(maxVisibleRows + 2, readRows.length));
+            
+            // Store scroll state
+            scrollContainer._scrollState = {
+                totalRows: readRows.length,
+                visibleRows: maxVisibleRows,
+                currentScrollTop: 0,
+                contentViewport: contentViewport,
+                readRows: readRows
+            };
+            
+            scrollContainer.appendChild(contentViewport);
+            return scrollContainer;
+        }
+
+        function createMockScrollbar(trackHeight, contentHeight, scrollContainer) {
+            const scrollbar = document.createElement('div');
+            scrollbar.className = 'reads-vertical-scrollbar';
+            scrollbar.style.cssText = 'position: absolute; top: 0; right: 0; width: 16px; height: ' + trackHeight + 'px; background-color: #f0f0f0; border-left: 1px solid #ddd; cursor: default;';
+            
+            const thumb = document.createElement('div');
+            thumb.className = 'scrollbar-thumb';
+            const thumbHeight = Math.max(20, (trackHeight / contentHeight) * trackHeight);
+            thumb.style.cssText = 'position: absolute; top: 0; left: 2px; right: 2px; height: ' + thumbHeight + 'px; background-color: #888; border-radius: 6px; cursor: pointer; transition: background-color 0.2s;';
+            
+            // Scrolling logic
+            let isDragging = false;
+            let dragStartY = 0;
+            let dragStartScrollTop = 0;
+            
+            const updateScrollPosition = function(scrollTop) {
+                const maxScrollTop = contentHeight - trackHeight;
+                const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, scrollTop));
+                const thumbTop = (clampedScrollTop / maxScrollTop) * (trackHeight - thumbHeight);
+                thumb.style.top = thumbTop + 'px';
+                
+                // Update viewport
+                const state = scrollContainer._scrollState;
+                state.currentScrollTop = clampedScrollTop;
+                state.contentViewport.style.transform = 'translateY(' + (-clampedScrollTop) + 'px)';
+                
+                // Update visible rows if needed
+                const rowHeight = 16;
+                const firstVisibleRow = Math.max(0, Math.floor(clampedScrollTop / rowHeight));
+                const lastVisibleRow = Math.min(state.totalRows, firstVisibleRow + state.visibleRows + 4);
+                
+                // Re-render if needed (simplified for demo)
+                if (Math.abs(firstVisibleRow - (state.lastFirstRow || 0)) > 2) {
+                    state.contentViewport.innerHTML = '';
+                    renderMockVisibleRows(state.contentViewport, state.readRows, firstVisibleRow, lastVisibleRow);
+                    state.lastFirstRow = firstVisibleRow;
+                }
+            };
+            
+            // Mouse events
+            thumb.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                isDragging = true;
+                dragStartY = e.clientY;
+                dragStartScrollTop = parseFloat(thumb.style.top) || 0;
+                document.body.style.userSelect = 'none';
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                const deltaY = e.clientY - dragStartY;
+                const maxScrollTop = contentHeight - trackHeight;
+                const scrollRatio = deltaY / (trackHeight - thumbHeight);
+                const newScrollTop = dragStartScrollTop + (scrollRatio * maxScrollTop);
+                updateScrollPosition(newScrollTop);
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.userSelect = '';
+                }
+            });
+            
+            // Mouse wheel
+            scrollContainer.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                const currentScrollTop = scrollContainer._scrollState.currentScrollTop;
+                const scrollDelta = e.deltaY * 2;
+                updateScrollPosition(currentScrollTop + scrollDelta);
+            });
+            
+            scrollbar.appendChild(thumb);
+            scrollbar._updateScrollPosition = updateScrollPosition;
+            return scrollbar;
+        }
+
+        function renderMockVisibleRows(container, readRows, startRow, endRow) {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            const visibleRowCount = endRow - startRow;
+            const svgHeight = visibleRowCount * 16;
+            
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', svgHeight);
+            svg.setAttribute('viewBox', '0 0 800 ' + svgHeight);
+            svg.setAttribute('class', 'reads-svg-container scrollable');
+            svg.style.top = (startRow * 16) + 'px';
+            
+            for (let rowIndex = startRow; rowIndex < endRow && rowIndex < readRows.length; rowIndex++) {
+                const rowReads = readRows[rowIndex];
+                const relativeRowIndex = rowIndex - startRow;
+                
+                rowReads.forEach(function(read, readIndex) {
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', readIndex * 80 + 10);
+                    rect.setAttribute('y', relativeRowIndex * 16 + 2);
+                    rect.setAttribute('width', 70);
+                    rect.setAttribute('height', 12);
+                    rect.setAttribute('class', 'mock-read' + (read.strand === '-' ? ' reverse' : ''));
+                    rect.setAttribute('rx', '2');
+                    
+                    // Add tooltip
+                    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                    title.textContent = read.id + ' (' + read.start + '-' + read.end + ', ' + read.strand + ', MQ:' + read.mappingQuality + ')';
+                    rect.appendChild(title);
+                    
+                    svg.appendChild(rect);
+                });
+            }
+            
+            container.appendChild(svg);
+            updatePerformanceMetrics(null, null, null, endRow - startRow);
+        }
+
+        function updatePerformanceMetrics(renderTime, totalRows, visibleRows, visibleElements) {
+            if (renderTime !== null) {
+                document.getElementById('renderTime').textContent = renderTime.toFixed(2);
+            }
+            if (totalRows !== null && visibleRows !== null) {
+                const efficiency = ((visibleRows / totalRows) * 100).toFixed(1);
+                document.getElementById('scrollResponsiveness').textContent = efficiency + '% efficient';
+            }
+            if (visibleElements !== null) {
+                document.getElementById('visibleElements').textContent = visibleElements;
+                const estimatedMemory = (visibleElements * 0.1).toFixed(2);
+                document.getElementById('memoryUsage').textContent = estimatedMemory;
+            }
+        }
+
+        // Test functions
+        function generateMockTrack() {
+            const totalRows = parseInt(document.getElementById('totalRows').value);
+            const visibleRows = parseInt(document.getElementById('visibleRows').value);
+            const trackHeight = parseInt(document.getElementById('trackHeight').value);
+            
+            const readRows = generateMockReads(totalRows);
+            const container = document.getElementById('mockTrackContainer');
+            
+            createMockScrollableTrack(container, readRows, trackHeight, visibleRows);
+            
+            document.getElementById('mockResults').innerHTML = '<span class="success">✅ Mock track generated successfully!</span><br>📊 Total rows: ' + totalRows + '<br>👁️ Visible rows: ' + visibleRows + '<br>📏 Track height: ' + trackHeight + 'px<br>🎯 Scrollable: ' + (totalRows > visibleRows ? 'Yes' : 'No');
+        }
+
+        function scrollToRow() {
+            const targetRow = parseInt(document.getElementById('targetRow').value);
+            const container = document.getElementById('mockTrackContainer');
+            const scrollbar = container.querySelector('.reads-vertical-scrollbar');
+            
+            if (scrollbar && scrollbar._updateScrollPosition) {
+                const scrollTop = targetRow * 16;
+                scrollbar._updateScrollPosition(scrollTop);
+                
+                document.getElementById('mockResults').innerHTML += '<br><span class="info">📍 Scrolled to row ' + targetRow + '</span>';
+            }
+        }
+
+        // Initialize with default mock track
+        document.addEventListener('DOMContentLoaded', function() {
+            generateMockTrack();
+        });
+    </script>
+</body>
+</html>

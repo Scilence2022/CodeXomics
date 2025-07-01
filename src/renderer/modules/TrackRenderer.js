@@ -2314,32 +2314,52 @@ class TrackRenderer {
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
             
-            // Limit rows based on maxRows setting
-            const maxRows = settings.maxRows || 20;
-            const limitedReadRows = readRows.slice(0, maxRows);
-            
             const readHeight = settings.readHeight || 14;
             const rowSpacing = settings.readSpacing || 2;
             const topPadding = 10;
             const bottomPadding = 10;
             
-            // Calculate adaptive track height
-            let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
-            trackHeight = Math.max(trackHeight, settings.height || 150);
-            trackContent.style.height = `${trackHeight}px`;
+            // Check if vertical scrolling is enabled and needed
+            const enableVerticalScroll = settings.enableVerticalScroll !== false && readRows.length > (settings.maxVisibleRows || 10);
             
-            // Create SVG-based read visualization instead of HTML divs
-            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+            if (enableVerticalScroll) {
+                // Create scrollable reads track with all rows
+                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
+            } else {
+                // Use traditional limited rows approach
+                const maxRows = settings.maxRows || 20;
+                const limitedReadRows = readRows.slice(0, maxRows);
+                
+                // Calculate adaptive track height
+                let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+                trackHeight = Math.max(trackHeight, settings.height || 150);
+                trackContent.style.height = `${trackHeight}px`;
+                
+                // Create SVG-based read visualization
+                this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+            }
             
             // Add reads statistics with cache info and sampling info
-            const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
-            const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
             const stats = this.genomeBrowser.readsManager.getCacheStats();
+            let statsText;
             
-            let statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
-            if (hiddenRowsCount > 0) {
-                const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
-                statsText += ` (${hiddenReadsTotal} hidden)`;
+            if (enableVerticalScroll) {
+                // Scrollable mode statistics
+                const totalReadsCount = readRows.reduce((sum, row) => sum + row.length, 0);
+                const maxVisibleRows = settings.maxVisibleRows || 10;
+                statsText = `${totalReadsCount} reads in ${readRows.length} rows (${Math.min(maxVisibleRows, readRows.length)} visible, scrollable)`;
+            } else {
+                // Traditional mode statistics
+                const maxRows = settings.maxRows || 20;
+                const limitedReadRows = readRows.slice(0, maxRows);
+                const hiddenRowsCount = Math.max(0, readRows.length - limitedReadRows.length);
+                const visibleReadsCount = limitedReadRows.reduce((sum, row) => sum + row.length, 0);
+                
+                statsText = `${visibleReadsCount} reads in ${limitedReadRows.length} rows`;
+                if (hiddenRowsCount > 0) {
+                    const hiddenReadsTotal = readRows.slice(maxRows).reduce((sum, row) => sum + row.length, 0);
+                    statsText += ` (${hiddenReadsTotal} hidden)`;
+                }
             }
             
             // Add sampling information if available and enabled
@@ -2357,8 +2377,8 @@ class TrackRenderer {
             
             statsText += ` | Cache: ${stats.cacheSize}/${stats.maxCacheSize} (${Math.round(stats.hitRate * 100)}% hit rate)`;
             
-                const statsElement = this.createStatsElement(statsText, 'reads-stats');
-                trackContent.appendChild(statsElement);
+            const statsElement = this.createStatsElement(statsText, 'reads-stats');
+            trackContent.appendChild(statsElement);
             }
             
         } catch (error) {
@@ -2388,6 +2408,274 @@ class TrackRenderer {
         this.restoreHeaderState(track, 'reads');
         
         return track;
+    }
+
+    /**
+     * Create scrollable reads track with vertical scrolling capability
+     */
+    createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings) {
+        const maxVisibleRows = settings.maxVisibleRows || 10;
+        const scrollbarWidth = 16; // Standard scrollbar width
+        
+        // Calculate dimensions
+        const rowHeight = readHeight + rowSpacing;
+        const totalContentHeight = topPadding + (readRows.length * rowHeight) - rowSpacing + bottomPadding;
+        const visibleHeight = Math.min(totalContentHeight, topPadding + (maxVisibleRows * rowHeight) - rowSpacing + bottomPadding);
+        const trackHeight = Math.max(visibleHeight, settings.height || 150);
+        
+        // Set track content height
+        trackContent.style.height = `${trackHeight}px`;
+        trackContent.style.position = 'relative';
+        trackContent.style.overflow = 'hidden';
+        
+        // Create scrollable container
+        const scrollContainer = document.createElement('div');
+        scrollContainer.className = 'reads-scroll-container';
+        scrollContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: ${scrollbarWidth}px;
+            bottom: 0;
+            overflow: hidden;
+        `;
+        
+        // Create content viewport
+        const contentViewport = document.createElement('div');
+        contentViewport.className = 'reads-content-viewport';
+        contentViewport.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: ${totalContentHeight}px;
+            transform: translateY(0px);
+            transition: transform 0.1s ease-out;
+        `;
+        
+        // Create vertical scrollbar
+        const scrollbar = this.createVerticalScrollbar(trackHeight, totalContentHeight, contentViewport, scrollContainer);
+        
+        // Store scroll state
+        let currentScrollTop = 0;
+        let visibleRowStart = 0;
+        let visibleRowEnd = Math.min(readRows.length, maxVisibleRows + 2); // +2 for buffer
+        
+        // Initial render of visible rows
+        this.renderVisibleRows(contentViewport, readRows, viewport, readHeight, rowSpacing, topPadding, visibleRowStart, visibleRowEnd, settings);
+        
+        // Handle scrolling
+        const handleScroll = (scrollTop) => {
+            currentScrollTop = scrollTop;
+            
+            // Calculate which rows should be visible
+            const firstVisibleRow = Math.max(0, Math.floor((scrollTop - topPadding) / rowHeight));
+            const lastVisibleRow = Math.min(readRows.length, firstVisibleRow + maxVisibleRows + 4); // +4 for buffer
+            
+            // Only re-render if visible range changed significantly
+            if (Math.abs(firstVisibleRow - visibleRowStart) > 2 || Math.abs(lastVisibleRow - visibleRowEnd) > 2) {
+                visibleRowStart = firstVisibleRow;
+                visibleRowEnd = lastVisibleRow;
+                
+                // Clear and re-render visible rows
+                contentViewport.innerHTML = '';
+                this.renderVisibleRows(contentViewport, readRows, viewport, readHeight, rowSpacing, topPadding, visibleRowStart, visibleRowEnd, settings);
+            }
+            
+            // Update viewport position
+            contentViewport.style.transform = `translateY(${-scrollTop}px)`;
+        };
+        
+        // Store scroll handler for external access
+        scrollContainer._handleScroll = handleScroll;
+        scrollContainer._scrollState = {
+            totalRows: readRows.length,
+            visibleRows: maxVisibleRows,
+            currentScrollTop: () => currentScrollTop,
+            scrollToRow: (rowIndex) => {
+                const targetScrollTop = Math.max(0, Math.min(
+                    totalContentHeight - visibleHeight,
+                    topPadding + rowIndex * rowHeight
+                ));
+                handleScroll(targetScrollTop);
+                scrollbar._updateScrollPosition(targetScrollTop);
+            }
+        };
+        
+        scrollContainer.appendChild(contentViewport);
+        trackContent.appendChild(scrollContainer);
+        trackContent.appendChild(scrollbar);
+        
+        console.log(`📜 [ScrollableReads] Created scrollable track: ${readRows.length} total rows, ${maxVisibleRows} visible, ${totalContentHeight}px total height`);
+    }
+    
+    /**
+     * Create vertical scrollbar for reads track
+     */
+    createVerticalScrollbar(trackHeight, contentHeight, contentViewport, scrollContainer) {
+        const scrollbarWidth = 16;
+        
+        // Scrollbar container
+        const scrollbar = document.createElement('div');
+        scrollbar.className = 'reads-vertical-scrollbar';
+        scrollbar.style.cssText = `
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: ${scrollbarWidth}px;
+            height: ${trackHeight}px;
+            background-color: #f0f0f0;
+            border-left: 1px solid #ddd;
+            cursor: default;
+        `;
+        
+        // Scrollbar thumb
+        const thumb = document.createElement('div');
+        thumb.className = 'scrollbar-thumb';
+        const thumbHeight = Math.max(20, (trackHeight / contentHeight) * trackHeight);
+        thumb.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 2px;
+            right: 2px;
+            height: ${thumbHeight}px;
+            background-color: #888;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        `;
+        
+        // Thumb hover effect
+        thumb.addEventListener('mouseenter', () => {
+            thumb.style.backgroundColor = '#555';
+        });
+        thumb.addEventListener('mouseleave', () => {
+            thumb.style.backgroundColor = '#888';
+        });
+        
+        // Scrolling logic
+        let isDragging = false;
+        let dragStartY = 0;
+        let dragStartScrollTop = 0;
+        
+        const updateScrollPosition = (scrollTop) => {
+            const maxScrollTop = contentHeight - trackHeight;
+            const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, scrollTop));
+            const thumbTop = (clampedScrollTop / maxScrollTop) * (trackHeight - thumbHeight);
+            thumb.style.top = `${thumbTop}px`;
+            
+            if (scrollContainer._handleScroll) {
+                scrollContainer._handleScroll(clampedScrollTop);
+            }
+        };
+        
+        // Mouse down on thumb
+        thumb.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDragging = true;
+            dragStartY = e.clientY;
+            dragStartScrollTop = parseFloat(thumb.style.top) || 0;
+            document.body.style.userSelect = 'none';
+        });
+        
+        // Mouse move (document level)
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaY = e.clientY - dragStartY;
+            const maxScrollTop = contentHeight - trackHeight;
+            const scrollRatio = deltaY / (trackHeight - thumbHeight);
+            const newScrollTop = dragStartScrollTop + (scrollRatio * maxScrollTop);
+            
+            updateScrollPosition(newScrollTop);
+        });
+        
+        // Mouse up (document level)
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.userSelect = '';
+            }
+        });
+        
+        // Click on scrollbar track
+        scrollbar.addEventListener('click', (e) => {
+            if (e.target === scrollbar) {
+                const rect = scrollbar.getBoundingClientRect();
+                const clickY = e.clientY - rect.top;
+                const maxScrollTop = contentHeight - trackHeight;
+                const newScrollTop = (clickY / trackHeight) * maxScrollTop;
+                updateScrollPosition(newScrollTop);
+            }
+        });
+        
+        // Mouse wheel scrolling on scroll container
+        scrollContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
+            const scrollDelta = e.deltaY * 2; // Adjust scroll speed
+            updateScrollPosition(currentScrollTop + scrollDelta);
+        });
+        
+        // Store update function for external use
+        scrollbar._updateScrollPosition = updateScrollPosition;
+        
+        scrollbar.appendChild(thumb);
+        return scrollbar;
+    }
+    
+    /**
+     * Render only visible rows for performance
+     */
+    renderVisibleRows(container, readRows, viewport, readHeight, rowSpacing, topPadding, startRow, endRow, settings) {
+        // Force layout calculation to get accurate width
+        const containerWidth = container.parentElement?.getBoundingClientRect().width || 800;
+        
+        // Create SVG for visible rows
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const visibleRowCount = endRow - startRow;
+        const svgHeight = topPadding + (visibleRowCount * (readHeight + rowSpacing));
+        
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', svgHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('class', 'reads-svg-container scrollable');
+        svg.style.position = 'absolute';
+        svg.style.top = `${topPadding + startRow * (readHeight + rowSpacing)}px`;
+        svg.style.left = '0';
+        svg.style.pointerEvents = 'all';
+        
+        // Create definitions for gradients
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        this.createReadGradients(defs, settings);
+        svg.appendChild(defs);
+        
+        // Render visible rows
+        for (let rowIndex = startRow; rowIndex < endRow && rowIndex < readRows.length; rowIndex++) {
+            const rowReads = readRows[rowIndex];
+            const relativeRowIndex = rowIndex - startRow;
+            
+            rowReads.forEach((read) => {
+                const readGroup = this.createSVGReadElement(
+                    read, 
+                    viewport.start, 
+                    viewport.end, 
+                    viewport.range, 
+                    readHeight, 
+                    relativeRowIndex, 
+                    rowSpacing, 
+                    topPadding, 
+                    containerWidth, 
+                    settings
+                );
+                if (readGroup) {
+                    svg.appendChild(readGroup);
+                }
+            });
+        }
+        
+        container.appendChild(svg);
+        
+        console.log(`📜 [ScrollableReads] Rendered rows ${startRow}-${endRow-1} (${visibleRowCount} rows) in SVG`);
     }
 
     // New method to arrange reads into non-overlapping rows
@@ -5173,6 +5461,18 @@ class TrackRenderer {
                     <div class="help-text">Vertical spacing between read rows.</div>
                 </div>
                 <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll !== false ? 'checked' : ''}>
+                        Enable vertical scrolling
+                    </label>
+                    <div class="help-text">Enable vertical scrolling when reads exceed the maximum visible rows. When disabled, excess reads are simply hidden.</div>
+                </div>
+                <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll !== false ? 'block' : 'none'}">
+                    <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
+                    <input type="number" id="readsMaxVisibleRows" min="5" max="30" value="${settings.maxVisibleRows || 10}">
+                    <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
+                </div>
+                <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll !== false ? 'none' : 'block'}">
                     <label for="readsMaxRows">Maximum visible rows:</label>
                     <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
                     <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
@@ -5319,7 +5619,7 @@ class TrackRenderer {
             </div>
             
             <script>
-                // Add event listener for sampling mode change
+                // Add event listener for sampling mode change and vertical scroll toggle
                 document.addEventListener('DOMContentLoaded', function() {
                     const samplingModeSelect = document.getElementById('readsSamplingMode');
                     if (samplingModeSelect) {
@@ -5334,6 +5634,24 @@ class TrackRenderer {
                             } else {
                                 percentageGroup.style.display = 'none';
                                 countGroup.style.display = 'block';
+                            }
+                        });
+                    }
+                    
+                    // Handle vertical scroll toggle
+                    const verticalScrollCheckbox = document.getElementById('readsEnableVerticalScroll');
+                    if (verticalScrollCheckbox) {
+                        verticalScrollCheckbox.addEventListener('change', function() {
+                            const isEnabled = this.checked;
+                            const maxVisibleRowsGroup = document.getElementById('readsMaxVisibleRowsGroup');
+                            const maxRowsGroup = document.getElementById('readsMaxRowsGroup');
+                            
+                            if (isEnabled) {
+                                maxVisibleRowsGroup.style.display = 'block';
+                                maxRowsGroup.style.display = 'none';
+                            } else {
+                                maxVisibleRowsGroup.style.display = 'none';
+                                maxRowsGroup.style.display = 'block';
                             }
                         });
                     }
@@ -5510,7 +5828,13 @@ class TrackRenderer {
             case 'reads':
                 settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
-                settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
+                // Vertical scrolling settings
+                settings.enableVerticalScroll = modal.querySelector('#readsEnableVerticalScroll').checked;
+                if (settings.enableVerticalScroll) {
+                    settings.maxVisibleRows = parseInt(modal.querySelector('#readsMaxVisibleRows').value) || 10;
+                } else {
+                    settings.maxRows = parseInt(modal.querySelector('#readsMaxRows').value) || 20;
+                }
                 settings.forwardColor = modal.querySelector('#readsForwardColor').value;
                 settings.reverseColor = modal.querySelector('#readsReverseColor').value;
                 settings.pairedColor = modal.querySelector('#readsPairedColor').value;
