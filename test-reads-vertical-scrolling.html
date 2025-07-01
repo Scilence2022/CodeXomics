@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reads Track Vertical Scrolling Test</title>
+    <title>Reads Vertical Scrolling & Mutation Visualization Test</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,14 +14,7 @@
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .test-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
         .success { color: #28a745; }
@@ -32,51 +25,36 @@
         /* Mock track styles */
         .mock-track {
             border: 1px solid #ddd;
-            margin: 10px 0;
+            border-radius: 4px;
+            background: #fafafa;
             position: relative;
-            background: white;
+            margin: 10px 0;
         }
         .mock-track-header {
-            background: #f8f9fa;
-            padding: 8px;
+            background: #e9ecef;
+            padding: 8px 12px;
             border-bottom: 1px solid #ddd;
             font-weight: bold;
+            font-size: 14px;
+            color: #495057;
         }
         .mock-track-content {
             position: relative;
-            overflow: hidden;
+            background: white;
         }
         .reads-scroll-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 16px;
-            bottom: 0;
             overflow: hidden;
         }
         .reads-content-viewport {
-            position: relative;
-            width: 100%;
-            transform: translateY(0px);
             transition: transform 0.1s ease-out;
         }
         .reads-vertical-scrollbar {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 16px;
             background-color: #f0f0f0;
             border-left: 1px solid #ddd;
-            cursor: default;
         }
         .scrollbar-thumb {
-            position: absolute;
-            top: 0;
-            left: 2px;
-            right: 2px;
             background-color: #888;
             border-radius: 6px;
-            cursor: pointer;
             transition: background-color 0.2s;
         }
         .scrollbar-thumb:hover {
@@ -84,112 +62,228 @@
         }
         .mock-read {
             fill: #00b894;
-            stroke: #2d3436;
+            stroke: #00a085;
             stroke-width: 0.5;
         }
         .mock-read.reverse {
-            fill: #f39c12;
+            fill: #fd79a8;
+            stroke: #e84393;
+        }
+        .mock-read.quality-high {
+            fill: #00b894;
+        }
+        .mock-read.quality-medium {
+            fill: #fdcb6e;
+        }
+        .mock-read.quality-low {
+            fill: #e17055;
+        }
+        
+        /* Mutation visualization styles */
+        .mutation-line {
+            pointer-events: all;
+            cursor: pointer;
+        }
+        .mutation-line.insertion {
+            stroke: #FF6B6B;
+            stroke-dasharray: 2,1;
+        }
+        .mutation-line.deletion {
+            stroke: #4ECDC4;
+            stroke-width: 2;
+        }
+        .mutation-line.mismatch {
+            stroke: #FFD93D;
+            stroke-width: 1;
         }
         
         .controls {
-            margin: 10px 0;
-            padding: 10px;
-            background: #e9ecef;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
             border-radius: 5px;
         }
-        .controls button {
-            margin: 5px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
+        .control-group {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
         }
-        .controls button:hover {
-            background: #0056b3;
+        .control-group label {
+            display: inline-block;
+            margin-right: 5px;
+            font-weight: bold;
         }
-        .controls input {
-            margin: 5px;
-            padding: 4px 8px;
+        .mutation-legend {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff;
             border: 1px solid #ddd;
             border-radius: 4px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+            font-size: 12px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
-    <div class="test-header">
-        <h1>🧬 Reads Track Vertical Scrolling Test</h1>
-        <p>Testing the new vertical scrolling functionality for Aligned Reads track</p>
-    </div>
-
+    <h1>🧬 Reads Vertical Scrolling & Mutation Visualization Test</h1>
+    
     <div class="test-container">
-        <h2>📋 Test Overview</h2>
-        <p>This test validates the vertical scrolling mechanism for reads tracks, including:</p>
-        <ul>
-            <li>✅ Scrollable container creation</li>
-            <li>✅ Custom scrollbar implementation</li>
-            <li>✅ Viewport-based rendering</li>
-            <li>✅ Mouse wheel scrolling</li>
-            <li>✅ Scrollbar dragging</li>
-            <li>✅ Performance optimization</li>
-        </ul>
-    </div>
-
-    <div class="test-container">
-        <h2>🎛️ Mock Scrollable Reads Track</h2>
+        <h2>📊 Mock Scrollable Reads Track with Mutations</h2>
         <div class="controls">
-            <label>Total Rows: <input type="number" id="totalRows" value="50" min="10" max="200"></label>
-            <label>Visible Rows: <input type="number" id="visibleRows" value="10" min="5" max="30"></label>
-            <label>Track Height: <input type="number" id="trackHeight" value="200" min="100" max="400">px</label>
-            <button onclick="generateMockTrack()">Generate Mock Track</button>
-            <button onclick="scrollToRow()">Scroll to Row: <input type="number" id="targetRow" value="25" min="0" max="199"></button>
+            <div class="control-group">
+                <label>Total Rows:</label>
+                <input type="number" id="totalRows" value="50" min="10" max="200">
+            </div>
+            <div class="control-group">
+                <label>Visible Rows:</label>
+                <input type="number" id="visibleRows" value="8" min="3" max="20">
+            </div>
+            <div class="control-group">
+                <label>Track Height:</label>
+                <input type="number" id="trackHeight" value="150" min="100" max="400">
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showMutations" checked>
+                    Show Mutations
+                </label>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showQualityColors">
+                    Quality Colors
+                </label>
+            </div>
+            <button onclick="generateMockTrack()">Generate Track</button>
+            <button onclick="scrollToRow()">Scroll to Random Row</button>
+        </div>
+        
+        <div class="mutation-legend">
+            <strong>Mutation Legend:</strong>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #FF6B6B; border: 1px dashed #FF6B6B;"></span>
+                Insertions (dashed)
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #4ECDC4; height: 4px;"></span>
+                Deletions (thick)
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #FFD93D;"></span>
+                Mismatches
+            </div>
         </div>
         
         <div id="mockTrackContainer"></div>
         
         <div id="mockResults" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; font-size: 12px;">
-            Ready to generate mock scrollable reads track...
+            Ready to generate mock scrollable reads track with mutations...
         </div>
     </div>
 
     <div class="test-container">
-        <h2>📊 Performance Metrics</h2>
-        <div id="performanceMetrics">
-            <p><strong>Render Time:</strong> <span id="renderTime">-</span> ms</p>
-            <p><strong>Scroll Responsiveness:</strong> <span id="scrollResponsiveness">-</span> ms</p>
-            <p><strong>Memory Usage:</strong> <span id="memoryUsage">-</span> MB</p>
-            <p><strong>Visible Elements:</strong> <span id="visibleElements">-</span></p>
+        <h2>📈 Performance Metrics</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <strong>Rendering Performance:</strong>
+                <div id="renderingTime">-</div>
+            </div>
+            <div>
+                <strong>Memory Efficiency:</strong>
+                <div id="memoryEfficiency">-</div>
+            </div>
+            <div>
+                <strong>Scroll Responsiveness:</strong>
+                <div id="scrollResponsiveness">-</div>
+            </div>
+            <div>
+                <strong>Mutation Count:</strong>
+                <div id="mutationCount">-</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Mock data generation
-        function generateMockReads(totalRows, readsPerRow = 10) {
-            const reads = [];
+        let currentMockTrack = null;
+        
+        function generateMockReads(totalRows, includeMutations = true) {
+            const readRows = [];
+            
             for (let row = 0; row < totalRows; row++) {
                 const rowReads = [];
-                for (let i = 0; i < readsPerRow; i++) {
+                const readsInRow = Math.floor(Math.random() * 8) + 3;
+                
+                for (let i = 0; i < readsInRow; i++) {
                     const start = Math.floor(Math.random() * 1000) + (i * 120);
-                    rowReads.push({
+                    const length = Math.floor(Math.random() * 100) + 50;
+                    const read = {
                         id: 'read_' + row + '_' + i,
                         start: start,
-                        end: start + Math.floor(Math.random() * 100) + 50,
+                        end: start + length,
                         strand: Math.random() > 0.5 ? '+' : '-',
-                        mappingQuality: Math.floor(Math.random() * 60)
-                    });
+                        mappingQuality: Math.floor(Math.random() * 60) + 1,
+                        mutations: includeMutations ? generateMockMutations(start, start + length) : []
+                    };
+                    rowReads.push(read);
                 }
-                reads.push(rowReads);
+                readRows.push(rowReads);
             }
-            return reads;
+            
+            return readRows;
         }
-
-        // Mock scrollable track implementation
-        function createMockScrollableTrack(container, readRows, trackHeight, maxVisibleRows) {
-            const startTime = performance.now();
+        
+        function generateMockMutations(readStart, readEnd) {
+            const mutations = [];
+            const readLength = readEnd - readStart;
+            const mutationCount = Math.floor(Math.random() * 5); // 0-4 mutations per read
             
-            container.innerHTML = '';
+            for (let i = 0; i < mutationCount; i++) {
+                const position = readStart + Math.floor(Math.random() * readLength);
+                const mutationType = ['insertion', 'deletion', 'mismatch'][Math.floor(Math.random() * 3)];
+                
+                let mutation = {
+                    position: position,
+                    type: mutationType
+                };
+                
+                switch (mutationType) {
+                    case 'insertion':
+                        mutation.sequence = ['A', 'T', 'G', 'C'][Math.floor(Math.random() * 4)].repeat(Math.floor(Math.random() * 3) + 1);
+                        mutation.length = mutation.sequence.length;
+                        mutation.refSequence = '';
+                        mutation.color = '#FF6B6B';
+                        break;
+                    case 'deletion':
+                        mutation.length = Math.floor(Math.random() * 3) + 1;
+                        mutation.sequence = '';
+                        mutation.refSequence = 'N'.repeat(mutation.length);
+                        mutation.color = '#4ECDC4';
+                        break;
+                    case 'mismatch':
+                        mutation.sequence = ['A', 'T', 'G', 'C'][Math.floor(Math.random() * 4)];
+                        mutation.refSequence = ['A', 'T', 'G', 'C'][Math.floor(Math.random() * 4)];
+                        mutation.length = 1;
+                        mutation.color = '#FFD93D';
+                        break;
+                }
+                
+                mutations.push(mutation);
+            }
             
+            return mutations.sort((a, b) => a.position - b.position);
+        }
+        
+        function createMockScrollableTrack(container, readRows, trackHeight, maxVisibleRows, showMutations = true, showQualityColors = false) {
             const track = document.createElement('div');
             track.className = 'mock-track';
             track.style.height = (trackHeight + 30) + 'px';
@@ -197,6 +291,9 @@
             const header = document.createElement('div');
             header.className = 'mock-track-header';
             header.textContent = 'Aligned Reads (' + readRows.length + ' rows, ' + maxVisibleRows + ' visible)';
+            if (showMutations) {
+                header.textContent += ' - Mutations Enabled';
+            }
             
             const content = document.createElement('div');
             content.className = 'mock-track-content';
@@ -204,23 +301,7 @@
             content.style.position = 'relative';
             content.style.overflow = 'hidden';
             
-            // Create scrollable components
-            const scrollContainer = createMockScrollContainer(readRows, trackHeight, maxVisibleRows);
-            const scrollbar = createMockScrollbar(trackHeight, readRows.length * 16, scrollContainer);
-            
-            content.appendChild(scrollContainer);
-            content.appendChild(scrollbar);
-            track.appendChild(header);
-            track.appendChild(content);
-            container.appendChild(track);
-            
-            const renderTime = performance.now() - startTime;
-            updatePerformanceMetrics(renderTime, readRows.length, maxVisibleRows);
-            
-            return track;
-        }
-
-        function createMockScrollContainer(readRows, trackHeight, maxVisibleRows) {
+            // Create scrollable container
             const scrollContainer = document.createElement('div');
             scrollContainer.className = 'reads-scroll-container';
             scrollContainer.style.cssText = 'position: absolute; top: 0; left: 0; right: 16px; bottom: 0; overflow: hidden;';
@@ -231,22 +312,27 @@
             contentViewport.style.cssText = 'position: relative; width: 100%; height: ' + totalHeight + 'px; transform: translateY(0px); transition: transform 0.1s ease-out;';
             
             // Initial render of visible rows
-            renderMockVisibleRows(contentViewport, readRows, 0, Math.min(maxVisibleRows + 2, readRows.length));
-            
-            // Store scroll state
-            scrollContainer._scrollState = {
-                totalRows: readRows.length,
-                visibleRows: maxVisibleRows,
-                currentScrollTop: 0,
-                contentViewport: contentViewport,
-                readRows: readRows
-            };
+            renderMockVisibleRows(contentViewport, readRows, 0, Math.min(maxVisibleRows + 2, readRows.length), showMutations, showQualityColors);
             
             scrollContainer.appendChild(contentViewport);
-            return scrollContainer;
+            
+            // Create scrollbar
+            const scrollbar = createMockScrollbar(trackHeight, totalHeight, scrollContainer);
+            
+            content.appendChild(scrollContainer);
+            content.appendChild(scrollbar);
+            track.appendChild(header);
+            track.appendChild(content);
+            
+            container.appendChild(track);
+            return track;
         }
-
+        
         function createMockScrollbar(trackHeight, contentHeight, scrollContainer) {
+            if (contentHeight <= trackHeight) {
+                return document.createElement('div'); // No scrollbar needed
+            }
+            
             const scrollbar = document.createElement('div');
             scrollbar.className = 'reads-vertical-scrollbar';
             scrollbar.style.cssText = 'position: absolute; top: 0; right: 0; width: 16px; height: ' + trackHeight + 'px; background-color: #f0f0f0; border-left: 1px solid #ddd; cursor: default;';
@@ -257,6 +343,14 @@
             thumb.style.cssText = 'position: absolute; top: 0; left: 2px; right: 2px; height: ' + thumbHeight + 'px; background-color: #888; border-radius: 6px; cursor: pointer; transition: background-color 0.2s;';
             
             // Scrolling logic
+            scrollContainer._scrollState = {
+                currentScrollTop: 0,
+                contentViewport: scrollContainer.querySelector('.reads-content-viewport'),
+                maxScrollTop: contentHeight - trackHeight,
+                thumbHeight: thumbHeight,
+                trackHeight: trackHeight
+            };
+            
             let isDragging = false;
             let dragStartY = 0;
             let dragStartScrollTop = 0;
@@ -273,40 +367,42 @@
                 state.contentViewport.style.transform = 'translateY(' + (-clampedScrollTop) + 'px)';
                 
                 // Update visible rows if needed
-                const rowHeight = 16;
-                const firstVisibleRow = Math.max(0, Math.floor(clampedScrollTop / rowHeight));
-                const lastVisibleRow = Math.min(state.totalRows, firstVisibleRow + state.visibleRows + 4);
+                const startRow = Math.floor(clampedScrollTop / 16);
+                const endRow = Math.min(startRow + Math.ceil(trackHeight / 16) + 4, readRows.length);
                 
-                // Re-render if needed (simplified for demo)
-                if (Math.abs(firstVisibleRow - (state.lastFirstRow || 0)) > 2) {
+                if (state.lastStartRow !== startRow || state.lastEndRow !== endRow) {
                     state.contentViewport.innerHTML = '';
-                    renderMockVisibleRows(state.contentViewport, state.readRows, firstVisibleRow, lastVisibleRow);
-                    state.lastFirstRow = firstVisibleRow;
+                    renderMockVisibleRows(state.contentViewport, readRows, startRow, endRow, 
+                        document.getElementById('showMutations').checked,
+                        document.getElementById('showQualityColors').checked);
+                    state.lastStartRow = startRow;
+                    state.lastEndRow = endRow;
                 }
             };
+            
+            scrollbar._updateScrollPosition = updateScrollPosition;
             
             // Mouse events
             thumb.addEventListener('mousedown', function(e) {
                 e.preventDefault();
                 isDragging = true;
                 dragStartY = e.clientY;
-                dragStartScrollTop = parseFloat(thumb.style.top) || 0;
-                document.body.style.userSelect = 'none';
+                dragStartScrollTop = scrollContainer._scrollState.currentScrollTop;
+                thumb.style.backgroundColor = '#555';
             });
             
             document.addEventListener('mousemove', function(e) {
                 if (!isDragging) return;
                 const deltaY = e.clientY - dragStartY;
-                const maxScrollTop = contentHeight - trackHeight;
                 const scrollRatio = deltaY / (trackHeight - thumbHeight);
-                const newScrollTop = dragStartScrollTop + (scrollRatio * maxScrollTop);
+                const newScrollTop = dragStartScrollTop + (scrollRatio * (contentHeight - trackHeight));
                 updateScrollPosition(newScrollTop);
             });
             
             document.addEventListener('mouseup', function() {
                 if (isDragging) {
                     isDragging = false;
-                    document.body.style.userSelect = '';
+                    thumb.style.backgroundColor = '#888';
                 }
             });
             
@@ -314,96 +410,190 @@
             scrollContainer.addEventListener('wheel', function(e) {
                 e.preventDefault();
                 const currentScrollTop = scrollContainer._scrollState.currentScrollTop;
-                const scrollDelta = e.deltaY * 2;
-                updateScrollPosition(currentScrollTop + scrollDelta);
+                const scrollSpeed = 32;
+                const newScrollTop = currentScrollTop + (e.deltaY > 0 ? scrollSpeed : -scrollSpeed);
+                updateScrollPosition(newScrollTop);
             });
             
             scrollbar.appendChild(thumb);
-            scrollbar._updateScrollPosition = updateScrollPosition;
             return scrollbar;
         }
-
-        function renderMockVisibleRows(container, readRows, startRow, endRow) {
+        
+        function renderMockVisibleRows(container, readRows, startRow, endRow, showMutations = true, showQualityColors = false) {
+            const svgHeight = (endRow - startRow) * 16;
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            const visibleRowCount = endRow - startRow;
-            const svgHeight = visibleRowCount * 16;
-            
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', svgHeight);
             svg.setAttribute('viewBox', '0 0 800 ' + svgHeight);
             svg.setAttribute('class', 'reads-svg-container scrollable');
             svg.style.top = (startRow * 16) + 'px';
             
+            let totalMutations = 0;
+            
             for (let rowIndex = startRow; rowIndex < endRow && rowIndex < readRows.length; rowIndex++) {
                 const rowReads = readRows[rowIndex];
                 const relativeRowIndex = rowIndex - startRow;
                 
                 rowReads.forEach(function(read, readIndex) {
+                    // Create read group
+                    const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    readGroup.setAttribute('class', 'read-group');
+                    
+                    // Create read rectangle
                     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     rect.setAttribute('x', readIndex * 80 + 10);
                     rect.setAttribute('y', relativeRowIndex * 16 + 2);
                     rect.setAttribute('width', 70);
                     rect.setAttribute('height', 12);
-                    rect.setAttribute('class', 'mock-read' + (read.strand === '-' ? ' reverse' : ''));
                     rect.setAttribute('rx', '2');
+                    
+                    // Apply coloring
+                    if (showQualityColors) {
+                        if (read.mappingQuality >= 40) {
+                            rect.setAttribute('class', 'mock-read quality-high');
+                        } else if (read.mappingQuality >= 20) {
+                            rect.setAttribute('class', 'mock-read quality-medium');
+                        } else {
+                            rect.setAttribute('class', 'mock-read quality-low');
+                        }
+                    } else {
+                        rect.setAttribute('class', 'mock-read' + (read.strand === '-' ? ' reverse' : ''));
+                    }
                     
                     // Add tooltip
                     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
                     title.textContent = read.id + ' (' + read.start + '-' + read.end + ', ' + read.strand + ', MQ:' + read.mappingQuality + ')';
+                    if (showMutations && read.mutations.length > 0) {
+                        title.textContent += '\nMutations: ' + read.mutations.length;
+                    }
                     rect.appendChild(title);
                     
-                    svg.appendChild(rect);
+                    readGroup.appendChild(rect);
+                    
+                    // Add mutations if enabled
+                    if (showMutations && read.mutations && read.mutations.length > 0) {
+                        totalMutations += read.mutations.length;
+                        
+                        read.mutations.forEach(function(mutation) {
+                            const mutationPosInRead = mutation.position - read.start;
+                            const readLength = read.end - read.start;
+                            
+                            if (mutationPosInRead >= 0 && mutationPosInRead <= readLength) {
+                                const relativeX = (mutationPosInRead / readLength) * 70;
+                                const absoluteX = readIndex * 80 + 10 + relativeX;
+                                
+                                const mutationLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                                mutationLine.setAttribute('class', 'mutation-line ' + mutation.type);
+                                mutationLine.setAttribute('x1', absoluteX);
+                                mutationLine.setAttribute('y1', relativeRowIndex * 16 + 2);
+                                mutationLine.setAttribute('x2', absoluteX);
+                                mutationLine.setAttribute('y2', relativeRowIndex * 16 + 14);
+                                mutationLine.setAttribute('stroke', mutation.color);
+                                mutationLine.setAttribute('opacity', '0.8');
+                                
+                                // Set line properties based on mutation type
+                                switch (mutation.type) {
+                                    case 'insertion':
+                                        mutationLine.setAttribute('stroke-width', '1.5');
+                                        mutationLine.setAttribute('stroke-dasharray', '2,1');
+                                        break;
+                                    case 'deletion':
+                                        mutationLine.setAttribute('stroke-width', '2');
+                                        break;
+                                    case 'mismatch':
+                                        mutationLine.setAttribute('stroke-width', '1');
+                                        break;
+                                }
+                                
+                                // Add mutation tooltip
+                                const mutationTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                                switch (mutation.type) {
+                                    case 'insertion':
+                                        mutationTitle.textContent = 'Insertion at ' + mutation.position + ': +' + mutation.sequence + ' (' + mutation.length + 'bp)';
+                                        break;
+                                    case 'deletion':
+                                        mutationTitle.textContent = 'Deletion at ' + mutation.position + ': -' + mutation.length + 'bp';
+                                        break;
+                                    case 'mismatch':
+                                        mutationTitle.textContent = 'Mismatch at ' + mutation.position + ': ' + mutation.refSequence + '→' + mutation.sequence;
+                                        break;
+                                }
+                                mutationLine.appendChild(mutationTitle);
+                                
+                                readGroup.appendChild(mutationLine);
+                            }
+                        });
+                    }
+                    
+                    svg.appendChild(readGroup);
                 });
             }
             
             container.appendChild(svg);
-            updatePerformanceMetrics(null, null, null, endRow - startRow);
+            
+            // Update mutation count
+            document.getElementById('mutationCount').textContent = totalMutations + ' visible';
+            
+            return container;
         }
-
-        function updatePerformanceMetrics(renderTime, totalRows, visibleRows, visibleElements) {
-            if (renderTime !== null) {
-                document.getElementById('renderTime').textContent = renderTime.toFixed(2);
-            }
+        
+        function generateMockTrack() {
+            const container = document.getElementById('mockTrackContainer');
+            container.innerHTML = '';
+            
+            const totalRows = parseInt(document.getElementById('totalRows').value) || 50;
+            const visibleRows = parseInt(document.getElementById('visibleRows').value) || 8;
+            const trackHeight = parseInt(document.getElementById('trackHeight').value) || 150;
+            const showMutations = document.getElementById('showMutations').checked;
+            const showQualityColors = document.getElementById('showQualityColors').checked;
+            
+            const startTime = performance.now();
+            
+            const readRows = generateMockReads(totalRows, showMutations);
+            currentMockTrack = createMockScrollableTrack(container, readRows, trackHeight, visibleRows, showMutations, showQualityColors);
+            
+            const renderTime = performance.now() - startTime;
+            
+            // Update performance metrics
+            document.getElementById('renderingTime').textContent = renderTime.toFixed(2) + 'ms';
+            
+            const totalElements = container.querySelectorAll('rect, line').length;
+            const visibleElements = Math.min(totalRows * 10, visibleRows * 10); // Approximate
+            document.getElementById('memoryEfficiency').textContent = totalElements + ' elements';
+            
             if (totalRows !== null && visibleRows !== null) {
                 const efficiency = ((visibleRows / totalRows) * 100).toFixed(1);
                 document.getElementById('scrollResponsiveness').textContent = efficiency + '% efficient';
             }
             if (visibleElements !== null) {
-                document.getElementById('visibleElements').textContent = visibleElements;
-                const estimatedMemory = (visibleElements * 0.1).toFixed(2);
-                document.getElementById('memoryUsage').textContent = estimatedMemory;
+                document.getElementById('memoryEfficiency').textContent += ' (' + (totalElements <= visibleElements * 2 ? 'Efficient' : 'Could optimize') + ')';
             }
-        }
-
-        // Test functions
-        function generateMockTrack() {
-            const totalRows = parseInt(document.getElementById('totalRows').value);
-            const visibleRows = parseInt(document.getElementById('visibleRows').value);
-            const trackHeight = parseInt(document.getElementById('trackHeight').value);
             
-            const readRows = generateMockReads(totalRows);
-            const container = document.getElementById('mockTrackContainer');
+            // Store reference to read data
+            currentMockTrack._readRows = readRows;
             
-            createMockScrollableTrack(container, readRows, trackHeight, visibleRows);
+            createMockScrollableTrack(container, readRows, trackHeight, visibleRows, showMutations, showQualityColors);
             
-            document.getElementById('mockResults').innerHTML = '<span class="success">✅ Mock track generated successfully!</span><br>📊 Total rows: ' + totalRows + '<br>👁️ Visible rows: ' + visibleRows + '<br>📏 Track height: ' + trackHeight + 'px<br>🎯 Scrollable: ' + (totalRows > visibleRows ? 'Yes' : 'No');
+            document.getElementById('mockResults').innerHTML = '<span class="success">✅ Mock track generated successfully!</span><br>📊 Total rows: ' + totalRows + '<br>👁️ Visible rows: ' + visibleRows + '<br>📏 Track height: ' + trackHeight + 'px<br>🎯 Scrollable: ' + (totalRows > visibleRows ? 'Yes' : 'No') + '<br>🧬 Mutations: ' + (showMutations ? 'Enabled' : 'Disabled');
         }
 
         function scrollToRow() {
-            const targetRow = parseInt(document.getElementById('targetRow').value);
-            const container = document.getElementById('mockTrackContainer');
-            const scrollbar = container.querySelector('.reads-vertical-scrollbar');
-            
-            if (scrollbar && scrollbar._updateScrollPosition) {
+            if (currentMockTrack && currentMockTrack._readRows) {
+                const totalRows = currentMockTrack._readRows.length;
+                const targetRow = Math.floor(Math.random() * totalRows);
                 const scrollTop = targetRow * 16;
-                scrollbar._updateScrollPosition(scrollTop);
                 
-                document.getElementById('mockResults').innerHTML += '<br><span class="info">📍 Scrolled to row ' + targetRow + '</span>';
+                const scrollbar = currentMockTrack.querySelector('.reads-vertical-scrollbar');
+                if (scrollbar && scrollbar._updateScrollPosition) {
+                    scrollbar._updateScrollPosition(scrollTop);
+                    
+                    document.getElementById('mockResults').innerHTML += '<br><span class="info">📍 Scrolled to row ' + targetRow + '</span>';
+                }
             }
         }
 
-        // Initialize with default mock track
-        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize with default track
+        window.addEventListener('load', function() {
             generateMockTrack();
         });
     </script>

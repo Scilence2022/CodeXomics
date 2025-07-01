@@ -2865,6 +2865,14 @@ class TrackRenderer {
         const readShape = this.createSVGReadShape(read, elementWidth, readHeight, settings);
         readGroup.appendChild(readShape);
 
+        // Add mutation visualization if enabled
+        if (settings.showMutations && read.mutations && read.mutations.length > 0) {
+            const mutationElements = this.createSVGMutations(read, elementWidth, readHeight, start, end, range, containerWidth, settings);
+            mutationElements.forEach(mutationElement => {
+                readGroup.appendChild(mutationElement);
+            });
+        }
+
         // Add interaction handlers
         this.addSVGReadInteraction(readGroup, read, rowIndex);
 
@@ -2957,6 +2965,103 @@ class TrackRenderer {
             }
             
             return rect;
+        }
+    }
+
+    /**
+     * Create SVG elements for mutations on a read
+     */
+    createSVGMutations(read, readWidth, readHeight, viewStart, viewEnd, range, containerWidth, settings) {
+        const mutationElements = [];
+        
+        if (!read.mutations || read.mutations.length === 0) {
+            return mutationElements;
+        }
+        
+        // Filter mutations that are visible in the current view
+        const visibleMutations = read.mutations.filter(mutation => {
+            return mutation.position >= viewStart && mutation.position <= viewEnd;
+        });
+        
+        visibleMutations.forEach(mutation => {
+            // Calculate position within the read
+            const mutationPosInRead = mutation.position - read.start;
+            const readLength = read.end - read.start;
+            
+            // Skip if mutation is outside the read bounds
+            if (mutationPosInRead < 0 || mutationPosInRead > readLength) {
+                return;
+            }
+            
+            // Calculate x position within the read element
+            const relativeX = (mutationPosInRead / readLength) * readWidth;
+            
+            // Create mutation line
+            const mutationLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            mutationLine.setAttribute('class', 'mutation-line');
+            mutationLine.setAttribute('x1', relativeX);
+            mutationLine.setAttribute('y1', 0);
+            mutationLine.setAttribute('x2', relativeX);
+            mutationLine.setAttribute('y2', readHeight);
+            mutationLine.setAttribute('stroke', mutation.color);
+            mutationLine.setAttribute('stroke-width', this.getMutationLineWidth(mutation, settings));
+            mutationLine.setAttribute('opacity', settings.mutationOpacity || 0.8);
+            
+            // Add mutation-specific styling
+            switch (mutation.type) {
+                case 'insertion':
+                    mutationLine.setAttribute('stroke-dasharray', '2,1');
+                    break;
+                case 'deletion':
+                    mutationLine.setAttribute('stroke-width', Math.max(2, this.getMutationLineWidth(mutation, settings)));
+                    break;
+                case 'mismatch':
+                    mutationLine.setAttribute('stroke-width', 1);
+                    break;
+            }
+            
+            // Add tooltip with mutation information
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = this.formatMutationTooltip(mutation);
+            mutationLine.appendChild(title);
+            
+            mutationElements.push(mutationLine);
+        });
+        
+        return mutationElements;
+    }
+    
+    /**
+     * Get mutation line width based on type and settings
+     */
+    getMutationLineWidth(mutation, settings) {
+        const baseWidth = settings.mutationLineWidth || 1;
+        
+        switch (mutation.type) {
+            case 'insertion':
+                return baseWidth * 1.5;
+            case 'deletion':
+                return baseWidth * 2;
+            case 'mismatch':
+                return baseWidth;
+            default:
+                return baseWidth;
+        }
+    }
+    
+    /**
+     * Format mutation tooltip text
+     */
+    formatMutationTooltip(mutation) {
+        switch (mutation.type) {
+            case 'insertion':
+                return `Insertion at ${mutation.position}: +${mutation.sequence} (${mutation.length}bp)`;
+            case 'deletion':
+                return `Deletion at ${mutation.position}: -${mutation.length}bp`;
+            case 'mismatch':
+                return `Mismatch at ${mutation.position}: ${mutation.refSequence}→${mutation.sequence}`;
+            default:
+                return `${mutation.type} at ${mutation.position}`;
         }
     }
 
@@ -5575,6 +5680,13 @@ class TrackRenderer {
                 </div>
                 <div class="form-group">
                     <label>
+                        <input type="checkbox" id="readsShowMutations" ${settings.showMutations ? 'checked' : ''}>
+                        Show mutations (IGV-style)
+                    </label>
+                    <div class="help-text">Display mutations as colored vertical lines on reads. Shows insertions (red), deletions (cyan), and mismatches (yellow).</div>
+                </div>
+                <div class="form-group">
+                    <label>
                         <input type="checkbox" id="readsIgnoreChromosome" ${settings.ignoreChromosome ? 'checked' : ''}>
                         Ignore chromosome information
                     </label>
@@ -5843,6 +5955,7 @@ class TrackRenderer {
                 settings.opacity = parseFloat(modal.querySelector('#readsOpacity').value) || 0.9;
                 settings.showDirectionArrows = modal.querySelector('#readsShowDirectionArrows').checked;
                 settings.showQualityColors = modal.querySelector('#readsShowQualityColors').checked;
+                settings.showMutations = modal.querySelector('#readsShowMutations').checked;
                 settings.ignoreChromosome = modal.querySelector('#readsIgnoreChromosome').checked;
                 settings.minWidth = parseInt(modal.querySelector('#readsMinWidth').value) || 2;
                 settings.streamingThreshold = parseInt(modal.querySelector('#readsStreamingThreshold').value) || 50;

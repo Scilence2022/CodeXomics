@@ -747,7 +747,9 @@ class BamReader {
                     quality: record.qual || '',
                     flags: record.flags || 0,
                     templateLength: record.template_length || record.tlen || 0,
-                    tags: record.tags || {}
+                    tags: record.tags || {},
+                    // Parse mutations from CIGAR and sequence
+                    mutations: this.parseMutations(record)
                 };
                 
                 reads.push(read);
@@ -793,6 +795,171 @@ class BamReader {
         console.log(`🔍 [BamReader] === RECORD CONVERSION DEBUG END ===`);
         
         return reads;
+    }
+
+    /**
+     * Parse mutations from BAM record using CIGAR string and MD tag
+     * @param {Object} record - BAM record
+     * @returns {Array} Array of mutation objects
+     */
+    parseMutations(record) {
+        const mutations = [];
+        
+        try {
+            const cigar = record.CIGAR || record.cigar || '';
+            const sequence = record.seq || '';
+            const mdTag = record.tags?.MD || record.MD || '';
+            
+            if (!cigar || !sequence) {
+                return mutations;
+            }
+            
+            // Parse CIGAR string to find insertions and deletions
+            const cigarOps = this.parseCigarString(cigar);
+            let refPos = record.start; // 0-based reference position
+            let seqPos = 0; // 0-based sequence position
+            
+            for (const op of cigarOps) {
+                const { operation, length } = op;
+                
+                switch (operation) {
+                    case 'M': // Match/mismatch
+                    case '=': // Exact match
+                    case 'X': // Mismatch
+                        // For mismatches, we need MD tag to identify specific positions
+                        if (operation === 'X' || (operation === 'M' && mdTag)) {
+                            const mismatches = this.parseMismatchesFromMD(mdTag, refPos, seqPos, length, sequence);
+                            mutations.push(...mismatches);
+                        }
+                        refPos += length;
+                        seqPos += length;
+                        break;
+                        
+                    case 'I': // Insertion
+                        mutations.push({
+                            type: 'insertion',
+                            position: refPos + 1, // Convert to 1-based
+                            length: length,
+                            sequence: sequence.substring(seqPos, seqPos + length),
+                            refSequence: '',
+                            color: '#FF6B6B' // Red for insertions
+                        });
+                        seqPos += length;
+                        // refPos doesn't advance for insertions
+                        break;
+                        
+                    case 'D': // Deletion
+                        mutations.push({
+                            type: 'deletion',
+                            position: refPos + 1, // Convert to 1-based
+                            length: length,
+                            sequence: '',
+                            refSequence: 'N'.repeat(length), // Placeholder
+                            color: '#4ECDC4' // Cyan for deletions
+                        });
+                        refPos += length;
+                        // seqPos doesn't advance for deletions
+                        break;
+                        
+                    case 'N': // Skipped region (intron)
+                        refPos += length;
+                        break;
+                        
+                    case 'S': // Soft clipping
+                    case 'H': // Hard clipping
+                        if (operation === 'S') {
+                            seqPos += length;
+                        }
+                        break;
+                        
+                    case 'P': // Padding
+                        // No position changes
+                        break;
+                }
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ [BamReader] Error parsing mutations:', error.message);
+        }
+        
+        return mutations;
+    }
+    
+    /**
+     * Parse CIGAR string into operations
+     * @param {string} cigar - CIGAR string
+     * @returns {Array} Array of {operation, length} objects
+     */
+    parseCigarString(cigar) {
+        const operations = [];
+        const cigarRegex = /(\d+)([MIDNSHPX=])/g;
+        let match;
+        
+        while ((match = cigarRegex.exec(cigar)) !== null) {
+            operations.push({
+                length: parseInt(match[1]),
+                operation: match[2]
+            });
+        }
+        
+        return operations;
+    }
+    
+    /**
+     * Parse mismatches from MD tag
+     * @param {string} mdTag - MD tag value
+     * @param {number} refPos - Current reference position
+     * @param {number} seqPos - Current sequence position
+     * @param {number} length - Length of the match region
+     * @param {string} sequence - Read sequence
+     * @returns {Array} Array of mismatch mutations
+     */
+    parseMismatchesFromMD(mdTag, refPos, seqPos, length, sequence) {
+        const mismatches = [];
+        
+        if (!mdTag) return mismatches;
+        
+        try {
+            // Parse MD tag format: numbers and letters
+            // Example: "10A5^AC6" means 10 matches, A->?, 5 matches, deletion AC, 6 matches
+            const mdRegex = /(\d+)|([A-Z]+)|\^([A-Z]+)/g;
+            let match;
+            let currentRefPos = refPos;
+            let currentSeqPos = seqPos;
+            
+            while ((match = mdRegex.exec(mdTag)) !== null) {
+                if (match[1]) {
+                    // Number: advance positions
+                    const advance = parseInt(match[1]);
+                    currentRefPos += advance;
+                    currentSeqPos += advance;
+                } else if (match[2]) {
+                    // Mismatch: each character is a mismatch
+                    for (let i = 0; i < match[2].length; i++) {
+                        if (currentSeqPos < sequence.length) {
+                            mismatches.push({
+                                type: 'mismatch',
+                                position: currentRefPos + 1, // Convert to 1-based
+                                length: 1,
+                                sequence: sequence[currentSeqPos],
+                                refSequence: match[2][i],
+                                color: '#FFD93D' // Yellow for mismatches
+                            });
+                        }
+                        currentRefPos++;
+                        currentSeqPos++;
+                    }
+                } else if (match[3]) {
+                    // Deletion (^): reference bases that are deleted
+                    // This is handled in CIGAR parsing, skip here
+                    currentRefPos += match[3].length;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [BamReader] Error parsing MD tag:', error.message);
+        }
+        
+        return mismatches;
     }
 
     /**
