@@ -4595,10 +4595,10 @@ class TrackRenderer {
         // Calculate intelligent tick spacing
         const { majorInterval, minorInterval } = this.calculateDetailedTickSpacing(range, width);
 
-        // Draw ticks and labels
+        // Draw ticks and labels with reduced internal height
         ctx.strokeStyle = '#6c757d';
         ctx.fillStyle = '#495057';
-        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -4612,13 +4612,13 @@ class TrackRenderer {
             if (x >= 0 && x <= width && !drawnPositions.has(pos)) {
                 drawnPositions.add(pos);
                 
-                // Draw major tick
+                // Draw major tick - reduced height from 22 to 16
                 ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, 22);
+                ctx.moveTo(x, 3);
+                ctx.lineTo(x, 19);
                 ctx.stroke();
 
-                // Draw label with minimum spacing check
+                // Draw label with minimum spacing check - moved up from 32 to 28
                 const label = this.formatDetailedPosition(pos);
                 const labelWidth = ctx.measureText(label).width;
                 
@@ -4635,12 +4635,12 @@ class TrackRenderer {
                 }
                 
                 if (canDrawLabel) {
-                    ctx.fillText(label, x, 32);
+                    ctx.fillText(label, x, 28);
                 }
             }
         }
 
-        // Minor ticks (if there's enough space)
+        // Minor ticks (if there's enough space) - reduced height from 10 to 7
         if (width / (range / minorInterval) > 8) { // Only show if ticks are spaced enough
             ctx.strokeStyle = '#adb5bd';
             const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
@@ -4650,7 +4650,7 @@ class TrackRenderer {
                     
                     if (x >= 0 && x <= width) {
                         ctx.beginPath();
-                        ctx.moveTo(x, 0);
+                        ctx.moveTo(x, 3);
                         ctx.lineTo(x, 10);
                         ctx.stroke();
                     }
