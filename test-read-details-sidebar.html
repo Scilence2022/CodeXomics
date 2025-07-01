@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Details Sidebar Test - GenomeExplorer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #28a745;
+            border-bottom: 3px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: #28a745;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+        }
+        
+        .feature-card h3 {
+            color: #28a745;
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-card .icon {
+            width: 24px;
+            height: 24px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .demo-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .demo-read {
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .demo-read:hover {
+            background: #e8f5e8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        }
+        
+        .demo-read.selected {
+            background: #d4edda;
+            border-color: #155724;
+            box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
+        }
+        
+        .read-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .read-name {
+            font-weight: 600;
+            color: #28a745;
+            font-size: 1.1rem;
+        }
+        
+        .read-position {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .read-details {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .sequence-preview {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            word-break: break-all;
+            color: #495057;
+        }
+        
+        .sidebar-preview {
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            width: 350px;
+            height: 600px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .sidebar-header h3 {
+            margin: 0;
+            color: #28a745;
+            font-size: 1.3rem;
+        }
+        
+        .close-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .read-basic-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .read-type-badge {
+            background: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .zoom-btn {
+            background: #007bff;
+            color: white;
+        }
+        
+        .zoom-btn:hover {
+            background: #0056b3;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .copy-btn:hover {
+            background: #1e7e34;
+        }
+        
+        .quality-btn {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .quality-btn:hover {
+            background: #7c3aed;
+        }
+        
+        .sequence-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        .sequence-section h4 {
+            margin: 0 0 10px 0;
+            color: #28a745;
+            font-size: 1rem;
+        }
+        
+        .sequence-display {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            word-break: break-all;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+        }
+        
+        .base-a { color: #ff6b6b; }
+        .base-t { color: #4ecdc4; }
+        .base-g { color: #45b7d1; }
+        .base-c { color: #96ceb4; }
+        
+        .instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            color: #1976d2;
+            margin: 0 0 10px 0;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .status.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Read Details Sidebar</h1>
+            <p>Interactive Read Analysis & Sequence Viewer</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>📋 Implementation Overview</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3><span class="icon">🎯</span>Click-to-Select</h3>
+                        <p>Click on any read in the BAM/SAM tracks to select it and view detailed information in the left sidebar panel.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">📊</span>Comprehensive Details</h3>
+                        <p>View read name, position, strand, mapping quality, SAM flags, and all available attributes.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">🧬</span>Sequence Display</h3>
+                        <p>Full DNA sequence with color-coded bases, quality scores, and CIGAR string information.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">⚡</span>Quick Actions</h3>
+                        <p>Zoom to read location, copy sequences, and copy quality scores with one-click buttons.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🧪 Interactive Demo</h2>
+                <div class="instructions">
+                    <h3>How to Test:</h3>
+                    <p>Click on any of the demo reads below to see how the Read Details Sidebar would appear. This simulates the actual functionality in GenomeExplorer.</p>
+                </div>
+                
+                <div style="display: flex; gap: 30px; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h3>Sample Reads Track</h3>
+                        <div class="demo-section">
+                            <div class="demo-read" onclick="selectDemoRead(this, 'read1')">
+                                <div class="read-info">
+                                    <div class="read-name">SRR123456.1</div>
+                                    <div class="read-position">1,234-1,384 (+)</div>
+                                </div>
+                                <div class="read-details">Length: 150bp | MAPQ: 60 | Paired</div>
+                                <div class="sequence-preview">
+                                    <span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span>...
+                                </div>
+                            </div>
+                            
+                            <div class="demo-read" onclick="selectDemoRead(this, 'read2')">
+                                <div class="read-info">
+                                    <div class="read-name">SRR123456.2</div>
+                                    <div class="read-position">2,456-2,606 (-)</div>
+                                </div>
+                                <div class="read-details">Length: 150bp | MAPQ: 42 | Paired</div>
+                                <div class="sequence-preview">
+                                    <span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-t">T</span>...
+                                </div>
+                            </div>
+                            
+                            <div class="demo-read" onclick="selectDemoRead(this, 'read3')">
+                                <div class="read-info">
+                                    <div class="read-name">SRR123456.3</div>
+                                    <div class="read-position">3,789-3,939 (+)</div>
+                                </div>
+                                <div class="read-details">Length: 150bp | MAPQ: 35 | Single</div>
+                                <div class="sequence-preview">
+                                    <span class="base-t">T</span><span class="base-t">T</span><span class="base-a">A</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-c">C</span><span class="base-a">A</span><span class="base-g">G</span><span class="base-t">T</span><span class="base-c">C</span><span class="base-g">G</span><span class="base-a">A</span><span class="base-t">T</span><span class="base-g">G</span><span class="base-c">C</span><span class="base-a">A</span>...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-preview" id="sidebarPreview" style="display: none;">
+                        <div class="sidebar-header">
+                            <h3>Read Details</h3>
+                            <button class="close-btn" onclick="closeSidebar()">×</button>
+                        </div>
+                        
+                        <div id="readDetailsContent">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 Technical Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3><span class="icon">📱</span>Responsive Design</h3>
+                        <p>Sidebar adapts to different screen sizes with mobile-friendly layouts and touch interactions.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">🎨</span>Visual Feedback</h3>
+                        <p>Selected reads are highlighted with green borders and pulsing animations for clear identification.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">📋</span>Copy Functions</h3>
+                        <p>One-click copying of DNA sequences, quality scores, and CIGAR strings to clipboard.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">🔍</span>Sequence Analysis</h3>
+                        <p>Color-coded DNA bases, expandable full sequences, and formatted display with line numbers.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📚 Implementation Details</h2>
+                <div class="demo-section">
+                    <h3>Files Modified:</h3>
+                    <ul>
+                        <li><strong>index.html</strong> - Added Read Details sidebar section</li>
+                        <li><strong>styles.css</strong> - Added comprehensive styling for read details panel</li>
+                        <li><strong>renderer-modular.js</strong> - Added selectRead, populateReadDetails, and related methods</li>
+                        <li><strong>TrackRenderer.js</strong> - Modified showReadDetails to use new sidebar</li>
+                        <li><strong>UIManager.js</strong> - Added support for read details panel management</li>
+                    </ul>
+                    
+                    <h3>Key Methods Added:</h3>
+                    <ul>
+                        <li><code>selectRead(read, fileInfo)</code> - Main read selection handler</li>
+                        <li><code>populateReadDetails(read, fileInfo)</code> - Populate sidebar with read info</li>
+                        <li><code>createReadSequencesSection(read, readName, chromosome)</code> - Create sequence displays</li>
+                        <li><code>getReadAttributes(read)</code> - Extract read properties and metadata</li>
+                        <li><code>zoomToRead()</code>, <code>copyReadSequence()</code>, <code>copyReadQuality()</code> - Action methods</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status" id="status"></div>
+    
+    <script>
+        const readData = {
+            read1: {
+                name: 'SRR123456.1',
+                position: '1,234-1,384',
+                strand: 'Forward (+)',
+                length: '150',
+                mapq: '60',
+                flags: 'paired, proper_pair, read1',
+                sequence: 'ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC',
+                quality: '####################################################################################################################################################################',
+                cigar: '150M'
+            },
+            read2: {
+                name: 'SRR123456.2',
+                position: '2,456-2,606',
+                strand: 'Reverse (-)',
+                length: '150',
+                mapq: '42',
+                flags: 'paired, proper_pair, read2, reverse',
+                sequence: 'GCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCAT',
+                quality: '###########$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$',
+                cigar: '75M2I73M'
+            },
+            read3: {
+                name: 'SRR123456.3',
+                position: '3,789-3,939',
+                strand: 'Forward (+)',
+                length: '150',
+                mapq: '35',
+                flags: 'unmapped',
+                sequence: 'TTAGCCAGTCGATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC',
+                quality: '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                cigar: '16S134M'
+            }
+        };
+        
+        function selectDemoRead(element, readId) {
+            // Clear previous selections
+            document.querySelectorAll('.demo-read').forEach(read => {
+                read.classList.remove('selected');
+            });
+            
+            // Select current read
+            element.classList.add('selected');
+            
+            // Show sidebar
+            const sidebar = document.getElementById('sidebarPreview');
+            sidebar.style.display = 'block';
+            
+            // Populate sidebar content
+            const read = readData[readId];
+            populateSidebarContent(read);
+            
+            // Show status notification
+            showStatus(`Selected read: ${read.name}`);
+        }
+        
+        function populateSidebarContent(read) {
+            const content = document.getElementById('readDetailsContent');
+            
+            const colorizedSequence = colorizeSequence(read.sequence.substring(0, 60) + '...');
+            
+            content.innerHTML = `
+                <div class="read-basic-info">
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">${read.name}</div>
+                    <div class="read-type-badge">Aligned Read</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 13px; color: #6c757d; margin-bottom: 4px;">Position: ${read.position}</div>
+                    <div style="font-size: 12px; color: #6c757d;">Strand: ${read.strand} | Length: ${read.length} bp</div>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: #28a745; font-size: 14px;">Read Properties</h4>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #6c757d;">Mapping Quality</div>
+                        <div style="font-size: 13px; color: #495057;">${read.mapq}</div>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #6c757d;">SAM Flags</div>
+                        <div style="font-size: 13px; color: #495057;"><code style="font-family: 'Courier New', monospace; font-size: 11px;">${read.flags}</code></div>
+                    </div>
+                </div>
+                
+                <div class="sequence-section">
+                    <h4>Sequences</h4>
+                    <div style="border: 1px solid #e9ecef; border-radius: 4px; margin-bottom: 12px;">
+                        <div style="background: #f8f9fa; padding: 8px 12px; border-bottom: 1px solid #e9ecef; font-size: 12px; font-weight: 600;">
+                            DNA Sequence (${read.length} bp)
+                        </div>
+                        <div style="padding: 8px 12px;">
+                            <div class="sequence-display">${colorizedSequence}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="border: 1px solid #e9ecef; border-radius: 4px; margin-bottom: 12px;">
+                        <div style="background: #f8f9fa; padding: 8px 12px; border-bottom: 1px solid #e9ecef; font-size: 12px; font-weight: 600;">
+                            Quality Scores (${read.length} values)
+                        </div>
+                        <div style="padding: 8px 12px;">
+                            <div class="sequence-display">${read.quality.substring(0, 60)}...</div>
+                        </div>
+                    </div>
+                    
+                    <div style="border: 1px solid #e9ecef; border-radius: 4px;">
+                        <div style="background: #f8f9fa; padding: 8px 12px; border-bottom: 1px solid #e9ecef; font-size: 12px; font-weight: 600;">
+                            CIGAR String
+                        </div>
+                        <div style="padding: 8px 12px;">
+                            <div class="sequence-display"><code>${read.cigar}</code></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn zoom-btn" onclick="showStatus('Zoomed to read location')">🔍 Zoom to Read</button>
+                    <button class="action-btn copy-btn" onclick="copyToClipboard('${read.sequence}', 'DNA sequence')">📋 Copy Sequence</button>
+                    <button class="action-btn quality-btn" onclick="copyToClipboard('${read.quality}', 'Quality scores')">📊 Copy Quality</button>
+                </div>
+            `;
+        }
+        
+        function colorizeSequence(sequence) {
+            return sequence.replace(/[ATGC]/g, (base) => {
+                const classMap = { A: 'base-a', T: 'base-t', G: 'base-g', C: 'base-c' };
+                return `<span class="${classMap[base]}">${base}</span>`;
+            });
+        }
+        
+        function closeSidebar() {
+            document.getElementById('sidebarPreview').style.display = 'none';
+            document.querySelectorAll('.demo-read').forEach(read => {
+                read.classList.remove('selected');
+            });
+            showStatus('Read Details panel closed');
+        }
+        
+        function copyToClipboard(text, type) {
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus(`${type} copied to clipboard!`);
+            }).catch(() => {
+                showStatus(`Failed to copy ${type}`);
+            });
+        }
+        
+        function showStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.classList.add('show');
+            
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Auto-select first read on load
+        setTimeout(() => {
+            const firstRead = document.querySelector('.demo-read');
+            if (firstRead) {
+                selectDemoRead(firstRead, 'read1');
+            }
+        }, 1000);
+    </script>
+</body>
+</html> 

@@ -3388,9 +3388,20 @@ class TrackRenderer {
      * Show detailed read information
      */
     showReadDetails(read, readInfo) {
-        // Create a more sophisticated popup or modal for read details
-        // For now, use alert but could be enhanced with a proper modal
-        alert(readInfo);
+        // Use the new read details sidebar functionality
+        // Get file info if available
+        let fileInfo = null;
+        if (this.genomeBrowser.multiFileManager && this.genomeBrowser.multiFileManager.files) {
+            // Try to find the file info for this read
+            const files = this.genomeBrowser.multiFileManager.files.reads || [];
+            if (files.length > 0) {
+                // For now, use the first file or try to match by read properties
+                fileInfo = files[0];
+            }
+        }
+        
+        // Call the new selectRead method from GenomeBrowser
+        this.genomeBrowser.selectRead(read, fileInfo);
     }
 
     createProteinTrack(chromosome) {

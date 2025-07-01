@@ -2948,6 +2948,14 @@ class GenomeBrowser {
         }
     }
 
+    showReadDetailsPanel() {
+        const readDetailsSection = document.getElementById('readDetailsSection');
+        if (readDetailsSection) {
+            readDetailsSection.style.display = 'block';
+            this.uiManager.showSidebarIfHidden();
+        }
+    }
+
     populateGeneDetails(gene, operonInfo = null) {
         const geneDetailsContent = document.getElementById('geneDetailsContent');
         if (!geneDetailsContent) return;
@@ -3040,6 +3048,301 @@ class GenomeBrowser {
         
         // Add event listeners for expandable sections
         this.setupExpandableSequences();
+    }
+
+    populateReadDetails(read, fileInfo = null) {
+        const readDetailsContent = document.getElementById('readDetailsContent');
+        if (!readDetailsContent) return;
+        
+        // Get basic read information
+        const readName = read.id || read.qname || 'Unknown Read';
+        const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
+        const length = (read.end - read.start + 1).toLocaleString();
+        const strand = read.strand === '+' || read.strand === 1 ? 'Forward (+)' : 'Reverse (-)';
+        
+        // Get current chromosome for context
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        
+        // Create the read details HTML
+        let html = `
+            <div class="read-details-info">
+                <div class="read-basic-info">
+                    <div class="read-name">${readName}</div>
+                    <div class="read-type-badge">Aligned Read</div>
+                    <div class="read-position">Position: ${position}</div>
+                    <div class="read-strand">Strand: ${strand} | Length: ${length} bp</div>
+        `;
+        
+        // Add file information if available
+        if (fileInfo) {
+            html += `
+                    <div class="read-file-info" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            <strong>File:</strong> ${fileInfo.name || 'Unknown File'}
+                        </div>
+                    </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // Add sequences section if we have sequence data
+        if (read.sequence || read.quality) {
+            html += this.createReadSequencesSection(read, readName, currentChr);
+        }
+        
+        // Add read attributes if available
+        const attributes = this.getReadAttributes(read);
+        if (Object.keys(attributes).length > 0) {
+            html += `
+                <div class="read-attributes">
+                    <h4>Read Properties</h4>
+            `;
+            
+            Object.entries(attributes).forEach(([key, value]) => {
+                if (value != null && String(value).trim() !== '') {
+                    html += `
+                        <div class="read-attribute">
+                            <div class="read-attribute-label">${key.replace(/_/g, ' ')}</div>
+                            <div class="read-attribute-value">${this.formatReadAttributeValue(key, value)}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `</div>`;
+        }
+        
+        // Add action buttons
+        html += `
+            <div class="read-actions">
+                <button class="btn read-zoom-btn read-action-btn" onclick="window.genomeBrowser.zoomToRead()">
+                    <i class="fas fa-search-plus"></i> Zoom to Read
+                </button>
+                <button class="btn read-copy-btn read-action-btn" onclick="window.genomeBrowser.copyReadSequence()">
+                    <i class="fas fa-copy"></i> Copy Sequence
+                </button>
+        `;
+        
+        // Add copy quality button if quality data is available
+        if (read.quality && read.quality.length > 0) {
+            html += `
+                <button class="btn read-copy-quality-btn read-action-btn" onclick="window.genomeBrowser.copyReadQuality()">
+                    <i class="fas fa-copy"></i> Copy Quality
+                </button>
+            `;
+        }
+        
+        html += `</div></div>`;
+        
+        readDetailsContent.innerHTML = html;
+        
+        // Add event listeners for expandable sequences
+        this.setupExpandableReadSequences();
+    }
+
+    createReadSequencesSection(read, readName, chromosome) {
+        let html = `
+            <div class="read-sequences">
+                <h4>Sequences</h4>
+        `;
+        
+        // Add DNA sequence if available
+        if (read.sequence && read.sequence.length > 0) {
+            const sequencePreview = this.formatSequencePreview(read.sequence, 60);
+            const sequenceFormatted = this.formatSequenceWithLineNumbers(read.sequence, 1);
+            
+            html += `
+                <div class="read-sequence-section">
+                    <div class="read-sequence-header">
+                        <span>DNA Sequence (${read.sequence.length} bp)</span>
+                        <div class="read-sequence-actions">
+                            <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('dna-${readName}')">
+                                <i class="fas fa-expand-alt"></i> Show Full
+                            </button>
+                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('dna', '${readName}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="read-sequence-content">
+                        <div class="read-sequence-preview" id="dna-${readName}-preview">
+                            ${this.colorizeSequenceBases(sequencePreview)}
+                        </div>
+                        <div class="read-sequence-full" id="dna-${readName}-full">
+                            <div class="read-sequence-formatted">
+                                ${this.colorizeSequenceBases(sequenceFormatted)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add quality scores if available
+        if (read.quality && read.quality.length > 0) {
+            const qualityPreview = this.formatQualityPreview(read.quality, 60);
+            const qualityFormatted = this.formatQualityWithLineNumbers(read.quality, 1);
+            
+            html += `
+                <div class="read-sequence-section">
+                    <div class="read-sequence-header">
+                        <span>Quality Scores (${read.quality.length} values)</span>
+                        <div class="read-sequence-actions">
+                            <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('quality-${readName}')">
+                                <i class="fas fa-expand-alt"></i> Show Full
+                            </button>
+                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('quality', '${readName}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="read-sequence-content">
+                        <div class="read-sequence-preview" id="quality-${readName}-preview">
+                            ${qualityPreview}
+                        </div>
+                        <div class="read-sequence-full" id="quality-${readName}-full">
+                            <div class="read-sequence-formatted">
+                                ${qualityFormatted}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add CIGAR string if available
+        if (read.cigar && read.cigar.length > 0) {
+            html += `
+                <div class="read-sequence-section">
+                    <div class="read-sequence-header">
+                        <span>CIGAR String</span>
+                        <div class="read-sequence-actions">
+                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('cigar', '${readName}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="read-sequence-content">
+                        <div class="read-sequence-preview">
+                            <code style="font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all;">${read.cigar}</code>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        return html;
+    }
+
+    getReadAttributes(read) {
+        const attributes = {};
+        
+        // Basic read properties
+        if (read.mappingQuality != null) {
+            attributes['Mapping Quality'] = read.mappingQuality;
+        }
+        
+        if (read.flags != null) {
+            attributes['SAM Flags'] = `${read.flags} (${this.interpretSamFlags(read.flags)})`;
+        }
+        
+        if (read.templateLength != null && read.templateLength !== 0) {
+            attributes['Template Length'] = read.templateLength;
+        }
+        
+        if (read.chromosome) {
+            attributes['Reference'] = read.chromosome;
+        }
+        
+        // Add mutations if available
+        if (read.mutations && read.mutations.length > 0) {
+            attributes['Mutations'] = `${read.mutations.length} variants detected`;
+        }
+        
+        // Add tags if available
+        if (read.tags && Object.keys(read.tags).length > 0) {
+            Object.entries(read.tags).forEach(([tag, value]) => {
+                attributes[`Tag ${tag}`] = value;
+            });
+        }
+        
+        return attributes;
+    }
+
+    formatReadAttributeValue(key, value) {
+        // Special formatting for certain attributes
+        if (key.toLowerCase().includes('quality')) {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue)) {
+                let qualityClass = 'quality-low';
+                if (numValue >= 30) qualityClass = 'quality-high';
+                else if (numValue >= 20) qualityClass = 'quality-medium';
+                
+                return `<span class="${qualityClass}" style="font-weight: 600;">${value}</span>`;
+            }
+        }
+        
+        if (key.toLowerCase().includes('flags')) {
+            return `<code style="font-family: 'Courier New', monospace; font-size: 11px;">${value}</code>`;
+        }
+        
+        return value;
+    }
+
+    interpretSamFlags(flags) {
+        const flagMeanings = [];
+        if (flags & 0x1) flagMeanings.push('paired');
+        if (flags & 0x2) flagMeanings.push('proper_pair');
+        if (flags & 0x4) flagMeanings.push('unmapped');
+        if (flags & 0x8) flagMeanings.push('mate_unmapped');
+        if (flags & 0x10) flagMeanings.push('reverse');
+        if (flags & 0x20) flagMeanings.push('mate_reverse');
+        if (flags & 0x40) flagMeanings.push('read1');
+        if (flags & 0x80) flagMeanings.push('read2');
+        if (flags & 0x100) flagMeanings.push('secondary');
+        if (flags & 0x200) flagMeanings.push('qcfail');
+        if (flags & 0x400) flagMeanings.push('duplicate');
+        if (flags & 0x800) flagMeanings.push('supplementary');
+        
+        return flagMeanings.length > 0 ? flagMeanings.join(', ') : 'none';
+    }
+
+    formatQualityPreview(quality, maxLength = 60) {
+        if (!quality || quality.length === 0) return 'No quality data';
+        
+        const qualityStr = typeof quality === 'string' ? quality : 
+                          Array.isArray(quality) ? quality.join(' ') : String(quality);
+        
+        if (qualityStr.length <= maxLength) {
+            return qualityStr;
+        }
+        
+        return qualityStr.substring(0, maxLength) + '...';
+    }
+
+    formatQualityWithLineNumbers(quality, startPosition = 1) {
+        if (!quality || quality.length === 0) return 'No quality data';
+        
+        const qualityStr = typeof quality === 'string' ? quality : 
+                          Array.isArray(quality) ? quality.join(' ') : String(quality);
+        
+        const lines = [];
+        const charsPerLine = 60;
+        
+        for (let i = 0; i < qualityStr.length; i += charsPerLine) {
+            const lineNumber = Math.floor(i / charsPerLine) * charsPerLine + startPosition;
+            const line = qualityStr.substring(i, i + charsPerLine);
+            lines.push(`<span class="sequence-position">${lineNumber.toString().padStart(8, ' ')}</span>${line}`);
+        }
+        
+        return lines.join('<br>');
+    }
+
+    setupExpandableReadSequences() {
+        // This will be called after the HTML is inserted to set up event listeners
+        // for expandable sequence sections in read details
     }
 
     /**
@@ -3877,6 +4180,196 @@ class GenomeBrowser {
         this.clearSequenceSelection();
         
         console.log('Cleared gene selection');
+    }
+
+    selectRead(read, fileInfo = null) {
+        // Store the selected read
+        this.selectedRead = { read: read, fileInfo: fileInfo };
+        
+        // Clear any existing read selection
+        this.clearReadSelection(false);
+        
+        // Show read selection feedback
+        this.showReadSelectionFeedback(read);
+        
+        // Highlight the selected read in the track
+        this.highlightSelectedRead(read);
+        
+        // Populate and show read details panel
+        this.populateReadDetails(read, fileInfo);
+        this.showReadDetailsPanel();
+        
+        console.log('Read selected:', read.id || read.qname, 'at position', read.start + '-' + read.end);
+    }
+
+    showReadSelectionFeedback(read) {
+        const readName = read.id || read.qname || 'Unknown Read';
+        const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
+        
+        this.showNotification(`Selected read: ${readName} at ${position}`, 'info');
+    }
+
+    highlightSelectedRead(read) {
+        // Remove previous selection highlights
+        document.querySelectorAll('.svg-read-element.selected').forEach(element => {
+            element.classList.remove('selected');
+            element.style.filter = '';
+            element.style.stroke = '';
+            element.style.strokeWidth = '';
+        });
+        
+        // Find and highlight the selected read element
+        document.querySelectorAll('.svg-read-element').forEach(element => {
+            const readGroup = element.closest('g[class*="svg-read-element"]') || element;
+            const title = readGroup.querySelector('title');
+            
+            if (title && title.textContent.includes(read.id || read.qname || '')) {
+                readGroup.classList.add('selected');
+                console.log('Highlighted selected read element');
+            }
+        });
+    }
+
+    clearReadSelection(hidePanel = true) {
+        this.selectedRead = null;
+        
+        // Remove selected class from all read elements
+        document.querySelectorAll('.svg-read-element.selected').forEach(element => {
+            element.classList.remove('selected');
+            element.style.filter = '';
+            element.style.stroke = '';
+            element.style.strokeWidth = '';
+        });
+        
+        // Hide read details panel if requested
+        if (hidePanel) {
+            const readDetailsSection = document.getElementById('readDetailsSection');
+            if (readDetailsSection) {
+                readDetailsSection.style.display = 'none';
+            }
+            
+            this.uiManager.checkAndHideSidebarIfAllPanelsClosed();
+        }
+    }
+
+    // Action methods for read details buttons
+    zoomToRead() {
+        if (!this.selectedRead) return;
+        
+        const read = this.selectedRead.read;
+        const readLength = read.end - read.start;
+        const padding = Math.max(500, Math.floor(readLength * 2)); // 2x padding or 500bp minimum
+        
+        const newStart = Math.max(0, read.start - padding);
+        const newEnd = read.end + padding;
+        
+        this.currentPosition = { start: newStart, end: newEnd };
+        
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.updateStatistics(currentChr, this.currentSequence[currentChr]);
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+    }
+
+    copyReadSequence() {
+        if (!this.selectedRead || !this.selectedRead.read.sequence) {
+            this.showNotification('No sequence data available for selected read', 'warning');
+            return;
+        }
+        
+        const read = this.selectedRead.read;
+        const readName = read.id || read.qname || 'Unknown Read';
+        const sequence = read.sequence;
+        
+        const sequenceText = `>${readName} ${read.start}-${read.end} (${read.strand})\n${sequence}`;
+        
+        navigator.clipboard.writeText(sequenceText).then(() => {
+            this.showNotification(`Read sequence copied to clipboard (${sequence.length} bp)`, 'success');
+        }).catch(err => {
+            console.error('Failed to copy read sequence:', err);
+            this.showNotification('Failed to copy read sequence', 'error');
+        });
+    }
+
+    copyReadQuality() {
+        if (!this.selectedRead || !this.selectedRead.read.quality) {
+            this.showNotification('No quality data available for selected read', 'warning');
+            return;
+        }
+        
+        const read = this.selectedRead.read;
+        const readName = read.id || read.qname || 'Unknown Read';
+        const quality = read.quality;
+        
+        const qualityText = `>${readName} Quality Scores\n${quality}`;
+        
+        navigator.clipboard.writeText(qualityText).then(() => {
+            this.showNotification(`Read quality scores copied to clipboard`, 'success');
+        }).catch(err => {
+            console.error('Failed to copy read quality:', err);
+            this.showNotification('Failed to copy read quality', 'error');
+        });
+    }
+
+    copySpecificReadSequence(type, readName) {
+        if (!this.selectedRead) return;
+        
+        const read = this.selectedRead.read;
+        let content = '';
+        let description = '';
+        
+        switch (type) {
+            case 'dna':
+                if (read.sequence) {
+                    content = read.sequence;
+                    description = 'DNA sequence';
+                }
+                break;
+            case 'quality':
+                if (read.quality) {
+                    content = read.quality;
+                    description = 'quality scores';
+                }
+                break;
+            case 'cigar':
+                if (read.cigar) {
+                    content = read.cigar;
+                    description = 'CIGAR string';
+                }
+                break;
+        }
+        
+        if (content) {
+            navigator.clipboard.writeText(content).then(() => {
+                this.showNotification(`Read ${description} copied to clipboard`, 'success');
+            }).catch(err => {
+                console.error(`Failed to copy read ${description}:`, err);
+                this.showNotification(`Failed to copy read ${description}`, 'error');
+            });
+        } else {
+            this.showNotification(`No ${description} available for this read`, 'warning');
+        }
+    }
+
+    toggleReadSequence(elementId) {
+        const previewElement = document.getElementById(`${elementId}-preview`);
+        const fullElement = document.getElementById(`${elementId}-full`);
+        const toggleButton = document.querySelector(`button[onclick*="${elementId}"]`);
+        
+        if (previewElement && fullElement && toggleButton) {
+            const isShowingFull = fullElement.style.display !== 'none';
+            
+            if (isShowingFull) {
+                previewElement.style.display = 'block';
+                fullElement.style.display = 'none';
+                toggleButton.innerHTML = '<i class="fas fa-expand-alt"></i> Show Full';
+            } else {
+                previewElement.style.display = 'none';
+                fullElement.style.display = 'block';
+                toggleButton.innerHTML = '<i class="fas fa-compress-alt"></i> Show Preview';
+            }
+        }
     }
 
     // User-defined features functionality

@@ -27,6 +27,11 @@ class UIManager {
                 this.genomeBrowser.clearGeneSelection();
             }
             
+            // Special handling for read details panel
+            if (panelId === 'readDetailsSection') {
+                this.genomeBrowser.clearReadSelection();
+            }
+            
             // Special handling for search results panel
             if (panelId === 'searchResultsSection') {
                 this.genomeBrowser.navigationManager.clearSearchResults();
