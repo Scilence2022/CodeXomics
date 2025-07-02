@@ -374,6 +374,7 @@ class BlastManager {
             }
         }
 
+        // Add standard databases first
         databases.forEach(db => {
             const option = document.createElement('option');
             option.value = db.value;
@@ -383,6 +384,58 @@ class BlastManager {
             }
             select.appendChild(option);
         });
+
+        // Add custom databases that are compatible with current BLAST type
+        this.addCustomDatabaseOptions(activeType);
+    }
+
+    addCustomDatabaseOptions(blastType) {
+        const select = document.getElementById('blastDatabase');
+        if (!select || !this.customDatabases) return;
+
+        // Add a separator if there are custom databases
+        const customDbs = Array.from(this.customDatabases.values()).filter(db => 
+            db.status === 'ready' && this.isDatabaseCompatible(db, blastType)
+        );
+
+        if (customDbs.length > 0) {
+            // Add separator
+            const separator = document.createElement('option');
+            separator.disabled = true;
+            separator.textContent = '── Custom Databases ──';
+            separator.style.fontStyle = 'italic';
+            separator.style.backgroundColor = '#f5f5f5';
+            select.appendChild(separator);
+
+            // Add custom databases
+            customDbs.forEach(database => {
+                const option = document.createElement('option');
+                option.value = `custom_${database.id}`;
+                option.textContent = `${database.name} (${database.type === 'nucl' ? 'Nucleotide' : 'Protein'})`;
+                option.title = `Custom database - ${database.source === 'project' ? 'from project genome' : 'from file'}`;
+                select.appendChild(option);
+            });
+        }
+    }
+
+    isDatabaseCompatible(database, blastType) {
+        // Check if database type is compatible with BLAST type
+        const dbType = database.type;
+        
+        switch (blastType) {
+            case 'blastn':
+                return dbType === 'nucl';
+            case 'blastp':
+                return dbType === 'prot';
+            case 'blastx':
+                return dbType === 'prot';
+            case 'tblastn':
+                return dbType === 'nucl';
+            case 'tblastx':
+                return dbType === 'nucl';
+            default:
+                return true; // Allow all if unknown type
+        }
     }
 
     initializeUI() {
@@ -496,7 +549,7 @@ class BlastManager {
         // Populate UI elements
         this.populateProjectGenomesList();
         this.populateAvailableDatabasesList();
-        this.updateBlastDatabaseOptions();
+        this.updateDatabaseOptions();
         
         console.log('✓ Database management initialized');
     }
@@ -700,28 +753,7 @@ class BlastManager {
         container.innerHTML = html;
     }
 
-    updateBlastDatabaseOptions() {
-        const select = document.getElementById('blastDatabase');
-        if (!select) return;
 
-        // Remove existing custom options
-        const options = Array.from(select.options);
-        options.forEach(option => {
-            if (option.value.startsWith('custom_')) {
-                option.remove();
-            }
-        });
-
-        // Add custom databases as options
-        this.customDatabases.forEach((database, id) => {
-            if (database.status === 'ready') {
-                const option = document.createElement('option');
-                option.value = `custom_${id}`;
-                option.textContent = database.name;
-                select.appendChild(option);
-            }
-        });
-    }
 
     async browseCustomFile() {
         try {
@@ -816,7 +848,7 @@ class BlastManager {
             // Update UI
             this.populateProjectGenomesList();
             this.populateAvailableDatabasesList();
-            this.updateBlastDatabaseOptions();
+            this.updateDatabaseOptions();
             
             this.showNotification(`Database ${dbName} created successfully`, 'success');
             
@@ -894,7 +926,7 @@ class BlastManager {
             
             // Update UI
             this.populateAvailableDatabasesList();
-            this.updateBlastDatabaseOptions();
+            this.updateDatabaseOptions();
             
             // Clear form
             document.getElementById('customFilePath').value = '';
@@ -1651,7 +1683,10 @@ class BlastManager {
         const blastType = params.blastType;
         const blastExecutable = this.getBlastExecutable(blastType);
         
-        let command = `${blastExecutable} -query "${queryFile}" -db "${params.database}"`;
+        // Resolve database path
+        const databasePath = this.resolveDatabasePath(params.database);
+        
+        let command = `${blastExecutable} -query "${queryFile}" -db "${databasePath}"`;
         
         // Add common parameters
         command += ` -evalue ${params.evalue}`;
@@ -1673,6 +1708,29 @@ class BlastManager {
         }
         
         return command;
+    }
+
+    resolveDatabasePath(databaseValue) {
+        // Check if this is a custom database
+        if (databaseValue.startsWith('custom_')) {
+            const dbId = databaseValue.replace('custom_', '');
+            const customDb = this.customDatabases.get(dbId);
+            
+            if (customDb) {
+                // For custom databases, we would need to return the actual path to the BLAST database files
+                // For now, we'll return a placeholder path that would be created during database creation
+                const path = require('path');
+                const os = require('os');
+                const documentsPath = os.homedir() + '/Documents';
+                const blastDbPath = path.join(documentsPath, 'GenomeExplorer Projects', 'blast_databases', dbId);
+                return blastDbPath;
+            } else {
+                throw new Error(`Custom database not found: ${dbId}`);
+            }
+        }
+        
+        // For standard databases, return as-is
+        return databaseValue;
     }
 
     getBlastExecutable(blastType) {
