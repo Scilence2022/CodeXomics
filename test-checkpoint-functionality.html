@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkpoint Manager Functionality Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        
+        .test-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+        
+        .test-output {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #4a5568;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #48bb78; }
+        .status-error { background: #f56565; }
+        .status-warning { background: #ed8936; }
+        .status-info { background: #4299e1; }
+        
+        .checkpoint-demo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .demo-panel {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .demo-panel h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .checkpoint-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8fafc;
+        }
+        
+        .checkpoint-item {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .checkpoint-item:last-child {
+            border-bottom: none;
+        }
+        
+        .checkpoint-info {
+            flex: 1;
+        }
+        
+        .checkpoint-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .checkpoint-time {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .checkpoint-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4299e1;
+        }
+        
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-save"></i> Checkpoint Manager Test</h1>
+            <p>Comprehensive testing of Genome AI Studio's Checkpoint functionality</p>
+        </div>
+        
+        <div class="content">
+            <!-- System Status -->
+            <div class="test-section">
+                <h2><i class="fas fa-heartbeat"></i> System Status</h2>
+                <div id="systemStatus" class="test-output">Initializing system...</div>
+            </div>
+            
+            <!-- Checkpoint Creation Tests -->
+            <div class="test-section">
+                <h2><i class="fas fa-plus-circle"></i> Checkpoint Creation</h2>
+                <div class="test-controls">
+                    <button class="btn btn-primary" onclick="testCheckpointCreation()">
+                        <i class="fas fa-play"></i> Test Creation
+                    </button>
+                    <button class="btn btn-success" onclick="createManualCheckpoint()">
+                        <i class="fas fa-bookmark"></i> Create Manual
+                    </button>
+                    <button class="btn btn-warning" onclick="createAutoCheckpoint()">
+                        <i class="fas fa-clock"></i> Create Auto
+                    </button>
+                    <button class="btn btn-secondary" onclick="createMilestoneCheckpoint()">
+                        <i class="fas fa-flag"></i> Create Milestone
+                    </button>
+                </div>
+                <div id="creationOutput" class="test-output">Ready to test checkpoint creation...</div>
+            </div>
+            
+            <!-- Checkpoint Management -->
+            <div class="test-section">
+                <h2><i class="fas fa-list"></i> Checkpoint Management</h2>
+                <div class="test-controls">
+                    <button class="btn btn-primary" onclick="listCheckpoints()">
+                        <i class="fas fa-list"></i> List All
+                    </button>
+                    <button class="btn btn-success" onclick="showCheckpointStats()">
+                        <i class="fas fa-chart-bar"></i> Show Stats
+                    </button>
+                    <button class="btn btn-warning" onclick="testRollback()">
+                        <i class="fas fa-undo"></i> Test Rollback
+                    </button>
+                    <button class="btn btn-danger" onclick="clearAllCheckpoints()">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                </div>
+                <div id="managementOutput" class="test-output">Ready to test checkpoint management...</div>
+            </div>
+            
+            <!-- Interactive Demo -->
+            <div class="test-section">
+                <h2><i class="fas fa-gamepad"></i> Interactive Demo</h2>
+                <div class="checkpoint-demo">
+                    <div class="demo-panel">
+                        <h3>Create Checkpoint</h3>
+                        <div class="form-group">
+                            <label for="checkpointName">Checkpoint Name:</label>
+                            <input type="text" id="checkpointName" class="form-control" placeholder="Enter checkpoint name...">
+                        </div>
+                        <div class="form-group">
+                            <label for="checkpointType">Type:</label>
+                            <select id="checkpointType" class="form-control">
+                                <option value="manual">Manual</option>
+                                <option value="auto">Auto</option>
+                                <option value="milestone">Milestone</option>
+                                <option value="before_action">Before Action</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="createCustomCheckpoint()">
+                            <i class="fas fa-save"></i> Create Checkpoint
+                        </button>
+                    </div>
+                    
+                    <div class="demo-panel">
+                        <h3>Checkpoint List</h3>
+                        <div id="checkpointList" class="checkpoint-list">
+                            <div style="padding: 20px; text-align: center; color: #718096;">
+                                No checkpoints created yet
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="refreshCheckpointList()" style="margin-top: 10px;">
+                            <i class="fas fa-refresh"></i> Refresh List
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="test-section">
+                <h2><i class="fas fa-chart-line"></i> Statistics</h2>
+                <div id="statsContainer" class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCheckpoints">0</div>
+                        <div class="stat-label">Total Checkpoints</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="manualCheckpoints">0</div>
+                        <div class="stat-label">Manual</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="autoCheckpoints">0</div>
+                        <div class="stat-label">Auto</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalSize">0 KB</div>
+                        <div class="stat-label">Total Size</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mock Dependencies -->
+    <script>
+        // Mock GenomeBrowser class
+        class MockGenomeBrowser {
+            constructor() {
+                this.currentFile = 'test_genome.fasta';
+                this.currentChromosome = 'chr1';
+                this.currentPosition = 1000;
+                this.zoomLevel = 1.0;
+                this.viewStart = 500;
+                this.viewEnd = 1500;
+                this.loadedFiles = ['test_genome.fasta'];
+                this.selectedFeatures = [];
+                this.trackSettings = { gene: { height: 100 }, gc: { height: 80 } };
+                this.sequenceMode = 'nucleotide';
+                this.displayMode = 'normal';
+            }
+            
+            showNotification(message, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                this.updateTestOutput('systemStatus', `[${new Date().toLocaleTimeString()}] ${message}`);
+            }
+            
+            updateTestOutput(elementId, message) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent += message + '\n';
+                    element.scrollTop = element.scrollHeight;
+                }
+            }
+            
+            displayGenomeView() {
+                console.log('Mock: displayGenomeView called');
+            }
+        }
+        
+        // Mock ActionManager
+        class MockActionManager {
+            constructor() {
+                this.actions = [
+                    { id: 1, type: 'copy_sequence', status: 'pending' },
+                    { id: 2, type: 'paste_sequence', status: 'completed' }
+                ];
+                this.clipboard = { sequence: 'ATCGATCG', type: 'dna' };
+                this.nextActionId = 3;
+            }
+            
+            getState() {
+                return {
+                    actions: [...this.actions],
+                    clipboard: this.clipboard,
+                    nextActionId: this.nextActionId
+                };
+            }
+            
+            restoreState(state) {
+                this.actions = state.actions || [];
+                this.clipboard = state.clipboard || null;
+                this.nextActionId = state.nextActionId || 1;
+            }
+        }
+        
+        // Initialize system
+        let genomeBrowser, checkpointManager;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystem();
+        });
+        
+        function initializeSystem() {
+            updateOutput('systemStatus', 'Initializing mock system...');
+            
+            try {
+                // Create mock instances
+                genomeBrowser = new MockGenomeBrowser();
+                window.genomeBrowser = genomeBrowser;
+                
+                window.actionManager = new MockActionManager();
+                
+                updateOutput('systemStatus', '✅ Mock GenomeBrowser created');
+                updateOutput('systemStatus', '✅ Mock ActionManager created');
+                
+                // Load CheckpointManager script and initialize
+                loadCheckpointManager();
+                
+            } catch (error) {
+                updateOutput('systemStatus', `❌ Error initializing system: ${error.message}`);
+            }
+        }
+        
+        function loadCheckpointManager() {
+            // Since we can't load the actual module, we'll create a simplified version for testing
+            updateOutput('systemStatus', 'Loading CheckpointManager...');
+            
+            // Load the actual CheckpointManager from the source
+            const script = document.createElement('script');
+            script.src = 'src/renderer/modules/CheckpointManager.js';
+            script.onload = function() {
+                try {
+                    window.checkpointManager = new CheckpointManager(genomeBrowser);
+                    updateOutput('systemStatus', '✅ CheckpointManager initialized successfully');
+                    updateOutput('systemStatus', '🚀 System ready for testing!');
+                    updateStats();
+                } catch (error) {
+                    updateOutput('systemStatus', `❌ Error initializing CheckpointManager: ${error.message}`);
+                    createMockCheckpointManager();
+                }
+            };
+            script.onerror = function() {
+                updateOutput('systemStatus', '⚠️ Could not load CheckpointManager.js, creating mock version...');
+                createMockCheckpointManager();
+            };
+            document.head.appendChild(script);
+        }
+        
+        function createMockCheckpointManager() {
+            // Create a mock CheckpointManager for testing
+            window.checkpointManager = {
+                checkpoints: [],
+                nextCheckpointId: 1,
+                CHECKPOINT_TYPES: {
+                    MANUAL: 'manual',
+                    AUTO: 'auto',
+                    MILESTONE: 'milestone',
+                    BEFORE_ACTION: 'before_action'
+                },
+                
+                async createCheckpoint(name, type = 'manual', metadata = {}) {
+                    const checkpoint = {
+                        id: this.nextCheckpointId++,
+                        name: name || `Checkpoint ${this.nextCheckpointId}`,
+                        type: type,
+                        timestamp: new Date(),
+                        state: this.captureSystemState(),
+                        metadata: metadata,
+                        size: Math.floor(Math.random() * 10000) + 1000
+                    };
+                    
+                    this.checkpoints.push(checkpoint);
+                    genomeBrowser.showNotification(`Checkpoint "${checkpoint.name}" created`, 'success');
+                    return checkpoint.id;
+                },
+                
+                captureSystemState() {
+                    return {
+                        timestamp: new Date().toISOString(),
+                        genomeBrowser: {
+                            currentFile: genomeBrowser.currentFile,
+                            currentChromosome: genomeBrowser.currentChromosome,
+                            currentPosition: genomeBrowser.currentPosition
+                        },
+                        actionManager: window.actionManager.getState()
+                    };
+                },
+                
+                async createManualCheckpoint() {
+                    const name = prompt('Enter checkpoint name:', `Manual ${new Date().toLocaleTimeString()}`);
+                    if (name) {
+                        return await this.createCheckpoint(name, this.CHECKPOINT_TYPES.MANUAL);
+                    }
+                },
+                
+                async rollbackToCheckpoint(checkpointId) {
+                    const checkpoint = this.checkpoints.find(cp => cp.id === checkpointId);
+                    if (checkpoint) {
+                        const confirmed = confirm(`Rollback to "${checkpoint.name}"?`);
+                        if (confirmed) {
+                            genomeBrowser.showNotification(`Rolled back to: ${checkpoint.name}`, 'success');
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                
+                deleteCheckpoint(checkpointId) {
+                    const index = this.checkpoints.findIndex(cp => cp.id === checkpointId);
+                    if (index > -1) {
+                        const checkpoint = this.checkpoints[index];
+                        this.checkpoints.splice(index, 1);
+                        genomeBrowser.showNotification(`Deleted: ${checkpoint.name}`, 'success');
+                    }
+                },
+                
+                getCheckpointStats() {
+                    return {
+                        total: this.checkpoints.length,
+                        manual: this.checkpoints.filter(cp => cp.type === 'manual').length,
+                        auto: this.checkpoints.filter(cp => cp.type === 'auto').length,
+                        totalSize: this.checkpoints.reduce((sum, cp) => sum + cp.size, 0)
+                    };
+                },
+                
+                async clearAllCheckpoints() {
+                    const confirmed = confirm('Clear all checkpoints?');
+                    if (confirmed) {
+                        this.checkpoints = [];
+                        genomeBrowser.showNotification('All checkpoints cleared', 'success');
+                    }
+                }
+            };
+            
+            updateOutput('systemStatus', '✅ Mock CheckpointManager created');
+            updateOutput('systemStatus', '🚀 System ready for testing!');
+            updateStats();
+        }
+        
+        // Test functions
+        async function testCheckpointCreation() {
+            updateOutput('creationOutput', '🧪 Testing checkpoint creation...');
+            
+            try {
+                // Test manual checkpoint
+                const manualId = await window.checkpointManager.createCheckpoint('Test Manual', 'manual');
+                updateOutput('creationOutput', `✅ Manual checkpoint created (ID: ${manualId})`);
+                
+                // Test auto checkpoint
+                const autoId = await window.checkpointManager.createCheckpoint('Test Auto', 'auto');
+                updateOutput('creationOutput', `✅ Auto checkpoint created (ID: ${autoId})`);
+                
+                // Test milestone checkpoint
+                const milestoneId = await window.checkpointManager.createCheckpoint('Test Milestone', 'milestone');
+                updateOutput('creationOutput', `✅ Milestone checkpoint created (ID: ${milestoneId})`);
+                
+                updateOutput('creationOutput', '🎉 All checkpoint creation tests passed!');
+                updateStats();
+                refreshCheckpointList();
+                
+            } catch (error) {
+                updateOutput('creationOutput', `❌ Error in checkpoint creation test: ${error.message}`);
+            }
+        }
+        
+        async function createManualCheckpoint() {
+            try {
+                await window.checkpointManager.createManualCheckpoint();
+                updateStats();
+                refreshCheckpointList();
+            } catch (error) {
+                updateOutput('creationOutput', `❌ Error creating manual checkpoint: ${error.message}`);
+            }
+        }
+        
+        async function createAutoCheckpoint() {
+            try {
+                const name = `Auto ${new Date().toLocaleTimeString()}`;
+                await window.checkpointManager.createCheckpoint(name, 'auto');
+                updateStats();
+                refreshCheckpointList();
+            } catch (error) {
+                updateOutput('creationOutput', `❌ Error creating auto checkpoint: ${error.message}`);
+            }
+        }
+        
+        async function createMilestoneCheckpoint() {
+            try {
+                const name = `Milestone ${new Date().toLocaleTimeString()}`;
+                await window.checkpointManager.createCheckpoint(name, 'milestone');
+                updateStats();
+                refreshCheckpointList();
+            } catch (error) {
+                updateOutput('creationOutput', `❌ Error creating milestone checkpoint: ${error.message}`);
+            }
+        }
+        
+        async function createCustomCheckpoint() {
+            const name = document.getElementById('checkpointName').value.trim();
+            const type = document.getElementById('checkpointType').value;
+            
+            if (!name) {
+                alert('Please enter a checkpoint name');
+                return;
+            }
+            
+            try {
+                await window.checkpointManager.createCheckpoint(name, type);
+                document.getElementById('checkpointName').value = '';
+                updateStats();
+                refreshCheckpointList();
+            } catch (error) {
+                updateOutput('creationOutput', `❌ Error creating custom checkpoint: ${error.message}`);
+            }
+        }
+        
+        function listCheckpoints() {
+            updateOutput('managementOutput', '📋 Listing all checkpoints...');
+            
+            const checkpoints = window.checkpointManager.checkpoints;
+            if (checkpoints.length === 0) {
+                updateOutput('managementOutput', 'No checkpoints found');
+                return;
+            }
+            
+            checkpoints.forEach((checkpoint, index) => {
+                const timeAgo = getTimeAgo(checkpoint.timestamp);
+                updateOutput('managementOutput', 
+                    `${index + 1}. ${checkpoint.name} (${checkpoint.type}) - ${timeAgo}`);
+            });
+            
+            updateOutput('managementOutput', `Total: ${checkpoints.length} checkpoints`);
+        }
+        
+        function showCheckpointStats() {
+            const stats = window.checkpointManager.getCheckpointStats();
+            
+            updateOutput('managementOutput', '📊 Checkpoint Statistics:');
+            updateOutput('managementOutput', `Total Checkpoints: ${stats.total}`);
+            updateOutput('managementOutput', `Manual: ${stats.manual}`);
+            updateOutput('managementOutput', `Auto: ${stats.auto}`);
+            updateOutput('managementOutput', `Total Size: ${formatBytes(stats.totalSize)}`);
+        }
+        
+        async function testRollback() {
+            const checkpoints = window.checkpointManager.checkpoints;
+            if (checkpoints.length === 0) {
+                updateOutput('managementOutput', 'No checkpoints available for rollback test');
+                return;
+            }
+            
+            const checkpoint = checkpoints[0];
+            updateOutput('managementOutput', `Testing rollback to: ${checkpoint.name}`);
+            
+            try {
+                const success = await window.checkpointManager.rollbackToCheckpoint(checkpoint.id);
+                if (success) {
+                    updateOutput('managementOutput', '✅ Rollback test completed successfully');
+                } else {
+                    updateOutput('managementOutput', '⚠️ Rollback was cancelled or failed');
+                }
+            } catch (error) {
+                updateOutput('managementOutput', `❌ Error in rollback test: ${error.message}`);
+            }
+        }
+        
+        async function clearAllCheckpoints() {
+            try {
+                await window.checkpointManager.clearAllCheckpoints();
+                updateStats();
+                refreshCheckpointList();
+                updateOutput('managementOutput', '✅ All checkpoints cleared');
+            } catch (error) {
+                updateOutput('managementOutput', `❌ Error clearing checkpoints: ${error.message}`);
+            }
+        }
+        
+        function refreshCheckpointList() {
+            const listElement = document.getElementById('checkpointList');
+            const checkpoints = window.checkpointManager.checkpoints;
+            
+            if (checkpoints.length === 0) {
+                listElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #718096;">No checkpoints created yet</div>';
+                return;
+            }
+            
+            const sortedCheckpoints = [...checkpoints].sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
+            listElement.innerHTML = sortedCheckpoints.map(checkpoint => `
+                <div class="checkpoint-item">
+                    <div class="checkpoint-info">
+                        <div class="checkpoint-name">
+                            <i class="fas ${getCheckpointIcon(checkpoint.type)}"></i>
+                            ${checkpoint.name}
+                        </div>
+                        <div class="checkpoint-time">
+                            ${getTimeAgo(checkpoint.timestamp)} • ${formatBytes(checkpoint.size)}
+                        </div>
+                    </div>
+                    <div class="checkpoint-controls">
+                        <button class="btn btn-primary btn-sm" onclick="rollbackToCheckpoint(${checkpoint.id})" title="Rollback">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteCheckpoint(${checkpoint.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateStats() {
+            if (!window.checkpointManager) return;
+            
+            const stats = window.checkpointManager.getCheckpointStats();
+            
+            document.getElementById('totalCheckpoints').textContent = stats.total;
+            document.getElementById('manualCheckpoints').textContent = stats.manual;
+            document.getElementById('autoCheckpoints').textContent = stats.auto;
+            document.getElementById('totalSize').textContent = formatBytes(stats.totalSize);
+        }
+        
+        async function rollbackToCheckpoint(checkpointId) {
+            try {
+                await window.checkpointManager.rollbackToCheckpoint(checkpointId);
+            } catch (error) {
+                console.error('Error in rollback:', error);
+            }
+        }
+        
+        function deleteCheckpoint(checkpointId) {
+            try {
+                window.checkpointManager.deleteCheckpoint(checkpointId);
+                refreshCheckpointList();
+                updateStats();
+            } catch (error) {
+                console.error('Error deleting checkpoint:', error);
+            }
+        }
+        
+        // Utility functions
+        function updateOutput(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const timestamp = new Date().toLocaleTimeString();
+                element.textContent += `[${timestamp}] ${message}\n`;
+                element.scrollTop = element.scrollHeight;
+            }
+        }
+        
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const checkpointTime = new Date(timestamp);
+            const diffMs = now - checkpointTime;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return checkpointTime.toLocaleDateString();
+        }
+        
+        function getCheckpointIcon(type) {
+            const icons = {
+                'manual': 'fa-bookmark',
+                'auto': 'fa-clock',
+                'milestone': 'fa-flag',
+                'before_action': 'fa-shield-alt'
+            };
+            return icons[type] || 'fa-bookmark';
+        }
+        
+        function formatBytes(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html> 

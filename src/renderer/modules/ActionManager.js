@@ -1038,7 +1038,7 @@ class ActionManager {
      */
     createCheckpoint() {
         if (window.checkpointManager) {
-            window.checkpointManager.createCheckpoint();
+            window.checkpointManager.createManualCheckpoint();
         } else {
             this.genomeBrowser.showNotification('Checkpoint system not available', 'warning');
         }
@@ -1049,7 +1049,7 @@ class ActionManager {
      */
     rollback() {
         if (window.checkpointManager) {
-            window.checkpointManager.showRollbackDialog();
+            window.checkpointManager.showCheckpointList();
         } else {
             this.genomeBrowser.showNotification('Rollback system not available', 'warning');
         }
