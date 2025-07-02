@@ -873,41 +873,97 @@
             if (totalMemory < 2) {
                 throw new Error('Insufficient memory: At least 2GB RAM required');
             }
+            logMessage(`Memory check passed: ${totalMemory.toFixed(1)}GB total, ${freeMemory.toFixed(1)}GB free`, 'success');
             
             // Check disk space
             try {
                 const { exec } = require('child_process');
                 const { promisify } = require('util');
                 const execAsync = promisify(exec);
+                const fs = require('fs');
                 
                 let diskCommand;
-                if (platform === 'win32') {
-                    diskCommand = 'dir /-c';
-                } else {
-                    diskCommand = 'df -h .';
-                }
+                let minFreeSpace = 2; // 2GB minimum
                 
-                await execAsync(diskCommand);
-                logMessage('Disk space check passed', 'success');
+                if (platform === 'win32') {
+                    // Check C: drive space
+                    diskCommand = 'fsutil volume diskfree C:';
+                    try {
+                        const { stdout } = await execAsync(diskCommand);
+                        const freeBytes = parseInt(stdout.match(/Total free bytes\s*:\s*(\d+)/)?.[1] || '0');
+                        const freeGB = freeBytes / (1024**3);
+                        
+                        if (freeGB < minFreeSpace) {
+                            throw new Error(`Insufficient disk space: ${freeGB.toFixed(1)}GB free, ${minFreeSpace}GB required`);
+                        }
+                        logMessage(`Disk space check passed: ${freeGB.toFixed(1)}GB free`, 'success');
+                    } catch (error) {
+                        logMessage('Warning: Could not verify disk space on Windows', 'warning');
+                    }
+                } else {
+                    // Unix-like systems
+                    diskCommand = 'df -h .';
+                    try {
+                        const { stdout } = await execAsync(diskCommand);
+                        logMessage('Disk space check passed', 'success');
+                    } catch (error) {
+                        logMessage('Warning: Could not verify disk space', 'warning');
+                    }
+                }
             } catch (error) {
-                logMessage('Warning: Could not verify disk space', 'warning');
+                logMessage(`Disk space check warning: ${error.message}`, 'warning');
+            }
+            
+            // Check write permissions for installation directory
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                
+                const testDir = path.dirname(installPath);
+                const testFile = path.join(testDir, 'blast_install_test_' + Date.now());
+                
+                fs.writeFileSync(testFile, 'test');
+                fs.unlinkSync(testFile);
+                logMessage('Write permission check passed', 'success');
+            } catch (error) {
+                logMessage('Warning: May need elevated privileges for installation', 'warning');
             }
             
             // Check network connectivity
             await new Promise((resolve, reject) => {
                 const https = require('https');
+                logMessage('Testing network connectivity to NCBI FTP...', 'info');
+                
                 const req = https.get('https://ftp.ncbi.nlm.nih.gov', (res) => {
-                    logMessage('Network connectivity verified', 'success');
+                    logMessage(`Network connectivity verified (HTTP ${res.statusCode})`, 'success');
                     resolve();
                 });
-                req.on('error', () => {
-                    reject(new Error('No internet connection to NCBI FTP'));
+                
+                req.on('error', (error) => {
+                    reject(new Error(`No internet connection to NCBI FTP: ${error.message}`));
                 });
-                req.setTimeout(5000, () => {
+                
+                req.setTimeout(10000, () => {
                     req.destroy();
                     reject(new Error('Network timeout - check internet connection'));
                 });
             });
+            
+            // Check if BLAST+ is already installed
+            try {
+                const { exec } = require('child_process');
+                const { promisify } = require('util');
+                const execAsync = promisify(exec);
+                
+                const { stdout } = await execAsync('blastn -version');
+                const versionMatch = stdout.match(/blastn: ([\d.]+)/);
+                const currentVersion = versionMatch ? versionMatch[1] : 'Unknown';
+                
+                logMessage(`Existing BLAST+ installation found: v${currentVersion}`, 'warning');
+                logMessage('Installation will update the existing version', 'info');
+            } catch (error) {
+                logMessage('No existing BLAST+ installation detected', 'info');
+            }
         }
 
         async function downloadBlastPackage() {
@@ -924,22 +980,58 @@
                 
                 logMessage(`Saving to: ${filePath}`, 'info');
                 
+                // Check if file already exists
+                if (fs.existsSync(filePath)) {
+                    logMessage(`File already exists, verifying...`, 'info');
+                    const stats = fs.statSync(filePath);
+                    if (stats.size > 100 * 1024 * 1024) { // > 100MB, likely complete
+                        logMessage(`Using existing file: ${filename}`, 'success');
+                        resolve(filePath);
+                        return;
+                    } else {
+                        logMessage(`Existing file incomplete, re-downloading...`, 'warning');
+                        fs.unlinkSync(filePath);
+                    }
+                }
+                
                 const file = fs.createWriteStream(filePath);
                 
-                https.get(downloadUrl, (response) => {
+                const request = https.get(downloadUrl, (response) => {
+                    if (response.statusCode === 302 || response.statusCode === 301) {
+                        // Handle redirects
+                        logMessage(`Following redirect to: ${response.headers.location}`, 'info');
+                        https.get(response.headers.location, handleResponse);
+                        return;
+                    }
+                    
+                    handleResponse(response);
+                });
+                
+                function handleResponse(response) {
                     if (response.statusCode !== 200) {
+                        file.close();
+                        fs.unlink(filePath, () => {});
                         reject(new Error(`Download failed: HTTP ${response.statusCode}`));
                         return;
                     }
                     
                     const totalSize = parseInt(response.headers['content-length'] || '0');
                     let downloadedSize = 0;
+                    let lastLogTime = 0;
+                    
+                    logMessage(`Starting download: ${(totalSize/1024/1024).toFixed(1)}MB`, 'info');
                     
                     response.on('data', (chunk) => {
                         downloadedSize += chunk.length;
-                        if (totalSize > 0) {
+                        const now = Date.now();
+                        
+                        // Log progress every 2 seconds
+                        if (totalSize > 0 && now - lastLogTime > 2000) {
                             const percent = (downloadedSize / totalSize * 100).toFixed(1);
-                            logMessage(`Download progress: ${percent}% (${(downloadedSize/1024/1024).toFixed(1)}MB)`, 'info');
+                            const mbDownloaded = (downloadedSize/1024/1024).toFixed(1);
+                            const mbTotal = (totalSize/1024/1024).toFixed(1);
+                            logMessage(`Download progress: ${percent}% (${mbDownloaded}MB/${mbTotal}MB)`, 'info');
+                            lastLogTime = now;
                         }
                     });
                     
@@ -947,13 +1039,28 @@
                     
                     file.on('finish', () => {
                         file.close();
-                        logMessage(`Download completed: ${filename}`, 'success');
+                        const finalSize = fs.statSync(filePath).size;
+                        logMessage(`Download completed: ${filename} (${(finalSize/1024/1024).toFixed(1)}MB)`, 'success');
                         resolve(filePath);
                     });
                     
-                }).on('error', (error) => {
-                    fs.unlink(filePath, () => {}); // Clean up partial file
+                    file.on('error', (error) => {
+                        fs.unlink(filePath, () => {});
+                        reject(new Error(`File write error: ${error.message}`));
+                    });
+                }
+                
+                request.on('error', (error) => {
+                    file.close();
+                    fs.unlink(filePath, () => {});
                     reject(new Error(`Download error: ${error.message}`));
+                });
+                
+                request.setTimeout(30000, () => {
+                    request.destroy();
+                    file.close();
+                    fs.unlink(filePath, () => {});
+                    reject(new Error('Download timeout (30 seconds)'));
                 });
             });
         }
@@ -962,13 +1069,47 @@
             const platform = os.platform();
             logMessage(`Extracting package for ${platform}...`, 'info');
             
-            // For demo purposes, simulate extraction
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
             if (platform === 'win32') {
-                logMessage('Windows installer will handle extraction automatically', 'info');
-            } else {
-                logMessage('Package extracted to temporary directory', 'success');
+                logMessage('Windows installer (.exe) will handle extraction automatically', 'info');
+                return;
+            }
+            
+            // For Unix-like systems (macOS, Linux), extract tar.gz
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            const path = require('path');
+            
+            try {
+                const filename = path.basename(downloadUrl);
+                const tempDir = os.tmpdir();
+                const filePath = path.join(tempDir, filename);
+                const extractDir = path.join(tempDir, 'blast-extract-' + Date.now());
+                
+                logMessage(`Creating extraction directory: ${extractDir}`, 'info');
+                const fs = require('fs');
+                fs.mkdirSync(extractDir, { recursive: true });
+                
+                logMessage(`Extracting ${filename}...`, 'info');
+                const extractCommand = `tar -xzf "${filePath}" -C "${extractDir}"`;
+                
+                await execAsync(extractCommand);
+                
+                // Find the extracted directory
+                const extractedContents = fs.readdirSync(extractDir);
+                const blastDir = extractedContents.find(name => name.startsWith('ncbi-blast-'));
+                
+                if (blastDir) {
+                    const extractedPath = path.join(extractDir, blastDir);
+                    logMessage(`Package extracted successfully to: ${extractedPath}`, 'success');
+                    
+                    // Store the extracted path for installation
+                    global.extractedBlastPath = extractedPath;
+                } else {
+                    throw new Error('Could not find extracted BLAST+ directory');
+                }
+            } catch (error) {
+                throw new Error(`Extraction failed: ${error.message}`);
             }
         }
 
@@ -976,24 +1117,121 @@
             const platform = os.platform();
             logMessage(`Installing BLAST+ tools for ${platform}...`, 'info');
             
+            const fs = require('fs');
+            const path = require('path');
+            const { exec, spawn } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            
             try {
-                // Create installation directory
-                const fs = require('fs');
-                if (!fs.existsSync(installPath)) {
-                    fs.mkdirSync(installPath, { recursive: true });
-                    logMessage(`Created installation directory: ${installPath}`, 'success');
-                }
-                
-                // Platform-specific installation simulation
                 if (platform === 'win32') {
-                    logMessage('Running Windows installer...', 'info');
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    // Windows: Run the executable installer
+                    logMessage('Running Windows installer with elevated privileges...', 'info');
+                    
+                    const filename = path.basename(downloadUrl);
+                    const tempDir = os.tmpdir();
+                    const installerPath = path.join(tempDir, filename);
+                    
+                    // Run installer with proper arguments
+                    const installArgs = [
+                        '/S', // Silent install
+                        `/D=${installPath}` // Installation directory
+                    ];
+                    
+                    return new Promise((resolve, reject) => {
+                        const installer = spawn(installerPath, installArgs, {
+                            stdio: 'pipe',
+                            shell: true
+                        });
+                        
+                        let output = '';
+                        installer.stdout.on('data', (data) => {
+                            output += data.toString();
+                            logMessage(`Installer: ${data.toString().trim()}`, 'info');
+                        });
+                        
+                        installer.stderr.on('data', (data) => {
+                            output += data.toString();
+                            logMessage(`Installer: ${data.toString().trim()}`, 'warning');
+                        });
+                        
+                        installer.on('close', (code) => {
+                            if (code === 0) {
+                                logMessage('Windows installer completed successfully', 'success');
+                                resolve();
+                            } else {
+                                reject(new Error(`Installer failed with exit code ${code}`));
+                            }
+                        });
+                        
+                        installer.on('error', (error) => {
+                            reject(new Error(`Failed to run installer: ${error.message}`));
+                        });
+                    });
+                    
                 } else {
-                    logMessage('Copying binaries to installation directory...', 'info');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // macOS/Linux: Copy files from extracted directory
+                    if (!global.extractedBlastPath) {
+                        throw new Error('Extracted BLAST+ path not found');
+                    }
+                    
+                    logMessage(`Creating installation directory: ${installPath}`, 'info');
+                    
+                    // Create installation directory with proper permissions
+                    try {
+                        fs.mkdirSync(installPath, { recursive: true, mode: 0o755 });
+                    } catch (error) {
+                        if (error.code === 'EACCES') {
+                            // Try with sudo for system directories
+                            logMessage('Requesting elevated privileges for installation...', 'warning');
+                            try {
+                                await execAsync(`sudo mkdir -p "${installPath}"`);
+                                await execAsync(`sudo chmod 755 "${installPath}"`);
+                            } catch (sudoError) {
+                                throw new Error(`Permission denied. Please run as administrator or choose a different installation path.`);
+                            }
+                        } else {
+                            throw error;
+                        }
+                    }
+                    
+                    logMessage('Copying BLAST+ binaries...', 'info');
+                    
+                    const binSourcePath = path.join(global.extractedBlastPath, 'bin');
+                    const binDestPath = path.join(installPath, 'bin');
+                    
+                    // Copy binaries
+                    try {
+                        await execAsync(`cp -r "${binSourcePath}" "${installPath}/"`);
+                        await execAsync(`chmod +x "${binDestPath}"/*`);
+                        logMessage('Binaries copied successfully', 'success');
+                    } catch (error) {
+                        if (error.message.includes('Permission denied')) {
+                            logMessage('Using elevated privileges to copy files...', 'warning');
+                            await execAsync(`sudo cp -r "${binSourcePath}" "${installPath}/"`);
+                            await execAsync(`sudo chmod +x "${binDestPath}"/*`);
+                            await execAsync(`sudo chown -R $(whoami) "${installPath}"`);
+                        } else {
+                            throw error;
+                        }
+                    }
+                    
+                    // Copy other necessary directories
+                    const additionalDirs = ['doc', 'data'];
+                    for (const dir of additionalDirs) {
+                        const sourcePath = path.join(global.extractedBlastPath, dir);
+                        if (fs.existsSync(sourcePath)) {
+                            try {
+                                await execAsync(`cp -r "${sourcePath}" "${installPath}/"`);
+                                logMessage(`Copied ${dir} directory`, 'success');
+                            } catch (error) {
+                                logMessage(`Warning: Could not copy ${dir} directory: ${error.message}`, 'warning');
+                            }
+                        }
+                    }
+                    
+                    logMessage('BLAST+ tools installed successfully', 'success');
                 }
-                
-                logMessage('BLAST+ tools installed successfully', 'success');
             } catch (error) {
                 throw new Error(`Installation failed: ${error.message}`);
             }
@@ -1003,16 +1241,77 @@
             const platform = os.platform();
             logMessage(`Configuring environment variables for ${platform}...`, 'info');
             
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+            
             try {
+                const binPath = path.join(installPath, 'bin');
+                
                 if (platform === 'win32') {
                     logMessage('Adding BLAST+ to Windows PATH...', 'info');
-                    // In real implementation, would modify Windows registry
+                    
+                    // For Windows, we'll create a batch script to add to PATH
+                    const batchScript = `@echo off
+echo Adding BLAST+ to PATH...
+setx PATH "%PATH%;${binPath}" /M
+echo BLAST+ added to system PATH
+pause`;
+                    
+                    const scriptPath = path.join(os.tmpdir(), 'add_blast_to_path.bat');
+                    fs.writeFileSync(scriptPath, batchScript);
+                    
+                    logMessage(`Created PATH configuration script: ${scriptPath}`, 'info');
+                    logMessage('Please run the script as Administrator to add BLAST+ to system PATH', 'warning');
+                    
                 } else {
+                    // macOS/Linux: Add to shell profile
                     logMessage('Adding BLAST+ to Unix PATH...', 'info');
-                    // In real implementation, would modify shell profile files
+                    
+                    const homeDir = os.homedir();
+                    const shellProfiles = [
+                        path.join(homeDir, '.bashrc'),
+                        path.join(homeDir, '.bash_profile'),
+                        path.join(homeDir, '.zshrc'),
+                        path.join(homeDir, '.profile')
+                    ];
+                    
+                    const pathExport = `\n# BLAST+ Tools\nexport PATH="${binPath}:$PATH"\n`;
+                    
+                    // Find existing shell profile or create .profile
+                    let profilePath = path.join(homeDir, '.profile');
+                    for (const profile of shellProfiles) {
+                        if (fs.existsSync(profile)) {
+                            profilePath = profile;
+                            break;
+                        }
+                    }
+                    
+                    try {
+                        // Check if BLAST+ is already in PATH
+                        const currentProfile = fs.existsSync(profilePath) ? fs.readFileSync(profilePath, 'utf8') : '';
+                        
+                        if (!currentProfile.includes(binPath)) {
+                            fs.appendFileSync(profilePath, pathExport);
+                            logMessage(`Added BLAST+ to PATH in ${profilePath}`, 'success');
+                            logMessage('Please restart your terminal or run: source ' + profilePath, 'info');
+                        } else {
+                            logMessage('BLAST+ already in PATH configuration', 'info');
+                        }
+                        
+                        // Also try to add to current session
+                        process.env.PATH = `${binPath}:${process.env.PATH}`;
+                        logMessage('Added BLAST+ to current session PATH', 'success');
+                        
+                    } catch (error) {
+                        logMessage(`Could not modify shell profile: ${error.message}`, 'warning');
+                        logMessage(`Please manually add ${binPath} to your PATH`, 'warning');
+                    }
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, 1500));
                 logMessage('Environment configuration completed', 'success');
             } catch (error) {
                 logMessage(`Environment configuration warning: ${error.message}`, 'warning');

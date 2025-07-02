@@ -4281,6 +4281,30 @@ ipcMain.handle('selectMultipleFiles', async () => {
   }
 });
 
+// Handle FASTA file selection for BLAST
+ipcMain.handle('selectFastaFile', async () => {
+  try {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(null, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'FASTA files', extensions: ['fasta', 'fa', 'fas'] },
+        { name: 'Text files', extensions: ['txt'] },
+        { name: 'All files', extensions: ['*'] }
+      ],
+      title: 'Select FASTA file for BLAST database'
+    });
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { success: true, filePath: result.filePaths[0] };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle project creation
 ipcMain.handle('createProjectDirectory', async (event, location, projectName) => {
   try {
