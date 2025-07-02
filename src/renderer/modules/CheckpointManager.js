@@ -583,7 +583,7 @@ class CheckpointManager {
             const checkpoint = this.checkpoints.find(cp => cp.id === checkpointId);
             if (!checkpoint) return;
             
-            const confirmed = confirm(`Are you sure you want to delete checkpoint "${checkpoint.name}"?`);
+            const confirmed = await this.showDeleteConfirmModal(checkpoint.name);
             if (!confirmed) return;
             
             this.checkpoints = this.checkpoints.filter(cp => cp.id !== checkpointId);
@@ -596,6 +596,19 @@ class CheckpointManager {
             console.error('❌ Error deleting checkpoint:', error);
             this.genomeBrowser.showNotification('Failed to delete checkpoint', 'error');
         }
+    }
+    
+    /**
+     * Show delete confirmation modal
+     */
+    async showDeleteConfirmModal(checkpointName) {
+        return new Promise((resolve) => {
+            this.showConfirmModal(
+                'Delete Checkpoint',
+                `Are you sure you want to delete checkpoint "${checkpointName}"?\n\nThis action cannot be undone.`,
+                resolve
+            );
+        });
     }
     
     /**
@@ -719,21 +732,175 @@ class CheckpointManager {
     }
     
     /**
-     * Prompt for checkpoint name
+     * Prompt for checkpoint name using custom modal
      */
     async promptForCheckpointName() {
         return new Promise((resolve) => {
-            const name = prompt('Enter checkpoint name:', this.generateCheckpointName(this.CHECKPOINT_TYPES.MANUAL));
-            resolve(name);
+            this.showNamePromptModal(resolve);
         });
     }
     
     /**
-     * Confirm rollback action
+     * Show custom name prompt modal
+     */
+    showNamePromptModal(callback) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('checkpointNamePromptModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'checkpointNamePromptModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>Create Checkpoint</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="checkpointNamePromptInput">Checkpoint Name:</label>
+                            <input type="text" id="checkpointNamePromptInput" class="form-control" 
+                                   placeholder="Enter checkpoint name..." 
+                                   value="${this.generateCheckpointName(this.CHECKPOINT_TYPES.MANUAL)}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="checkpointNamePromptConfirm" class="btn btn-primary">Create</button>
+                        <button class="btn modal-close">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            // Update the default value
+            const input = modal.querySelector('#checkpointNamePromptInput');
+            if (input) {
+                input.value = this.generateCheckpointName(this.CHECKPOINT_TYPES.MANUAL);
+            }
+        }
+        
+        // Set up event listeners
+        const confirmBtn = modal.querySelector('#checkpointNamePromptConfirm');
+        const input = modal.querySelector('#checkpointNamePromptInput');
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        
+        const handleConfirm = () => {
+            const name = input.value.trim();
+            modal.classList.remove('show');
+            callback(name || null);
+        };
+        
+        const handleCancel = () => {
+            modal.classList.remove('show');
+            callback(null);
+        };
+        
+        // Remove existing listeners
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        const newConfirmBtn = modal.querySelector('#checkpointNamePromptConfirm');
+        
+        newConfirmBtn.addEventListener('click', handleConfirm);
+        
+        closeButtons.forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', handleCancel);
+        });
+        
+        // Handle Enter key
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleConfirm();
+            }
+        });
+        
+        // Show modal and focus input
+        modal.classList.add('show');
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 100);
+    }
+    
+    /**
+     * Confirm rollback action using custom modal
      */
     async confirmRollback(checkpoint) {
-        const message = `Are you sure you want to rollback to checkpoint "${checkpoint.name}"?\n\nThis will restore the system state from ${checkpoint.timestamp.toLocaleString()}.\n\nCurrent state will be automatically saved as a backup.`;
-        return confirm(message);
+        return new Promise((resolve) => {
+            this.showConfirmModal(
+                'Confirm Rollback',
+                `Are you sure you want to rollback to checkpoint "${checkpoint.name}"?\n\nThis will restore the system state from ${checkpoint.timestamp.toLocaleString()}.\n\nCurrent state will be automatically saved as a backup.`,
+                resolve
+            );
+        });
+    }
+    
+    /**
+     * Show custom confirmation modal
+     */
+    showConfirmModal(title, message, callback) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('checkpointConfirmModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'checkpointConfirmModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3 id="checkpointConfirmTitle">${title}</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="checkpointConfirmMessage" style="white-space: pre-line; line-height: 1.5;">
+                            ${message}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="checkpointConfirmYes" class="btn btn-primary">Yes, Rollback</button>
+                        <button class="btn btn-secondary modal-close">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            // Update content
+            modal.querySelector('#checkpointConfirmTitle').textContent = title;
+            modal.querySelector('#checkpointConfirmMessage').textContent = message;
+        }
+        
+        // Set up event listeners
+        const confirmBtn = modal.querySelector('#checkpointConfirmYes');
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        
+        const handleConfirm = () => {
+            modal.classList.remove('show');
+            callback(true);
+        };
+        
+        const handleCancel = () => {
+            modal.classList.remove('show');
+            callback(false);
+        };
+        
+        // Remove existing listeners
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        const newConfirmBtn = modal.querySelector('#checkpointConfirmYes');
+        
+        newConfirmBtn.addEventListener('click', handleConfirm);
+        
+        closeButtons.forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', handleCancel);
+        });
+        
+        // Show modal
+        modal.classList.add('show');
     }
     
     /**
@@ -906,7 +1073,7 @@ class CheckpointManager {
      * Clear all checkpoints
      */
     async clearAllCheckpoints() {
-        const confirmed = confirm('Are you sure you want to delete all checkpoints? This action cannot be undone.');
+        const confirmed = await this.showClearAllConfirmModal();
         if (!confirmed) return;
         
         this.checkpoints = [];
@@ -914,6 +1081,19 @@ class CheckpointManager {
         this.updateCheckpointListUI();
         
         this.genomeBrowser.showNotification('All checkpoints cleared', 'success');
+    }
+    
+    /**
+     * Show clear all confirmation modal
+     */
+    async showClearAllConfirmModal() {
+        return new Promise((resolve) => {
+            this.showConfirmModal(
+                'Clear All Checkpoints',
+                `Are you sure you want to delete ALL checkpoints?\n\nThis will permanently remove ${this.checkpoints.length} checkpoint(s).\n\nThis action cannot be undone.`,
+                resolve
+            );
+        });
     }
     
     /**

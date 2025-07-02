@@ -528,22 +528,40 @@
                 },
                 
                 async createManualCheckpoint() {
-                    const name = prompt('Enter checkpoint name:', `Manual ${new Date().toLocaleTimeString()}`);
+                    const name = await this.promptForName(`Manual ${new Date().toLocaleTimeString()}`);
                     if (name) {
                         return await this.createCheckpoint(name, this.CHECKPOINT_TYPES.MANUAL);
                     }
                 },
                 
+                async promptForName(defaultName) {
+                    return new Promise((resolve) => {
+                        const name = window.prompt ? 
+                            window.prompt('Enter checkpoint name:', defaultName) : 
+                            defaultName;
+                        resolve(name);
+                    });
+                },
+                
                 async rollbackToCheckpoint(checkpointId) {
                     const checkpoint = this.checkpoints.find(cp => cp.id === checkpointId);
                     if (checkpoint) {
-                        const confirmed = confirm(`Rollback to "${checkpoint.name}"?`);
+                        const confirmed = await this.confirmAction(`Rollback to "${checkpoint.name}"?`);
                         if (confirmed) {
                             genomeBrowser.showNotification(`Rolled back to: ${checkpoint.name}`, 'success');
                             return true;
                         }
                     }
                     return false;
+                },
+                
+                async confirmAction(message) {
+                    return new Promise((resolve) => {
+                        const confirmed = window.confirm ? 
+                            window.confirm(message) : 
+                            true; // Default to true in test environment
+                        resolve(confirmed);
+                    });
                 },
                 
                 deleteCheckpoint(checkpointId) {
@@ -565,7 +583,7 @@
                 },
                 
                 async clearAllCheckpoints() {
-                    const confirmed = confirm('Clear all checkpoints?');
+                    const confirmed = await this.confirmAction('Clear all checkpoints?');
                     if (confirmed) {
                         this.checkpoints = [];
                         genomeBrowser.showNotification('All checkpoints cleared', 'success');
