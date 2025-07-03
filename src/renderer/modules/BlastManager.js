@@ -75,7 +75,7 @@ class BlastManager {
         }
     }
 
-    async runCommand(command) {
+    async runCommand(command, workingDirectory = null) {
         return new Promise((resolve, reject) => {
             const { exec } = require('child_process');
             const path = require('path');
@@ -93,7 +93,14 @@ class BlastManager {
                 console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
             }
 
-            exec(finalCommand, (error, stdout, stderr) => {
+            // Set execution options
+            const execOptions = {};
+            if (workingDirectory) {
+                execOptions.cwd = workingDirectory;
+                console.log('BlastManager: Setting working directory to:', workingDirectory);
+            }
+
+            exec(finalCommand, execOptions, (error, stdout, stderr) => {
                 if (error) {
                     console.error('BlastManager: Command execution error:', error);
                     console.error('BlastManager: Command stderr:', stderr);
@@ -993,13 +1000,17 @@ class BlastManager {
                 
                 try {
                     // Create the actual BLAST database
-                    // Use proper shell escaping for paths with spaces
-                    const escapedFilePath = filePath.replace(/"/g, '\\"');
-                    const escapedOutputPath = outputPath.replace(/"/g, '\\"');
-                    const escapedDbName = dbName.replace(/"/g, '\\"');
+                    // Use relative paths to avoid issues with spaces in absolute paths
+                    const path = require('path');
+                    const fileName = path.basename(filePath);
+                    const sourceDirectory = path.dirname(filePath);
+                    const outputName = path.basename(outputPath);
                     
-                    const makeblastdbCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbName}"`;
-                    await this.runCommand(makeblastdbCmd);
+                    // Build command with relative paths
+                    const makeblastdbCmd = `makeblastdb -in "${fileName}" -dbtype ${dbType} -out "${outputName}" -title "${dbName}"`;
+                    
+                    // Execute command in the source directory
+                    await this.runCommand(makeblastdbCmd, sourceDirectory);
                     
                     // Mark as ready and store additional metadata
                     const dbEntry = this.customDatabases.get(dbId);

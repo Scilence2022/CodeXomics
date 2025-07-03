@@ -1074,6 +1074,10 @@ class ProjectManagerWindow {
             if (window.electronAPI) {
                 // Get the absolute path for file operations
                 const filePath = this.getFileAbsolutePath(file);
+                console.log('🔍 ProjectManagerWindow.openFileInMainWindow Debug:');
+                console.log('   File object:', file);
+                console.log('   Current project:', this.currentProject);
+                console.log('   Resolved absolute path:', filePath);
                 
                 // First check if main window exists and its status
                 const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
@@ -1122,11 +1126,33 @@ class ProjectManagerWindow {
      * @returns {string} 绝对路径
      */
     getFileAbsolutePath(file) {
-        if (!file || !this.currentProject) return '';
+        if (!file || !this.currentProject) {
+            console.log('🔍 getFileAbsolutePath: Missing file or currentProject');
+            return '';
+        }
+        
+        console.log('🔍 getFileAbsolutePath called with file:', {
+            id: file.id,
+            name: file.name,
+            path: file.path,
+            absolutePath: file.absolutePath,
+            hasAbsolutePath: !!file.absolutePath
+        });
+        console.log('🔍 getFileAbsolutePath current project:', {
+            name: this.currentProject.name,
+            dataFolderPath: this.currentProject.dataFolderPath
+        });
         
         // 如果文件有绝对路径，直接返回
         if (file.absolutePath) {
+            console.log('🔍 getFileAbsolutePath: Using existing absolutePath:', file.absolutePath);
             return file.absolutePath;
+        }
+        
+        // 如果文件路径已经是绝对路径，直接返回
+        if (file.path && (file.path.startsWith('/') || file.path.includes(':\\'))) {
+            console.log('🔍 getFileAbsolutePath: Path is already absolute:', file.path);
+            return file.path;
         }
         
         // 如果文件有相对路径，构建绝对路径
@@ -1134,7 +1160,9 @@ class ProjectManagerWindow {
             const path = require('path');
             // 确保使用正确的路径分隔符
             const normalizedRelativePath = file.path.replace(/\\/g, '/');
-            return path.resolve(this.currentProject.dataFolderPath, normalizedRelativePath);
+            const absolutePath = path.resolve(this.currentProject.dataFolderPath, normalizedRelativePath);
+            console.log('🔍 getFileAbsolutePath: Constructed from dataFolderPath:', absolutePath);
+            return absolutePath;
         }
         
         // 兜底情况 - 使用动态项目目录名称构建路径
@@ -1148,10 +1176,13 @@ class ProjectManagerWindow {
             const projectDataPath = path.join(projectsDir, this.currentProject.name);
             
             const normalizedRelativePath = file.path.replace(/\\/g, '/');
-            return path.resolve(projectDataPath, normalizedRelativePath);
+            const absolutePath = path.resolve(projectDataPath, normalizedRelativePath);
+            console.log('🔍 getFileAbsolutePath: Constructed from project name:', absolutePath);
+            return absolutePath;
         }
         
         // 最后的兜底情况
+        console.log('🔍 getFileAbsolutePath: Using fallback path:', file.path || '');
         return file.path || '';
     }
 
@@ -3540,7 +3571,13 @@ Built with ❤️ for the bioinformatics community.
             const fileType = this.detectFileType(file.name);
             
             if (window.electronAPI && window.electronAPI.openFileInMainWindow) {
-                const result = await window.electronAPI.openFileInMainWindow(file.path);
+                // Use getFileAbsolutePath to resolve the correct absolute path
+                const filePath = this.getFileAbsolutePath(file);
+                console.log('🔍 previewFile Debug:');
+                console.log('   File object:', file);
+                console.log('   Resolved absolute path:', filePath);
+                
+                const result = await window.electronAPI.openFileInMainWindow(filePath);
                 if (result.success) {
                     this.showNotification(`Opened "${file.name}" for preview`, 'success');
                 } else {
