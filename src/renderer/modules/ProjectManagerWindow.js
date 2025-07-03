@@ -168,8 +168,35 @@ class ProjectManagerWindow {
             // 清空表单
             document.getElementById('projectName').value = '';
             document.getElementById('projectDescription').value = '';
-            document.getElementById('projectLocation').value = '';
+            
+            // 设置默认项目位置
+            this.setDefaultProjectLocation();
+            
             modal.style.display = 'block';
+        }
+    }
+
+    async setDefaultProjectLocation() {
+        try {
+            if (window.electronAPI && window.electronAPI.getProjectDirectoryName) {
+                const result = await window.electronAPI.getProjectDirectoryName();
+                if (result.success) {
+                    const os = require('os');
+                    const path = require('path');
+                    const documentsPath = path.join(os.homedir(), 'Documents');
+                    const defaultLocation = path.join(documentsPath, result.directoryName);
+                    document.getElementById('projectLocation').value = defaultLocation;
+                    console.log(`📁 Default project location set to: ${defaultLocation}`);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to set default project location:', error);
+            // 设置一个通用的默认位置
+            const os = require('os');
+            const path = require('path');
+            const documentsPath = path.join(os.homedir(), 'Documents');
+            const defaultLocation = path.join(documentsPath, 'Genome AI Studio Projects');
+            document.getElementById('projectLocation').value = defaultLocation;
         }
     }
 
@@ -210,42 +237,93 @@ class ProjectManagerWindow {
             return;
         }
 
+        if (!location) {
+            this.showNotification('Project location is required', 'warning');
+            return;
+        }
+
         try {
             const projectId = this.generateId();
-            const project = {
-                id: projectId,
-                name: name,
-                description: description,
-                location: location || 'Default',
-                created: new Date().toISOString(),
-                modified: new Date().toISOString(),
-                files: [],
-                folders: [
-                    { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
-                    { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
-                    { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
-                    { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
-                    { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
-                ],
-                metadata: {
-                    totalFiles: 0,
-                    totalSize: 0,
-                    lastOpened: new Date().toISOString()
+            
+            // Step 1: Create physical project structure
+            console.log(`🏗️ Creating project structure for "${name}" at "${location}"`);
+            
+            if (window.electronAPI && window.electronAPI.createNewProjectStructure) {
+                const structureResult = await window.electronAPI.createNewProjectStructure(location, name);
+                
+                if (!structureResult.success) {
+                    throw new Error(`Failed to create project structure: ${structureResult.error}`);
                 }
-            };
+                
+                console.log(`✅ Project structure created: ${structureResult.projectFilePath}`);
+                
+                // Step 2: Create project object with correct paths
+                const project = {
+                    id: projectId,
+                    name: name,
+                    description: description,
+                    location: location,
+                    projectFilePath: structureResult.projectFilePath,
+                    dataFolderPath: structureResult.dataFolderPath,
+                    created: new Date().toISOString(),
+                    modified: new Date().toISOString(),
+                    files: [],
+                    folders: [
+                        { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
+                        { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
+                        { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
+                        { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
+                        { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] }
+                    ],
+                    metadata: {
+                        totalFiles: 0,
+                        totalSize: 0,
+                        lastOpened: new Date().toISOString()
+                    },
+                    history: [{
+                        timestamp: new Date().toISOString(),
+                        action: 'created',
+                        description: `Project "${name}" created at ${location}`
+                    }]
+                };
 
-            this.projects.set(projectId, project);
-            await this.saveProjects();
-            
-            this.renderProjectTree();
-            this.selectProject(projectId);
-            this.closeModal('newProjectModal');
-            
-            this.showNotification(`Project "${name}" created successfully`, 'success');
+                // Step 3: Generate and save Project.GAI file
+                console.log(`💾 Creating Project.GAI file...`);
+                
+                if (!this.xmlHandler) {
+                    this.xmlHandler = new ProjectXMLHandler();
+                }
+                
+                const xmlContent = this.xmlHandler.projectToXML(project);
+                const saveResult = await window.electronAPI.saveProjectToSpecificFile(structureResult.projectFilePath, xmlContent);
+                
+                if (!saveResult.success) {
+                    throw new Error(`Failed to save project file: ${saveResult.error}`);
+                }
+                
+                console.log(`✅ Project.GAI file created: ${structureResult.projectFilePath}`);
+                
+                // Step 4: Add to project list and update UI
+                this.projects.set(projectId, project);
+                await this.saveProjects();
+                
+                this.renderProjectTree();
+                this.selectProject(projectId);
+                this.closeModal('newProjectModal');
+                
+                this.showNotification(`Project "${name}" created successfully at ${location}`, 'success');
+                
+                console.log(`🎉 Project creation completed successfully!`);
+                console.log(`📁 Project directory: ${structureResult.dataFolderPath}`);
+                console.log(`📄 Project file: ${structureResult.projectFilePath}`);
+                
+            } else {
+                throw new Error('Project creation API not available');
+            }
             
         } catch (error) {
             console.error('Error creating project:', error);
-            this.showNotification('Failed to create project', 'error');
+            this.showNotification(`Failed to create project: ${error.message}`, 'error');
         }
     }
 

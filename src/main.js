@@ -5215,25 +5215,37 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
 // Handle creating new project structure
 ipcMain.handle('createNewProjectStructure', async (event, location, projectName) => {
   try {
+    console.log(`🏗️ Creating project structure: "${projectName}" at "${location}"`);
+    
     // 新的目录结构：所有文件都在项目目录内
     const projectDir = path.join(location, projectName);
     const projectFilePath = path.join(projectDir, 'Project.GAI'); // 固定文件名
     
-    // 创建项目目录和子文件夹
-    if (!fs.existsSync(projectDir)) {
-      fs.mkdirSync(projectDir, { recursive: true });
+    // 检查项目目录是否已存在
+    if (fs.existsSync(projectDir)) {
+      return {
+        success: false,
+        error: `Project directory "${projectName}" already exists at this location`
+      };
     }
+    
+    // 创建项目目录
+    console.log(`📁 Creating project directory: ${projectDir}`);
+    fs.mkdirSync(projectDir, { recursive: true });
     
     // 创建子文件夹结构
     const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
+    console.log(`📂 Creating subdirectories: ${subFolders.join(', ')}`);
+    
     subFolders.forEach(folderName => {
       const subFolderPath = path.join(projectDir, folderName);
-      if (!fs.existsSync(subFolderPath)) {
-        fs.mkdirSync(subFolderPath, { recursive: true });
-      }
+      fs.mkdirSync(subFolderPath, { recursive: true });
+      console.log(`  ✅ Created: ${folderName}/`);
     });
     
-    console.log(`✅ Created new project structure: ${projectFilePath} in ${projectDir}`);
+    console.log(`✅ Project structure created successfully`);
+    console.log(`📁 Project directory: ${projectDir}`);
+    console.log(`📄 Project file will be: ${projectFilePath}`);
     
     return {
       success: true,
@@ -5243,7 +5255,7 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
     };
     
   } catch (error) {
-    console.error('Error creating project structure:', error);
+    console.error('❌ Error creating project structure:', error);
     return { 
       success: false, 
       error: error.message 
@@ -5254,20 +5266,30 @@ ipcMain.handle('createNewProjectStructure', async (event, location, projectName)
 // Handle saving project to specific file
 ipcMain.handle('saveProjectToSpecificFile', async (event, filePath, content) => {
   try {
+    console.log(`💾 Saving project file to: ${filePath}`);
+    
     // 确保目录存在
     const dirPath = path.dirname(filePath);
     if (!fs.existsSync(dirPath)) {
+      console.log(`📁 Creating directory: ${dirPath}`);
       fs.mkdirSync(dirPath, { recursive: true });
     }
     
     // 写入文件
     fs.writeFileSync(filePath, content, 'utf8');
-    console.log(`✅ Project saved to: ${filePath}`);
     
-    return { success: true, filePath: filePath };
+    // 验证文件是否创建成功
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      console.log(`✅ Project file saved successfully: ${filePath}`);
+      console.log(`📊 File size: ${stats.size} bytes`);
+      return { success: true, filePath: filePath, size: stats.size };
+    } else {
+      throw new Error('File was not created successfully');
+    }
     
   } catch (error) {
-    console.error('Error saving project to specific file:', error);
+    console.error('❌ Error saving project to specific file:', error);
     return { 
       success: false, 
       error: error.message 
