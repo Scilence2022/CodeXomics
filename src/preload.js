@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Path utilities
   getDocumentsPath: () => ipcRenderer.invoke('getDocumentsPath'),
+  getProjectDirectoryName: () => ipcRenderer.invoke('getProjectDirectoryName'),
   createProjectFolder: (projectName, folderName) => ipcRenderer.invoke('createProjectFolder', projectName, folderName),
   saveProjectsData: (projectsData) => ipcRenderer.invoke('saveProjectsData', projectsData),
   loadProjectsData: () => ipcRenderer.invoke('loadProjectsData'),

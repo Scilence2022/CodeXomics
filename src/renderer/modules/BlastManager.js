@@ -2971,11 +2971,11 @@ class BlastManager {
                     return customDb.dbPath;
                 }
                 
-                // Fallback to default path construction
+                // Fallback to default path construction - use static directory name
                 const path = require('path');
                 const os = require('os');
                 const documentsPath = os.homedir() + '/Documents';
-                const blastDbPath = path.join(documentsPath, 'GenomeExplorer Projects', 'blast_databases', dbId);
+                const blastDbPath = path.join(documentsPath, 'Genome AI Studio Projects', 'blast_databases', dbId);
                 return blastDbPath;
             } else {
                 throw new Error(`Custom database not found: ${dbId}`);

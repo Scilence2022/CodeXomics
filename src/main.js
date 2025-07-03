@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const MCPGenomeBrowserServer = require('./mcp-server');
 
+// Application constants
+const APP_NAME = 'Genome AI Studio';
+const PROJECT_DIRECTORY_NAME = 'Genome AI Studio Projects';
+
 let mainWindow;
 let mcpServer = null;
 let mcpServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
@@ -4557,7 +4561,8 @@ ipcMain.handle('getDocumentsPath', async () => {
 ipcMain.handle('createProjectFolder', async (event, projectName, folderName) => {
   try {
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const dirResult = await ipcMain.invoke('getProjectDirectoryName');
+    const projectsDir = path.join(documentsPath, dirResult.directoryName);
     const projectDir = path.join(projectsDir, projectName);
     const folderPath = path.join(projectDir, folderName);
     
@@ -5155,7 +5160,8 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
     
     // 修正：直接使用项目目录结构，不要额外的data子目录
     const documentsPath = app.getPath('documents');
-    const projectsDir = path.join(documentsPath, 'GenomeExplorer Projects');
+    const dirResult = await ipcMain.invoke('getProjectDirectoryName');
+    const projectsDir = path.join(documentsPath, dirResult.directoryName);
     const projectDir = path.join(projectsDir, projectName);
     const targetFolderDir = path.join(projectDir, folderPath);
     
@@ -6312,3 +6318,35 @@ function resetWindowPositions() {
 }
 
 // ========== END WINDOW LAYOUT FUNCTIONS ==========
+
+// Handle getting project directory name
+ipcMain.handle('getProjectDirectoryName', async () => {
+  try {
+    const documentsPath = app.getPath('documents');
+    
+    // Check which project directory exists
+    const possibleNames = [
+      'Genome AI Studio Projects',
+      'GenomeExplorer Projects',
+      'GenomeAI Studio Projects',
+      'Genome Explorer Projects'
+    ];
+    
+    for (const name of possibleNames) {
+      const testPath = path.join(documentsPath, name);
+      if (fs.existsSync(testPath)) {
+        console.log(`✅ Found existing project directory: ${name}`);
+        return { success: true, directoryName: name };
+      }
+    }
+    
+    // If none exist, use the default
+    const defaultName = PROJECT_DIRECTORY_NAME;
+    console.log(`📁 Using default project directory name: ${defaultName}`);
+    return { success: true, directoryName: defaultName };
+    
+  } catch (error) {
+    console.error('Error getting project directory name:', error);
+    return { success: false, error: error.message };
+  }
+});
