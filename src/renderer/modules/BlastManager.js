@@ -87,12 +87,16 @@ class BlastManager {
             if (isBlastCommand) {
                 // Set BLASTDB environment variable for the command
                 const localDbPath = this.config.localDbPath; // Use the configured localDbPath
-                finalCommand = `export BLASTDB=${localDbPath} && ${command}`;
+                // Properly escape the BLASTDB path for shell execution
+                const escapedDbPath = localDbPath.replace(/"/g, '\\"');
+                finalCommand = `export BLASTDB="${escapedDbPath}" && ${command}`;
                 console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
             }
 
             exec(finalCommand, (error, stdout, stderr) => {
                 if (error) {
+                    console.error('BlastManager: Command execution error:', error);
+                    console.error('BlastManager: Command stderr:', stderr);
                     reject(error);
                     return;
                 }
@@ -989,7 +993,12 @@ class BlastManager {
                 
                 try {
                     // Create the actual BLAST database
-                    const makeblastdbCmd = `makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}" -title "${dbName}"`;
+                    // Use proper shell escaping for paths with spaces
+                    const escapedFilePath = filePath.replace(/"/g, '\\"');
+                    const escapedOutputPath = outputPath.replace(/"/g, '\\"');
+                    const escapedDbName = dbName.replace(/"/g, '\\"');
+                    
+                    const makeblastdbCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbName}"`;
                     await this.runCommand(makeblastdbCmd);
                     
                     // Mark as ready and store additional metadata
