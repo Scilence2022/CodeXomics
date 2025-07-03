@@ -1059,10 +1059,16 @@ class ProjectManagerWindow {
             return path.resolve(this.currentProject.dataFolderPath, normalizedRelativePath);
         }
         
-        // 兜底情况 - 如果没有dataFolderPath，尝试使用项目位置构建
-        if (file.path && this.currentProject.location && this.currentProject.name) {
+        // 兜底情况 - 使用动态项目目录名称构建路径
+        if (file.path && this.currentProject.name) {
             const path = require('path');
-            const projectDataPath = path.join(this.currentProject.location, this.currentProject.name);
+            const os = require('os');
+            
+            // 使用动态项目目录名称
+            const documentsPath = path.join(os.homedir(), 'Documents');
+            const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
+            const projectDataPath = path.join(projectsDir, this.currentProject.name);
+            
             const normalizedRelativePath = file.path.replace(/\\/g, '/');
             return path.resolve(projectDataPath, normalizedRelativePath);
         }
@@ -3013,11 +3019,21 @@ System Information:
                         throw new Error('Invalid project data structure');
                     }
                     
-                    // Set up project paths
+                    // Set up project paths for new directory structure
                     project.projectFilePath = filePath;
-                    const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
-                    project.dataFolderPath = `${projectDir}/${project.name}`;
-                    project.location = projectDir;
+                    
+                    // 检查是否为新结构（Project.GAI 在项目目录内）
+                    if (fileName === 'Project.GAI') {
+                        // 新结构：Project.GAI 在项目目录内
+                        const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                        project.dataFolderPath = projectDir;
+                        project.location = projectDir.substring(0, projectDir.lastIndexOf('/'));
+                    } else {
+                        // 旧结构：ProjectName.prj.GAI 与项目目录平级
+                        const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                        project.dataFolderPath = `${projectDir}/${project.name}`;
+                        project.location = projectDir;
+                    }
                     
                     // Update project metadata
                     project.xmlFileName = fileName;

@@ -1029,7 +1029,7 @@ function createMenu() {
               const result = await dialog.showOpenDialog(null, {
                 properties: ['openFile'],
                 filters: [
-                  { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+                  { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
                   { name: 'XML Files', extensions: ['xml'] },
                   { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] }
@@ -3446,7 +3446,7 @@ function createProjectManagerMenu(projectManagerWindow) {
             const result = await dialog.showOpenDialog(projectManagerWindow, {
               properties: ['openFile'],
               filters: [
-                { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+                { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
                 { name: 'XML Files', extensions: ['xml'] },
                 { name: 'Project Files', extensions: ['genomeproj', 'json'] },
                 { name: 'All Files', extensions: ['*'] }
@@ -4244,7 +4244,7 @@ ipcMain.handle('selectProjectFile', async () => {
     const result = await dialog.showOpenDialog(null, {
       properties: ['openFile'],
       filters: [
-        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+        { name: 'Genome AI Studio Project Files', extensions: ['GAI', 'prj.GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj', 'json'] },
         { name: 'All Files', extensions: ['*'] }
@@ -5021,30 +5021,36 @@ ipcMain.handle('saveProjectFile', async (event, defaultPath, content) => {
   try {
     const { dialog } = require('electron');
     
-    // 确保默认文件名包含.prj.GAI扩展名
+    // 新结构：默认保存为 Project.GAI
     let defaultFileName = defaultPath;
-    if (!defaultFileName.endsWith('.prj.GAI')) {
-      if (defaultFileName.endsWith('.xml')) {
-        defaultFileName = defaultFileName.replace('.xml', '.prj.GAI');
-      } else {
-        defaultFileName += '.prj.GAI';
-      }
+    if (defaultFileName.endsWith('.prj.GAI') || defaultFileName.endsWith('.xml')) {
+      // 如果是旧格式，转换为新格式
+      const dir = path.dirname(defaultFileName);
+      defaultFileName = path.join(dir, 'Project.GAI');
+    } else if (!defaultFileName.endsWith('Project.GAI')) {
+      defaultFileName = path.join(defaultFileName, 'Project.GAI');
     }
     
     const result = await dialog.showSaveDialog(null, {
       defaultPath: defaultFileName,
       filters: [
-        { name: 'Genome AI Studio Project Files', extensions: ['prj.GAI'] },
+        { name: 'Genome AI Studio Project Files', extensions: ['GAI'] },
         { name: 'XML Files', extensions: ['xml'] },
         { name: 'Project Files', extensions: ['genomeproj'] },
         { name: 'All Files', extensions: ['*'] }
       ],
-      title: 'Save Project as XML'
+      title: 'Save Project File'
     });
     
     if (!result.canceled && result.filePath) {
+      // 确保父目录存在
+      const parentDir = path.dirname(result.filePath);
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+      
       fs.writeFileSync(result.filePath, content, 'utf8');
-      console.log(`✅ Project saved as XML: ${result.filePath}`);
+      console.log(`✅ Project saved: ${result.filePath}`);
       return { success: true, filePath: result.filePath };
     }
     
@@ -5209,30 +5215,31 @@ ipcMain.handle('copyFileToProject', async (event, sourcePath, projectName, folde
 // Handle creating new project structure
 ipcMain.handle('createNewProjectStructure', async (event, location, projectName) => {
   try {
-    // 创建项目文件路径和数据文件夹路径
-    const projectFilePath = path.join(location, `${projectName}.prj.GAI`);
-    const dataFolderPath = path.join(location, projectName);
+    // 新的目录结构：所有文件都在项目目录内
+    const projectDir = path.join(location, projectName);
+    const projectFilePath = path.join(projectDir, 'Project.GAI'); // 固定文件名
     
-    // 创建数据文件夹和子文件夹
-    if (!fs.existsSync(dataFolderPath)) {
-      fs.mkdirSync(dataFolderPath, { recursive: true });
+    // 创建项目目录和子文件夹
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true });
     }
     
-    // 修正：创建子文件夹结构，使用大写首字母以匹配UI显示
-    const subFolders = ['Genomes', 'Annotations', 'Variants', 'Reads', 'Analysis'];
+    // 创建子文件夹结构
+    const subFolders = ['genomes', 'annotations', 'variants', 'reads', 'analysis'];
     subFolders.forEach(folderName => {
-      const subFolderPath = path.join(dataFolderPath, folderName);
+      const subFolderPath = path.join(projectDir, folderName);
       if (!fs.existsSync(subFolderPath)) {
         fs.mkdirSync(subFolderPath, { recursive: true });
       }
     });
     
-    console.log(`✅ Created project structure: ${projectFilePath} and ${dataFolderPath}`);
+    console.log(`✅ Created new project structure: ${projectFilePath} in ${projectDir}`);
     
     return {
       success: true,
       projectFilePath: projectFilePath,
-      dataFolderPath: dataFolderPath
+      dataFolderPath: projectDir, // 项目目录即为数据目录
+      projectDir: projectDir
     };
     
   } catch (error) {
@@ -5298,18 +5305,24 @@ ipcMain.handle('saveProjectAs', async (event, defaultProjectName) => {
 // Handle checking if project exists
 ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
   try {
-    const projectFilePath = path.join(directory, `${projectName}.prj.GAI`);
-    const dataFolderPath = path.join(directory, projectName);
+    // 新结构：检查项目目录内的 Project.GAI 文件
+    const projectDir = path.join(directory, projectName);
+    const newProjectFilePath = path.join(projectDir, 'Project.GAI');
     
-    const fileExists = fs.existsSync(projectFilePath);
-    const folderExists = fs.existsSync(dataFolderPath);
+    // 向后兼容：也检查旧结构
+    const oldProjectFilePath = path.join(directory, `${projectName}.prj.GAI`);
+    
+    const newFileExists = fs.existsSync(newProjectFilePath);
+    const oldFileExists = fs.existsSync(oldProjectFilePath);
+    const folderExists = fs.existsSync(projectDir);
     
     return {
-      exists: fileExists || folderExists,
-      fileExists: fileExists,
+      exists: newFileExists || oldFileExists || folderExists,
+      fileExists: newFileExists || oldFileExists,
       folderExists: folderExists,
-      projectFilePath: projectFilePath,
-      dataFolderPath: dataFolderPath
+      projectFilePath: newFileExists ? newProjectFilePath : oldProjectFilePath,
+      dataFolderPath: projectDir,
+      isNewStructure: newFileExists
     };
     
   } catch (error) {
@@ -5324,25 +5337,31 @@ ipcMain.handle('checkProjectExists', async (event, directory, projectName) => {
 // Handle copying project to new location
 ipcMain.handle('copyProject', async (event, sourceProjectFile, sourceDataFolder, targetDirectory, projectName) => {
   try {
-    const targetProjectFile = path.join(targetDirectory, `${projectName}.prj.GAI`);
-    const targetDataFolder = path.join(targetDirectory, projectName);
+    // 新结构：目标项目目录和文件
+    const targetProjectDir = path.join(targetDirectory, projectName);
+    const targetProjectFile = path.join(targetProjectDir, 'Project.GAI');
     
-    // 复制项目文件
+    // 创建目标项目目录
+    if (!fs.existsSync(targetProjectDir)) {
+      fs.mkdirSync(targetProjectDir, { recursive: true });
+    }
+    
+    // 复制项目文件到新位置
     if (fs.existsSync(sourceProjectFile)) {
       fs.copyFileSync(sourceProjectFile, targetProjectFile);
       console.log(`✅ Copied project file: ${sourceProjectFile} → ${targetProjectFile}`);
     }
     
-    // 复制数据文件夹
-    if (fs.existsSync(sourceDataFolder)) {
-      await copyDirectoryRecursive(sourceDataFolder, targetDataFolder);
-      console.log(`✅ Copied data folder: ${sourceDataFolder} → ${targetDataFolder}`);
+    // 复制数据文件夹内容（如果源数据文件夹存在且不同于目标目录）
+    if (fs.existsSync(sourceDataFolder) && sourceDataFolder !== targetProjectDir) {
+      await copyDirectoryRecursive(sourceDataFolder, targetProjectDir);
+      console.log(`✅ Copied data folder: ${sourceDataFolder} → ${targetProjectDir}`);
     }
     
     return {
       success: true,
       targetProjectFile: targetProjectFile,
-      targetDataFolder: targetDataFolder
+      targetDataFolder: targetProjectDir
     };
     
   } catch (error) {
