@@ -1054,10 +1054,20 @@ class ProjectManagerWindow {
         // 如果文件有相对路径，构建绝对路径
         if (file.path && this.currentProject.dataFolderPath) {
             const path = require('path');
-            return path.resolve(this.currentProject.dataFolderPath, file.path);
+            // 确保使用正确的路径分隔符
+            const normalizedRelativePath = file.path.replace(/\\/g, '/');
+            return path.resolve(this.currentProject.dataFolderPath, normalizedRelativePath);
         }
         
-        // 兜底情况
+        // 兜底情况 - 如果没有dataFolderPath，尝试使用项目位置构建
+        if (file.path && this.currentProject.location && this.currentProject.name) {
+            const path = require('path');
+            const projectDataPath = path.join(this.currentProject.location, this.currentProject.name);
+            const normalizedRelativePath = file.path.replace(/\\/g, '/');
+            return path.resolve(projectDataPath, normalizedRelativePath);
+        }
+        
+        // 最后的兜底情况
         return file.path || '';
     }
 
