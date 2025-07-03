@@ -362,6 +362,54 @@
             color: #c62828;
         }
 
+        .manual-install-section {
+            margin: 20px 0;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .manual-install-actions {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .manual-install-instructions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .manual-install-instructions h5 {
+            margin-bottom: 10px;
+        }
+
+        .manual-install-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .manual-install-instructions li {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -584,7 +632,15 @@
                 }
             } else if (platform === 'win32') {
                 platformDisplay = 'Windows';
-                archDisplay = arch === 'x64' ? 'x64 (64-bit)' : 'x32 (32-bit)';
+                // Fix: Always show 64-bit for Windows since win32 platform can be 64-bit
+                if (arch === 'x64') {
+                    archDisplay = 'x64 (64-bit)';
+                } else if (arch === 'ia32') {
+                    archDisplay = 'x32 (32-bit)';
+                } else {
+                    // For other architectures, show as 64-bit (most common case)
+                    archDisplay = 'x64 (64-bit)';
+                }
             } else if (platform === 'linux') {
                 platformDisplay = 'Linux';
                 if (arch === 'arm64' || arch === 'aarch64') {
@@ -1132,40 +1188,84 @@
                     const tempDir = os.tmpdir();
                     const installerPath = path.join(tempDir, filename);
                     
-                    // Run installer with proper arguments
-                    const installArgs = [
-                        '/S', // Silent install
-                        `/D=${installPath}` // Installation directory
-                    ];
+                    // Check if installer file exists
+                    if (!fs.existsSync(installerPath)) {
+                        throw new Error(`Installer file not found: ${installerPath}`);
+                    }
+                    
+                    // First try to run installer with elevated privileges using PowerShell
+                    logMessage('Attempting to run installer with administrator privileges...', 'info');
+                    
+                    const powershellCommand = `Start-Process -FilePath "${installerPath}" -ArgumentList "/S", "/D=${installPath}" -Verb RunAs -Wait`;
                     
                     return new Promise((resolve, reject) => {
-                        const installer = spawn(installerPath, installArgs, {
+                        // Try PowerShell elevation first
+                        const powershell = spawn('powershell.exe', ['-Command', powershellCommand], {
                             stdio: 'pipe',
                             shell: true
                         });
                         
                         let output = '';
-                        installer.stdout.on('data', (data) => {
+                        let errorOutput = '';
+                        
+                        powershell.stdout.on('data', (data) => {
                             output += data.toString();
-                            logMessage(`Installer: ${data.toString().trim()}`, 'info');
+                            logMessage(`PowerShell: ${data.toString().trim()}`, 'info');
                         });
                         
-                        installer.stderr.on('data', (data) => {
-                            output += data.toString();
-                            logMessage(`Installer: ${data.toString().trim()}`, 'warning');
+                        powershell.stderr.on('data', (data) => {
+                            errorOutput += data.toString();
+                            logMessage(`PowerShell Error: ${data.toString().trim()}`, 'warning');
                         });
                         
-                        installer.on('close', (code) => {
+                        powershell.on('close', (code) => {
                             if (code === 0) {
-                                logMessage('Windows installer completed successfully', 'success');
+                                logMessage('Windows installer completed successfully with elevated privileges', 'success');
                                 resolve();
                             } else {
-                                reject(new Error(`Installer failed with exit code ${code}`));
+                                logMessage(`PowerShell elevation failed (code: ${code}), trying direct execution...`, 'warning');
+                                
+                                // Fallback to direct execution
+                                const fallbackInstaller = spawn(installerPath, ['/S', `/D=${installPath}`], {
+                                    stdio: 'pipe',
+                                    shell: true
+                                });
+                                
+                                let fallbackOutput = '';
+                                fallbackInstaller.stdout.on('data', (data) => {
+                                    fallbackOutput += data.toString();
+                                    logMessage(`Installer: ${data.toString().trim()}`, 'info');
+                                });
+                                
+                                fallbackInstaller.stderr.on('data', (data) => {
+                                    fallbackOutput += data.toString();
+                                    logMessage(`Installer: ${data.toString().trim()}`, 'warning');
+                                });
+                                
+                                fallbackInstaller.on('close', (fallbackCode) => {
+                                    if (fallbackCode === 0) {
+                                        logMessage('Windows installer completed successfully', 'success');
+                                        resolve();
+                                    } else {
+                                        logMessage('Installation failed. Providing manual installation option...', 'error');
+                                        showManualInstallationOption(installerPath);
+                                        reject(new Error(`Installer failed with exit code ${fallbackCode}. Please try manual installation.`));
+                                    }
+                                });
+                                
+                                fallbackInstaller.on('error', (fallbackError) => {
+                                    logMessage('Installation failed. Providing manual installation option...', 'error');
+                                    showManualInstallationOption(installerPath);
+                                    reject(new Error(`Failed to run installer: ${fallbackError.message}. Please try manual installation.`));
+                                });
                             }
                         });
                         
-                        installer.on('error', (error) => {
-                            reject(new Error(`Failed to run installer: ${error.message}`));
+                        powershell.on('error', (error) => {
+                            logMessage(`PowerShell execution failed: ${error.message}`, 'warning');
+                            logMessage('Providing manual installation option...', 'info');
+                            showManualInstallationOption(installerPath);
+                            reject(new Error(`Failed to run installer with elevated privileges: ${error.message}. Please try manual installation.`));
                         });
                     });
                     
@@ -1235,6 +1335,63 @@
             } catch (error) {
                 throw new Error(`Installation failed: ${error.message}`);
             }
+        }
+
+        function showManualInstallationOption(installerPath) {
+            logMessage('=== MANUAL INSTALLATION OPTION ===', 'info');
+            logMessage(`Installer downloaded to: ${installerPath}`, 'info');
+            logMessage('You can manually run the installer with administrator privileges:', 'info');
+            logMessage('1. Right-click on the installer file', 'info');
+            logMessage('2. Select "Run as administrator"', 'info');
+            logMessage('3. Follow the installation wizard', 'info');
+            
+            // Create a button to open the installer location
+            const manualInstallSection = document.createElement('div');
+            manualInstallSection.className = 'manual-install-section';
+            manualInstallSection.innerHTML = `
+                <div class="alert alert-warning">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Manual Installation Required</h4>
+                    <p>Automatic installation failed. You can manually install BLAST+ using the downloaded installer.</p>
+                    <div class="manual-install-actions">
+                        <button id="openInstallerLocation" class="btn btn-primary">
+                            <i class="fas fa-folder-open"></i> Open Installer Location
+                        </button>
+                        <button id="runManualInstaller" class="btn btn-success">
+                            <i class="fas fa-play"></i> Run Installer Manually
+                        </button>
+                    </div>
+                    <div class="manual-install-instructions">
+                        <h5>Manual Installation Steps:</h5>
+                        <ol>
+                            <li>Click "Open Installer Location" to navigate to the installer</li>
+                            <li>Right-click on the installer file</li>
+                            <li>Select "Run as administrator"</li>
+                            <li>Follow the installation wizard</li>
+                            <li>After installation, restart this application</li>
+                        </ol>
+                    </div>
+                </div>
+            `;
+            
+            // Insert the manual install section after the progress container
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer && progressContainer.parentNode) {
+                progressContainer.parentNode.insertBefore(manualInstallSection, progressContainer.nextSibling);
+            }
+            
+            // Add event listeners for the buttons
+            document.getElementById('openInstallerLocation').addEventListener('click', () => {
+                const { shell } = require('electron');
+                const path = require('path');
+                shell.showItemInFolder(installerPath);
+                logMessage('Opened installer location in file explorer', 'info');
+            });
+            
+            document.getElementById('runManualInstaller').addEventListener('click', () => {
+                const { shell } = require('electron');
+                shell.openPath(installerPath);
+                logMessage('Attempting to run installer manually...', 'info');
+            });
         }
 
         async function configureEnvironment() {

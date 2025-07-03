@@ -90,7 +90,8 @@ class ConfigManager {
                         ui: electronAPI_path.join(configDir, 'ui-preferences.json'),
                         chat: electronAPI_path.join(configDir, 'chat-history.json'),
                         app: electronAPI_path.join(configDir, 'app-settings.json'),
-                        evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json')
+                        evolution: electronAPI_path.join(configDir, 'conversation-evolution-data.json'),
+                        blast: electronAPI_path.join(configDir, 'blast-databases.json')
                     };
                     console.log('electronAPI config paths:', paths);
                     console.log('=== getConfigPath Debug End (electronAPI success) ===');
@@ -125,7 +126,8 @@ class ConfigManager {
                                 ui: path.join(configDir, 'ui-preferences.json'),
                                 chat: path.join(configDir, 'chat-history.json'),
                                 app: path.join(configDir, 'app-settings.json'),
-                                evolution: path.join(configDir, 'conversation-evolution-data.json')
+                                evolution: path.join(configDir, 'conversation-evolution-data.json'),
+                                blast: path.join(configDir, 'blast-databases.json')
                             };
                             
                             console.log('Final config paths using require:');
@@ -293,6 +295,23 @@ class ConfigManager {
                     export: 'Ctrl+E',
                     chat: 'Ctrl+H',
                     help: 'F1'
+                }
+            },
+            blast: {
+                customDatabases: {},
+                settings: {
+                    version: '1.0',
+                    autoValidate: true,
+                    validateOnStartup: true,
+                    maxDatabaseAge: 86400000, // 24 hours in milliseconds
+                    backupEnabled: true,
+                    compressionEnabled: false
+                },
+                metadata: {
+                    lastUpdated: null,
+                    totalDatabases: 0,
+                    lastValidation: null,
+                    migrationVersion: '1.0'
                 }
             }
         };
@@ -466,7 +485,8 @@ class ConfigManager {
                 ui: this.configPath.ui,
                 chat: this.configPath.chat,
                 app: this.configPath.app,
-                evolution: this.configPath.evolution
+                evolution: this.configPath.evolution,
+                blast: this.configPath.blast
             };
 
             for (const [section, filePath] of Object.entries(configFiles)) {
@@ -530,6 +550,40 @@ class ConfigManager {
             if (appSettings) {
                 this.config.app = { ...this.config.app, ...JSON.parse(appSettings) };
                 console.log('App settings loaded from localStorage');
+            }
+
+            // Load BLAST databases (migration from localStorage)
+            const blastDatabases = localStorage.getItem('blast_custom_databases');
+            if (blastDatabases) {
+                try {
+                    const savedData = JSON.parse(blastDatabases);
+                    let databases;
+                    
+                    if (Array.isArray(savedData)) {
+                        // Old format - direct array
+                        databases = savedData;
+                        console.log('Loading BLAST databases from old localStorage format');
+                    } else if (savedData.databases) {
+                        // New format - with metadata
+                        databases = savedData.databases;
+                        console.log('Loading BLAST databases from new localStorage format');
+                    }
+                    
+                    if (databases) {
+                        // Convert array format to object format for ConfigManager
+                        const databasesObject = {};
+                        databases.forEach(([id, data]) => {
+                            databasesObject[id] = data;
+                        });
+                        
+                        this.config.blast.customDatabases = databasesObject;
+                        this.config.blast.metadata.lastUpdated = new Date().toISOString();
+                        this.config.blast.metadata.totalDatabases = databases.length;
+                        console.log(`Migrated ${databases.length} BLAST databases from localStorage`);
+                    }
+                } catch (error) {
+                    console.error('Error migrating BLAST databases from localStorage:', error);
+                }
             }
 
             console.log('Configuration loaded from localStorage successfully');
@@ -609,7 +663,8 @@ class ConfigManager {
                 [this.configPath.ui]: this.config.ui,
                 [this.configPath.chat]: this.config.chat,
                 [this.configPath.app]: this.config.app,
-                [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig()
+                [this.configPath.evolution]: this.config.evolution || this.getDefaultEvolutionConfig(),
+                [this.configPath.blast]: this.config.blast
             };
 
             for (const [filePath, data] of Object.entries(configFiles)) {
@@ -957,5 +1012,145 @@ class ConfigManager {
             usingLocalStorage: this.configPath === null,
             isInitialized: this.isInitialized
         };
+    }
+
+    // BLAST Database specific methods
+    async getBlastDatabases() {
+        await this.waitForInitialization();
+        return this.config.blast.customDatabases || {};
+    }
+
+    async setBlastDatabase(id, databaseData) {
+        await this.waitForInitialization();
+        
+        if (!this.config.blast.customDatabases) {
+            this.config.blast.customDatabases = {};
+        }
+        
+        // Add metadata
+        databaseData.lastModified = new Date().toISOString();
+        
+        this.config.blast.customDatabases[id] = databaseData;
+        this.config.blast.metadata.lastUpdated = new Date().toISOString();
+        this.config.blast.metadata.totalDatabases = Object.keys(this.config.blast.customDatabases).length;
+        
+        await this.saveConfig();
+        console.log(`BLAST database ${id} saved to config`);
+    }
+
+    async removeBlastDatabase(id) {
+        await this.waitForInitialization();
+        
+        if (this.config.blast.customDatabases && this.config.blast.customDatabases[id]) {
+            delete this.config.blast.customDatabases[id];
+            this.config.blast.metadata.lastUpdated = new Date().toISOString();
+            this.config.blast.metadata.totalDatabases = Object.keys(this.config.blast.customDatabases).length;
+            
+            await this.saveConfig();
+            console.log(`BLAST database ${id} removed from config`);
+            return true;
+        }
+        return false;
+    }
+
+    async updateBlastDatabase(id, updates) {
+        await this.waitForInitialization();
+        
+        if (this.config.blast.customDatabases && this.config.blast.customDatabases[id]) {
+            this.config.blast.customDatabases[id] = {
+                ...this.config.blast.customDatabases[id],
+                ...updates,
+                lastModified: new Date().toISOString()
+            };
+            this.config.blast.metadata.lastUpdated = new Date().toISOString();
+            
+            await this.saveConfig();
+            console.log(`BLAST database ${id} updated in config`);
+            return true;
+        }
+        return false;
+    }
+
+    async clearBlastDatabases() {
+        await this.waitForInitialization();
+        
+        this.config.blast.customDatabases = {};
+        this.config.blast.metadata.lastUpdated = new Date().toISOString();
+        this.config.blast.metadata.totalDatabases = 0;
+        
+        await this.saveConfig();
+        console.log('All BLAST databases cleared from config');
+    }
+
+    async getBlastSettings() {
+        await this.waitForInitialization();
+        return this.config.blast.settings || {};
+    }
+
+    async setBlastSettings(settings) {
+        await this.waitForInitialization();
+        
+        this.config.blast.settings = {
+            ...this.config.blast.settings,
+            ...settings
+        };
+        
+        await this.saveConfig();
+        console.log('BLAST settings updated');
+    }
+
+    async migrateBlastDatabasesFromLocalStorage() {
+        console.log('=== Starting BLAST database migration from localStorage ===');
+        
+        try {
+            const localStorageData = localStorage.getItem('blast_custom_databases');
+            if (!localStorageData) {
+                console.log('No BLAST databases found in localStorage to migrate');
+                return { success: true, migrated: 0 };
+            }
+
+            const savedData = JSON.parse(localStorageData);
+            let databases;
+            
+            if (Array.isArray(savedData)) {
+                databases = savedData;
+                console.log('Found old format BLAST databases in localStorage');
+            } else if (savedData.databases) {
+                databases = savedData.databases;
+                console.log('Found new format BLAST databases in localStorage');
+            } else {
+                throw new Error('Invalid BLAST database format in localStorage');
+            }
+
+            let migratedCount = 0;
+            for (const [id, data] of databases) {
+                await this.setBlastDatabase(id, {
+                    ...data,
+                    migratedFrom: 'localStorage',
+                    migrationDate: new Date().toISOString()
+                });
+                migratedCount++;
+            }
+
+            // Update migration metadata
+            this.config.blast.metadata.migrationVersion = '1.0';
+            this.config.blast.metadata.lastMigration = new Date().toISOString();
+            await this.saveConfig();
+
+            console.log(`Successfully migrated ${migratedCount} BLAST databases from localStorage`);
+            
+            // Optionally clean up localStorage after successful migration
+            if (migratedCount > 0) {
+                localStorage.removeItem('blast_custom_databases');
+                localStorage.removeItem('blast_custom_databases_backup');
+                console.log('Cleaned up localStorage after successful migration');
+            }
+
+            return { success: true, migrated: migratedCount };
+            
+        } catch (error) {
+            console.error('Error migrating BLAST databases from localStorage:', error);
+            return { success: false, error: error.message };
+        }
     }
 } 

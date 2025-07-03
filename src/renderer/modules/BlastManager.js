@@ -9,6 +9,9 @@ class BlastManager {
         this.searchResults = null;
         this.isSearching = false;
         
+        // Get ConfigManager instance from app
+        this.configManager = app.configManager || null;
+        
         // BLAST configuration
         this.config = {
             ncbiBaseUrl: 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi',
@@ -28,7 +31,9 @@ class BlastManager {
         
         this.initializeUI();
         this.initializeLocalBlast();
-        this.initializeDatabaseManagement();
+        this.initializeDatabaseManagement().catch(error => {
+            console.error('Failed to initialize database management:', error);
+        });
     }
 
     async initializeLocalBlast() {
@@ -534,69 +539,202 @@ class BlastManager {
         this.setupAllEventListeners();
     }
 
-    initializeDatabaseManagement() {
+    async initializeDatabaseManagement() {
         console.log('BlastManager: Initializing database management...');
         
-        // Load project genomes from current app state
-        this.loadProjectGenomes();
-        
-        // Load existing custom databases from localStorage
-        this.loadCustomDatabases();
+        // Load existing custom databases from ConfigManager or localStorage
+        await this.loadCustomDatabases();
         
         // Set up database management event listeners
         this.setupDatabaseManagementListeners();
         
         // Populate UI elements
-        this.populateProjectGenomesList();
         this.populateAvailableDatabasesList();
         this.updateDatabaseOptions();
         
         console.log('✓ Database management initialized');
     }
 
-    loadProjectGenomes() {
-        // Get project genomes from app state
-        if (this.app && this.app.loadedGenomes) {
-            this.projectGenomes.clear();
-            
-            this.app.loadedGenomes.forEach((genome, key) => {
-                this.projectGenomes.set(key, {
-                    id: key,
-                    name: genome.name || key,
-                    accession: genome.accession || 'Unknown',
-                    size: genome.sequences ? genome.sequences.reduce((sum, seq) => sum + seq.sequence.length, 0) : 0,
-                    genes: genome.features ? genome.features.filter(f => f.type === 'gene').length : 0,
-                    sequenceFile: genome.filePath || null,
-                    proteinFile: genome.proteinFile || null,
-                    data: genome
+    // Project Genomes functionality removed - databases are now created from custom files only
+
+    async loadCustomDatabases() {
+        console.log('=== BlastManager.loadCustomDatabases Debug Start ===');
+        
+        try {
+            if (this.configManager) {
+                console.log('Using ConfigManager for loading BLAST databases');
+                
+                // Try to migrate from localStorage first if needed
+                const migrationResult = await this.configManager.migrateBlastDatabasesFromLocalStorage();
+                if (migrationResult.migrated > 0) {
+                    console.log(`Migrated ${migrationResult.migrated} databases from localStorage to ConfigManager`);
+                }
+                
+                // Load databases from ConfigManager
+                const databasesObject = await this.configManager.getBlastDatabases();
+                console.log('Retrieved BLAST databases from ConfigManager:', databasesObject);
+                
+                // Convert object format back to Map for BlastManager compatibility
+                this.customDatabases = new Map();
+                Object.entries(databasesObject).forEach(([id, data]) => {
+                    this.customDatabases.set(id, data);
                 });
-            });
-            
-            console.log(`Loaded ${this.projectGenomes.size} project genomes`);
+                
+                console.log(`Loaded ${this.customDatabases.size} custom databases from ConfigManager`);
+                
+                // Validate database files still exist
+                await this.validateStoredDatabases();
+                
+            } else {
+                console.log('ConfigManager not available, falling back to localStorage');
+                await this.loadFromLocalStorageFallback();
+            }
+        } catch (error) {
+            console.error('Error loading custom databases:', error);
+            await this.loadFromLocalStorageFallback();
         }
+        
+        console.log('=== BlastManager.loadCustomDatabases Debug End ===');
     }
 
-    loadCustomDatabases() {
+    async loadFromLocalStorageFallback() {
         try {
             const saved = localStorage.getItem('blast_custom_databases');
             if (saved) {
-                const databases = JSON.parse(saved);
+                const savedData = JSON.parse(saved);
+                
+                // Handle both old format (direct array) and new format (with metadata)
+                let databases;
+                if (Array.isArray(savedData)) {
+                    // Old format - direct array
+                    databases = savedData;
+                    console.log('Loading databases from old localStorage format');
+                } else if (savedData.databases) {
+                    // New format - with metadata
+                    databases = savedData.databases;
+                    console.log(`Loading databases from new localStorage format (version: ${savedData.version}, saved: ${savedData.timestamp})`);
+                } else {
+                    throw new Error('Invalid database format');
+                }
+                
                 this.customDatabases = new Map(databases);
-                console.log(`Loaded ${this.customDatabases.size} custom databases from storage`);
+                console.log(`Loaded ${this.customDatabases.size} custom databases from localStorage`);
+                
+                // Validate database files still exist
+                await this.validateStoredDatabases();
+            } else {
+                console.log('No custom databases found in localStorage');
+                this.customDatabases = new Map();
             }
         } catch (error) {
             console.warn('Failed to load custom databases from localStorage:', error);
-            this.customDatabases = new Map();
+            
+            // Try to load from backup
+            try {
+                const backup = localStorage.getItem('blast_custom_databases_backup');
+                if (backup) {
+                    const backupData = JSON.parse(backup);
+                    const databases = backupData.databases || backupData;
+                    this.customDatabases = new Map(databases);
+                    console.log(`Loaded ${this.customDatabases.size} custom databases from backup`);
+                } else {
+                    this.customDatabases = new Map();
+                }
+            } catch (backupError) {
+                console.error('Failed to load from backup as well:', backupError);
+                this.customDatabases = new Map();
+            }
         }
     }
 
-    saveCustomDatabases() {
+    async validateStoredDatabases() {
+        const fs = require('fs').promises;
+        let removedCount = 0;
+        
+        for (const [dbId, database] of this.customDatabases) {
+            try {
+                if (database.dbPath) {
+                    // Check if database files still exist
+                    const extensions = database.type === 'nucl' ? ['.nhr', '.nin', '.nsq'] : ['.phr', '.pin', '.psq'];
+                    let foundFiles = 0;
+                    
+                    for (const ext of extensions) {
+                        try {
+                            await fs.access(database.dbPath + ext);
+                            foundFiles++;
+                        } catch (error) {
+                            // File doesn't exist
+                        }
+                    }
+                    
+                    if (foundFiles === 0) {
+                        console.warn(`Database files not found for ${database.name}, removing from storage`);
+                        this.customDatabases.delete(dbId);
+                        removedCount++;
+                    } else {
+                        // Update last validated timestamp
+                        database.lastValidated = new Date().toISOString();
+                    }
+                }
+            } catch (error) {
+                console.error(`Error validating database ${database.name}:`, error);
+            }
+        }
+        
+        if (removedCount > 0) {
+            console.log(`Removed ${removedCount} invalid databases from storage`);
+            await this.saveCustomDatabases();
+        }
+    }
+
+    async saveCustomDatabases() {
+        console.log('=== BlastManager.saveCustomDatabases Debug Start ===');
+        
+        try {
+            if (this.configManager) {
+                console.log('Using ConfigManager for saving BLAST databases');
+                
+                // Convert Map to object format for ConfigManager
+                const databasesObject = {};
+                this.customDatabases.forEach((data, id) => {
+                    databasesObject[id] = data;
+                });
+                
+                // Save each database individually to ConfigManager
+                for (const [id, data] of this.customDatabases.entries()) {
+                    await this.configManager.setBlastDatabase(id, data);
+                }
+                
+                console.log(`Custom databases saved to ConfigManager: ${this.customDatabases.size} databases`);
+                
+            } else {
+                console.log('ConfigManager not available, falling back to localStorage');
+                await this.saveToLocalStorageFallback();
+            }
+        } catch (error) {
+            console.error('Failed to save custom databases to ConfigManager:', error);
+            // Fallback to localStorage on error
+            await this.saveToLocalStorageFallback();
+        }
+        
+        console.log('=== BlastManager.saveCustomDatabases Debug End ===');
+    }
+
+    async saveToLocalStorageFallback() {
         try {
             const databases = Array.from(this.customDatabases.entries());
-            localStorage.setItem('blast_custom_databases', JSON.stringify(databases));
-            console.log('Custom databases saved to localStorage');
+            const databaseData = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                databases: databases
+            };
+            localStorage.setItem('blast_custom_databases', JSON.stringify(databaseData));
+            console.log(`Custom databases saved to localStorage: ${databases.length} databases`);
+            
+            // Also save to a backup key for safety
+            localStorage.setItem('blast_custom_databases_backup', JSON.stringify(databaseData));
         } catch (error) {
-            console.error('Failed to save custom databases:', error);
+            console.error('Failed to save custom databases to localStorage:', error);
         }
     }
 
@@ -660,51 +798,7 @@ class BlastManager {
         console.log('✓ Keyboard shortcuts set up (Ctrl+Enter to run BLAST)');
     }
 
-    populateProjectGenomesList() {
-        const container = document.getElementById('projectGenomesList');
-        if (!container) return;
-
-        if (this.projectGenomes.size === 0) {
-            container.innerHTML = `
-                <div class="no-genomes-message">
-                    <i class="fas fa-info-circle"></i>
-                    No genomes found in current project. Please load genome files to create databases.
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        this.projectGenomes.forEach((genome, id) => {
-            const sizeFormatted = this.formatFileSize(genome.size);
-            const genesFormatted = genome.genes.toLocaleString();
-            
-            html += `
-                <div class="genome-item" data-genome-id="${id}">
-                    <div class="genome-info">
-                        <div class="genome-name">${this.escapeHtml(genome.name)}</div>
-                        <div class="genome-details">${sizeFormatted} • ${genesFormatted} genes • ${this.escapeHtml(genome.accession)}</div>
-                        <div class="genome-stats">
-                            <div class="genome-stat">Nucleotide DB: ${this.hasDatabase(id, 'nucl') ? 'Ready' : 'Not Created'}</div>
-                            <div class="genome-stat">Protein DB: ${this.hasDatabase(id, 'prot') ? 'Ready' : 'Not Created'}</div>
-                        </div>
-                    </div>
-                    <div class="db-actions">
-                        <button class="btn btn-success btn-sm" onclick="window.blastManager.createGenomeDatabase('${id}', 'nucl')" 
-                                ${this.hasDatabase(id, 'nucl') ? 'disabled' : ''}>
-                            <i class="fas fa-dna"></i> ${this.hasDatabase(id, 'nucl') ? 'Nucleotide ✓' : 'Nucleotide DB'}
-                        </button>
-                        <button class="btn btn-info btn-sm" onclick="window.blastManager.createGenomeDatabase('${id}', 'prot')"
-                                ${this.hasDatabase(id, 'prot') ? 'disabled' : ''}>
-                            <i class="fas fa-circle"></i> ${this.hasDatabase(id, 'prot') ? 'Protein ✓' : 'Protein DB'}
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-    }
+    // populateProjectGenomesList method removed - Project Genomes functionality disabled
 
     populateAvailableDatabasesList() {
         const container = document.getElementById('availableDatabasesList');
@@ -735,23 +829,61 @@ class BlastManager {
 
         // Add custom databases
         this.customDatabases.forEach((database, id) => {
-            const sourceType = database.source === 'project' ? 'Project genome' : 'Custom file';
+            const locationInfo = database.location === 'source_directory' ? 
+                `Located in source directory` : 
+                `Custom file database`;
             html += `
                 <div class="database-item">
                     <div class="database-info">
                         <div class="database-name">${this.escapeHtml(database.name)}</div>
-                        <div class="database-details">Local database • ${sourceType} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
+                        <div class="database-details">Local database • ${locationInfo} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
+                        ${database.sourceDirectory ? `<div class="database-path">Path: ${this.escapeHtml(database.sourceDirectory)}</div>` : ''}
                     </div>
-                    <div class="status-indicator status-${database.status}">
-                        <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
-                        ${database.status.charAt(0).toUpperCase() + database.status.slice(1)}
+                    <div class="database-actions">
+                        <div class="status-indicator status-${database.status}">
+                            <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
+                            ${database.status.charAt(0).toUpperCase() + database.status.slice(1)}
+                        </div>
+                        <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${id}" title="Delete database">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             `;
         });
 
         container.innerHTML = html;
+
+        // Add event listeners for delete buttons
+        container.querySelectorAll('.delete-custom-db-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const dbId = btn.dataset.dbId;
+                const database = this.customDatabases.get(dbId);
+                
+                if (database && confirm(`Are you sure you want to delete the database "${database.name}"?\n\nThis will permanently remove the database files.`)) {
+                    try {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        
+                        await this.deleteCustomDatabase(dbId);
+                        this.showNotification(`Database "${database.name}" deleted successfully`, 'success');
+                    } catch (error) {
+                        console.error('Error deleting database:', error);
+                        this.showNotification(`Failed to delete database: ${error.message}`, 'error');
+                        
+                        // Restore button
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-trash"></i>';
+                    }
+                }
+            });
+        });
     }
+
+    // createGenomeDatabase method removed - Project Genomes functionality disabled
 
 
 
@@ -787,81 +919,7 @@ class BlastManager {
         }
     }
 
-    async createGenomeDatabase(genomeId, dbType) {
-        const genome = this.projectGenomes.get(genomeId);
-        if (!genome) {
-            this.showNotification(`Genome ${genomeId} not found`, 'error');
-            return;
-        }
-
-        const dbId = `${genomeId}_${dbType}`;
-        const dbName = `${genome.name} (${dbType === 'nucl' ? 'Nucleotide' : 'Protein'})`;
-
-        // Check if already exists
-        if (this.customDatabases.has(dbId)) {
-            this.showNotification(`Database ${dbName} already exists`, 'warning');
-            return;
-        }
-
-        // Show operation log
-        this.showOperationLog();
-        this.appendLog(`Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genome.name}...`);
-
-        try {
-            // Add to custom databases with creating status
-            this.customDatabases.set(dbId, {
-                id: dbId,
-                name: dbName,
-                type: dbType,
-                source: 'project',
-                genomeId: genomeId,
-                status: 'creating',
-                created: new Date().toISOString()
-            });
-
-            // Update UI
-            this.populateProjectGenomesList();
-            this.populateAvailableDatabasesList();
-
-            // Simulate database creation process
-            this.appendLog(`Extracting ${dbType === 'nucl' ? 'sequences' : 'proteins'} from genome data...`);
-            
-            await this.delay(1000);
-            
-            this.appendLog(`Writing FASTA file: ${dbId}.fasta`);
-            
-            await this.delay(1500);
-            
-            this.appendLog(`Running: makeblastdb -in "${dbId}.fasta" -dbtype ${dbType} -out "${dbId}"`);
-            
-            await this.delay(2000);
-            
-            // Mark as ready
-            this.customDatabases.get(dbId).status = 'ready';
-            
-            this.appendLog(`✓ Database created successfully: ${dbId}`, 'success');
-            this.appendLog(`Database files: ${dbId}.nhr, ${dbId}.nin, ${dbId}.nsq`, 'success');
-            
-            // Save to localStorage
-            this.saveCustomDatabases();
-            
-            // Update UI
-            this.populateProjectGenomesList();
-            this.populateAvailableDatabasesList();
-            this.updateDatabaseOptions();
-            
-            this.showNotification(`Database ${dbName} created successfully`, 'success');
-            
-        } catch (error) {
-            console.error('Error creating genome database:', error);
-            this.appendLog(`✗ Error creating database: ${error.message}`, 'error');
-            
-            // Remove from custom databases
-            this.customDatabases.delete(dbId);
-            
-            this.showNotification(`Failed to create database: ${error.message}`, 'error');
-        }
-    }
+    // createGenomeDatabase method removed - Project Genomes functionality disabled
 
     async createCustomDatabase() {
         const filePath = document.getElementById('customFilePath').value.trim();
@@ -904,16 +962,14 @@ class BlastManager {
             this.appendLog(`Source file: ${filePath}`);
             this.appendLog(`Database name: ${dbName}`);
             
-            // Create database directory if it doesn't exist
+            // Create database in the same directory as the source file
             const path = require('path');
-            const os = require('os');
-            const documentsPath = os.homedir() + '/Documents';
-            const dbDirectory = path.join(documentsPath, 'GenomeExplorer Projects', 'blast_databases');
+            const sourceDirectory = path.dirname(filePath);
+            const dbFileName = `${dbId}`;
+            const outputPath = path.join(sourceDirectory, dbFileName);
             
-            this.appendLog(`Creating database directory: ${dbDirectory}`);
-            await this.runCommand(`mkdir -p "${dbDirectory}"`);
-            
-            const outputPath = path.join(dbDirectory, dbId);
+            this.appendLog(`Creating database in source directory: ${sourceDirectory}`);
+            this.appendLog(`Database output path: ${outputPath}`);
             
             this.appendLog(`Validating FASTA file format...`);
             
@@ -936,9 +992,13 @@ class BlastManager {
                     const makeblastdbCmd = `makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}" -title "${dbName}"`;
                     await this.runCommand(makeblastdbCmd);
                     
-                    // Mark as ready
-                    this.customDatabases.get(dbId).status = 'ready';
-                    this.customDatabases.get(dbId).dbPath = outputPath;
+                    // Mark as ready and store additional metadata
+                    const dbEntry = this.customDatabases.get(dbId);
+                    dbEntry.status = 'ready';
+                    dbEntry.dbPath = outputPath;
+                    dbEntry.sourceDirectory = sourceDirectory;
+                    dbEntry.location = 'source_directory';
+                    dbEntry.lastUsed = new Date().toISOString();
                     
                     this.appendLog(`✓ Custom database created successfully: ${dbName}`, 'success');
                     
@@ -963,8 +1023,8 @@ class BlastManager {
                 }
             }
             
-            // Save to localStorage
-            this.saveCustomDatabases();
+            // Save to ConfigManager
+            await this.saveCustomDatabases();
             
             // Update UI
             this.populateAvailableDatabasesList();
@@ -987,6 +1047,66 @@ class BlastManager {
             this.populateAvailableDatabasesList();
             
             this.showNotification(`Failed to create database: ${error.message}`, 'error');
+        }
+    }
+
+    // Custom database deletion
+    async deleteCustomDatabase(dbId) {
+        console.log(`=== BlastManager.deleteCustomDatabase Debug Start: ${dbId} ===`);
+        
+        try {
+            // Check if database exists
+            if (!this.customDatabases.has(dbId)) {
+                throw new Error('Custom database not found');
+            }
+
+            const database = this.customDatabases.get(dbId);
+            console.log(`Deleting custom database: ${database.name}`);
+
+            // Delete database files if they exist
+            if (database.dbPath) {
+                try {
+                    const fs = require('fs').promises;
+                    const extensions = database.type === 'nucl' ? ['.nhr', '.nin', '.nsq'] : ['.phr', '.pin', '.psq'];
+                    
+                    for (const ext of extensions) {
+                        try {
+                            await fs.unlink(database.dbPath + ext);
+                            console.log(`Deleted database file: ${database.dbPath + ext}`);
+                        } catch (error) {
+                            console.warn(`Could not delete file ${database.dbPath + ext}:`, error.message);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error deleting database files:', error);
+                }
+            }
+
+            // Remove from memory
+            this.customDatabases.delete(dbId);
+
+            // Remove from ConfigManager
+            if (this.configManager) {
+                await this.configManager.removeBlastDatabase(dbId);
+                console.log(`Removed database ${dbId} from ConfigManager`);
+            } else {
+                // Fallback to localStorage update
+                await this.saveToLocalStorageFallback();
+                console.log(`Updated localStorage after removing database ${dbId}`);
+            }
+
+            // Update UI
+            this.populateAvailableDatabasesList();
+            this.updateDatabaseOptions();
+
+            console.log(`✓ Custom database ${database.name} deleted successfully`);
+            return true;
+            
+        } catch (error) {
+            console.error(`Error deleting custom database ${dbId}:`, error);
+            throw error;
+        } finally {
+            console.log(`=== BlastManager.deleteCustomDatabase Debug End: ${dbId} ===`);
         }
     }
 
@@ -2341,13 +2461,24 @@ class BlastManager {
             // Step 2: Poll for job completion
             const results = await this.pollNCBIBlastResults(jobId, params);
             
+            // Mark as real results
+            results.isRealResults = true;
+            results.rawOutput = results.rawXML || 'Raw XML output available';
+            
             return results;
         } catch (error) {
             console.error('NCBI BLAST error:', error);
             
-            // Fallback to enhanced mock results for demonstration
-            console.log('Falling back to enhanced mock results...');
-            return this.generateEnhancedMockResults(params);
+            // Show warning that we're using mock results
+            this.showNotification('NCBI BLAST failed. Using simulated results for demonstration. Error: ' + error.message, 'warning');
+            
+            // Generate enhanced mock results with clear indication
+            const mockResults = this.generateEnhancedMockResults(params);
+            mockResults.isRealResults = false;
+            mockResults.errorMessage = error.message;
+            mockResults.rawOutput = 'Mock results - no raw output available';
+            
+            return mockResults;
         }
     }
 
@@ -2381,18 +2512,22 @@ class BlastManager {
             body: formData.toString()
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const responseText = await response.text();
         
         // Extract RID (Request ID) from response
         const ridMatch = responseText.match(/RID = ([A-Z0-9]+)/);
         if (!ridMatch) {
-            throw new Error('Failed to submit BLAST job - no RID returned');
+            throw new Error('Failed to submit BLAST job - no RID returned. Response: ' + responseText.substring(0, 500));
         }
         
         return ridMatch[1];
     }
 
-    async pollNCBIBlastResults(jobId, params, maxAttempts = 30) {
+    async pollNCBIBlastResults(jobId, params, maxAttempts = 60) {
         const baseUrl = 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi';
         let attempts = 0;
         
@@ -2402,16 +2537,22 @@ class BlastManager {
             // Check job status
             const statusUrl = `${baseUrl}?CMD=Get&FORMAT_OBJECT=SearchInfo&RID=${jobId}`;
             const statusResponse = await fetch(statusUrl);
+            
+            if (!statusResponse.ok) {
+                throw new Error(`Status check failed: ${statusResponse.status}`);
+            }
+            
             const statusText = await statusResponse.text();
             
             if (statusText.includes('Status=WAITING')) {
                 console.log(`BLAST job ${jobId} still running... (attempt ${attempts}/${maxAttempts})`);
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                this.updateSearchProgress(`Waiting for NCBI BLAST results... (${attempts}/${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
                 continue;
             }
             
             if (statusText.includes('Status=FAILED')) {
-                throw new Error('BLAST job failed');
+                throw new Error('BLAST job failed on NCBI server');
             }
             
             if (statusText.includes('Status=UNKNOWN')) {
@@ -2422,20 +2563,41 @@ class BlastManager {
                 // Job completed, retrieve results
                 const resultsUrl = `${baseUrl}?CMD=Get&FORMAT_TYPE=XML&RID=${jobId}`;
                 const resultsResponse = await fetch(resultsUrl);
+                
+                if (!resultsResponse.ok) {
+                    throw new Error(`Results retrieval failed: ${resultsResponse.status}`);
+                }
+                
                 const resultsXml = await resultsResponse.text();
                 
+                // Also get text format for raw output
+                const textResultsUrl = `${baseUrl}?CMD=Get&FORMAT_TYPE=Text&RID=${jobId}`;
+                const textResultsResponse = await fetch(textResultsUrl);
+                const textResults = textResultsResponse.ok ? await textResultsResponse.text() : 'Text format not available';
+                
                 // Parse XML results
-                return this.parseNCBIBlastXML(resultsXml, params);
+                const parsedResults = this.parseNCBIBlastXML(resultsXml, params);
+                parsedResults.rawXML = resultsXml;
+                parsedResults.rawText = textResults;
+                parsedResults.jobId = jobId;
+                
+                return parsedResults;
             }
         }
         
-        throw new Error('BLAST job timed out - results may still be processing');
+        throw new Error(`BLAST job timed out after ${maxAttempts} attempts - results may still be processing`);
     }
 
     parseNCBIBlastXML(xmlString, params) {
         try {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+            
+            // Check for parsing errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error('XML parsing error: ' + parserError.textContent);
+            }
             
             // Extract basic information
             const iterations = xmlDoc.getElementsByTagName('Iteration');
@@ -2466,11 +2628,12 @@ class BlastManager {
                 parameters: params,
                 hits: hits,
                 statistics: statistics,
-                source: 'NCBI'
+                source: 'NCBI',
+                timestamp: new Date().toISOString()
             };
         } catch (error) {
             console.error('Error parsing NCBI BLAST XML:', error);
-            throw new Error('Failed to parse BLAST results');
+            throw new Error('Failed to parse BLAST results: ' + error.message);
         }
     }
 
@@ -2515,12 +2678,14 @@ class BlastManager {
                 identityCount: hspIdentity,
                 coverage: coverage,
                 alignmentLength: hspAlignLen,
+                mismatches: hspAlignLen - hspIdentity,
+                gaps: hspAlignLen - hspIdentity, // Approximate gaps
                 queryRange: { from: hspQueryFrom, to: hspQueryTo },
                 hitRange: { from: hspHitFrom, to: hspHitTo },
                 alignment: {
-                    query: hspQuerySeq,
-                    subject: hspHitSeq,
-                    match: hspMidline
+                    query: hspQuerySeq || '',
+                    subject: hspHitSeq || '',
+                    match: hspMidline || ''
                 },
                 hsps: this.parseAllHSPs(hitElement) // Parse all HSPs for detailed view
             };
@@ -2672,12 +2837,20 @@ class BlastManager {
             
             // Build BLAST command
             const blastCommand = this.buildBlastCommand(params, queryFile);
+            console.log('Executing local BLAST command:', blastCommand);
             
             // Execute BLAST search
             const blastOutput = await this.runCommand(blastCommand);
+            console.log('Local BLAST output received:', blastOutput.length, 'characters');
             
             // Parse BLAST results
             const results = this.parseBlastOutput(blastOutput, params);
+            
+            // Mark as real results and store raw output
+            results.isRealResults = true;
+            results.rawOutput = blastOutput;
+            results.rawText = blastOutput;
+            results.blastCommand = blastCommand;
             
             // Clean up temporary file
             await this.cleanupTempFile(queryFile);
@@ -2686,18 +2859,16 @@ class BlastManager {
         } catch (error) {
             console.error('Local BLAST search error:', error);
             
-            // Check if it's a database-related error
-            if (error.message.includes('Database memory map file error') || 
-                error.message.includes('BLAST Database error') ||
-                error.message.includes('Database not found')) {
-                
-                // Automatically fall back to enhanced mock results
-                console.log('Database error detected, falling back to enhanced mock results...');
-                this.showNotification('Database not available. Showing simulated results for demonstration.', 'warning');
-                return this.generateEnhancedMockResults(params);
-            }
+            // Show detailed error information
+            this.showNotification(`Local BLAST failed: ${error.message}. Using simulated results for demonstration.`, 'warning');
             
-            throw new Error(`Local BLAST search failed: ${error.message}`);
+            // Generate enhanced mock results with clear indication
+            const mockResults = this.generateEnhancedMockResults(params);
+            mockResults.isRealResults = false;
+            mockResults.errorMessage = error.message;
+            mockResults.rawOutput = 'Mock results - no raw output available';
+            
+            return mockResults;
         }
     }
 
@@ -2766,7 +2937,10 @@ class BlastManager {
         // Add common parameters
         command += ` -evalue ${params.evalue}`;
         command += ` -max_target_seqs ${params.maxTargets}`;
-        command += ` -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"`;
+        
+        // Use detailed output format that includes sequence alignment information
+        // Format 6 with additional sequence fields: qseq (query sequence) and sseq (subject sequence)
+        command += ` -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle qseq sseq qcovs qcovhsp"`;
         
         // Add type-specific parameters
         if (blastType === 'blastn') {
@@ -2833,32 +3007,81 @@ class BlastManager {
         const hits = [];
         
         for (const line of lines) {
-            if (!line.trim()) continue;
+            if (!line.trim() || line.startsWith('#')) continue; // Skip empty lines and comments
             
             const parts = line.split('\t');
-            if (parts.length < 12) continue; // Skip lines with insufficient columns
+            if (parts.length < 15) continue; // Skip lines with insufficient columns (now expecting 17 fields)
             
             const [
                 qseqid, sseqid, pident, length, mismatch, gapopen,
-                qstart, qend, sstart, send, evalue, bitscore, stitle = 'No description available'
+                qstart, qend, sstart, send, evalue, bitscore, stitle = 'No description available',
+                qseq = '', sseq = '', qcovs = '0', qcovhsp = '0'
             ] = parts;
             
-            console.log('BLAST hit parsed:', { sseqid, pident, length, evalue, bitscore, stitle });
+            console.log('BLAST hit parsed:', { sseqid, pident, length, evalue, bitscore, stitle, hasSequences: !!(qseq && sseq) });
+            
+            // Parse numeric values safely
+            const alignmentLength = parseInt(length) || 0;
+            const queryStart = parseInt(qstart) || 0;
+            const queryEnd = parseInt(qend) || 0;
+            const subjectStart = parseInt(sstart) || 0;
+            const subjectEnd = parseInt(send) || 0;
+            const identityPercent = parseFloat(pident) || 0;
+            const bitScore = parseFloat(bitscore) || 0;
+            const queryCovsPercent = parseFloat(qcovs) || 0;
+            const queryCovsHspPercent = parseFloat(qcovhsp) || 0;
+            const mismatches = parseInt(mismatch) || 0;
+            const gaps = parseInt(gapopen) || 0;
+            
+            // Generate match string from real sequences if available
+            let matchString = '';
+            if (qseq && sseq && qseq.length === sseq.length) {
+                matchString = this.generateRealMatchString(qseq, sseq);
+            } else {
+                // Fallback to approximation
+                matchString = this.generateMatchString(alignmentLength, mismatches, gaps);
+            }
+            
+            // Use real sequences if available, otherwise fallback to extracted sequences
+            const querySequence = qseq || this.getAlignmentSequence(params.sequence, queryStart, queryEnd);
+            const subjectSequence = sseq || this.generateSubjectSequence(querySequence, identityPercent, mismatches, gaps);
             
             hits.push({
                 id: sseqid,
                 accession: sseqid,
                 description: stitle || sseqid || 'No description available',
-                length: parseInt(length),
+                length: alignmentLength,
                 evalue: evalue,
-                score: `${bitscore} bits`,
-                identity: `${pident}%`,
-                coverage: this.calculateCoverage(parseInt(length), params.sequence.length),
+                score: `${bitScore.toFixed(1)} bits`,
+                bitScore: bitScore,
+                identity: `${identityPercent.toFixed(1)}%`,
+                identityPercent: identityPercent,
+                identityCount: Math.round(alignmentLength * identityPercent / 100),
+                coverage: `${queryCovsPercent.toFixed(1)}%`,
+                queryRange: { from: queryStart, to: queryEnd },
+                hitRange: { from: subjectStart, to: subjectEnd },
+                alignmentLength: alignmentLength,
+                mismatches: mismatches,
+                gaps: gaps,
                 alignment: {
-                    query: this.getAlignmentSequence(params.sequence, parseInt(qstart), parseInt(qend)),
-                    subject: this.getAlignmentSequence(params.sequence, parseInt(qstart), parseInt(qend)), // For now, use same as query
-                    match: this.generateMatchString(parseInt(length), parseInt(mismatch), parseInt(gapopen))
-                }
+                    query: querySequence,
+                    subject: subjectSequence,
+                    match: matchString
+                },
+                hsps: [{
+                    score: bitScore,
+                    bitScore: bitScore,
+                    evalue: evalue,
+                    identity: Math.round(alignmentLength * identityPercent / 100),
+                    alignLen: alignmentLength,
+                    queryFrom: queryStart,
+                    queryTo: queryEnd,
+                    hitFrom: subjectStart,
+                    hitTo: subjectEnd,
+                    querySeq: querySequence,
+                    hitSeq: subjectSequence,
+                    midline: matchString
+                }]
             });
         }
         
@@ -2875,8 +3098,11 @@ class BlastManager {
                 database: params.database,
                 totalSequences: this.config.localDatabases.get(params.database)?.sequences || 'Unknown',
                 totalLetters: this.config.localDatabases.get(params.database)?.letters || 'Unknown',
-                searchTime: 'Local search'
-            }
+                searchTime: 'Local search',
+                effectiveSearchSpace: 'Local database'
+            },
+            source: 'Local',
+            timestamp: new Date().toISOString()
         };
     }
 
@@ -2907,6 +3133,88 @@ class BlastManager {
         }
         
         return matchString;
+    }
+
+    generateRealMatchString(querySeq, subjectSeq) {
+        // Generate accurate match string from real sequences
+        let matchString = '';
+        const minLength = Math.min(querySeq.length, subjectSeq.length);
+        
+        for (let i = 0; i < minLength; i++) {
+            const qBase = querySeq[i].toUpperCase();
+            const sBase = subjectSeq[i].toUpperCase();
+            
+            if (qBase === '-' || sBase === '-') {
+                matchString += ' '; // gap
+            } else if (qBase === sBase) {
+                matchString += '|'; // exact match
+            } else if (this.isSimilarAminoAcid(qBase, sBase)) {
+                matchString += '+'; // similar amino acids (for protein sequences)
+            } else {
+                matchString += ' '; // mismatch
+            }
+        }
+        
+        return matchString;
+    }
+
+    isSimilarAminoAcid(aa1, aa2) {
+        // Define similar amino acid groups for protein sequences
+        const similarGroups = [
+            ['A', 'G'], // small
+            ['I', 'L', 'V'], // hydrophobic aliphatic
+            ['F', 'W', 'Y'], // aromatic
+            ['K', 'R'], // basic
+            ['D', 'E'], // acidic
+            ['Q', 'N'], // amide
+            ['S', 'T'], // hydroxyl
+            ['C', 'M'] // sulfur
+        ];
+        
+        for (const group of similarGroups) {
+            if (group.includes(aa1) && group.includes(aa2)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    generateSubjectSequence(querySeq, identityPercent, mismatches, gaps) {
+        // Generate a realistic subject sequence based on identity percentage
+        let subjectSeq = '';
+        const targetIdentity = identityPercent / 100;
+        const seqLength = querySeq.length;
+        let identityCount = 0;
+        
+        // Determine bases/amino acids for substitution
+        const isProtein = /[ARNDCQEGHILKMFPSTWYV]/i.test(querySeq);
+        const substitutionChars = isProtein ? 
+            ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'] :
+            ['A', 'T', 'C', 'G'];
+        
+        for (let i = 0; i < seqLength; i++) {
+            const shouldMatch = (identityCount / (i + 1)) < targetIdentity;
+            
+            if (shouldMatch && Math.random() > 0.1) {
+                // Keep original base/amino acid for identity
+                subjectSeq += querySeq[i];
+                identityCount++;
+            } else {
+                // Introduce variation
+                if (gaps > 0 && Math.random() < 0.02) {
+                    subjectSeq += '-'; // gap
+                } else {
+                    // Substitution
+                    let newChar;
+                    do {
+                        newChar = substitutionChars[Math.floor(Math.random() * substitutionChars.length)];
+                    } while (newChar === querySeq[i].toUpperCase());
+                    subjectSeq += newChar;
+                }
+            }
+        }
+        
+        return subjectSeq;
     }
 
     async cleanupTempFile(file) {
@@ -2963,8 +3271,21 @@ class BlastManager {
                         <span class="badge badge-type">
                             <i class="fas fa-cog"></i> ${results.parameters.blastType.toUpperCase()}
                         </span>
+                        <span class="badge badge-result-type ${results.isRealResults !== false ? 'real-results' : 'mock-results'}">
+                            <i class="${results.isRealResults !== false ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'}"></i> 
+                            ${results.isRealResults !== false ? 'Real Results' : 'Simulated'}
+                        </span>
                     </div>
                 </div>
+                
+                ${results.isRealResults === false && results.errorMessage ? `
+                <div class="error-info">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> These are simulated results. Original error: ${results.errorMessage}
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div class="query-summary">
                     <div class="query-info">
@@ -2980,8 +3301,12 @@ class BlastManager {
                             </div>
                             <div class="query-detail">
                                 <span class="label">Search Time:</span>
-                                <span class="value">${new Date().toLocaleString()}</span>
+                                <span class="value">${results.timestamp ? new Date(results.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
                             </div>
+                            ${results.jobId ? `<div class="query-detail">
+                                <span class="label">Job ID:</span>
+                                <span class="value">${results.jobId}</span>
+                            </div>` : ''}
                         </div>
                     </div>
                     
@@ -3069,6 +3394,12 @@ class BlastManager {
                         <div class="control-group">
                             <button id="exportResults" class="btn btn-success">
                                 <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <button id="viewRawOutput" class="btn btn-info">
+                                <i class="fas fa-file-alt"></i> Raw Output
                             </button>
                         </div>
                     </div>
@@ -3281,10 +3612,16 @@ class BlastManager {
                                     <div class="score-label">Coverage</div>
                                 </div>
                             </div>
+                            
+                            <div class="hit-actions">
+                                <button class="btn btn-sm btn-outline-primary toggle-details" data-hit-index="${index}">
+                                    <i class="fas fa-chevron-down"></i> More Details
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="hit-card-body">
+                    <div class="hit-details-section" style="display: none;">
                         ${this.renderHitDetails(hit)}
                     </div>
                 </div>
@@ -3339,27 +3676,43 @@ class BlastManager {
     }
 
     formatAlignment(alignment, queryRange, hitRange) {
+        if (!alignment || !alignment.query || !alignment.subject) {
+            return 'No alignment data available';
+        }
+        
         const lineLength = 60;
-        const query = alignment.query;
-        const subject = alignment.subject;
-        const match = alignment.match;
+        const query = alignment.query || '';
+        const subject = alignment.subject || '';
+        const match = alignment.match || '';
+        
+        // Ensure all sequences have the same length
+        const maxLength = Math.max(query.length, subject.length, match.length);
+        const paddedQuery = query.padEnd(maxLength, ' ');
+        const paddedSubject = subject.padEnd(maxLength, ' ');
+        const paddedMatch = match.padEnd(maxLength, ' ');
         
         let formatted = '';
         let queryPos = queryRange.from;
         let hitPos = hitRange.from;
         
-        for (let i = 0; i < query.length; i += lineLength) {
-            const queryLine = query.substring(i, i + lineLength);
-            const matchLine = match.substring(i, i + lineLength);
-            const subjectLine = subject.substring(i, i + lineLength);
+        for (let i = 0; i < maxLength; i += lineLength) {
+            const queryLine = paddedQuery.substring(i, i + lineLength);
+            const matchLine = paddedMatch.substring(i, i + lineLength);
+            const subjectLine = paddedSubject.substring(i, i + lineLength);
             
-            const queryEndPos = queryPos + queryLine.replace(/-/g, '').length - 1;
-            const hitEndPos = hitPos + subjectLine.replace(/-/g, '').length - 1;
+            // Calculate actual positions excluding gaps
+            const queryBasesInLine = queryLine.replace(/-/g, '').length;
+            const subjectBasesInLine = subjectLine.replace(/-/g, '').length;
             
-            formatted += `Query  ${queryPos.toString().padStart(6)} ${queryLine} ${queryEndPos}\n`;
+            const queryEndPos = queryPos + queryBasesInLine - 1;
+            const hitEndPos = hitPos + subjectBasesInLine - 1;
+            
+            // Format with proper spacing and alignment
+            formatted += `Query  ${queryPos.toString().padStart(6)} ${queryLine} ${queryEndPos.toString().padStart(6)}\n`;
             formatted += `       ${' '.repeat(6)} ${matchLine}\n`;
-            formatted += `Sbjct  ${hitPos.toString().padStart(6)} ${subjectLine} ${hitEndPos}\n\n`;
+            formatted += `Sbjct  ${hitPos.toString().padStart(6)} ${subjectLine} ${hitEndPos.toString().padStart(6)}\n\n`;
             
+            // Update positions for next line
             queryPos = queryEndPos + 1;
             hitPos = hitEndPos + 1;
         }
@@ -3395,9 +3748,9 @@ class BlastManager {
 
         container.innerHTML = `
             <div class="blast-loading">
-                <i class="fas fa-spinner"></i>
+                <i class="fas fa-spinner fa-spin"></i>
                 <h4>Running BLAST Search...</h4>
-                <p>Please wait while we search the database</p>
+                <p id="progressMessage">Please wait while we search the database</p>
                 <div class="blast-progress">
                     <div class="blast-progress-bar" style="width: 30%"></div>
                 </div>
@@ -3405,6 +3758,13 @@ class BlastManager {
         `;
 
         this.showResultsModal();
+    }
+
+    updateSearchProgress(message) {
+        const progressMessage = document.getElementById('progressMessage');
+        if (progressMessage) {
+            progressMessage.textContent = message;
+        }
     }
 
     hideSearchProgress() {
@@ -3437,6 +3797,109 @@ class BlastManager {
         } catch (error) {
             this.showNotification('Error exporting results: ' + error.message, 'error');
         }
+    }
+
+    showRawOutput() {
+        if (!this.searchResults) {
+            this.showNotification('No results available', 'warning');
+            return;
+        }
+
+        const rawOutput = this.searchResults.rawOutput || this.searchResults.rawText || 'No raw output available';
+        const isRealResults = this.searchResults.isRealResults !== false;
+        
+        // Create modal for raw output
+        const modal = document.createElement('div');
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-file-alt"></i> 
+                            Raw BLAST Output 
+                            <span class="badge ${isRealResults ? 'badge-success' : 'badge-warning'}">
+                                ${isRealResults ? 'Real Results' : 'Simulated Results'}
+                            </span>
+                        </h5>
+                        <button type="button" class="btn-close" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="raw-output-controls mb-3">
+                            <div class="btn-group" role="group">
+                                ${this.searchResults.rawText ? `
+                                <button class="btn btn-outline-primary active" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
+                                    <i class="fas fa-align-left"></i> Text Format
+                                </button>
+                                ` : ''}
+                                ${this.searchResults.rawXML ? `
+                                <button class="btn btn-outline-primary ${!this.searchResults.rawText ? 'active' : ''}" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
+                                    <i class="fas fa-code"></i> XML Format
+                                </button>
+                                ` : ''}
+                                <button class="btn btn-outline-success" onclick="navigator.clipboard.writeText(this.parentElement.parentElement.nextElementSibling.querySelector('[style*=block] pre, pre').textContent); alert('Copied to clipboard!');">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button class="btn btn-outline-info" onclick="
+                                    const content = this.parentElement.parentElement.nextElementSibling.querySelector('[style*=block] pre, pre').textContent;
+                                    const blob = new Blob([content], { type: 'text/plain' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'blast_raw_output.txt';
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                ">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                        <div class="raw-output-content">
+                            ${this.searchResults.rawText ? `
+                            <div class="raw-text" style="display: ${this.searchResults.rawXML ? 'block' : 'block'};">
+                                <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawText)}</pre>
+                            </div>
+                            ` : ''}
+                            ${this.searchResults.rawXML ? `
+                            <div class="raw-xml" style="display: ${this.searchResults.rawText ? 'none' : 'block'};">
+                                <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawXML)}</pre>
+                            </div>
+                            ` : ''}
+                            ${!this.searchResults.rawText && !this.searchResults.rawXML ? `
+                            <div class="no-raw-output">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>No raw output available.</strong><br>
+                                    ${isRealResults ? 'Raw output was not captured for this search.' : 'This is a simulated result - no actual BLAST output was generated.'}
+                                    ${this.searchResults.blastCommand ? `<br><br><strong>Command used:</strong><br><code>${this.searchResults.blastCommand}</code>` : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add escape key listener
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
     }
 
     formatResultsForExport() {
@@ -4076,6 +4539,12 @@ class BlastManager {
         if (exportButton) {
             exportButton.addEventListener('click', () => this.exportResults());
         }
+
+        // Raw output button
+        const rawOutputBtn = document.getElementById('viewRawOutput');
+        if (rawOutputBtn) {
+            rawOutputBtn.addEventListener('click', () => this.showRawOutput());
+        }
     }
 
     setupHitEventListeners() {
@@ -4093,6 +4562,24 @@ class BlastManager {
                 } else {
                     icon.classList.remove('fa-chevron-up');
                     icon.classList.add('fa-chevron-down');
+                }
+            });
+        });
+
+        // Add click handlers for "More Details" buttons in detailed view
+        document.querySelectorAll('.toggle-details').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const hitIndex = button.dataset.hitIndex;
+                const hit = document.querySelector(`[data-hit-index="${hitIndex}"]`);
+                const detailsSection = hit.querySelector('.hit-details-section');
+                
+                if (detailsSection.style.display === 'none') {
+                    detailsSection.style.display = 'block';
+                    button.innerHTML = '<i class="fas fa-chevron-up"></i> Less Details';
+                } else {
+                    detailsSection.style.display = 'none';
+                    button.innerHTML = '<i class="fas fa-chevron-down"></i> More Details';
                 }
             });
         });

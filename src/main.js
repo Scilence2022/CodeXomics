@@ -4780,6 +4780,12 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
       }
     });
 
+    // Helper function to get project-relative path
+    function getProjectRelativePath(absolutePath, projectBasePath) {
+      const relativePath = path.relative(projectBasePath, absolutePath);
+      return relativePath.replace(/\\/g, '/'); // Normalize path separators
+    }
+
     // Helper function to scan directory recursively
     function scanDirectory(dirPath, relativePath = '', currentFolderPath = []) {
       const items = fs.readdirSync(dirPath);
@@ -4807,7 +4813,7 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
             if (!existingFolderPaths.has(folderPathString) && !discoveredFolderPaths.has(folderPathString)) {
               discoveredFolderPaths.add(folderPathString);
               
-              // Create folder object
+              // Create folder object with relative path
               newFolders.push({
                 name: item,
                 icon: getFolderIcon(item),
@@ -4817,7 +4823,8 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
                 custom: true,
                 autoDiscovered: true,
                 discoveredDate: new Date().toISOString(),
-                relativePath: relativeFilePath
+                relativePath: relativeFilePath,
+                absolutePath: itemPath // Keep absolute path for system operations
               });
             }
             
@@ -4827,17 +4834,21 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
           } else if (stats.isFile()) {
             // Process file
             const tempId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const projectRelativePath = getProjectRelativePath(itemPath, projectPath);
             
-            // Check if this file path already exists
+            // Check if this file path already exists (use relative path for comparison)
             const isDuplicate = existingFileIds.some(existingPath => 
-              existingPath === itemPath || existingPath.endsWith(relativeFilePath)
+              existingPath === projectRelativePath || 
+              existingPath === itemPath || 
+              existingPath.endsWith(relativeFilePath)
             );
             
             if (!isDuplicate) {
               newFiles.push({
                 id: tempId,
                 name: item,
-                path: itemPath,
+                path: projectRelativePath, // Use relative path for storage
+                absolutePath: itemPath, // Keep absolute path for system operations
                 relativePath: relativeFilePath,
                 type: getFileTypeFromExtension(item),
                 size: stats.size,
@@ -4850,6 +4861,7 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
                 metadata: {
                   autoDiscovered: true,
                   discoveredDate: new Date().toISOString(),
+                  projectRelativePath: projectRelativePath,
                   originalPath: itemPath,
                   fileSystem: {
                     created: stats.birthtime ? stats.birthtime.toISOString() : null,
@@ -4871,7 +4883,7 @@ ipcMain.handle('scanProjectFolder', async (event, projectPath, existingFileIds, 
     scanDirectory(projectPath);
 
     console.log(`📁 Scanned project folder: ${projectPath}`);
-    console.log(`🆕 Found ${newFiles.length} new files`);
+    console.log(`🆕 Found ${newFiles.length} new files (using relative paths)`);
     console.log(`📂 Found ${newFolders.length} new folders`);
 
     return { 

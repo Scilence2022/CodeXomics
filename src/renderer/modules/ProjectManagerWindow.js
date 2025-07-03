@@ -19,6 +19,12 @@ class ProjectManagerWindow {
         this.currentViewMode = 'grid'; // Add view mode tracking
         this.viewMode = 'grid'; // For compatibility
         
+        // Enhanced project management features
+        this.fileRelationships = new Map(); // Track file relationships
+        this.projectTemplates = new Map(); // Store project templates
+        this.searchIndex = new Map(); // Search index for files
+        this.fileWatcher = null; // File system watcher
+        
         // File type configurations
         this.fileTypes = {
             'fasta': { icon: 'FA', color: '#28a745' },
@@ -988,13 +994,16 @@ class ProjectManagerWindow {
 
         try {
             if (window.electronAPI) {
+                // Get the absolute path for file operations
+                const filePath = this.getFileAbsolutePath(file);
+                
                 // First check if main window exists and its status
                 const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
                 
                 if (mainWindowStatus.error && mainWindowStatus.error === 'Main window not available') {
                     // No main window exists, create a new one
                     console.log('No main window available, creating new window...');
-                    const result = await window.electronAPI.createNewMainWindow(file.path);
+                    const result = await window.electronAPI.createNewMainWindow(filePath);
                     if (result.success) {
                         this.showNotification(`Opened "${file.name}" in new GenomeExplorer window`, 'success');
                     } else {
@@ -1002,13 +1011,13 @@ class ProjectManagerWindow {
                     }
                 } else if (window.electronAPI.openFileInMainWindow) {
                     // Main window exists, try to open file in it
-                    const result = await window.electronAPI.openFileInMainWindow(file.path);
+                    const result = await window.electronAPI.openFileInMainWindow(filePath);
                     if (result.success) {
                         this.showNotification(`Opened "${file.name}" in GenomeExplorer`, 'success');
                     } else {
                         // If opening in existing window fails, try creating new window
                         console.log('Failed to open in existing window, creating new window...');
-                        const newWindowResult = await window.electronAPI.createNewMainWindow(file.path);
+                        const newWindowResult = await window.electronAPI.createNewMainWindow(filePath);
                         if (newWindowResult.success) {
                             this.showNotification(`Opened "${file.name}" in new GenomeExplorer window`, 'success');
                         } else {
@@ -1028,6 +1037,258 @@ class ProjectManagerWindow {
     }
 
     // ====== 工具方法 ======
+
+    /**
+     * 获取文件的绝对路径
+     * @param {Object} file - 文件对象
+     * @returns {string} 绝对路径
+     */
+    getFileAbsolutePath(file) {
+        if (!file || !this.currentProject) return '';
+        
+        // 如果文件有绝对路径，直接返回
+        if (file.absolutePath) {
+            return file.absolutePath;
+        }
+        
+        // 如果文件有相对路径，构建绝对路径
+        if (file.path && this.currentProject.dataFolderPath) {
+            const path = require('path');
+            return path.resolve(this.currentProject.dataFolderPath, file.path);
+        }
+        
+        // 兜底情况
+        return file.path || '';
+    }
+
+    /**
+     * 获取文件的项目相对路径
+     * @param {Object} file - 文件对象
+     * @returns {string} 项目相对路径
+     */
+    getFileProjectRelativePath(file) {
+        if (!file) return '';
+        
+        // 如果已有项目相对路径，直接返回
+        if (file.path && !file.path.startsWith('/') && !file.path.includes(':\\')) {
+            return file.path;
+        }
+        
+        // 如果有绝对路径，转换为相对路径
+        if (file.absolutePath && this.currentProject && this.currentProject.dataFolderPath) {
+            const path = require('path');
+            const relativePath = path.relative(this.currentProject.dataFolderPath, file.absolutePath);
+            return relativePath.replace(/\\/g, '/');
+        }
+        
+        return file.name || '';
+    }
+
+    /**
+     * 规范化文件路径存储
+     * @param {Object} file - 文件对象
+     * @returns {Object} 规范化后的文件对象
+     */
+    normalizeFilePaths(file) {
+        if (!file || !this.currentProject) return file;
+        
+        const normalizedFile = { ...file };
+        
+        // 确保有项目相对路径
+        normalizedFile.path = this.getFileProjectRelativePath(file);
+        
+        // 如果没有绝对路径，尝试构建
+        if (!normalizedFile.absolutePath && this.currentProject.dataFolderPath) {
+            const path = require('path');
+            normalizedFile.absolutePath = path.resolve(this.currentProject.dataFolderPath, normalizedFile.path);
+        }
+        
+        return normalizedFile;
+    }
+
+    /**
+     * 建立文件关系（如配对的reads文件、注释文件等）
+     * @param {Array} files - 文件数组
+     */
+    buildFileRelationships(files) {
+        if (!files || files.length === 0) return;
+        
+        this.fileRelationships.clear();
+        
+        files.forEach(file => {
+            const relationships = this.detectFileRelationships(file, files);
+            if (relationships.length > 0) {
+                this.fileRelationships.set(file.id, relationships);
+            }
+        });
+    }
+
+    /**
+     * 检测文件关系
+     * @param {Object} file - 目标文件
+     * @param {Array} allFiles - 所有文件
+     * @returns {Array} 相关文件列表
+     */
+    detectFileRelationships(file, allFiles) {
+        const relationships = [];
+        const fileName = file.name.toLowerCase();
+        const baseName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+        
+        // 检测配对的reads文件 (R1/R2, _1/_2, forward/reverse)
+        if (fileName.includes('_r1') || fileName.includes('_1') || fileName.includes('forward')) {
+            const pairPattern = fileName.replace(/(_r1|_1|forward)/, '(_r2|_2|reverse)');
+            const pair = allFiles.find(f => f.name.toLowerCase().match(new RegExp(pairPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))));
+            if (pair) {
+                relationships.push({ type: 'paired_reads', file: pair });
+            }
+        }
+        
+        // 检测注释文件关系 (同名不同扩展名)
+        const annotationExtensions = ['.gff', '.gff3', '.gtf', '.bed', '.vcf'];
+        const genomeExtensions = ['.fasta', '.fa', '.fas', '.gb', '.gbk'];
+        
+        if (genomeExtensions.some(ext => fileName.endsWith(ext))) {
+            annotationExtensions.forEach(ext => {
+                const annotationFile = allFiles.find(f => 
+                    f.name.toLowerCase().startsWith(baseName) && 
+                    f.name.toLowerCase().endsWith(ext)
+                );
+                if (annotationFile) {
+                    relationships.push({ type: 'annotation', file: annotationFile });
+                }
+            });
+        }
+        
+        // 检测索引文件关系
+        const indexFile = allFiles.find(f => 
+            f.name.toLowerCase() === fileName + '.fai' || 
+            f.name.toLowerCase() === fileName + '.bai' ||
+            f.name.toLowerCase() === fileName + '.idx'
+        );
+        if (indexFile) {
+            relationships.push({ type: 'index', file: indexFile });
+        }
+        
+        return relationships;
+    }
+
+    /**
+     * 智能文件分类
+     * @param {Array} files - 文件数组
+     * @returns {Object} 分类结果
+     */
+    smartFileClassification(files) {
+        const classification = {
+            genomes: [],
+            annotations: [],
+            variants: [],
+            reads: [],
+            analysis: [],
+            others: []
+        };
+        
+        files.forEach(file => {
+            const fileName = file.name.toLowerCase();
+            const fileType = file.type;
+            
+            // 基因组文件
+            if (fileType === 'fasta' || fileType === 'genbank' || 
+                fileName.includes('genome') || fileName.includes('reference')) {
+                classification.genomes.push(file);
+            }
+            // 注释文件
+            else if (fileType === 'gff' || fileType === 'bed' || 
+                     fileName.includes('annotation') || fileName.includes('gene')) {
+                classification.annotations.push(file);
+            }
+            // 变异文件
+            else if (fileType === 'vcf' || fileName.includes('variant') || 
+                     fileName.includes('snp') || fileName.includes('indel')) {
+                classification.variants.push(file);
+            }
+            // 测序数据
+            else if (fileType === 'fastq' || fileType === 'bam' || fileType === 'sam' ||
+                     fileName.includes('read') || fileName.includes('seq')) {
+                classification.reads.push(file);
+            }
+            // 分析结果
+            else if (fileName.includes('result') || fileName.includes('output') ||
+                     fileName.includes('analysis') || fileName.includes('report')) {
+                classification.analysis.push(file);
+            }
+            // 其他
+            else {
+                classification.others.push(file);
+            }
+        });
+        
+        return classification;
+    }
+
+    /**
+     * 构建搜索索引
+     * @param {Array} files - 文件数组
+     */
+    buildSearchIndex(files) {
+        this.searchIndex.clear();
+        
+        files.forEach(file => {
+            const searchTerms = [
+                file.name.toLowerCase(),
+                file.type,
+                ...(file.tags || []),
+                ...(file.folder || []),
+                file.path.toLowerCase()
+            ];
+            
+            // 添加元数据搜索项
+            if (file.metadata) {
+                Object.values(file.metadata).forEach(value => {
+                    if (typeof value === 'string') {
+                        searchTerms.push(value.toLowerCase());
+                    }
+                });
+            }
+            
+            searchTerms.forEach(term => {
+                if (!this.searchIndex.has(term)) {
+                    this.searchIndex.set(term, new Set());
+                }
+                this.searchIndex.get(term).add(file.id);
+            });
+        });
+    }
+
+    /**
+     * 高级搜索
+     * @param {string} query - 搜索查询
+     * @returns {Array} 匹配的文件
+     */
+    advancedSearch(query) {
+        if (!query || query.trim() === '') return [];
+        
+        const searchTerms = query.toLowerCase().split(/\s+/);
+        const matchingFileIds = new Set();
+        
+        searchTerms.forEach(term => {
+            // 精确匹配
+            if (this.searchIndex.has(term)) {
+                this.searchIndex.get(term).forEach(fileId => matchingFileIds.add(fileId));
+            }
+            
+            // 模糊匹配
+            this.searchIndex.forEach((fileIds, indexTerm) => {
+                if (indexTerm.includes(term)) {
+                    fileIds.forEach(fileId => matchingFileIds.add(fileId));
+                }
+            });
+        });
+        
+        // 返回匹配的文件对象
+        return Array.from(matchingFileIds)
+            .map(fileId => this.findFileById(fileId))
+            .filter(file => file !== null);
+    }
 
     getCurrentFolderFiles() {
         if (!this.currentProject) return [];
@@ -1373,7 +1634,10 @@ class ProjectManagerWindow {
                         file.metadata.autoDiscovered = true;
                         file.metadata.discoveredDate = new Date().toISOString();
                         
-                        this.currentProject.files.push(file);
+                        // Normalize file paths to ensure consistent storage
+                        const normalizedFile = this.normalizeFilePaths(file);
+                        
+                        this.currentProject.files.push(normalizedFile);
                     });
 
                     // Add new folders to the project
@@ -1388,7 +1652,13 @@ class ProjectManagerWindow {
 
                     // Update project metadata
                     this.currentProject.modified = new Date().toISOString();
+                    this.currentProject.metadata.totalFiles = this.currentProject.files.length;
+                    this.currentProject.metadata.totalSize = this.currentProject.files.reduce((sum, f) => sum + (f.size || 0), 0);
                     this.projects.set(this.currentProject.id, this.currentProject);
+
+                    // Build enhanced project features
+                    this.buildFileRelationships(this.currentProject.files);
+                    this.buildSearchIndex(this.currentProject.files);
 
                     // 标记项目为已修改，这样保存按钮就会保存到.prj.GAI文件
                     this.markProjectAsModified();
@@ -1403,55 +1673,18 @@ class ProjectManagerWindow {
 
                     // Update UI
                     this.renderProjectTree();
-                    this.selectProject(project.id);
+                    this.renderProjectContent();
                     
-                    // Auto-scan project directory after loading to ensure workspace shows current files
-                    setTimeout(async () => {
-                        console.log('🔄 Auto-scanning project directory after loading...');
-                        console.log('🔍 Current project:', this.currentProject?.name);
-                        console.log('🔍 Project location:', this.currentProject?.location);
-                        console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
-                        console.log('🔍 ElectronAPI available:', !!window.electronAPI);
-                        console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
-                        
-                        // Force scan execution even if initial state is empty
-                        if (this.currentProject) {
-                            // Ensure project has basic array structures
-                            if (!this.currentProject.files) {
-                                this.currentProject.files = [];
-                                console.log('📁 Initialized empty files array');
-                            }
-                            if (!this.currentProject.folders) {
-                                this.currentProject.folders = [];
-                                console.log('📁 Initialized empty folders array');
-                            }
-                            
-                            // Execute scan
-                            try {
-                                await this.scanAndAddNewFiles();
-                                console.log('✅ Directory scan completed');
-                            } catch (error) {
-                                console.error('❌ Directory scan failed:', error);
-                                // If scan fails, at least ensure basic structure is displayed
-                                this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
-                            }
-                        }
-                        
-                        // Force UI refresh regardless of scan success
-                        this.renderProjectTree();
-                        if (this.currentProject) {
-                            this.selectProject(this.currentProject.id);
-                            this.renderProjectContent(); // Ensure workspace content is also refreshed
-                        }
-                        
-                        console.log('🎯 UI refresh completed - check workspace for files/folders');
-                        console.log('📊 Final project state:', {
-                            files: this.currentProject?.files?.length || 0,
-                            folders: this.currentProject?.folders?.length || 0
-                        });
-                    }, 300);
+                    // Show smart classification summary
+                    const classification = this.smartFileClassification(this.currentProject.files);
+                    const classificationSummary = Object.entries(classification)
+                        .filter(([_, files]) => files.length > 0)
+                        .map(([category, files]) => `${category}: ${files.length}`)
+                        .join(', ');
                     
-                    this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
+                    if (classificationSummary) {
+                        console.log(`📊 Smart Classification: ${classificationSummary}`);
+                    }
                     
                     console.log(`📊 Scan Summary:`, {
                         newFiles: newFiles.length,
@@ -2438,15 +2671,18 @@ ${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
         const fileId = Array.from(this.selectedFiles)[0];
         const file = this.findFileById(fileId);
         
-        if (file && file.path) {
-            if (window.electronAPI && window.electronAPI.openFileInExternalEditor) {
-                window.electronAPI.openFileInExternalEditor(file.path);
+        if (file) {
+            const filePath = this.getFileAbsolutePath(file);
+            if (filePath && window.electronAPI && window.electronAPI.openFileInExternalEditor) {
+                window.electronAPI.openFileInExternalEditor(filePath);
                 this.showNotification(`Opening "${file.name}" in external editor`, 'info');
+            } else if (!filePath) {
+                this.showNotification('File path not available', 'error');
             } else {
                 this.showNotification('External editor not available in browser mode', 'warning');
             }
         } else {
-            this.showNotification('File path not available', 'error');
+            this.showNotification('File not found', 'error');
         }
     }
 
