@@ -853,22 +853,15 @@ function createWindow() {
   // Load the app
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
-  // Clear cache aggressively to ensure fresh file loading
-  mainWindow.webContents.session.clearCache();
-  mainWindow.webContents.session.clearStorageData();
-  
-  // Force reload after cache clear
-  mainWindow.webContents.once('did-finish-load', () => {
-    mainWindow.webContents.reload();
-  });
-
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
-  // Open DevTools to debug UI issues (temporarily enabled for debugging)
-  mainWindow.webContents.openDevTools();
+  // Open DevTools for debugging (can be disabled in production)
+  if (process.argv.includes('--dev')) {
+    mainWindow.webContents.openDevTools();
+  }
 
   // 主窗口获得焦点时切换回主菜单
   mainWindow.on('focus', () => {
