@@ -854,22 +854,42 @@ class MCPGenomeBrowserServer {
 
         // Handle Evo2 tools directly on server
         if (toolName === 'evo2_generate_sequence') {
+            console.log('=== MCP SERVER: EVO2 TOOL CALL ===');
+            console.log('Tool:', toolName);
+            console.log('Parameters received:', parameters);
+            console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2GenerateSequence(parameters);
         }
         
         if (toolName === 'evo2_predict_function') {
+            console.log('=== MCP SERVER: EVO2 TOOL CALL ===');
+            console.log('Tool:', toolName);
+            console.log('Parameters received:', parameters);
+            console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2PredictFunction(parameters);
         }
         
         if (toolName === 'evo2_design_crispr') {
+            console.log('=== MCP SERVER: EVO2 TOOL CALL ===');
+            console.log('Tool:', toolName);
+            console.log('Parameters received:', parameters);
+            console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2DesignCrispr(parameters);
         }
         
         if (toolName === 'evo2_optimize_sequence') {
+            console.log('=== MCP SERVER: EVO2 TOOL CALL ===');
+            console.log('Tool:', toolName);
+            console.log('Parameters received:', parameters);
+            console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2OptimizeSequence(parameters);
         }
         
         if (toolName === 'evo2_analyze_essentiality') {
+            console.log('=== MCP SERVER: EVO2 TOOL CALL ===');
+            console.log('Tool:', toolName);
+            console.log('Parameters received:', parameters);
+            console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2AnalyzeEssentiality(parameters);
         }
 
@@ -2680,9 +2700,15 @@ class MCPGenomeBrowserServer {
         console.log('Parameters:', { prompt: prompt.substring(0, 100) + '...', maxTokens, temperature, topP });
 
         try {
-            // NVIDIA Health API format for Evo2
+            // NVIDIA AI Foundation Models API format for Evo2
             const requestBody = {
-                prompt: taxonomy ? `${taxonomy}${prompt}` : prompt,
+                model: 'nvidia/arc/evo2-40b',
+                messages: [
+                    {
+                        role: 'user',
+                        content: taxonomy ? `${taxonomy}${prompt}` : prompt
+                    }
+                ],
                 max_tokens: Math.min(maxTokens, 1048576),
                 temperature: Math.max(0.0, Math.min(2.0, temperature)),
                 top_p: Math.max(0.0, Math.min(1.0, topP)),
@@ -2697,10 +2723,10 @@ class MCPGenomeBrowserServer {
                 requestBody.stop = stopSequences;
             }
 
-            const result = await this.callEvo2API('/v1/biology/arc/evo2-40b/generate', requestBody, apiConfig);
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
             
-            // Health API returns different format than chat completions
-            const generatedSequence = result.generated_text || result.choices?.[0]?.message?.content || '';
+            // Chat completions API format
+            const generatedSequence = result.choices?.[0]?.message?.content || result.generated_text || '';
             
             console.log(`Generated sequence length: ${generatedSequence.length}`);
             console.log('=== MCP SERVER: EVO2 GENERATE SEQUENCE END ===');
@@ -2744,13 +2770,19 @@ class MCPGenomeBrowserServer {
             const fullPrompt = taxonomy ? `${taxonomy}${prompt}` : prompt;
 
             const requestBody = {
-                prompt: fullPrompt,
+                model: 'nvidia/arc/evo2-40b',
+                messages: [
+                    {
+                        role: 'user',
+                        content: fullPrompt
+                    }
+                ],
                 max_tokens: 2048,
                 temperature: 0.3  // Lower temperature for more deterministic function prediction
             };
 
-            const result = await this.callEvo2API('/v1/biology/arc/evo2-40b/generate', requestBody, apiConfig);
-            const prediction = result.generated_text || result.choices?.[0]?.message?.content || '';
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
+            const prediction = result.choices?.[0]?.message?.content || result.generated_text || '';
 
             console.log('=== MCP SERVER: EVO2 PREDICT FUNCTION END ===');
 
@@ -2792,13 +2824,19 @@ class MCPGenomeBrowserServer {
                 (organism ? ` Target organism: ${organism}` : '');
 
             const requestBody = {
-                prompt: designPrompt,
+                model: 'nvidia/arc/evo2-40b',
+                messages: [
+                    {
+                        role: 'user',
+                        content: designPrompt
+                    }
+                ],
                 max_tokens: 4096,
                 temperature: 0.7
             };
 
-            const result = await this.callEvo2API('/v1/biology/arc/evo2-40b/generate', requestBody, apiConfig);
-            const design = result.generated_text || result.choices?.[0]?.message?.content || '';
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
+            const design = result.choices?.[0]?.message?.content || result.generated_text || '';
 
             // Parse the design result to extract components
             const designComponents = this.parseCrisprDesign(design, targetSequence, guideLength);
@@ -2832,7 +2870,8 @@ class MCPGenomeBrowserServer {
             optimizationGoal, 
             constraints = {}, 
             targetOrganism = null, 
-            preserveFunction = true 
+            preserveFunction = true,
+            apiConfig = null
         } = parameters;
 
         console.log('=== MCP SERVER: EVO2 OPTIMIZE SEQUENCE ===');
@@ -2855,13 +2894,19 @@ class MCPGenomeBrowserServer {
                 (preserveFunction ? ' Preserve the original biological function.' : '');
 
             const requestBody = {
-                prompt: prompt,
+                model: 'nvidia/arc/evo2-40b',
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
                 max_tokens: Math.max(sequence.length * 2, 2048),
                 temperature: 0.5
             };
 
-            const result = await this.callEvo2API('/v1/biology/arc/evo2-40b/generate', requestBody);
-            const optimizedSequence = this.extractSequenceFromResponse(result.generated_text || result.choices?.[0]?.message?.content || '');
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
+            const optimizedSequence = this.extractSequenceFromResponse(result.choices?.[0]?.message?.content || result.generated_text || '');
 
             const analysis = this.analyzeOptimization(sequence, optimizedSequence, optimizationGoal);
 
@@ -2890,7 +2935,8 @@ class MCPGenomeBrowserServer {
             sequence, 
             organism = null, 
             resolution = 'nucleotide', 
-            includeVisualization = true 
+            includeVisualization = true,
+            apiConfig = null
         } = parameters;
 
         console.log('=== MCP SERVER: EVO2 ANALYZE ESSENTIALITY ===');
@@ -2902,13 +2948,19 @@ class MCPGenomeBrowserServer {
                 ' Provide detailed essentiality scores and functional importance.';
 
             const requestBody = {
-                prompt: prompt,
+                model: 'nvidia/arc/evo2-40b',
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
                 max_tokens: 4096,
                 temperature: 0.2  // Low temperature for consistent analysis
             };
 
-            const result = await this.callEvo2API('/v1/biology/arc/evo2-40b/generate', requestBody);
-            const analysis = result.generated_text || result.choices?.[0]?.message?.content || '';
+            const result = await this.callEvo2API('/v1/chat/completions', requestBody, apiConfig);
+            const analysis = result.choices?.[0]?.message?.content || result.generated_text || '';
 
             const essentialityData = this.parseEssentialityAnalysis(analysis, sequence, resolution);
 
@@ -2959,24 +3011,52 @@ class MCPGenomeBrowserServer {
             return this.getSimulatedEvo2Response(requestBody);
         }
 
+        // Validate API key format
+        if (!config.apiKey.startsWith('nvapi-')) {
+            console.warn('Invalid NVIDIA API key format, using simulated response');
+            return this.getSimulatedEvo2Response(requestBody);
+        }
+
         try {
             const url = new URL(config.baseUrl);
+            const apiEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+            
+            console.log(`Making request to: ${url.protocol}//${url.hostname}${apiEndpoint}`);
+            
             const response = await this.makeHTTPSRequest({
                 hostname: url.hostname,
                 port: url.port || (url.protocol === 'https:' ? 443 : 80),
-                path: endpoint,
+                path: apiEndpoint,
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${config.apiKey}`,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'User-Agent': 'Genome AI Studio/0.2'
+                    'User-Agent': 'Genome AI Studio/1.0'
                 }
             }, JSON.stringify(requestBody));
 
-            return JSON.parse(response);
+            const responseData = JSON.parse(response);
+            console.log('Evo2 API response received:', {
+                hasGeneratedText: !!responseData.generated_text,
+                hasChoices: !!responseData.choices,
+                responseLength: responseData.generated_text?.length || 0
+            });
+            
+            return responseData;
         } catch (error) {
-            console.warn(`Evo2 API call failed: ${error.message}, using simulated response`);
+            console.error(`Evo2 API call failed: ${error.message}`);
+            console.error('Request details:', {
+                endpoint: endpoint,
+                baseUrl: config?.baseUrl,
+                hasApiKey: !!config?.apiKey
+            });
+            
+            // Only use simulation for network/API errors, not for configuration issues
+            if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
+                throw new Error(`Evo2 API connection failed: ${error.message}`);
+            }
+            
             return this.getSimulatedEvo2Response(requestBody);
         }
     }
@@ -2988,7 +3068,7 @@ class MCPGenomeBrowserServer {
         // This would typically read from a config file or environment variables
         return {
             apiKey: process.env.NVIDIA_API_KEY || null,
-            baseUrl: process.env.EVO2_BASE_URL || 'https://health.api.nvidia.com',
+            baseUrl: process.env.EVO2_BASE_URL || 'https://integrate.api.nvidia.com',
             model: 'nvidia/arc/evo2-40b'
         };
     }
@@ -2997,12 +3077,11 @@ class MCPGenomeBrowserServer {
      * Simulate Evo2 response for testing
      */
     getSimulatedEvo2Response(requestBody) {
-        const userContent = requestBody.prompt || requestBody.messages?.[0]?.content || '';
+        const userContent = requestBody.messages?.[0]?.content || requestBody.prompt || '';
         const generatedText = this.generateSimulatedSequence(userContent, requestBody.max_tokens || 1000);
         
-        // Return both Health API and Chat API formats for compatibility
+        // Return Chat API format for compatibility
         return {
-            generated_text: generatedText,
             choices: [
                 {
                     message: {

@@ -313,6 +313,15 @@ class ConfigManager {
                     lastValidation: null,
                     migrationVersion: '1.0'
                 }
+            },
+            evo2: {
+                apiKey: '',
+                apiUrl: 'https://integrate.api.nvidia.com',
+                timeout: 60,
+                maxRetries: 3,
+                debugMode: false,
+                lastSaved: null,
+                analysisHistory: []
             }
         };
     }
@@ -1152,5 +1161,62 @@ class ConfigManager {
             console.error('Error migrating BLAST databases from localStorage:', error);
             return { success: false, error: error.message };
         }
+    }
+
+    // Evo2 configuration methods
+    async getEvo2Config() {
+        await this.waitForInitialization();
+        return this.config.evo2 || {};
+    }
+
+    async setEvo2Config(config) {
+        await this.waitForInitialization();
+        
+        this.config.evo2 = {
+            ...this.config.evo2,
+            ...config,
+            lastSaved: new Date().toISOString()
+        };
+        
+        await this.saveConfig();
+        console.log('Evo2 configuration updated');
+    }
+
+    async getEvo2ApiKey() {
+        await this.waitForInitialization();
+        return this.config.evo2?.apiKey || '';
+    }
+
+    async setEvo2ApiKey(apiKey) {
+        await this.waitForInitialization();
+        
+        if (!this.config.evo2) {
+            this.config.evo2 = {};
+        }
+        
+        this.config.evo2.apiKey = apiKey;
+        this.config.evo2.lastSaved = new Date().toISOString();
+        
+        await this.saveConfig();
+        console.log('Evo2 API key updated');
+    }
+
+    async getEvo2AnalysisHistory() {
+        await this.waitForInitialization();
+        return this.config.evo2?.analysisHistory || [];
+    }
+
+    async setEvo2AnalysisHistory(history) {
+        await this.waitForInitialization();
+        
+        if (!this.config.evo2) {
+            this.config.evo2 = {};
+        }
+        
+        this.config.evo2.analysisHistory = history;
+        this.config.evo2.lastSaved = new Date().toISOString();
+        
+        await this.saveConfig();
+        console.log('Evo2 analysis history updated');
     }
 } 

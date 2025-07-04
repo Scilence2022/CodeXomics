@@ -877,9 +877,9 @@
         let analysisHistory = [];
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadApiConfig();
-            loadAnalysisHistory();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadApiConfig();
+            await loadAnalysisHistory();
             setupMenuEventListeners();
             initializeMCPConnection();
         });
@@ -1048,36 +1048,65 @@
         }
 
         // Enhanced API Configuration System
-        function loadApiConfig() {
-            const config = getStoredConfig();
-            updateCompactConfigDisplay();
+        async function loadApiConfig() {
+            const config = await getStoredConfig();
+            await updateCompactConfigDisplay();
             
             // Load into modal if it exists
             if (document.getElementById('modalApiKey')) {
                 document.getElementById('modalApiKey').value = config.apiKey || '';
-                document.getElementById('modalApiUrl').value = config.apiUrl || 'https://health.api.nvidia.com';
+                document.getElementById('modalApiUrl').value = config.apiUrl || 'https://integrate.api.nvidia.com';
                 document.getElementById('defaultTimeout').value = config.timeout || 60;
                 document.getElementById('maxRetries').value = config.maxRetries || 3;
                 document.getElementById('enableDebugMode').checked = config.debugMode || false;
                 
-                updateModalConfigStatus();
+                await updateModalConfigStatus();
                 setupConfigValidation();
             }
         }
 
-        function getStoredConfig() {
-            return {
-                apiKey: localStorage.getItem('evo2_api_key') || '',
-                apiUrl: localStorage.getItem('evo2_api_url') || 'https://health.api.nvidia.com',
-                timeout: parseInt(localStorage.getItem('evo2_timeout')) || 60,
-                maxRetries: parseInt(localStorage.getItem('evo2_max_retries')) || 3,
-                debugMode: localStorage.getItem('evo2_debug_mode') === 'true',
-                lastSaved: localStorage.getItem('evo2_config_timestamp')
-            };
+        async function getStoredConfig() {
+            try {
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    const config = await ipcRenderer.invoke('evo2-get-config');
+                    console.log('Evo2 config loaded from ConfigManager:', config);
+                    return {
+                        apiKey: config.apiKey || '',
+                        apiUrl: config.apiUrl || 'https://integrate.api.nvidia.com',
+                        timeout: config.timeout || 60,
+                        maxRetries: config.maxRetries || 3,
+                        debugMode: config.debugMode || false,
+                        lastSaved: config.lastSaved || null
+                    };
+                } else {
+                    // Fallback to localStorage if not in Electron environment
+                    console.log('Evo2 config loaded from localStorage (fallback)');
+                    return {
+                        apiKey: localStorage.getItem('evo2_api_key') || '',
+                        apiUrl: localStorage.getItem('evo2_api_url') || 'https://integrate.api.nvidia.com',
+                        timeout: parseInt(localStorage.getItem('evo2_timeout')) || 60,
+                        maxRetries: parseInt(localStorage.getItem('evo2_max_retries')) || 3,
+                        debugMode: localStorage.getItem('evo2_debug_mode') === 'true',
+                        lastSaved: localStorage.getItem('evo2_config_timestamp')
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading Evo2 config:', error);
+                // Return default config on error
+                return {
+                    apiKey: '',
+                    apiUrl: 'https://integrate.api.nvidia.com',
+                    timeout: 60,
+                    maxRetries: 3,
+                    debugMode: false,
+                    lastSaved: null
+                };
+            }
         }
 
-        function getApiConfig() {
-            const config = getStoredConfig();
+        async function getApiConfig() {
+            const config = await getStoredConfig();
             if (config.apiKey) {
                 return { 
                     key: config.apiKey, 
@@ -1090,8 +1119,8 @@
             return null;
         }
 
-        function updateCompactConfigDisplay() {
-            const config = getStoredConfig();
+        async function updateCompactConfigDisplay() {
+            const config = await getStoredConfig();
             const statusElement = document.getElementById('compactConfigStatus');
             const statusText = document.getElementById('compactConfigText');
             const statusDetail = document.getElementById('compactConfigDetail');
@@ -1108,9 +1137,9 @@
         }
 
         // Modal Configuration Functions
-        function openConfigModal() {
+        async function openConfigModal() {
             document.getElementById('configModal').style.display = 'flex';
-            loadApiConfig(); // Refresh modal data
+            await loadApiConfig(); // Refresh modal data
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }
 
@@ -1119,7 +1148,7 @@
             document.body.style.overflow = 'auto'; // Restore scrolling
         }
 
-        function saveModalConfig() {
+        async function saveModalConfig() {
             const apiKey = document.getElementById('modalApiKey').value.trim();
             const apiUrl = document.getElementById('modalApiUrl').value.trim();
             const timeout = document.getElementById('defaultTimeout').value;
@@ -1138,28 +1167,54 @@
                 return;
             }
             
-            // Save configuration
-            localStorage.setItem('evo2_api_key', apiKey);
-            localStorage.setItem('evo2_api_url', apiUrl);
-            localStorage.setItem('evo2_timeout', timeout);
-            localStorage.setItem('evo2_max_retries', maxRetries);
-            localStorage.setItem('evo2_debug_mode', debugMode.toString());
-            localStorage.setItem('evo2_config_timestamp', new Date().toISOString());
-            
-            // Update displays
-            updateCompactConfigDisplay();
-            updateModalConfigStatus();
-            
-            showNotification('Configuration saved successfully!', 'success');
-            
-            // Auto-close modal after successful save
-            setTimeout(() => {
-                closeConfigModal();
-            }, 1500);
+            try {
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    const config = {
+                        apiKey: apiKey,
+                        apiUrl: apiUrl,
+                        timeout: parseInt(timeout),
+                        maxRetries: parseInt(maxRetries),
+                        debugMode: debugMode,
+                        lastSaved: new Date().toISOString()
+                    };
+                    
+                    const result = await ipcRenderer.invoke('evo2-set-config', config);
+                    if (result.success) {
+                        console.log('Evo2 config saved to ConfigManager');
+                    } else {
+                        throw new Error(result.error || 'Failed to save config');
+                    }
+                } else {
+                    // Fallback to localStorage if not in Electron environment
+                    localStorage.setItem('evo2_api_key', apiKey);
+                    localStorage.setItem('evo2_api_url', apiUrl);
+                    localStorage.setItem('evo2_timeout', timeout);
+                    localStorage.setItem('evo2_max_retries', maxRetries);
+                    localStorage.setItem('evo2_debug_mode', debugMode.toString());
+                    localStorage.setItem('evo2_config_timestamp', new Date().toISOString());
+                    console.log('Evo2 config saved to localStorage (fallback)');
+                }
+                
+                // Update displays
+                await updateCompactConfigDisplay();
+                updateModalConfigStatus();
+                
+                showNotification('Configuration saved successfully!', 'success');
+                
+                // Auto-close modal after successful save
+                setTimeout(() => {
+                    closeConfigModal();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error saving Evo2 config:', error);
+                showNotification('Failed to save configuration: ' + error.message, 'error');
+            }
         }
 
-        function updateModalConfigStatus() {
-            const config = getStoredConfig();
+        async function updateModalConfigStatus() {
+            const config = await getStoredConfig();
             const statusDisplay = document.getElementById('modalConfigStatus');
             const statusIndicator = document.getElementById('modalStatusIndicator');
             const statusText = document.getElementById('modalStatusText');
@@ -1629,10 +1684,14 @@
                 return;
             }
             
+            // Get API configuration
+            const apiConfig = getApiConfig();
+            
             const params = {
                 sequence: sequence,
                 optimizationGoal: optimizationGoal,
-                targetOrganism: targetOrganism || null
+                targetOrganism: targetOrganism || null,
+                apiConfig: apiConfig
             };
             
             await executeAnalysis('evo2_optimize_sequence', params, 'Optimizing sequence...');
@@ -1650,10 +1709,14 @@
                 return;
             }
             
+            // Get API configuration
+            const apiConfig = getApiConfig();
+            
             const params = {
                 sequence: sequence,
                 resolution: resolution,
-                organism: organism || null
+                organism: organism || null,
+                apiConfig: apiConfig
             };
             
             await executeAnalysis('evo2_analyze_essentiality', params, 'Analyzing essentiality...');
@@ -1668,7 +1731,7 @@
                 
                 hideLoading();
                 displayResults(result, toolName);
-                addToHistory(toolName, params, result);
+                await addToHistory(toolName, params, result);
                 
             } catch (error) {
                 hideLoading();
@@ -1690,6 +1753,19 @@
 
         // MCP Tool calling
         async function callMCPTool(toolName, parameters) {
+            // Debug logging
+            console.log('=== EVO2 FRONTEND: CALLING MCP TOOL ===');
+            console.log('Tool name:', toolName);
+            console.log('Parameters:', parameters);
+            console.log('API Config present:', !!parameters.apiConfig);
+            if (parameters.apiConfig) {
+                console.log('API Config details:', {
+                    hasKey: !!parameters.apiConfig.key,
+                    hasUrl: !!parameters.apiConfig.url,
+                    url: parameters.apiConfig.url
+                });
+            }
+            
             const response = await fetch('http://localhost:3000/execute-tool', {
                 method: 'POST',
                 headers: {
@@ -1712,6 +1788,7 @@
                 throw new Error(data.error);
             }
             
+            console.log('=== EVO2 FRONTEND: MCP TOOL CALL COMPLETE ===');
             return data.result;
         }
 
@@ -1786,7 +1863,7 @@
         }
 
         // History management
-        function addToHistory(toolName, params, result) {
+        async function addToHistory(toolName, params, result) {
             const historyItem = {
                 toolName: toolName,
                 timestamp: Date.now(),
@@ -1797,14 +1874,57 @@
             analysisHistory.unshift(historyItem);
             analysisHistory = analysisHistory.slice(0, 10); // Keep last 10
             
-            localStorage.setItem('evo2_analysis_history', JSON.stringify(analysisHistory));
+            try {
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    const result = await ipcRenderer.invoke('evo2-set-analysis-history', analysisHistory);
+                    if (result.success) {
+                        console.log('Evo2 analysis history saved to ConfigManager');
+                    } else {
+                        console.error('Failed to save analysis history:', result.error);
+                        // Fallback to localStorage
+                        localStorage.setItem('evo2_analysis_history', JSON.stringify(analysisHistory));
+                    }
+                } else {
+                    // Fallback to localStorage if not in Electron environment
+                    localStorage.setItem('evo2_analysis_history', JSON.stringify(analysisHistory));
+                }
+            } catch (error) {
+                console.error('Error saving analysis history:', error);
+                // Fallback to localStorage
+                localStorage.setItem('evo2_analysis_history', JSON.stringify(analysisHistory));
+            }
+            
             updateHistoryDisplay();
         }
 
-        function loadAnalysisHistory() {
-            const stored = localStorage.getItem('evo2_analysis_history');
-            if (stored) {
-                analysisHistory = JSON.parse(stored);
+        async function loadAnalysisHistory() {
+            try {
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    const history = await ipcRenderer.invoke('evo2-get-analysis-history');
+                    analysisHistory = history || [];
+                    console.log('Evo2 analysis history loaded from ConfigManager:', analysisHistory.length, 'items');
+                } else {
+                    // Fallback to localStorage if not in Electron environment
+                    const stored = localStorage.getItem('evo2_analysis_history');
+                    if (stored) {
+                        analysisHistory = JSON.parse(stored);
+                        console.log('Evo2 analysis history loaded from localStorage (fallback):', analysisHistory.length, 'items');
+                    } else {
+                        analysisHistory = [];
+                    }
+                }
+                updateHistoryDisplay();
+            } catch (error) {
+                console.error('Error loading analysis history:', error);
+                // Fallback to localStorage
+                const stored = localStorage.getItem('evo2_analysis_history');
+                if (stored) {
+                    analysisHistory = JSON.parse(stored);
+                } else {
+                    analysisHistory = [];
+                }
                 updateHistoryDisplay();
             }
         }

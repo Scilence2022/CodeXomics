@@ -3248,6 +3248,122 @@ ipcMain.on('open-blast-installer-window', () => {
   createBlastInstallerWindow();
 });
 
+// Evo2 configuration IPC handlers
+ipcMain.handle('evo2-get-config', async () => {
+  try {
+    // Get the main window to access ConfigManager
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      const config = await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.getEvo2Config();
+        } else {
+          Promise.resolve({});
+        }
+      `);
+      return config;
+    }
+    return {};
+  } catch (error) {
+    console.error('Error getting Evo2 config:', error);
+    return {};
+  }
+});
+
+ipcMain.handle('evo2-set-config', async (event, config) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.setEvo2Config(${JSON.stringify(config)});
+        }
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error setting Evo2 config:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('evo2-get-api-key', async () => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      const apiKey = await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.getEvo2ApiKey();
+        } else {
+          Promise.resolve('');
+        }
+      `);
+      return apiKey;
+    }
+    return '';
+  } catch (error) {
+    console.error('Error getting Evo2 API key:', error);
+    return '';
+  }
+});
+
+ipcMain.handle('evo2-set-api-key', async (event, apiKey) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.setEvo2ApiKey('${apiKey}');
+        }
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error setting Evo2 API key:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('evo2-get-analysis-history', async () => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      const history = await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.getEvo2AnalysisHistory();
+        } else {
+          Promise.resolve([]);
+        }
+      `);
+      return history;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting Evo2 analysis history:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('evo2-set-analysis-history', async (event, history) => {
+  try {
+    const mainWindow = getCurrentMainWindow();
+    if (mainWindow && mainWindow.webContents) {
+      await mainWindow.webContents.executeJavaScript(`
+        if (window.genomeBrowser && window.genomeBrowser.configManager) {
+          window.genomeBrowser.configManager.setEvo2AnalysisHistory(${JSON.stringify(history)});
+        }
+      `);
+      return { success: true };
+    }
+    return { success: false, error: 'Main window not available' };
+  } catch (error) {
+    console.error('Error setting Evo2 analysis history:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // IPC handler for BLAST installation check
 ipcMain.on('check-blast-installation', (event) => {
   console.log('IPC: Checking BLAST installation...');
