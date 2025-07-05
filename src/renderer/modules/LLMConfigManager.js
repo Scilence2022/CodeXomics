@@ -1643,19 +1643,25 @@ If the user is asking a general question that doesn't require a tool, respond no
     }
 
     showSystemPromptPreview(prompt, type) {
+        // Remove any existing modal first
+        const existingModal = document.getElementById('systemPromptPreviewModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
         // Create modal HTML
         const modalHtml = `
-            <div class="modal show" id="systemPromptPreviewModal" style="z-index: 10001;">
+            <div class="modal" id="systemPromptPreviewModal" style="z-index: 10001;">
                 <div class="modal-content" style="max-width: 800px; max-height: 80vh;">
                     <div class="modal-header">
                         <h3>${type} System Prompt Preview</h3>
-                        <button class="modal-close">&times;</button>
+                        <button class="modal-close" type="button">&times;</button>
                     </div>
                     <div class="modal-body" style="overflow-y: auto;">
                         <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #374151;">${prompt}</div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn modal-close">Close</button>
+                        <button class="btn modal-close" type="button">Close</button>
                     </div>
                 </div>
             </div>
@@ -1664,22 +1670,42 @@ If the user is asking a general question that doesn't require a tool, respond no
         // Add to DOM
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        // Add event listeners
+        // Get the modal element
         const modal = document.getElementById('systemPromptPreviewModal');
-        const closeButtons = modal.querySelectorAll('.modal-close');
         
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
+        // Function to close the modal
+        const closeModal = () => {
+            if (modal && modal.parentNode) {
                 modal.remove();
-            });
+            }
+        };
+
+        // Add event listeners
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', closeModal);
         });
 
         // Close on backdrop click
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                modal.remove();
+                closeModal();
             }
         });
+
+        // Close on Escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        // Show the modal
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
     }
 
     showNotification(message, type = 'info') {

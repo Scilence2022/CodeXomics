@@ -698,10 +698,18 @@ class MicrobeGenomicsFunctions {
         // First, find the gene by name or locus tag
         const geneResult = this.searchGeneByName(identifier);
         if (!geneResult) {
+            // Provide more helpful error information
+            const availableGenes = this.getAvailableGeneNames();
+            const suggestions = this.generateGeneSuggestions(identifier, availableGenes);
+            
             return {
                 success: false,
                 error: `Gene "${identifier}" not found`,
-                identifier: identifier
+                identifier: identifier,
+                suggestions: suggestions,
+                availableGenesCount: availableGenes.length,
+                availableGenesSample: availableGenes.slice(0, 10), // Show first 10 genes
+                message: `Gene "${identifier}" not found in the current genome. ${suggestions.length > 0 ? 'Try one of these similar genes: ' + suggestions.join(', ') : 'No similar genes found.'}`
             };
         }
         
@@ -755,6 +763,145 @@ class MicrobeGenomicsFunctions {
             geneType: feature.type || 'CDS',
             qualifiers: feature.qualifiers || {}
         };
+    }
+
+    /**
+     * Get available gene names from current annotations
+     * @returns {Array} Array of available gene names and locus tags
+     */
+    static getAvailableGeneNames() {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.currentAnnotations) return [];
+        
+        const geneNames = new Set();
+        
+        for (const [chr, features] of Object.entries(gb.currentAnnotations)) {
+            features.forEach(feature => {
+                const qualifiers = feature.qualifiers || {};
+                if (qualifiers.gene) {
+                    geneNames.add(qualifiers.gene);
+                }
+                if (qualifiers.locus_tag) {
+                    geneNames.add(qualifiers.locus_tag);
+                }
+            });
+        }
+        
+        return Array.from(geneNames).sort();
+    }
+
+    /**
+     * Get a sample of available genes for display
+     * @param {number} count - Number of genes to return (default: 20)
+     * @returns {Array} Array of sample gene names
+     */
+    static getSampleGenes(count = 20) {
+        const availableGenes = this.getAvailableGeneNames();
+        return availableGenes.slice(0, count);
+    }
+
+    /**
+     * Search for genes by partial name match
+     * @param {string} partialName - Partial gene name to search for
+     * @param {number} maxResults - Maximum number of results to return (default: 10)
+     * @returns {Array} Array of matching gene names
+     */
+    static searchGenesByPartialName(partialName, maxResults = 10) {
+        const availableGenes = this.getAvailableGeneNames();
+        const partialLower = partialName.toLowerCase();
+        
+        const matches = availableGenes.filter(gene => 
+            gene.toLowerCase().includes(partialLower)
+        );
+        
+        return matches.slice(0, maxResults);
+    }
+
+    /**
+     * Generate gene name suggestions based on input
+     * @param {string} input - Input gene identifier
+     * @param {Array} availableGenes - Array of available gene names
+     * @returns {Array} Array of suggested gene names
+     */
+    static generateGeneSuggestions(input, availableGenes) {
+        if (!input || !availableGenes.length) return [];
+        
+        const inputLower = input.toLowerCase();
+        const suggestions = [];
+        
+        // Exact prefix matches
+        const prefixMatches = availableGenes.filter(gene => 
+            gene.toLowerCase().startsWith(inputLower)
+        );
+        suggestions.push(...prefixMatches.slice(0, 5));
+        
+        // Contains matches
+        const containsMatches = availableGenes.filter(gene => 
+            gene.toLowerCase().includes(inputLower) && 
+            !prefixMatches.includes(gene)
+        );
+        suggestions.push(...containsMatches.slice(0, 3));
+        
+        // Fuzzy matches (simple similarity)
+        const fuzzyMatches = availableGenes.filter(gene => {
+            const geneLower = gene.toLowerCase();
+            const similarity = this.calculateStringSimilarity(inputLower, geneLower);
+            return similarity > 0.3 && !suggestions.includes(gene);
+        });
+        suggestions.push(...fuzzyMatches.slice(0, 2));
+        
+        return suggestions.slice(0, 10); // Limit to 10 suggestions
+    }
+
+    /**
+     * Calculate simple string similarity (0-1)
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string
+     * @returns {number} Similarity score
+     */
+    static calculateStringSimilarity(str1, str2) {
+        if (str1 === str2) return 1;
+        if (str1.length === 0 || str2.length === 0) return 0;
+        
+        const longer = str1.length > str2.length ? str1 : str2;
+        const shorter = str1.length > str2.length ? str2 : str1;
+        
+        const editDistance = this.levenshteinDistance(str1, str2);
+        return 1 - (editDistance / longer.length);
+    }
+
+    /**
+     * Calculate Levenshtein distance between two strings
+     * @param {string} str1 - First string
+     * @param {string} str2 - Second string
+     * @returns {number} Edit distance
+     */
+    static levenshteinDistance(str1, str2) {
+        const matrix = [];
+        
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
     }
 
     /**

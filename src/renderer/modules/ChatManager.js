@@ -5115,13 +5115,27 @@ ${this.getPluginSystemInfo()}`;
             const result = window.MicrobeFns.getCodingSequence(identifier);
             
             if (!result.success) {
-                // 提供更详细的错误信息和建议
+                // Enhanced error handling with suggestions
                 let errorMessage = result.error;
+                let suggestions = '';
+                
                 if (result.error.includes('not found')) {
+                    if (result.suggestions && result.suggestions.length > 0) {
+                        suggestions = `\n\nSimilar genes found: ${result.suggestions.join(', ')}`;
+                    }
+                    
+                    if (result.availableGenesCount > 0) {
+                        suggestions += `\n\nAvailable genes in this genome: ${result.availableGenesCount} total`;
+                        if (result.availableGenesSample && result.availableGenesSample.length > 0) {
+                            suggestions += `\nSample genes: ${result.availableGenesSample.join(', ')}`;
+                        }
+                    }
+                    
                     errorMessage += `\n\nSuggestions:
-- Try using search_gene_by_name first to find the exact gene name
-- Check if the gene exists using search_features
-- Verify the genome data is loaded correctly`;
+- Try using search_gene_by_name to find the exact gene name
+- Use search_features to see all available genes
+- Check the gene name spelling and case sensitivity
+- Verify the genome data is loaded correctly${suggestions}`;
                 }
                 throw new Error(errorMessage);
             }
