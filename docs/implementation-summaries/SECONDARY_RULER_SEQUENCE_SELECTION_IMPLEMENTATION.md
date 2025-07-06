@@ -55,6 +55,8 @@ this.secondaryRulerSelection = null;
 - `applySecondaryRulerSelection(start, end)` - Applies selection to genome browser
 - `clearSecondaryRulerSelection()` - Clears selection state
 - `highlightSelectedRegion(start, end)` - Highlights overlapping features
+- `disableTrackDragging(trackContent)` - Disables track dragging during selection mode
+- `enableTrackDragging(trackContent)` - Re-enables track dragging after selection mode
 
 **Modified Methods:**
 - `createTrackHeader()` - Added selection button for Genes & Features track
@@ -185,6 +187,12 @@ Proper state management ensures consistency:
 - Activates Copy button when selection is made
 - Integrates with existing sequence selection state
 - Maintains consistency with primary ruler selection
+
+### 4. Track Dragging Control
+- **Disable During Selection**: Automatically disables track dragging and mouse following when selection mode is enabled
+- **Re-enable After Selection**: Restores track dragging functionality when selection mode is disabled
+- **State Preservation**: Stores and restores original cursor, title, and pointer events
+- **Event Listener Management**: Properly removes and re-adds drag event listeners through NavigationManager
 
 ## User Experience
 

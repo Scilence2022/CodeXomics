@@ -5463,6 +5463,13 @@ class TrackRenderer {
             return;
         }
         
+        // Find the track content for drag control
+        const trackContent = geneTrack.querySelector('.track-content');
+        if (!trackContent) {
+            console.warn('Track content not found in gene track');
+            return;
+        }
+        
         // Toggle selection mode
         const isSelecting = detailedRuler.classList.contains('selecting');
         
@@ -5470,6 +5477,9 @@ class TrackRenderer {
             // Exit selection mode
             detailedRuler.classList.remove('selecting');
             detailedRuler.style.cursor = 'default';
+            
+            // Re-enable dragging for the track content
+            this.enableTrackDragging(trackContent);
             
             // Clear any existing selection
             this.clearSecondaryRulerSelection();
@@ -5481,11 +5491,14 @@ class TrackRenderer {
                 selectionBtn.style.color = '#6c757d';
             }
             
-            console.log('Secondary ruler selection mode disabled');
+            console.log('Secondary ruler selection mode disabled - dragging re-enabled');
         } else {
             // Enter selection mode
             detailedRuler.classList.add('selecting');
             detailedRuler.style.cursor = 'crosshair';
+            
+            // Disable dragging for the track content
+            this.disableTrackDragging(trackContent);
             
             // Update button appearance
             const selectionBtn = document.querySelector('.track-selection-btn');
@@ -5494,11 +5507,67 @@ class TrackRenderer {
                 selectionBtn.style.color = '#ffffff';
             }
             
-            console.log('Secondary ruler selection mode enabled');
+            console.log('Secondary ruler selection mode enabled - dragging disabled');
         }
         
         // Add mouse event listeners for selection
         this.setupSecondaryRulerSelection(detailedRuler);
+    }
+    
+    /**
+     * Disable track dragging functionality
+     */
+    disableTrackDragging(trackContent) {
+        if (!trackContent) return;
+        
+        // Store original cursor and title
+        trackContent.dataset.originalCursor = trackContent.style.cursor;
+        trackContent.dataset.originalTitle = trackContent.title;
+        
+        // Disable dragging
+        trackContent.style.cursor = 'default';
+        trackContent.title = 'Sequence selection mode active - dragging disabled';
+        trackContent.style.pointerEvents = 'none';
+        
+        // Remove drag event listeners
+        if (trackContent._handleDragMouseDown) {
+            trackContent.removeEventListener('mousedown', trackContent._handleDragMouseDown);
+            trackContent._handleDragMouseDown = null;
+        }
+        
+        console.log('Track dragging disabled for sequence selection mode');
+    }
+    
+    /**
+     * Enable track dragging functionality
+     */
+    enableTrackDragging(trackContent) {
+        if (!trackContent) return;
+        
+        // Restore original cursor and title
+        if (trackContent.dataset.originalCursor) {
+            trackContent.style.cursor = trackContent.dataset.originalCursor;
+            delete trackContent.dataset.originalCursor;
+        } else {
+            trackContent.style.cursor = 'grab';
+        }
+        
+        if (trackContent.dataset.originalTitle) {
+            trackContent.title = trackContent.dataset.originalTitle;
+            delete trackContent.dataset.originalTitle;
+        } else {
+            trackContent.title = 'Drag left or right to navigate through the genome\nKeyboard: ← → arrows, Home, End';
+        }
+        
+        // Re-enable pointer events
+        trackContent.style.pointerEvents = 'auto';
+        
+        // Re-add drag functionality through NavigationManager
+        if (this.genomeBrowser && this.genomeBrowser.navigationManager) {
+            this.genomeBrowser.navigationManager.makeDraggable(trackContent, this.genomeBrowser.currentChromosome);
+        }
+        
+        console.log('Track dragging re-enabled');
     }
     
     /**
