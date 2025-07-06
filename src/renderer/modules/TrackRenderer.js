@@ -227,13 +227,26 @@ class TrackRenderer {
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'track-buttons';
         
+        // Add sequence selection button for Genes & Features track
+        if (trackType === 'genes') {
+            const selectionBtn = document.createElement('button');
+            selectionBtn.className = 'track-btn track-selection-btn';
+            selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
+            selectionBtn.title = 'Toggle sequence selection mode on secondary ruler';
+            selectionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleSecondaryRulerSelection(trackType);
+            });
+            buttonsContainer.appendChild(selectionBtn);
+        }
+        
         // Settings button
         const settingsBtn = document.createElement('button');
         settingsBtn.className = 'track-btn track-settings-btn';
         settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
         settingsBtn.title = 'Track Settings';
         settingsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+                e.stopPropagation();
             this.openTrackSettings(trackType);
         });
         
@@ -334,11 +347,15 @@ class TrackRenderer {
      * Get current viewport data for consistent access
      */
     getCurrentViewport() {
-        return {
-            start: this.genomeBrowser.currentPosition.start,
-            end: this.genomeBrowser.currentPosition.end,
-            range: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start
-        };
+        if (this.genomeBrowser && this.genomeBrowser.currentPosition) {
+            return {
+                start: this.genomeBrowser.currentPosition.start,
+                end: this.genomeBrowser.currentPosition.end,
+                range: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start
+            };
+        }
+        // Fallback if genome browser is not available
+        return { start: 1, end: 1000, range: 999 };
     }
     
     /**
@@ -5427,6 +5444,266 @@ class TrackRenderer {
         }
     }
     
+    /**
+     * Toggle secondary ruler selection mode for Genes & Features track
+     */
+    toggleSecondaryRulerSelection(trackType) {
+        if (trackType !== 'genes') return;
+        
+        // Find the detailed ruler in the gene track
+        const geneTrack = document.querySelector('.gene-track');
+        if (!geneTrack) {
+            console.warn('Gene track not found');
+            return;
+        }
+        
+        const detailedRuler = geneTrack.querySelector('.detailed-ruler-container');
+        if (!detailedRuler) {
+            console.warn('Detailed ruler not found in gene track');
+            return;
+        }
+        
+        // Toggle selection mode
+        const isSelecting = detailedRuler.classList.contains('selecting');
+        
+        if (isSelecting) {
+            // Exit selection mode
+            detailedRuler.classList.remove('selecting');
+            detailedRuler.style.cursor = 'default';
+            
+            // Clear any existing selection
+            this.clearSecondaryRulerSelection();
+            
+            // Update button appearance
+            const selectionBtn = document.querySelector('.track-selection-btn');
+            if (selectionBtn) {
+                selectionBtn.style.background = 'rgba(255, 255, 255, 0.8)';
+                selectionBtn.style.color = '#6c757d';
+            }
+            
+            console.log('Secondary ruler selection mode disabled');
+        } else {
+            // Enter selection mode
+            detailedRuler.classList.add('selecting');
+            detailedRuler.style.cursor = 'crosshair';
+            
+            // Update button appearance
+            const selectionBtn = document.querySelector('.track-selection-btn');
+            if (selectionBtn) {
+                selectionBtn.style.background = '#3b82f6';
+                selectionBtn.style.color = '#ffffff';
+            }
+            
+            console.log('Secondary ruler selection mode enabled');
+        }
+        
+        // Add mouse event listeners for selection
+        this.setupSecondaryRulerSelection(detailedRuler);
+    }
+    
+    /**
+     * Setup secondary ruler selection functionality
+     */
+    setupSecondaryRulerSelection(detailedRuler) {
+        // Remove existing listeners to avoid duplicates
+        detailedRuler.removeEventListener('mousedown', this.handleSecondaryRulerMouseDown);
+        detailedRuler.removeEventListener('mousemove', this.handleSecondaryRulerMouseMove);
+        detailedRuler.removeEventListener('mouseup', this.handleSecondaryRulerMouseUp);
+        
+        // Add new listeners
+        detailedRuler.addEventListener('mousedown', this.handleSecondaryRulerMouseDown.bind(this));
+        detailedRuler.addEventListener('mousemove', this.handleSecondaryRulerMouseMove.bind(this));
+        detailedRuler.addEventListener('mouseup', this.handleSecondaryRulerMouseUp.bind(this));
+    }
+    
+    /**
+     * Handle mouse down on secondary ruler
+     */
+    handleSecondaryRulerMouseDown(e) {
+        if (!e.target.classList.contains('detailed-ruler-canvas')) return;
+        
+        const rect = e.target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const viewport = this.getCurrentViewport();
+        const startPos = Math.round(viewport.start + (x / rect.width) * (viewport.end - viewport.start));
+        
+        this.secondaryRulerSelection = {
+            start: startPos,
+            end: startPos,
+            isSelecting: true
+        };
+        
+        // Create selection indicator
+        this.createSecondaryRulerSelectionIndicator(e.target);
+    }
+    
+    /**
+     * Handle mouse move on secondary ruler
+     */
+    handleSecondaryRulerMouseMove(e) {
+        if (!this.secondaryRulerSelection || !this.secondaryRulerSelection.isSelecting) return;
+        
+        const rect = e.target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const viewport = this.getCurrentViewport();
+        const currentPos = Math.round(viewport.start + (x / rect.width) * (viewport.end - viewport.start));
+        
+        this.secondaryRulerSelection.end = currentPos;
+        this.updateSecondaryRulerSelectionIndicator();
+    }
+    
+    /**
+     * Handle mouse up on secondary ruler
+     */
+    handleSecondaryRulerMouseUp(e) {
+        if (!this.secondaryRulerSelection) return;
+        
+        this.secondaryRulerSelection.isSelecting = false;
+        
+        // Apply the selection
+        const start = Math.min(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
+        const end = Math.max(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
+        
+        if (start !== end) {
+            this.applySecondaryRulerSelection(start, end);
+        }
+    }
+    
+    /**
+     * Create selection indicator for secondary ruler
+     */
+    createSecondaryRulerSelectionIndicator(canvas) {
+        // Remove existing indicator
+        const existingIndicator = canvas.parentElement.querySelector('.secondary-ruler-selection');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Create new indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'secondary-ruler-selection';
+        indicator.style.cssText = `
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: rgba(59, 130, 246, 0.3);
+            border: 2px solid #3b82f6;
+            pointer-events: none;
+            z-index: 20;
+        `;
+        
+        canvas.parentElement.appendChild(indicator);
+    }
+    
+    /**
+     * Update secondary ruler selection indicator
+     */
+    updateSecondaryRulerSelectionIndicator() {
+        if (!this.secondaryRulerSelection) return;
+        
+        const indicator = document.querySelector('.secondary-ruler-selection');
+        if (!indicator) return;
+        
+        const viewport = this.getCurrentViewport();
+        const canvas = document.querySelector('.detailed-ruler-canvas');
+        if (!canvas) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const start = Math.min(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
+        const end = Math.max(this.secondaryRulerSelection.start, this.secondaryRulerSelection.end);
+        
+        const startX = ((start - viewport.start) / (viewport.end - viewport.start)) * rect.width;
+        const endX = ((end - viewport.start) / (viewport.end - viewport.start)) * rect.width;
+        
+        indicator.style.left = `${startX}px`;
+        indicator.style.width = `${endX - startX}px`;
+    }
+    
+    /**
+     * Apply secondary ruler selection
+     */
+    applySecondaryRulerSelection(start, end) {
+        // Clear any existing selection
+        this.genomeBrowser.clearSequenceSelection();
+        
+        // Set the sequence selection
+        this.genomeBrowser.currentSequenceSelection = {
+            chromosome: this.genomeBrowser.currentChromosome,
+            start: start,
+            end: end
+        };
+        
+        // Update sequence selection state
+        this.genomeBrowser.sequenceSelection = {
+            start: start,
+            end: end,
+            active: true,
+            source: 'secondary-ruler'
+        };
+        
+        // Highlight the selected region in Genes & Features track
+        this.highlightSelectedRegion(start, end);
+        
+        // Update copy button state
+        this.genomeBrowser.updateCopyButtonState();
+        
+        // Show notification
+        this.genomeBrowser.showNotification(
+            `Sequence selected: ${this.genomeBrowser.currentChromosome}:${start}-${end} (${end - start + 1} bp)`,
+            'success'
+        );
+        
+        console.log(`Secondary ruler selection applied: ${start}-${end}`);
+    }
+    
+    /**
+     * Clear secondary ruler selection
+     */
+    clearSecondaryRulerSelection() {
+        // Remove selection indicator
+        const indicator = document.querySelector('.secondary-ruler-selection');
+        if (indicator) {
+            indicator.remove();
+        }
+        
+        // Clear selection state
+        this.secondaryRulerSelection = null;
+        
+        // Clear feature highlights
+        document.querySelectorAll('.feature-highlighted').forEach(el => {
+            el.classList.remove('feature-highlighted');
+        });
+    }
+    
+    /**
+     * Highlight selected region in Genes & Features track
+     */
+    highlightSelectedRegion(start, end) {
+        // Find features that overlap with the selection
+        const chromosome = this.genomeBrowser.currentChromosome;
+        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
+            const annotations = this.genomeBrowser.currentAnnotations[chromosome];
+            const overlappingFeatures = annotations.filter(feature => 
+                feature.start <= end && feature.end >= start
+            );
+            
+            // Clear previous highlights
+            document.querySelectorAll('.feature-highlighted').forEach(el => {
+                el.classList.remove('feature-highlighted');
+            });
+            
+            // Highlight overlapping features
+            overlappingFeatures.forEach(feature => {
+                const featureElements = document.querySelectorAll(`[data-feature-id="${feature.id}"]`);
+                featureElements.forEach(el => {
+                    el.classList.add('feature-highlighted');
+                });
+            });
+            
+            console.log(`TrackRenderer: Highlighted ${overlappingFeatures.length} features in selected region`);
+        }
+    }
+
     /**
      * Create floating button to restore hidden header
      */

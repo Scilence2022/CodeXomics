@@ -26809,6 +26809,46 @@ path.svg-gene-element.selected {
     pointer-events: none; /* Allow clicks to pass through to genes */
 }
 
+/* Secondary ruler selection mode */
+.detailed-ruler-container.selecting {
+    pointer-events: auto;
+}
+
+.detailed-ruler-container.selecting .detailed-ruler-canvas {
+    pointer-events: auto;
+    cursor: crosshair !important;
+}
+
+.detailed-ruler-container.selecting .detailed-ruler-canvas:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+/* Secondary ruler selection indicator */
+.secondary-ruler-selection {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.3);
+    border: 2px solid #3b82f6;
+    pointer-events: none;
+    z-index: 25;
+    border-radius: 2px;
+}
+
+/* Track selection button styles */
+.track-selection-btn:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.track-selection-btn.active {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
 .detailed-ruler-canvas:hover {
     background: rgba(59, 130, 246, 0.05);
 }
