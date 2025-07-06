@@ -24647,7 +24647,46 @@ svg {
     height: 10px;
     margin: 1px 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: none !important; /* Disable transitions during resizing */
+}
+
+/* Feature highlighting for ruler-based selection */
+.feature-highlighted {
+    background: rgba(59, 130, 246, 0.3) !important;
+    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5) !important;
+    z-index: 10 !important;
+}
+
+.feature-highlighted:hover {
+    background: rgba(59, 130, 246, 0.5) !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.7) !important;
+}
+
+/* Ruler selection mode styles */
+.genome-navigation-bar.selecting .navigation-canvas {
+    cursor: crosshair !important;
+}
+
+.genome-navigation-bar.selecting .selection-toggle-btn {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Selection toggle button hover effects */
+.selection-toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.selection-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+/* Disable transitions during resizing */
+.track-splitter.resizing * {
+    transition: none !important;
 }
 
 .track-splitter-handle {
