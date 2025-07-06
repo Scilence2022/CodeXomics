@@ -151,6 +151,7 @@ class ExportManager {
                         processedFeatures.add(featureId);
                         
                         const cdsSequence = this.extractFeatureSequence(sequence, feature);
+                        // Don't pass strand parameter since extractFeatureSequence already handles reverse complement
                         const proteinSequence = this.translateDNA(cdsSequence);
                         
                         // Remove trailing asterisks (stop codons) from protein sequence
@@ -295,7 +296,7 @@ class ExportManager {
     }
 
     // Helper method to translate DNA to protein
-    translateDNA(dnaSequence) {
+    translateDNA(dnaSequence, strand = null) {
         const codonTable = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
             'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
@@ -315,11 +316,16 @@ class ExportManager {
             'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
 
-        let protein = '';
-        const upperDNA = dnaSequence.toUpperCase();
+        let sequence = dnaSequence.toUpperCase();
         
-        for (let i = 0; i < upperDNA.length - 2; i += 3) {
-            const codon = upperDNA.substring(i, i + 3);
+        // Only perform reverse complement if strand is provided and sequence hasn't been processed yet
+        if (strand === -1 && !dnaSequence.includes('processed')) {
+            sequence = this.reverseComplement(sequence);
+        }
+        
+        let protein = '';
+        for (let i = 0; i < sequence.length - 2; i += 3) {
+            const codon = sequence.substring(i, i + 3);
             if (codon.length === 3) {
                 protein += codonTable[codon] || 'X';
             }
