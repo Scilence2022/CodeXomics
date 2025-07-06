@@ -993,8 +993,27 @@ class SequenceUtils {
             this.vscodeEditor = null;
         }
         
+        // Save existing UI elements before cleaning container
+        const existingToolbar = document.getElementById('sequenceEditingToolbar');
+        const existingStatusBar = document.getElementById('sequenceEditingStatusBar');
+        const existingTextArea = document.getElementById('sequenceEditingTextArea');
+        
         // Clean container
         container.innerHTML = '';
+        
+        // Restore UI elements if they existed
+        if (existingToolbar) {
+            container.parentNode.insertBefore(existingToolbar, container);
+        }
+        if (existingStatusBar) {
+            container.parentNode.insertBefore(existingStatusBar, container.nextSibling);
+        }
+        if (existingTextArea) {
+            const editingContainer = document.getElementById('sequenceEditingContainer');
+            if (editingContainer) {
+                editingContainer.appendChild(existingTextArea);
+            }
+        }
         
         // Set minimum height to ensure proper sizing
         container.style.minHeight = '400px';

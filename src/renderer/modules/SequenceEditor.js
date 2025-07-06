@@ -44,10 +44,10 @@ class SequenceEditor {
         // Add editing capabilities to VSCode editor
         this.enhanceVSCodeEditor();
         
-        // Create editing toolbar
+        // Create editing toolbar (will check for existing)
         this.createEditingToolbar();
         
-        // Create status bar
+        // Create status bar (will check for existing)
         this.createStatusBar();
         
         // Setup keyboard shortcuts
@@ -481,8 +481,13 @@ class SequenceEditor {
         this.hasUnsavedChanges = false;
         this.editingStartTime = Date.now();
         
-        // Create text editing area
-        this.createEditingTextArea();
+        // Create text editing area (only if it doesn't exist)
+        const existingTextArea = document.getElementById('sequenceEditingTextArea');
+        if (!existingTextArea) {
+            this.createEditingTextArea();
+        } else {
+            console.log('🔧 [SequenceEditor] Text editing area already exists, reusing');
+        }
         
         // Update UI
         this.showEditingToolbar();
@@ -644,6 +649,14 @@ class SequenceEditor {
      * Create editing toolbar
      */
     createEditingToolbar() {
+        // Check if toolbar already exists
+        const existingToolbar = document.getElementById('sequenceEditingToolbar');
+        if (existingToolbar) {
+            console.log('🔧 [SequenceEditor] Editing toolbar already exists, reusing');
+            this.editingToolbar = existingToolbar;
+            return;
+        }
+        
         const toolbar = document.createElement('div');
         toolbar.id = 'sequenceEditingToolbar';
         toolbar.className = 'sequence-editing-toolbar';
@@ -701,6 +714,14 @@ class SequenceEditor {
      * Create status bar
      */
     createStatusBar() {
+        // Check if status bar already exists
+        const existingStatusBar = document.getElementById('sequenceEditingStatusBar');
+        if (existingStatusBar) {
+            console.log('🔧 [SequenceEditor] Status bar already exists, reusing');
+            this.statusBar = existingStatusBar;
+            return;
+        }
+        
         const statusBar = document.createElement('div');
         statusBar.id = 'sequenceEditingStatusBar';
         statusBar.className = 'sequence-editing-status-bar';
