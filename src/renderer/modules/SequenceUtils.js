@@ -1440,6 +1440,7 @@ class SequenceUtils {
             height: ${containerHeight}px;
             max-height: ${availableHeight}px;
             overflow-y: ${needsScrolling ? 'auto' : 'hidden'};
+            overflow-x: hidden;
             position: relative;
             box-sizing: border-box;
         `;
