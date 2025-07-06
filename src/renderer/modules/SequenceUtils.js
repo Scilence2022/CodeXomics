@@ -1807,7 +1807,15 @@ class SequenceUtils {
     copySequence() {
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
-            alert('No sequence to copy');
+            const errorMessage = 'No sequence to copy';
+            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                this.genomeBrowser.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
             return;
         }
         
@@ -1847,7 +1855,15 @@ class SequenceUtils {
                 // Priority 4: Use entire visible sequence
                 const userChoice = confirm('No sequence selected. Click OK to copy the entire visible sequence, or Cancel to select a specific region first.');
                 if (!userChoice) {
-                    alert('Please click on a gene in the Gene Track or drag to select sequence, then click Copy again.');
+                    const errorMessage = 'Please click on a gene in the Gene Track or drag to select sequence, then click Copy again.';
+                    if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                        this.genomeBrowser.uiManager.updateStatus(errorMessage);
+                    } else {
+                        const statusElement = document.getElementById('statusText');
+                        if (statusElement) {
+                            statusElement.textContent = errorMessage;
+                        }
+                    }
                     return;
                 }
                 textToCopy = sequence.substring(this.genomeBrowser.currentPosition.start, this.genomeBrowser.currentPosition.end);
@@ -1868,10 +1884,27 @@ class SequenceUtils {
         }
         
         navigator.clipboard.writeText(textToCopy).then(() => {
-            alert(copyMessage);
+            // Update status bar instead of showing alert
+            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                this.genomeBrowser.uiManager.updateStatus(copyMessage);
+            } else {
+                // Fallback to status bar update if uiManager is not available
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = copyMessage;
+                }
+            }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            alert('Failed to copy to clipboard');
+            const errorMessage = 'Failed to copy to clipboard';
+            if (this.genomeBrowser && this.genomeBrowser.uiManager) {
+                this.genomeBrowser.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
         });
     }
 

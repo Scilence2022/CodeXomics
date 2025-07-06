@@ -229,8 +229,9 @@ class GenomeNavigationBar {
         // Draw current view range indicator
         this.drawRangeIndicator();
         
-        // Draw sequence selection if in selection mode
-        if (this.selectionMode && this.selectionStart !== null && this.selectionEnd !== null) {
+        // Draw sequence selection if in selection mode or has final selection
+        if ((this.selectionMode && this.selectionStart !== null && this.selectionEnd !== null) ||
+            (this.finalSelectionStart && this.finalSelectionEnd)) {
             this.drawSelectionIndicator();
         }
         
@@ -333,14 +334,23 @@ class GenomeNavigationBar {
      * Draw sequence selection indicator
      */
     drawSelectionIndicator() {
-        if (!this.selectionStart || !this.selectionEnd) return;
+        // Use either active selection or final selection
+        let start, end;
+        if (this.selectionStart && this.selectionEnd) {
+            // Active selection during drag
+            start = Math.min(this.selectionStart, this.selectionEnd);
+            end = Math.max(this.selectionStart, this.selectionEnd);
+        } else if (this.finalSelectionStart && this.finalSelectionEnd) {
+            // Final selection after completion
+            start = this.finalSelectionStart;
+            end = this.finalSelectionEnd;
+        } else {
+            return; // No selection to draw
+        }
         
         const width = this.canvas.width / (window.devicePixelRatio || 1);
         const height = this.height;
         const scale = width / this.sequenceLength;
-        
-        const start = Math.min(this.selectionStart, this.selectionEnd);
-        const end = Math.max(this.selectionStart, this.selectionEnd);
         
         const startX = start * scale;
         const endX = end * scale;
@@ -425,6 +435,11 @@ class GenomeNavigationBar {
             this.isSelecting = true;
             this.selectionStart = this.getPositionFromEvent(e);
             this.selectionEnd = this.selectionStart;
+            
+            // Clear previous final selection when starting new selection
+            this.finalSelectionStart = null;
+            this.finalSelectionEnd = null;
+            
             this.canvas.style.cursor = 'crosshair';
             this.container.classList.add('selecting');
             this.canvas.classList.add('selecting');
@@ -549,10 +564,14 @@ class GenomeNavigationBar {
                 // Apply sequence selection to the genome browser
                 this.applySequenceSelection(startPos, endPos);
                 
+                // Keep the selection indicator visible after selection
+                this.finalSelectionStart = startPos;
+                this.finalSelectionEnd = endPos;
+                
                 console.log(`GenomeNavigationBar: Sequence selected ${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
             }
             
-            // Reset selection state
+            // Reset selection state but keep final selection for display
             this.isSelecting = false;
             this.selectionStart = null;
             this.selectionEnd = null;
@@ -747,6 +766,11 @@ class GenomeNavigationBar {
             this.selectionToggle.style.borderColor = '#cbd5e1';
             this.canvas.style.cursor = 'crosshair';
             this.genomeBrowser.showNotification('Navigation mode enabled.', 'info');
+            
+            // Clear final selection when exiting selection mode
+            this.finalSelectionStart = null;
+            this.finalSelectionEnd = null;
+            this.draw(); // Redraw to remove selection indicator
         }
         
         console.log(`GenomeNavigationBar: Selection mode ${this.selectionMode ? 'enabled' : 'disabled'}`);
@@ -785,6 +809,28 @@ class GenomeNavigationBar {
             `Sequence selected: ${this.currentChromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`,
             'success'
         );
+        
+        // Update status bar with selection information
+        const selectionLength = endPos - startPos + 1;
+        const statusMessage = `🔵 Sequence Selected: ${this.currentChromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+        
+        if (this.genomeBrowser.uiManager) {
+            this.genomeBrowser.uiManager.updateStatus(statusMessage);
+        } else {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = statusMessage;
+                statusElement.style.color = '#3b82f6';
+                statusElement.style.fontWeight = 'bold';
+                
+                // Reset to normal after 5 seconds
+                setTimeout(() => {
+                    statusElement.style.color = '';
+                    statusElement.style.fontWeight = '';
+                    statusElement.textContent = 'Ready';
+                }, 5000);
+            }
+        }
     }
     
     /**

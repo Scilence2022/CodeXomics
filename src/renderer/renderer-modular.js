@@ -3966,7 +3966,15 @@ class GenomeBrowser {
      */
     copySpecificSequence(type, geneName, chromosome, start, end, strand) {
         if (!this.currentSequence || !this.currentSequence[chromosome]) {
-            alert('No sequence available to copy');
+            const errorMessage = 'No sequence available to copy';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
             return;
         }
         
@@ -4000,10 +4008,26 @@ class GenomeBrowser {
         const fastaContent = `${header}\n${sequence}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            alert(`Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`);
+            const successMessage = `Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`;
+            if (this.uiManager) {
+                this.uiManager.updateStatus(successMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = successMessage;
+                }
+            }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            alert('Failed to copy to clipboard');
+            const errorMessage = 'Failed to copy to clipboard';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
         });
     }
     
@@ -4015,7 +4039,15 @@ class GenomeBrowser {
         
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
-            alert('No sequence available to copy');
+            const errorMessage = 'No sequence available to copy';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
             return;
         }
         
@@ -4036,10 +4068,26 @@ class GenomeBrowser {
         const fastaContent = `${fastaHeader}\n${cleanTranslation}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            alert(`Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`);
+            const successMessage = `Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`;
+            if (this.uiManager) {
+                this.uiManager.updateStatus(successMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = successMessage;
+                }
+            }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            alert('Failed to copy to clipboard');
+            const errorMessage = 'Failed to copy to clipboard';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
         });
     }
 
@@ -4160,7 +4208,15 @@ class GenomeBrowser {
         
         const currentChr = document.getElementById('chromosomeSelect').value;
         if (!currentChr || !this.currentSequence || !this.currentSequence[currentChr]) {
-            alert('No sequence available to copy');
+            const errorMessage = 'No sequence available to copy';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
             return;
         }
         
@@ -4173,10 +4229,26 @@ class GenomeBrowser {
         const fastaContent = `${fastaHeader}\n${geneSequence}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            alert(`Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`);
+            const successMessage = `Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`;
+            if (this.uiManager) {
+                this.uiManager.updateStatus(successMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = successMessage;
+                }
+            }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            alert('Failed to copy to clipboard');
+            const errorMessage = 'Failed to copy to clipboard';
+            if (this.uiManager) {
+                this.uiManager.updateStatus(errorMessage);
+            } else {
+                const statusElement = document.getElementById('statusText');
+                if (statusElement) {
+                    statusElement.textContent = errorMessage;
+                }
+            }
         });
     }
 
