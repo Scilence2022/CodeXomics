@@ -1952,54 +1952,51 @@ class GenomeBrowser {
         const startResize = (e) => {
             isResizing = true;
             startY = e.clientY || e.touches[0].clientY;
-            
-            // Set a global flag to prevent track content dragging during splitter resize
             document.body.setAttribute('data-splitter-resizing', 'true');
-            
-            // Find the tracks above and below this splitter
             topTrack = splitter.previousElementSibling;
             bottomTrack = splitter.nextElementSibling;
-            
             if (topTrack && bottomTrack) {
                 const topContent = topTrack.querySelector('.track-content');
                 const bottomContent = bottomTrack.querySelector('.track-content');
-                
                 if (topContent && bottomContent) {
                     startTopHeight = topContent.offsetHeight;
                     startBottomHeight = bottomContent.offsetHeight;
                 }
             }
-            
             splitter.classList.add('resizing');
             document.body.style.cursor = 'row-resize';
             document.body.style.userSelect = 'none';
-            
             e.preventDefault();
         };
         
         const doResize = (e) => {
             if (!isResizing || !topTrack || !bottomTrack) return;
-            
             const currentY = e.clientY || e.touches[0].clientY;
             const deltaY = currentY - startY;
-            
             const topContent = topTrack.querySelector('.track-content');
             const bottomContent = bottomTrack.querySelector('.track-content');
-            
             if (topContent && bottomContent) {
-                // Calculate new heights
                 const newTopHeight = startTopHeight + deltaY;
                 const newBottomHeight = startBottomHeight - deltaY;
-                
-                // Set minimum heights
                 const minHeight = 40;
-                
                 if (newTopHeight >= minHeight && newBottomHeight >= minHeight) {
                     topContent.style.height = `${newTopHeight}px`;
                     bottomContent.style.height = `${newBottomHeight}px`;
+                    // --- Dynamic adjustment for sequence track window ---
+                    if (bottomTrack.classList.contains('sequence-track') || bottomTrack.id === 'sequenceDisplaySection') {
+                        const parent = bottomTrack.parentElement;
+                        const parentHeight = parent ? parent.offsetHeight : window.innerHeight;
+                        // If剩余空间小于10px，恢复flex自适应
+                        if (parentHeight - (topTrack.offsetHeight + splitter.offsetHeight + newBottomHeight) < 10 || newBottomHeight > parentHeight * 0.75) {
+                            bottomTrack.style.flex = '1 0 auto';
+                            bottomTrack.style.height = '';
+                        } else {
+                            bottomTrack.style.flex = 'none';
+                            bottomTrack.style.height = `${newBottomHeight}px`;
+                        }
+                    }
                 }
             }
-            
             e.preventDefault();
         };
         
@@ -2013,6 +2010,18 @@ class GenomeBrowser {
             
             // Remove the global flag to allow track content dragging again
             document.body.removeAttribute('data-splitter-resizing');
+            
+            // Trigger sequence track window re-render if it was affected
+            if (bottomTrack && (bottomTrack.classList.contains('sequence-track') || bottomTrack.id === 'sequenceDisplaySection')) {
+                const currentChr = document.getElementById('chromosomeSelect')?.value;
+                if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+                    console.log('🔄 Triggering sequence track window re-render after splitter adjustment');
+                    // Use a small delay to ensure DOM updates are complete
+                    setTimeout(() => {
+                        this.displayEnhancedSequence(currentChr, this.currentSequence[currentChr]);
+                    }, 50);
+                }
+            }
             
             topTrack = null;
             bottomTrack = null;

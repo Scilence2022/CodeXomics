@@ -2745,11 +2745,11 @@ svg {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    flex: 0 0 auto; /* Don't grow, don't shrink, auto basis */
+    flex: 1 0 auto; /* Allow growing, don't shrink, auto basis */
     /* Set reasonable default height and constraints */
     height: 250px; /* Default height on first load */
     min-height: 50px; /* Minimum height to show header when collapsed */
-    max-height: 60vh; /* Maximum 60% of viewport height to prevent covering everything */
+    max-height: 80vh; /* Increased maximum height to use more space */
     position: relative; /* Establish stacking context */
     z-index: 10; /* Higher z-index to ensure it appears above genome tracks */
     /* Always dock to bottom */
@@ -7172,11 +7172,11 @@ svg {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    flex: 0 0 auto; /* Don't grow, don't shrink, auto basis */
+    flex: 1 0 auto; /* Allow growing, don't shrink, auto basis */
     /* Set reasonable default height and constraints */
     height: 250px; /* Default height on first load */
     min-height: 50px; /* Minimum height to show header when collapsed */
-    max-height: 60vh; /* Maximum 60% of viewport height to prevent covering everything */
+    max-height: 80vh; /* Increased maximum height to use more space */
     position: relative; /* Establish stacking context */
     z-index: 10; /* Higher z-index to ensure it appears above genome tracks */
     /* Always dock to bottom */

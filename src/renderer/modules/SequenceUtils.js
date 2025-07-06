@@ -1070,7 +1070,8 @@ class SequenceUtils {
         container.style.removeProperty('font-family');
         container.style.removeProperty('background');
         container.style.removeProperty('color');
-        container.style.removeProperty('overflow');
+        // Keep overflow styles to maintain scrollbar behavior
+        // container.style.removeProperty('overflow');
         container.className = '';
         
         const subsequence = fullSequence.substring(viewStart, viewEnd);

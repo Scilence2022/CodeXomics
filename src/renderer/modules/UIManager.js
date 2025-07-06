@@ -407,6 +407,19 @@ class UIManager {
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
                 splitter.classList.remove('active');
+                
+                // Trigger sequence track window re-render if it was affected
+                const sequenceSection = document.getElementById('sequenceDisplaySection');
+                if (sequenceSection && sequenceSection.style.display !== 'none') {
+                    const currentChr = document.getElementById('chromosomeSelect')?.value;
+                    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                        console.log('🔄 Triggering sequence track window re-render after main splitter adjustment');
+                        // Use a small delay to ensure DOM updates are complete
+                        setTimeout(() => {
+                            this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                        }, 50);
+                    }
+                }
             }
         });
         
@@ -434,6 +447,16 @@ class UIManager {
                     genomeSection.style.height = 'auto';
                     sequenceSection.style.flex = 'none';
                     sequenceSection.style.height = `${defaultSequenceHeight}px`;
+                    
+                    // Trigger sequence track window re-render after Home key reset
+                    const currentChr = document.getElementById('chromosomeSelect')?.value;
+                    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                        console.log('🔄 Triggering sequence track window re-render after Home key reset');
+                        setTimeout(() => {
+                            this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                        }, 50);
+                    }
+                    
                     e.preventDefault();
                     return;
                 default:
@@ -467,6 +490,15 @@ class UIManager {
                 
                 sequenceSection.style.flex = 'none';
                 sequenceSection.style.height = `${newSequenceHeight}px`;
+                
+                // Trigger sequence track window re-render after keyboard adjustment
+                const currentChr = document.getElementById('chromosomeSelect')?.value;
+                if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                    console.log('🔄 Triggering sequence track window re-render after keyboard adjustment');
+                    setTimeout(() => {
+                        this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                    }, 50);
+                }
             }
         });
         
@@ -478,6 +510,15 @@ class UIManager {
             genomeSection.style.height = 'auto';
             sequenceSection.style.flex = 'none';
             sequenceSection.style.height = `${defaultSequenceHeight}px`;
+            
+            // Trigger sequence track window re-render after double-click reset
+            const currentChr = document.getElementById('chromosomeSelect')?.value;
+            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+                console.log('🔄 Triggering sequence track window re-render after double-click reset');
+                setTimeout(() => {
+                    this.genomeBrowser.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                }, 50);
+            }
         });
     }
 
