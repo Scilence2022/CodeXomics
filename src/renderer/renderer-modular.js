@@ -450,7 +450,11 @@ class GenomeBrowser {
         document.getElementById('resetZoomBtn').addEventListener('click', () => this.navigationManager.resetZoom());
 
         // Sequence controls
-        document.getElementById('copySequenceBtn').addEventListener('click', () => this.sequenceUtils.copySequence());
+        document.getElementById('copySequenceBtn').addEventListener('click', (e) => {
+            // Prevent ActionManager from also handling this event
+            e.stopImmediatePropagation();
+            this.sequenceUtils.copySequence();
+        });
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
         document.getElementById('sequenceSettingsBtn').addEventListener('click', () => {
             if (this.trackRenderer) {

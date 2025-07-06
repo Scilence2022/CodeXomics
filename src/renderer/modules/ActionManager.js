@@ -488,6 +488,83 @@ class ActionManager {
     }
     
     /**
+     * Collect comprehensive data for a genomic region
+     */
+    async collectComprehensiveData(chromosome, start, end, strand) {
+        const comprehensiveData = {
+            region: {
+                chromosome: chromosome,
+                start: start,
+                end: end,
+                strand: strand,
+                length: end - start + 1
+            },
+            features: [],
+            annotations: [],
+            variants: [],
+            reads: [],
+            metadata: {}
+        };
+        
+        try {
+            // Collect features in the region
+            if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
+                const annotations = this.genomeBrowser.currentAnnotations[chromosome];
+                comprehensiveData.features = annotations.filter(feature => 
+                    feature.start <= end && feature.end >= start
+                );
+            }
+            
+            // Collect variants in the region
+            if (this.genomeBrowser.currentVariants && this.genomeBrowser.currentVariants[chromosome]) {
+                const variants = this.genomeBrowser.currentVariants[chromosome];
+                comprehensiveData.variants = variants.filter(variant => 
+                    variant.start <= end && variant.end >= start
+                );
+            }
+            
+            // Collect reads in the region
+            if (this.genomeBrowser.currentReads && this.genomeBrowser.currentReads[chromosome]) {
+                const reads = this.genomeBrowser.currentReads[chromosome];
+                comprehensiveData.reads = reads.filter(read => 
+                    read.start <= end && read.end >= start
+                );
+            }
+            
+            // Collect additional metadata
+            comprehensiveData.metadata = {
+                gcContent: this.calculateGCContent(comprehensiveData.sequence),
+                featureTypes: [...new Set(comprehensiveData.features.map(f => f.type))],
+                variantTypes: [...new Set(comprehensiveData.variants.map(v => v.type))],
+                readCount: comprehensiveData.reads.length,
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log('📊 [ActionManager] Collected comprehensive data:', {
+                region: comprehensiveData.region,
+                featuresCount: comprehensiveData.features.length,
+                variantsCount: comprehensiveData.variants.length,
+                readsCount: comprehensiveData.reads.length
+            });
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error collecting comprehensive data:', error);
+        }
+        
+        return comprehensiveData;
+    }
+    
+    /**
+     * Calculate GC content of a sequence
+     */
+    calculateGCContent(sequence) {
+        if (!sequence || sequence.length === 0) return 0;
+        
+        const gcCount = (sequence.match(/[GC]/gi) || []).length;
+        return (gcCount / sequence.length * 100).toFixed(2);
+    }
+    
+    /**
      * Execute all pending actions
      */
     async executeAllActions() {
@@ -574,7 +651,7 @@ class ActionManager {
     }
     
     /**
-     * Execute copy sequence action
+     * Execute copy sequence action with comprehensive data
      */
     async executeCopySequence(action) {
         const { chromosome, start, end, strand } = action.metadata;
@@ -584,17 +661,23 @@ class ActionManager {
             throw new Error('Unable to retrieve sequence for copying');
         }
         
+        // Collect comprehensive data including features, annotations, and metadata
+        const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
+        
         this.clipboard = {
             type: 'copy',
             sequence: sequence,
             source: action.target,
-            timestamp: new Date()
+            timestamp: new Date(),
+            comprehensiveData: comprehensiveData
         };
         
         return {
             operation: 'copy',
             sequenceLength: sequence.length,
-            source: action.target
+            source: action.target,
+            featuresCount: comprehensiveData.features?.length || 0,
+            annotationsCount: comprehensiveData.annotations?.length || 0
         };
     }
     
