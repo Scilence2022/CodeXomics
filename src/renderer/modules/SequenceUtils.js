@@ -241,6 +241,9 @@ class SequenceUtils {
         // Add sequence content mode selector if in view mode
         if (this.displayMode === 'view') {
             this.addSequenceContentModeSelector();
+        } else {
+            // Ensure View Mode UI elements are removed in Edit Mode
+            this.removeSequenceContentModeSelector();
         }
         
         // Update CSS variables for line height
@@ -962,6 +965,13 @@ class SequenceUtils {
                 if (this.vscodeEditor) {
                     this.vscodeEditor.updateDimensions();
                     this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
+                    
+                    // Ensure editing mode is maintained if SequenceEditor exists
+                    if (this.sequenceEditor && this.sequenceEditor.isEditMode) {
+                        console.log('🔧 [SequenceUtils] Maintaining editing mode after sequence update');
+                        // Re-enable editing mode to ensure proper state
+                        this.sequenceEditor.enableEditMode();
+                    }
                 }
             }, 10); // Shorter delay for updates
             
@@ -1013,6 +1023,12 @@ class SequenceUtils {
                 // Add editing capabilities
                 if (this.sequenceEditor) {
                     console.log('🔧 [SequenceUtils] SequenceEditor ready for editing');
+                    
+                    // If we were in edit mode before, automatically enable editing
+                    if (this.displayMode === 'edit') {
+                        console.log('🔧 [SequenceUtils] Auto-enabling editing mode for new editor');
+                        this.sequenceEditor.enableEditMode();
+                    }
                 }
             } else {
                 console.error('❌ [SequenceUtils] VSCode editor instance lost after timeout');
