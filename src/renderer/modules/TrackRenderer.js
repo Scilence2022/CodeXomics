@@ -5722,6 +5722,28 @@ class TrackRenderer {
             'success'
         );
         
+        // Update status bar with selection information
+        const selectionLength = end - start + 1;
+        const statusMessage = `🔵 Secondary Ruler Selection: ${this.genomeBrowser.currentChromosome}:${start.toLocaleString()}-${end.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+        
+        if (this.genomeBrowser.uiManager) {
+            this.genomeBrowser.uiManager.updateStatus(statusMessage);
+        } else {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = statusMessage;
+                statusElement.style.color = '#3b82f6';
+                statusElement.style.fontWeight = 'bold';
+                
+                // Reset to normal after 5 seconds
+                setTimeout(() => {
+                    statusElement.style.color = '';
+                    statusElement.style.fontWeight = '';
+                    statusElement.textContent = 'Ready';
+                }, 5000);
+            }
+        }
+        
         console.log(`Secondary ruler selection applied: ${start}-${end}`);
     }
     

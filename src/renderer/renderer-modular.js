@@ -4139,6 +4139,29 @@ class GenomeBrowser {
         // Update copy button text to indicate gene sequence is selected
         this.updateCopyButtonState();
         
+        // Update status bar with gene selection information
+        const selectionLength = gene.end - gene.start + 1;
+        const geneName = this.sequenceSelection.geneName;
+        const statusMessage = `🔵 Gene Selection: ${geneName} (${gene.start.toLocaleString()}-${gene.end.toLocaleString()}, ${selectionLength.toLocaleString()} bp)`;
+        
+        if (this.uiManager) {
+            this.uiManager.updateStatus(statusMessage);
+        } else {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = statusMessage;
+                statusElement.style.color = '#3b82f6';
+                statusElement.style.fontWeight = 'bold';
+                
+                // Reset to normal after 5 seconds
+                setTimeout(() => {
+                    statusElement.style.color = '';
+                    statusElement.style.fontWeight = '';
+                    statusElement.textContent = 'Ready';
+                }, 5000);
+            }
+        }
+        
         console.log(`Selected gene sequence for ${this.sequenceSelection.geneName} (${gene.start}-${gene.end})`);
     }
     
@@ -4740,6 +4763,28 @@ class GenomeBrowser {
         
         // Update copy button state when manual selection is made
         this.updateCopyButtonState();
+        
+        // Update status bar with selection information
+        const selectionLength = endPos - startPos + 1;
+        const statusMessage = `🔵 Sequence Track Selection: ${start.chromosome}:${startPos.toLocaleString()}-${endPos.toLocaleString()} (${selectionLength.toLocaleString()} bp)`;
+        
+        if (this.uiManager) {
+            this.uiManager.updateStatus(statusMessage);
+        } else {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = statusMessage;
+                statusElement.style.color = '#3b82f6';
+                statusElement.style.fontWeight = 'bold';
+                
+                // Reset to normal after 5 seconds
+                setTimeout(() => {
+                    statusElement.style.color = '';
+                    statusElement.style.fontWeight = '';
+                    statusElement.textContent = 'Ready';
+                }, 5000);
+            }
+        }
         
         console.log(`Selected sequence: ${start.chromosome}:${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
     }

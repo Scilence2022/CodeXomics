@@ -135,22 +135,35 @@ class ExportManager {
 
         let proteinContent = '';
         const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
+        const processedFeatures = new Set(); // Track processed features to avoid duplicates
 
         chromosomes.forEach(chr => {
             const sequence = this.genomeBrowser.currentSequence[chr];
             const features = this.genomeBrowser.currentAnnotations[chr] || [];
             
             features.forEach(feature => {
-                if (feature.type === 'CDS' || feature.type === 'gene') {
-                    const cdsSequence = this.extractFeatureSequence(sequence, feature);
-                    const proteinSequence = this.translateDNA(cdsSequence);
-                    const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                // Only process CDS features, skip gene features to avoid duplication
+                if (feature.type === 'CDS') {
+                    // Create unique identifier to avoid duplicates
+                    const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
                     
-                    proteinContent += `>${header}\n`;
-                    
-                    // Split sequence into lines of 80 characters
-                    for (let i = 0; i < proteinSequence.length; i += 80) {
-                        proteinContent += proteinSequence.substring(i, i + 80) + '\n';
+                    if (!processedFeatures.has(featureId)) {
+                        processedFeatures.add(featureId);
+                        
+                        const cdsSequence = this.extractFeatureSequence(sequence, feature);
+                        const proteinSequence = this.translateDNA(cdsSequence);
+                        
+                        // Remove trailing asterisks (stop codons) from protein sequence
+                        const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+                        
+                        const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                        
+                        proteinContent += `>${header}\n`;
+                        
+                        // Split sequence into lines of 80 characters
+                        for (let i = 0; i < cleanProteinSequence.length; i += 80) {
+                            proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+                        }
                     }
                 }
             });

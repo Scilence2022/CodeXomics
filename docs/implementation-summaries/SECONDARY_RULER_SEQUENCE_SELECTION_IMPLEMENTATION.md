@@ -52,7 +52,7 @@ this.secondaryRulerSelection = null;
 - `handleSecondaryRulerMouseUp(e)` - Handles mouse up events
 - `createSecondaryRulerSelectionIndicator(canvas)` - Creates visual indicator
 - `updateSecondaryRulerSelectionIndicator()` - Updates indicator position
-- `applySecondaryRulerSelection(start, end)` - Applies selection to genome browser
+- `applySecondaryRulerSelection(start, end)` - Applies selection to genome browser and updates status bar
 - `clearSecondaryRulerSelection()` - Clears selection state
 - `highlightSelectedRegion(start, end)` - Highlights overlapping features
 - `disableTrackDragging(trackContent)` - Disables track dragging during selection mode
@@ -193,6 +193,13 @@ Proper state management ensures consistency:
 - **Re-enable After Selection**: Restores track dragging functionality when selection mode is disabled
 - **State Preservation**: Stores and restores original cursor, title, and pointer events
 - **Event Listener Management**: Properly removes and re-adds drag event listeners through NavigationManager
+
+### 5. Status Bar Integration
+- **Highlighted Information**: Status bar displays selection information with blue color and bold text
+- **Secondary Ruler Indicator**: Uses "🔵 Secondary Ruler Selection:" prefix to distinguish from primary ruler
+- **Detailed Information**: Shows chromosome, position range, and length in base pairs
+- **Auto Reset**: Automatically resets to "Ready" after 5 seconds
+- **Clear Formatting**: Uses emoji and formatting to make selection information stand out
 
 ## User Experience
 

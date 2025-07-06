@@ -75,10 +75,39 @@ class BlastManager {
         }
     }
 
+    async checkAndFixBlastDatabaseDirectory() {
+        const fs = require('fs');
+        const path = require('path');
+        
+        try {
+            const localDbPath = this.config.localDbPath;
+            
+            // Check if directory exists
+            if (!fs.existsSync(localDbPath)) {
+                console.log('BlastManager: Creating BLAST database directory:', localDbPath);
+                fs.mkdirSync(localDbPath, { recursive: true });
+                return true;
+            }
+            
+            // Check if directory is writable
+            try {
+                await fs.promises.access(localDbPath, fs.constants.W_OK);
+                return true;
+            } catch (error) {
+                console.error('BlastManager: BLAST database directory not writable:', localDbPath);
+                throw new Error(`BLAST database directory not writable: ${localDbPath}`);
+            }
+        } catch (error) {
+            console.error('BlastManager: Error checking BLAST database directory:', error);
+            throw error;
+        }
+    }
+
     async runCommand(command, workingDirectory = null) {
         return new Promise((resolve, reject) => {
             const { exec } = require('child_process');
             const path = require('path');
+            const fs = require('fs');
 
             // Check if it's a BLAST-related command
             const isBlastCommand = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'].some(cmd => command.startsWith(cmd));
@@ -87,6 +116,19 @@ class BlastManager {
             if (isBlastCommand) {
                 // Set BLASTDB environment variable for the command
                 const localDbPath = this.config.localDbPath; // Use the configured localDbPath
+                
+                // Check if BLASTDB directory exists, create it if it doesn't
+                if (!fs.existsSync(localDbPath)) {
+                    try {
+                        fs.mkdirSync(localDbPath, { recursive: true });
+                        console.log('BlastManager: Created BLASTDB directory:', localDbPath);
+                    } catch (error) {
+                        console.error('BlastManager: Failed to create BLASTDB directory:', error);
+                        reject(new Error(`Failed to create BLASTDB directory: ${error.message}`));
+                        return;
+                    }
+                }
+                
                 // Properly escape the BLASTDB path for shell execution
                 const escapedDbPath = localDbPath.replace(/"/g, '\\"');
                 finalCommand = `export BLASTDB="${escapedDbPath}" && ${command}`;
@@ -104,7 +146,15 @@ class BlastManager {
                 if (error) {
                     console.error('BlastManager: Command execution error:', error);
                     console.error('BlastManager: Command stderr:', stderr);
-                    reject(error);
+                    
+                    // Provide more specific error messages for common BLAST issues
+                    if (stderr && stderr.includes('Database memory map file error')) {
+                        reject(new Error(`BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`));
+                    } else if (stderr && stderr.includes('BLAST Database error')) {
+                        reject(new Error(`BLAST database error: ${stderr.trim()}`));
+                    } else {
+                        reject(error);
+                    }
                     return;
                 }
                 resolve(stdout);
@@ -996,6 +1046,14 @@ class BlastManager {
                 this.appendLog(`✓ Database entry created: ${dbName}`, 'success');
                 this.appendLog(`Note: Install BLAST+ to enable actual searching`, 'warning');
             } else {
+                // Check and fix BLAST database directory
+                try {
+                    await this.checkAndFixBlastDatabaseDirectory();
+                    this.appendLog(`✓ BLAST database directory verified: ${this.config.localDbPath}`, 'success');
+                } catch (error) {
+                    this.appendLog(`⚠ Database directory issue: ${error.message}`, 'warning');
+                    this.appendLog(`Attempting to create database anyway...`, 'info');
+                }
                 this.appendLog(`Running: makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}"`);
                 
                 try {
@@ -1006,8 +1064,23 @@ class BlastManager {
                     const sourceDirectory = path.dirname(filePath);
                     const outputName = path.basename(outputPath);
                     
+                    // Check if source file exists and is readable
+                    const fs = require('fs');
+                    if (!fs.existsSync(filePath)) {
+                        throw new Error(`Source file not found: ${filePath}`);
+                    }
+                    
+                    // Check if source directory is writable
+                    try {
+                        await fs.promises.access(sourceDirectory, fs.constants.W_OK);
+                    } catch (error) {
+                        throw new Error(`Cannot write to source directory: ${sourceDirectory}. Please check permissions.`);
+                    }
+                    
                     // Build command with relative paths
                     const makeblastdbCmd = `makeblastdb -in "${fileName}" -dbtype ${dbType} -out "${outputName}" -title "${dbName}"`;
+                    
+                    this.appendLog(`Executing: ${makeblastdbCmd} in directory: ${sourceDirectory}`);
                     
                     // Execute command in the source directory
                     await this.runCommand(makeblastdbCmd, sourceDirectory);
