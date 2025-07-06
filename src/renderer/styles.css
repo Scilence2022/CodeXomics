@@ -31761,22 +31761,46 @@ path.svg-gene-element.selected {
 }
 
 /* Sequence scrollbar styling */
-.sequence-full::-webkit-scrollbar {
-    width: 6px;
+.sequence-full::-webkit-scrollbar,
+.detailed-sequence-view.virtualized::-webkit-scrollbar {
+    width: 8px;
 }
 
-.sequence-full::-webkit-scrollbar-track {
+.sequence-full::-webkit-scrollbar-track,
+.detailed-sequence-view.virtualized::-webkit-scrollbar-track {
     background: var(--bg-tertiary);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
-.sequence-full::-webkit-scrollbar-thumb {
+.sequence-full::-webkit-scrollbar-thumb,
+.detailed-sequence-view.virtualized::-webkit-scrollbar-thumb {
     background: var(--border-color);
-    border-radius: 3px;
+    border-radius: 4px;
+    min-height: 20px;
 }
 
-.sequence-full::-webkit-scrollbar-thumb:hover {
+.sequence-full::-webkit-scrollbar-thumb:hover,
+.detailed-sequence-view.virtualized::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+}
+
+/* Ensure virtualized containers have proper scrollbar behavior */
+.detailed-sequence-view.virtualized {
+    /* Ensure scrollbar space is always reserved for layout consistency */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-tertiary);
+}
+
+/* Firefox scrollbar styling */
+.sequence-full,
+.detailed-sequence-view.virtualized {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-tertiary);
+}
+
+/* Ensure consistent scrollbar spacing */
+.detailed-sequence-view.virtualized::-webkit-scrollbar-corner {
+    background: var(--bg-tertiary);
 }
 
 /* SVG Enhanced Sequence Display Styles */

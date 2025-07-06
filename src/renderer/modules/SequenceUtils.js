@@ -608,7 +608,7 @@ class SequenceUtils {
         toggleButton.innerHTML = this.displayMode === 'edit' ? 
             '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
         toggleButton.title = this.displayMode === 'edit' ? 
-            'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+            'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
         
         toggleButton.onclick = () => {
             this.toggleDisplayMode();
@@ -647,15 +647,13 @@ class SequenceUtils {
             toggleButton.innerHTML = this.displayMode === 'edit' ? 
                 '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
             toggleButton.title = this.displayMode === 'edit' ? 
-                'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+                'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
         }
         
-        // Handle editing button and sequence content mode selector
+        // Handle sequence content mode selector (only remove it in edit mode)
         if (this.displayMode === 'edit') {
-            this.addEditingButton();
             this.removeSequenceContentModeSelector();
         } else {
-            this.removeEditingButton();
             this.addSequenceContentModeSelector();
         }
         
@@ -692,6 +690,15 @@ class SequenceUtils {
             try {
                 // Force re-render by calling displayEnhancedSequence
                 this.displayEnhancedSequence(chromosome, sequence);
+                
+                // If switching to edit mode, automatically enable editing after rendering
+                if (this.displayMode === 'edit') {
+                    // Use setTimeout to ensure VS Code editor is fully initialized
+                    setTimeout(() => {
+                        this.enableEditingModeDirectly();
+                    }, 100);
+                }
+                
                 console.log(`✅ [SequenceUtils] Successfully switched to ${this.displayMode} mode`);
             } catch (error) {
                 console.error(`❌ [SequenceUtils] Error switching to ${this.displayMode} mode:`, error);
@@ -705,7 +712,7 @@ class SequenceUtils {
                     toggleButton.innerHTML = this.displayMode === 'edit' ? 
                         '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
                     toggleButton.title = this.displayMode === 'edit' ? 
-                        'Switch to traditional sequence view' : 'Switch to VS Code-style editor';
+                        'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
                 }
                 
                 // Try to render in the original mode
@@ -724,28 +731,32 @@ class SequenceUtils {
     }
     
     /**
-     * Add editing button when in Edit Mode
+     * Enable editing mode directly without showing intermediate UI
      */
-    addEditingButton() {
-        // Remove existing editing button if any
-        this.removeEditingButton();
+    enableEditingModeDirectly() {
+        if (this.displayMode !== 'edit') {
+            console.warn('⚠️ [SequenceUtils] Cannot enable editing mode outside of edit display mode');
+            return;
+        }
         
-        const editingButton = document.createElement('button');
-        editingButton.id = 'sequenceEditingToggle';
-        editingButton.className = 'btn btn-sm btn-warning';
-        editingButton.innerHTML = '<i class="fas fa-pencil-alt"></i> Enable Editing';
-        editingButton.title = 'Enable sequence editing capabilities';
+        if (!this.sequenceEditor) {
+            console.warn('⚠️ [SequenceUtils] SequenceEditor not available, cannot enable editing');
+            this.genomeBrowser.showNotification('Editing functionality not available', 'warning');
+            return;
+        }
         
-        editingButton.onclick = () => {
-            this.toggleEditingMode();
-        };
+        console.log('🔧 [SequenceUtils] Enabling editing mode directly');
         
-        // Insert editing button after mode toggle
-        const sequenceControls = document.querySelector('.sequence-controls');
-        const settingsBtn = document.getElementById('sequenceSettingsBtn');
-        
-        if (sequenceControls && settingsBtn) {
-            sequenceControls.insertBefore(editingButton, settingsBtn);
+        try {
+            // Enable editing mode directly
+            this.sequenceEditor.enableEditMode();
+            console.log('✅ [SequenceUtils] Editing mode enabled successfully');
+            
+            // Show notification
+            this.genomeBrowser.showNotification('Edit mode enabled. You can now edit the sequence directly.', 'success');
+        } catch (error) {
+            console.error('❌ [SequenceUtils] Error enabling editing mode:', error);
+            this.genomeBrowser.showNotification('Failed to enable editing mode', 'error');
         }
     }
     
@@ -775,49 +786,7 @@ class SequenceUtils {
         }
     }
     
-    /**
-     * Toggle editing capabilities within Edit Mode
-     */
-    toggleEditingMode() {
-        if (this.displayMode !== 'edit' || !this.sequenceEditor) {
-            console.warn('⚠️ [SequenceUtils] Editing mode only available in Edit Mode with SequenceEditor');
-            this.genomeBrowser.showNotification('Editing mode only available in Edit Mode', 'warning');
-            return;
-        }
-        
-        const isCurrentlyEditing = this.sequenceEditor.isEditMode;
-        console.log(`🔧 [SequenceUtils] Toggling editing mode: ${isCurrentlyEditing ? 'Disable' : 'Enable'}`);
-        
-        if (isCurrentlyEditing) {
-            this.sequenceEditor.disableEditMode();
-        } else {
-            this.sequenceEditor.enableEditMode();
-        }
-        
-        this.updateEditingToggleButton();
-        
-        console.log(`✅ [SequenceUtils] Editing mode ${isCurrentlyEditing ? 'disabled' : 'enabled'}`);
-    }
-    
-    /**
-     * Update the editing toggle button text and style
-     */
-    updateEditingToggleButton() {
-        const editingButton = document.getElementById('sequenceEditingToggle');
-        if (!editingButton || !this.sequenceEditor) return;
-        
-        const isEditing = this.sequenceEditor.isEditMode;
-        
-        if (isEditing) {
-            editingButton.innerHTML = '<i class="fas fa-times"></i> Disable Editing';
-            editingButton.className = 'btn btn-sm btn-danger';
-            editingButton.title = 'Disable sequence editing and return to view mode';
-        } else {
-            editingButton.innerHTML = '<i class="fas fa-pencil-alt"></i> Enable Editing';
-            editingButton.className = 'btn btn-sm btn-warning';
-            editingButton.title = 'Enable sequence editing capabilities';
-        }
-    }
+
     
     /**
      * Clean up container styles to prevent mode interference
@@ -1441,23 +1410,47 @@ class SequenceUtils {
         console.log('🔧 [SequenceUtils] Using virtualized rendering for large sequence');
         
         const totalLines = Math.ceil(subsequence.length / optimalLineLength);
-        const containerHeight = Math.min(600, totalLines * this.virtualScrolling.lineHeight);
+        
+        // Calculate actual available height instead of using fixed 600px
+        const parentContainer = document.getElementById('sequenceContent');
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        let availableHeight = 400; // Default fallback
+        
+        if (sequenceDisplaySection) {
+            const sectionRect = sequenceDisplaySection.getBoundingClientRect();
+            const sequenceHeader = document.querySelector('.sequence-header');
+            const headerHeight = sequenceHeader ? sequenceHeader.offsetHeight : 60;
+            availableHeight = Math.max(200, sectionRect.height - headerHeight - 40); // Reserve space for padding
+        }
+        
+        // Calculate optimal container height
+        const maxPossibleHeight = totalLines * this.virtualScrolling.lineHeight;
+        const containerHeight = Math.min(availableHeight, maxPossibleHeight);
+        
+        // Update virtual scrolling parameters based on actual container size
+        const dynamicVisibleLines = Math.floor(containerHeight / this.virtualScrolling.lineHeight);
+        const needsScrolling = totalLines > dynamicVisibleLines;
+        
+        console.log(`🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}`);
         
         // Create virtualized container
         const virtualContainer = document.createElement('div');
         virtualContainer.className = 'detailed-sequence-view virtualized';
         virtualContainer.style.cssText = `
             height: ${containerHeight}px;
-            overflow-y: auto;
+            max-height: ${availableHeight}px;
+            overflow-y: ${needsScrolling ? 'auto' : 'hidden'};
             position: relative;
+            box-sizing: border-box;
         `;
         
         // Viewport for visible lines
         const viewport = document.createElement('div');
         viewport.className = 'virtual-viewport';
         viewport.style.cssText = `
-            height: ${totalLines * this.virtualScrolling.lineHeight}px;
+            height: ${maxPossibleHeight}px;
             position: relative;
+            min-height: ${containerHeight}px;
         `;
         
         // Visible content container
@@ -1473,21 +1466,32 @@ class SequenceUtils {
         viewport.appendChild(visibleContent);
         virtualContainer.appendChild(viewport);
         
+        // Store dynamic parameters for scroll handling
+        const virtualScrollingParams = {
+            ...this.virtualScrolling,
+            visibleLines: dynamicVisibleLines,
+            containerHeight: containerHeight,
+            totalLines: totalLines,
+            needsScrolling: needsScrolling
+        };
+        
         // Initial render (only if DNA should be shown)
         const shouldShowDNA = this.shouldShowDNASequence(subsequence.length);
         if (shouldShowDNA) {
-            this.updateVirtualizedContent(visibleContent, 0, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines);
+            this.updateVirtualizedContent(visibleContent, 0, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines, virtualScrollingParams);
         }
         
-        // Scroll handler for virtual scrolling
-        let scrollTimeout;
-        virtualContainer.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const scrollTop = virtualContainer.scrollTop;
-                this.updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines);
-            }, 16); // ~60fps
-        });
+        // Scroll handler for virtual scrolling (only if scrolling is needed)
+        if (needsScrolling) {
+            let scrollTimeout;
+            virtualContainer.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    const scrollTop = virtualContainer.scrollTop;
+                    this.updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines, virtualScrollingParams);
+                }, 16); // ~60fps
+            });
+        }
         
         container.appendChild(virtualContainer);
         
@@ -1498,10 +1502,12 @@ class SequenceUtils {
     /**
      * Update virtualized content based on scroll position
      */
-    updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines) {
-        const lineHeight = this.virtualScrolling.lineHeight;
-        const visibleLines = this.virtualScrolling.visibleLines;
-        const bufferLines = this.virtualScrolling.bufferLines;
+    updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines, virtualScrollingParams = null) {
+        // Use dynamic parameters if provided, otherwise fall back to instance parameters
+        const params = virtualScrollingParams || this.virtualScrolling;
+        const lineHeight = params.lineHeight;
+        const visibleLines = params.visibleLines;
+        const bufferLines = params.bufferLines;
         
         const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
         const endLine = Math.min(totalLines, startLine + visibleLines + bufferLines * 2);
@@ -1526,7 +1532,7 @@ class SequenceUtils {
             visibleContent.appendChild(lineElement);
         }
         
-        console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}`);
+        console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px`);
     }
     
     /**

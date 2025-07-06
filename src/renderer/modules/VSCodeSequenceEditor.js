@@ -276,6 +276,7 @@ class VSCodeSequenceEditor {
                 background: #2d2d30;
                 position: relative;
                 border-left: 1px solid #3c3c3c;
+                flex-shrink: 0; /* Prevent scrollbar from shrinking */
             }
             
             .scrollbar-thumb {
@@ -286,11 +287,17 @@ class VSCodeSequenceEditor {
                 position: absolute;
                 width: 8px;
                 cursor: pointer;
-                transition: background 0.2s;
+                transition: background 0.2s, opacity 0.2s;
             }
             
             .scrollbar-thumb:hover {
                 background: #4f4f4f;
+            }
+            
+            /* Hide thumb when not needed but maintain scrollbar space */
+            .scrollbar-thumb[style*="display: none"] {
+                opacity: 0;
+                pointer-events: none;
             }
             
             /* Minimap */
@@ -540,7 +547,10 @@ class VSCodeSequenceEditor {
         }
         
         const contentRect = this.sequenceContent.getBoundingClientRect();
-        this.contentWidth = Math.max(contentRect.width - 20, 600); // Account for padding, minimum width
+        
+        // Always reserve space for scrollbar to ensure consistent layout
+        const scrollbarWidth = 12;
+        this.contentWidth = Math.max(contentRect.width - 20 - scrollbarWidth, 600); // Account for padding and scrollbar
         this.contentHeight = Math.max(this.containerHeight - 60, 340); // Account for ruler, borders, padding
         
         // Calculate bases per line based on available width
@@ -909,10 +919,8 @@ class VSCodeSequenceEditor {
     
     handleWheel(e) {
         const delta = e.deltaY;
-        this.scrollTop = Math.max(0, Math.min(
-            this.scrollTop + delta,
-            (this.totalLines - this.visibleLines) * this.lineHeight
-        ));
+        const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
+        this.scrollTop = Math.max(0, Math.min(this.scrollTop + delta, maxScrollTop));
         
         this.render();
         this.updateScrollbar();
@@ -1008,11 +1016,12 @@ class VSCodeSequenceEditor {
     ensureCursorVisible() {
         const { line } = this.getLineColumnFromPosition(this.cursorPosition);
         const y = line * this.lineHeight;
+        const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
         
         if (y < this.scrollTop) {
             this.scrollTop = y;
         } else if (y >= this.scrollTop + this.contentHeight) {
-            this.scrollTop = y - this.contentHeight + this.lineHeight;
+            this.scrollTop = Math.min(maxScrollTop, y - this.contentHeight + this.lineHeight);
         }
         
         this.updateScrollbar();
@@ -1040,16 +1049,34 @@ class VSCodeSequenceEditor {
     }
     
     updateScrollbar() {
-        if (this.totalLines <= this.visibleLines) {
-            this.scrollbar.style.display = 'none';
-            return;
-        }
-        
+        // Always show scrollbar container to maintain consistent layout
         this.scrollbar.style.display = 'block';
         const thumb = this.scrollbar.querySelector('.scrollbar-thumb');
         
-        const thumbHeight = Math.max(20, (this.visibleLines / this.totalLines) * this.containerHeight);
-        const thumbTop = (this.scrollTop / this.lineHeight / this.totalLines) * this.containerHeight;
+        // Calculate if scrolling is actually needed
+        const needsScrolling = this.totalLines > this.visibleLines;
+        
+        if (!needsScrolling) {
+            // Hide thumb but keep scrollbar container for layout consistency
+            thumb.style.display = 'none';
+            // Ensure scrollTop is 0 when no scrolling is needed
+            this.scrollTop = 0;
+            return;
+        }
+        
+        // Show thumb and calculate its position
+        thumb.style.display = 'block';
+        
+        // Improved thumb height calculation
+        const thumbHeight = Math.max(20, Math.min(
+            this.containerHeight * 0.8, // Max 80% of container height
+            (this.visibleLines / this.totalLines) * this.containerHeight
+        ));
+        
+        // Improved thumb position calculation
+        const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
+        const scrollRatio = maxScrollTop > 0 ? this.scrollTop / maxScrollTop : 0;
+        const thumbTop = scrollRatio * (this.containerHeight - thumbHeight);
         
         thumb.style.height = thumbHeight + 'px';
         thumb.style.top = thumbTop + 'px';
@@ -1163,14 +1190,15 @@ class VSCodeSequenceEditor {
     }
     
     pageUp() {
+        const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
         this.scrollTop = Math.max(0, this.scrollTop - this.contentHeight);
         this.render();
         this.updateScrollbar();
     }
     
     pageDown() {
-        const maxScroll = (this.totalLines - this.visibleLines) * this.lineHeight;
-        this.scrollTop = Math.min(maxScroll, this.scrollTop + this.contentHeight);
+        const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
+        this.scrollTop = Math.min(maxScrollTop, this.scrollTop + this.contentHeight);
         this.render();
         this.updateScrollbar();
     }
@@ -1192,19 +1220,27 @@ class VSCodeSequenceEditor {
     
     handleScrollbarMouseDown(e) {
         if (e.target.classList.contains('scrollbar-thumb')) {
+            // Only handle dragging if thumb is visible (meaning scrolling is needed)
+            const thumb = e.target;
+            if (thumb.style.display === 'none') {
+                return;
+            }
+            
             // Handle thumb dragging
             const startY = e.clientY;
             const startScrollTop = this.scrollTop;
             
             const handleMouseMove = (e) => {
                 const deltaY = e.clientY - startY;
-                const scrollRatio = deltaY / this.containerHeight;
-                const newScrollTop = startScrollTop + (scrollRatio * this.totalLines * this.lineHeight);
-                
-                this.scrollTop = Math.max(0, Math.min(
-                    newScrollTop,
-                    (this.totalLines - this.visibleLines) * this.lineHeight
+                const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
+                const thumbHeight = Math.max(20, Math.min(
+                    this.containerHeight * 0.8,
+                    (this.visibleLines / this.totalLines) * this.containerHeight
                 ));
+                const scrollRatio = deltaY / (this.containerHeight - thumbHeight);
+                const newScrollTop = startScrollTop + (scrollRatio * maxScrollTop);
+                
+                this.scrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop));
                 
                 this.render();
                 this.updateScrollbar();
@@ -1219,15 +1255,17 @@ class VSCodeSequenceEditor {
             document.addEventListener('mouseup', handleMouseUp);
         } else {
             // Click on scrollbar track
+            const thumb = this.scrollbar.querySelector('.scrollbar-thumb');
+            if (thumb.style.display === 'none') {
+                return; // No scrolling needed
+            }
+            
             const rect = this.scrollbar.getBoundingClientRect();
             const clickY = e.clientY - rect.top;
             const scrollRatio = clickY / rect.height;
+            const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
             
-            this.scrollTop = scrollRatio * (this.totalLines - this.visibleLines) * this.lineHeight;
-            this.scrollTop = Math.max(0, Math.min(
-                this.scrollTop,
-                (this.totalLines - this.visibleLines) * this.lineHeight
-            ));
+            this.scrollTop = Math.max(0, Math.min(scrollRatio * maxScrollTop, maxScrollTop));
             
             this.render();
             this.updateScrollbar();
