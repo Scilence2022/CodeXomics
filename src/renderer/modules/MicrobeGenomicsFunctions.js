@@ -144,6 +144,13 @@ class MicrobeGenomicsFunctions {
      * @returns {number} GC percentage (0-100)
      */
     static computeGC(dna) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacyComputeGC(dna);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         if (!dna) return 0;
         const g = (dna.match(/G/gi) || []).length;
         const c = (dna.match(/C/gi) || []).length;
@@ -157,6 +164,13 @@ class MicrobeGenomicsFunctions {
      * @returns {string} Reverse complement sequence
      */
     static reverseComplement(dna) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacyReverseComplement(dna);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N' };
         return dna.toUpperCase().split('').reverse().map(base => complement[base] || 'N').join('');
     }
@@ -429,6 +443,13 @@ class MicrobeGenomicsFunctions {
      * @returns {Object|null} Gene object or null if not found
      */
     static searchGeneByName(name) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacySearchGeneByName(name);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const gb = window.genomeBrowser;
         if (!gb) throw new Error('GenomeBrowser not initialised');
         name = name.toLowerCase();

@@ -588,6 +588,13 @@ const PluginImplementations = {
     },
     
     reverseComplement(sequence) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacyReverseComplement(sequence);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G' };
         return sequence.split('').reverse().map(base => complement[base.toUpperCase()] || 'N').join('');
     },

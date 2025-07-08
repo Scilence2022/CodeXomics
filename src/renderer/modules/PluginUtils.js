@@ -23,6 +23,13 @@ const PluginUtils = {
     },
 
     reverseComplement(dna) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacyReverseComplement(dna);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const complement = { 'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N' };
         return dna.toUpperCase().split('').reverse().map(base => complement[base] || 'N').join('');
     },

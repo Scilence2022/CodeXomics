@@ -711,6 +711,13 @@ class CrisprDesigner {
      * Get reverse complement of DNA sequence
      */
     reverseComplement(sequence) {
+        // Use unified sequence processing implementation
+        if (window.UnifiedSequenceProcessing) {
+            const result = window.UnifiedSequenceProcessing.legacyReverseComplement(sequence);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const complement = {
             'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C',
             'a': 't', 't': 'a', 'c': 'g', 'g': 'c'
