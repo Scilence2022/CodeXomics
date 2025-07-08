@@ -297,6 +297,13 @@ class ExportManager {
 
     // Helper method to translate DNA to protein
     translateDNA(dnaSequence, strand = null) {
+        // Use unified translation implementation
+        if (window.UnifiedDNATranslation) {
+            const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand || 1);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const codonTable = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
             'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',

@@ -4195,7 +4195,48 @@ class BlastManager {
     }
 
     translateDNAToProteins(dnaSequence, chromosome) {
-        // Simple 6-frame translation (3 forward, 3 reverse)
+        // Use unified translation implementation
+        if (window.UnifiedDNATranslation) {
+            let fastaContent = '';
+            const cleanSeq = dnaSequence.toUpperCase().replace(/[^ATGC]/g, '');
+
+            // Forward frames (1, 2, 3)
+            for (let frame = 0; frame < 3; frame++) {
+                const result = window.UnifiedDNATranslation.translateDNA({
+                    sequence: cleanSeq,
+                    frame: frame,
+                    strand: 1,
+                    geneticCode: 'standard',
+                    includeStops: false,
+                    validateInput: false
+                });
+                
+                if (result.success && result.protein.length > 10) {
+                    fastaContent += `>${chromosome}_frame_+${frame + 1}\n${result.protein}\n`;
+                }
+            }
+
+            // Reverse frames (4, 5, 6)
+            const revSeq = window.UnifiedDNATranslation.reverseComplement(cleanSeq);
+            for (let frame = 0; frame < 3; frame++) {
+                const result = window.UnifiedDNATranslation.translateDNA({
+                    sequence: revSeq,
+                    frame: frame,
+                    strand: 1,
+                    geneticCode: 'standard',
+                    includeStops: false,
+                    validateInput: false
+                });
+                
+                if (result.success && result.protein.length > 10) {
+                    fastaContent += `>${chromosome}_frame_-${frame + 1}\n${result.protein}\n`;
+                }
+            }
+
+            return fastaContent;
+        }
+        
+        // Fallback to original implementation
         const geneticCode = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
             'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',

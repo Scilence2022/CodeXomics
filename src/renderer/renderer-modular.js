@@ -2825,6 +2825,13 @@ class GenomeBrowser {
     }
 
     translateDNA(dnaSequence, strand) {
+        // Use unified translation implementation
+        if (window.UnifiedDNATranslation) {
+            const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand);
+            return result;
+        }
+        
+        // Fallback to sequenceUtils implementation
         return this.sequenceUtils.translateDNA(dnaSequence, strand);
     }
 

@@ -168,6 +168,13 @@ class MicrobeGenomicsFunctions {
      * @returns {string} Amino acid sequence
      */
     static translateDNA(dna, frame = 0) {
+        // Use unified translation implementation
+        if (window.UnifiedDNATranslation) {
+            const result = window.UnifiedDNATranslation.legacyTranslateDNA(dna, frame);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const codonTable = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
             'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',

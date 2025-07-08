@@ -1757,6 +1757,13 @@ class SequenceUtils {
 
     // Biological utilities
     translateDNA(dnaSequence, strand = 1) {
+        // Use unified translation implementation
+        if (window.UnifiedDNATranslation) {
+            const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand);
+            return result;
+        }
+        
+        // Fallback to original implementation if unified module not available
         const geneticCode = {
             'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
             'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
