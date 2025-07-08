@@ -8700,6 +8700,181 @@ path.svg-gene-element.selected {
     }
 }
 
+/* Actions Track SVG Styles */
+.actions-track {
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+    margin-bottom: 2px;
+    overflow: hidden;
+    z-index: 10; /* Ensure actions track is above other tracks */
+}
+
+.actions-svg-container {
+    overflow: visible;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.svg-action-element {
+    transition: opacity 0.2s ease, filter 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
+
+.svg-action-element:hover {
+    opacity: 0.8;
+    filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    z-index: 3; /* Bring hovered actions to front */
+}
+
+/* Action type specific styling */
+.svg-action-element.copy-sequence path {
+    fill: url(#copy-gradient) !important;
+    stroke: #3b82f6 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-action-element.cut-sequence path {
+    fill: url(#cut-gradient) !important;
+    stroke: #ef4444 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-action-element.paste-sequence path {
+    fill: url(#paste-gradient) !important;
+    stroke: #10b981 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-action-element.delete-sequence path {
+    fill: url(#delete-gradient) !important;
+    stroke: #f59e0b !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-action-element.insert-sequence path {
+    fill: url(#insert-gradient) !important;
+    stroke: #8b5cf6 !important;
+    stroke-width: 1.5 !important;
+}
+
+.svg-action-element.replace-sequence path {
+    fill: url(#replace-gradient) !important;
+    stroke: #06b6d4 !important;
+    stroke-width: 1.5 !important;
+}
+
+/* Action status styling */
+.svg-action-element[data-action-status="executing"] path {
+    stroke-dasharray: 3,3 !important;
+    stroke-width: 2 !important;
+    animation: actionExecuting 1.5s infinite linear;
+}
+
+.svg-action-element[data-action-status="completed"] {
+    opacity: 0.7;
+}
+
+.svg-action-element[data-action-status="completed"] path {
+    stroke: #10b981 !important;
+    stroke-width: 2 !important;
+}
+
+.svg-action-element[data-action-status="failed"] path {
+    stroke: #ef4444 !important;
+    stroke-width: 2 !important;
+    stroke-dasharray: 2,2 !important;
+}
+
+@keyframes actionExecuting {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 12; }
+}
+
+/* Action text styling */
+.svg-action-text-protected {
+    pointer-events: none;
+    transform-origin: center center;
+    position: relative;
+    z-index: 4;
+}
+
+.svg-action-text-protected text {
+    vector-effect: non-scaling-stroke !important;
+    font-family: 'Arial', sans-serif !important;
+    font-weight: 500 !important;
+    fill: #ffffff !important;
+    text-rendering: geometricPrecision;
+}
+
+/* Actions track container */
+.unified-actions-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    z-index: 1;
+}
+
+/* Action track statistics */
+.actions-track-stats {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: rgba(255,255,255,0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    color: #666;
+    border: 1px solid #ddd;
+    z-index: 5; /* Keep stats above everything else */
+}
+
+/* No actions message styling */
+.no-actions-message,
+.no-actions-visible-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #666;
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+    z-index: 1;
+}
+
+/* Responsive actions track */
+@media (max-width: 768px) {
+    .actions-svg-container text {
+        font-size: 9px !important;
+    }
+    
+    .svg-action-element {
+        opacity: 0.9;
+    }
+    
+    .actions-track-stats {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+}
+
+/* Advanced text protection for actions track */
+.actions-svg-container text {
+    vector-effect: non-scaling-stroke !important;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transform: scale(1, 1) !important;
+    transform-origin: center center !important;
+}
+
 /* Track Splitters */
 
 /* Add Feature Buttons */

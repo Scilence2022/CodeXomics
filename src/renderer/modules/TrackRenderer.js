@@ -56,6 +56,13 @@ class TrackRenderer {
                 className: 'wig-track',
                 requiresData: false,
                 dataSource: 'currentWIGTracks'
+            },
+            actions: {
+                defaultHeight: '100px',
+                header: 'Actions',
+                className: 'actions-track',
+                requiresData: false,
+                dataSource: 'actionManager'
             }
         };
         
@@ -4938,9 +4945,590 @@ class TrackRenderer {
         // Restore header state if it was previously hidden
         this.restoreHeaderState(track, 'wigTracks');
         
+                return track;
+    }
+
+    /**
+     * Create Actions track with SVG rendering similar to genes
+     */
+    createActionsTrack(chromosome) {
+        const { track, trackContent } = this.createTrackBase('actions', chromosome);
+        const viewport = this.getCurrentViewport();
+        
+        // Get actions from ActionManager
+        const actionManager = this.genomeBrowser.actionManager;
+        if (!actionManager || !actionManager.actions || actionManager.actions.length === 0) {
+            const noDataMsg = this.createNoDataMessage(
+                'No actions in queue. Use the Action menu to add sequence operations.',
+                'no-actions-message'
+            );
+            trackContent.appendChild(noDataMsg);
+            return track;
+        }
+        
+        // Filter actions that have position information
+        const visibleActions = actionManager.actions.filter(action => {
+            // Only show actions with position information
+            if (!action.target || !action.details) return false;
+            
+            // Parse position from target (e.g., "chr1:1000-2000")
+            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            if (!positionMatch) return false;
+            
+            const actionChr = positionMatch[1];
+            const actionStart = parseInt(positionMatch[2]);
+            const actionEnd = parseInt(positionMatch[3]);
+            
+            // Only show actions for current chromosome that are in viewport
+            return actionChr === chromosome && 
+                   actionEnd >= viewport.start && 
+                   actionStart <= viewport.end;
+        });
+        
+        if (visibleActions.length === 0) {
+            const noDataMsg = this.createNoDataMessage(
+                'No actions visible in current region.',
+                'no-actions-visible-message'
+            );
+            trackContent.appendChild(noDataMsg);
+            return track;
+        }
+        
+        // Get track settings
+        const settings = this.getActionTrackSettings();
+        
+        // Arrange actions in rows to prevent overlap
+        const actionRows = this.arrangeActionsInRows(visibleActions, viewport.start, viewport.end, settings);
+        
+        // Calculate layout
+        const layout = this.calculateActionTrackLayout(actionRows, settings);
+        
+        // Set calculated height
+        trackContent.style.height = `${Math.max(layout.totalHeight, 80)}px`;
+        
+        // Create unified container for all action track elements
+        const unifiedContainer = document.createElement('div');
+        unifiedContainer.className = 'unified-actions-container';
+        unifiedContainer.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        `;
+        
+        // Create SVG-based action visualization
+        this.renderActionElementsSVG(unifiedContainer, actionRows, viewport, layout, settings);
+        
+        // Add the unified container to trackContent
+        trackContent.appendChild(unifiedContainer);
+        
+        // Add statistics
+        const statsText = `${visibleActions.length} actions visible`;
+        const statsElement = this.createStatsElement(statsText, 'actions-track-stats');
+        trackContent.appendChild(statsElement);
+        
+        // Restore header state if it was previously hidden
+        this.restoreHeaderState(track, 'actions');
+        
         return track;
     }
-    
+
+    /**
+     * Create SVG-based action visualization similar to genes
+     */
+    renderActionElementsSVG(trackContent, actionRows, viewport, layout, settings) {
+        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        
+        // Create SVG container
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const svgContentHeight = layout.totalHeight - layout.rulerHeight;
+        
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', svgContentHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContentHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('class', 'actions-svg-container');
+        svg.style.position = 'relative';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.pointerEvents = 'all';
+
+        // Create definitions for gradients
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        this.createActionGradients(defs);
+        svg.appendChild(defs);
+
+        // Create action elements as SVG shapes
+        actionRows.forEach((rowActions, rowIndex) => {
+            if (rowIndex >= layout.maxRows) return;
+            
+            rowActions.forEach((action) => {
+                const actionGroup = this.createSVGActionElement(action, viewport, rowIndex, layout, settings, defs, containerWidth);
+                if (actionGroup) {
+                    svg.appendChild(actionGroup);
+                }
+            });
+        });
+
+        trackContent.appendChild(svg);
+    }
+
+    /**
+     * Create individual SVG action element
+     */
+    createSVGActionElement(action, viewport, rowIndex, layout, settings, defs, containerWidth) {
+        // Parse position from target
+        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        if (!positionMatch) return null;
+        
+        const actionStart = parseInt(positionMatch[2]);
+        const actionEnd = parseInt(positionMatch[3]);
+        
+        // Calculate position and dimensions
+        const left = ((actionStart - viewport.start) / viewport.range) * 100;
+        const width = ((actionEnd - actionStart) / viewport.range) * 100;
+        
+        if (width <= 0) return null;
+
+        // Get positioning parameters
+        const y = layout.topPadding + rowIndex * (layout.actionHeight + layout.rowSpacing);
+        const x = (left / 100) * containerWidth;
+        const elementWidth = Math.max((width / 100) * containerWidth, 8);
+        const elementHeight = layout.actionHeight;
+
+        // Create SVG group for the action
+        const actionGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        actionGroup.setAttribute('class', `svg-action-element ${action.type.toLowerCase().replace('_', '-')}`);
+        actionGroup.setAttribute('transform', `translate(${x}, ${y})`);
+
+        // Get action color based on type and status
+        const actionColor = this.getActionColor(action);
+        
+        // Create gradient for action background
+        const gradientId = `action-gradient-${action.id}`;
+        const gradient = this.createSVGActionGradient(defs, gradientId, actionColor);
+
+        // Create action shape
+        const actionShape = this.createSVGActionShape(action, elementWidth, elementHeight, gradientId);
+        actionGroup.appendChild(actionShape);
+
+        // Add action text label if there's enough space
+        if (elementWidth > 30) {
+            const actionText = this.createSVGActionText(action, elementWidth, elementHeight, settings);
+            if (actionText) {
+                actionGroup.appendChild(actionText);
+            }
+        }
+
+        // Add interaction handlers
+        this.addSVGActionInteraction(actionGroup, action, rowIndex);
+
+        return actionGroup;
+    }
+
+    /**
+     * Create action gradients for different action types
+     */
+    createActionGradients(defs) {
+        const gradients = [
+            { id: 'copy-gradient', color: '#3b82f6' },
+            { id: 'cut-gradient', color: '#ef4444' },
+            { id: 'paste-gradient', color: '#10b981' },
+            { id: 'delete-gradient', color: '#f59e0b' },
+            { id: 'insert-gradient', color: '#8b5cf6' },
+            { id: 'replace-gradient', color: '#06b6d4' },
+            { id: 'default-gradient', color: '#6b7280' }
+        ];
+
+        gradients.forEach(({ id, color }) => {
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', id);
+            gradient.setAttribute('x1', '0%');
+            gradient.setAttribute('y1', '0%');
+            gradient.setAttribute('x2', '0%');
+            gradient.setAttribute('y2', '100%');
+
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('stop-color', this.lightenColor(color, 20));
+
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop2.setAttribute('offset', '100%');
+            stop2.setAttribute('stop-color', color);
+
+            gradient.appendChild(stop1);
+            gradient.appendChild(stop2);
+            defs.appendChild(gradient);
+        });
+    }
+
+    /**
+     * Create gradient for specific action
+     */
+    createSVGActionGradient(defs, gradientId, baseColor) {
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.setAttribute('id', gradientId);
+        gradient.setAttribute('x1', '0%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', '0%');
+        gradient.setAttribute('y2', '100%');
+
+        const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', this.lightenColor(baseColor, 20));
+
+        const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', baseColor);
+
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        defs.appendChild(gradient);
+
+        return gradient;
+    }
+
+    /**
+     * Create action shape based on action type
+     */
+    createSVGActionShape(action, width, height, gradientId) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData;
+
+        // Create different shapes based on action type
+        switch (action.type) {
+            case 'copy_sequence':
+                // Rectangle with rounded corners
+                pathData = `M 0 2 
+                           L ${width - 2} 2 
+                           Q ${width} 2 ${width} 4 
+                           L ${width} ${height - 4} 
+                           Q ${width} ${height - 2} ${width - 2} ${height - 2} 
+                           L 2 ${height - 2} 
+                           Q 0 ${height - 2} 0 ${height - 4} 
+                           L 0 4 
+                           Q 0 2 2 2 Z`;
+                break;
+            
+            case 'cut_sequence':
+                // Zigzag shape
+                pathData = `M 0 ${height/2} 
+                           L ${width * 0.2} 2 
+                           L ${width * 0.4} ${height - 2} 
+                           L ${width * 0.6} 2 
+                           L ${width * 0.8} ${height - 2} 
+                           L ${width} ${height/2} 
+                           L ${width * 0.8} ${height/2} 
+                           L ${width * 0.6} ${height - 2} 
+                           L ${width * 0.4} 2 
+                           L ${width * 0.2} ${height - 2} Z`;
+                break;
+            
+            case 'paste_sequence':
+                // Arrow pointing right
+                pathData = `M 0 0 
+                           L ${width - 6} 0 
+                           L ${width} ${height/2} 
+                           L ${width - 6} ${height} 
+                           L 0 ${height} Z`;
+                break;
+            
+            case 'delete_sequence':
+                // X shape
+                pathData = `M 0 0 
+                           L ${width * 0.2} 0 
+                           L ${width/2} ${height * 0.3} 
+                           L ${width * 0.8} 0 
+                           L ${width} 0 
+                           L ${width * 0.7} ${height/2} 
+                           L ${width} ${height} 
+                           L ${width * 0.8} ${height} 
+                           L ${width/2} ${height * 0.7} 
+                           L ${width * 0.2} ${height} 
+                           L 0 ${height} 
+                           L ${width * 0.3} ${height/2} Z`;
+                break;
+            
+            default:
+                // Default rectangle
+                pathData = `M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`;
+        }
+
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', `url(#${gradientId})`);
+        path.setAttribute('stroke', this.getActionColor(action));
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', `action-${action.type.toLowerCase().replace('_', '-')}`);
+
+        // Add status-based styling
+        if (action.status === 'executing') {
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('stroke-dasharray', '3,3');
+        } else if (action.status === 'completed') {
+            path.setAttribute('opacity', '0.7');
+        } else if (action.status === 'failed') {
+            path.setAttribute('stroke', '#ef4444');
+            path.setAttribute('stroke-width', '2');
+        }
+
+        return path;
+    }
+
+    /**
+     * Create action text label
+     */
+    createSVGActionText(action, width, height, settings) {
+        const actionName = this.getActionDisplayName(action);
+        const baseFontSize = settings?.fontSize || 10;
+        const fontSize = Math.max(8, Math.min(baseFontSize, height * 0.6));
+        
+        // Smart text truncation
+        let displayText = actionName;
+        const estimatedCharWidth = fontSize * 0.6;
+        const maxChars = Math.floor(width / estimatedCharWidth);
+        
+        if (actionName.length > maxChars && maxChars > 3) {
+            displayText = actionName.substring(0, maxChars - 3) + '...';
+        }
+
+        const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        textGroup.setAttribute('class', 'svg-action-text-protected');
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', width / 2);
+        text.setAttribute('y', height / 2);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('font-size', `${fontSize}px`);
+        text.setAttribute('font-family', 'Arial, sans-serif');
+        text.setAttribute('font-weight', '500');
+        text.setAttribute('fill', '#ffffff');
+        text.setAttribute('pointer-events', 'none');
+        text.style.vectorEffect = 'non-scaling-stroke';
+        text.textContent = displayText;
+        
+        textGroup.appendChild(text);
+        return textGroup;
+    }
+
+    /**
+     * Add interaction handlers to action elements
+     */
+    addSVGActionInteraction(actionGroup, action, rowIndex) {
+        // Add data attributes for easier access
+        actionGroup.setAttribute('data-action-id', action.id);
+        actionGroup.setAttribute('data-action-type', action.type);
+        actionGroup.setAttribute('data-action-status', action.status);
+        
+        // Create tooltip
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = this.getActionTooltip(action);
+        actionGroup.appendChild(title);
+
+        // Add hover effects
+        actionGroup.style.cursor = 'pointer';
+        actionGroup.addEventListener('mouseenter', () => {
+            actionGroup.style.opacity = '0.8';
+        });
+        actionGroup.addEventListener('mouseleave', () => {
+            actionGroup.style.opacity = '1';
+        });
+
+        // Add click handler
+        actionGroup.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showActionDetails(action);
+        });
+    }
+
+    /**
+     * Get action color based on type and status
+     */
+    getActionColor(action) {
+        const statusColors = {
+            'pending': '#6b7280',
+            'executing': '#3b82f6',
+            'completed': '#10b981',
+            'failed': '#ef4444'
+        };
+        
+        const typeColors = {
+            'copy_sequence': '#3b82f6',
+            'cut_sequence': '#ef4444',
+            'paste_sequence': '#10b981',
+            'delete_sequence': '#f59e0b',
+            'insert_sequence': '#8b5cf6',
+            'replace_sequence': '#06b6d4'
+        };
+        
+        // Use status color if status is not pending, otherwise use type color
+        if (action.status !== 'pending') {
+            return statusColors[action.status] || statusColors['pending'];
+        }
+        
+        return typeColors[action.type] || typeColors['copy_sequence'];
+    }
+
+    /**
+     * Get display name for action
+     */
+    getActionDisplayName(action) {
+        const typeNames = {
+            'copy_sequence': 'Copy',
+            'cut_sequence': 'Cut',
+            'paste_sequence': 'Paste',
+            'delete_sequence': 'Delete',
+            'insert_sequence': 'Insert',
+            'replace_sequence': 'Replace'
+        };
+        
+        return typeNames[action.type] || action.type;
+    }
+
+    /**
+     * Get tooltip text for action
+     */
+    getActionTooltip(action) {
+        const typeName = this.getActionDisplayName(action);
+        const statusText = action.status.charAt(0).toUpperCase() + action.status.slice(1);
+        
+        return `${typeName} Action (${statusText})
+Target: ${action.target}
+Details: ${action.details}
+Created: ${new Date(action.timestamp).toLocaleString()}`;
+    }
+
+    /**
+     * Show action details in modal
+     */
+    showActionDetails(action) {
+        // Use existing action list modal or create a simple alert
+        if (this.genomeBrowser.actionManager && this.genomeBrowser.actionManager.showActionList) {
+            this.genomeBrowser.actionManager.showActionList();
+        } else {
+            alert(this.getActionTooltip(action));
+        }
+    }
+
+    /**
+     * Arrange actions in rows to prevent overlap
+     */
+    arrangeActionsInRows(actions, viewStart, viewEnd, settings) {
+        const rows = [];
+        
+        // Sort actions by start position
+        const sortedActions = [...actions].sort((a, b) => {
+            const aMatch = a.target.match(/(\w+):(\d+)-(\d+)/);
+            const bMatch = b.target.match(/(\w+):(\d+)-(\d+)/);
+            if (!aMatch || !bMatch) return 0;
+            return parseInt(aMatch[2]) - parseInt(bMatch[2]);
+        });
+        
+        // Place actions in rows
+        sortedActions.forEach(action => {
+            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            if (!positionMatch) return;
+            
+            const actionStart = parseInt(positionMatch[2]);
+            const actionEnd = parseInt(positionMatch[3]);
+            
+            // Find first row where action fits
+            let placed = false;
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const canPlace = row.every(existingAction => {
+                    const existingMatch = existingAction.target.match(/(\w+):(\d+)-(\d+)/);
+                    if (!existingMatch) return true;
+                    
+                    const existingStart = parseInt(existingMatch[2]);
+                    const existingEnd = parseInt(existingMatch[3]);
+                    
+                    // Check if they don't overlap
+                    return actionEnd < existingStart || actionStart > existingEnd;
+                });
+                
+                if (canPlace) {
+                    row.push(action);
+                    placed = true;
+                    break;
+                }
+            }
+            
+            // If not placed, create new row
+            if (!placed) {
+                rows.push([action]);
+            }
+        });
+        
+        return rows;
+    }
+
+    /**
+     * Calculate action track layout
+     */
+    calculateActionTrackLayout(actionRows, settings) {
+        const actionHeight = settings?.actionHeight || 20;
+        const rowSpacing = settings?.rowSpacing || 5;
+        const topPadding = settings?.topPadding || 10;
+        const bottomPadding = settings?.bottomPadding || 10;
+        const rulerHeight = settings?.rulerHeight || 20;
+        const maxRows = settings?.maxRows || 10;
+        
+        const visibleRows = Math.min(actionRows.length, maxRows);
+        const contentHeight = visibleRows * actionHeight + (visibleRows - 1) * rowSpacing;
+        const totalHeight = topPadding + contentHeight + bottomPadding + rulerHeight;
+        
+        return {
+            actionHeight,
+            rowSpacing,
+            topPadding,
+            bottomPadding,
+            rulerHeight,
+            maxRows,
+            visibleRows,
+            contentHeight,
+            totalHeight
+        };
+    }
+
+    /**
+     * Update actions track in real-time when actions change
+     */
+    updateActionsTrack() {
+        const currentChromosome = this.genomeBrowser.currentChromosome;
+        if (!currentChromosome) {
+            console.warn('No current chromosome, cannot update actions track');
+            return;
+        }
+        
+        // Find the existing actions track
+        const existingActionsTrack = document.querySelector('.actions-track');
+        if (!existingActionsTrack) {
+            console.warn('Actions track not found in DOM');
+            return;
+        }
+        
+        // Create new actions track
+        const newActionsTrack = this.createActionsTrack(currentChromosome);
+        
+        // Replace the existing track with the new one
+        existingActionsTrack.parentNode.replaceChild(newActionsTrack, existingActionsTrack);
+        
+        // Make the new track draggable and resizable
+        this.genomeBrowser.makeTrackDraggable(newActionsTrack, 'actions');
+        this.genomeBrowser.addTrackResizeHandle(newActionsTrack, 'actions');
+        
+        console.log('✅ Actions track updated successfully');
+    }
+
+    /**
+     * Get action track settings
+     */
+    getActionTrackSettings() {
+        return this.getTrackSettings('actions');
+    }
+
     createWIGAreaChart(svg, data, viewport, minValue, maxValue, color) {
         const svgWidth = 800; // Default width, will be scaled by CSS
         const svgHeight = 30;
@@ -6572,7 +7160,7 @@ class TrackRenderer {
                 showOperonsSameRow: false,
                 height: 120,
                 geneHeight: 12,
-                fontSize: 11,
+            fontSize: 11,
                 fontFamily: 'Arial, sans-serif',
                 layoutMode: 'compact' // 'compact' or 'groupByType'
             },

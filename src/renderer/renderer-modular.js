@@ -155,7 +155,8 @@ class GenomeBrowser {
             variants: false,
             reads: false,
             proteins: false,
-            sequence: true  // Add sequence as a regular track
+            sequence: true,  // Add sequence as a regular track
+            actions: false   // Add actions track
         };
 
         // Feature type visibility
@@ -1879,6 +1880,12 @@ class GenomeBrowser {
                 tracksToShow.push({ element: proteinTrack, type: 'proteins' });
             }
             
+            // 7. Actions track (show if selected, even without data)
+            if (this.visibleTracks.has('actions')) {
+                const actionsTrack = this.trackRenderer.createActionsTrack(chromosome);
+                tracksToShow.push({ element: actionsTrack, type: 'actions' });
+            }
+            
             // Add tracks without splitters, but make them draggable and resizable
             tracksToShow.forEach((track, index) => {
                 // Add the track
@@ -2532,6 +2539,7 @@ class GenomeBrowser {
         const trackWIG = document.getElementById('trackWIG');
         const trackProteins = document.getElementById('trackProteins');
         const trackSequence = document.getElementById('trackSequence');
+        const trackActions = document.getElementById('trackActions');
         
         if (trackGenes && trackGenes.checked) tracks.add('genes');
         if (trackGC && trackGC.checked) tracks.add('gc');
@@ -2540,6 +2548,7 @@ class GenomeBrowser {
         if (trackWIG && trackWIG.checked) tracks.add('wigTracks');
         if (trackProteins && trackProteins.checked) tracks.add('proteins');
         if (trackSequence && trackSequence.checked) tracks.add('sequence');
+        if (trackActions && trackActions.checked) tracks.add('actions');
         
         this.visibleTracks = tracks;
         
@@ -2551,6 +2560,7 @@ class GenomeBrowser {
         const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
         const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
+        const sidebarTrackActions = document.getElementById('sidebarTrackActions');
         
         if (sidebarTrackGenes) sidebarTrackGenes.checked = tracks.has('genes');
         if (sidebarTrackGC) sidebarTrackGC.checked = tracks.has('gc');
@@ -2559,6 +2569,7 @@ class GenomeBrowser {
         if (sidebarTrackWIG) sidebarTrackWIG.checked = tracks.has('wigTracks');
         if (sidebarTrackProteins) sidebarTrackProteins.checked = tracks.has('proteins');
         if (sidebarTrackSequence) sidebarTrackSequence.checked = tracks.has('sequence');
+        if (sidebarTrackActions) sidebarTrackActions.checked = tracks.has('actions');
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2588,6 +2599,7 @@ class GenomeBrowser {
         const sidebarTrackWIG = document.getElementById('sidebarTrackWIG');
         const sidebarTrackProteins = document.getElementById('sidebarTrackProteins');
         const sidebarTrackSequence = document.getElementById('sidebarTrackSequence');
+        const sidebarTrackActions = document.getElementById('sidebarTrackActions');
         
         if (sidebarTrackGenes && sidebarTrackGenes.checked) tracks.add('genes');
         if (sidebarTrackGC && sidebarTrackGC.checked) tracks.add('gc');
@@ -2596,6 +2608,7 @@ class GenomeBrowser {
         if (sidebarTrackWIG && sidebarTrackWIG.checked) tracks.add('wigTracks');
         if (sidebarTrackProteins && sidebarTrackProteins.checked) tracks.add('proteins');
         if (sidebarTrackSequence && sidebarTrackSequence.checked) tracks.add('sequence');
+        if (sidebarTrackActions && sidebarTrackActions.checked) tracks.add('actions');
         
         this.visibleTracks = tracks;
         
@@ -2607,6 +2620,7 @@ class GenomeBrowser {
         const trackWIG = document.getElementById('trackWIG');
         const trackProteins = document.getElementById('trackProteins');
         const trackSequence = document.getElementById('trackSequence');
+        const trackActions = document.getElementById('trackActions');
         
         if (trackGenes) trackGenes.checked = tracks.has('genes');
         if (trackGC) trackGC.checked = tracks.has('gc');
@@ -2615,6 +2629,7 @@ class GenomeBrowser {
         if (trackWIG) trackWIG.checked = tracks.has('wigTracks');
         if (trackProteins) trackProteins.checked = tracks.has('proteins');
         if (trackSequence) trackSequence.checked = tracks.has('sequence');
+        if (trackActions) trackActions.checked = tracks.has('actions');
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;

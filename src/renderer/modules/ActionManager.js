@@ -156,8 +156,30 @@ class ActionManager {
         this.updateActionListUI();
         this.updateStats();
         
+        // Notify actions track to update
+        this.notifyActionsTrackUpdate();
+        
         console.log('Action added:', action);
         return action.id;
+    }
+    
+    /**
+     * Notify actions track to update when actions change
+     */
+    notifyActionsTrackUpdate() {
+        if (this.genomeBrowser && this.genomeBrowser.trackRenderer) {
+            // Check if actions track is visible
+            const trackActionsCheckbox = document.getElementById('trackActions');
+            const sidebarTrackActionsCheckbox = document.getElementById('sidebarTrackActions');
+            
+            const isActionsTrackVisible = (trackActionsCheckbox && trackActionsCheckbox.checked) ||
+                                         (sidebarTrackActionsCheckbox && sidebarTrackActionsCheckbox.checked);
+            
+            if (isActionsTrackVisible) {
+                console.log('🔄 Updating actions track due to action changes');
+                this.genomeBrowser.trackRenderer.updateActionsTrack();
+            }
+        }
     }
     
     /**
@@ -610,6 +632,9 @@ class ActionManager {
             this.hideExecutionProgress();
             this.updateActionListUI();
             this.updateStats();
+            
+            // Notify actions track to update
+            this.notifyActionsTrackUpdate();
         }
     }
     
@@ -619,6 +644,9 @@ class ActionManager {
     async executeAction(action) {
         action.status = this.STATUS.EXECUTING;
         action.executionStart = new Date();
+        
+        // Notify actions track about status change to executing
+        this.notifyActionsTrackUpdate();
         
         try {
             let result;
@@ -655,6 +683,9 @@ class ActionManager {
             action.executionEnd = new Date();
             console.error(`Error executing action ${action.id}:`, error);
         }
+        
+        // Notify actions track about status change to completed/failed
+        this.notifyActionsTrackUpdate();
     }
     
     /**
@@ -962,6 +993,9 @@ class ActionManager {
         this.actions = this.actions.filter(action => action.id !== actionId);
         this.updateActionListUI();
         this.updateStats();
+        
+        // Notify actions track to update
+        this.notifyActionsTrackUpdate();
     }
     
     /**
@@ -977,6 +1011,10 @@ class ActionManager {
             this.actions = [];
             this.updateActionListUI();
             this.updateStats();
+            
+            // Notify actions track to update
+            this.notifyActionsTrackUpdate();
+            
             this.genomeBrowser.showNotification('All actions cleared', 'success');
         }
     }
@@ -1047,6 +1085,10 @@ class ActionManager {
                     
                     this.updateActionListUI();
                     this.updateStats();
+                    
+                    // Notify actions track to update
+                    this.notifyActionsTrackUpdate();
+                    
                     this.genomeBrowser.showNotification(`${importData.actions.length} actions imported successfully`, 'success');
                     
                 } catch (error) {
