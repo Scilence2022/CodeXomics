@@ -356,14 +356,16 @@ class GenomeBrowser {
         setTimeout(() => {
             try {
                 if (typeof ActionManager !== 'undefined') {
-                    window.actionManager = new ActionManager(this);
+                    this.actionManager = new ActionManager(this);
+                    window.actionManager = this.actionManager; // Keep for backward compatibility
                     console.log('✅ ActionManager initialized');
                 } else {
                     console.warn('⚠️ ActionManager class not available');
                 }
                 
                 if (typeof CheckpointManager !== 'undefined') {
-                    window.checkpointManager = new CheckpointManager(this);
+                    this.checkpointManager = new CheckpointManager(this);
+                    window.checkpointManager = this.checkpointManager; // Keep for backward compatibility
                     console.log('✅ CheckpointManager initialized');
                 } else {
                     console.warn('⚠️ CheckpointManager class not available');

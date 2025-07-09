@@ -282,7 +282,6 @@ class TrackRenderer {
             e.stopPropagation();
             this.toggleTrackHeader(trackType, hideHeaderBtn);
         });
-        buttonsContainer.appendChild(hideHeaderBtn);
         
         // Close button
         const closeBtn = document.createElement('button');
@@ -308,6 +307,7 @@ class TrackRenderer {
         
         buttonsContainer.appendChild(settingsBtn);
         buttonsContainer.appendChild(toggleBtn);
+        buttonsContainer.appendChild(hideHeaderBtn);
         buttonsContainer.appendChild(closeBtn);
         trackHeader.appendChild(buttonsContainer);
         

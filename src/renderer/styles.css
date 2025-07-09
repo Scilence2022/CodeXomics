@@ -1271,22 +1271,6 @@ body {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
@@ -5744,22 +5728,6 @@ body {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
@@ -11471,22 +11439,6 @@ path.svg-gene-element.selected {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
@@ -13035,22 +12987,6 @@ body {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
@@ -17019,22 +16955,6 @@ body {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
@@ -22490,22 +22410,6 @@ path.svg-gene-element.selected {
     }
 }
 
-.track-header::after {
-    content: '⇄';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.track-header:hover::after {
-    opacity: 1;
-    color: #495057;
-}
 
 .track-content {
     position: relative;
