@@ -830,6 +830,10 @@ class ChatManager {
                     result = await this.codonUsageAnalysis(parameters);
                     break;
                     
+                case 'amino_acid_composition':
+                    result = await this.aminoAcidComposition(parameters);
+                    break;
+                    
                 case 'bookmark_position':
                     result = await this.bookmarkPosition(parameters);
                     break;
@@ -4045,6 +4049,10 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.codonUsageAnalysis(parameters);
                     break;
                     
+                case 'amino_acid_composition':
+                    result = await this.aminoAcidComposition(parameters);
+                    break;
+                    
                 case 'bookmark_position':
                     result = await this.bookmarkPosition(parameters);
                     break;
@@ -5978,36 +5986,101 @@ ${this.getPluginSystemInfo()}`;
 
     // 4. ENHANCED SEQUENCE STATISTICS
     async sequenceStatistics(params) {
-        const { chromosome, start, end, include = ['basic', 'composition', 'complexity'] } = params;
+        const { chromosome, start, end, include = ['basic', 'composition', 'complexity'], sequence, sequenceType = 'dna' } = params;
         
-        const chr = chromosome || this.app.currentChromosome;
-        if (!chr) {
-            throw new Error('No chromosome specified and none currently selected');
+        let inputSequence;
+        
+        // If sequence is provided directly, use it
+        if (sequence) {
+            inputSequence = sequence.replace(/\s/g, '').toUpperCase();
+            // Remove stop codon if protein sequence
+            if (sequenceType === 'protein' && inputSequence.endsWith('*')) {
+                inputSequence = inputSequence.slice(0, -1);
+            }
+        } else {
+            // Use genomic region
+            const chr = chromosome || this.app.currentChromosome;
+            if (!chr) {
+                throw new Error('No chromosome specified and none currently selected');
+            }
+            
+            const regionStart = start || this.app.currentPosition?.start || 0;
+            const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
+            
+            inputSequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
         }
         
-        const regionStart = start || this.app.currentPosition?.start || 0;
-        const regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence[chr]?.length || 0;
-        
-        const sequence = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
         const stats = {};
         
         // Basic composition
         if (include.includes('basic') || include.includes('composition')) {
-            const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
-            for (const base of sequence) {
-                counts[base] = (counts[base] || 0) + 1;
+            if (sequenceType === 'protein') {
+                // Protein amino acid composition
+                const aaCounts = {};
+                const aminoAcids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'];
+                
+                // Initialize counts
+                aminoAcids.forEach(aa => aaCounts[aa] = 0);
+                
+                // Count amino acids
+                for (const aa of inputSequence) {
+                    if (aminoAcids.includes(aa)) {
+                        aaCounts[aa]++;
+                    }
+                }
+                
+                const length = inputSequence.length;
+                const composition = { length: length };
+                
+                // Calculate percentages
+                aminoAcids.forEach(aa => {
+                    composition[aa] = { 
+                        count: aaCounts[aa], 
+                        percentage: (aaCounts[aa] / length * 100).toFixed(2) 
+                    };
+                });
+                
+                // Add amino acid properties
+                const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
+                const charged = ['R', 'K', 'D', 'E'];
+                const polar = ['N', 'Q', 'S', 'T', 'Y'];
+                const basic = ['R', 'K', 'H'];
+                const acidic = ['D', 'E'];
+                
+                const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+                const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
+                const polarCount = polar.reduce((sum, aa) => sum + aaCounts[aa], 0);
+                const basicCount = basic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+                const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+                
+                composition.properties = {
+                    hydrophobic: { count: hydrophobicCount, percentage: (hydrophobicCount / length * 100).toFixed(2) },
+                    charged: { count: chargedCount, percentage: (chargedCount / length * 100).toFixed(2) },
+                    polar: { count: polarCount, percentage: (polarCount / length * 100).toFixed(2) },
+                    basic: { count: basicCount, percentage: (basicCount / length * 100).toFixed(2) },
+                    acidic: { count: acidicCount, percentage: (acidicCount / length * 100).toFixed(2) }
+                };
+                
+                stats.composition = composition;
+                
+            } else {
+                // DNA nucleotide composition
+                const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
+                for (const base of inputSequence) {
+                    counts[base] = (counts[base] || 0) + 1;
+                }
+                
+                const length = inputSequence.length;
+                stats.composition = {
+                    length: length,
+                    A: { count: counts.A, percentage: (counts.A / length * 100).toFixed(2) },
+                    T: { count: counts.T, percentage: (counts.T / length * 100).toFixed(2) },
+                    G: { count: counts.G, percentage: (counts.G / length * 100).toFixed(2) },
+                    C: { count: counts.C, percentage: (counts.C / length * 100).toFixed(2) },
+                    GC: { percentage: ((counts.G + counts.C) / length * 100).toFixed(2) },
+                    AT: { percentage: ((counts.A + counts.T) / length * 100).toFixed(2) }
+                };
             }
-            
-            const length = sequence.length;
-            stats.composition = {
-                length: length,
-                A: { count: counts.A, percentage: (counts.A / length * 100).toFixed(2) },
-                T: { count: counts.T, percentage: (counts.T / length * 100).toFixed(2) },
-                G: { count: counts.G, percentage: (counts.G / length * 100).toFixed(2) },
-                C: { count: counts.C, percentage: (counts.C / length * 100).toFixed(2) },
-                GC: { percentage: ((counts.G + counts.C) / length * 100).toFixed(2) },
-                AT: { percentage: ((counts.A + counts.T) / length * 100).toFixed(2) }
-            };
         }
         
         // AT/GC skew
@@ -6138,6 +6211,87 @@ ${this.getPluginSystemInfo()}`;
             codonUsage: codonUsage,
             aminoAcidComposition: aminoAcidCounts,
             mostFrequentCodons: codonUsage.slice(0, 10)
+        };
+    }
+
+    // Amino acid composition analysis
+    async aminoAcidComposition(params) {
+        const { proteinSequence, geneName } = params;
+        
+        if (!proteinSequence) {
+            throw new Error('Protein sequence is required for amino acid composition analysis');
+        }
+        
+        // Clean the sequence (remove stop codon if present)
+        let cleanSequence = proteinSequence.replace(/\s/g, '').toUpperCase();
+        if (cleanSequence.endsWith('*')) {
+            cleanSequence = cleanSequence.slice(0, -1);
+        }
+        
+        // Define amino acids and their properties
+        const aminoAcids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'];
+        const aminoAcidNames = {
+            'A': 'Alanine', 'R': 'Arginine', 'N': 'Asparagine', 'D': 'Aspartic acid',
+            'C': 'Cysteine', 'Q': 'Glutamine', 'E': 'Glutamic acid', 'G': 'Glycine',
+            'H': 'Histidine', 'I': 'Isoleucine', 'L': 'Leucine', 'K': 'Lysine',
+            'M': 'Methionine', 'F': 'Phenylalanine', 'P': 'Proline', 'S': 'Serine',
+            'T': 'Threonine', 'W': 'Tryptophan', 'Y': 'Tyrosine', 'V': 'Valine'
+        };
+        
+        const hydrophobic = ['A', 'V', 'I', 'L', 'M', 'F', 'W', 'Y'];
+        const charged = ['R', 'K', 'D', 'E'];
+        const polar = ['N', 'Q', 'S', 'T', 'Y'];
+        const basic = ['R', 'K', 'H'];
+        const acidic = ['D', 'E'];
+        const aromatic = ['F', 'W', 'Y'];
+        const small = ['A', 'G', 'S'];
+        
+        // Count amino acids
+        const aaCounts = {};
+        aminoAcids.forEach(aa => aaCounts[aa] = 0);
+        
+        for (const aa of cleanSequence) {
+            if (aminoAcids.includes(aa)) {
+                aaCounts[aa]++;
+            }
+        }
+        
+        const length = cleanSequence.length;
+        
+        // Calculate composition
+        const composition = aminoAcids.map(aa => ({
+            aa: aa,
+            name: aminoAcidNames[aa],
+            count: aaCounts[aa],
+            percentage: (aaCounts[aa] / length * 100).toFixed(2)
+        })).sort((a, b) => b.count - a.count);
+        
+        // Calculate property groups
+        const hydrophobicCount = hydrophobic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const chargedCount = charged.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const polarCount = polar.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const basicCount = basic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const acidicCount = acidic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const aromaticCount = aromatic.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        const smallCount = small.reduce((sum, aa) => sum + aaCounts[aa], 0);
+        
+        const properties = {
+            hydrophobic: { count: hydrophobicCount, percentage: (hydrophobicCount / length * 100).toFixed(2) },
+            charged: { count: chargedCount, percentage: (chargedCount / length * 100).toFixed(2) },
+            polar: { count: polarCount, percentage: (polarCount / length * 100).toFixed(2) },
+            basic: { count: basicCount, percentage: (basicCount / length * 100).toFixed(2) },
+            acidic: { count: acidicCount, percentage: (acidicCount / length * 100).toFixed(2) },
+            aromatic: { count: aromaticCount, percentage: (aromaticCount / length * 100).toFixed(2) },
+            small: { count: smallCount, percentage: (smallCount / length * 100).toFixed(2) }
+        };
+        
+        return {
+            gene: geneName || 'Unknown',
+            length: length,
+            composition: composition,
+            properties: properties,
+            mostAbundant: composition.slice(0, 5),
+            leastAbundant: composition.filter(aa => aa.count > 0).slice(-5).reverse()
         };
     }
 

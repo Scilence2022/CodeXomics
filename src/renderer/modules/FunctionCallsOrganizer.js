@@ -69,6 +69,7 @@ class FunctionCallsOrganizer {
                     'sequence_statistics',
                     'codon_usage_analysis',
                     'analyze_codon_usage',
+                    'amino_acid_composition',
                     'calculate_melting_temp',
                     'calculate_molecular_weight'
                 ]
