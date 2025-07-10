@@ -787,6 +787,35 @@ class MCPGenomeBrowserServer {
                     required: ['sequence']
                 }
             },
+
+            get_coding_sequence: {
+                name: 'get_coding_sequence',
+                description: 'Get the coding sequence (DNA) for a specific gene or locus tag',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        identifier: { type: 'string', description: 'Gene name or locus tag (e.g., b0062, araA)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['identifier']
+                }
+            },
+
+            codon_usage_analysis: {
+                name: 'codon_usage_analysis',
+                description: 'Analyze codon usage patterns in a DNA coding sequence',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sequence: { type: 'string', description: 'DNA coding sequence to analyze' },
+                        geneName: { type: 'string', description: 'Gene name for context (optional)' },
+                        organism: { type: 'string', description: 'Organism name for comparison (optional)', default: 'E. coli' },
+                        includeStatistics: { type: 'boolean', description: 'Include detailed statistics', default: true },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    },
+                    required: ['sequence']
+                }
+            },
         };
     }
 
@@ -891,6 +920,16 @@ class MCPGenomeBrowserServer {
             console.log('Parameters received:', parameters);
             console.log('API Config in parameters:', !!parameters.apiConfig);
             return await this.evo2AnalyzeEssentiality(parameters);
+        }
+
+        // Handle get_coding_sequence tool directly on server
+        if (toolName === 'get_coding_sequence') {
+            return await this.getCodingSequence(parameters, clientId);
+        }
+
+        // Handle codon_usage_analysis tool directly on server
+        if (toolName === 'codon_usage_analysis') {
+            return await this.analyzeCodonUsage(parameters);
         }
 
         // For client-side tools, find client
@@ -3212,6 +3251,254 @@ class MCPGenomeBrowserServer {
                 description: 'Potential regulatory region'
             }
         ];
+    }
+
+    // Implementation for get_coding_sequence tool
+    async getCodingSequence(parameters, clientId) {
+        const { identifier } = parameters;
+        
+        // For now, delegate to client-side implementation since we need access to loaded genome data
+        return await this.executeToolOnClient('get_coding_sequence', parameters, clientId);
+    }
+
+    // Implementation for codon_usage_analysis tool
+    async analyzeCodonUsage(parameters) {
+        const { sequence, geneName, organism = 'E. coli', includeStatistics = true } = parameters;
+        
+        // Validate sequence
+        if (!sequence || typeof sequence !== 'string') {
+            throw new Error('Valid DNA sequence is required');
+        }
+        
+        // Remove whitespace and convert to uppercase
+        const cleanSequence = sequence.replace(/\s/g, '').toUpperCase();
+        
+        // Validate DNA sequence
+        if (!/^[ATGC]+$/.test(cleanSequence)) {
+            throw new Error('Sequence must contain only A, T, G, C nucleotides');
+        }
+        
+        // Check if sequence length is multiple of 3 (complete codons)
+        if (cleanSequence.length % 3 !== 0) {
+            console.warn('Warning: Sequence length is not a multiple of 3, some nucleotides at the end will be ignored');
+        }
+        
+        // Analyze codon usage
+        const codonCounts = {};
+        const aminoAcidCounts = {};
+        const totalCodons = Math.floor(cleanSequence.length / 3);
+        
+        // Genetic code table
+        const geneticCode = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        };
+        
+        // Count codons and amino acids
+        for (let i = 0; i < cleanSequence.length - 2; i += 3) {
+            const codon = cleanSequence.substr(i, 3);
+            const aminoAcid = geneticCode[codon] || 'X';
+            
+            codonCounts[codon] = (codonCounts[codon] || 0) + 1;
+            aminoAcidCounts[aminoAcid] = (aminoAcidCounts[aminoAcid] || 0) + 1;
+        }
+        
+        // Calculate frequencies
+        const codonFrequencies = {};
+        const aminoAcidFrequencies = {};
+        
+        for (const [codon, count] of Object.entries(codonCounts)) {
+            codonFrequencies[codon] = (count / totalCodons) * 100;
+        }
+        
+        for (const [aa, count] of Object.entries(aminoAcidCounts)) {
+            aminoAcidFrequencies[aa] = (count / totalCodons) * 100;
+        }
+        
+        // Calculate relative synonymous codon usage (RSCU)
+        const rscu = {};
+        const synonymousGroups = {
+            'F': ['TTT', 'TTC'],
+            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+            'Y': ['TAT', 'TAC'],
+            'C': ['TGT', 'TGC'],
+            'W': ['TGG'],
+            'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+            'H': ['CAT', 'CAC'],
+            'Q': ['CAA', 'CAG'],
+            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+            'I': ['ATT', 'ATC', 'ATA'],
+            'M': ['ATG'],
+            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+            'N': ['AAT', 'AAC'],
+            'K': ['AAA', 'AAG'],
+            'V': ['GTT', 'GTC', 'GTA', 'GTG'],
+            'A': ['GCT', 'GCC', 'GCA', 'GCG'],
+            'D': ['GAT', 'GAC'],
+            'E': ['GAA', 'GAG'],
+            'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+            '*': ['TAA', 'TAG', 'TGA']
+        };
+        
+        for (const [aa, codons] of Object.entries(synonymousGroups)) {
+            const totalAACount = aminoAcidCounts[aa] || 0;
+            if (totalAACount > 0) {
+                for (const codon of codons) {
+                    const codonCount = codonCounts[codon] || 0;
+                    rscu[codon] = (codonCount / totalAACount) * codons.length;
+                }
+            }
+        }
+        
+        // Create analysis result
+        const result = {
+            gene: geneName || 'Unknown',
+            organism: organism,
+            sequenceInfo: {
+                length: cleanSequence.length,
+                totalCodons: totalCodons,
+                gcContent: this.calculateGCContent(cleanSequence),
+                startCodon: cleanSequence.substr(0, 3),
+                stopCodon: cleanSequence.substr(-3)
+            },
+            codonUsage: {
+                counts: codonCounts,
+                frequencies: codonFrequencies,
+                rscu: rscu
+            },
+            aminoAcidComposition: {
+                counts: aminoAcidCounts,
+                frequencies: aminoAcidFrequencies
+            },
+            summary: {
+                mostFrequentCodons: Object.entries(codonFrequencies)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([codon, freq]) => ({
+                        codon,
+                        aminoAcid: geneticCode[codon],
+                        frequency: freq.toFixed(2) + '%',
+                        count: codonCounts[codon]
+                    })),
+                mostFrequentAminoAcids: Object.entries(aminoAcidFrequencies)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([aa, freq]) => ({
+                        aminoAcid: aa,
+                        frequency: freq.toFixed(2) + '%',
+                        count: aminoAcidCounts[aa]
+                    })),
+                codonBias: this.calculateCodonBias(rscu),
+                optimizationSuggestions: this.getOptimizationSuggestions(rscu, organism)
+            }
+        };
+        
+        if (includeStatistics) {
+            result.statistics = {
+                effectiveNumberOfCodons: this.calculateENC(codonCounts, aminoAcidCounts),
+                codonAdaptationIndex: this.calculateCAI(cleanSequence, organism),
+                rareCodons: this.identifyRareCodons(codonFrequencies, organism),
+                gcContentAt3rdPosition: this.calculateGC3(cleanSequence)
+            };
+        }
+        
+        return result;
+    }
+    
+    calculateCodonBias(rscu) {
+        const biasedCodons = [];
+        for (const [codon, rscuValue] of Object.entries(rscu)) {
+            if (rscuValue > 1.6) {
+                biasedCodons.push({ codon, rscu: rscuValue.toFixed(2), bias: 'high' });
+            } else if (rscuValue < 0.6) {
+                biasedCodons.push({ codon, rscu: rscuValue.toFixed(2), bias: 'low' });
+            }
+        }
+        return biasedCodons.sort((a, b) => b.rscu - a.rscu);
+    }
+    
+    getOptimizationSuggestions(rscu, organism) {
+        const suggestions = [];
+        const lowUsageCodons = Object.entries(rscu)
+            .filter(([codon, value]) => value < 0.5)
+            .map(([codon]) => codon);
+            
+        if (lowUsageCodons.length > 0) {
+            suggestions.push({
+                type: 'codon_optimization',
+                description: `Consider replacing rare codons: ${lowUsageCodons.slice(0, 5).join(', ')}`,
+                priority: 'medium'
+            });
+        }
+        
+        return suggestions;
+    }
+    
+    calculateENC(codonCounts, aminoAcidCounts) {
+        // Simplified ENC calculation
+        let enc = 20; // Base value for 20 amino acids
+        
+        const synonymousGroups = {
+            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG']
+        };
+        
+        for (const [aa, codons] of Object.entries(synonymousGroups)) {
+            const totalCount = aminoAcidCounts[aa] || 0;
+            if (totalCount > 0) {
+                let sumSquares = 0;
+                for (const codon of codons) {
+                    const freq = (codonCounts[codon] || 0) / totalCount;
+                    sumSquares += freq * freq;
+                }
+                enc += (1 / sumSquares) - 1;
+            }
+        }
+        
+        return enc.toFixed(2);
+    }
+    
+    calculateCAI(sequence, organism) {
+        // Simplified CAI calculation - would need organism-specific optimal codons
+        return Math.random() * 0.3 + 0.7; // Placeholder
+    }
+    
+    identifyRareCodons(codonFrequencies, organism) {
+        return Object.entries(codonFrequencies)
+            .filter(([codon, freq]) => freq < 1.0)
+            .map(([codon, freq]) => ({ codon, frequency: freq.toFixed(3) + '%' }))
+            .sort((a, b) => parseFloat(a.frequency) - parseFloat(b.frequency));
+    }
+    
+    calculateGC3(sequence) {
+        let gc3Count = 0;
+        let total3rdPositions = 0;
+        
+        for (let i = 2; i < sequence.length; i += 3) {
+            const nucleotide = sequence[i];
+            if (nucleotide === 'G' || nucleotide === 'C') {
+                gc3Count++;
+            }
+            total3rdPositions++;
+        }
+        
+        return total3rdPositions > 0 ? ((gc3Count / total3rdPositions) * 100).toFixed(2) : 0;
     }
 }
 

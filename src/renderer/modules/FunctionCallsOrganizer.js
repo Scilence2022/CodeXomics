@@ -48,7 +48,8 @@ class FunctionCallsOrganizer {
                     'get_file_info',
                     'search_pattern',
                     'search_motif',
-                    'search_sequence_motif'
+                    'search_sequence_motif',
+                    'get_coding_sequence'
                 ]
             },
             
