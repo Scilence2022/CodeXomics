@@ -754,6 +754,10 @@ class ChatManager {
                     result = await this.toggleTrack(parameters);
                     break;
                     
+                case 'toggle_annotation_track':
+                    result = await this.toggleAnnotationTrack(parameters);
+                    break;
+                    
                 case 'create_annotation':
                     result = await this.createAnnotation(parameters);
                     break;
@@ -1293,21 +1297,63 @@ class ChatManager {
     }
 
     async toggleTrack(params) {
-        const { trackName, visible } = params;
+        // Support both camelCase and snake_case parameter names
+        const trackName = params.trackName || params.track_name;
+        let visible = params.visible;
         
-        const trackCheckbox = document.getElementById(`track${trackName.charAt(0).toUpperCase() + trackName.slice(1)}`);
-        if (trackCheckbox) {
-            trackCheckbox.checked = visible;
-            trackCheckbox.dispatchEvent(new Event('change'));
-            
-            return {
-                track: trackName,
-                visible: visible,
-                message: `Track ${trackName} ${visible ? 'shown' : 'hidden'}`
-            };
+        if (!trackName) {
+            throw new Error('trackName or track_name parameter is required');
         }
         
-        throw new Error(`Track ${trackName} not found`);
+        // Map track names to checkbox IDs
+        const trackMapping = {
+            'genes': 'trackGenes',
+            'gc': 'trackGC',
+            'variants': 'trackVariants', 
+            'reads': 'trackReads',
+            'proteins': 'trackProteins',
+            'wigTracks': 'trackWIG',
+            'sequence': 'trackSequence',
+            'actions': 'trackActions'
+        };
+        
+        const checkboxId = trackMapping[trackName];
+        if (!checkboxId) {
+            throw new Error(`Unknown track: ${trackName}. Available tracks: ${Object.keys(trackMapping).join(', ')}`);
+        }
+        
+        const trackCheckbox = document.getElementById(checkboxId);
+        if (!trackCheckbox) {
+            throw new Error(`Track checkbox not found: ${checkboxId}`);
+        }
+        
+        // If visible not specified, toggle current state
+        if (visible === undefined) {
+            visible = !trackCheckbox.checked;
+        }
+        
+        trackCheckbox.checked = visible;
+        trackCheckbox.dispatchEvent(new Event('change'));
+        
+        // Also sync with sidebar checkbox
+        const sidebarCheckboxId = 'sidebar' + checkboxId.charAt(0).toUpperCase() + checkboxId.slice(1);
+        const sidebarCheckbox = document.getElementById(sidebarCheckboxId);
+        if (sidebarCheckbox) {
+            sidebarCheckbox.checked = visible;
+            sidebarCheckbox.dispatchEvent(new Event('change'));
+        }
+        
+        return {
+            success: true,
+            track: trackName,
+            visible: visible,
+            message: `Track ${trackName} ${visible ? 'shown' : 'hidden'}`
+        };
+    }
+
+    async toggleAnnotationTrack(params) {
+        // Alias for toggleTrack for annotation-specific tracks
+        return await this.toggleTrack(params);
     }
 
     async createAnnotation(params) {
@@ -1420,11 +1466,24 @@ class ChatManager {
 
     getVisibleTracks() {
         const tracks = [];
-        const trackCheckboxes = document.querySelectorAll('#trackCheckboxes input[type="checkbox"]');
         
-        trackCheckboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                tracks.push(checkbox.value);
+        // Define track mappings with their checkbox IDs
+        const trackMappings = [
+            { name: 'genes', id: 'trackGenes' },
+            { name: 'gc', id: 'trackGC' },
+            { name: 'variants', id: 'trackVariants' },
+            { name: 'reads', id: 'trackReads' },
+            { name: 'proteins', id: 'trackProteins' },
+            { name: 'wigTracks', id: 'trackWIG' },
+            { name: 'sequence', id: 'trackSequence' },
+            { name: 'actions', id: 'trackActions' }
+        ];
+        
+        // Check each track checkbox
+        trackMappings.forEach(track => {
+            const checkbox = document.getElementById(track.id);
+            if (checkbox && checkbox.checked) {
+                tracks.push(track.name);
             }
         });
         
@@ -2280,7 +2339,8 @@ class ChatManager {
                 return `🧬 Retrieved ${result.length}bp sequence from ${result.chromosome}:${result.start}-${result.end}`;
                 
             case 'toggle_track':
-                return `👁️ Track "${parameters.trackName}" is now ${result.visible ? 'visible' : 'hidden'}`;
+            case 'toggle_annotation_track':
+                return `👁️ Track "${parameters.trackName || parameters.track_name}" is now ${result.visible ? 'visible' : 'hidden'}`;
                 
             case 'create_annotation':
                 return `✨ Created ${result.type} annotation "${result.name}" at ${result.chromosome}:${result.start}-${result.end}`;
@@ -4016,6 +4076,10 @@ ${this.getPluginSystemInfo()}`;
                     
                 case 'get_multiple_coding_sequences':
                     result = await this.getMultipleCodingSequences(parameters);
+                    break;
+                    
+                case 'toggle_annotation_track':
+                    result = await this.toggleAnnotationTrack(parameters);
                     break;
                     
                 case 'zoom_to_gene':
@@ -6736,20 +6800,7 @@ ${this.getPluginSystemInfo()}`;
         return matches / minLength;
     }
 
-    getVisibleTracks() {
-        // Return list of currently visible tracks
-        const visibleTracks = [];
-        
-        if (this.app.trackManager && this.app.trackManager.tracks) {
-            Object.entries(this.app.trackManager.tracks).forEach(([trackName, track]) => {
-                if (track.visible !== false) {
-                    visibleTracks.push(trackName);
-                }
-            });
-        }
-        
-        return visibleTracks;
-    }
+
 
     // ========================================
     // NEW CHAT FUNCTIONALITY
