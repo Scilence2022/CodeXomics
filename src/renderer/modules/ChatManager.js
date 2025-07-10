@@ -2024,23 +2024,8 @@ class ChatManager {
                 // 显示LLM的思考过程（如果响应包含思考标签）
                 this.showThinkingProcess && this.displayLLMThinking(response);
                 
-                // Check for task completion signals if early completion is enabled
-                if (enableEarlyCompletion) {
-                    const completionResult = this.checkTaskCompletion(response);
-                    if (completionResult.isCompleted) {
-                        console.log('=== TASK COMPLETION DETECTED ===');
-                        console.log('Completion reason:', completionResult.reason);
-                        console.log('Completion confidence:', completionResult.confidence);
-                        console.log('================================');
-                        
-                        taskCompleted = true;
-                        finalResponse = completionResult.summary || response;
-                        this.showNotification(`Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`, 'success');
-                        break;
-                    }
-                }
-                
-                // Check if the response contains tool calls (JSON format)
+                // CRITICAL FIX: Check for tool calls FIRST, before task completion
+                // This prevents early completion from skipping tool execution
                 console.log('Attempting to parse tool call(s)...');
                 const toolCall = this.parseToolCall(response);
                 
@@ -2051,6 +2036,27 @@ class ChatManager {
                 
                 // Determine which tools to execute
                 const toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
+                
+                // Check for task completion signals if early completion is enabled
+                // BUT ONLY if there are NO tool calls to execute
+                if (enableEarlyCompletion && toolsToExecute.length === 0) {
+                    const completionResult = this.checkTaskCompletion(response);
+                    if (completionResult.isCompleted) {
+                        console.log('=== TASK COMPLETION DETECTED (NO TOOL CALLS) ===');
+                        console.log('Completion reason:', completionResult.reason);
+                        console.log('Completion confidence:', completionResult.confidence);
+                        console.log('================================================');
+                        
+                        taskCompleted = true;
+                        finalResponse = completionResult.summary || response;
+                        this.showNotification(`Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`, 'success');
+                        break;
+                    }
+                } else if (toolsToExecute.length > 0) {
+                    console.log('=== TOOL CALLS FOUND - SKIPPING EARLY COMPLETION CHECK ===');
+                    console.log('Tool calls take priority over completion detection');
+                    console.log('=========================================================');
+                }
                 
                 if (toolsToExecute.length > 0) {
                     console.log(`=== ${toolsToExecute.length} TOOL CALL(S) DETECTED ===`);
@@ -2679,6 +2685,13 @@ class ChatManager {
         
         // Check if no tool calls are present (conversational response)
         const hasToolCall = this.parseToolCall(response) !== null || this.parseMultipleToolCalls(response).length > 0;
+        
+        // CRITICAL: If tool calls are present, heavily reduce completion confidence
+        // Tool calls should ALWAYS take priority over completion detection
+        if (hasToolCall) {
+            maxWeight *= 0.1; // Drastically reduce confidence if tool calls exist
+            console.log('Tool calls detected - heavily reducing task completion confidence to prioritize tool execution');
+        }
         
         // CRITICAL: For analysis tasks, don't mark as complete if we only have basic data retrieval
         const isAnalysisTask = lowercaseResponse.includes('analyze') || lowercaseResponse.includes('analysis');
@@ -3731,7 +3744,7 @@ ${this.getPluginSystemInfo()}`;
                 if (jsonMatch) {
                     cleanResponse = jsonMatch[0];
                     console.log('Found JSON within text:', cleanResponse);
-                } else {
+        } else {
                     console.log('No JSON found within text, checking if this is a confirmation message');
                     // Check if this is a confirmation message that should have been a tool call
                     if (cleanResponse.includes('Navigated to') || cleanResponse.includes('✅')) {
@@ -3839,7 +3852,7 @@ ${this.getPluginSystemInfo()}`;
             console.log('=== parseToolCall DEBUG END (NO TOOL CALL) ===');
             return null;
             
-        } catch (error) {
+            } catch (error) {
             console.error('=== parseToolCall ERROR ===');
             console.error('Error:', error);
             console.error('Stack:', error.stack);
@@ -4385,12 +4398,18 @@ ${this.getPluginSystemInfo()}`;
             return result;
             
         } catch (error) {
-            console.error(`Error executing tool ${toolName}:`, error);
+            console.error(`=== TOOL EXECUTION ERROR ===`);
+            console.error(`Tool: ${toolName}`);
+            console.error(`Parameters:`, parameters);
+            console.error(`Error:`, error);
+            console.error(`Stack:`, error.stack);
+            console.error(`===========================`);
             return {
                 success: false,
                 error: error.message,
                 tool: toolName,
-                parameters: parameters
+                parameters: parameters,
+                timestamp: new Date().toISOString()
             };
         }
     }
@@ -4414,7 +4433,7 @@ ${this.getPluginSystemInfo()}`;
             'get_bookmarks',
             'save_view_state',
             
-            // Search & Discovery
+            // Search & Discovery  
             'search_features',
             'search_gene_by_name',
             'search_by_position',
@@ -5079,7 +5098,7 @@ ${this.getPluginSystemInfo()}`;
                             if (strand === 1) {
                                 currentORF.start += start;
                                 currentORF.end += start;
-                            } else {
+        } else {
                                 const temp = sequence.length - currentORF.end - 1 + start;
                                 currentORF.end = sequence.length - currentORF.start - 1 + start;
                                 currentORF.start = temp;
@@ -8035,12 +8054,12 @@ ${this.getPluginSystemInfo()}`;
         
         try {
             // Test if categories method works
-            const categories = this.MicrobeFns.getFunctionCategories();
+                const categories = this.MicrobeFns.getFunctionCategories();
             testResults.categoriesAvailable = !!categories;
             console.log('✅ Categories available:', Object.keys(categories));
             
             // Test if examples method works
-            const examples = this.MicrobeFns.getUsageExamples();
+                const examples = this.MicrobeFns.getUsageExamples();
             testResults.examplesAvailable = !!examples;
             console.log('✅ Examples available:', examples.length);
             
