@@ -7378,6 +7378,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const showHoverEffectsEl = modal.querySelector('#sequenceShowHoverEffects');
                 if (showHoverEffectsEl) settings.showHoverEffects = showHoverEffectsEl.checked;
                 
+                // Cursor Settings
+                const cursorColorEl = modal.querySelector('#sequenceCursorColor');
+                if (cursorColorEl) settings.cursorColor = cursorColorEl.value;
+                
                 // Position & Size Corrections
                 const horizontalOffsetEl = modal.querySelector('#sequenceHorizontalOffset');
                 if (horizontalOffsetEl) settings.horizontalOffset = parseFloat(horizontalOffsetEl.value) || 0;
@@ -7571,11 +7575,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         }
         this.trackSettings[trackType] = settings;
         
-        // Special handling for sequence track VSCodeSequenceEditor
-        if (trackType === 'sequence' && this.genomeBrowser.sequenceUtils && this.genomeBrowser.sequenceUtils.vscodeEditor) {
-            console.log('🔧 [TrackRenderer] Applying sequence settings to VSCodeSequenceEditor...');
+        // Special handling for sequence track settings
+        if (trackType === 'sequence' && this.genomeBrowser.sequenceUtils) {
+            console.log('🔧 [TrackRenderer] Applying sequence settings...');
             console.log('🔧 [TrackRenderer] Settings to apply:', settings);
-            this.applySequenceSettingsToVSCodeEditor(settings);
+            
+            // Apply cursor color to SequenceUtils (View Mode)
+            if (settings.cursorColor) {
+                this.genomeBrowser.sequenceUtils.setCursorColor(settings.cursorColor);
+            }
+            
+            // Apply to VSCodeSequenceEditor if available (Edit Mode)
+            if (this.genomeBrowser.sequenceUtils.vscodeEditor) {
+                this.applySequenceSettingsToVSCodeEditor(settings);
+            }
         }
         
         // Store settings - the complete redraw will handle applying all settings including height
@@ -8146,6 +8159,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                         <input type="color" id="sequenceColorN" value="${settings.colorN || '#888888'}">
                         <div class="help-text">Color for unknown or ambiguous bases.</div>
                     </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h4>Cursor Settings</h4>
+                <div class="form-group">
+                    <label for="sequenceCursorColor">Cursor color:</label>
+                    <input type="color" id="sequenceCursorColor" value="${settings.cursorColor || '#000000'}">
+                    <div class="help-text">Color of the blinking cursor when clicking on sequence positions.</div>
                 </div>
             </div>
             

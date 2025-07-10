@@ -91,6 +91,10 @@ class VSCodeSequenceEditor {
         this.createEditorStructure();
         this.setupEventListeners();
         this.setupKeyboardShortcuts();
+        
+        // Initialize cursor as focused and visible
+        this.cursor.classList.add('focused');
+        this.cursor.style.display = 'block';
     }
     
     createEditorStructure() {
@@ -114,6 +118,7 @@ class VSCodeSequenceEditor {
         this.sequenceContent = document.createElement('div');
         this.sequenceContent.className = 'sequence-content';
         this.sequenceContent.tabIndex = 0; // Make focusable
+        this.sequenceContent.style.cursor = 'text'; // Show text cursor on hover
         
         // Create cursor
         this.cursor = document.createElement('div');
@@ -202,6 +207,12 @@ class VSCodeSequenceEditor {
                 padding: 0 10px;
                 outline: none;
                 cursor: text;
+                background: transparent;
+            }
+            
+            .sequence-content:focus {
+                outline: 1px solid rgba(59, 130, 246, 0.3);
+                background: rgba(59, 130, 246, 0.02);
             }
             
             .sequence-line {
@@ -252,16 +263,39 @@ class VSCodeSequenceEditor {
             .editor-cursor {
                 position: absolute;
                 width: 2px;
-                height: 20px;
+                height: ${this.lineHeight}px;
                 background: ${this.settings.cursorColor};
-                animation: blink 1s infinite;
-                z-index: 10;
+                animation: cursor-blink 1.2s infinite;
+                z-index: 15;
                 pointer-events: none;
+                border-radius: 1px;
+                box-shadow: 0 0 2px rgba(255, 255, 255, 0.3);
+                opacity: 1;
+                transition: none;
             }
             
-            @keyframes blink {
-                0%, 50% { opacity: 1; }
-                51%, 100% { opacity: 0; }
+            .editor-cursor.focused {
+                animation: cursor-blink 1.2s infinite;
+            }
+            
+            .editor-cursor.unfocused {
+                animation: none;
+                opacity: 0.6;
+            }
+            
+            @keyframes cursor-blink {
+                0%, 45% { 
+                    opacity: 1; 
+                    background: ${this.settings.cursorColor};
+                }
+                46%, 54% { 
+                    opacity: 0.8; 
+                    background: ${this.settings.cursorColor};
+                }
+                55%, 100% { 
+                    opacity: 0; 
+                    background: transparent;
+                }
             }
             
             .editor-selection {
@@ -497,6 +531,12 @@ class VSCodeSequenceEditor {
         this.measureCharacterWidth();
         this.updateDimensions();
         this.render();
+        
+        // Ensure cursor is visible after sequence update
+        if (this.cursorPosition >= 0) {
+            this.cursor.classList.add('focused');
+            this.renderCursor();
+        }
     }
     
     measureCharacterWidth() {
@@ -683,14 +723,40 @@ class VSCodeSequenceEditor {
     renderCursor() {
         if (this.cursorPosition >= 0 && this.cursorPosition <= this.sequence.length) {
             const { line, column } = this.getLineColumnFromPosition(this.cursorPosition);
-            const x = column * this.charWidth;
+            
+            // Account for line numbers padding (10px) when positioning cursor
+            const x = column * this.charWidth + 10; // Add padding offset
             const y = line * this.lineHeight - this.scrollTop;
             
-            this.cursor.style.left = x + 'px';
-            this.cursor.style.top = y + 'px';
-            this.cursor.style.display = 'block';
+            // Ensure cursor is visible within the current view
+            if (y >= 0 && y < this.contentHeight) {
+                this.cursor.style.left = x + 'px';
+                this.cursor.style.top = y + 'px';
+                this.cursor.style.display = 'block';
+                this.cursor.style.zIndex = '15'; // Ensure cursor is above other elements
+                
+                // Force re-render to ensure cursor appears
+                this.cursor.style.opacity = '1';
+                
+                console.log('🎯 [VSCode Editor] Cursor positioned at:', {
+                    position: this.cursorPosition,
+                    line,
+                    column,
+                    x: x + 'px',
+                    y: y + 'px',
+                    visible: true
+                });
+            } else {
+                this.cursor.style.display = 'none';
+                console.log('🎯 [VSCode Editor] Cursor hidden (out of view):', {
+                    position: this.cursorPosition,
+                    y,
+                    contentHeight: this.contentHeight
+                });
+            }
         } else {
             this.cursor.style.display = 'none';
+            console.log('🎯 [VSCode Editor] Cursor hidden (invalid position):', this.cursorPosition);
         }
     }
     
@@ -808,11 +874,24 @@ class VSCodeSequenceEditor {
         this.sequenceContent.focus();
         
         const position = this.getPositionFromMouseEvent(e);
+        console.log('🖱️ [VSCode Editor] Mouse clicked at position:', position);
+        
         this.setCursorPosition(position);
         this.selectionStart = position;
         this.selectionEnd = position;
         
+        // Ensure cursor is focused and visible
+        this.cursor.classList.add('focused');
+        this.cursor.classList.remove('unfocused');
+        
+        // Force immediate render to show cursor
         this.render();
+        
+        // Extra render after a small delay to ensure visibility
+        setTimeout(() => {
+            this.renderCursor();
+        }, 10);
+        
         e.preventDefault();
     }
     
@@ -1011,6 +1090,24 @@ class VSCodeSequenceEditor {
     setCursorPosition(position) {
         this.cursorPosition = Math.max(0, Math.min(position, this.sequence.length));
         this.ensureCursorVisible();
+        
+        // Update cursor position in ActionManager for paste operations
+        if (this.genomeBrowser && this.genomeBrowser.actionManager) {
+            this.genomeBrowser.actionManager.setCursorPosition(this.viewStart + this.cursorPosition);
+        }
+        
+        // Update cursor position in status bar
+        this.updateCursorStatus();
+        
+        // Force cursor to be visible and render it
+        this.cursor.classList.add('focused');
+        this.cursor.classList.remove('unfocused');
+        this.renderCursor();
+        
+        console.log('🎯 [VSCode Editor] Cursor position set to:', {
+            position: this.cursorPosition,
+            absolutePosition: this.viewStart + this.cursorPosition
+        });
     }
     
     ensureCursorVisible() {
@@ -1211,11 +1308,19 @@ class VSCodeSequenceEditor {
     }
     
     handleFocus() {
+        console.log('🎯 [VSCode Editor] Editor focused');
+        this.cursor.classList.add('focused');
+        this.cursor.classList.remove('unfocused');
         this.cursor.style.display = 'block';
+        this.renderCursor(); // Re-render cursor when focused
     }
     
     handleBlur() {
-        this.cursor.style.display = 'none';
+        console.log('🎯 [VSCode Editor] Editor blurred');
+        this.cursor.classList.remove('focused');
+        this.cursor.classList.add('unfocused');
+        // Don't hide cursor completely on blur, just make it less prominent
+        this.renderCursor();
     }
     
     handleScrollbarMouseDown(e) {
@@ -1510,6 +1615,25 @@ class VSCodeSequenceEditor {
         };
         
         this.updateSettings(defaultSettings);
+    }
+    
+    /**
+     * Update cursor position in status bar
+     */
+    updateCursorStatus() {
+        const cursorStatusElement = document.getElementById('cursorStatus');
+        if (cursorStatusElement) {
+            const absolutePosition = this.viewStart + this.cursorPosition;
+            const { line, column } = this.getLineColumnFromPosition(this.cursorPosition);
+            cursorStatusElement.textContent = `Position: ${absolutePosition + 1} | Line: ${line + 1}, Column: ${column + 1}`;
+        }
+    }
+    
+    /**
+     * Get current cursor position for external use (like paste operations)
+     */
+    getCursorPosition() {
+        return this.viewStart + this.cursorPosition;
     }
     
     // Cleanup

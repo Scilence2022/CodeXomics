@@ -9,6 +9,7 @@ class ActionManager {
         this.nextActionId = 1;
         this.isExecuting = false;
         this.clipboard = null; // Stores copied/cut sequence data
+        this.cursorPosition = 0; // Track cursor position for paste operations
         
         // Action types
         this.ACTION_TYPES = {
@@ -41,6 +42,7 @@ class ActionManager {
             const copyBtn = document.getElementById('copySequenceBtn');
             const cutBtn = document.getElementById('cutSequenceBtn');
             const pasteBtn = document.getElementById('pasteSequenceBtn');
+            const deleteBtn = document.getElementById('deleteSequenceBtn');
             const showListBtn = document.getElementById('showActionListBtn');
             const executeBtn = document.getElementById('executeActionsBtn');
             const checkpointBtn = document.getElementById('createCheckpointBtn');
@@ -57,6 +59,10 @@ class ActionManager {
             if (pasteBtn) {
                 pasteBtn.addEventListener('click', () => this.handlePasteSequence());
                 console.log('✅ Paste sequence listener added');
+            }
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => this.handleDeleteSequence());
+                console.log('✅ Delete sequence listener added');
             }
             if (showListBtn) {
                 showListBtn.addEventListener('click', () => this.showActionList());
@@ -205,7 +211,49 @@ class ActionManager {
             return;
         }
         
+        // If we have a cursor position, use it for paste
+        if (this.cursorPosition > 0) {
+            const chromosome = this.genomeBrowser.currentChromosome;
+            if (chromosome) {
+                // Paste at cursor position
+                const target = `${chromosome}:${this.cursorPosition}`;
+                const metadata = { 
+                    chromosome, 
+                    start: this.cursorPosition, 
+                    end: this.cursorPosition, 
+                    strand: '+',
+                    clipboardData: this.clipboard
+                };
+                
+                this.addAction(
+                    this.ACTION_TYPES.PASTE_SEQUENCE,
+                    target,
+                    `Paste ${this.clipboard.sequence?.length || 0} bp at cursor position ${this.cursorPosition}`,
+                    metadata
+                );
+                
+                this.genomeBrowser.showNotification(`Paste action queued at cursor position ${this.cursorPosition}`, 'success');
+                return;
+            }
+        }
+        
+        // Fallback to modal selection if no cursor position
         this.showSequenceSelectionModal('paste');
+    }
+    
+    /**
+     * Handle delete sequence action
+     */
+    handleDeleteSequence() {
+        this.showSequenceSelectionModal('delete');
+    }
+    
+    /**
+     * Set cursor position for paste operations
+     */
+    setCursorPosition(position) {
+        this.cursorPosition = position;
+        console.log('🎯 [ActionManager] Cursor position set to:', position);
     }
     
     /**
@@ -218,7 +266,8 @@ class ActionManager {
         const titleMap = {
             'copy': 'Copy Sequence',
             'cut': 'Cut Sequence', 
-            'paste': 'Paste Sequence'
+            'paste': 'Paste Sequence',
+            'delete': 'Delete Sequence'
         };
         document.getElementById('sequenceSelectionTitle').textContent = titleMap[operation] || 'Select Sequence';
         
@@ -450,6 +499,15 @@ class ActionManager {
                         { ...metadata, clipboardData: this.clipboard }
                     );
                     break;
+                    
+                case 'delete':
+                    this.addAction(
+                        this.ACTION_TYPES.DELETE_SEQUENCE,
+                        target,
+                        `Delete ${end - start + 1} bp from ${target}`,
+                        metadata
+                    );
+                    break;
             }
             
             // Close modal
@@ -664,6 +722,10 @@ class ActionManager {
                     result = await this.executePasteSequence(action);
                     break;
                     
+                case this.ACTION_TYPES.DELETE_SEQUENCE:
+                    result = await this.executeDeleteSequence(action);
+                    break;
+                    
                 case this.ACTION_TYPES.SEQUENCE_EDIT:
                     result = await this.executeSequenceEdit(action);
                     break;
@@ -766,6 +828,31 @@ class ActionManager {
             sequenceLength: clipboardData.sequence.length,
             target: action.target,
             source: clipboardData.source
+        };
+    }
+    
+    /**
+     * Execute delete sequence action
+     */
+    async executeDeleteSequence(action) {
+        const { chromosome, start, end } = action.metadata;
+        
+        console.log('🗑️ [ActionManager] Executing delete sequence action:', {
+            actionId: action.id,
+            target: action.target,
+            region: `${chromosome}:${start}-${end}`,
+            sequenceLength: end - start + 1
+        });
+        
+        // In a real implementation, this would remove the sequence from the genome
+        // For now, we'll simulate the deletion
+        
+        return {
+            operation: 'delete',
+            sequenceLength: end - start + 1,
+            target: action.target,
+            chromosome: chromosome,
+            deletedRegion: { start, end }
         };
     }
     

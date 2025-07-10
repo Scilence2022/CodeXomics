@@ -260,6 +260,72 @@
             </div>
             
             <div class="toolbar-section">
+                <label>Actions:</label>
+                <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Actions">
+                    <i class="fas fa-cut"></i>
+                    <span>Actions</span>
+                </button>
+                <div class="actions-dropdown" id="actionsDropdown" style="display: none;">
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-clipboard"></i>
+                            Sequence Operations
+                        </div>
+                        <button id="copySequenceBtn" class="dropdown-feature-btn" title="Copy Sequence">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                        <button id="cutSequenceBtn" class="dropdown-feature-btn" title="Cut Sequence">
+                            <i class="fas fa-cut"></i>
+                            Cut
+                        </button>
+                        <button id="pasteSequenceBtn" class="dropdown-feature-btn" title="Paste Sequence">
+                            <i class="fas fa-paste"></i>
+                            Paste
+                        </button>
+                        <button id="deleteSequenceBtn" class="dropdown-feature-btn" title="Delete Sequence">
+                            <i class="fas fa-trash"></i>
+                            Delete
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-list"></i>
+                            Action Management
+                        </div>
+                        <button id="showActionListBtn" class="dropdown-feature-btn" title="Show Action List">
+                            <i class="fas fa-list"></i>
+                            Action List
+                        </button>
+                        <button id="executeActionsBtn" class="dropdown-feature-btn" title="Execute Actions">
+                            <i class="fas fa-play"></i>
+                            Execute All
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    <div class="dropdown-section">
+                        <div class="dropdown-section-title">
+                            <i class="fas fa-save"></i>
+                            Checkpoint System
+                        </div>
+                        <button id="createCheckpointBtn" class="dropdown-feature-btn" title="Create Checkpoint">
+                            <i class="fas fa-save"></i>
+                            Create Checkpoint
+                        </button>
+                        <button id="rollbackBtn" class="dropdown-feature-btn" title="Rollback">
+                            <i class="fas fa-undo"></i>
+                            Rollback
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar-section">
                 <label>Add Features:</label>
                 <button id="addFeaturesBtn" class="btn btn-sm toggle-btn" title="Add Features">
                     <i class="fas fa-plus"></i>
@@ -645,6 +711,9 @@
         <footer class="status-bar">
             <div class="status-left">
                 <span id="statusText">Ready</span>
+            </div>
+            <div class="status-center">
+                <span id="cursorStatus">Cursor: Click on sequence to position</span>
             </div>
             <div class="status-right">
                 <span id="coordinateDisplay">Position: -</span>

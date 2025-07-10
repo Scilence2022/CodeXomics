@@ -4512,6 +4512,12 @@ class GenomeBrowser {
             this.toggleAddFeaturesDropdown();
         });
         
+        // Actions dropdown menu
+        document.getElementById('actionsMenuBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleActionsDropdown();
+        });
+        
         // Dropdown feature buttons
         document.querySelectorAll('.dropdown-feature-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -4525,7 +4531,10 @@ class GenomeBrowser {
         document.getElementById('addFeatureBtn')?.addEventListener('click', () => this.addUserFeature());
         
         // Close dropdown when clicking outside
-        document.addEventListener('click', () => this.hideAddFeaturesDropdown());
+        document.addEventListener('click', () => {
+            this.hideAddFeaturesDropdown();
+            this.hideActionsDropdown();
+        });
         
         // Enable sequence selection in bottom panel
         this.initializeSequenceSelection();
@@ -4548,6 +4557,27 @@ class GenomeBrowser {
     hideAddFeaturesDropdown() {
         const dropdown = document.getElementById('addFeaturesDropdown');
         const button = document.getElementById('addFeaturesBtn');
+        
+        if (dropdown && button) {
+            dropdown.style.display = 'none';
+            button.classList.remove('active');
+        }
+    }
+    
+    toggleActionsDropdown() {
+        const dropdown = document.getElementById('actionsDropdown');
+        const button = document.getElementById('actionsMenuBtn');
+        
+        if (dropdown && button) {
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            button.classList.toggle('active', !isVisible);
+        }
+    }
+
+    hideActionsDropdown() {
+        const dropdown = document.getElementById('actionsDropdown');
+        const button = document.getElementById('actionsMenuBtn');
         
         if (dropdown && button) {
             dropdown.style.display = 'none';

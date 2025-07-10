@@ -4,6 +4,9 @@
 class SequenceUtils {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
+        
+        // Make this instance globally accessible for click handlers
+        window.sequenceUtils = this;
         this._cachedCharWidth = null; // Cache for character width measurement
         this.vscodeEditor = null;
         this.sequenceEditor = null; // Advanced editing capabilities
@@ -45,6 +48,15 @@ class SequenceUtils {
             lastRenderStart: 0
         };
         
+        // Cursor management for View Mode
+        this.cursor = {
+            position: -1,        // Absolute genome position
+            element: null,       // DOM element for cursor
+            visible: false,      // Cursor visibility state
+            blinking: false,     // Blinking animation state
+            color: '#000000'     // Default cursor color (black)
+        };
+        
         // Drag optimization
         this.dragOptimization = {
             isDragging: false,
@@ -58,6 +70,13 @@ class SequenceUtils {
         
         // Load minimum line spacing from settings
         this.loadMinLineSpacingFromSettings();
+        
+        // Initialize cursor styles with setting
+        this.loadCursorSettings();
+        this.initializeCursorStyles();
+        
+        // Add window resize listener to handle cursor repositioning
+        this.setupWindowResizeHandler();
     }
 
     /**
@@ -1359,9 +1378,13 @@ class SequenceUtils {
             
             if (this.colorCache.has(colorKey)) {
                 style = this.colorCache.get(colorKey);
+                // Ensure cursor text is included even for cached styles
+                if (!style.includes('cursor: text')) {
+                    style += ' cursor: text;';
+                }
                 this.performanceStats.cacheHits++;
             } else {
-                style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top;`;
+                style = `color: ${baseTextColor}; font-size: ${baseFontSize}; display: inline-block; padding: 0; margin: 0; vertical-align: top; cursor: text;`;
                 if (featureHexColor) {
                     const backgroundColorRgba = this.hexToRgba(featureHexColor, 0.1);
                     style += ` background-color: ${backgroundColorRgba};`;
@@ -1374,7 +1397,8 @@ class SequenceUtils {
             
             const className = `base-${base.toLowerCase()}`;
             const titleAttr = featureTitle ? ` title="${featureTitle}"` : '';
-            fragments.push(`<span class="${className}" style="${style}"${titleAttr}>${base}</span>`);
+            const clickHandler = ` onclick="window.sequenceUtils?.handleSequenceClick(event, ${absPos})"`;
+            fragments.push(`<span class="${className}" style="${style}"${titleAttr}${clickHandler}>${base}</span>`);
         }
         
         return fragments.join('');
@@ -2270,6 +2294,8 @@ class SequenceUtils {
             showRegulatory: true,
             showTooltips: true,
             showHoverEffects: true,
+            // Cursor settings
+            cursorColor: '#000000',
             // Position & Size Corrections
             horizontalOffset: 0,
             verticalOffset: 0,
@@ -2486,6 +2512,317 @@ class SequenceUtils {
              } catch (error) {
                  console.warn('⚠️ [SequenceUtils] Could not load minimum line spacing from localStorage:', error);
              }
+         }
+     }
+     
+     /**
+      * Load cursor settings from sequence track settings
+      */
+     loadCursorSettings() {
+         const settings = this.getSequenceTrackSettings();
+         if (settings.cursorColor) {
+             this.cursor.color = settings.cursorColor;
+         }
+     }
+     
+     /**
+      * Initialize cursor styles for View Mode
+      */
+     initializeCursorStyles() {
+         const style = document.createElement('style');
+         style.id = 'view-mode-cursor-styles';
+         style.textContent = `
+             .view-mode-cursor {
+                 position: absolute;
+                 width: 2px;
+                 min-height: 18px;
+                 height: auto;
+                 background-color: ${this.cursor.color};
+                 z-index: 15;
+                 pointer-events: none;
+                 animation: view-cursor-blink 1.2s infinite;
+                 border-radius: 1px;
+                 box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+             }
+             
+             @keyframes view-cursor-blink {
+                 0%, 45% { 
+                     opacity: 1; 
+                     background-color: ${this.cursor.color};
+                 }
+                 46%, 54% { 
+                     opacity: 0.8; 
+                     background-color: ${this.cursor.color};
+                 }
+                 55%, 100% { 
+                     opacity: 0; 
+                     background-color: transparent;
+                 }
+             }
+             
+             .sequence-bases {
+                 position: relative;
+                 cursor: text;
+             }
+             
+             .sequence-base-clickable {
+                 position: relative;
+                 cursor: text;
+             }
+         `;
+         
+         // Only add if not already present
+         if (!document.getElementById('view-mode-cursor-styles')) {
+             document.head.appendChild(style);
+         }
+     }
+     
+     /**
+      * Update cursor color and refresh styles
+      */
+     setCursorColor(color) {
+         this.cursor.color = color;
+         
+         // Remove existing styles and recreate with new color
+         const existingStyles = document.getElementById('view-mode-cursor-styles');
+         if (existingStyles) {
+             existingStyles.remove();
+         }
+         
+         this.initializeCursorStyles();
+         
+         // Update cursor element if it exists
+         if (this.cursor.element) {
+             this.cursor.element.style.backgroundColor = color;
+         }
+         
+         console.log('🎨 [SequenceUtils] Cursor color updated to:', color);
+     }
+     
+     /**
+      * Handle click on sequence base
+      */
+     handleSequenceClick(event, genomicPosition) {
+         event.preventDefault();
+         event.stopPropagation();
+         
+         console.log('🖱️ [SequenceUtils] Sequence clicked at position:', genomicPosition);
+         
+         // Store the clicked element for accurate positioning
+         this.clickedElement = event.target;
+         this.setCursorPosition(genomicPosition);
+     }
+     
+     /**
+      * Position cursor at specific genome position
+      */
+     setCursorPosition(genomicPosition) {
+         console.log('🎯 [SequenceUtils] Setting cursor position to:', genomicPosition);
+         
+         this.cursor.position = genomicPosition;
+         
+         // Update cursor position in ActionManager for paste operations
+         if (this.genomeBrowser && this.genomeBrowser.actionManager) {
+             this.genomeBrowser.actionManager.setCursorPosition(genomicPosition);
+         }
+         
+         // Update status bar
+         this.updateCursorStatus(genomicPosition);
+         
+         // Create cursor if needed and position it
+         this.createAndPositionCursor();
+     }
+     
+     /**
+      * Force cursor repositioning (useful after layout changes)
+      */
+     repositionCursor() {
+         if (this.cursor.position >= 0) {
+             console.log('🔄 [SequenceUtils] Force repositioning cursor at position:', this.cursor.position);
+             this.positionCursorInView();
+         }
+     }
+     
+     /**
+      * Create and position cursor in the view
+      */
+     createAndPositionCursor() {
+         const container = document.getElementById('sequenceContent');
+         if (!container) return;
+         
+         // Create cursor element if needed
+         if (!this.cursor.element) {
+             this.cursor.element = document.createElement('div');
+             this.cursor.element.className = 'view-mode-cursor';
+             this.cursor.element.style.display = 'none';
+             container.appendChild(this.cursor.element);
+         }
+         
+         // Find base element at cursor position and show cursor
+         const currentPos = this.genomeBrowser.currentPosition;
+         if (currentPos && this.cursor.position >= currentPos.start && this.cursor.position <= currentPos.end) {
+             // Position cursor at the correct location
+             setTimeout(() => {
+                 this.positionCursorInView();
+             }, 50); // Small delay to ensure DOM is updated
+         }
+     }
+     
+     /**
+      * Position cursor element in the current view
+      */
+     positionCursorInView() {
+         if (!this.cursor.element || this.cursor.position < 0) return;
+         
+         const container = document.getElementById('sequenceContent');
+         if (!container) return;
+         
+         // If we have a clicked element, use its position directly for accuracy
+         if (this.clickedElement) {
+             this.positionCursorAtElement(this.clickedElement, container);
+             this.clickedElement = null;
+             return;
+         }
+         
+         // Fallback: find the base element by searching through spans
+         const targetSpan = this.findSequenceSpanAtPosition(this.cursor.position, container);
+         if (targetSpan) {
+             this.positionCursorAtElement(targetSpan, container);
+         } else {
+             console.warn('🎯 [SequenceUtils] Could not find sequence span for position:', this.cursor.position);
+             this.cursor.element.style.display = 'none';
+         }
+     }
+     
+     /**
+      * Position cursor at a specific DOM element with improved accuracy
+      */
+     positionCursorAtElement(element, container) {
+         if (!element || !container || !this.cursor.element) return;
+         
+         // Get position coordinates with proper viewport consideration
+         const elementRect = element.getBoundingClientRect();
+         const containerRect = container.getBoundingClientRect();
+         
+         // Find the closest sequence line to get proper vertical alignment
+         const sequenceLine = element.closest('.sequence-line') || element.closest('.sequence-line-group');
+         let lineRect = null;
+         if (sequenceLine) {
+             lineRect = sequenceLine.getBoundingClientRect();
+         }
+         
+         // Calculate horizontal position (relative to container)
+         const left = elementRect.left - containerRect.left;
+         
+         // Calculate vertical position with improved accuracy
+         let top;
+         if (lineRect) {
+             // Use the line's top position for better vertical alignment
+             top = lineRect.top - containerRect.top;
+         } else {
+             // Fallback to element's top position
+             top = elementRect.top - containerRect.top;
+         }
+         
+         // Set cursor height to match the sequence line height
+         const height = lineRect ? lineRect.height : (elementRect.height || 20);
+         
+         // Apply positioning with fixed position for stability
+         this.cursor.element.style.position = 'absolute';
+         this.cursor.element.style.left = Math.round(left) + 'px';
+         this.cursor.element.style.top = Math.round(top) + 'px';
+         this.cursor.element.style.height = Math.round(height) + 'px';
+         this.cursor.element.style.display = 'block';
+         this.cursor.element.style.zIndex = '15';
+         this.cursor.element.style.pointerEvents = 'none';
+         
+         console.log('🎯 [SequenceUtils] Cursor positioned with improved accuracy:', {
+             genomicPosition: this.cursor.position,
+             left: Math.round(left) + 'px',
+             top: Math.round(top) + 'px',
+             height: Math.round(height) + 'px',
+             elementText: element.textContent,
+             hasLineRect: !!lineRect,
+             containerScrollTop: container.scrollTop,
+             containerScrollLeft: container.scrollLeft
+         });
+     }
+     
+     /**
+      * Find sequence span element at specific genomic position
+      */
+     findSequenceSpanAtPosition(position, container) {
+         // Try multiple selectors for better element finding
+         const selectors = [
+             `span[onclick*="${position})"]`,
+             `span[onclick*="handleSequenceClick(event, ${position})"]`,
+             '.base-a, .base-t, .base-g, .base-c, .base-n'
+         ];
+         
+         for (const selector of selectors) {
+             const spans = container.querySelectorAll(selector);
+             for (const span of spans) {
+                 const onclick = span.getAttribute('onclick');
+                 if (onclick && onclick.includes(`${position})`)) {
+                     return span;
+                 }
+             }
+         }
+         
+         return null;
+     }
+     
+     /**
+      * Setup window resize handler for cursor repositioning
+      */
+     setupWindowResizeHandler() {
+         let resizeTimeout;
+         
+         const handleResize = () => {
+             console.log('🔧 [SequenceUtils] Window resized, repositioning cursor...');
+             
+             // Clear any existing timeout
+             clearTimeout(resizeTimeout);
+             
+             // Debounce the resize event to avoid excessive cursor updates
+             resizeTimeout = setTimeout(() => {
+                 if (this.cursor.element && this.cursor.position >= 0) {
+                     // Re-position cursor after resize
+                     this.positionCursorInView();
+                 }
+             }, 150); // 150ms debounce delay
+         };
+         
+         // Listen for window resize events
+         window.addEventListener('resize', handleResize);
+         
+         // Also listen for container size changes using ResizeObserver if available
+         if (typeof ResizeObserver !== 'undefined') {
+             const container = document.getElementById('sequenceContent');
+             if (container) {
+                 const resizeObserver = new ResizeObserver((entries) => {
+                     for (const entry of entries) {
+                         console.log('🔧 [SequenceUtils] Container resized, repositioning cursor...');
+                         handleResize();
+                         break; // Only handle the first entry
+                     }
+                 });
+                 
+                 resizeObserver.observe(container);
+                 
+                 // Store reference for cleanup if needed
+                 this.resizeObserver = resizeObserver;
+             }
+         }
+     }
+     
+     /**
+      * Update cursor status in status bar
+      */
+     updateCursorStatus(position) {
+         const cursorStatusElement = document.getElementById('cursorStatus');
+         if (cursorStatusElement && position >= 0) {
+             cursorStatusElement.textContent = `Cursor: ${position + 1}`;
          }
      }
 }
