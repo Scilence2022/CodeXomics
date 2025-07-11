@@ -1037,12 +1037,8 @@ class ActionManager {
         }
         
         // Create a deep copy of the entire action list for execution
-        const originalActions = this.actions;
         const executionActionsCopy = JSON.parse(JSON.stringify(this.actions));
-        
-        // Work with the copied action list during execution
-        this.actions = executionActionsCopy;
-        const pendingActionsCopy = this.actions.filter(action => action.status === this.STATUS.PENDING);
+        const pendingActionsCopy = executionActionsCopy.filter(action => action.status === this.STATUS.PENDING);
         
         console.log(`🔄 [ActionManager] Created execution copy with ${executionActionsCopy.length} actions (${pendingActionsCopy.length} pending)`);
         
@@ -1052,13 +1048,13 @@ class ActionManager {
         try {
             for (let i = 0; i < pendingActionsCopy.length; i++) {
                 const action = pendingActionsCopy[i];
-                await this.executeAction(action);
+                await this.executeActionOnCopy(action, executionActionsCopy);
                 
                 // After executing this action, adjust positions of all remaining pending actions in the copy
-                this.adjustPendingActionPositions(action, i + 1);
+                this.adjustPendingActionPositionsOnCopy(action, i + 1, executionActionsCopy);
                 
                 this.showExecutionProgress(i + 1, pendingActionsCopy.length);
-                this.updateActionListUI();
+                // Don't update UI during execution to avoid showing intermediate states
                 
                 // Small delay between actions
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -1068,22 +1064,18 @@ class ActionManager {
             
             // Generate and prompt to save GBK file after successful action execution
             // Use the execution copy for GBK generation to include executed action details
-            await this.generateAndSaveGBK();
+            await this.generateAndSaveGBKFromCopy(executionActionsCopy);
             
-            // Restore the original action list after successful execution
-            console.log(`✅ [ActionManager] Execution successful, restoring original action list`);
-            this.actions = originalActions;
+            console.log(`✅ [ActionManager] Execution successful, original action list unchanged`);
             
         } catch (error) {
             console.error('Error executing actions:', error);
             this.genomeBrowser.showNotification('Error executing actions', 'error');
             
-            // Restore the original action list on failure
-            console.log(`❌ [ActionManager] Execution failed, restoring original action list`);
-            this.actions = originalActions;
+            console.log(`❌ [ActionManager] Execution failed, original action list unchanged`);
             
         } finally {
-            // Original actions are always restored, regardless of success or failure
+            // Original actions are never modified during execution
             
             this.isExecuting = false;
             this.hideExecutionProgress();
@@ -1157,6 +1149,237 @@ class ActionManager {
         this.notifyActionsTrackUpdate();
     }
     
+    /**
+     * Execute a single action on copy without affecting original action list or UI
+     */
+    async executeActionOnCopy(action, executionActionsCopy) {
+        action.status = this.STATUS.EXECUTING;
+        action.executionStart = new Date();
+        
+        // Don't notify actions track to avoid UI updates during execution
+        
+        try {
+            let result;
+            
+            switch (action.type) {
+                case this.ACTION_TYPES.COPY_SEQUENCE:
+                    result = await this.executeCopySequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.CUT_SEQUENCE:
+                    result = await this.executeCutSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.PASTE_SEQUENCE:
+                    result = await this.executePasteSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.DELETE_SEQUENCE:
+                    result = await this.executeDeleteSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.INSERT_SEQUENCE:
+                    result = await this.executeInsertSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.REPLACE_SEQUENCE:
+                    result = await this.executeReplaceSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.SEQUENCE_EDIT:
+                    result = await this.executeSequenceEdit(action);
+                    break;
+                    
+                default:
+                    throw new Error(`Unknown action type: ${action.type}`);
+            }
+            
+            action.status = this.STATUS.COMPLETED;
+            action.result = result;
+            action.executionEnd = new Date();
+            action.actualTime = action.executionEnd - action.executionStart;
+            
+        } catch (error) {
+            action.status = this.STATUS.FAILED;
+            action.error = error.message;
+            action.executionEnd = new Date();
+            console.error(`Error executing action ${action.id}:`, error);
+        }
+        
+        // Don't notify actions track to avoid UI updates during execution
+    }
+    
+    /**
+     * Adjust pending action positions on copy without affecting original action list
+     */
+    adjustPendingActionPositionsOnCopy(executedAction, startIndex, executionActionsCopy) {
+        console.log(`🔧 [ActionManager] Adjusting pending action positions on copy after executing action: ${executedAction.type}`);
+        
+        // Only adjust if the executed action affects sequence positions
+        if (!this.isPositionAffectingAction(executedAction)) {
+            console.log(`🔧 [ActionManager] Action ${executedAction.type} does not affect positions, skipping adjustment`);
+            return;
+        }
+        
+        const { chromosome, start, end } = executedAction.metadata;
+        let positionShift = 0;
+        
+        // Calculate position shift based on action type
+        switch (executedAction.type) {
+            case this.ACTION_TYPES.DELETE_SEQUENCE:
+            case this.ACTION_TYPES.CUT_SEQUENCE:
+                positionShift = -(end - start + 1); // Negative shift for deletions
+                break;
+                
+            case this.ACTION_TYPES.INSERT_SEQUENCE:
+                const insertLength = executedAction.metadata.insertSequence ? 
+                    executedAction.metadata.insertSequence.length : 
+                    (executedAction.metadata.length || 0);
+                positionShift = insertLength; // Positive shift for insertions
+                break;
+                
+            case this.ACTION_TYPES.REPLACE_SEQUENCE:
+                const originalLength = end - start + 1;
+                const newLength = executedAction.metadata.newSequence ? 
+                    executedAction.metadata.newSequence.length : 
+                    (executedAction.metadata.newLength || originalLength);
+                positionShift = newLength - originalLength; // Net change
+                break;
+                
+            case this.ACTION_TYPES.PASTE_SEQUENCE:
+                // Handle paste-insert vs paste-replace
+                if (executedAction.result && executedAction.result.operation === 'paste-insert') {
+                    const pasteLength = executedAction.metadata.clipboardData ? 
+                        executedAction.metadata.clipboardData.sequence.length : 0;
+                    positionShift = pasteLength;
+                } else if (executedAction.result && executedAction.result.operation === 'paste-replace') {
+                    const originalLength = end - start + 1;
+                    const newLength = executedAction.metadata.clipboardData ? 
+                        executedAction.metadata.clipboardData.sequence.length : 0;
+                    positionShift = newLength - originalLength;
+                }
+                break;
+        }
+        
+        if (positionShift === 0) {
+            console.log(`🔧 [ActionManager] No position shift needed for action ${executedAction.type}`);
+            return;
+        }
+        
+        console.log(`🔧 [ActionManager] Calculated position shift: ${positionShift} for ${chromosome} after position ${start}`);
+        
+        // Adjust all remaining pending actions on the copy
+        let adjustedCount = 0;
+        for (let i = startIndex; i < executionActionsCopy.length; i++) {
+            const pendingAction = executionActionsCopy[i];
+            
+            // Only adjust pending actions
+            if (pendingAction.status !== this.STATUS.PENDING) {
+                continue;
+            }
+            
+            // Only adjust actions on the same chromosome  
+            if (!pendingAction.metadata || pendingAction.metadata.chromosome !== chromosome) {
+                continue;
+            }
+            
+            // Check if the pending action is affected by the executed action
+            const pendingStart = pendingAction.metadata.start || pendingAction.metadata.position;
+            const pendingEnd = pendingAction.metadata.end || pendingStart;
+            
+            // Handle different scenarios based on the executed action type
+            if (executedAction.type === this.ACTION_TYPES.DELETE_SEQUENCE || 
+                executedAction.type === this.ACTION_TYPES.CUT_SEQUENCE) {
+                
+                // Check if pending action is completely within the deleted region
+                if (pendingStart >= start && pendingEnd <= end) {
+                    // Mark as failed - target region no longer exists
+                    pendingAction.status = this.STATUS.FAILED;
+                    pendingAction.error = `Target region ${pendingStart}-${pendingEnd} was deleted by action ${executedAction.id}`;
+                    pendingAction.failureReason = `Deleted by action ${executedAction.id}`;
+                    console.log(`❌ [ActionManager] Marking action ${pendingAction.id} as failed - target deleted`);
+                    continue;
+                }
+                
+                // Check if pending action starts after the deleted region
+                if (pendingStart > end) {
+                    // Shift the entire action
+                    pendingAction.metadata.start += positionShift;
+                    if (pendingAction.metadata.end) {
+                        pendingAction.metadata.end += positionShift;
+                    }
+                    
+                    // Update target string
+                    if (pendingAction.target && pendingAction.target.includes(':')) {
+                        const parts = pendingAction.target.split(':');
+                        if (parts.length >= 2) {
+                            const positionPart = parts[1];
+                            if (positionPart.includes('-')) {
+                                const [startStr, endStr] = positionPart.split('-');
+                                const oldStart = parseInt(startStr);
+                                const oldEnd = parseInt(endStr.split('(')[0]); // Remove strand info
+                                const newStart = oldStart + positionShift;
+                                const newEnd = oldEnd + positionShift;
+                                const strandInfo = endStr.includes('(') ? endStr.substring(endStr.indexOf('(')) : '';
+                                pendingAction.target = `${parts[0]}:${newStart}-${newEnd}${strandInfo}`;
+                            }
+                        }
+                    }
+                    
+                    // Update description
+                    if (pendingAction.details && pendingAction.details.replace) {
+                        pendingAction.details = pendingAction.details.replace(
+                            /(\d+)-(\d+)/g,
+                            (match, start, end) => `${parseInt(start) + positionShift}-${parseInt(end) + positionShift}`
+                        );
+                    }
+                    
+                    adjustedCount++;
+                    console.log(`🔧 [ActionManager] Adjusted action ${pendingAction.id} position by ${positionShift}`);
+                }
+            } else {
+                // For insertions and other modifications, adjust positions after the change
+                if (pendingStart > start) {
+                    // Shift the entire action
+                    pendingAction.metadata.start += positionShift;
+                    if (pendingAction.metadata.end) {
+                        pendingAction.metadata.end += positionShift;
+                    }
+                    
+                    // Update target string
+                    if (pendingAction.target && pendingAction.target.includes(':')) {
+                        const parts = pendingAction.target.split(':');
+                        if (parts.length >= 2) {
+                            const positionPart = parts[1];
+                            if (positionPart.includes('-')) {
+                                const [startStr, endStr] = positionPart.split('-');
+                                const oldStart = parseInt(startStr);
+                                const oldEnd = parseInt(endStr.split('(')[0]); // Remove strand info
+                                const newStart = oldStart + positionShift;
+                                const newEnd = oldEnd + positionShift;
+                                const strandInfo = endStr.includes('(') ? endStr.substring(endStr.indexOf('(')) : '';
+                                pendingAction.target = `${parts[0]}:${newStart}-${newEnd}${strandInfo}`;
+                            }
+                        }
+                    }
+                    
+                    // Update description
+                    if (pendingAction.details && pendingAction.details.replace) {
+                        pendingAction.details = pendingAction.details.replace(
+                            /(\d+)-(\d+)/g,
+                            (match, start, end) => `${parseInt(start) + positionShift}-${parseInt(end) + positionShift}`
+                        );
+                    }
+                    
+                    adjustedCount++;
+                    console.log(`🔧 [ActionManager] Adjusted action ${pendingAction.id} position by ${positionShift}`);
+                }
+            }
+        }
+        
+        console.log(`🔧 [ActionManager] Adjusted ${adjustedCount} pending actions on copy`);
+    }
+
     /**
      * Execute copy sequence action with comprehensive data
      */
@@ -2297,6 +2520,224 @@ class ActionManager {
         };
     }
     
+    /**
+     * Generate and save GBK file from execution copy with modification history
+     */
+    async generateAndSaveGBKFromCopy(executionActionsCopy) {
+        try {
+            // Check if we have genome data to export
+            if (!this.genomeBrowser.currentSequence) {
+                this.genomeBrowser.showNotification('No genome data available for GBK export', 'warning');
+                return;
+            }
+            
+            // Check if ExportManager is available
+            if (!this.genomeBrowser.exportManager) {
+                this.genomeBrowser.showNotification('Export functionality not available', 'error');
+                return;
+            }
+            
+            // Generate GBK content using ExportManager
+            const chromosomes = Object.keys(this.genomeBrowser.currentSequence);
+            let genbankContent = '';
+
+            chromosomes.forEach(chr => {
+                // Apply sequence modifications if any exist
+                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
+                const sequence = modifiedSequence;
+                
+                // Adjust feature positions based on sequence modifications
+                const adjustedFeatures = this.adjustFeaturePositions(chr, this.genomeBrowser.currentAnnotations[chr] || []);
+                const features = adjustedFeatures;
+                
+                // Get executed actions for modification history from execution copy
+                const executedActions = executionActionsCopy.filter(action => action.status === this.STATUS.COMPLETED);
+                const relevantActions = executedActions.filter(action => 
+                    action.metadata && action.metadata.chromosome === chr
+                );
+                
+                // GenBank header
+                genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
+                genbankContent += `DEFINITION  ${chr} - Modified with sequence actions (${relevantActions.length} modifications)\n`;
+                genbankContent += `ACCESSION   ${chr}\n`;
+                genbankContent += `VERSION     ${chr}\n`;
+                genbankContent += `KEYWORDS    genome editing, sequence modification, action execution\n`;
+                genbankContent += `SOURCE      .\n`;
+                genbankContent += `  ORGANISM  .\n`;
+                
+                // Add modification history as comments
+                if (relevantActions.length > 0) {
+                    genbankContent += `COMMENT     MODIFICATION HISTORY:\n`;
+                    genbankContent += `COMMENT     This sequence has been modified using Genome AI Studio Action Manager.\n`;
+                    genbankContent += `COMMENT     Total modifications: ${relevantActions.length}\n`;
+                    genbankContent += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
+                    genbankContent += `COMMENT     \n`;
+                    
+                    relevantActions.forEach((action, index) => {
+                        genbankContent += `COMMENT     Modification ${index + 1}:\n`;
+                        genbankContent += `COMMENT       Action ID: ${action.id}\n`;
+                        genbankContent += `COMMENT       Type: ${action.type}\n`;
+                        genbankContent += `COMMENT       Target: ${action.target}\n`;
+                        genbankContent += `COMMENT       Description: ${action.details || 'N/A'}\n`;
+                        genbankContent += `COMMENT       Executed: ${action.executionEnd ? new Date(action.executionEnd).toISOString() : 'N/A'}\n`;
+                        genbankContent += `COMMENT       Duration: ${action.actualTime ? action.actualTime + 'ms' : 'N/A'}\n`;
+                        
+                        // Add specific details based on action type
+                        if (action.metadata) {
+                            if (action.metadata.start && action.metadata.end) {
+                                genbankContent += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
+                                genbankContent += `COMMENT       Length: ${action.metadata.end - action.metadata.start + 1} bp\n`;
+                            }
+                            if (action.metadata.strand) {
+                                genbankContent += `COMMENT       Strand: ${action.metadata.strand}\n`;
+                            }
+                        }
+                        
+                        // Add result information if available
+                        if (action.result) {
+                            if (action.result.sequenceLength) {
+                                genbankContent += `COMMENT       Sequence length: ${action.result.sequenceLength} bp\n`;
+                            }
+                            if (action.result.featuresCount !== undefined) {
+                                genbankContent += `COMMENT       Affected features: ${action.result.featuresCount}\n`;
+                            }
+                        }
+                        
+                        genbankContent += `COMMENT     \n`;
+                    });
+                }
+                genbankContent += `FEATURES             Location/Qualifiers\n`;
+                genbankContent += `     source          1..${sequence.length}\n`;
+                
+                // Add features
+                features.forEach(feature => {
+                    const location = feature.strand === '-' ? 
+                        `complement(${feature.start}..${feature.end})` : 
+                        `${feature.start}..${feature.end}`;
+                    
+                    genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
+                    
+                    // Add comprehensive qualifier information
+                    // Priority order: qualifiers object properties, then direct properties
+                    const qualifiers = feature.qualifiers || {};
+                    
+                    // Gene name/identifier
+                    const geneName = qualifiers.gene || feature.name || qualifiers.locus_tag;
+                    if (geneName) {
+                        genbankContent += `                     /gene="${geneName}"\n`;
+                    }
+                    
+                    // Locus tag (if different from gene name)
+                    if (qualifiers.locus_tag && qualifiers.locus_tag !== geneName) {
+                        genbankContent += `                     /locus_tag="${qualifiers.locus_tag}"\n`;
+                    }
+                    
+                    // Product description
+                    const product = qualifiers.product || feature.product;
+                    if (product) {
+                        genbankContent += `                     /product="${product}"\n`;
+                    }
+                    
+                    // Protein ID
+                    if (qualifiers.protein_id) {
+                        genbankContent += `                     /protein_id="${qualifiers.protein_id}"\n`;
+                    }
+                    
+                    // Translation (for CDS features)
+                    if (feature.type === 'CDS' && qualifiers.translation) {
+                        genbankContent += `                     /translation="${qualifiers.translation}"\n`;
+                    }
+                    
+                    // Codon start
+                    if (qualifiers.codon_start) {
+                        genbankContent += `                     /codon_start=${qualifiers.codon_start}\n`;
+                    }
+                    
+                    // Transl table
+                    if (qualifiers.transl_table) {
+                        genbankContent += `                     /transl_table=${qualifiers.transl_table}\n`;
+                    }
+                    
+                    // Function/EC number
+                    if (qualifiers.EC_number) {
+                        genbankContent += `                     /EC_number="${qualifiers.EC_number}"\n`;
+                    }
+                    
+                    // GO terms
+                    if (qualifiers.GO_component) {
+                        genbankContent += `                     /GO_component="${qualifiers.GO_component}"\n`;
+                    }
+                    if (qualifiers.GO_function) {
+                        genbankContent += `                     /GO_function="${qualifiers.GO_function}"\n`;
+                    }
+                    if (qualifiers.GO_process) {
+                        genbankContent += `                     /GO_process="${qualifiers.GO_process}"\n`;
+                    }
+                    
+                    // Database cross-references
+                    if (qualifiers.db_xref) {
+                        if (Array.isArray(qualifiers.db_xref)) {
+                            qualifiers.db_xref.forEach(xref => {
+                                genbankContent += `                     /db_xref="${xref}"\n`;
+                            });
+                        } else {
+                            genbankContent += `                     /db_xref="${qualifiers.db_xref}"\n`;
+                        }
+                    }
+                    
+                    // Inference
+                    if (qualifiers.inference) {
+                        genbankContent += `                     /inference="${qualifiers.inference}"\n`;
+                    }
+                    
+                    // Notes (combine multiple sources)
+                    const notes = [];
+                    if (qualifiers.note) {
+                        if (Array.isArray(qualifiers.note)) {
+                            notes.push(...qualifiers.note);
+                        } else {
+                            notes.push(qualifiers.note);
+                        }
+                    }
+                    if (feature.note && !notes.includes(feature.note)) {
+                        notes.push(feature.note);
+                    }
+                    
+                    notes.forEach(note => {
+                        genbankContent += `                     /note="${note}"\n`;
+                    });
+                });
+                
+                genbankContent += `ORIGIN\n`;
+                
+                // Add sequence in GenBank format (60 chars per line, numbered)
+                for (let i = 0; i < sequence.length; i += 60) {
+                    const lineNum = (i + 1).toString().padStart(9);
+                    const seqLine = sequence.substring(i, i + 60).toLowerCase();
+                    const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+                    genbankContent += `${lineNum} ${formattedSeq}\n`;
+                }
+                
+                genbankContent += `//\n\n`;
+            });
+            
+            // Save the generated GBK file
+            const fileName = `modified_genome_${new Date().toISOString().replace(/[:.]/g, '-')}.gbk`;
+            const filePath = await this.genomeBrowser.exportManager.saveFile(fileName, genbankContent, 'gbk');
+            
+            if (filePath) {
+                this.genomeBrowser.showNotification(`GBK file exported successfully: ${fileName}`, 'success');
+                console.log(`✅ [ActionManager] GBK file generated: ${filePath}`);
+            } else {
+                this.genomeBrowser.showNotification('Failed to save GBK file', 'error');
+            }
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error generating GBK file:', error);
+            this.genomeBrowser.showNotification('Error generating GBK file', 'error');
+        }
+    }
+
     /**
      * Generate and save GBK file after action execution
      */
