@@ -58,11 +58,12 @@ class TrackRenderer {
                 dataSource: 'currentWIGTracks'
             },
             actions: {
-                defaultHeight: '100px',
+                defaultHeight: '120px',
                 header: 'Actions',
                 className: 'actions-track',
                 requiresData: false,
-                dataSource: 'actionManager'
+                dataSource: 'actionManager',
+                actionHeight: 10 // Default action element height in pixels
             }
         };
         
@@ -5524,12 +5525,12 @@ class TrackRenderer {
                 break;
                 
             case 'cut_sequence':
-                // Improved scissors symbol with better design
+                // Vertical scissors symbol with heads pointing up
                 const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 const leftBladePath = `
-                    M ${centerX - symbolSize/4} ${centerY - symbolSize/4}
-                    L ${centerX} ${centerY}
-                    L ${centerX - symbolSize/3} ${centerY - symbolSize/6}
+                    M ${centerX - symbolSize/6} ${centerY - symbolSize/3}
+                    L ${centerX - symbolSize/12} ${centerY - symbolSize/6}
+                    L ${centerX - symbolSize/4} ${centerY - symbolSize/4}
                 `;
                 leftBlade.setAttribute('d', leftBladePath);
                 leftBlade.setAttribute('stroke', '#ffffff');
@@ -5540,9 +5541,9 @@ class TrackRenderer {
                 
                 const rightBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 const rightBladePath = `
-                    M ${centerX + symbolSize/4} ${centerY + symbolSize/4}
-                    L ${centerX} ${centerY}
-                    L ${centerX + symbolSize/3} ${centerY + symbolSize/6}
+                    M ${centerX + symbolSize/6} ${centerY - symbolSize/3}
+                    L ${centerX + symbolSize/12} ${centerY - symbolSize/6}
+                    L ${centerX + symbolSize/4} ${centerY - symbolSize/4}
                 `;
                 rightBlade.setAttribute('d', rightBladePath);
                 rightBlade.setAttribute('stroke', '#ffffff');
@@ -5551,24 +5552,45 @@ class TrackRenderer {
                 rightBlade.setAttribute('stroke-linecap', 'round');
                 rightBlade.setAttribute('stroke-linejoin', 'round');
                 
-                // Scissor handles
-                const leftHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                leftHandle.setAttribute('cx', centerX - symbolSize/3);
-                leftHandle.setAttribute('cy', centerY - symbolSize/3);
-                leftHandle.setAttribute('r', '1.5');
+                // Vertical handles (finger grips)
+                const leftHandle = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                leftHandle.setAttribute('cx', centerX - symbolSize/6);
+                leftHandle.setAttribute('cy', centerY + symbolSize/4);
+                leftHandle.setAttribute('rx', '1.5');
+                leftHandle.setAttribute('ry', '2.5');
                 leftHandle.setAttribute('fill', 'none');
                 leftHandle.setAttribute('stroke', '#ffffff');
                 leftHandle.setAttribute('stroke-width', '1');
                 
-                const rightHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                rightHandle.setAttribute('cx', centerX + symbolSize/3);
-                rightHandle.setAttribute('cy', centerY + symbolSize/3);
-                rightHandle.setAttribute('r', '1.5');
+                const rightHandle = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                rightHandle.setAttribute('cx', centerX + symbolSize/6);
+                rightHandle.setAttribute('cy', centerY + symbolSize/4);
+                rightHandle.setAttribute('rx', '1.5');
+                rightHandle.setAttribute('ry', '2.5');
                 rightHandle.setAttribute('fill', 'none');
                 rightHandle.setAttribute('stroke', '#ffffff');
                 rightHandle.setAttribute('stroke-width', '1');
                 
-                // Central pivot
+                // Connecting arms from blades to handles
+                const leftArm = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                leftArm.setAttribute('x1', centerX - symbolSize/12);
+                leftArm.setAttribute('y1', centerY - symbolSize/6);
+                leftArm.setAttribute('x2', centerX - symbolSize/6);
+                leftArm.setAttribute('y2', centerY + symbolSize/6);
+                leftArm.setAttribute('stroke', '#ffffff');
+                leftArm.setAttribute('stroke-width', '1.5');
+                leftArm.setAttribute('stroke-linecap', 'round');
+                
+                const rightArm = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                rightArm.setAttribute('x1', centerX + symbolSize/12);
+                rightArm.setAttribute('y1', centerY - symbolSize/6);
+                rightArm.setAttribute('x2', centerX + symbolSize/6);
+                rightArm.setAttribute('y2', centerY + symbolSize/6);
+                rightArm.setAttribute('stroke', '#ffffff');
+                rightArm.setAttribute('stroke-width', '1.5');
+                rightArm.setAttribute('stroke-linecap', 'round');
+                
+                // Central pivot point
                 const pivot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 pivot.setAttribute('cx', centerX);
                 pivot.setAttribute('cy', centerY);
@@ -5577,6 +5599,8 @@ class TrackRenderer {
                 
                 symbolGroup.appendChild(leftBlade);
                 symbolGroup.appendChild(rightBlade);
+                symbolGroup.appendChild(leftArm);
+                symbolGroup.appendChild(rightArm);
                 symbolGroup.appendChild(leftHandle);
                 symbolGroup.appendChild(rightHandle);
                 symbolGroup.appendChild(pivot);
@@ -5934,10 +5958,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Calculate action track layout
      */
     calculateActionTrackLayout(actionRows, settings) {
-        const actionHeight = settings?.actionHeight || 20;
-        const rowSpacing = settings?.rowSpacing || 5;
-        const topPadding = settings?.topPadding || 10;
-        const bottomPadding = settings?.bottomPadding || 10;
+        const actionHeight = settings?.actionHeight || 10;
+        const rowSpacing = settings?.rowSpacing || 2;
+        const topPadding = settings?.topPadding || 5;
+        const bottomPadding = settings?.bottomPadding || 5;
         const rulerHeight = settings?.rulerHeight || 20;
         const maxRows = settings?.maxRows || 10;
         
@@ -7664,6 +7688,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 samplingPercentage: 20,
                 samplingCount: 5000,
                 showSamplingInfo: true
+            },
+            actions: {
+                actionHeight: 10, // Height of each action element in pixels
+                rowSpacing: 2,    // Spacing between action rows
+                topPadding: 5,    // Top padding for action track
+                bottomPadding: 5, // Bottom padding for action track
+                height: 120,      // Total track height
+                fontSize: 10,     // Font size for action text
+                fontFamily: 'Arial, sans-serif'
             }
         };
         
