@@ -33788,3 +33788,92 @@ path.svg-gene-element.selected {
     min-width: 200px;
     margin-top: 4px;
 }
+
+/* Gene Edit Modal Styles */
+.gene-edit-form {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.qualifiers-list {
+    margin-bottom: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    background: var(--bg-secondary);
+}
+
+.qualifier-row {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+.qualifier-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.qualifier-key,
+.qualifier-value {
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+.remove-qualifier-btn {
+    padding: 4px 6px;
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+}
+
+.remove-qualifier-btn:hover {
+    background: #dc2626;
+}
+
+.qualifiers-list:empty::before {
+    content: "No additional qualifiers";
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Gene Edit Modal responsive adjustments */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .qualifier-inputs {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .qualifier-inputs .remove-qualifier-btn {
+        justify-self: end;
+        grid-column: 1;
+        margin-top: 4px;
+    }
+}

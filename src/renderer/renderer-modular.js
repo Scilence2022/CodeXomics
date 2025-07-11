@@ -3079,6 +3079,13 @@ class GenomeBrowser {
             `;
         }
         
+        // Add edit button
+        html += `
+                <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
+                    <i class="fas fa-edit"></i> Edit Annotation
+                </button>
+        `;
+        
         html += `</div></div>`;
         
         geneDetailsContent.innerHTML = html;
@@ -4312,6 +4319,289 @@ class GenomeBrowser {
         this.clearSequenceSelection();
         
         console.log('Cleared gene selection');
+    }
+
+    // Edit gene annotation functionality
+    editGeneAnnotation() {
+        if (!this.selectedGene || !this.selectedGene.gene) {
+            console.warn('No gene selected for editing');
+            return;
+        }
+
+        const gene = this.selectedGene.gene;
+        const modal = document.getElementById('editGeneModal');
+        
+        if (!modal) {
+            console.error('Edit gene modal not found');
+            return;
+        }
+
+        // Populate modal fields with current gene data
+        this.populateEditModal(gene);
+        
+        // Show the modal
+        modal.classList.add('show');
+        
+        // Set up event listeners for the modal
+        this.setupEditModalEventListeners();
+    }
+
+    populateEditModal(gene) {
+        // Get form elements
+        const geneName = document.getElementById('editGeneName');
+        const geneType = document.getElementById('editGeneType');
+        const geneStart = document.getElementById('editGeneStart');
+        const geneEnd = document.getElementById('editGeneEnd');
+        const geneStrand = document.getElementById('editGeneStrand');
+        const geneProduct = document.getElementById('editGeneProduct');
+        const geneLocusTag = document.getElementById('editGeneLocusTag');
+        const geneNote = document.getElementById('editGeneNote');
+
+        // Populate basic fields
+        if (geneName) geneName.value = gene.qualifiers?.gene || '';
+        if (geneType) geneType.value = gene.type || 'gene';
+        if (geneStart) geneStart.value = gene.start || '';
+        if (geneEnd) geneEnd.value = gene.end || '';
+        if (geneStrand) geneStrand.value = gene.strand || 1;
+        if (geneProduct) geneProduct.value = gene.qualifiers?.product || '';
+        if (geneLocusTag) geneLocusTag.value = gene.qualifiers?.locus_tag || '';
+        if (geneNote) geneNote.value = gene.qualifiers?.note || '';
+
+        // Populate additional qualifiers
+        this.populateAdditionalQualifiers(gene.qualifiers || {});
+    }
+
+    populateAdditionalQualifiers(qualifiers) {
+        const qualifiersList = document.getElementById('editGeneQualifiers');
+        if (!qualifiersList) return;
+
+        // Clear existing qualifiers
+        qualifiersList.innerHTML = '';
+
+        // Define standard qualifiers that are handled by dedicated fields
+        const standardQualifiers = ['gene', 'product', 'locus_tag', 'note'];
+
+        // Add remaining qualifiers
+        Object.entries(qualifiers).forEach(([key, value]) => {
+            if (!standardQualifiers.includes(key) && value && value.toString().trim()) {
+                this.addQualifierRow(key, value.toString());
+            }
+        });
+    }
+
+    addQualifierRow(key = '', value = '') {
+        const qualifiersList = document.getElementById('editGeneQualifiers');
+        if (!qualifiersList) return;
+
+        const qualifierDiv = document.createElement('div');
+        qualifierDiv.className = 'qualifier-row';
+        qualifierDiv.innerHTML = `
+            <div class="qualifier-inputs">
+                <input type="text" class="qualifier-key input-full" placeholder="Qualifier name" value="${key}">
+                <input type="text" class="qualifier-value input-full" placeholder="Qualifier value" value="${value}">
+                <button type="button" class="btn btn-sm btn-danger remove-qualifier-btn" title="Remove qualifier">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Add event listener for remove button
+        const removeBtn = qualifierDiv.querySelector('.remove-qualifier-btn');
+        removeBtn.addEventListener('click', () => {
+            qualifierDiv.remove();
+        });
+
+        qualifiersList.appendChild(qualifierDiv);
+    }
+
+    setupEditModalEventListeners() {
+        // Add qualifier button
+        const addQualifierBtn = document.getElementById('addQualifierBtn');
+        if (addQualifierBtn) {
+            addQualifierBtn.removeEventListener('click', this.handleAddQualifier);
+            addQualifierBtn.addEventListener('click', this.handleAddQualifier.bind(this));
+        }
+
+        // Save button
+        const saveBtn = document.getElementById('saveGeneEditBtn');
+        if (saveBtn) {
+            saveBtn.removeEventListener('click', this.handleSaveGeneEdit);
+            saveBtn.addEventListener('click', this.handleSaveGeneEdit.bind(this));
+        }
+
+        // Modal close buttons
+        const modal = document.getElementById('editGeneModal');
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.removeEventListener('click', this.handleCloseEditModal);
+            btn.addEventListener('click', this.handleCloseEditModal.bind(this));
+        });
+
+        // Close on outside click
+        modal.removeEventListener('click', this.handleModalOutsideClick);
+        modal.addEventListener('click', this.handleModalOutsideClick.bind(this));
+    }
+
+    handleAddQualifier() {
+        this.addQualifierRow();
+    }
+
+    handleCloseEditModal() {
+        const modal = document.getElementById('editGeneModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    handleModalOutsideClick(e) {
+        if (e.target === e.currentTarget) {
+            this.handleCloseEditModal();
+        }
+    }
+
+    handleSaveGeneEdit() {
+        if (!this.selectedGene || !this.selectedGene.gene) {
+            console.warn('No gene selected for saving');
+            return;
+        }
+
+        // Get form data
+        const formData = this.collectEditFormData();
+        if (!formData) {
+            return; // Error occurred during data collection
+        }
+
+        // Update the gene object
+        this.updateGeneData(this.selectedGene.gene, formData);
+
+        // Refresh the gene details display
+        this.populateGeneDetails(this.selectedGene.gene, this.selectedGene.operonInfo);
+
+        // Refresh the tracks to show updated annotation
+        this.refreshTrackDisplay();
+
+        // Close the modal
+        this.handleCloseEditModal();
+
+        // Show success message
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Gene annotation updated: ${formData.geneName || 'Unknown'}`);
+        }
+
+        console.log('Gene annotation updated successfully');
+    }
+
+    collectEditFormData() {
+        try {
+            const geneName = document.getElementById('editGeneName')?.value || '';
+            const geneType = document.getElementById('editGeneType')?.value || 'gene';
+            const geneStart = parseInt(document.getElementById('editGeneStart')?.value) || 0;
+            const geneEnd = parseInt(document.getElementById('editGeneEnd')?.value) || 0;
+            const geneStrand = parseInt(document.getElementById('editGeneStrand')?.value) || 1;
+            const geneProduct = document.getElementById('editGeneProduct')?.value || '';
+            const geneLocusTag = document.getElementById('editGeneLocusTag')?.value || '';
+            const geneNote = document.getElementById('editGeneNote')?.value || '';
+
+            // Validate required fields
+            if (geneStart <= 0 || geneEnd <= 0 || geneStart >= geneEnd) {
+                alert('Please enter valid start and end positions (start must be less than end and both must be positive)');
+                return null;
+            }
+
+            // Collect additional qualifiers
+            const additionalQualifiers = {};
+            const qualifierRows = document.querySelectorAll('.qualifier-row');
+            qualifierRows.forEach(row => {
+                const keyInput = row.querySelector('.qualifier-key');
+                const valueInput = row.querySelector('.qualifier-value');
+                if (keyInput && valueInput && keyInput.value.trim() && valueInput.value.trim()) {
+                    additionalQualifiers[keyInput.value.trim()] = valueInput.value.trim();
+                }
+            });
+
+            return {
+                geneName,
+                geneType,
+                geneStart,
+                geneEnd,
+                geneStrand,
+                geneProduct,
+                geneLocusTag,
+                geneNote,
+                additionalQualifiers
+            };
+        } catch (error) {
+            console.error('Error collecting form data:', error);
+            alert('Error collecting form data. Please check your inputs.');
+            return null;
+        }
+    }
+
+    updateGeneData(gene, formData) {
+        // Update basic gene properties
+        gene.type = formData.geneType;
+        gene.start = formData.geneStart;
+        gene.end = formData.geneEnd;
+        gene.strand = formData.geneStrand;
+
+        // Update qualifiers
+        if (!gene.qualifiers) {
+            gene.qualifiers = {};
+        }
+
+        // Update standard qualifiers
+        if (formData.geneName) gene.qualifiers.gene = formData.geneName;
+        if (formData.geneProduct) gene.qualifiers.product = formData.geneProduct;
+        if (formData.geneLocusTag) gene.qualifiers.locus_tag = formData.geneLocusTag;
+        if (formData.geneNote) gene.qualifiers.note = formData.geneNote;
+
+        // Add additional qualifiers
+        Object.entries(formData.additionalQualifiers).forEach(([key, value]) => {
+            gene.qualifiers[key] = value;
+        });
+
+        // Remove empty qualifiers
+        Object.keys(gene.qualifiers).forEach(key => {
+            if (!gene.qualifiers[key] || gene.qualifiers[key].toString().trim() === '') {
+                delete gene.qualifiers[key];
+            }
+        });
+    }
+
+    refreshTrackDisplay() {
+        // Get current chromosome
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (!currentChr) return;
+
+        // Refresh gene track if visible
+        if (this.visibleTracks.has('genes')) {
+            const annotations = this.currentAnnotations[currentChr] || [];
+            const operons = this.operons || [];
+            
+            // Re-render the gene track
+            const geneTrack = document.querySelector('.gene-track');
+            if (geneTrack) {
+                const trackContent = geneTrack.querySelector('.track-content');
+                if (trackContent && this.trackRenderer) {
+                    // Get current viewport
+                    const viewport = {
+                        start: this.currentPosition.start,
+                        end: this.currentPosition.end,
+                        range: this.currentPosition.end - this.currentPosition.start
+                    };
+
+                    // Filter visible genes
+                    const visibleGenes = annotations.filter(gene => {
+                        return this.shouldShowGeneType(gene.type) &&
+                               gene.end >= viewport.start && gene.start <= viewport.end;
+                    });
+
+                    // Clear and re-render
+                    trackContent.innerHTML = '';
+                    this.trackRenderer.renderGeneElements(trackContent, visibleGenes, viewport, operons);
+                }
+            }
+        }
     }
 
     selectRead(read, fileInfo = null) {

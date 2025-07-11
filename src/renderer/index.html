@@ -2476,6 +2476,85 @@
         </div>
     </div>
 
+    <!-- Edit Gene Annotation Modal -->
+    <div id="editGeneModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Gene Annotation</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="gene-edit-form">
+                    <div class="form-group">
+                        <label for="editGeneName">Gene Name:</label>
+                        <input type="text" id="editGeneName" class="input-full" placeholder="Enter gene name">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGeneType">Feature Type:</label>
+                        <select id="editGeneType" class="select input-full">
+                            <option value="gene">Gene</option>
+                            <option value="CDS">CDS (Coding Sequence)</option>
+                            <option value="mRNA">mRNA</option>
+                            <option value="rRNA">rRNA (Ribosomal RNA)</option>
+                            <option value="tRNA">tRNA (Transfer RNA)</option>
+                            <option value="promoter">Promoter</option>
+                            <option value="terminator">Terminator</option>
+                            <option value="regulatory">Regulatory Element</option>
+                            <option value="misc_feature">Miscellaneous Feature</option>
+                            <option value="repeat_region">Repeat Region</option>
+                            <option value="comment">Comment/Note</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editGeneStart">Start Position:</label>
+                            <input type="number" id="editGeneStart" class="input-full" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editGeneEnd">End Position:</label>
+                            <input type="number" id="editGeneEnd" class="input-full" min="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editGeneStrand">Strand:</label>
+                        <select id="editGeneStrand" class="select input-full">
+                            <option value="1">Forward (+)</option>
+                            <option value="-1">Reverse (-)</option>
+                            <option value="0">Both/Unknown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editGeneProduct">Product:</label>
+                        <input type="text" id="editGeneProduct" class="input-full" placeholder="Enter gene product">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGeneLocusTag">Locus Tag:</label>
+                        <input type="text" id="editGeneLocusTag" class="input-full" placeholder="Enter locus tag">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGeneNote">Note/Description:</label>
+                        <textarea id="editGeneNote" class="input-full" rows="3" placeholder="Enter additional notes or description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Additional Qualifiers:</label>
+                        <div id="editGeneQualifiers" class="qualifiers-list">
+                            <!-- Dynamic qualifiers will be added here -->
+                        </div>
+                        <button type="button" id="addQualifierBtn" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-plus"></i> Add Qualifier
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveGeneEditBtn" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!--script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script -->
