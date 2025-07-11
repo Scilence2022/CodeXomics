@@ -5397,89 +5397,223 @@ class TrackRenderer {
     }
 
     /**
-     * Create action shape based on action type
+     * Create action shape based on action type - now uses rectangles for all with symbols
      */
     createSVGActionShape(action, width, height, gradientId) {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        let pathData;
+        // Create container group for rectangle and symbol
+        const shapeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        shapeGroup.setAttribute('class', `action-shape-${action.type.toLowerCase().replace('_', '-')}`);
 
-        // Create different shapes based on action type
-        switch (action.type) {
-            case 'copy_sequence':
-                // Rectangle with rounded corners
-                pathData = `M 0 2 
-                           L ${width - 2} 2 
-                           Q ${width} 2 ${width} 4 
-                           L ${width} ${height - 4} 
-                           Q ${width} ${height - 2} ${width - 2} ${height - 2} 
-                           L 2 ${height - 2} 
-                           Q 0 ${height - 2} 0 ${height - 4} 
-                           L 0 4 
-                           Q 0 2 2 2 Z`;
-                break;
-            
-            case 'cut_sequence':
-                // Zigzag shape
-                pathData = `M 0 ${height/2} 
-                           L ${width * 0.2} 2 
-                           L ${width * 0.4} ${height - 2} 
-                           L ${width * 0.6} 2 
-                           L ${width * 0.8} ${height - 2} 
-                           L ${width} ${height/2} 
-                           L ${width * 0.8} ${height/2} 
-                           L ${width * 0.6} ${height - 2} 
-                           L ${width * 0.4} 2 
-                           L ${width * 0.2} ${height - 2} Z`;
-                break;
-            
-            case 'paste_sequence':
-                // Arrow pointing right
-                pathData = `M 0 0 
-                           L ${width - 6} 0 
-                           L ${width} ${height/2} 
-                           L ${width - 6} ${height} 
-                           L 0 ${height} Z`;
-                break;
-            
-            case 'delete_sequence':
-                // X shape
-                pathData = `M 0 0 
-                           L ${width * 0.2} 0 
-                           L ${width/2} ${height * 0.3} 
-                           L ${width * 0.8} 0 
-                           L ${width} 0 
-                           L ${width * 0.7} ${height/2} 
-                           L ${width} ${height} 
-                           L ${width * 0.8} ${height} 
-                           L ${width/2} ${height * 0.7} 
-                           L ${width * 0.2} ${height} 
-                           L 0 ${height} 
-                           L ${width * 0.3} ${height/2} Z`;
-                break;
-            
-            default:
-                // Default rectangle
-                pathData = `M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`;
-        }
-
-        path.setAttribute('d', pathData);
-        path.setAttribute('fill', `url(#${gradientId})`);
-        path.setAttribute('stroke', this.getActionColor(action));
-        path.setAttribute('stroke-width', '1');
-        path.setAttribute('class', `action-${action.type.toLowerCase().replace('_', '-')}`);
+        // Create rectangle base for all action types
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', '0');
+        rect.setAttribute('y', '0');
+        rect.setAttribute('width', width);
+        rect.setAttribute('height', height);
+        rect.setAttribute('rx', '3'); // Rounded corners
+        rect.setAttribute('ry', '3');
+        rect.setAttribute('fill', `url(#${gradientId})`);
+        rect.setAttribute('stroke', this.getActionColor(action));
+        rect.setAttribute('stroke-width', '1');
+        rect.setAttribute('class', `action-${action.type.toLowerCase().replace('_', '-')}`);
 
         // Add status-based styling
         if (action.status === 'executing') {
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('stroke-dasharray', '3,3');
+            rect.setAttribute('stroke-width', '2');
+            rect.setAttribute('stroke-dasharray', '3,3');
         } else if (action.status === 'completed') {
-            path.setAttribute('opacity', '0.7');
+            rect.setAttribute('opacity', '0.7');
         } else if (action.status === 'failed') {
-            path.setAttribute('stroke', '#ef4444');
-            path.setAttribute('stroke-width', '2');
+            rect.setAttribute('stroke', '#ef4444');
+            rect.setAttribute('stroke-width', '2');
         }
 
-        return path;
+        shapeGroup.appendChild(rect);
+
+        // Add action type symbol if there's enough space
+        if (width >= 16 && height >= 12) {
+            const symbol = this.createActionSymbol(action.type, width, height);
+            if (symbol) {
+                shapeGroup.appendChild(symbol);
+            }
+        }
+
+        return shapeGroup;
+    }
+
+    /**
+     * Create symbol for specific action type
+     */
+    createActionSymbol(actionType, containerWidth, containerHeight) {
+        const symbolGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        symbolGroup.setAttribute('class', 'action-symbol');
+        
+        // Calculate symbol size and position
+        const symbolSize = Math.min(containerWidth * 0.6, containerHeight * 0.6, 12);
+        const centerX = containerWidth / 2;
+        const centerY = containerHeight / 2;
+        
+        let symbolPath;
+        
+        switch (actionType) {
+            case 'copy_sequence':
+                // Duplicate/copy symbol - two overlapping rectangles
+                const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect1.setAttribute('x', centerX - symbolSize/2 + 1);
+                rect1.setAttribute('y', centerY - symbolSize/2 + 1);
+                rect1.setAttribute('width', symbolSize * 0.7);
+                rect1.setAttribute('height', symbolSize * 0.7);
+                rect1.setAttribute('fill', 'none');
+                rect1.setAttribute('stroke', '#ffffff');
+                rect1.setAttribute('stroke-width', '1.5');
+                rect1.setAttribute('rx', '1');
+                
+                const rect2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect2.setAttribute('x', centerX - symbolSize/2 - 1);
+                rect2.setAttribute('y', centerY - symbolSize/2 - 1);
+                rect2.setAttribute('width', symbolSize * 0.7);
+                rect2.setAttribute('height', symbolSize * 0.7);
+                rect2.setAttribute('fill', 'none');
+                rect2.setAttribute('stroke', '#ffffff');
+                rect2.setAttribute('stroke-width', '1.5');
+                rect2.setAttribute('rx', '1');
+                
+                symbolGroup.appendChild(rect2);
+                symbolGroup.appendChild(rect1);
+                break;
+                
+            case 'cut_sequence':
+                // Scissors symbol
+                symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const scissorsPath = `
+                    M ${centerX - symbolSize/3} ${centerY - symbolSize/3}
+                    L ${centerX + symbolSize/3} ${centerY + symbolSize/3}
+                    M ${centerX - symbolSize/3} ${centerY + symbolSize/3}
+                    L ${centerX + symbolSize/3} ${centerY - symbolSize/3}
+                    M ${centerX - symbolSize/2} ${centerY - symbolSize/2}
+                    A 2 2 0 1 1 ${centerX - symbolSize/2 + 1} ${centerY - symbolSize/2 + 1}
+                    M ${centerX + symbolSize/2} ${centerY + symbolSize/2}
+                    A 2 2 0 1 1 ${centerX + symbolSize/2 - 1} ${centerY + symbolSize/2 - 1}
+                `;
+                symbolPath.setAttribute('d', scissorsPath);
+                symbolPath.setAttribute('stroke', '#ffffff');
+                symbolPath.setAttribute('stroke-width', '1.5');
+                symbolPath.setAttribute('fill', 'none');
+                symbolPath.setAttribute('stroke-linecap', 'round');
+                symbolGroup.appendChild(symbolPath);
+                break;
+                
+            case 'paste_sequence':
+                // Clipboard symbol
+                const clipboardBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                clipboardBase.setAttribute('x', centerX - symbolSize/3);
+                clipboardBase.setAttribute('y', centerY - symbolSize/2);
+                clipboardBase.setAttribute('width', symbolSize * 0.6);
+                clipboardBase.setAttribute('height', symbolSize * 0.8);
+                clipboardBase.setAttribute('fill', 'none');
+                clipboardBase.setAttribute('stroke', '#ffffff');
+                clipboardBase.setAttribute('stroke-width', '1.5');
+                clipboardBase.setAttribute('rx', '1');
+                
+                const clipboardTop = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                clipboardTop.setAttribute('x', centerX - symbolSize/6);
+                clipboardTop.setAttribute('y', centerY - symbolSize/2 - 1);
+                clipboardTop.setAttribute('width', symbolSize * 0.3);
+                clipboardTop.setAttribute('height', '3');
+                clipboardTop.setAttribute('fill', '#ffffff');
+                clipboardTop.setAttribute('rx', '1');
+                
+                symbolGroup.appendChild(clipboardBase);
+                symbolGroup.appendChild(clipboardTop);
+                break;
+                
+            case 'delete_sequence':
+                // Trash/delete symbol
+                const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                trashBase.setAttribute('x', centerX - symbolSize/3);
+                trashBase.setAttribute('y', centerY - symbolSize/4);
+                trashBase.setAttribute('width', symbolSize * 0.6);
+                trashBase.setAttribute('height', symbolSize * 0.6);
+                trashBase.setAttribute('fill', 'none');
+                trashBase.setAttribute('stroke', '#ffffff');
+                trashBase.setAttribute('stroke-width', '1.5');
+                trashBase.setAttribute('rx', '1');
+                
+                const trashLid = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                trashLid.setAttribute('x1', centerX - symbolSize/2);
+                trashLid.setAttribute('y1', centerY - symbolSize/4);
+                trashLid.setAttribute('x2', centerX + symbolSize/2);
+                trashLid.setAttribute('y2', centerY - symbolSize/4);
+                trashLid.setAttribute('stroke', '#ffffff');
+                trashLid.setAttribute('stroke-width', '1.5');
+                
+                const trashHandle = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                trashHandle.setAttribute('x1', centerX - symbolSize/6);
+                trashHandle.setAttribute('y1', centerY - symbolSize/2);
+                trashHandle.setAttribute('x2', centerX + symbolSize/6);
+                trashHandle.setAttribute('y2', centerY - symbolSize/2);
+                trashHandle.setAttribute('stroke', '#ffffff');
+                trashHandle.setAttribute('stroke-width', '1.5');
+                
+                symbolGroup.appendChild(trashBase);
+                symbolGroup.appendChild(trashLid);
+                symbolGroup.appendChild(trashHandle);
+                break;
+                
+            case 'insert_sequence':
+                // Plus/insert symbol
+                const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                plusH.setAttribute('x1', centerX - symbolSize/3);
+                plusH.setAttribute('y1', centerY);
+                plusH.setAttribute('x2', centerX + symbolSize/3);
+                plusH.setAttribute('y2', centerY);
+                plusH.setAttribute('stroke', '#ffffff');
+                plusH.setAttribute('stroke-width', '2');
+                plusH.setAttribute('stroke-linecap', 'round');
+                
+                const plusV = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                plusV.setAttribute('x1', centerX);
+                plusV.setAttribute('y1', centerY - symbolSize/3);
+                plusV.setAttribute('x2', centerX);
+                plusV.setAttribute('y2', centerY + symbolSize/3);
+                plusV.setAttribute('stroke', '#ffffff');
+                plusV.setAttribute('stroke-width', '2');
+                plusV.setAttribute('stroke-linecap', 'round');
+                
+                symbolGroup.appendChild(plusH);
+                symbolGroup.appendChild(plusV);
+                break;
+                
+            case 'replace_sequence':
+                // Refresh/replace symbol
+                symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const replacePath = `
+                    M ${centerX - symbolSize/3} ${centerY}
+                    A ${symbolSize/3} ${symbolSize/3} 0 1 1 ${centerX + symbolSize/3} ${centerY}
+                    M ${centerX + symbolSize/4} ${centerY - symbolSize/6}
+                    L ${centerX + symbolSize/3} ${centerY}
+                    L ${centerX + symbolSize/4} ${centerY + symbolSize/6}
+                `;
+                symbolPath.setAttribute('d', replacePath);
+                symbolPath.setAttribute('stroke', '#ffffff');
+                symbolPath.setAttribute('stroke-width', '1.5');
+                symbolPath.setAttribute('fill', 'none');
+                symbolPath.setAttribute('stroke-linecap', 'round');
+                symbolGroup.appendChild(symbolPath);
+                break;
+                
+            default:
+                // Default: simple dot
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', centerY);
+                circle.setAttribute('r', symbolSize/4);
+                circle.setAttribute('fill', '#ffffff');
+                symbolGroup.appendChild(circle);
+                break;
+        }
+        
+        return symbolGroup;
     }
 
     /**
