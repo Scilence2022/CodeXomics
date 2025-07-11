@@ -83,9 +83,18 @@ class ActionManager {
             }
         };
         
-        // Try to setup listeners immediately, and also retry after a delay
+        // Try to setup listeners immediately, and also retry after a delay if needed
         setupListeners();
-        setTimeout(setupListeners, 1000);
+        // Only retry if listeners weren't set up successfully the first time
+        setTimeout(() => {
+            // Check if at least one button exists before retrying
+            if (!document.getElementById('copySequenceBtn') && 
+                !document.getElementById('cutSequenceBtn') && 
+                !document.getElementById('pasteSequenceBtn') && 
+                !document.getElementById('deleteSequenceBtn')) {
+                setupListeners();
+            }
+        }, 1000);
         
         // Action List modal listeners
         document.getElementById('executeAllActionsBtn')?.addEventListener('click', () => this.executeAllActions());
@@ -224,11 +233,20 @@ class ActionManager {
             return;
         }
         
+        console.log('🔍 [ActionManager] Paste sequence debug:', {
+            clipboard: this.clipboard,
+            cursorPosition: this.cursorPosition,
+            currentChromosome: this.genomeBrowser.currentChromosome,
+            selectedChromosome: this.genomeBrowser.selectedChromosome,
+            currentSequence: this.genomeBrowser.currentSequence ? Object.keys(this.genomeBrowser.currentSequence) : null
+        });
+        
         // Check if we have an active selection
         const selectionInfo = this.getActiveSelection();
+        console.log('🔍 [ActionManager] Selection info:', selectionInfo);
         
         if (selectionInfo && selectionInfo.hasSelection) {
-            // If selection exists, create REPLACE action
+            // If selection exists, create PASTE action for replace
             const target = `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`;
             const metadata = {
                 chromosome: selectionInfo.chromosome,
@@ -236,27 +254,32 @@ class ActionManager {
                 end: selectionInfo.end,
                 strand: selectionInfo.strand || '+',
                 clipboardData: this.clipboard,
-                newSequence: this.clipboard.sequence,
                 selectionSource: selectionInfo.source
             };
             
             this.addAction(
-                this.ACTION_TYPES.REPLACE_SEQUENCE,
+                this.ACTION_TYPES.PASTE_SEQUENCE,
                 target,
-                `Replace ${selectionInfo.end - selectionInfo.start + 1} bp with ${this.clipboard.sequence.length} bp from clipboard`,
+                `Paste ${this.clipboard.sequence.length} bp to replace ${selectionInfo.end - selectionInfo.start + 1} bp in ${selectionInfo.name}`,
                 metadata
             );
             
             this.genomeBrowser.showNotification(
-                `Replace action queued: ${selectionInfo.name} with ${this.clipboard.sequence.length} bp`, 
+                `Paste-replace action queued: ${selectionInfo.name} with ${this.clipboard.sequence.length} bp`, 
                 'success'
             );
             return;
         }
         
         // If we have a cursor position but no selection, use it for INSERT
-        if (this.cursorPosition > 0) {
-            const chromosome = this.genomeBrowser.currentChromosome;
+        if (this.cursorPosition >= 0 && !isNaN(this.cursorPosition)) {
+            // Try to get chromosome from various sources
+            const chromosome = this.genomeBrowser.currentChromosome || 
+                              this.genomeBrowser.selectedChromosome ||
+                              (this.genomeBrowser.currentSequence && Object.keys(this.genomeBrowser.currentSequence)[0]);
+            
+            console.log('🔍 [ActionManager] Cursor position valid, chromosome:', chromosome);
+            
             if (chromosome) {
                 const target = `${chromosome}:${this.cursorPosition}`;
                 const metadata = { 
@@ -264,18 +287,17 @@ class ActionManager {
                     start: this.cursorPosition, 
                     end: this.cursorPosition, 
                     strand: '+',
-                    clipboardData: this.clipboard,
-                    insertSequence: this.clipboard.sequence
+                    clipboardData: this.clipboard
                 };
                 
                 this.addAction(
-                    this.ACTION_TYPES.INSERT_SEQUENCE,
+                    this.ACTION_TYPES.PASTE_SEQUENCE,
                     target,
-                    `Insert ${this.clipboard.sequence.length} bp at cursor position ${this.cursorPosition}`,
+                    `Paste ${this.clipboard.sequence.length} bp at cursor position ${this.cursorPosition}`,
                     metadata
                 );
                 
-                this.genomeBrowser.showNotification(`Insert action queued at cursor position ${this.cursorPosition}`, 'success');
+                this.genomeBrowser.showNotification(`Paste-insert action queued at cursor position ${this.cursorPosition}`, 'success');
                 return;
             }
         }
