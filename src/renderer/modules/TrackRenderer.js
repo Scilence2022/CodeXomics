@@ -4966,8 +4966,8 @@ class TrackRenderer {
             return track;
         }
         
-        // Filter actions that have position information
-        const visibleActions = actionManager.actions.filter(action => {
+        // Filter actions that have position information for current chromosome
+        const chromosomeActions = actionManager.actions.filter(action => {
             // Only show actions with position information
             if (!action.target || !action.details) return false;
             
@@ -4976,17 +4976,30 @@ class TrackRenderer {
             if (!positionMatch) return false;
             
             const actionChr = positionMatch[1];
+            
+            // Show all actions for current chromosome (not limited to viewport)
+            return actionChr === chromosome;
+        });
+        
+        // Separate actions into in-view and out-of-view
+        const visibleActions = chromosomeActions.filter(action => {
+            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
             const actionStart = parseInt(positionMatch[2]);
             const actionEnd = parseInt(positionMatch[3]);
             
-            // Only show actions for current chromosome that are in viewport
-            return actionChr === chromosome && 
-                   actionEnd >= viewport.start && 
-                   actionStart <= viewport.end;
+            return actionEnd >= viewport.start && actionStart <= viewport.end;
         });
         
-        if (visibleActions.length === 0) {
-            // Check if there are actions but they just don't have position info or are outside current view
+        const outOfViewActions = chromosomeActions.filter(action => {
+            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            const actionStart = parseInt(positionMatch[2]);
+            const actionEnd = parseInt(positionMatch[3]);
+            
+            return !(actionEnd >= viewport.start && actionStart <= viewport.end);
+        });
+        
+        if (chromosomeActions.length === 0) {
+            // No actions for this chromosome at all
             const totalActions = actionManager.actions.length;
             const actionsWithPosition = actionManager.actions.filter(action => {
                 return action.target && action.target.match(/(\w+):(\d+)-(\d+)/);
@@ -4998,10 +5011,10 @@ class TrackRenderer {
             } else if (actionsWithPosition === 0) {
                 message = `${totalActions} action(s) in queue. Open Action List to view and manage actions.`;
             } else {
-                message = `No actions visible in current region. ${actionsWithPosition} positioned action(s) available.`;
+                message = `No actions for chromosome ${chromosome}. ${actionsWithPosition} positioned action(s) on other chromosomes.`;
             }
             
-            const noDataMsg = this.createNoDataMessage(message, 'no-actions-visible-message');
+            const noDataMsg = this.createNoDataMessage(message, 'no-actions-message');
             trackContent.appendChild(noDataMsg);
             return track;
         }
@@ -5009,34 +5022,58 @@ class TrackRenderer {
         // Get track settings
         const settings = this.getActionTrackSettings();
         
-        // Arrange actions in rows to prevent overlap
-        const actionRows = this.arrangeActionsInRows(visibleActions, viewport.start, viewport.end, settings);
-        
-        // Calculate layout
-        const layout = this.calculateActionTrackLayout(actionRows, settings);
-        
-        // Set calculated height
-        trackContent.style.height = `${Math.max(layout.totalHeight, 80)}px`;
-        
-        // Create unified container for all action track elements
-        const unifiedContainer = document.createElement('div');
-        unifiedContainer.className = 'unified-actions-container';
-        unifiedContainer.style.cssText = `
+        // Create main container for all action elements
+        const mainContainer = document.createElement('div');
+        mainContainer.className = 'actions-track-container';
+        mainContainer.style.cssText = `
             position: relative;
             width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         `;
         
-        // Create SVG-based action visualization
-        this.renderActionElementsSVG(unifiedContainer, actionRows, viewport, layout, settings);
+        // Handle in-view actions
+        if (visibleActions.length > 0) {
+            // Arrange visible actions in rows to prevent overlap
+            const actionRows = this.arrangeActionsInRows(visibleActions, viewport.start, viewport.end, settings);
+            
+            // Calculate layout
+            const layout = this.calculateActionTrackLayout(actionRows, settings);
+            
+            // Create container for visible actions
+            const visibleContainer = document.createElement('div');
+            visibleContainer.className = 'visible-actions-container';
+            visibleContainer.style.cssText = `
+                position: relative;
+                width: 100%;
+                height: ${Math.max(layout.totalHeight, 60)}px;
+            `;
+            
+            // Create SVG-based action visualization for visible actions
+            this.renderActionElementsSVG(visibleContainer, actionRows, viewport, layout, settings);
+            
+            mainContainer.appendChild(visibleContainer);
+        }
         
-        // Add the unified container to trackContent
-        trackContent.appendChild(unifiedContainer);
+        // Handle out-of-view actions
+        if (outOfViewActions.length > 0) {
+            const outOfViewContainer = this.createOutOfViewActionsSection(outOfViewActions, viewport, chromosome);
+            mainContainer.appendChild(outOfViewContainer);
+        }
+        
+        // Set container height and add to track
+        const totalHeight = Math.max(mainContainer.scrollHeight, 80);
+        trackContent.style.height = `${totalHeight}px`;
+        trackContent.appendChild(mainContainer);
         
         // Add statistics
-        const statsText = `${visibleActions.length} actions visible`;
+        let statsText;
+        if (outOfViewActions.length > 0) {
+            statsText = `${visibleActions.length} in view, ${outOfViewActions.length} out of view`;
+        } else {
+            statsText = `${visibleActions.length} actions visible`;
+        }
         const statsElement = this.createStatsElement(statsText, 'actions-track-stats');
         trackContent.appendChild(statsElement);
         
@@ -5044,6 +5081,164 @@ class TrackRenderer {
         this.restoreHeaderState(track, 'actions');
         
         return track;
+    }
+
+    /**
+     * Create section for out-of-view actions with navigation options
+     */
+    createOutOfViewActionsSection(outOfViewActions, viewport, chromosome) {
+        const container = document.createElement('div');
+        container.className = 'out-of-view-actions-section';
+        container.style.cssText = `
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-top: 4px;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            font-weight: 600;
+            font-size: 12px;
+            color: #495057;
+            margin-bottom: 6px;
+        `;
+        header.textContent = `${outOfViewActions.length} action(s) outside current view:`;
+        container.appendChild(header);
+        
+        // Actions list
+        outOfViewActions.forEach((action, index) => {
+            const actionElement = this.createOutOfViewActionItem(action, viewport, chromosome);
+            container.appendChild(actionElement);
+        });
+        
+        return container;
+    }
+    
+    /**
+     * Create individual action item for out-of-view actions
+     */
+    createOutOfViewActionItem(action, viewport, chromosome) {
+        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        const actionStart = parseInt(positionMatch[2]);
+        const actionEnd = parseInt(positionMatch[3]);
+        const actionLength = actionEnd - actionStart + 1;
+        
+        const item = document.createElement('div');
+        item.className = 'out-of-view-action-item';
+        item.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            margin-bottom: 2px;
+            background: white;
+            border-radius: 3px;
+            font-size: 11px;
+            border-left: 3px solid ${this.getActionTypeColor(action.type)};
+        `;
+        
+        // Action info
+        const info = document.createElement('div');
+        info.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        `;
+        
+        const actionName = document.createElement('div');
+        actionName.style.cssText = `
+            font-weight: 600;
+            color: #212529;
+        `;
+        actionName.textContent = `${action.type.replace('_', ' ').toUpperCase()}`;
+        
+        const position = document.createElement('div');
+        position.style.cssText = `
+            color: #6c757d;
+            font-size: 10px;
+        `;
+        position.textContent = `${actionStart.toLocaleString()}-${actionEnd.toLocaleString()} (${actionLength.toLocaleString()} bp)`;
+        
+        info.appendChild(actionName);
+        info.appendChild(position);
+        
+        // Navigation button
+        const navButton = document.createElement('button');
+        navButton.className = 'btn btn-sm';
+        navButton.style.cssText = `
+            padding: 2px 6px;
+            font-size: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 8px;
+        `;
+        navButton.textContent = 'Go to';
+        navButton.title = `Navigate to ${action.target}`;
+        
+        // Add click handler for navigation
+        navButton.addEventListener('click', () => {
+            this.navigateToAction(action, chromosome);
+        });
+        
+        item.appendChild(info);
+        item.appendChild(navButton);
+        
+        return item;
+    }
+    
+    /**
+     * Navigate to an action's position
+     */
+    navigateToAction(action, chromosome) {
+        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        if (!positionMatch) return;
+        
+        const actionStart = parseInt(positionMatch[2]);
+        const actionEnd = parseInt(positionMatch[3]);
+        const center = Math.floor((actionStart + actionEnd) / 2);
+        
+        // Calculate a reasonable view range around the action
+        const actionLength = actionEnd - actionStart + 1;
+        const viewRange = Math.max(actionLength * 5, 10000); // Show at least 10kb or 5x action length
+        const newStart = Math.max(1, center - Math.floor(viewRange / 2));
+        const newEnd = center + Math.floor(viewRange / 2);
+        
+        console.log(`🎯 Navigating to action at ${action.target}`);
+        
+        // Use genome browser's navigation functionality
+        if (this.genomeBrowser && this.genomeBrowser.navigateToPosition) {
+            this.genomeBrowser.navigateToPosition(chromosome, newStart, newEnd);
+        } else {
+            // Fallback: update position and refresh view
+            this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+            const sequence = this.genomeBrowser.currentSequence[chromosome];
+            if (sequence) {
+                this.genomeBrowser.displayGenomeView(chromosome, sequence);
+            }
+        }
+    }
+    
+    /**
+     * Get color for action type
+     */
+    getActionTypeColor(actionType) {
+        const colors = {
+            'copy_sequence': '#28a745',
+            'cut_sequence': '#dc3545', 
+            'paste_sequence': '#17a2b8',
+            'delete_sequence': '#fd7e14',
+            'insert_sequence': '#6f42c1',
+            'replace_sequence': '#20c997',
+            'sequence_edit': '#6c757d'
+        };
+        return colors[actionType] || '#6c757d';
     }
 
     /**
