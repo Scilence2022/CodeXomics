@@ -1036,18 +1036,28 @@ class ActionManager {
             return;
         }
         
+        // Create a deep copy of the entire action list for execution
+        const originalActions = this.actions;
+        const executionActionsCopy = JSON.parse(JSON.stringify(this.actions));
+        
+        // Work with the copied action list during execution
+        this.actions = executionActionsCopy;
+        const pendingActionsCopy = this.actions.filter(action => action.status === this.STATUS.PENDING);
+        
+        console.log(`🔄 [ActionManager] Created execution copy with ${executionActionsCopy.length} actions (${pendingActionsCopy.length} pending)`);
+        
         this.isExecuting = true;
-        this.showExecutionProgress(0, pendingActions.length);
+        this.showExecutionProgress(0, pendingActionsCopy.length);
         
         try {
-            for (let i = 0; i < pendingActions.length; i++) {
-                const action = pendingActions[i];
+            for (let i = 0; i < pendingActionsCopy.length; i++) {
+                const action = pendingActionsCopy[i];
                 await this.executeAction(action);
                 
-                // After executing this action, adjust positions of all remaining pending actions
+                // After executing this action, adjust positions of all remaining pending actions in the copy
                 this.adjustPendingActionPositions(action, i + 1);
                 
-                this.showExecutionProgress(i + 1, pendingActions.length);
+                this.showExecutionProgress(i + 1, pendingActionsCopy.length);
                 this.updateActionListUI();
                 
                 // Small delay between actions
@@ -1056,13 +1066,24 @@ class ActionManager {
             
             this.genomeBrowser.showNotification('All actions executed successfully', 'success');
             
+            // Update the original action list with the execution results
+            console.log(`✅ [ActionManager] Execution successful, updating original action list`);
+            
             // Generate and prompt to save GBK file after successful action execution
             await this.generateAndSaveGBK();
             
         } catch (error) {
             console.error('Error executing actions:', error);
             this.genomeBrowser.showNotification('Error executing actions', 'error');
+            
+            // Restore the original action list on failure
+            console.log(`❌ [ActionManager] Execution failed, restoring original action list`);
+            this.actions = originalActions;
+            
         } finally {
+            // If execution was successful, the copied actions are already in this.actions
+            // If execution failed, we've restored originalActions above
+            
             this.isExecuting = false;
             this.hideExecutionProgress();
             this.updateActionListUI();
@@ -2305,14 +2326,62 @@ class ActionManager {
                 const adjustedFeatures = this.adjustFeaturePositions(chr, this.genomeBrowser.currentAnnotations[chr] || []);
                 const features = adjustedFeatures;
                 
+                // Get executed actions for modification history
+                const executedActions = this.actions.filter(action => action.status === this.STATUS.COMPLETED);
+                const relevantActions = executedActions.filter(action => 
+                    action.metadata && action.metadata.chromosome === chr
+                );
+                
                 // GenBank header
                 genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
-                genbankContent += `DEFINITION  ${chr} - Modified with sequence actions\n`;
+                genbankContent += `DEFINITION  ${chr} - Modified with sequence actions (${relevantActions.length} modifications)\n`;
                 genbankContent += `ACCESSION   ${chr}\n`;
                 genbankContent += `VERSION     ${chr}\n`;
-                genbankContent += `KEYWORDS    .\n`;
+                genbankContent += `KEYWORDS    genome editing, sequence modification, action execution\n`;
                 genbankContent += `SOURCE      .\n`;
                 genbankContent += `  ORGANISM  .\n`;
+                
+                // Add modification history as comments
+                if (relevantActions.length > 0) {
+                    genbankContent += `COMMENT     MODIFICATION HISTORY:\n`;
+                    genbankContent += `COMMENT     This sequence has been modified using Genome AI Studio Action Manager.\n`;
+                    genbankContent += `COMMENT     Total modifications: ${relevantActions.length}\n`;
+                    genbankContent += `COMMENT     Export timestamp: ${new Date().toISOString()}\n`;
+                    genbankContent += `COMMENT     \n`;
+                    
+                    relevantActions.forEach((action, index) => {
+                        genbankContent += `COMMENT     Modification ${index + 1}:\n`;
+                        genbankContent += `COMMENT       Action ID: ${action.id}\n`;
+                        genbankContent += `COMMENT       Type: ${action.type}\n`;
+                        genbankContent += `COMMENT       Target: ${action.target}\n`;
+                        genbankContent += `COMMENT       Description: ${action.details || 'N/A'}\n`;
+                        genbankContent += `COMMENT       Executed: ${action.executionEnd ? new Date(action.executionEnd).toISOString() : 'N/A'}\n`;
+                        genbankContent += `COMMENT       Duration: ${action.actualTime ? action.actualTime + 'ms' : 'N/A'}\n`;
+                        
+                        // Add specific details based on action type
+                        if (action.metadata) {
+                            if (action.metadata.start && action.metadata.end) {
+                                genbankContent += `COMMENT       Position: ${action.metadata.start}-${action.metadata.end}\n`;
+                                genbankContent += `COMMENT       Length: ${action.metadata.end - action.metadata.start + 1} bp\n`;
+                            }
+                            if (action.metadata.strand) {
+                                genbankContent += `COMMENT       Strand: ${action.metadata.strand}\n`;
+                            }
+                        }
+                        
+                        // Add result information if available
+                        if (action.result) {
+                            if (action.result.sequenceLength) {
+                                genbankContent += `COMMENT       Sequence length: ${action.result.sequenceLength} bp\n`;
+                            }
+                            if (action.result.featuresCount !== undefined) {
+                                genbankContent += `COMMENT       Affected features: ${action.result.featuresCount}\n`;
+                            }
+                        }
+                        
+                        genbankContent += `COMMENT     \n`;
+                    });
+                }
                 genbankContent += `FEATURES             Location/Qualifiers\n`;
                 genbankContent += `     source          1..${sequence.length}\n`;
                 
