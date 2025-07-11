@@ -503,6 +503,7 @@ class GenomeBrowser {
         document.getElementById('trackWIG').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackActions').addEventListener('change', () => this.updateVisibleTracks());
 
         // Sidebar track controls
         document.getElementById('sidebarTrackGenes').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
@@ -512,6 +513,7 @@ class GenomeBrowser {
         document.getElementById('sidebarTrackWIG').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackActions').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
 
         // Panel close buttons
         document.querySelectorAll('.close-panel-btn').forEach(btn => {
@@ -2638,6 +2640,27 @@ class GenomeBrowser {
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
         }
+    }
+
+    // Helper method to programmatically enable Actions track
+    enableActionsTrack() {
+        // Add to visible tracks
+        this.visibleTracks.add('actions');
+        
+        // Update checkboxes to reflect the change
+        const trackActions = document.getElementById('trackActions');
+        const sidebarTrackActions = document.getElementById('sidebarTrackActions');
+        
+        if (trackActions) trackActions.checked = true;
+        if (sidebarTrackActions) sidebarTrackActions.checked = true;
+        
+        // Refresh the display to show the track
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
+            this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+        }
+        
+        console.log('✅ Actions track enabled and displayed');
     }
 
     // Gene filter methods

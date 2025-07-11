@@ -962,6 +962,12 @@ class ActionManager {
      * Show action list modal
      */
     showActionList() {
+        // Enable Actions track if not already visible
+        if (!this.genomeBrowser.visibleTracks.has('actions')) {
+            console.log('🎯 Enabling Actions track for Action List display');
+            this.genomeBrowser.enableActionsTrack();
+        }
+        
         this.updateActionListUI();
         const modal = document.getElementById('actionListModal');
         if (modal) {

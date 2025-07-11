@@ -4986,10 +4986,22 @@ class TrackRenderer {
         });
         
         if (visibleActions.length === 0) {
-            const noDataMsg = this.createNoDataMessage(
-                'No actions visible in current region.',
-                'no-actions-visible-message'
-            );
+            // Check if there are actions but they just don't have position info or are outside current view
+            const totalActions = actionManager.actions.length;
+            const actionsWithPosition = actionManager.actions.filter(action => {
+                return action.target && action.target.match(/(\w+):(\d+)-(\d+)/);
+            }).length;
+            
+            let message;
+            if (totalActions === 0) {
+                message = 'No actions in queue. Use the Action menu to add sequence operations.';
+            } else if (actionsWithPosition === 0) {
+                message = `${totalActions} action(s) in queue. Open Action List to view and manage actions.`;
+            } else {
+                message = `No actions visible in current region. ${actionsWithPosition} positioned action(s) available.`;
+            }
+            
+            const noDataMsg = this.createNoDataMessage(message, 'no-actions-visible-message');
             trackContent.appendChild(noDataMsg);
             return track;
         }
