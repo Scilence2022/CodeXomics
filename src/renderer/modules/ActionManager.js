@@ -201,10 +201,29 @@ class ActionManager {
     /**
      * Handle copy sequence action
      */
-    handleCopySequence() {
+    async handleCopySequence() {
         // Try to create action directly from current selections
         const selectionInfo = this.getActiveSelection();
         if (selectionInfo && selectionInfo.hasSelection) {
+            // Immediately get sequence and set clipboard for copy
+            const sequence = await this.getSequenceForRegion(
+                selectionInfo.chromosome, 
+                selectionInfo.start, 
+                selectionInfo.end, 
+                selectionInfo.strand
+            );
+            
+            if (sequence) {
+                this.clipboard = {
+                    type: 'copy',
+                    sequence: sequence,
+                    source: `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`,
+                    timestamp: new Date(),
+                    sourceInfo: selectionInfo
+                };
+                console.log('📋 [ActionManager] Clipboard set for copy:', this.clipboard);
+            }
+            
             this.createActionFromSelection('copy', selectionInfo);
         } else {
             this.showSequenceSelectionModal('copy');
@@ -214,10 +233,29 @@ class ActionManager {
     /**
      * Handle cut sequence action
      */
-    handleCutSequence() {
+    async handleCutSequence() {
         // Try to create action directly from current selections
         const selectionInfo = this.getActiveSelection();
         if (selectionInfo && selectionInfo.hasSelection) {
+            // Immediately get sequence and set clipboard for cut
+            const sequence = await this.getSequenceForRegion(
+                selectionInfo.chromosome, 
+                selectionInfo.start, 
+                selectionInfo.end, 
+                selectionInfo.strand
+            );
+            
+            if (sequence) {
+                this.clipboard = {
+                    type: 'cut',
+                    sequence: sequence,
+                    source: `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`,
+                    timestamp: new Date(),
+                    sourceInfo: selectionInfo
+                };
+                console.log('📋 [ActionManager] Clipboard set for cut:', this.clipboard);
+            }
+            
             this.createActionFromSelection('cut', selectionInfo);
         } else {
             this.showSequenceSelectionModal('cut');
@@ -866,6 +904,18 @@ class ActionManager {
         try {
             switch (this.currentOperation) {
                 case 'copy':
+                    // Get sequence and set clipboard immediately for copy
+                    const copySequence = await this.getSequenceForRegion(chromosome, start, end, strand);
+                    if (copySequence) {
+                        this.clipboard = {
+                            type: 'copy',
+                            sequence: copySequence,
+                            source: target,
+                            timestamp: new Date()
+                        };
+                        console.log('📋 [ActionManager] Clipboard set for copy (modal):', this.clipboard);
+                    }
+                    
                     this.addAction(
                         this.ACTION_TYPES.COPY_SEQUENCE,
                         target,
@@ -875,6 +925,18 @@ class ActionManager {
                     break;
                     
                 case 'cut':
+                    // Get sequence and set clipboard immediately for cut
+                    const cutSequence = await this.getSequenceForRegion(chromosome, start, end, strand);
+                    if (cutSequence) {
+                        this.clipboard = {
+                            type: 'cut',
+                            sequence: cutSequence,
+                            source: target,
+                            timestamp: new Date()
+                        };
+                        console.log('📋 [ActionManager] Clipboard set for cut (modal):', this.clipboard);
+                    }
+                    
                     this.addAction(
                         this.ACTION_TYPES.CUT_SEQUENCE,
                         target,
@@ -1416,13 +1478,11 @@ class ActionManager {
         // Collect comprehensive data including features, annotations, and metadata
         const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
         
-        this.clipboard = {
-            type: 'copy',
-            sequence: sequence,
-            source: action.target,
-            timestamp: new Date(),
-            comprehensiveData: comprehensiveData
-        };
+        // Clipboard should already be set when the action was created
+        // Update it with comprehensive data if needed
+        if (this.clipboard && this.clipboard.sequence === sequence) {
+            this.clipboard.comprehensiveData = comprehensiveData;
+        }
         
         return {
             operation: 'copy',
@@ -1444,12 +1504,16 @@ class ActionManager {
             throw new Error('Unable to retrieve sequence for cutting');
         }
         
-        this.clipboard = {
-            type: 'cut',
-            sequence: sequence,
-            source: action.target,
-            timestamp: new Date()
-        };
+        // Clipboard should already be set when the action was created
+        // Just verify it exists
+        if (!this.clipboard || this.clipboard.sequence !== sequence) {
+            this.clipboard = {
+                type: 'cut',
+                sequence: sequence,
+                source: action.target,
+                timestamp: new Date()
+            };
+        }
         
         // Record the sequence modification (cut is essentially a delete)
         this.recordSequenceModification(chromosome, {

@@ -224,43 +224,6 @@
                 </div>
             </div>
             <div class="toolbar-section">
-                <label>Show Features:</label>
-                <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-filter"></i>
-                </button>
-                <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showGenes"> Genes
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showCDS" checked> CDS
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showMRNA" checked> mRNA
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showTRNA" checked> tRNA
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showRRNA" checked> rRNA
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showPromoter" checked> Promoters
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showTerminator" checked> Terminators
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showRegulatory" checked> Regulatory
-                    </label>
-                    <label class="feature-checkbox">
-                        <input type="checkbox" id="showOther" checked> Other Features
-                    </label>
-                </div>
-            </div>
-            
-            <div class="toolbar-section">
-                <label>Actions:</label>
                 <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Actions">
                     <i class="fas fa-cut"></i>
                     <span>Actions</span>
@@ -326,10 +289,45 @@
             </div>
             
             <div class="toolbar-section">
-                <label>Add Features:</label>
+                <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-filter"></i>
+                </button>
+                <span class="toolbar-text">Features</span>
+                <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showGenes"> Genes
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showCDS" checked> CDS
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showMRNA" checked> mRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showTRNA" checked> tRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showRRNA" checked> rRNA
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showPromoter" checked> Promoters
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showTerminator" checked> Terminators
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showRegulatory" checked> Regulatory
+                    </label>
+                    <label class="feature-checkbox">
+                        <input type="checkbox" id="showOther" checked> Other Features
+                    </label>
+                </div>
+            </div>
+            
+            <div class="toolbar-section">
                 <button id="addFeaturesBtn" class="btn btn-sm toggle-btn" title="Add Features">
                     <i class="fas fa-plus"></i>
-                    <span>Add</span>
+                    <span>Add Features</span>
                 </button>
                 <div class="add-features-dropdown" id="addFeaturesDropdown" style="display: none;">
                     <div class="dropdown-section">

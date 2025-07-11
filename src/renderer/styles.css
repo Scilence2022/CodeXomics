@@ -184,6 +184,14 @@ body {
     white-space: nowrap;
 }
 
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
 /* MCP Server Controls in Header */
 .mcp-server-controls {
     display: flex;
@@ -4639,6 +4647,14 @@ body {
     font-weight: 500;
     color: #495057;
     white-space: nowrap;
+}
+
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
 }
 
 /* MCP Server Controls in Header */
@@ -11900,6 +11916,14 @@ body {
     white-space: nowrap;
 }
 
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
 /* MCP Server Controls in Header */
 .mcp-server-controls {
     display: flex;
@@ -15866,6 +15890,14 @@ body {
     font-weight: 500;
     color: #495057;
     white-space: nowrap;
+}
+
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
 }
 
 /* MCP Server Controls in Header */
@@ -32985,8 +33017,8 @@ path.svg-gene-element.selected {
 }
 
 .action-list-content {
-    min-height: 200px;
-    max-height: 400px;
+    min-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
