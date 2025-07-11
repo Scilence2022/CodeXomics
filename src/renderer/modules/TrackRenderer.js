@@ -5316,16 +5316,57 @@ class TrackRenderer {
         const gradientId = `action-gradient-${action.id}`;
         const gradient = this.createSVGActionGradient(defs, gradientId, actionColor);
 
-        // Create action shape
-        const actionShape = this.createSVGActionShape(action, elementWidth, elementHeight, gradientId);
-        actionGroup.appendChild(actionShape);
-
-        // Add action text label if there's enough space
+        // Create action layout with separate symbol and text areas
         if (elementWidth > 30) {
-            const actionText = this.createSVGActionText(action, elementWidth, elementHeight, settings);
-            if (actionText) {
-                actionGroup.appendChild(actionText);
+            // Calculate layout dimensions
+            const symbolWidth = Math.min(elementHeight, 20); // Square symbol area
+            const textWidth = elementWidth - symbolWidth - 2; // Remaining space for text with 2px gap
+            
+            // Create background rectangle
+            const backgroundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            backgroundRect.setAttribute('x', '0');
+            backgroundRect.setAttribute('y', '0');
+            backgroundRect.setAttribute('width', elementWidth);
+            backgroundRect.setAttribute('height', elementHeight);
+            backgroundRect.setAttribute('rx', '3');
+            backgroundRect.setAttribute('ry', '3');
+            backgroundRect.setAttribute('fill', `url(#${gradientId})`);
+            backgroundRect.setAttribute('stroke', this.getActionColor(action));
+            backgroundRect.setAttribute('stroke-width', '1');
+            backgroundRect.setAttribute('class', `action-${action.type.toLowerCase().replace('_', '-')}`);
+
+            // Add status-based styling to background
+            if (action.status === 'executing') {
+                backgroundRect.setAttribute('stroke-width', '2');
+                backgroundRect.setAttribute('stroke-dasharray', '3,3');
+            } else if (action.status === 'completed') {
+                backgroundRect.setAttribute('opacity', '0.7');
+            } else if (action.status === 'failed') {
+                backgroundRect.setAttribute('stroke', '#ef4444');
+                backgroundRect.setAttribute('stroke-width', '2');
             }
+            
+            actionGroup.appendChild(backgroundRect);
+            
+            // Create symbol in left area
+            if (symbolWidth >= 12) {
+                const symbolGroup = this.createActionSymbol(action.type, symbolWidth, elementHeight);
+                if (symbolGroup) {
+                    actionGroup.appendChild(symbolGroup);
+                }
+            }
+            
+            // Create text in right area
+            if (textWidth > 20) {
+                const actionText = this.createSVGActionText(action, textWidth, elementHeight, settings, symbolWidth + 2);
+                if (actionText) {
+                    actionGroup.appendChild(actionText);
+                }
+            }
+        } else {
+            // For narrow elements, use the original single shape approach
+            const actionShape = this.createSVGActionShape(action, elementWidth, elementHeight, gradientId);
+            actionGroup.appendChild(actionShape);
         }
 
         // Add interaction handlers
@@ -5619,7 +5660,7 @@ class TrackRenderer {
     /**
      * Create action text label
      */
-    createSVGActionText(action, width, height, settings) {
+    createSVGActionText(action, width, height, settings, xOffset = 0) {
         const actionName = this.getActionDisplayName(action);
         const baseFontSize = settings?.fontSize || 10;
         const fontSize = Math.max(8, Math.min(baseFontSize, height * 0.6));
@@ -5637,9 +5678,19 @@ class TrackRenderer {
         textGroup.setAttribute('class', 'svg-action-text-protected');
         
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', width / 2);
+        
+        // Position text based on whether there's an offset (separate symbol area)
+        if (xOffset > 0) {
+            // Text area starts at xOffset, use left alignment with some padding
+            text.setAttribute('x', xOffset + 4);
+            text.setAttribute('text-anchor', 'start');
+        } else {
+            // Center text in the full width
+            text.setAttribute('x', width / 2);
+            text.setAttribute('text-anchor', 'middle');
+        }
+        
         text.setAttribute('y', height / 2);
-        text.setAttribute('text-anchor', 'middle');
         text.setAttribute('dominant-baseline', 'central');
         text.setAttribute('font-size', `${fontSize}px`);
         text.setAttribute('font-family', 'Arial, sans-serif');
