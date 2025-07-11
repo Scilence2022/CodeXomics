@@ -1043,6 +1043,10 @@ class ActionManager {
             for (let i = 0; i < pendingActions.length; i++) {
                 const action = pendingActions[i];
                 await this.executeAction(action);
+                
+                // After executing this action, adjust positions of all remaining pending actions
+                this.adjustPendingActionPositions(action, i + 1);
+                
                 this.showExecutionProgress(i + 1, pendingActions.length);
                 this.updateActionListUI();
                 
@@ -1373,6 +1377,180 @@ class ActionManager {
         });
         
         console.log(`📝 [ActionManager] Recorded ${modification.type} modification for ${chromosome}:`, modification);
+    }
+    
+    /**
+     * Adjust positions of pending actions after executing an action
+     */
+    adjustPendingActionPositions(executedAction, startIndex) {
+        console.log(`🔧 [ActionManager] Adjusting pending action positions after executing action: ${executedAction.type}`);
+        
+        // Only adjust if the executed action affects sequence positions
+        if (!this.isPositionAffectingAction(executedAction)) {
+            console.log(`🔧 [ActionManager] Action ${executedAction.type} does not affect positions, skipping adjustment`);
+            return;
+        }
+        
+        const { chromosome, start, end } = executedAction.metadata;
+        let positionShift = 0;
+        
+        // Calculate position shift based on action type
+        switch (executedAction.type) {
+            case this.ACTION_TYPES.DELETE_SEQUENCE:
+            case this.ACTION_TYPES.CUT_SEQUENCE:
+                positionShift = -(end - start + 1); // Negative shift for deletions
+                break;
+                
+            case this.ACTION_TYPES.INSERT_SEQUENCE:
+                const insertLength = executedAction.metadata.insertSequence ? 
+                    executedAction.metadata.insertSequence.length : 
+                    (executedAction.metadata.length || 0);
+                positionShift = insertLength; // Positive shift for insertions
+                break;
+                
+            case this.ACTION_TYPES.REPLACE_SEQUENCE:
+                const originalLength = end - start + 1;
+                const newLength = executedAction.metadata.newSequence ? 
+                    executedAction.metadata.newSequence.length : 
+                    (executedAction.metadata.newLength || originalLength);
+                positionShift = newLength - originalLength; // Net change
+                break;
+                
+            case this.ACTION_TYPES.PASTE_SEQUENCE:
+                // Handle paste-insert vs paste-replace
+                if (executedAction.result && executedAction.result.operation === 'paste-insert') {
+                    const pasteLength = executedAction.metadata.clipboardData ? 
+                        executedAction.metadata.clipboardData.sequence.length : 0;
+                    positionShift = pasteLength;
+                } else if (executedAction.result && executedAction.result.operation === 'paste-replace') {
+                    const originalLength = end - start + 1;
+                    const newLength = executedAction.metadata.clipboardData ? 
+                        executedAction.metadata.clipboardData.sequence.length : 0;
+                    positionShift = newLength - originalLength;
+                }
+                break;
+        }
+        
+        if (positionShift === 0) {
+            console.log(`🔧 [ActionManager] No position shift needed for action ${executedAction.type}`);
+            return;
+        }
+        
+        console.log(`🔧 [ActionManager] Calculated position shift: ${positionShift} for ${chromosome} after position ${start}`);
+        
+        // Adjust all remaining pending actions
+        let adjustedCount = 0;
+        for (let i = startIndex; i < this.actions.length; i++) {
+            const pendingAction = this.actions[i];
+            
+            // Only adjust pending actions
+            if (pendingAction.status !== this.STATUS.PENDING) {
+                continue;
+            }
+            
+            // Only adjust actions on the same chromosome
+            if (pendingAction.metadata.chromosome !== chromosome) {
+                continue;
+            }
+            
+            // Check if the pending action is affected by the executed action
+            const pendingStart = pendingAction.metadata.start || pendingAction.metadata.position;
+            const pendingEnd = pendingAction.metadata.end || pendingStart;
+            
+            // Handle different scenarios based on the executed action type
+            if (executedAction.type === this.ACTION_TYPES.DELETE_SEQUENCE || 
+                executedAction.type === this.ACTION_TYPES.CUT_SEQUENCE) {
+                
+                // Check if pending action is completely within the deleted region
+                if (pendingStart >= start && pendingEnd <= end) {
+                    console.log(`⚠️ [ActionManager] Pending action ${pendingAction.id} is within deleted region, marking as failed`);
+                    pendingAction.status = this.STATUS.FAILED;
+                    pendingAction.failureReason = `Target region was deleted by previous action`;
+                    continue;
+                }
+                
+                // Check if pending action partially overlaps with deleted region
+                if (pendingStart < end && pendingEnd > start) {
+                    console.log(`⚠️ [ActionManager] Pending action ${pendingAction.id} partially overlaps with deleted region, marking as failed`);
+                    pendingAction.status = this.STATUS.FAILED;
+                    pendingAction.failureReason = `Target region partially overlaps with deleted area`;
+                    continue;
+                }
+                
+                // Only adjust positions for actions that come after the deletion
+                if (pendingStart <= start) {
+                    continue; // This action is before the executed action
+                }
+            } else {
+                // For insert/replace actions, only adjust positions that come after
+                if (pendingStart <= start) {
+                    continue; // This action is before the executed action
+                }
+            }
+            
+            // Adjust the pending action's positions
+            const originalTarget = pendingAction.target;
+            const originalDescription = pendingAction.description;
+            
+            if (pendingAction.metadata.start) {
+                pendingAction.metadata.start += positionShift;
+            }
+            if (pendingAction.metadata.end) {
+                pendingAction.metadata.end += positionShift;
+            }
+            if (pendingAction.metadata.position) {
+                pendingAction.metadata.position += positionShift;
+            }
+            
+            // Update target string
+            const newStart = pendingAction.metadata.start || pendingAction.metadata.position;
+            const newEnd = pendingAction.metadata.end || newStart;
+            const strand = pendingAction.metadata.strand || '+';
+            
+            if (pendingAction.metadata.end) {
+                pendingAction.target = `${chromosome}:${newStart}-${newEnd}(${strand})`;
+            } else {
+                pendingAction.target = `${chromosome}:${newStart}`;
+            }
+            
+            // Update description to reflect position change
+            const positionInfo = pendingAction.metadata.end ? 
+                `${newStart}-${newEnd}` : 
+                `${newStart}`;
+            
+            pendingAction.description = pendingAction.description.replace(
+                /\d+(-\d+)?/,
+                positionInfo
+            );
+            
+            console.log(`🔧 [ActionManager] Adjusted pending action ${pendingAction.id}:`, {
+                type: pendingAction.type,
+                oldTarget: originalTarget,
+                newTarget: pendingAction.target,
+                oldDescription: originalDescription,
+                newDescription: pendingAction.description,
+                positionShift: positionShift
+            });
+            
+            adjustedCount++;
+        }
+        
+        console.log(`🔧 [ActionManager] Adjusted ${adjustedCount} pending actions after executing ${executedAction.type}`);
+    }
+    
+    /**
+     * Check if an action type affects sequence positions
+     */
+    isPositionAffectingAction(action) {
+        const positionAffectingTypes = [
+            this.ACTION_TYPES.DELETE_SEQUENCE,
+            this.ACTION_TYPES.CUT_SEQUENCE,
+            this.ACTION_TYPES.INSERT_SEQUENCE,
+            this.ACTION_TYPES.REPLACE_SEQUENCE,
+            this.ACTION_TYPES.PASTE_SEQUENCE
+        ];
+        
+        return positionAffectingTypes.includes(action.type);
     }
     
     /**
@@ -1825,6 +2003,8 @@ class ActionManager {
                 <div class="action-details">${action.details}</div>
                 <div class="action-status">
                     <span class="status-badge ${statusClass}">${action.status}</span>
+                    ${action.status === this.STATUS.FAILED && action.failureReason ? 
+                        `<div class="failure-reason" title="${action.failureReason}">⚠️ ${action.failureReason}</div>` : ''}
                 </div>
                 <div class="action-controls">
                     ${action.status === this.STATUS.PENDING ? `
@@ -2004,6 +2184,13 @@ class ActionManager {
         
         try {
             await this.executeAction(action);
+            
+            // Find the index of the executed action and adjust subsequent pending actions
+            const actionIndex = this.actions.findIndex(a => a.id === actionId);
+            if (actionIndex !== -1) {
+                this.adjustPendingActionPositions(action, actionIndex + 1);
+            }
+            
             this.updateActionListUI();
             this.updateStats();
             this.genomeBrowser.showNotification('Action executed successfully', 'success');

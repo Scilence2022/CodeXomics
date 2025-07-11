@@ -33922,3 +33922,28 @@ path.svg-gene-element.selected {
     margin-top: 4px;
     display: block;
 }
+
+/* Action failure reason styling */
+.failure-reason {
+    font-size: 10px;
+    color: var(--error-color);
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 3px;
+    padding: 2px 4px;
+    margin-top: 2px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-item.failed {
+    background-color: #fef2f2;
+    border-left: 4px solid var(--error-color);
+}
+
+.action-item.failed .action-target {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
