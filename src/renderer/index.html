@@ -191,38 +191,7 @@
                 </button>
                 <button id="resetZoomBtn" class="btn btn-sm">Reset</button>
             </div>
-            <div class="toolbar-section">
-                <label>Tracks:</label>
-                <button id="toggleTracks" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackGC" value="gc" checked> GC Content
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackVariants" value="variants"> VCF Variants
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackReads" value="reads"> Aligned Reads
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackWIG" value="wigTracks"> WIG Tracks
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackProteins" value="proteins"> Proteins
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence
-                    </label>
-                    <label class="track-checkbox">
-                        <input type="checkbox" id="trackActions" value="actions"> Actions
-                    </label>
-                </div>
-            </div>
+
             <div class="toolbar-section">
                 <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Actions">
                     <i class="fas fa-cut"></i>
@@ -287,12 +256,48 @@
                     </div>
                 </div>
             </div>
+
+            <div class="toolbar-section">
+                <!-- <label>Tracks:</label> -->
+                <button id="toggleTracks" class="btn btn-sm toggle-btn">
+                    <i class="fas fa-eye"></i>
+                    <span>Tracks</span>
+                </button>
+                <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackGenes" value="genes" checked> Genes & Features
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackGC" value="gc" checked> GC Content
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackVariants" value="variants"> VCF Variants
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackReads" value="reads"> Aligned Reads
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackWIG" value="wigTracks"> WIG Tracks
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackProteins" value="proteins"> Proteins
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackSequence" value="sequence" checked> Sequence
+                    </label>
+                    <label class="track-checkbox">
+                        <input type="checkbox" id="trackActions" value="actions"> Actions
+                    </label>
+                </div>
+            </div>
+          
             
             <div class="toolbar-section">
                 <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
                     <i class="fas fa-filter"></i>
+                    <span>Features</span>
                 </button>
-                <span class="toolbar-text">Features</span>
+               
                 <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
                     <label class="feature-checkbox">
                         <input type="checkbox" id="showGenes"> Genes
