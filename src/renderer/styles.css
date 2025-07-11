@@ -33877,3 +33877,16 @@ path.svg-gene-element.selected {
         margin-top: 4px;
     }
 }
+
+/* Gene Edit Button Styling */
+.gene-edit-btn {
+    background: #fecaca !important; /* Light red background */
+    color: #dc2626 !important; /* Darker red text */
+    border: 1px solid #fca5a5 !important; /* Light red border */
+}
+
+.gene-edit-btn:hover {
+    background: #fca5a5 !important; /* Slightly darker red on hover */
+    color: #b91c1c !important; /* Even darker red text on hover */
+    border-color: #f87171 !important; /* Medium red border on hover */
+}
