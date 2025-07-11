@@ -192,14 +192,26 @@ class ActionManager {
      * Handle copy sequence action
      */
     handleCopySequence() {
-        this.showSequenceSelectionModal('copy');
+        // Try to create action directly from current selections
+        const selectionInfo = this.getActiveSelection();
+        if (selectionInfo && selectionInfo.hasSelection) {
+            this.createActionFromSelection('copy', selectionInfo);
+        } else {
+            this.showSequenceSelectionModal('copy');
+        }
     }
     
     /**
      * Handle cut sequence action
      */
     handleCutSequence() {
-        this.showSequenceSelectionModal('cut');
+        // Try to create action directly from current selections
+        const selectionInfo = this.getActiveSelection();
+        if (selectionInfo && selectionInfo.hasSelection) {
+            this.createActionFromSelection('cut', selectionInfo);
+        } else {
+            this.showSequenceSelectionModal('cut');
+        }
     }
     
     /**
@@ -245,7 +257,13 @@ class ActionManager {
      * Handle delete sequence action
      */
     handleDeleteSequence() {
-        this.showSequenceSelectionModal('delete');
+        // Try to create action directly from current selections
+        const selectionInfo = this.getActiveSelection();
+        if (selectionInfo && selectionInfo.hasSelection) {
+            this.createActionFromSelection('delete', selectionInfo);
+        } else {
+            this.showSequenceSelectionModal('delete');
+        }
     }
     
     /**
@@ -257,52 +275,181 @@ class ActionManager {
     }
     
     /**
+     * Get the currently active selection (prioritized)
+     */
+    getActiveSelection() {
+        // Priority 1: Manual sequence selection
+        if (this.genomeBrowser.currentSequenceSelection) {
+            const selection = this.genomeBrowser.currentSequenceSelection;
+            return {
+                hasSelection: true,
+                chromosome: selection.chromosome,
+                start: parseInt(selection.start),
+                end: parseInt(selection.end),
+                strand: '+', // Default for manual selections
+                source: 'manual',
+                name: `Manual Selection (${selection.chromosome}:${selection.start}-${selection.end})`
+            };
+        }
+        
+        // Priority 2: Active gene selection
+        if (this.genomeBrowser.sequenceSelection && this.genomeBrowser.sequenceSelection.active && this.genomeBrowser.sequenceSelection.source === 'gene') {
+            const selection = this.genomeBrowser.sequenceSelection;
+            return {
+                hasSelection: true,
+                chromosome: selection.chromosome || this.genomeBrowser.currentChromosome,
+                start: parseInt(selection.start),
+                end: parseInt(selection.end),
+                strand: selection.strand || '+',
+                source: 'gene',
+                name: selection.geneName || 'Gene Selection'
+            };
+        }
+        
+        // Priority 3: Selected gene
+        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+            const gene = this.genomeBrowser.selectedGene.gene;
+            return {
+                hasSelection: true,
+                chromosome: gene.chromosome || this.genomeBrowser.currentChromosome,
+                start: parseInt(gene.start),
+                end: parseInt(gene.end),
+                strand: gene.strand || '+',
+                source: 'selectedGene',
+                name: gene.name || gene.locus_tag || 'Selected Gene'
+            };
+        }
+        
+        return {
+            hasSelection: false,
+            source: 'none'
+        };
+    }
+    
+    /**
+     * Create action directly from selection info
+     */
+    createActionFromSelection(operation, selectionInfo) {
+        const { chromosome, start, end, strand, source, name } = selectionInfo;
+        
+        const target = `${chromosome}:${start}-${end}(${strand})`;
+        const length = end - start + 1;
+        const metadata = { chromosome, start, end, strand, selectionSource: source };
+        
+        let actionType, description;
+        
+        switch (operation) {
+            case 'copy':
+                actionType = this.ACTION_TYPES.COPY_SEQUENCE;
+                description = `Copy ${length.toLocaleString()} bp from ${name}`;
+                break;
+            case 'cut':
+                actionType = this.ACTION_TYPES.CUT_SEQUENCE;
+                description = `Cut ${length.toLocaleString()} bp from ${name}`;
+                break;
+            case 'delete':
+                actionType = this.ACTION_TYPES.DELETE_SEQUENCE;
+                description = `Delete ${length.toLocaleString()} bp from ${name}`;
+                break;
+            default:
+                console.error('Unknown operation:', operation);
+                return;
+        }
+        
+        // Create the action
+        const actionId = this.addAction(actionType, target, description, metadata);
+        
+        // Show confirmation
+        this.genomeBrowser.showNotification(
+            `${operation.charAt(0).toUpperCase() + operation.slice(1)} action created for ${name} (${length.toLocaleString()} bp)`,
+            'success'
+        );
+        
+        console.log(`🎯 [ActionManager] Created ${operation} action from ${source} selection:`, {
+            actionId,
+            target,
+            length,
+            selectionName: name
+        });
+        
+        return actionId;
+    }
+    
+    /**
      * Show sequence selection modal
      */
     showSequenceSelectionModal(operation) {
         this.currentOperation = operation;
         
-        // Update modal title based on operation
-        const titleMap = {
-            'copy': 'Copy Sequence',
-            'cut': 'Cut Sequence', 
-            'paste': 'Paste Sequence',
-            'delete': 'Delete Sequence'
-        };
-        document.getElementById('sequenceSelectionTitle').textContent = titleMap[operation] || 'Select Sequence';
-        
         // Populate chromosome dropdown
         this.populateChromosomeSelect();
         
-        // Set default values - prioritize selected gene, then current view
+        // Set default values - prioritize manual selection, then gene selection, then current view
         let defaultChromosome = null;
         let defaultStart = 1;
         let defaultEnd = 1000;
+        let selectionSource = 'default';
         
-        // Check if there's a selected gene first
-        if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
+        // Priority 1: Check if there's a manual sequence selection
+        if (this.genomeBrowser.currentSequenceSelection) {
+            const selection = this.genomeBrowser.currentSequenceSelection;
+            defaultChromosome = selection.chromosome;
+            defaultStart = parseInt(selection.start) || 1;
+            defaultEnd = parseInt(selection.end) || defaultStart + 1000;
+            selectionSource = 'manual';
+            
+            console.log('Using manual sequence selection for action:', {
+                chromosome: defaultChromosome,
+                start: defaultStart,
+                end: defaultEnd,
+                length: defaultEnd - defaultStart + 1,
+                source: 'manual track selection'
+            });
+        }
+        // Priority 2: Check if there's an active gene selection (from sequenceSelection)
+        else if (this.genomeBrowser.sequenceSelection && this.genomeBrowser.sequenceSelection.active && this.genomeBrowser.sequenceSelection.source === 'gene') {
+            const selection = this.genomeBrowser.sequenceSelection;
+            defaultChromosome = selection.chromosome || this.genomeBrowser.currentChromosome;
+            defaultStart = parseInt(selection.start) || 1;
+            defaultEnd = parseInt(selection.end) || defaultStart + 1000;
+            selectionSource = 'gene';
+            
+            console.log('Using active gene selection for action:', {
+                chromosome: defaultChromosome,
+                start: defaultStart,
+                end: defaultEnd,
+                gene: selection.geneName,
+                source: 'gene selection'
+            });
+        }
+        // Priority 3: Check if there's a selected gene (from selectedGene)
+        else if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
             const gene = this.genomeBrowser.selectedGene.gene;
             defaultChromosome = gene.chromosome || this.genomeBrowser.currentChromosome;
             defaultStart = parseInt(gene.start) || 1;
             defaultEnd = parseInt(gene.end) || defaultStart + 1000;
+            selectionSource = 'selectedGene';
             
-            console.log('Using selected gene for sequence selection:', {
+            console.log('Using selected gene for action:', {
                 chromosome: defaultChromosome,
                 start: defaultStart,
                 end: defaultEnd,
-                gene: gene.name || gene.locus_tag
+                gene: gene.name || gene.locus_tag,
+                source: 'selected gene'
             });
         } 
-        // Fall back to current genome view
+        // Priority 4: Fall back to current genome view
         else if (this.genomeBrowser.currentChromosome) {
             defaultChromosome = this.genomeBrowser.currentChromosome;
             defaultStart = this.genomeBrowser.currentPosition?.start || 1;
             defaultEnd = this.genomeBrowser.currentPosition?.end || defaultStart + 1000;
+            selectionSource = 'viewport';
             
-            console.log('Using current view for sequence selection:', {
+            console.log('Using current view for action (no selection):', {
                 chromosome: defaultChromosome,
                 start: defaultStart,
-                end: defaultEnd
+                end: defaultEnd,
+                source: 'current viewport'
             });
         }
         
@@ -313,6 +460,35 @@ class ActionManager {
         document.getElementById('startPositionSeq').value = defaultStart;
         document.getElementById('endPositionSeq').value = defaultEnd;
         document.getElementById('strandSelectSeq').value = '+'; // Default to forward strand
+        
+        // Update modal title based on operation and selection source
+        const titleMap = {
+            'copy': 'Copy Sequence',
+            'cut': 'Cut Sequence', 
+            'paste': 'Paste Sequence',
+            'delete': 'Delete Sequence'
+        };
+        
+        let baseTitle = titleMap[operation] || 'Select Sequence';
+        let sourceIndicator = '';
+        
+        // Add indicator based on selection source
+        switch (selectionSource) {
+            case 'manual':
+                sourceIndicator = ' (Using Manual Selection)';
+                break;
+            case 'gene':
+                sourceIndicator = ' (Using Gene Selection)';
+                break;
+            case 'selectedGene':
+                sourceIndicator = ' (Using Selected Gene)';
+                break;
+            case 'viewport':
+                sourceIndicator = ' (Using Current View)';
+                break;
+        }
+        
+        document.getElementById('sequenceSelectionTitle').textContent = baseTitle + sourceIndicator;
         
         // Show modal
         const modal = document.getElementById('sequenceSelectionModal');
