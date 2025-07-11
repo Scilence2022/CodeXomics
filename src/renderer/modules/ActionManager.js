@@ -1448,8 +1448,8 @@ class ActionManager {
                 continue;
             }
             
-            // Only adjust actions on the same chromosome
-            if (pendingAction.metadata.chromosome !== chromosome) {
+            // Only adjust actions on the same chromosome  
+            if (!pendingAction.metadata || pendingAction.metadata.chromosome !== chromosome) {
                 continue;
             }
             
@@ -1490,7 +1490,7 @@ class ActionManager {
             
             // Adjust the pending action's positions
             const originalTarget = pendingAction.target;
-            const originalDescription = pendingAction.description;
+            const originalDetails = pendingAction.details;
             
             if (pendingAction.metadata.start) {
                 pendingAction.metadata.start += positionShift;
@@ -1518,17 +1518,20 @@ class ActionManager {
                 `${newStart}-${newEnd}` : 
                 `${newStart}`;
             
-            pendingAction.description = pendingAction.description.replace(
-                /\d+(-\d+)?/,
-                positionInfo
-            );
+            // Safely update details if it exists
+            if (pendingAction.details && typeof pendingAction.details === 'string') {
+                pendingAction.details = pendingAction.details.replace(
+                    /\d+(-\d+)?/,
+                    positionInfo
+                );
+            }
             
             console.log(`🔧 [ActionManager] Adjusted pending action ${pendingAction.id}:`, {
                 type: pendingAction.type,
                 oldTarget: originalTarget,
                 newTarget: pendingAction.target,
-                oldDescription: originalDescription,
-                newDescription: pendingAction.description,
+                oldDetails: originalDetails,
+                newDetails: pendingAction.details,
                 positionShift: positionShift
             });
             
