@@ -858,6 +858,9 @@ class ActionManager {
             
             this.genomeBrowser.showNotification('All actions executed successfully', 'success');
             
+            // Generate and prompt to save GBK file after successful action execution
+            await this.generateAndSaveGBK();
+            
         } catch (error) {
             console.error('Error executing actions:', error);
             this.genomeBrowser.showNotification('Error executing actions', 'error');
@@ -1467,6 +1470,135 @@ class ActionManager {
         };
     }
     
+    /**
+     * Generate and save GBK file after action execution
+     */
+    async generateAndSaveGBK() {
+        try {
+            // Check if we have genome data to export
+            if (!this.genomeBrowser.currentSequence) {
+                this.genomeBrowser.showNotification('No genome data available for GBK export', 'warning');
+                return;
+            }
+            
+            // Check if ExportManager is available
+            if (!this.genomeBrowser.exportManager) {
+                this.genomeBrowser.showNotification('Export functionality not available', 'error');
+                return;
+            }
+            
+            // Generate GBK content using ExportManager
+            const chromosomes = Object.keys(this.genomeBrowser.currentSequence);
+            let genbankContent = '';
+
+            chromosomes.forEach(chr => {
+                const sequence = this.genomeBrowser.currentSequence[chr];
+                const features = this.genomeBrowser.currentAnnotations[chr] || [];
+                
+                // GenBank header
+                genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
+                genbankContent += `DEFINITION  ${chr} - Modified with sequence actions\n`;
+                genbankContent += `ACCESSION   ${chr}\n`;
+                genbankContent += `VERSION     ${chr}\n`;
+                genbankContent += `KEYWORDS    .\n`;
+                genbankContent += `SOURCE      .\n`;
+                genbankContent += `  ORGANISM  .\n`;
+                genbankContent += `FEATURES             Location/Qualifiers\n`;
+                genbankContent += `     source          1..${sequence.length}\n`;
+                
+                // Add features
+                features.forEach(feature => {
+                    const location = feature.strand === '-' ? 
+                        `complement(${feature.start}..${feature.end})` : 
+                        `${feature.start}..${feature.end}`;
+                    
+                    genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
+                    
+                    if (feature.name) {
+                        genbankContent += `                     /gene="${feature.name}"\n`;
+                    }
+                    if (feature.product) {
+                        genbankContent += `                     /product="${feature.product}"\n`;
+                    }
+                    if (feature.note) {
+                        genbankContent += `                     /note="${feature.note}"\n`;
+                    }
+                });
+                
+                genbankContent += `ORIGIN\n`;
+                
+                // Add sequence in GenBank format (60 chars per line, numbered)
+                for (let i = 0; i < sequence.length; i += 60) {
+                    const lineNum = (i + 1).toString().padStart(9);
+                    const seqLine = sequence.substring(i, i + 60).toLowerCase();
+                    const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
+                    genbankContent += `${lineNum} ${formattedSeq}\n`;
+                }
+                
+                genbankContent += `//\n\n`;
+            });
+            
+            // Prompt user to save the file
+            await this.promptSaveGBK(genbankContent);
+            
+        } catch (error) {
+            console.error('Error generating GBK file:', error);
+            this.genomeBrowser.showNotification('Error generating GBK file', 'error');
+        }
+    }
+    
+    /**
+     * Prompt user to save GBK file
+     */
+    async promptSaveGBK(content) {
+        try {
+            // Use Electron dialog to prompt for save location
+            const { ipcRenderer } = require('electron');
+            
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                title: 'Save modified genome as GenBank file',
+                defaultPath: 'modified_genome.gbk',
+                filters: [
+                    { name: 'GenBank Files', extensions: ['gbk', 'gb', 'genbank'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]
+            });
+            
+            if (!result.canceled && result.filePath) {
+                // Write file using Node.js fs
+                const fs = require('fs');
+                await fs.promises.writeFile(result.filePath, content, 'utf8');
+                
+                this.genomeBrowser.showNotification(`GBK file saved to: ${result.filePath}`, 'success');
+            }
+            
+        } catch (error) {
+            console.error('Error saving GBK file:', error);
+            
+            // Fallback to browser download if Electron dialog fails
+            this.downloadGBKFile(content);
+        }
+    }
+    
+    /**
+     * Fallback method to download GBK file using browser
+     */
+    downloadGBKFile(content) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modified_genome.gbk';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        
+        this.genomeBrowser.showNotification('GBK file downloaded as modified_genome.gbk', 'success');
+    }
+
     /**
      * Restore state from checkpoint
      */

@@ -1196,6 +1196,13 @@ function createMenu() {
             sendToCurrentMainWindow('action-paste-sequence');
           }
         },
+        {
+          label: 'Del Sequence',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => {
+            sendToCurrentMainWindow('action-delete-sequence');
+          }
+        },
         { type: 'separator' },
         {
           label: 'Show Action List',
@@ -1724,6 +1731,17 @@ ipcMain.handle('read-file', async (event, filePath) => {
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+// Handle save dialog requests
+ipcMain.handle('show-save-dialog', async (event, options) => {
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, options);
+    return result;
+  } catch (error) {
+    console.error('Error showing save dialog:', error);
+    return { canceled: true, error: error.message };
   }
 });
 

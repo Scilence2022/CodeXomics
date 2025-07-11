@@ -1636,7 +1636,7 @@ class GenomeBrowser {
         // Handle Action menu items
         ipcRenderer.on('action-copy-sequence', () => {
             if (window.actionManager) {
-                window.actionManager.showSequenceSelectionModal('copy');
+                window.actionManager.handleCopySequence();
             } else {
                 this.showNotification('Action system not initialized', 'error');
             }
@@ -1644,7 +1644,7 @@ class GenomeBrowser {
 
         ipcRenderer.on('action-cut-sequence', () => {
             if (window.actionManager) {
-                window.actionManager.showSequenceSelectionModal('cut');
+                window.actionManager.handleCutSequence();
             } else {
                 this.showNotification('Action system not initialized', 'error');
             }
@@ -1652,7 +1652,15 @@ class GenomeBrowser {
 
         ipcRenderer.on('action-paste-sequence', () => {
             if (window.actionManager) {
-                window.actionManager.pasteSequence();
+                window.actionManager.handlePasteSequence();
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
+        ipcRenderer.on('action-delete-sequence', () => {
+            if (window.actionManager) {
+                window.actionManager.handleDeleteSequence();
             } else {
                 this.showNotification('Action system not initialized', 'error');
             }

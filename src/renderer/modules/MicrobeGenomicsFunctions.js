@@ -1010,7 +1010,246 @@ class MicrobeGenomicsFunctions {
             addition: {
                 description: "Functions to add new annotations, tracks, and data",
                 functions: ['addAnnotation', 'getUpstreamRegion', 'getDownstreamRegion', 'addTrack', 'addVariant']
+            },
+            sequence_actions: {
+                description: "Functions to manipulate genome sequences via action queue",
+                functions: ['copy_sequence', 'cut_sequence', 'paste_sequence', 'delete_sequence', 'insert_sequence', 'replace_sequence']
             }
+        };
+    }
+
+    /* --------------------------------------------------------- */
+    /*  SEQUENCE ACTIONS                                        */
+    /* --------------------------------------------------------- */
+
+    /**
+     * Copy sequence from specified region to action queue
+     * @param {string} chromosome - Source chromosome
+     * @param {number} start - Start position (1-based)
+     * @param {number} end - End position (1-based)
+     * @param {string} strand - Strand ('+' or '-')
+     * @returns {object} Result with action ID and details
+     */
+    static copy_sequence(chromosome, start, end, strand = '+') {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        const target = `${chromosome}:${start}-${end}(${strand})`;
+        const length = end - start + 1;
+        const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.COPY_SEQUENCE,
+            target,
+            `Copy ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'copy',
+            target: target,
+            length: length,
+            message: `Copy action queued for ${chromosome}:${start}-${end} (${length} bp)`
+        };
+    }
+
+    /**
+     * Cut sequence from specified region to action queue
+     * @param {string} chromosome - Source chromosome
+     * @param {number} start - Start position (1-based)
+     * @param {number} end - End position (1-based)
+     * @param {string} strand - Strand ('+' or '-')
+     * @returns {object} Result with action ID and details
+     */
+    static cut_sequence(chromosome, start, end, strand = '+') {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        const target = `${chromosome}:${start}-${end}(${strand})`;
+        const length = end - start + 1;
+        const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.CUT_SEQUENCE,
+            target,
+            `Cut ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'cut',
+            target: target,
+            length: length,
+            message: `Cut action queued for ${chromosome}:${start}-${end} (${length} bp)`
+        };
+    }
+
+    /**
+     * Paste sequence at specified position from clipboard
+     * @param {string} chromosome - Target chromosome
+     * @param {number} position - Insert position (1-based)
+     * @returns {object} Result with action ID and details
+     */
+    static paste_sequence(chromosome, position) {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        if (!gb.actionManager.clipboard || !gb.actionManager.clipboard.sequence) {
+            throw new Error('No sequence in clipboard to paste');
+        }
+        
+        const target = `${chromosome}:${position}`;
+        const clipboardLength = gb.actionManager.clipboard.sequence.length;
+        const metadata = { 
+            chromosome, 
+            start: position, 
+            end: position, 
+            strand: '+',
+            clipboardData: gb.actionManager.clipboard,
+            selectionSource: 'function_call'
+        };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.PASTE_SEQUENCE,
+            target,
+            `Paste ${clipboardLength.toLocaleString()} bp at ${chromosome}:${position}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'paste',
+            target: target,
+            length: clipboardLength,
+            message: `Paste action queued for ${chromosome}:${position} (${clipboardLength} bp)`
+        };
+    }
+
+    /**
+     * Delete sequence from specified region
+     * @param {string} chromosome - Target chromosome
+     * @param {number} start - Start position (1-based)
+     * @param {number} end - End position (1-based)
+     * @returns {object} Result with action ID and details
+     */
+    static delete_sequence(chromosome, start, end) {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        const target = `${chromosome}:${start}-${end}`;
+        const length = end - start + 1;
+        const metadata = { chromosome, start, end, strand: '+', selectionSource: 'function_call' };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
+            target,
+            `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'delete',
+            target: target,
+            length: length,
+            message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`
+        };
+    }
+
+    /**
+     * Insert sequence at specified position
+     * @param {string} chromosome - Target chromosome
+     * @param {number} position - Insert position (1-based)
+     * @param {string} sequence - Sequence to insert
+     * @returns {object} Result with action ID and details
+     */
+    static insert_sequence(chromosome, position, sequence) {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        const target = `${chromosome}:${position}`;
+        const metadata = { 
+            chromosome, 
+            start: position, 
+            end: position, 
+            strand: '+',
+            insertSequence: sequence,
+            selectionSource: 'function_call'
+        };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.INSERT_SEQUENCE,
+            target,
+            `Insert ${sequence.length.toLocaleString()} bp at ${chromosome}:${position}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'insert',
+            target: target,
+            length: sequence.length,
+            message: `Insert action queued for ${chromosome}:${position} (${sequence.length} bp)`
+        };
+    }
+
+    /**
+     * Replace sequence in specified region
+     * @param {string} chromosome - Target chromosome
+     * @param {number} start - Start position (1-based)
+     * @param {number} end - End position (1-based)
+     * @param {string} newSequence - New sequence to replace with
+     * @returns {object} Result with action ID and details
+     */
+    static replace_sequence(chromosome, start, end, newSequence) {
+        const gb = window.genomeBrowser;
+        if (!gb || !gb.actionManager) {
+            throw new Error('ActionManager not available');
+        }
+        
+        const target = `${chromosome}:${start}-${end}`;
+        const originalLength = end - start + 1;
+        const metadata = { 
+            chromosome, 
+            start, 
+            end, 
+            strand: '+',
+            newSequence: newSequence,
+            selectionSource: 'function_call'
+        };
+        
+        const actionId = gb.actionManager.addAction(
+            gb.actionManager.ACTION_TYPES.REPLACE_SEQUENCE,
+            target,
+            `Replace ${originalLength.toLocaleString()} bp with ${newSequence.length.toLocaleString()} bp at ${chromosome}:${start}-${end}`,
+            metadata
+        );
+        
+        return {
+            success: true,
+            actionId: actionId,
+            action: 'replace',
+            target: target,
+            originalLength: originalLength,
+            newLength: newSequence.length,
+            message: `Replace action queued for ${chromosome}:${start}-${end} (${originalLength} → ${newSequence.length} bp)`
         };
     }
 
