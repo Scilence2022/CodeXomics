@@ -1066,11 +1066,13 @@ class ActionManager {
             
             this.genomeBrowser.showNotification('All actions executed successfully', 'success');
             
-            // Update the original action list with the execution results
-            console.log(`✅ [ActionManager] Execution successful, updating original action list`);
-            
             // Generate and prompt to save GBK file after successful action execution
+            // Use the execution copy for GBK generation to include executed action details
             await this.generateAndSaveGBK();
+            
+            // Restore the original action list after successful execution
+            console.log(`✅ [ActionManager] Execution successful, restoring original action list`);
+            this.actions = originalActions;
             
         } catch (error) {
             console.error('Error executing actions:', error);
@@ -1081,8 +1083,7 @@ class ActionManager {
             this.actions = originalActions;
             
         } finally {
-            // If execution was successful, the copied actions are already in this.actions
-            // If execution failed, we've restored originalActions above
+            // Original actions are always restored, regardless of success or failure
             
             this.isExecuting = false;
             this.hideExecutionProgress();
