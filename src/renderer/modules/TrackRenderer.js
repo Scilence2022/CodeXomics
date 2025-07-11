@@ -5524,24 +5524,62 @@ class TrackRenderer {
                 break;
                 
             case 'cut_sequence':
-                // Scissors symbol
-                symbolPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const scissorsPath = `
-                    M ${centerX - symbolSize/3} ${centerY - symbolSize/3}
-                    L ${centerX + symbolSize/3} ${centerY + symbolSize/3}
-                    M ${centerX - symbolSize/3} ${centerY + symbolSize/3}
-                    L ${centerX + symbolSize/3} ${centerY - symbolSize/3}
-                    M ${centerX - symbolSize/2} ${centerY - symbolSize/2}
-                    A 2 2 0 1 1 ${centerX - symbolSize/2 + 1} ${centerY - symbolSize/2 + 1}
-                    M ${centerX + symbolSize/2} ${centerY + symbolSize/2}
-                    A 2 2 0 1 1 ${centerX + symbolSize/2 - 1} ${centerY + symbolSize/2 - 1}
+                // Improved scissors symbol with better design
+                const leftBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const leftBladePath = `
+                    M ${centerX - symbolSize/4} ${centerY - symbolSize/4}
+                    L ${centerX} ${centerY}
+                    L ${centerX - symbolSize/3} ${centerY - symbolSize/6}
                 `;
-                symbolPath.setAttribute('d', scissorsPath);
-                symbolPath.setAttribute('stroke', '#ffffff');
-                symbolPath.setAttribute('stroke-width', '1.5');
-                symbolPath.setAttribute('fill', 'none');
-                symbolPath.setAttribute('stroke-linecap', 'round');
-                symbolGroup.appendChild(symbolPath);
+                leftBlade.setAttribute('d', leftBladePath);
+                leftBlade.setAttribute('stroke', '#ffffff');
+                leftBlade.setAttribute('stroke-width', '1.5');
+                leftBlade.setAttribute('fill', 'none');
+                leftBlade.setAttribute('stroke-linecap', 'round');
+                leftBlade.setAttribute('stroke-linejoin', 'round');
+                
+                const rightBlade = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const rightBladePath = `
+                    M ${centerX + symbolSize/4} ${centerY + symbolSize/4}
+                    L ${centerX} ${centerY}
+                    L ${centerX + symbolSize/3} ${centerY + symbolSize/6}
+                `;
+                rightBlade.setAttribute('d', rightBladePath);
+                rightBlade.setAttribute('stroke', '#ffffff');
+                rightBlade.setAttribute('stroke-width', '1.5');
+                rightBlade.setAttribute('fill', 'none');
+                rightBlade.setAttribute('stroke-linecap', 'round');
+                rightBlade.setAttribute('stroke-linejoin', 'round');
+                
+                // Scissor handles
+                const leftHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                leftHandle.setAttribute('cx', centerX - symbolSize/3);
+                leftHandle.setAttribute('cy', centerY - symbolSize/3);
+                leftHandle.setAttribute('r', '1.5');
+                leftHandle.setAttribute('fill', 'none');
+                leftHandle.setAttribute('stroke', '#ffffff');
+                leftHandle.setAttribute('stroke-width', '1');
+                
+                const rightHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                rightHandle.setAttribute('cx', centerX + symbolSize/3);
+                rightHandle.setAttribute('cy', centerY + symbolSize/3);
+                rightHandle.setAttribute('r', '1.5');
+                rightHandle.setAttribute('fill', 'none');
+                rightHandle.setAttribute('stroke', '#ffffff');
+                rightHandle.setAttribute('stroke-width', '1');
+                
+                // Central pivot
+                const pivot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                pivot.setAttribute('cx', centerX);
+                pivot.setAttribute('cy', centerY);
+                pivot.setAttribute('r', '1');
+                pivot.setAttribute('fill', '#ffffff');
+                
+                symbolGroup.appendChild(leftBlade);
+                symbolGroup.appendChild(rightBlade);
+                symbolGroup.appendChild(leftHandle);
+                symbolGroup.appendChild(rightHandle);
+                symbolGroup.appendChild(pivot);
                 break;
                 
             case 'paste_sequence':
@@ -5569,36 +5607,72 @@ class TrackRenderer {
                 break;
                 
             case 'delete_sequence':
-                // Trash/delete symbol
+                // Enhanced trash/delete symbol with better proportions
                 const trashBase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 trashBase.setAttribute('x', centerX - symbolSize/3);
-                trashBase.setAttribute('y', centerY - symbolSize/4);
-                trashBase.setAttribute('width', symbolSize * 0.6);
-                trashBase.setAttribute('height', symbolSize * 0.6);
+                trashBase.setAttribute('y', centerY - symbolSize/6);
+                trashBase.setAttribute('width', symbolSize * 0.65);
+                trashBase.setAttribute('height', symbolSize * 0.5);
                 trashBase.setAttribute('fill', 'none');
                 trashBase.setAttribute('stroke', '#ffffff');
                 trashBase.setAttribute('stroke-width', '1.5');
                 trashBase.setAttribute('rx', '1');
                 
+                // Lid of trash can
                 const trashLid = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                trashLid.setAttribute('x1', centerX - symbolSize/2);
-                trashLid.setAttribute('y1', centerY - symbolSize/4);
-                trashLid.setAttribute('x2', centerX + symbolSize/2);
-                trashLid.setAttribute('y2', centerY - symbolSize/4);
+                trashLid.setAttribute('x1', centerX - symbolSize/2.5);
+                trashLid.setAttribute('y1', centerY - symbolSize/6);
+                trashLid.setAttribute('x2', centerX + symbolSize/2.5);
+                trashLid.setAttribute('y2', centerY - symbolSize/6);
                 trashLid.setAttribute('stroke', '#ffffff');
-                trashLid.setAttribute('stroke-width', '1.5');
+                trashLid.setAttribute('stroke-width', '2');
+                trashLid.setAttribute('stroke-linecap', 'round');
                 
-                const trashHandle = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                trashHandle.setAttribute('x1', centerX - symbolSize/6);
-                trashHandle.setAttribute('y1', centerY - symbolSize/2);
-                trashHandle.setAttribute('x2', centerX + symbolSize/6);
-                trashHandle.setAttribute('y2', centerY - symbolSize/2);
+                // Handle of trash can
+                const trashHandle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                trashHandle.setAttribute('x', centerX - symbolSize/8);
+                trashHandle.setAttribute('y', centerY - symbolSize/3);
+                trashHandle.setAttribute('width', symbolSize/4);
+                trashHandle.setAttribute('height', '2');
+                trashHandle.setAttribute('fill', 'none');
                 trashHandle.setAttribute('stroke', '#ffffff');
                 trashHandle.setAttribute('stroke-width', '1.5');
+                trashHandle.setAttribute('rx', '1');
+                
+                // Vertical lines inside trash can
+                const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line1.setAttribute('x1', centerX - symbolSize/6);
+                line1.setAttribute('y1', centerY - symbolSize/12);
+                line1.setAttribute('x2', centerX - symbolSize/6);
+                line1.setAttribute('y2', centerY + symbolSize/6);
+                line1.setAttribute('stroke', '#ffffff');
+                line1.setAttribute('stroke-width', '1');
+                line1.setAttribute('stroke-linecap', 'round');
+                
+                const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line2.setAttribute('x1', centerX);
+                line2.setAttribute('y1', centerY - symbolSize/12);
+                line2.setAttribute('x2', centerX);
+                line2.setAttribute('y2', centerY + symbolSize/6);
+                line2.setAttribute('stroke', '#ffffff');
+                line2.setAttribute('stroke-width', '1');
+                line2.setAttribute('stroke-linecap', 'round');
+                
+                const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line3.setAttribute('x1', centerX + symbolSize/6);
+                line3.setAttribute('y1', centerY - symbolSize/12);
+                line3.setAttribute('x2', centerX + symbolSize/6);
+                line3.setAttribute('y2', centerY + symbolSize/6);
+                line3.setAttribute('stroke', '#ffffff');
+                line3.setAttribute('stroke-width', '1');
+                line3.setAttribute('stroke-linecap', 'round');
                 
                 symbolGroup.appendChild(trashBase);
                 symbolGroup.appendChild(trashLid);
                 symbolGroup.appendChild(trashHandle);
+                symbolGroup.appendChild(line1);
+                symbolGroup.appendChild(line2);
+                symbolGroup.appendChild(line3);
                 break;
                 
             case 'insert_sequence':
