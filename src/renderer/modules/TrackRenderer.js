@@ -4971,8 +4971,8 @@ class TrackRenderer {
             // Only show actions with position information
             if (!action.target || !action.details) return false;
             
-            // Parse position from target (e.g., "chr1:1000-2000")
-            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            // Parse position from target (e.g., "chr1:1000-2000" or "chr1:1000-2000(+)")
+            const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
             if (!positionMatch) return false;
             
             const actionChr = positionMatch[1];
@@ -4983,7 +4983,7 @@ class TrackRenderer {
         
         // Separate actions into in-view and out-of-view
         const visibleActions = chromosomeActions.filter(action => {
-            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
             const actionStart = parseInt(positionMatch[2]);
             const actionEnd = parseInt(positionMatch[3]);
             
@@ -4991,7 +4991,7 @@ class TrackRenderer {
         });
         
         const outOfViewActions = chromosomeActions.filter(action => {
-            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
             const actionStart = parseInt(positionMatch[2]);
             const actionEnd = parseInt(positionMatch[3]);
             
@@ -5121,7 +5121,7 @@ class TrackRenderer {
      * Create individual action item for out-of-view actions
      */
     createOutOfViewActionItem(action, viewport, chromosome) {
-        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
         const actionStart = parseInt(positionMatch[2]);
         const actionEnd = parseInt(positionMatch[3]);
         const actionLength = actionEnd - actionStart + 1;
@@ -5197,7 +5197,7 @@ class TrackRenderer {
      * Navigate to an action's position
      */
     navigateToAction(action, chromosome) {
-        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
         if (!positionMatch) return;
         
         const actionStart = parseInt(positionMatch[2]);
@@ -5286,7 +5286,7 @@ class TrackRenderer {
      */
     createSVGActionElement(action, viewport, rowIndex, layout, settings, defs, containerWidth) {
         // Parse position from target
-        const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+        const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
         if (!positionMatch) return null;
         
         const actionStart = parseInt(positionMatch[2]);
@@ -5626,15 +5626,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         // Sort actions by start position
         const sortedActions = [...actions].sort((a, b) => {
-            const aMatch = a.target.match(/(\w+):(\d+)-(\d+)/);
-            const bMatch = b.target.match(/(\w+):(\d+)-(\d+)/);
+            const aMatch = a.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
+            const bMatch = b.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
             if (!aMatch || !bMatch) return 0;
             return parseInt(aMatch[2]) - parseInt(bMatch[2]);
         });
         
         // Place actions in rows
         sortedActions.forEach(action => {
-            const positionMatch = action.target.match(/(\w+):(\d+)-(\d+)/);
+            const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
             if (!positionMatch) return;
             
             const actionStart = parseInt(positionMatch[2]);
