@@ -2723,14 +2723,10 @@ class ActionManager {
             
             // Save the generated GBK file
             const fileName = `modified_genome_${new Date().toISOString().replace(/[:.]/g, '-')}.gbk`;
-            const filePath = await this.genomeBrowser.exportManager.saveFile(fileName, genbankContent, 'gbk');
+            this.genomeBrowser.exportManager.downloadFile(genbankContent, fileName, 'text/plain');
             
-            if (filePath) {
-                this.genomeBrowser.showNotification(`GBK file exported successfully: ${fileName}`, 'success');
-                console.log(`✅ [ActionManager] GBK file generated: ${filePath}`);
-            } else {
-                this.genomeBrowser.showNotification('Failed to save GBK file', 'error');
-            }
+            this.genomeBrowser.showNotification(`GBK file exported successfully: ${fileName}`, 'success');
+            console.log(`✅ [ActionManager] GBK file generated: ${fileName}`);
             
         } catch (error) {
             console.error('❌ [ActionManager] Error generating GBK file:', error);
