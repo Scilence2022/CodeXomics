@@ -1489,6 +1489,168 @@ class ActionManager {
     }
     
     /**
+     * Adjust feature positions based on sequence modifications
+     */
+    adjustFeaturePositions(chromosome, originalFeatures) {
+        if (!this.sequenceModifications.has(chromosome)) {
+            return originalFeatures; // No modifications for this chromosome
+        }
+        
+        const modifications = this.sequenceModifications.get(chromosome);
+        if (modifications.length === 0) {
+            return originalFeatures;
+        }
+        
+        console.log(`🔧 [ActionManager] Adjusting ${originalFeatures.length} features for ${chromosome} with ${modifications.length} modifications`);
+        
+        // Sort modifications by position (ascending order for position adjustment calculation)
+        const sortedModifications = [...modifications].sort((a, b) => {
+            const posA = a.position || a.start || 0;
+            const posB = b.position || b.start || 0;
+            return posA - posB; // Ascending order
+        });
+        
+        const adjustedFeatures = [];
+        
+        for (const feature of originalFeatures) {
+            const adjustedFeature = this.adjustSingleFeature(feature, sortedModifications);
+            
+            // Only include features that are still valid after adjustments
+            if (adjustedFeature) {
+                adjustedFeatures.push(adjustedFeature);
+            }
+        }
+        
+        console.log(`🔧 [ActionManager] Feature adjustment complete: ${originalFeatures.length} → ${adjustedFeatures.length} features`);
+        return adjustedFeatures;
+    }
+    
+    /**
+     * Adjust a single feature based on modifications
+     */
+    adjustSingleFeature(feature, sortedModifications) {
+        let adjustedStart = feature.start;
+        let adjustedEnd = feature.end;
+        let isValid = true;
+        
+        // Apply each modification's position offset
+        for (const mod of sortedModifications) {
+            const modPosition = mod.position || mod.start || 0;
+            const modEnd = mod.end || modPosition;
+            
+            switch (mod.type) {
+                case 'delete':
+                    const deleteLength = mod.length || (modEnd - modPosition + 1);
+                    
+                    // Check if feature is completely within deleted region
+                    if (adjustedStart >= modPosition && adjustedEnd <= modEnd) {
+                        console.log(`❌ [ActionManager] Feature ${feature.name || feature.type} at ${feature.start}-${feature.end} deleted (within deletion ${modPosition}-${modEnd})`);
+                        isValid = false;
+                        break;
+                    }
+                    
+                    // Check if feature partially overlaps deletion - handle specially
+                    if (adjustedStart < modEnd && adjustedEnd >= modPosition) {
+                        // Feature overlaps with deletion
+                        if (adjustedStart < modPosition && adjustedEnd > modEnd) {
+                            // Feature spans the deletion - shrink it
+                            adjustedEnd -= deleteLength;
+                            console.log(`⚠️ [ActionManager] Feature ${feature.name || feature.type} spans deletion - adjusted end position`);
+                        } else if (adjustedStart < modPosition) {
+                            // Feature starts before deletion but ends within it
+                            adjustedEnd = modPosition - 1;
+                            console.log(`⚠️ [ActionManager] Feature ${feature.name || feature.type} truncated by deletion`);
+                        } else {
+                            // Feature starts within deletion
+                            console.log(`❌ [ActionManager] Feature ${feature.name || feature.type} starts within deletion - removing`);
+                            isValid = false;
+                            break;
+                        }
+                    }
+                    
+                    // Shift features that come after the deletion
+                    if (adjustedStart > modEnd) {
+                        adjustedStart -= deleteLength;
+                        adjustedEnd -= deleteLength;
+                    } else if (adjustedEnd > modEnd) {
+                        adjustedEnd -= deleteLength;
+                    }
+                    break;
+                    
+                case 'insert':
+                    const insertLength = mod.length || (mod.sequence ? mod.sequence.length : 0);
+                    
+                    // Shift features that come after the insertion
+                    if (adjustedStart >= modPosition) {
+                        adjustedStart += insertLength;
+                        adjustedEnd += insertLength;
+                    } else if (adjustedEnd >= modPosition) {
+                        // Feature spans the insertion point - extend end
+                        adjustedEnd += insertLength;
+                    }
+                    break;
+                    
+                case 'replace':
+                    const originalLength = mod.originalLength || (modEnd - modPosition + 1);
+                    const newLength = mod.newLength || (mod.newSequence ? mod.newSequence.length : originalLength);
+                    const lengthDiff = newLength - originalLength;
+                    
+                    // Check if feature is completely within replaced region
+                    if (adjustedStart >= modPosition && adjustedEnd <= modEnd) {
+                        console.log(`⚠️ [ActionManager] Feature ${feature.name || feature.type} within replacement region - may need manual review`);
+                        // Keep the feature but note it's in a replaced region
+                    }
+                    
+                    // Handle features that span or come after the replacement
+                    if (adjustedStart < modEnd && adjustedEnd >= modPosition) {
+                        // Feature overlaps with replacement
+                        if (adjustedStart < modPosition && adjustedEnd > modEnd) {
+                            // Feature spans the replacement
+                            adjustedEnd += lengthDiff;
+                        } else if (adjustedStart < modPosition) {
+                            // Feature starts before replacement but ends within it
+                            adjustedEnd = modPosition + newLength - 1;
+                        }
+                        // Features that start within replacement keep their relative positions
+                    }
+                    
+                    // Shift features that come after the replacement
+                    if (adjustedStart > modEnd) {
+                        adjustedStart += lengthDiff;
+                        adjustedEnd += lengthDiff;
+                    } else if (adjustedEnd > modEnd) {
+                        adjustedEnd += lengthDiff;
+                    }
+                    break;
+            }
+            
+            if (!isValid) break;
+        }
+        
+        if (!isValid || adjustedStart <= 0 || adjustedEnd <= 0 || adjustedStart > adjustedEnd) {
+            return null; // Invalid feature
+        }
+        
+        // Create adjusted feature with all original properties preserved
+        const adjustedFeature = {
+            ...feature, // Preserve all original properties
+            start: adjustedStart,
+            end: adjustedEnd
+        };
+        
+        // Add a note about position adjustment if positions changed
+        if (adjustedStart !== feature.start || adjustedEnd !== feature.end) {
+            const originalNote = adjustedFeature.note || '';
+            const adjustmentNote = `Position adjusted from ${feature.start}-${feature.end} due to sequence modifications.`;
+            adjustedFeature.note = originalNote ? `${originalNote} ${adjustmentNote}` : adjustmentNote;
+            
+            console.log(`📍 [ActionManager] Adjusted feature ${feature.name || feature.type}: ${feature.start}-${feature.end} → ${adjustedStart}-${adjustedEnd}`);
+        }
+        
+        return adjustedFeature;
+    }
+    
+    /**
      * Execute sequence edit action
      */
     async executeSequenceEdit(action) {
@@ -1948,7 +2110,10 @@ class ActionManager {
                 // Apply sequence modifications if any exist
                 const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
                 const sequence = modifiedSequence;
-                const features = this.genomeBrowser.currentAnnotations[chr] || [];
+                
+                // Adjust feature positions based on sequence modifications
+                const adjustedFeatures = this.adjustFeaturePositions(chr, this.genomeBrowser.currentAnnotations[chr] || []);
+                const features = adjustedFeatures;
                 
                 // GenBank header
                 genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
@@ -1969,15 +2134,95 @@ class ActionManager {
                     
                     genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
                     
-                    if (feature.name) {
-                        genbankContent += `                     /gene="${feature.name}"\n`;
+                    // Add comprehensive qualifier information
+                    // Priority order: qualifiers object properties, then direct properties
+                    const qualifiers = feature.qualifiers || {};
+                    
+                    // Gene name/identifier
+                    const geneName = qualifiers.gene || feature.name || qualifiers.locus_tag;
+                    if (geneName) {
+                        genbankContent += `                     /gene="${geneName}"\n`;
                     }
-                    if (feature.product) {
-                        genbankContent += `                     /product="${feature.product}"\n`;
+                    
+                    // Locus tag (if different from gene name)
+                    if (qualifiers.locus_tag && qualifiers.locus_tag !== geneName) {
+                        genbankContent += `                     /locus_tag="${qualifiers.locus_tag}"\n`;
                     }
-                    if (feature.note) {
-                        genbankContent += `                     /note="${feature.note}"\n`;
+                    
+                    // Product description
+                    const product = qualifiers.product || feature.product;
+                    if (product) {
+                        genbankContent += `                     /product="${product}"\n`;
                     }
+                    
+                    // Protein ID
+                    if (qualifiers.protein_id) {
+                        genbankContent += `                     /protein_id="${qualifiers.protein_id}"\n`;
+                    }
+                    
+                    // Translation (for CDS features)
+                    if (feature.type === 'CDS' && qualifiers.translation) {
+                        genbankContent += `                     /translation="${qualifiers.translation}"\n`;
+                    }
+                    
+                    // Codon start
+                    if (qualifiers.codon_start) {
+                        genbankContent += `                     /codon_start=${qualifiers.codon_start}\n`;
+                    }
+                    
+                    // Transl table
+                    if (qualifiers.transl_table) {
+                        genbankContent += `                     /transl_table=${qualifiers.transl_table}\n`;
+                    }
+                    
+                    // Function/EC number
+                    if (qualifiers.EC_number) {
+                        genbankContent += `                     /EC_number="${qualifiers.EC_number}"\n`;
+                    }
+                    
+                    // GO terms
+                    if (qualifiers.GO_component) {
+                        genbankContent += `                     /GO_component="${qualifiers.GO_component}"\n`;
+                    }
+                    if (qualifiers.GO_function) {
+                        genbankContent += `                     /GO_function="${qualifiers.GO_function}"\n`;
+                    }
+                    if (qualifiers.GO_process) {
+                        genbankContent += `                     /GO_process="${qualifiers.GO_process}"\n`;
+                    }
+                    
+                    // Database cross-references
+                    if (qualifiers.db_xref) {
+                        if (Array.isArray(qualifiers.db_xref)) {
+                            qualifiers.db_xref.forEach(xref => {
+                                genbankContent += `                     /db_xref="${xref}"\n`;
+                            });
+                        } else {
+                            genbankContent += `                     /db_xref="${qualifiers.db_xref}"\n`;
+                        }
+                    }
+                    
+                    // Inference
+                    if (qualifiers.inference) {
+                        genbankContent += `                     /inference="${qualifiers.inference}"\n`;
+                    }
+                    
+                    // Notes (combine multiple sources)
+                    const notes = [];
+                    if (qualifiers.note) {
+                        if (Array.isArray(qualifiers.note)) {
+                            notes.push(...qualifiers.note);
+                        } else {
+                            notes.push(qualifiers.note);
+                        }
+                    }
+                    if (feature.note && !notes.includes(feature.note)) {
+                        notes.push(feature.note);
+                    }
+                    
+                    notes.forEach(note => {
+                        genbankContent += `                     /note="${note}"\n`;
+                    });
                 });
                 
                 genbankContent += `ORIGIN\n`;
