@@ -1666,6 +1666,14 @@ class GenomeBrowser {
             }
         });
 
+        ipcRenderer.on('action-insert-sequence', () => {
+            if (window.actionManager) {
+                window.actionManager.handleInsertSequence();
+            } else {
+                this.showNotification('Action system not initialized', 'error');
+            }
+        });
+
         ipcRenderer.on('show-action-list', () => {
             if (window.actionManager) {
                 window.actionManager.showActionList();

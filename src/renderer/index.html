@@ -2476,6 +2476,42 @@
         </div>
     </div>
 
+    <!-- Insert Sequence Modal -->
+    <div id="sequenceInsertModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Insert Sequence</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="sequence-insert-form">
+                    <div class="form-group">
+                        <label for="chromosomeSelectInsert">Chromosome:</label>
+                        <select id="chromosomeSelectInsert" class="form-control">
+                            <option value="">Select chromosome...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="insertPositionSeq">Insert Position:</label>
+                        <input type="number" id="insertPositionSeq" class="form-control" min="1" placeholder="Position to insert sequence">
+                    </div>
+                    <div class="form-group">
+                        <label for="insertSequenceText">Sequence to Insert:</label>
+                        <textarea id="insertSequenceText" class="form-control" rows="4" placeholder="Enter DNA sequence (A, T, G, C)..."></textarea>
+                        <small class="form-help">Only valid DNA nucleotides (A, T, G, C) are allowed</small>
+                    </div>
+                    <div class="sequence-validation">
+                        <span id="sequenceValidation" class="validation-message"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmSequenceInsert" class="btn btn-primary">Insert Sequence</button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Gene Annotation Modal -->
     <div id="editGeneModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">

@@ -33890,3 +33890,35 @@ path.svg-gene-element.selected {
     color: #b91c1c !important; /* Even darker red text on hover */
     border-color: #f87171 !important; /* Medium red border on hover */
 }
+
+/* Sequence Validation Styling */
+.validation-message {
+    font-size: 12px;
+    margin-top: 5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.validation-message.valid {
+    color: var(--success-color);
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.validation-message.invalid {
+    color: var(--error-color);
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.sequence-validation {
+    margin-top: 8px;
+}
+
+.form-help {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    display: block;
+}

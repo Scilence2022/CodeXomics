@@ -10,6 +10,7 @@ class ActionManager {
         this.isExecuting = false;
         this.clipboard = null; // Stores copied/cut sequence data
         this.cursorPosition = 0; // Track cursor position for paste operations
+        this.sequenceModifications = new Map(); // Track sequence modifications by chromosome
         
         // Action types
         this.ACTION_TYPES = {
@@ -223,34 +224,72 @@ class ActionManager {
             return;
         }
         
-        // If we have a cursor position, use it for paste
+        // Check if we have an active selection
+        const selectionInfo = this.getActiveSelection();
+        
+        if (selectionInfo && selectionInfo.hasSelection) {
+            // If selection exists, create REPLACE action
+            const target = `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`;
+            const metadata = {
+                chromosome: selectionInfo.chromosome,
+                start: selectionInfo.start,
+                end: selectionInfo.end,
+                strand: selectionInfo.strand || '+',
+                clipboardData: this.clipboard,
+                newSequence: this.clipboard.sequence,
+                selectionSource: selectionInfo.source
+            };
+            
+            this.addAction(
+                this.ACTION_TYPES.REPLACE_SEQUENCE,
+                target,
+                `Replace ${selectionInfo.end - selectionInfo.start + 1} bp with ${this.clipboard.sequence.length} bp from clipboard`,
+                metadata
+            );
+            
+            this.genomeBrowser.showNotification(
+                `Replace action queued: ${selectionInfo.name} with ${this.clipboard.sequence.length} bp`, 
+                'success'
+            );
+            return;
+        }
+        
+        // If we have a cursor position but no selection, use it for INSERT
         if (this.cursorPosition > 0) {
             const chromosome = this.genomeBrowser.currentChromosome;
             if (chromosome) {
-                // Paste at cursor position
                 const target = `${chromosome}:${this.cursorPosition}`;
                 const metadata = { 
                     chromosome, 
                     start: this.cursorPosition, 
                     end: this.cursorPosition, 
                     strand: '+',
-                    clipboardData: this.clipboard
+                    clipboardData: this.clipboard,
+                    insertSequence: this.clipboard.sequence
                 };
                 
                 this.addAction(
-                    this.ACTION_TYPES.PASTE_SEQUENCE,
+                    this.ACTION_TYPES.INSERT_SEQUENCE,
                     target,
-                    `Paste ${this.clipboard.sequence?.length || 0} bp at cursor position ${this.cursorPosition}`,
+                    `Insert ${this.clipboard.sequence.length} bp at cursor position ${this.cursorPosition}`,
                     metadata
                 );
                 
-                this.genomeBrowser.showNotification(`Paste action queued at cursor position ${this.cursorPosition}`, 'success');
+                this.genomeBrowser.showNotification(`Insert action queued at cursor position ${this.cursorPosition}`, 'success');
                 return;
             }
         }
         
-        // Fallback to modal selection if no cursor position
+        // Fallback to modal selection if no cursor position or selection
         this.showSequenceSelectionModal('paste');
+    }
+    
+    /**
+     * Handle insert sequence action
+     */
+    handleInsertSequence() {
+        // Show modal to input sequence to insert
+        this.showSequenceInsertModal();
     }
     
     /**
@@ -517,6 +556,161 @@ class ActionManager {
                 select.appendChild(option);
             });
         }
+    }
+    
+    /**
+     * Show sequence insert modal
+     */
+    showSequenceInsertModal() {
+        const modal = document.getElementById('sequenceInsertModal');
+        if (!modal) return;
+        
+        // Populate chromosome dropdown for insert modal
+        this.populateChromosomeSelectInsert();
+        
+        // Set default values
+        let defaultChromosome = this.genomeBrowser.currentChromosome || '';
+        let defaultPosition = this.cursorPosition || 1;
+        
+        // Set default values
+        const chrSelect = document.getElementById('chromosomeSelectInsert');
+        const posInput = document.getElementById('insertPositionSeq');
+        const seqTextarea = document.getElementById('insertSequenceText');
+        
+        if (chrSelect) chrSelect.value = defaultChromosome;
+        if (posInput) posInput.value = defaultPosition;
+        if (seqTextarea) seqTextarea.value = '';
+        
+        // Clear validation message
+        const validationMsg = document.getElementById('sequenceValidation');
+        if (validationMsg) validationMsg.textContent = '';
+        
+        // Show modal
+        modal.style.display = 'block';
+        
+        // Setup event listeners for this modal instance
+        this.setupInsertModalEventListeners();
+    }
+    
+    /**
+     * Populate chromosome select for insert modal
+     */
+    populateChromosomeSelectInsert() {
+        const select = document.getElementById('chromosomeSelectInsert');
+        select.innerHTML = '<option value="">Select chromosome...</option>';
+        
+        if (this.genomeBrowser.currentSequence) {
+            Object.keys(this.genomeBrowser.currentSequence).forEach(chromosome => {
+                const option = document.createElement('option');
+                option.value = chromosome;
+                option.textContent = chromosome;
+                select.appendChild(option);
+            });
+        }
+    }
+    
+    /**
+     * Setup event listeners for insert modal
+     */
+    setupInsertModalEventListeners() {
+        // Remove existing listeners to prevent duplicates
+        const confirmBtn = document.getElementById('confirmSequenceInsert');
+        const seqTextarea = document.getElementById('insertSequenceText');
+        
+        if (confirmBtn) {
+            confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+            const newConfirmBtn = document.getElementById('confirmSequenceInsert');
+            newConfirmBtn.addEventListener('click', () => this.confirmSequenceInsert());
+        }
+        
+        if (seqTextarea) {
+            seqTextarea.addEventListener('input', () => this.validateInsertSequence());
+        }
+    }
+    
+    /**
+     * Validate insert sequence
+     */
+    validateInsertSequence() {
+        const seqTextarea = document.getElementById('insertSequenceText');
+        const validationMsg = document.getElementById('sequenceValidation');
+        
+        if (!seqTextarea || !validationMsg) return;
+        
+        const sequence = seqTextarea.value.toUpperCase().replace(/\s/g, '');
+        const validNucleotides = /^[ATGC]*$/;
+        
+        if (sequence === '') {
+            validationMsg.textContent = '';
+            validationMsg.className = 'validation-message';
+            return true;
+        }
+        
+        if (validNucleotides.test(sequence)) {
+            validationMsg.textContent = `✓ Valid sequence (${sequence.length} nucleotides)`;
+            validationMsg.className = 'validation-message valid';
+            return true;
+        } else {
+            validationMsg.textContent = '✗ Invalid sequence - only A, T, G, C allowed';
+            validationMsg.className = 'validation-message invalid';
+            return false;
+        }
+    }
+    
+    /**
+     * Confirm sequence insert
+     */
+    confirmSequenceInsert() {
+        const chromosome = document.getElementById('chromosomeSelectInsert').value;
+        const position = parseInt(document.getElementById('insertPositionSeq').value);
+        const sequence = document.getElementById('insertSequenceText').value.toUpperCase().replace(/\s/g, '');
+        
+        if (!chromosome) {
+            this.genomeBrowser.showNotification('Please select a chromosome', 'warning');
+            return;
+        }
+        
+        if (!position || position < 1) {
+            this.genomeBrowser.showNotification('Please enter a valid position', 'warning');
+            return;
+        }
+        
+        if (!sequence) {
+            this.genomeBrowser.showNotification('Please enter a sequence to insert', 'warning');
+            return;
+        }
+        
+        if (!this.validateInsertSequence()) {
+            this.genomeBrowser.showNotification('Please enter a valid DNA sequence', 'warning');
+            return;
+        }
+        
+        // Create insert action
+        const target = `${chromosome}:${position}`;
+        const metadata = {
+            chromosome,
+            start: position,
+            end: position,
+            strand: '+',
+            insertSequence: sequence,
+            selectionSource: 'manual_input'
+        };
+        
+        this.addAction(
+            this.ACTION_TYPES.INSERT_SEQUENCE,
+            target,
+            `Insert ${sequence.length} bp at ${chromosome}:${position}`,
+            metadata
+        );
+        
+        this.genomeBrowser.showNotification(
+            `Insert action queued: ${sequence.length} bp at ${chromosome}:${position}`,
+            'success'
+        );
+        
+        // Close modal
+        const modal = document.getElementById('sequenceInsertModal');
+        if (modal) modal.style.display = 'none';
     }
     
     /**
@@ -905,6 +1099,14 @@ class ActionManager {
                     result = await this.executeDeleteSequence(action);
                     break;
                     
+                case this.ACTION_TYPES.INSERT_SEQUENCE:
+                    result = await this.executeInsertSequence(action);
+                    break;
+                    
+                case this.ACTION_TYPES.REPLACE_SEQUENCE:
+                    result = await this.executeReplaceSequence(action);
+                    break;
+                    
                 case this.ACTION_TYPES.SEQUENCE_EDIT:
                     result = await this.executeSequenceEdit(action);
                     break;
@@ -978,13 +1180,23 @@ class ActionManager {
             timestamp: new Date()
         };
         
-        // Mark the region as cut (would need actual genome editing implementation)
-        // For now, we'll just store the clipboard data
+        // Record the sequence modification (cut is essentially a delete)
+        this.recordSequenceModification(chromosome, {
+            type: 'delete',
+            position: start,
+            start: start,
+            end: end,
+            length: end - start + 1,
+            actionId: action.id,
+            operation: 'cut' // Mark this as part of cut operation
+        });
         
         return {
             operation: 'cut',
             sequenceLength: sequence.length,
-            source: action.target
+            source: action.target,
+            chromosome: chromosome,
+            cutRegion: { start, end }
         };
     }
     
@@ -999,15 +1211,49 @@ class ActionManager {
             throw new Error('No clipboard data available for pasting');
         }
         
-        // For demonstration, we'll simulate the paste operation
-        // In a real implementation, this would modify the genome sequence
-        
-        return {
-            operation: 'paste',
-            sequenceLength: clipboardData.sequence.length,
-            target: action.target,
-            source: clipboardData.source
-        };
+        // Determine if this is an insert or replace based on start/end
+        if (start === end) {
+            // Insert operation
+            this.recordSequenceModification(chromosome, {
+                type: 'insert',
+                position: start,
+                sequence: clipboardData.sequence,
+                length: clipboardData.sequence.length,
+                actionId: action.id,
+                operation: 'paste-insert'
+            });
+            
+            return {
+                operation: 'paste-insert',
+                sequenceLength: clipboardData.sequence.length,
+                target: action.target,
+                source: clipboardData.source,
+                chromosome: chromosome,
+                position: start
+            };
+        } else {
+            // Replace operation
+            this.recordSequenceModification(chromosome, {
+                type: 'replace',
+                start: start,
+                end: end,
+                originalLength: end - start + 1,
+                newSequence: clipboardData.sequence,
+                newLength: clipboardData.sequence.length,
+                actionId: action.id,
+                operation: 'paste-replace'
+            });
+            
+            return {
+                operation: 'paste-replace',
+                originalLength: end - start + 1,
+                newLength: clipboardData.sequence.length,
+                target: action.target,
+                source: clipboardData.source,
+                chromosome: chromosome,
+                replacedRegion: { start, end }
+            };
+        }
     }
     
     /**
@@ -1023,8 +1269,15 @@ class ActionManager {
             sequenceLength: end - start + 1
         });
         
-        // In a real implementation, this would remove the sequence from the genome
-        // For now, we'll simulate the deletion
+        // Record the sequence modification
+        this.recordSequenceModification(chromosome, {
+            type: 'delete',
+            position: start,
+            start: start,
+            end: end,
+            length: end - start + 1,
+            actionId: action.id
+        });
         
         return {
             operation: 'delete',
@@ -1033,6 +1286,206 @@ class ActionManager {
             chromosome: chromosome,
             deletedRegion: { start, end }
         };
+    }
+    
+    /**
+     * Execute insert sequence action
+     */
+    async executeInsertSequence(action) {
+        const { chromosome, start, insertSequence } = action.metadata;
+        
+        console.log('➕ [ActionManager] Executing insert sequence action:', {
+            actionId: action.id,
+            target: action.target,
+            region: `${chromosome}:${start}`,
+            insertLength: insertSequence.length
+        });
+        
+        // Record the sequence modification
+        this.recordSequenceModification(chromosome, {
+            type: 'insert',
+            position: start,
+            sequence: insertSequence,
+            length: insertSequence.length,
+            actionId: action.id
+        });
+        
+        return {
+            operation: 'insert',
+            sequenceLength: insertSequence.length,
+            target: action.target,
+            chromosome: chromosome,
+            insertedSequence: insertSequence,
+            position: start
+        };
+    }
+    
+    /**
+     * Execute replace sequence action
+     */
+    async executeReplaceSequence(action) {
+        const { chromosome, start, end, newSequence } = action.metadata;
+        const originalLength = end - start + 1;
+        
+        console.log('🔄 [ActionManager] Executing replace sequence action:', {
+            actionId: action.id,
+            target: action.target,
+            region: `${chromosome}:${start}-${end}`,
+            originalLength: originalLength,
+            newLength: newSequence.length
+        });
+        
+        // Record the sequence modification  
+        this.recordSequenceModification(chromosome, {
+            type: 'replace',
+            start: start,
+            end: end,
+            originalLength: originalLength,
+            newSequence: newSequence,
+            newLength: newSequence.length,
+            actionId: action.id
+        });
+        
+        return {
+            operation: 'replace',
+            originalLength: originalLength,
+            newLength: newSequence.length,
+            target: action.target,
+            chromosome: chromosome,
+            replacedRegion: { start, end },
+            newSequence: newSequence
+        };
+    }
+    
+    /**
+     * Record sequence modification for later application
+     */
+    recordSequenceModification(chromosome, modification) {
+        if (!this.sequenceModifications.has(chromosome)) {
+            this.sequenceModifications.set(chromosome, []);
+        }
+        
+        const modifications = this.sequenceModifications.get(chromosome);
+        modifications.push({
+            ...modification,
+            timestamp: new Date(),
+            applied: false
+        });
+        
+        console.log(`📝 [ActionManager] Recorded ${modification.type} modification for ${chromosome}:`, modification);
+    }
+    
+    /**
+     * Apply all sequence modifications to generate modified sequence
+     */
+    applySequenceModifications(chromosome, originalSequence) {
+        if (!this.sequenceModifications.has(chromosome)) {
+            return originalSequence; // No modifications for this chromosome
+        }
+        
+        const modifications = this.sequenceModifications.get(chromosome);
+        if (modifications.length === 0) {
+            return originalSequence;
+        }
+        
+        console.log(`🔄 [ActionManager] Applying ${modifications.length} modifications to ${chromosome}`);
+        
+        // Sort modifications by position (descending order to avoid position shifts)
+        const sortedModifications = [...modifications].sort((a, b) => {
+            const posA = a.position || a.start || 0;
+            const posB = b.position || b.start || 0;
+            return posB - posA; // Descending order
+        });
+        
+        let modifiedSequence = originalSequence;
+        
+        for (const mod of sortedModifications) {
+            try {
+                switch (mod.type) {
+                    case 'delete':
+                        modifiedSequence = this.applyDeleteModification(modifiedSequence, mod);
+                        break;
+                    case 'insert':
+                        modifiedSequence = this.applyInsertModification(modifiedSequence, mod);
+                        break;
+                    case 'replace':
+                        modifiedSequence = this.applyReplaceModification(modifiedSequence, mod);
+                        break;
+                    default:
+                        console.warn(`Unknown modification type: ${mod.type}`);
+                }
+                
+                console.log(`✅ [ActionManager] Applied ${mod.type} modification at position ${mod.position || mod.start}`);
+                
+            } catch (error) {
+                console.error(`❌ [ActionManager] Error applying ${mod.type} modification:`, error);
+            }
+        }
+        
+        console.log(`🔄 [ActionManager] Final sequence length: ${originalSequence.length} → ${modifiedSequence.length}`);
+        return modifiedSequence;
+    }
+    
+    /**
+     * Apply delete modification to sequence
+     */
+    applyDeleteModification(sequence, modification) {
+        const { start, end } = modification;
+        
+        // Convert to 0-based indexing
+        const startIndex = start - 1;
+        const endIndex = end;
+        
+        if (startIndex < 0 || endIndex > sequence.length) {
+            throw new Error(`Delete range ${start}-${end} is out of bounds for sequence length ${sequence.length}`);
+        }
+        
+        const before = sequence.substring(0, startIndex);
+        const after = sequence.substring(endIndex);
+        
+        console.log(`🗑️ [ActionManager] Deleting ${end - start + 1} bp from position ${start}-${end}`);
+        return before + after;
+    }
+    
+    /**
+     * Apply insert modification to sequence
+     */
+    applyInsertModification(sequence, modification) {
+        const { position, sequence: insertSequence } = modification;
+        
+        // Convert to 0-based indexing
+        const insertIndex = position - 1;
+        
+        if (insertIndex < 0 || insertIndex > sequence.length) {
+            throw new Error(`Insert position ${position} is out of bounds for sequence length ${sequence.length}`);
+        }
+        
+        const before = sequence.substring(0, insertIndex);
+        const after = sequence.substring(insertIndex);
+        
+        console.log(`➕ [ActionManager] Inserting ${insertSequence.length} bp at position ${position}`);
+        return before + insertSequence + after;
+    }
+    
+    /**
+     * Apply replace modification to sequence
+     */
+    applyReplaceModification(sequence, modification) {
+        const { start, end, newSequence } = modification;
+        
+        // Convert to 0-based indexing
+        const startIndex = start - 1;
+        const endIndex = end;
+        
+        if (startIndex < 0 || endIndex > sequence.length) {
+            throw new Error(`Replace range ${start}-${end} is out of bounds for sequence length ${sequence.length}`);
+        }
+        
+        const before = sequence.substring(0, startIndex);
+        const after = sequence.substring(endIndex);
+        
+        console.log(`🔄 [ActionManager] Replacing ${end - start + 1} bp with ${newSequence.length} bp at position ${start}-${end}`);
+        return before + newSequence + after;
     }
     
     /**
@@ -1492,7 +1945,9 @@ class ActionManager {
             let genbankContent = '';
 
             chromosomes.forEach(chr => {
-                const sequence = this.genomeBrowser.currentSequence[chr];
+                // Apply sequence modifications if any exist
+                const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
+                const sequence = modifiedSequence;
                 const features = this.genomeBrowser.currentAnnotations[chr] || [];
                 
                 // GenBank header

@@ -1203,6 +1203,13 @@ function createMenu() {
             sendToCurrentMainWindow('action-delete-sequence');
           }
         },
+        {
+          label: 'Insert Sequence',
+          accelerator: 'CmdOrCtrl+Shift+I',
+          click: () => {
+            sendToCurrentMainWindow('action-insert-sequence');
+          }
+        },
         { type: 'separator' },
         {
           label: 'Show Action List',
