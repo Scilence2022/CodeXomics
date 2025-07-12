@@ -680,10 +680,15 @@ class TabManager {
                 tabState.trackSettings = { ...this.genomeBrowser.trackRenderer.trackSettings };
             }
             
-            // Update track order
+            // Update track order - ensure we get the most current order
             const currentTrackOrder = this.getTrackOrder();
-            tabState.trackOrder = currentTrackOrder;
-            console.log(`Updated track order for tab ${this.activeTabId}:`, currentTrackOrder);
+            // Only update if we actually got a valid order from DOM
+            if (currentTrackOrder && currentTrackOrder.length > 0) {
+                tabState.trackOrder = currentTrackOrder;
+                console.log(`Updated track order for tab ${this.activeTabId}:`, currentTrackOrder);
+            } else {
+                console.log(`No tracks found in DOM for tab ${this.activeTabId}, keeping existing order:`, tabState.trackOrder);
+            }
             
             // Update header states
             if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.headerStates) {
@@ -783,6 +788,31 @@ class TabManager {
         // Clear cache since track settings changed
         if (this.cacheSettings.enabled && this.activeTabId) {
             this.clearTabCache(this.activeTabId);
+        }
+    }
+
+    /**
+     * Handle track order change specifically (called after drag & drop)
+     */
+    onTrackOrderChanged(newOrder) {
+        if (!this.activeTabId) return;
+        
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (!tabState) return;
+        
+        try {
+            // Update track order immediately with the provided order
+            tabState.trackOrder = [...newOrder];
+            tabState.lastAccessedAt = new Date();
+            
+            console.log(`Track order updated for tab ${this.activeTabId}:`, newOrder);
+            
+            // Clear cache since track order changed
+            if (this.cacheSettings.enabled) {
+                this.clearTabCache(this.activeTabId);
+            }
+        } catch (error) {
+            console.error('Error updating track order for tab:', error);
         }
     }
 

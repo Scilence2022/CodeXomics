@@ -1955,8 +1955,15 @@ class GenomeBrowser {
                 currentTabOrder = currentTabState.trackOrder;
                 console.log('[displayGenomeView] Using saved tab track order:', currentTabOrder);
             } else {
-                currentTabOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
-                console.log('[displayGenomeView] Using default track order:', currentTabOrder);
+                // If no saved order, try to get current DOM order first
+                const domOrder = this.tabManager ? this.tabManager.getTrackOrder() : [];
+                if (domOrder && domOrder.length > 0) {
+                    currentTabOrder = domOrder;
+                    console.log('[displayGenomeView] Using current DOM track order:', currentTabOrder);
+                } else {
+                    currentTabOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
+                    console.log('[displayGenomeView] Using default track order:', currentTabOrder);
+                }
             }
             
             console.log('[displayGenomeView] Current tab state available:', !!currentTabState);
@@ -2604,13 +2611,11 @@ class GenomeBrowser {
             this.configManager.set('trackOrder', newOrder);
         }
         
-        // Notify TabManager of track order change with a small delay
-        // to ensure DOM changes are complete
+        // Notify TabManager of track order change IMMEDIATELY
+        // to ensure track state is synchronized before any re-rendering
         if (this.tabManager) {
-            setTimeout(() => {
-                this.tabManager.onTrackSettingsChanged();
-                console.log('Track order change notified to TabManager:', newOrder);
-            }, 50);
+            this.tabManager.onTrackOrderChanged(newOrder);
+            console.log('Track order change notified to TabManager:', newOrder);
         }
     }
 
