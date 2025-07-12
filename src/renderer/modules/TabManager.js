@@ -1972,6 +1972,19 @@ class TabManager {
             positionIndicator.style.visibility = 'visible';
             positionIndicator.style.opacity = this.positionIndicatorSettings.opacity;
             
+            // Ensure visualization height is consistent with settings
+            const tabVisualization = tabElement.querySelector('.tab-position-visualization');
+            if (tabVisualization) {
+                tabVisualization.style.height = `${this.positionIndicatorSettings.height}px`;
+            }
+            
+            // Apply animation class based on settings
+            if (this.positionIndicatorSettings.enableAnimations) {
+                tabElement.classList.add('animations-enabled');
+            } else {
+                tabElement.classList.remove('animations-enabled');
+            }
+            
             // Update tooltip
             const range = end - start;
             const tooltipText = `${chromosome}: ${start.toLocaleString()}-${end.toLocaleString()} (${range.toLocaleString()} bp)`;
