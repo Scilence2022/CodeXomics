@@ -681,7 +681,9 @@ class TabManager {
             }
             
             // Update track order
-            tabState.trackOrder = this.getTrackOrder();
+            const currentTrackOrder = this.getTrackOrder();
+            tabState.trackOrder = currentTrackOrder;
+            console.log(`Updated track order for tab ${this.activeTabId}:`, currentTrackOrder);
             
             // Update header states
             if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.headerStates) {
