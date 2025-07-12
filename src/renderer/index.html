@@ -175,6 +175,9 @@
             <button class="new-tab-button" id="newTabButton" title="New Genome Analysis">
                 <i class="fas fa-plus"></i>
             </button>
+            <button class="tab-settings-button" id="tabSettingsButton" title="Tab Settings">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
 
         <!-- Toolbar -->
@@ -2598,6 +2601,83 @@
             <div class="modal-footer">
                 <button id="saveGeneEditBtn" class="btn btn-primary">
                     <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button class="btn modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Settings Modal -->
+    <div id="tabSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Tab Behavior Settings</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4><i class="fas fa-memory"></i> Tab Rendering Cache</h4>
+                    <p class="help-text">Cache tab content to improve switching performance. When enabled, tab content is cached in memory to avoid re-rendering when switching between tabs.</p>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <label for="tabCacheEnabled">Enable Tab Caching</label>
+                            <p class="setting-description">Cache tab content for faster switching</p>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="tabCacheEnabled" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item" id="cacheSettingsGroup">
+                        <div class="setting-label">
+                            <label for="maxCacheSize">Maximum Cached Tabs</label>
+                            <p class="setting-description">Number of tabs to keep in cache</p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" id="maxCacheSize" min="1" max="20" value="10" class="form-control number-input">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item" id="cacheTimeoutGroup">
+                        <div class="setting-label">
+                            <label for="cacheTimeout">Cache Timeout (minutes)</label>
+                            <p class="setting-description">How long to keep cached content</p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="number" id="cacheTimeout" min="1" max="120" value="30" class="form-control number-input">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <label>Cache Statistics</label>
+                            <p class="setting-description">Current cache usage information</p>
+                        </div>
+                        <div class="setting-control">
+                            <div id="cacheStats" class="cache-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Cached Tabs:</span>
+                                    <span class="stat-value" id="cachedTabsCount">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Cache Size:</span>
+                                    <span class="stat-value" id="cacheSizeInfo">0/10</span>
+                                </div>
+                                <button id="clearCacheBtn" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-trash"></i> Clear Cache
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveTabSettingsBtn" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Settings
                 </button>
                 <button class="btn modal-close">Cancel</button>
             </div>

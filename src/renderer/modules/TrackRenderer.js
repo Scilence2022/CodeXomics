@@ -4672,6 +4672,13 @@ class TrackRenderer {
 
         rulerContainer.appendChild(canvas);
 
+        // Store the initial position for this ruler instance
+        rulerContainer._chromosome = chromosome;
+        rulerContainer._position = { 
+            start: this.genomeBrowser.currentPosition.start,
+            end: this.genomeBrowser.currentPosition.end
+        };
+
         // Setup canvas for high-DPI displays
         const setupCanvas = () => {
             const rect = rulerContainer.getBoundingClientRect();
@@ -4685,7 +4692,8 @@ class TrackRenderer {
             const ctx = canvas.getContext('2d');
             ctx.scale(dpr, dpr);
             
-            this.drawDetailedRuler(ctx, rect.width, chromosome);
+            // Use the ruler's stored position instead of global position
+            this.drawDetailedRulerWithPosition(ctx, rect.width, chromosome, rulerContainer._position);
         };
 
         // Initial setup
@@ -4705,6 +4713,14 @@ class TrackRenderer {
     drawDetailedRuler(ctx, width, chromosome) {
         const start = this.genomeBrowser.currentPosition.start;
         const end = this.genomeBrowser.currentPosition.end;
+        const position = { start, end };
+        this.drawDetailedRulerWithPosition(ctx, width, chromosome, position);
+    }
+
+    // Draw the detailed ruler with specific position
+    drawDetailedRulerWithPosition(ctx, width, chromosome, position) {
+        const start = position.start;
+        const end = position.end;
         const range = end - start;
         
         if (range <= 0 || width <= 0) return;

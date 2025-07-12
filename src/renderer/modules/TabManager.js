@@ -12,11 +12,21 @@ class TabManager {
         // Initialize UI elements
         this.tabContainer = document.getElementById('tabContainer');
         this.newTabButton = document.getElementById('newTabButton');
+        this.tabSettingsButton = document.getElementById('tabSettingsButton');
         
         // Tab state isolation
         this.tabStates = new Map(); // Store individual tab states
         
+        // Tab rendering cache system
+        this.tabCache = new Map(); // Store cached DOM content for each tab
+        this.cacheSettings = {
+            enabled: true, // Default to enabled
+            maxCacheSize: 10, // Maximum number of cached tabs
+            cacheTimeout: 30 * 60 * 1000 // 30 minutes cache timeout
+        };
+        
         this.initializeEventListeners();
+        this.initializeTabSettings();
         this.createInitialTab();
     }
     
@@ -214,6 +224,12 @@ class TabManager {
         // Save current tab state if there's an active tab
         if (this.activeTabId) {
             this.saveCurrentTabState();
+            
+            // Cache current tab content if caching is enabled
+            if (this.cacheSettings.enabled) {
+                this.cacheTabContent(this.activeTabId);
+            }
+            
             this.setTabActive(this.activeTabId, false);
         }
         
@@ -221,8 +237,13 @@ class TabManager {
         this.activeTabId = tabId;
         this.setTabActive(tabId, true);
         
-        // Restore tab state
-        this.restoreTabState(tabId);
+        // Try to restore from cache first, then fallback to full restore
+        if (this.cacheSettings.enabled && this.restoreFromCache(tabId)) {
+            console.log(`Restored tab ${tabId} from cache`);
+        } else {
+            // Restore tab state with full rendering
+            this.restoreTabState(tabId);
+        }
         
         // Update last accessed time
         const tabState = this.tabStates.get(tabId);
@@ -273,9 +294,10 @@ class TabManager {
             tabElement.remove();
         }
         
-        // Clean up state
+        // Clean up state and cache
         this.tabs.delete(tabId);
         this.tabStates.delete(tabId);
+        this.clearTabCache(tabId);
         
         // If closing active tab, switch to another tab
         if (this.activeTabId === tabId) {
@@ -441,6 +463,11 @@ class TabManager {
             tabState.lastAccessedAt = new Date();
         }
         
+        // Clear cache for this tab since position changed
+        if (this.cacheSettings.enabled) {
+            this.clearTabCache(this.activeTabId);
+        }
+        
         console.log(`Updated tab ${this.activeTabId} position to: ${positionTitle}`);
     }
     
@@ -587,12 +614,373 @@ class TabManager {
     }
     
     /**
+     * Cache current tab content
+     */
+    cacheTabContent(tabId) {
+        if (!this.cacheSettings.enabled) return;
+        
+        const genomeViewer = document.getElementById('genomeViewer');
+        if (!genomeViewer) return;
+        
+        // Clone the current content
+        const cachedContent = {
+            html: genomeViewer.innerHTML,
+            timestamp: Date.now(),
+            tabId: tabId,
+            position: this.tabStates.get(tabId)?.currentPosition ? 
+                      {...this.tabStates.get(tabId).currentPosition} : null
+        };
+        
+        // Store in cache
+        this.tabCache.set(tabId, cachedContent);
+        
+        // Enforce cache size limit
+        this.enforeCacheLimit();
+        
+        console.log(`Cached content for tab: ${tabId}`);
+    }
+    
+    /**
+     * Restore tab content from cache
+     */
+    restoreFromCache(tabId) {
+        if (!this.cacheSettings.enabled) return false;
+        
+        const cached = this.tabCache.get(tabId);
+        if (!cached) return false;
+        
+        // Check if cache is still valid (not expired)
+        if (Date.now() - cached.timestamp > this.cacheSettings.cacheTimeout) {
+            this.tabCache.delete(tabId);
+            return false;
+        }
+        
+        // Verify the cached position matches current tab state
+        const tabState = this.tabStates.get(tabId);
+        if (!tabState || !cached.position) return false;
+        
+        if (cached.position.start !== tabState.currentPosition?.start ||
+            cached.position.end !== tabState.currentPosition?.end) {
+            // Position changed, cache is invalid
+            this.tabCache.delete(tabId);
+            return false;
+        }
+        
+        // Restore cached content
+        const genomeViewer = document.getElementById('genomeViewer');
+        if (genomeViewer) {
+            genomeViewer.innerHTML = cached.html;
+            
+            // Update cached timestamp
+            cached.timestamp = Date.now();
+            
+            // Restore UI state from tab state
+            this.restoreUIStateOnly(tabId);
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Restore only UI state without full rendering
+     */
+    restoreUIStateOnly(tabId) {
+        const tabState = this.tabStates.get(tabId);
+        if (!tabState) return;
+        
+        try {
+            // Restore basic genome browser state
+            this.genomeBrowser.currentChromosome = tabState.currentChromosome;
+            this.genomeBrowser.currentPosition = { ...tabState.currentPosition };
+            this.genomeBrowser.currentSequence = tabState.currentSequence;
+            this.genomeBrowser.currentAnnotations = tabState.currentAnnotations;
+            this.genomeBrowser.currentVariants = tabState.currentVariants;
+            this.genomeBrowser.currentWIGTracks = tabState.currentWIGTracks;
+            
+            // Restore sidebar state
+            const sidebar = document.getElementById('sidebar');
+            if (tabState.sidebarVisible) {
+                sidebar.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('hidden');
+            }
+            
+            // Update chromosome selector
+            const chromosomeSelect = document.getElementById('chromosomeSelect');
+            if (chromosomeSelect && tabState.currentChromosome) {
+                chromosomeSelect.value = tabState.currentChromosome;
+            }
+            
+            // Restore selected items
+            this.genomeBrowser.selectedGene = tabState.selectedGene;
+            this.genomeBrowser.selectedRead = tabState.selectedRead;
+            
+            // Force update rulers with correct position
+            this.updateRulersForPosition(tabState.currentChromosome, tabState.currentPosition);
+            
+            console.log(`Restored UI state for tab: ${tabId}`);
+        } catch (error) {
+            console.error('Error restoring UI state from cache:', error);
+        }
+    }
+    
+    /**
+     * Update rulers to show correct position for cached tabs
+     */
+    updateRulersForPosition(chromosome, position) {
+        try {
+            // Update main navigation bar ruler
+            if (this.genomeBrowser.genomeNavigationBar && this.genomeBrowser.genomeNavigationBar.isVisible) {
+                // Force redraw of navigation bar with current position
+                this.genomeBrowser.genomeNavigationBar.draw();
+            }
+            
+            // Update detailed rulers in track content
+            const detailedRulers = document.querySelectorAll('.detailed-ruler-container');
+            detailedRulers.forEach(rulerContainer => {
+                // Update the stored position for this ruler
+                if (rulerContainer._position) {
+                    rulerContainer._position.start = position.start;
+                    rulerContainer._position.end = position.end;
+                }
+                rulerContainer._chromosome = chromosome;
+                
+                // Trigger redraw with updated position
+                if (rulerContainer._setupCanvas) {
+                    rulerContainer._setupCanvas();
+                }
+            });
+            
+            console.log(`Updated rulers for position: ${chromosome}:${position.start}-${position.end}`);
+        } catch (error) {
+            console.error('Error updating rulers:', error);
+        }
+    }
+    
+    /**
+     * Enforce cache size limit by removing oldest entries
+     */
+    enforeCacheLimit() {
+        if (this.tabCache.size <= this.cacheSettings.maxCacheSize) return;
+        
+        // Sort by timestamp and remove oldest entries
+        const sortedEntries = Array.from(this.tabCache.entries())
+            .sort((a, b) => a[1].timestamp - b[1].timestamp);
+        
+        const toRemove = this.tabCache.size - this.cacheSettings.maxCacheSize;
+        for (let i = 0; i < toRemove; i++) {
+            this.tabCache.delete(sortedEntries[i][0]);
+        }
+        
+        console.log(`Removed ${toRemove} entries from tab cache`);
+    }
+    
+    /**
+     * Clear cache for a specific tab
+     */
+    clearTabCache(tabId) {
+        this.tabCache.delete(tabId);
+        console.log(`Cleared cache for tab: ${tabId}`);
+    }
+    
+    /**
+     * Clear all tab cache
+     */
+    clearAllCache() {
+        this.tabCache.clear();
+        console.log('Cleared all tab cache');
+    }
+    
+    /**
+     * Update cache settings
+     */
+    updateCacheSettings(newSettings) {
+        this.cacheSettings = { ...this.cacheSettings, ...newSettings };
+        
+        // If caching was disabled, clear all cache
+        if (!this.cacheSettings.enabled) {
+            this.clearAllCache();
+        }
+        
+        // If cache size was reduced, enforce new limit
+        if (newSettings.maxCacheSize) {
+            this.enforeCacheLimit();
+        }
+        
+        console.log('Updated cache settings:', this.cacheSettings);
+    }
+    
+    /**
+     * Get cache statistics
+     */
+    getCacheStats() {
+        return {
+            enabled: this.cacheSettings.enabled,
+            size: this.tabCache.size,
+            maxSize: this.cacheSettings.maxCacheSize,
+            timeout: this.cacheSettings.cacheTimeout,
+            entries: Array.from(this.tabCache.entries()).map(([tabId, cache]) => ({
+                tabId,
+                timestamp: cache.timestamp,
+                age: Date.now() - cache.timestamp
+            }))
+        };
+    }
+    
+    /**
+     * Initialize tab settings functionality
+     */
+    initializeTabSettings() {
+        // Tab settings button click
+        this.tabSettingsButton.addEventListener('click', () => {
+            this.openTabSettingsModal();
+        });
+        
+        // Tab settings modal controls
+        const modal = document.getElementById('tabSettingsModal');
+        const tabCacheEnabled = document.getElementById('tabCacheEnabled');
+        const maxCacheSize = document.getElementById('maxCacheSize');
+        const cacheTimeout = document.getElementById('cacheTimeout');
+        const clearCacheBtn = document.getElementById('clearCacheBtn');
+        const saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
+        
+        // Modal close functionality
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.closeTabSettingsModal();
+            });
+        });
+        
+        // Cache enabled toggle
+        tabCacheEnabled.addEventListener('change', () => {
+            const isEnabled = tabCacheEnabled.checked;
+            this.toggleCacheSettingsVisibility(isEnabled);
+        });
+        
+        // Clear cache button
+        clearCacheBtn.addEventListener('click', () => {
+            this.clearAllCache();
+            this.updateCacheStatsDisplay();
+        });
+        
+        // Save settings button
+        saveTabSettingsBtn.addEventListener('click', () => {
+            this.saveTabSettings();
+        });
+        
+        // Close modal on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeTabSettingsModal();
+            }
+        });
+    }
+    
+    /**
+     * Open tab settings modal
+     */
+    openTabSettingsModal() {
+        const modal = document.getElementById('tabSettingsModal');
+        const tabCacheEnabled = document.getElementById('tabCacheEnabled');
+        const maxCacheSize = document.getElementById('maxCacheSize');
+        const cacheTimeout = document.getElementById('cacheTimeout');
+        
+        // Populate current settings
+        tabCacheEnabled.checked = this.cacheSettings.enabled;
+        maxCacheSize.value = this.cacheSettings.maxCacheSize;
+        cacheTimeout.value = Math.round(this.cacheSettings.cacheTimeout / (60 * 1000)); // Convert to minutes
+        
+        // Update visibility
+        this.toggleCacheSettingsVisibility(this.cacheSettings.enabled);
+        
+        // Update cache stats
+        this.updateCacheStatsDisplay();
+        
+        // Show modal
+        modal.style.display = 'flex';
+    }
+    
+    /**
+     * Close tab settings modal
+     */
+    closeTabSettingsModal() {
+        const modal = document.getElementById('tabSettingsModal');
+        modal.style.display = 'none';
+    }
+    
+    /**
+     * Toggle visibility of cache settings based on enabled state
+     */
+    toggleCacheSettingsVisibility(isEnabled) {
+        const cacheSettingsGroup = document.getElementById('cacheSettingsGroup');
+        const cacheTimeoutGroup = document.getElementById('cacheTimeoutGroup');
+        
+        if (isEnabled) {
+            cacheSettingsGroup.classList.remove('disabled');
+            cacheTimeoutGroup.classList.remove('disabled');
+        } else {
+            cacheSettingsGroup.classList.add('disabled');
+            cacheTimeoutGroup.classList.add('disabled');
+        }
+    }
+    
+    /**
+     * Update cache statistics display
+     */
+    updateCacheStatsDisplay() {
+        const stats = this.getCacheStats();
+        const cachedTabsCount = document.getElementById('cachedTabsCount');
+        const cacheSizeInfo = document.getElementById('cacheSizeInfo');
+        
+        cachedTabsCount.textContent = stats.size;
+        cacheSizeInfo.textContent = `${stats.size}/${stats.maxSize}`;
+    }
+    
+    /**
+     * Save tab settings
+     */
+    saveTabSettings() {
+        const tabCacheEnabled = document.getElementById('tabCacheEnabled');
+        const maxCacheSize = document.getElementById('maxCacheSize');
+        const cacheTimeout = document.getElementById('cacheTimeout');
+        
+        const newSettings = {
+            enabled: tabCacheEnabled.checked,
+            maxCacheSize: parseInt(maxCacheSize.value),
+            cacheTimeout: parseInt(cacheTimeout.value) * 60 * 1000 // Convert to milliseconds
+        };
+        
+        // Validate settings
+        if (newSettings.maxCacheSize < 1 || newSettings.maxCacheSize > 20) {
+            alert('Maximum cache size must be between 1 and 20');
+            return;
+        }
+        
+        if (newSettings.cacheTimeout < 60000 || newSettings.cacheTimeout > 7200000) { // 1 min to 120 min
+            alert('Cache timeout must be between 1 and 120 minutes');
+            return;
+        }
+        
+        // Update settings
+        this.updateCacheSettings(newSettings);
+        
+        // Close modal
+        this.closeTabSettingsModal();
+        
+        console.log('Tab settings saved successfully');
+    }
+    
+    /**
      * Cleanup resources
      */
     dispose() {
-        // Clean up all tab states
+        // Clean up all tab states and cache
         this.tabStates.clear();
         this.tabs.clear();
+        this.clearAllCache();
         
         // Remove event listeners
         document.removeEventListener('keydown', this.handleKeydown);
