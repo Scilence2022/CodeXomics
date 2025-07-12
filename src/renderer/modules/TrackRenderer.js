@@ -197,23 +197,24 @@ class TrackRenderer {
             const currentSettings = this.getTrackSettings('reads');
             samplingInput.value = currentSettings.samplingPercentage || 20;
             
-            // Add event listener for real-time updates
-            samplingInput.addEventListener('input', (e) => {
-                const percentage = parseInt(e.target.value);
-                if (percentage >= 1 && percentage <= 100) {
-                    this.updateSamplingPercentage(percentage);
-                }
-            });
-            
-            // Add enter key handler
+            // Add enter key handler - only trigger on Enter key press
             samplingInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    e.target.blur(); // Remove focus to trigger change
+                    let percentage = parseInt(e.target.value);
+                    if (isNaN(percentage) || percentage < 1) {
+                        percentage = 1;
+                        e.target.value = 1;
+                    } else if (percentage > 100) {
+                        percentage = 100;
+                        e.target.value = 100;
+                    }
+                    this.updateSamplingPercentage(percentage);
+                    e.target.blur(); // Remove focus
                 }
             });
             
-            // Add change handler for when user finishes editing
-            samplingInput.addEventListener('change', (e) => {
+            // Add change handler for when user clicks away (blur event)
+            samplingInput.addEventListener('blur', (e) => {
                 let percentage = parseInt(e.target.value);
                 if (isNaN(percentage) || percentage < 1) {
                     percentage = 1;
@@ -222,7 +223,12 @@ class TrackRenderer {
                     percentage = 100;
                     e.target.value = 100;
                 }
-                this.updateSamplingPercentage(percentage);
+                // Only update if value actually changed
+                const currentSettings = this.getTrackSettings('reads');
+                const currentPercentage = currentSettings.samplingPercentage || 20;
+                if (percentage !== currentPercentage) {
+                    this.updateSamplingPercentage(percentage);
+                }
             });
             
             samplingContainer.appendChild(samplingLabel);
@@ -2101,40 +2107,106 @@ class TrackRenderer {
             position: relative;
             height: 30px;
             overflow: hidden;
-            display: flex;
-            align-items: center;
+            width: 100%;
+            white-space: nowrap;
         `;
         
-        // Calculate dynamic font size
-        const containerWidth = 800; // fallback width
+        // Use a more flexible approach - calculate after element is added to DOM
+        // Initial render with estimated values
+        const sequenceLength = viewport.range;
+        const estimatedContainerWidth = 800; // Initial estimation
+        
+        // Calculate initial font size and character width
         const maxFontSize = 16;
         const minFontSize = 4;
-        const calculatedFontSize = Math.max(minFontSize, Math.min(maxFontSize, containerWidth / viewport.range * 0.8));
+        const availableWidth = estimatedContainerWidth * 0.95; // Leave 5% margin
+        const maxCharWidth = availableWidth / sequenceLength;
         
-        // Create sequence bases
+        // Calculate optimal font size
+        let fontSize = maxFontSize;
+        let estimatedCharWidth = fontSize * 0.6; // Monospace character width approximation
+        
+        while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
+            fontSize -= 0.5;
+            estimatedCharWidth = fontSize * 0.6;
+        }
+        
+        const finalFontSize = Math.max(minFontSize, fontSize);
+        const finalCharWidth = availableWidth / sequenceLength;
+        
+        // Create sequence bases with initial positioning
         for (let i = 0; i < subsequence.length; i++) {
-            const baseElement = this.createBaseElement(subsequence[i], i, viewport, calculatedFontSize);
+            const baseElement = this.createBaseElement(subsequence[i], i, viewport, finalFontSize, finalCharWidth);
             seqDisplay.appendChild(baseElement);
         }
+        
+        // Set up resize observer or defer precise calculation
+        setTimeout(() => {
+            this.adjustSequenceDisplay(seqDisplay, subsequence, viewport);
+        }, 100);
         
         return seqDisplay;
     }
     
     /**
+     * Adjust sequence display after DOM is rendered
+     */
+    adjustSequenceDisplay(seqDisplay, subsequence, viewport) {
+        if (!seqDisplay.parentElement) return;
+        
+        // Get actual container width
+        const containerWidth = seqDisplay.parentElement.getBoundingClientRect().width || 800;
+        const sequenceLength = viewport.range;
+        
+        // Recalculate with actual dimensions
+        const maxFontSize = 16;
+        const minFontSize = 4;
+        const availableWidth = containerWidth * 0.95;
+        const maxCharWidth = availableWidth / sequenceLength;
+        
+        let fontSize = maxFontSize;
+        let estimatedCharWidth = fontSize * 0.6;
+        
+        while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
+            fontSize -= 0.5;
+            estimatedCharWidth = fontSize * 0.6;
+        }
+        
+        const finalFontSize = Math.max(minFontSize, fontSize);
+        const finalCharWidth = availableWidth / sequenceLength;
+        
+        // Update all base elements with precise positioning
+        const baseElements = seqDisplay.querySelectorAll('.sequence-base-inline');
+        baseElements.forEach((element, index) => {
+            const leftPosition = index * finalCharWidth;
+            element.style.left = `${leftPosition}px`;
+            element.style.width = `${finalCharWidth}px`;
+            element.style.fontSize = `${finalFontSize}px`;
+        });
+    }
+    
+    /**
      * Create individual base element
      */
-    createBaseElement(base, index, viewport, fontSize) {
+    createBaseElement(base, index, viewport, fontSize, charWidth) {
         const baseElement = document.createElement('span');
         baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
         baseElement.textContent = base;
+        
+        // Calculate precise positioning
+        const leftPosition = index * charWidth;
+        
         baseElement.style.cssText = `
             position: absolute;
-            left: ${(index / viewport.range) * 100}%;
+            left: ${leftPosition}px;
+            width: ${charWidth}px;
             font-size: ${fontSize}px;
-            font-family: monospace;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
             font-weight: bold;
             text-align: center;
             line-height: 30px;
+            overflow: hidden;
+            white-space: nowrap;
         `;
         
         // Add tooltip with position info
@@ -2495,12 +2567,21 @@ class TrackRenderer {
                 trackContent.style.height = '80px'; // Default height for empty track
             } else {
             
+            // Create coverage visualization if enabled
+            const showCoverage = settings.showCoverage !== false; // Default to true
+            let coverageHeight = 0;
+            if (showCoverage) {
+                coverageHeight = parseInt(settings.coverageHeight) || 50;
+                this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
+            }
+            
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
             
             const readHeight = settings.readHeight || 14;
             const rowSpacing = settings.readSpacing || 2;
-            const topPadding = 10;
+            // Reduce top padding when coverage is shown to minimize gap
+            const topPadding = showCoverage ? 2 : 10;
             const bottomPadding = 10;
             
             // Check if vertical scrolling is enabled and needed
@@ -2508,19 +2589,20 @@ class TrackRenderer {
             
             if (enableVerticalScroll) {
                 // Create scrollable reads track with all rows
-                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
+                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
             } else {
                 // Use traditional limited rows approach
                 const maxRows = settings.maxRows || 20;
                 const limitedReadRows = readRows.slice(0, maxRows);
             
             // Calculate adaptive track height
-            let trackHeight = topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+            let trackHeight = coverageHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
             trackHeight = Math.max(trackHeight, settings.height || 150);
             trackContent.style.height = `${trackHeight}px`;
             
                 // Create SVG-based read visualization
-            this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                // Pass just topPadding - reads SVG will be positioned after coverage automatically  
+                this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
             }
             
             // Add reads statistics with cache info and sampling info
@@ -2676,16 +2758,25 @@ class TrackRenderer {
                 // Get track settings
                 const settings = this.getTrackSettings('reads');
                 
+                // Create coverage visualization if enabled
+                const showCoverage = settings.showCoverage !== false; // Default to true
+                let coverageHeight = 0;
+                if (showCoverage) {
+                    coverageHeight = parseInt(settings.coverageHeight) || 50;
+                    this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
+                }
+                
                 // Arrange reads in rows
                 const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
                 
                 // Calculate track height and spacing
                 const readHeight = parseInt(settings.readHeight) || 8;
                 const rowSpacing = parseInt(settings.rowSpacing) || 2;
-                const topPadding = parseInt(settings.topPadding) || 10;
+                // Reduce top padding when coverage is shown to minimize gap
+                const topPadding = showCoverage ? 2 : (parseInt(settings.topPadding) || 10);
                 const bottomPadding = parseInt(settings.bottomPadding) || 10;
                 
-                const trackHeight = topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
+                const trackHeight = coverageHeight + topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
                 trackContent.style.height = `${trackHeight}px`;
                 
                 // Check if vertical scrolling is needed
@@ -2693,9 +2784,10 @@ class TrackRenderer {
                 const enableVerticalScroll = settings.enableVerticalScroll !== false;
                 
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
-                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
                 } else {
                     // Render all reads normally
+                    // Pass just topPadding - reads SVG will be positioned after coverage automatically
                     this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
                 }
                 
@@ -2758,7 +2850,7 @@ class TrackRenderer {
             width: 100%;
             height: ${totalContentHeight}px;
             transform: translateY(0px);
-            transition: transform 0.1s ease-out;
+            will-change: transform;
         `;
         
         // Create vertical scrollbar
@@ -3039,6 +3131,10 @@ class TrackRenderer {
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         
+        // Check if coverage visualization exists to calculate proper SVG positioning
+        const coverageElement = trackContent.querySelector('.coverage-visualization');
+        const coverageHeight = coverageElement ? parseInt(coverageElement.style.height) || 0 : 0;
+        
         // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
@@ -3047,7 +3143,7 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container');
         svg.style.position = 'absolute';
-        svg.style.top = '0';
+        svg.style.top = `${coverageHeight}px`;
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
 
@@ -7145,6 +7241,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             case 'reads':
                 titleElement.textContent = 'Aligned Reads Track Settings';
                 bodyElement.innerHTML = this.createReadsSettingsContent(currentSettings);
+                
+                // Add event listeners for reads settings
+                setTimeout(() => {
+                    this.setupReadsSettingsEventListeners(bodyElement);
+                }, 100);
                 break;
                 
             case 'sequence':
@@ -7398,6 +7499,26 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      */
     createReadsSettingsContent(settings) {
         return `
+            <div class="settings-section">
+                <h4>Coverage Visualization</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowCoverage" ${settings.showCoverage !== false ? 'checked' : ''}>
+                        Show coverage visualization
+                    </label>
+                    <div class="help-text">Display read coverage track above the reads for better depth visualization.</div>
+                </div>
+                <div class="form-group" id="coverageHeightGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                    <label for="coverageHeight">Coverage track height (px):</label>
+                    <input type="number" id="coverageHeight" min="30" max="100" value="${settings.coverageHeight || 50}">
+                    <div class="help-text">Height of the coverage visualization track.</div>
+                </div>
+                <div class="form-group" id="coverageColorGroup" style="display: ${settings.showCoverage !== false ? 'block' : 'none'}">
+                    <label for="coverageColor">Coverage color:</label>
+                    <input type="color" id="coverageColor" value="${settings.coverageColor || '#4a90e2'}">
+                    <div class="help-text">Color for the coverage visualization area.</div>
+                </div>
+            </div>
             <div class="settings-section">
                 <h4>Read Display</h4>
                 <div class="form-group">
@@ -7792,6 +7913,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 break;
                 
             case 'reads':
+                // Coverage settings
+                settings.showCoverage = modal.querySelector('#readsShowCoverage').checked;
+                settings.coverageHeight = parseInt(modal.querySelector('#coverageHeight').value) || 50;
+                settings.coverageColor = modal.querySelector('#coverageColor').value || '#4a90e2';
+                
                 settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
                 // Vertical scrolling settings
@@ -8997,8 +9123,141 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         return result;
     }
 
+    /**
+     * Create coverage visualization above reads
+     */
+    createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings) {
+        // Calculate coverage data
+        const coverageData = this.calculateCoverage(reads, viewport.start, viewport.end);
+        const maxCoverage = Math.max(...coverageData, 1);
+        
+        // Create coverage container
+        const coverageContainer = document.createElement('div');
+        coverageContainer.className = 'coverage-visualization';
+        coverageContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: ${coverageHeight}px;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+            z-index: 1;
+        `;
+        
+        // Create SVG for coverage visualization
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', coverageHeight);
+        svg.setAttribute('viewBox', `0 0 100 ${coverageHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('class', 'coverage-svg');
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
+        
+        // Create coverage path
+        let pathData = `M 0 ${coverageHeight}`;
+        for (let i = 0; i < coverageData.length; i++) {
+            const x = (i / (coverageData.length - 1)) * 100;
+            const y = coverageHeight - (coverageData[i] / maxCoverage) * (coverageHeight - 5);
+            pathData += ` L ${x} ${y}`;
+        }
+        pathData += ` L 100 ${coverageHeight} Z`;
+        
+        const coveragePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        coveragePath.setAttribute('d', pathData);
+        coveragePath.setAttribute('fill', settings.coverageColor || '#4a90e2');
+        coveragePath.setAttribute('fill-opacity', '0.6');
+        coveragePath.setAttribute('stroke', settings.coverageStrokeColor || '#2c5aa0');
+        coveragePath.setAttribute('stroke-width', '1');
+        coveragePath.setAttribute('vector-effect', 'non-scaling-stroke');
+        
+        svg.appendChild(coveragePath);
+        coverageContainer.appendChild(svg);
+        
+        // Add coverage statistics
+        const avgCoverage = (coverageData.reduce((sum, val) => sum + val, 0) / coverageData.length).toFixed(1);
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'coverage-stats';
+        statsDiv.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            color: #666;
+            border: 1px solid #ddd;
+        `;
+        statsDiv.textContent = `Max: ${maxCoverage}x | Avg: ${avgCoverage}x`;
+        coverageContainer.appendChild(statsDiv);
+        
+        trackContent.appendChild(coverageContainer);
+    }
+    
+    /**
+     * Calculate coverage data for visualization
+     */
+    calculateCoverage(reads, start, end) {
+        const range = end - start;
+        const binSize = Math.max(1, Math.floor(range / 1000)); // 1000 bins max
+        const numBins = Math.ceil(range / binSize);
+        const coverage = new Array(numBins).fill(0);
+        
+        reads.forEach(read => {
+            const readStart = Math.max(read.start, start);
+            const readEnd = Math.min(read.end, end);
+            
+            if (readStart <= readEnd) {
+                const startBin = Math.floor((readStart - start) / binSize);
+                const endBin = Math.min(Math.floor((readEnd - start) / binSize), numBins - 1);
+                
+                for (let i = startBin; i <= endBin; i++) {
+                    coverage[i]++;
+                }
+            }
+        });
+        
+        return coverage;
+    }
 
-
+    /**
+     * Setup event listeners for reads settings
+     */
+    setupReadsSettingsEventListeners(bodyElement) {
+        // Coverage visualization toggle
+        const coverageCheckbox = bodyElement.querySelector('#readsShowCoverage');
+        const coverageHeightGroup = bodyElement.querySelector('#coverageHeightGroup');
+        const coverageColorGroup = bodyElement.querySelector('#coverageColorGroup');
+        
+        if (coverageCheckbox && coverageHeightGroup && coverageColorGroup) {
+            const toggleCoverageSettings = () => {
+                const isChecked = coverageCheckbox.checked;
+                coverageHeightGroup.style.display = isChecked ? 'block' : 'none';
+                coverageColorGroup.style.display = isChecked ? 'block' : 'none';
+            };
+            
+            coverageCheckbox.addEventListener('change', toggleCoverageSettings);
+            toggleCoverageSettings(); // Initial state
+        }
+        
+        // Vertical scrolling toggle
+        const verticalScrollCheckbox = bodyElement.querySelector('#readsEnableVerticalScroll');
+        const maxVisibleRowsGroup = bodyElement.querySelector('#readsMaxVisibleRowsGroup');
+        const maxRowsGroup = bodyElement.querySelector('#readsMaxRowsGroup');
+        
+        if (verticalScrollCheckbox && maxVisibleRowsGroup && maxRowsGroup) {
+            const toggleScrollSettings = () => {
+                const isChecked = verticalScrollCheckbox.checked;
+                maxVisibleRowsGroup.style.display = isChecked ? 'block' : 'none';
+                maxRowsGroup.style.display = isChecked ? 'none' : 'block';
+            };
+            
+            verticalScrollCheckbox.addEventListener('change', toggleScrollSettings);
+            toggleScrollSettings(); // Initial state
+        }
+    }
 }
 
 // Export for use in other modules

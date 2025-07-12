@@ -32938,6 +32938,56 @@ path.svg-gene-element.selected {
 }
 
 /* =====================================================
+   READS TRACK SCROLLING STYLES
+   ===================================================== */
+
+.reads-scroll-container {
+    position: absolute;
+    overflow: hidden;
+}
+
+.reads-content-viewport {
+    position: relative;
+    width: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+/* Coverage visualization styling */
+.coverage-visualization {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Sequence track wrapping fix */
+.sequence-single-line {
+    width: 100% !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    display: block !important; /* Override flex to prevent wrapping issues */
+}
+
+.sequence-base-inline {
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    font-family: 'Courier New', Consolas, Monaco, monospace !important;
+}
+
+.reads-content-viewport * {
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+/* Ensure SVG elements maintain their dimensions during transforms */
+.reads-svg-container.scrollable {
+    transform-origin: 0 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* =====================================================
    ACTION LIST MANAGEMENT STYLES
    ===================================================== */
 
