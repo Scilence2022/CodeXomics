@@ -27,7 +27,7 @@ class TabManager {
         
         // Position indicator settings
         this.positionIndicatorSettings = {
-            height: 3, // Height in pixels
+            height: 4, // Height in pixels
             defaultColor: '#1a73e8', // Default indicator color
             opacity: 0.8, // Indicator opacity
             borderWidth: 2, // Border width in pixels
@@ -1764,7 +1764,7 @@ class TabManager {
             };
             
             this.positionIndicatorSettings = {
-                height: 3,
+                height: 4,
                 defaultColor: '#1a73e8',
                 opacity: 0.8,
                 borderWidth: 2,
