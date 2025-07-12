@@ -1459,8 +1459,13 @@ class GenomeBrowser {
             document.getElementById(filterId).addEventListener('change', (e) => {
                 const filterKey = filterMap[filterId.replace('sidebar', '')];
                 this.geneFilters[filterKey] = e.target.checked;
+                this.featureVisibility[filterKey] = e.target.checked; // Keep in sync
                 this.syncSidebarFeatureFilter(filterId.replace('show', 'sidebarShow'), e.target.checked);
                 this.updateGeneDisplay();
+                // Notify TabManager of filter change
+                if (this.tabManager) {
+                    this.tabManager.onTrackSettingsChanged();
+                }
             });
         });
 
@@ -1469,8 +1474,13 @@ class GenomeBrowser {
             document.getElementById(filterId).addEventListener('change', (e) => {
                 const filterKey = filterMap[filterId.replace('sidebar', '').replace('Show', 'show')];
                 this.geneFilters[filterKey] = e.target.checked;
+                this.featureVisibility[filterKey] = e.target.checked; // Keep in sync
                 this.syncToolbarFeatureFilter(filterId.replace('sidebar', ''), e.target.checked);
                 this.updateGeneDisplay();
+                // Notify TabManager of filter change
+                if (this.tabManager) {
+                    this.tabManager.onTrackSettingsChanged();
+                }
             });
         });
     }
@@ -1805,6 +1815,66 @@ class GenomeBrowser {
         }
     }
 
+    // Helper method to create tracks by type
+    async createTrackByType(trackType, chromosome, sequence, tracksToShow) {
+        // Skip if track is not visible
+        const visibleTrackName = trackType === 'wigTracks' ? 'wigTracks' : trackType;
+        if (!this.visibleTracks.has(visibleTrackName)) {
+            return;
+        }
+        
+        let trackElement = null;
+        
+        switch (trackType) {
+            case 'genes':
+                // Gene track (only if annotations exist)
+                if (this.currentAnnotations && this.currentAnnotations[chromosome]) {
+                    trackElement = this.trackRenderer.createGeneTrack(chromosome);
+                }
+                break;
+                
+            case 'gc':
+                // GC Content track
+                trackElement = this.trackRenderer.createGCTrack(chromosome, sequence);
+                break;
+                
+            case 'variants':
+                // Variants track (show even without data)
+                trackElement = this.trackRenderer.createVariantTrack(chromosome);
+                break;
+                
+            case 'reads':
+                // Aligned reads track (async)
+                trackElement = await this.trackRenderer.createReadsTrack(chromosome);
+                break;
+                
+            case 'wigTracks':
+                // WIG tracks (show even without data)
+                trackElement = this.trackRenderer.createWIGTrack(chromosome);
+                break;
+                
+            case 'proteins':
+                // Protein track (only if we have CDS annotations)
+                if (this.currentAnnotations && this.currentAnnotations[chromosome]) {
+                    trackElement = this.trackRenderer.createProteinTrack(chromosome);
+                }
+                break;
+                
+            case 'actions':
+                // Actions track (show even without data)
+                trackElement = this.trackRenderer.createActionsTrack(chromosome);
+                break;
+                
+            default:
+                console.warn(`Unknown track type: ${trackType}`);
+                return;
+        }
+        
+        if (trackElement) {
+            tracksToShow.push({ element: trackElement, type: trackType });
+        }
+    }
+
     // Core genome display method
     async displayGenomeView(chromosome, sequence) {
         // Prevent multiple simultaneous rendering operations that could cause track duplication
@@ -1874,49 +1944,25 @@ class GenomeBrowser {
             const browserContainer = document.createElement('div');
             browserContainer.className = 'genome-browser-container';
             
-            // Collect all tracks to be displayed
+            // Collect all tracks to be displayed in tab-specific order
             const tracksToShow = [];
             
-            // 1. Gene track (only if genes track is selected and annotations exist)
-            if (this.visibleTracks.has('genes') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
-                const geneTrack = this.trackRenderer.createGeneTrack(chromosome);
-                tracksToShow.push({ element: geneTrack, type: 'genes' });
+            // Get current tab's track order from TabManager
+            const currentTabOrder = this.tabManager && this.tabManager.getCurrentTabState() ? 
+                this.tabManager.getCurrentTabState().trackOrder : 
+                ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
+            
+            // Create tracks according to the tab's specific order
+            for (const trackType of currentTabOrder) {
+                await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
             }
             
-            // 2. GC Content track (only if GC track is selected)
-            if (this.visibleTracks.has('gc')) {
-                const gcTrack = this.trackRenderer.createGCTrack(chromosome, sequence);
-                tracksToShow.push({ element: gcTrack, type: 'gc' });
-            }
-            
-            // 3. Variants track (show if selected, even without data)
-            if (this.visibleTracks.has('variants')) {
-                const variantTrack = this.trackRenderer.createVariantTrack(chromosome);
-                tracksToShow.push({ element: variantTrack, type: 'variants' });
-            }
-            
-            // 4. Aligned reads track (show if selected, even without data) - Now async
-            if (this.visibleTracks.has('reads')) {
-                const readsTrack = await this.trackRenderer.createReadsTrack(chromosome);
-                tracksToShow.push({ element: readsTrack, type: 'reads' });
-            }
-            
-            // 5. WIG tracks (show if selected, even without data)
-            if (this.visibleTracks.has('wigTracks')) {
-                const wigTrack = this.trackRenderer.createWIGTrack(chromosome);
-                tracksToShow.push({ element: wigTrack, type: 'wigTracks' });
-            }
-
-            // 6. Protein track (only if proteins track is selected and we have CDS annotations)
-            if (this.visibleTracks.has('proteins') && this.currentAnnotations && this.currentAnnotations[chromosome]) {
-                const proteinTrack = this.trackRenderer.createProteinTrack(chromosome);
-                tracksToShow.push({ element: proteinTrack, type: 'proteins' });
-            }
-            
-            // 7. Actions track (show if selected, even without data)
-            if (this.visibleTracks.has('actions')) {
-                const actionsTrack = this.trackRenderer.createActionsTrack(chromosome);
-                tracksToShow.push({ element: actionsTrack, type: 'actions' });
+            // Also create any visible tracks that aren't in the saved order (for backward compatibility)
+            const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
+            for (const trackType of defaultOrder) {
+                if (!currentTabOrder.includes(trackType)) {
+                    await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
+                }
             }
             
             // Add tracks without splitters, but make them draggable and resizable
@@ -1942,9 +1988,9 @@ class GenomeBrowser {
             
             container.appendChild(browserContainer);
             
-            // Apply saved track state (sizes and order) from previous sessions
+            // Apply saved track state (sizes) from previous sessions
+            // Note: Track order is already applied during track creation
             this.trackStateManager.applyTrackSizes(browserContainer);
-            this.trackStateManager.applyTrackOrder(browserContainer);
             
             // Handle bottom sequence panel separately (always docked to bottom)
             this.handleBottomSequencePanel(chromosome, sequence);
@@ -2548,6 +2594,11 @@ class GenomeBrowser {
         if (this.configManager) {
             this.configManager.set('trackOrder', newOrder);
         }
+        
+        // Notify TabManager of track order change
+        if (this.tabManager) {
+            this.tabManager.onTrackSettingsChanged();
+        }
     }
 
     // Track management methods
@@ -2603,6 +2654,20 @@ class GenomeBrowser {
         if (sidebarTrackProteins) sidebarTrackProteins.checked = tracks.has('proteins');
         if (sidebarTrackSequence) sidebarTrackSequence.checked = tracks.has('sequence');
         if (sidebarTrackActions) sidebarTrackActions.checked = tracks.has('actions');
+        
+        // Update trackVisibility object to match visibleTracks
+        this.trackVisibility.genes = tracks.has('genes');
+        this.trackVisibility.gc = tracks.has('gc');
+        this.trackVisibility.variants = tracks.has('variants');
+        this.trackVisibility.reads = tracks.has('reads');
+        this.trackVisibility.proteins = tracks.has('proteins');
+        this.trackVisibility.sequence = tracks.has('sequence');
+        this.trackVisibility.actions = tracks.has('actions');
+        
+        // Notify TabManager of track visibility change
+        if (this.tabManager) {
+            this.tabManager.onTrackVisibilityChanged();
+        }
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;
@@ -2663,6 +2728,20 @@ class GenomeBrowser {
         if (trackProteins) trackProteins.checked = tracks.has('proteins');
         if (trackSequence) trackSequence.checked = tracks.has('sequence');
         if (trackActions) trackActions.checked = tracks.has('actions');
+        
+        // Update trackVisibility object to match visibleTracks
+        this.trackVisibility.genes = tracks.has('genes');
+        this.trackVisibility.gc = tracks.has('gc');
+        this.trackVisibility.variants = tracks.has('variants');
+        this.trackVisibility.reads = tracks.has('reads');
+        this.trackVisibility.proteins = tracks.has('proteins');
+        this.trackVisibility.sequence = tracks.has('sequence');
+        this.trackVisibility.actions = tracks.has('actions');
+        
+        // Notify TabManager of track visibility change
+        if (this.tabManager) {
+            this.tabManager.onTrackVisibilityChanged();
+        }
         
         // Refresh the genome view if a file is loaded
         const currentChr = document.getElementById('chromosomeSelect').value;

@@ -173,6 +173,16 @@ class TabManager {
                 .map(([type, _]) => type) : 
             ['genes', 'sequence']);
         
+        // Copy current track visibility and feature visibility
+        const currentTrackVisibility = this.genomeBrowser.trackVisibility ? 
+            { ...this.genomeBrowser.trackVisibility } : 
+            { genes: true, gc: true, variants: false, reads: false, proteins: false, sequence: true, actions: false };
+        const currentFeatureVisibility = this.genomeBrowser.geneFilters ? 
+            { ...this.genomeBrowser.geneFilters } : 
+            (this.genomeBrowser.featureVisibility ? 
+                { ...this.genomeBrowser.featureVisibility } : 
+                { genes: false, CDS: true, mRNA: true, tRNA: true, rRNA: true, promoter: true, terminator: true, regulatory: true, other: true });
+        
         return {
             id: tabId,
             title: title,
@@ -197,8 +207,13 @@ class TabManager {
             // UI state (inherit current state but keep independent)
             sidebarVisible: currentSidebarVisible,
             activeTrackTypes: currentTrackTypes,
+            
+            // Track management state (independent per tab)
+            trackVisibility: currentTrackVisibility,
+            featureVisibility: currentFeatureVisibility,
             trackSettings: this.genomeBrowser.trackRenderer ? { ...this.genomeBrowser.trackRenderer.trackSettings } : {},
             headerStates: this.genomeBrowser.trackRenderer ? new Map(this.genomeBrowser.trackRenderer.headerStates) : new Map(),
+            trackOrder: this.getTrackOrder(), // Store track display order
             
             // History for navigation (start fresh for each tab)
             navigationHistory: [],
@@ -353,6 +368,13 @@ class TabManager {
             // Save UI state (independent per tab)
             tabState.sidebarVisible = !document.getElementById('sidebar').classList.contains('hidden');
             
+            // Save track management state (independent per tab)
+            tabState.trackVisibility = { ...this.genomeBrowser.trackVisibility };
+            tabState.featureVisibility = this.genomeBrowser.geneFilters ? 
+                { ...this.genomeBrowser.geneFilters } : 
+                { ...this.genomeBrowser.featureVisibility };
+            tabState.trackOrder = this.getTrackOrder();
+            
             // Save track renderer states (independent per tab)
             if (this.genomeBrowser.trackRenderer) {
                 tabState.trackSettings = { ...this.genomeBrowser.trackRenderer.trackSettings };
@@ -396,6 +418,24 @@ class TabManager {
                 sidebar.classList.add('hidden');
             }
             
+            // Restore track management state (independent per tab)
+            if (tabState.trackVisibility) {
+                this.genomeBrowser.trackVisibility = { ...tabState.trackVisibility };
+                // Also sync with visibleTracks
+                this.genomeBrowser.visibleTracks = new Set();
+                Object.entries(tabState.trackVisibility).forEach(([trackType, isVisible]) => {
+                    if (isVisible) {
+                        // Map track names to match visibleTracks naming convention
+                        const trackName = trackType === 'wig' ? 'wigTracks' : trackType;
+                        this.genomeBrowser.visibleTracks.add(trackName);
+                    }
+                });
+            }
+            if (tabState.featureVisibility) {
+                this.genomeBrowser.featureVisibility = { ...tabState.featureVisibility };
+                this.genomeBrowser.geneFilters = { ...tabState.featureVisibility }; // Keep in sync
+            }
+            
             // Restore track renderer states (independent per tab)
             if (this.genomeBrowser.trackRenderer && tabState.trackSettings) {
                 this.genomeBrowser.trackRenderer.trackSettings = { ...tabState.trackSettings };
@@ -413,6 +453,9 @@ class TabManager {
             if (chromosomeSelect && tabState.currentChromosome) {
                 chromosomeSelect.value = tabState.currentChromosome;
             }
+            
+            // Update track visibility controls in UI
+            this.updateTrackVisibilityControls();
             
             // Refresh the display if there's genome data
             if (tabState.currentSequence && tabState.currentChromosome) {
@@ -468,9 +511,55 @@ class TabManager {
             this.clearTabCache(this.activeTabId);
         }
         
+        // Also update track visibility and settings in tab state
+        this.updateCurrentTabTrackState();
+        
         console.log(`Updated tab ${this.activeTabId} position to: ${positionTitle}`);
     }
     
+    /**
+     * Update current tab's track state when changes occur
+     */
+    updateCurrentTabTrackState() {
+        if (!this.activeTabId) return;
+        
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (!tabState) return;
+        
+        try {
+            // Update track visibility
+            if (this.genomeBrowser.trackVisibility) {
+                tabState.trackVisibility = { ...this.genomeBrowser.trackVisibility };
+            }
+            
+            // Update feature visibility
+            if (this.genomeBrowser.geneFilters) {
+                tabState.featureVisibility = { ...this.genomeBrowser.geneFilters };
+            } else if (this.genomeBrowser.featureVisibility) {
+                tabState.featureVisibility = { ...this.genomeBrowser.featureVisibility };
+            }
+            
+            // Update track settings
+            if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.trackSettings) {
+                tabState.trackSettings = { ...this.genomeBrowser.trackRenderer.trackSettings };
+            }
+            
+            // Update track order
+            tabState.trackOrder = this.getTrackOrder();
+            
+            // Update header states
+            if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.headerStates) {
+                tabState.headerStates = new Map(this.genomeBrowser.trackRenderer.headerStates);
+            }
+            
+            tabState.lastAccessedAt = new Date();
+            
+            console.log(`Updated track state for tab: ${this.activeTabId}`);
+        } catch (error) {
+            console.error('Error updating tab track state:', error);
+        }
+    }
+
     /**
      * Create a new tab for a specific gene or position
      */
@@ -537,6 +626,28 @@ class TabManager {
         return this.tabStates.get(this.activeTabId);
     }
     
+    /**
+     * Handle track visibility change (called from UI)
+     */
+    onTrackVisibilityChanged() {
+        this.updateCurrentTabTrackState();
+        // Clear cache since track state changed
+        if (this.cacheSettings.enabled && this.activeTabId) {
+            this.clearTabCache(this.activeTabId);
+        }
+    }
+    
+    /**
+     * Handle track settings change (called from settings modals)
+     */
+    onTrackSettingsChanged() {
+        this.updateCurrentTabTrackState();
+        // Clear cache since track settings changed
+        if (this.cacheSettings.enabled && this.activeTabId) {
+            this.clearTabCache(this.activeTabId);
+        }
+    }
+
     /**
      * Get all tab information
      */
@@ -707,6 +818,32 @@ class TabManager {
                 sidebar.classList.add('hidden');
             }
             
+            // Restore track management state
+            if (tabState.trackVisibility) {
+                this.genomeBrowser.trackVisibility = { ...tabState.trackVisibility };
+                // Also sync with visibleTracks
+                this.genomeBrowser.visibleTracks = new Set();
+                Object.entries(tabState.trackVisibility).forEach(([trackType, isVisible]) => {
+                    if (isVisible) {
+                        // Map track names to match visibleTracks naming convention
+                        const trackName = trackType === 'wig' ? 'wigTracks' : trackType;
+                        this.genomeBrowser.visibleTracks.add(trackName);
+                    }
+                });
+            }
+            if (tabState.featureVisibility) {
+                this.genomeBrowser.featureVisibility = { ...tabState.featureVisibility };
+                this.genomeBrowser.geneFilters = { ...tabState.featureVisibility }; // Keep in sync
+            }
+            
+            // Restore track renderer states
+            if (this.genomeBrowser.trackRenderer && tabState.trackSettings) {
+                this.genomeBrowser.trackRenderer.trackSettings = { ...tabState.trackSettings };
+                if (tabState.headerStates) {
+                    this.genomeBrowser.trackRenderer.headerStates = new Map(tabState.headerStates);
+                }
+            }
+            
             // Update chromosome selector
             const chromosomeSelect = document.getElementById('chromosomeSelect');
             if (chromosomeSelect && tabState.currentChromosome) {
@@ -717,6 +854,9 @@ class TabManager {
             this.genomeBrowser.selectedGene = tabState.selectedGene;
             this.genomeBrowser.selectedRead = tabState.selectedRead;
             
+            // Update track visibility controls in UI
+            this.updateTrackVisibilityControls();
+            
             // Force update rulers with correct position
             this.updateRulersForPosition(tabState.currentChromosome, tabState.currentPosition);
             
@@ -726,6 +866,107 @@ class TabManager {
         }
     }
     
+    /**
+     * Get current track display order
+     */
+    getTrackOrder() {
+        // Get track order from current DOM structure
+        const genomeViewer = document.getElementById('genomeViewer');
+        if (!genomeViewer) return ['genes', 'gc', 'variants', 'reads', 'proteins', 'sequence'];
+        
+        const tracks = genomeViewer.querySelectorAll('[class*="-track"]');
+        const trackOrder = [];
+        
+        tracks.forEach(track => {
+            // Extract track type from class name
+            for (const className of track.classList) {
+                if (className.endsWith('-track') && !className.startsWith('track-')) {
+                    const trackType = className.replace('-track', '');
+                    if (!trackOrder.includes(trackType)) {
+                        trackOrder.push(trackType);
+                    }
+                    break;
+                }
+            }
+        });
+        
+        // Fallback to default order if no tracks found
+        return trackOrder.length > 0 ? trackOrder : ['genes', 'gc', 'variants', 'reads', 'proteins', 'sequence'];
+    }
+
+    /**
+     * Apply track order to the displayed tracks
+     */
+    applyTrackOrder(trackOrder) {
+        try {
+            const genomeViewer = document.getElementById('genomeViewer');
+            if (!genomeViewer) return;
+            
+            const tracks = {};
+            
+            // Collect all current tracks
+            genomeViewer.querySelectorAll('[class*="-track"]').forEach(track => {
+                for (const className of track.classList) {
+                    if (className.endsWith('-track') && !className.startsWith('track-')) {
+                        const trackType = className.replace('-track', '');
+                        tracks[trackType] = track;
+                        break;
+                    }
+                }
+            });
+            
+            // Reorder tracks according to the stored order
+            trackOrder.forEach(trackType => {
+                if (tracks[trackType]) {
+                    genomeViewer.appendChild(tracks[trackType]);
+                }
+            });
+            
+            console.log('Applied track order:', trackOrder);
+        } catch (error) {
+            console.error('Error applying track order:', error);
+        }
+    }
+    
+    /**
+     * Update track visibility controls in the UI
+     */
+    updateTrackVisibilityControls() {
+        try {
+            // Update track visibility checkboxes in toolbar if they exist
+            const trackTypes = ['genes', 'gc', 'variants', 'reads', 'proteins', 'sequence', 'actions'];
+            
+            trackTypes.forEach(trackType => {
+                const checkbox = document.getElementById(`show${trackType.charAt(0).toUpperCase() + trackType.slice(1)}Track`);
+                if (checkbox && this.genomeBrowser.trackVisibility && this.genomeBrowser.trackVisibility.hasOwnProperty(trackType)) {
+                    checkbox.checked = this.genomeBrowser.trackVisibility[trackType];
+                }
+                
+                // Also update any toggle buttons
+                const toggleBtn = document.getElementById(`toggle${trackType.charAt(0).toUpperCase() + trackType.slice(1)}Track`);
+                if (toggleBtn && this.genomeBrowser.trackVisibility) {
+                    const isVisible = this.genomeBrowser.trackVisibility[trackType];
+                    toggleBtn.classList.toggle('active', isVisible);
+                    toggleBtn.classList.toggle('inactive', !isVisible);
+                }
+            });
+            
+            // Update feature visibility controls
+            if (this.genomeBrowser.featureVisibility) {
+                Object.keys(this.genomeBrowser.featureVisibility).forEach(featureType => {
+                    const checkbox = document.getElementById(`show${featureType.charAt(0).toUpperCase() + featureType.slice(1)}`);
+                    if (checkbox) {
+                        checkbox.checked = this.genomeBrowser.featureVisibility[featureType];
+                    }
+                });
+            }
+            
+            console.log('Updated track visibility controls');
+        } catch (error) {
+            console.error('Error updating track visibility controls:', error);
+        }
+    }
+
     /**
      * Update rulers to show correct position for cached tabs
      */
