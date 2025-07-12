@@ -233,6 +233,11 @@ class TabManager {
         tab.innerHTML = `
             <i class="tab-icon fas fa-dna"></i>
             <span class="tab-title">${title}</span>
+            <div class="tab-position-visualization">
+                <div class="chromosome-track" title="Chromosome position indicator">
+                    <div class="position-indicator"></div>
+                </div>
+            </div>
             <button class="tab-close-button" title="Close tab">
                 <i class="fas fa-times"></i>
             </button>
@@ -369,10 +374,20 @@ class TabManager {
             this.restoreTabState(tabId);
         }
         
-        // Update last accessed time
+        // Update last accessed time and position visualization
         const tabState = this.tabStates.get(tabId);
         if (tabState) {
             tabState.lastAccessedAt = new Date();
+            
+            // Update position visualization for the current tab
+            if (tabState.currentChromosome && tabState.currentPosition) {
+                this.updateTabPositionVisualization(
+                    tabId,
+                    tabState.currentChromosome,
+                    tabState.currentPosition.start + 1,
+                    tabState.currentPosition.end
+                );
+            }
         }
         
         // Persist active tab change if enabled
@@ -642,6 +657,9 @@ class TabManager {
             tabState.lastAccessedAt = new Date();
         }
         
+        // Update position visualization
+        this.updateTabPositionVisualization(this.activeTabId, chromosome, start, end);
+        
         // Clear cache for this tab since position changed
         if (this.cacheSettings.enabled) {
             this.clearTabCache(this.activeTabId);
@@ -860,6 +878,9 @@ class TabManager {
         }
         
         console.log(`Updated all tabs with new genome data from: ${filename}`);
+        
+        // Update position visualizations for all tabs
+        this.updateAllTabVisualizations();
     }
     
     /**
@@ -1411,6 +1432,158 @@ class TabManager {
         console.log('Tab settings saved successfully');
     }
     
+    /**
+     * Get chromosome color based on chromosome name
+     */
+    getChromosomeColor(chromosome) {
+        // Define color scheme for different chromosomes
+        const colorMap = {
+            // Common bacterial chromosome names
+            'chromosome': '#3498db',    // Blue
+            'chr': '#3498db',          // Blue
+            'chr1': '#e74c3c',         // Red
+            'chr2': '#2ecc71',         // Green
+            'chr3': '#f39c12',         // Orange
+            'chr4': '#9b59b6',         // Purple
+            'chr5': '#1abc9c',         // Turquoise
+            'chr6': '#34495e',         // Dark blue-gray
+            'chr7': '#e67e22',         // Carrot
+            'chr8': '#8e44ad',         // Wisteria
+            'chr9': '#16a085',         // Green sea
+            'chr10': '#2c3e50',        // Midnight blue
+            'chr11': '#f1c40f',        // Sun flower
+            'chr12': '#27ae60',        // Nephritis
+            'chr13': '#e74c3c',        // Alizarin
+            'chr14': '#8e44ad',        // Amethyst
+            'chr15': '#f39c12',        // Orange
+            'chr16': '#d35400',        // Pumpkin
+            'chr17': '#7f8c8d',        // Asbestos
+            'chr18': '#2980b9',        // Belize hole
+            'chr19': '#c0392b',        // Pomegranate
+            'chr20': '#17a2b8',        // Cyan
+            'chr21': '#dc3545',        // Danger red
+            'chr22': '#6f42c1',        // Indigo
+            'chrX': '#fd7e14',         // Orange
+            'chrY': '#6610f2',         // Purple
+            'chrM': '#20c997',         // Teal
+            'chrMT': '#20c997',        // Teal
+            // Plasmids
+            'plasmid': '#ffc107',      // Yellow
+            'plas': '#ffc107',         // Yellow
+            'p1': '#ffc107',           // Yellow
+            'p2': '#fd7e14',           // Orange
+            'p3': '#dc3545',           // Red
+        };
+        
+        // Convert to lowercase for matching
+        const chrLower = chromosome.toLowerCase();
+        
+        // Try direct match first
+        if (colorMap[chrLower]) {
+            return colorMap[chrLower];
+        }
+        
+        // Try pattern matching
+        for (const [pattern, color] of Object.entries(colorMap)) {
+            if (chrLower.includes(pattern)) {
+                return color;
+            }
+        }
+        
+        // Generate consistent color based on chromosome name hash
+        let hash = 0;
+        for (let i = 0; i < chromosome.length; i++) {
+            const char = chromosome.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        
+        // Use hash to select from a palette of colors
+        const palette = [
+            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+            '#1abc9c', '#34495e', '#e67e22', '#8e44ad', '#16a085',
+            '#2c3e50', '#f1c40f', '#27ae60', '#c0392b', '#2980b9'
+        ];
+        
+        return palette[Math.abs(hash) % palette.length];
+    }
+
+    /**
+     * Update tab position visualization
+     */
+    updateTabPositionVisualization(tabId, chromosome, start, end) {
+        const tabElement = this.tabs.get(tabId);
+        if (!tabElement) return;
+        
+        const chromosomeTrack = tabElement.querySelector('.chromosome-track');
+        const positionIndicator = tabElement.querySelector('.position-indicator');
+        
+        if (!chromosomeTrack || !positionIndicator) return;
+        
+        try {
+            // Get chromosome length
+            const sequence = this.genomeBrowser.currentSequence;
+            if (!sequence || !sequence[chromosome]) return;
+            
+            const chromosomeLength = sequence[chromosome].length;
+            
+            // Calculate position percentage
+            const startPercent = (start / chromosomeLength) * 100;
+            const endPercent = (end / chromosomeLength) * 100;
+            const widthPercent = endPercent - startPercent;
+            
+            // Get chromosome color
+            const chromosomeColor = this.getChromosomeColor(chromosome);
+            
+            // Update tab element data attribute for CSS chromosome colors
+            tabElement.setAttribute('data-chromosome', chromosome);
+            
+            // Update chromosome track background color
+            chromosomeTrack.style.background = `linear-gradient(to right, ${chromosomeColor}22, ${chromosomeColor}44)`;
+            chromosomeTrack.style.borderColor = chromosomeColor;
+            
+            // Update position indicator with enhanced visibility
+            positionIndicator.style.left = `${startPercent}%`;
+            
+            // Calculate width with better minimum visibility
+            const calculatedWidth = Math.max(2, widthPercent); // Minimum 2% width for better visibility
+            const displayWidth = calculatedWidth > 50 ? 50 : calculatedWidth; // Cap at 50% to avoid overwhelming
+            positionIndicator.style.width = `${displayWidth}%`;
+            
+            // Enhanced styling for better visibility
+            positionIndicator.style.backgroundColor = chromosomeColor;
+            positionIndicator.style.border = `1px solid ${chromosomeColor}`;
+            positionIndicator.style.boxShadow = `0 0 4px ${chromosomeColor}88, inset 0 0 2px rgba(255, 255, 255, 0.3)`;
+            positionIndicator.style.minWidth = '3px'; // Absolute minimum width in pixels
+            positionIndicator.style.zIndex = '10'; // Ensure it's above the track
+            
+            // Update tooltip
+            const range = end - start;
+            const tooltipText = `${chromosome}: ${start.toLocaleString()}-${end.toLocaleString()} (${range.toLocaleString()} bp)`;
+            chromosomeTrack.title = tooltipText;
+            
+            console.log(`Updated position visualization for tab ${tabId}: ${chromosome} ${startPercent.toFixed(1)}%-${endPercent.toFixed(1)}%`);
+        } catch (error) {
+            console.error('Error updating tab position visualization:', error);
+        }
+    }
+
+    /**
+     * Update all tab position visualizations
+     */
+    updateAllTabVisualizations() {
+        this.tabStates.forEach((tabState, tabId) => {
+            if (tabState.currentChromosome && tabState.currentPosition) {
+                this.updateTabPositionVisualization(
+                    tabId,
+                    tabState.currentChromosome,
+                    tabState.currentPosition.start + 1,
+                    tabState.currentPosition.end
+                );
+            }
+        });
+    }
+
     /**
      * Cleanup resources
      */

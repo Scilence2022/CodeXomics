@@ -33149,6 +33149,142 @@ path.svg-gene-element.selected {
     color: #28a745;
 }
 
+/* =====================================================
+   TAB POSITION VISUALIZATION STYLES
+   ===================================================== */
+
+/* Tab Position Visualization */
+.tab-position-visualization {
+    position: absolute;
+    bottom: 0;
+    left: 12px;
+    right: 36px;
+    height: 3px;
+    margin-bottom: 1px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.genome-tab:hover .tab-position-visualization {
+    opacity: 1;
+}
+
+.chromosome-track {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #ddd, #eee);
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.genome-tab.active .chromosome-track {
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 4px rgba(26, 115, 232, 0.3);
+}
+
+.position-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2%;
+    background: #1a73e8;
+    border: 1px solid #1a73e8;
+    border-radius: 1px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 4px rgba(26, 115, 232, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3);
+    min-width: 3px; /* Increased minimum width for better visibility */
+    z-index: 10; /* Ensure it's above the track */
+}
+
+.genome-tab.active .position-indicator {
+    box-shadow: 0 0 6px rgba(26, 115, 232, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.4);
+    transform: scaleY(1.3);
+    border-width: 2px;
+}
+
+/* Position indicator animation on hover */
+.genome-tab:hover .position-indicator {
+    animation: position-pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 5px rgba(26, 115, 232, 0.8), inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+@keyframes position-pulse {
+    0%, 100% { 
+        opacity: 0.8;
+        transform: scaleY(1);
+        box-shadow: 0 0 4px rgba(26, 115, 232, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3);
+    }
+    50% { 
+        opacity: 1;
+        transform: scaleY(1.2);
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.5);
+    }
+}
+
+/* Different chromosome color themes */
+.genome-tab[data-chromosome="chr1"] .chromosome-track,
+.genome-tab[data-chromosome="chromosome"] .chromosome-track {
+    background: linear-gradient(to right, #e74c3c22, #e74c3c44);
+    border-color: #e74c3c;
+}
+
+.genome-tab[data-chromosome="chr2"] .chromosome-track {
+    background: linear-gradient(to right, #2ecc7122, #2ecc7144);
+    border-color: #2ecc71;
+}
+
+.genome-tab[data-chromosome="chr3"] .chromosome-track {
+    background: linear-gradient(to right, #f39c1222, #f39c1244);
+    border-color: #f39c12;
+}
+
+.genome-tab[data-chromosome^="plasmid"] .chromosome-track,
+.genome-tab[data-chromosome^="plas"] .chromosome-track {
+    background: linear-gradient(to right, #ffc10722, #ffc10744);
+    border-color: #ffc107;
+}
+
+/* Responsive adjustments for position visualization */
+@media (max-width: 768px) {
+    .tab-position-visualization {
+        left: 8px;
+        right: 30px;
+        height: 2px;
+    }
+    
+    .chromosome-track {
+        border-radius: 1px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .chromosome-track {
+        border-width: 2px;
+    }
+    
+    .position-indicator {
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .position-indicator,
+    .chromosome-track,
+    .tab-position-visualization {
+        transition: none;
+    }
+    
+    .genome-tab:hover .position-indicator {
+        animation: none;
+    }
+}
+
 .reads-content-viewport * {
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;

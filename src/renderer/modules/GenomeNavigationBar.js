@@ -736,6 +736,15 @@ class GenomeNavigationBar {
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
         
+        // Update current tab title with new position (from ruler navigation)
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(
+                this.currentChromosome, 
+                newStart + 1, 
+                newEnd
+            );
+        }
+        
         console.log(`GenomeNavigationBar: Navigated to position ${position}`);
     }
 

@@ -42,6 +42,11 @@ class NavigationManager {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             // Update navigation bar
             this.genomeBrowser.genomeNavigationBar.update();
+            
+            // Update current tab title with new position
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+            }
         }
     }
 
@@ -60,6 +65,11 @@ class NavigationManager {
             this.genomeBrowser.displayGenomeView(currentChr, sequence);
             // Update navigation bar
             this.genomeBrowser.genomeNavigationBar.update();
+            
+            // Update current tab title with new position
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+            }
         }
     }
 
@@ -79,6 +89,11 @@ class NavigationManager {
             this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             // Update navigation bar
             this.genomeBrowser.genomeNavigationBar.update();
+            
+            // Update current tab title with new position
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+            }
         }
     }
 
@@ -98,6 +113,11 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
+        
+        // Update current tab title with new position
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        }
     }
 
     resetZoom() {
@@ -602,6 +622,11 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(chromosome, sequence);
         this.genomeBrowser.genomeNavigationBar.update();
         
+        // Update current tab title with new position
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd);
+        }
+        
         // Update all detailed rulers after re-render
         this.updateDetailedRulers();
         
@@ -703,6 +728,11 @@ class NavigationManager {
             this.genomeBrowser.updateStatistics(chromosome, sequence);
             this.genomeBrowser.displayGenomeView(chromosome, sequence);
             this.genomeBrowser.genomeNavigationBar.update();
+            
+            // Update current tab title with new position
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd);
+            }
         });
     }
 
