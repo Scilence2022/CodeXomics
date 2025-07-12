@@ -32,6 +32,11 @@ class TabManager {
         this.initializeEventListeners();
         this.initializeTabSettings();
         this.initializePersistence();
+        
+        // Force visibility of position indicators after a short delay
+        setTimeout(() => {
+            this.forcePositionIndicatorVisibility();
+        }, 1000);
     }
     
     /**
@@ -215,6 +220,19 @@ class TabManager {
         this.tabs.set(tabId, tabElement);
         this.tabStates.set(tabId, tabState);
         
+        // Apply position visualization immediately if we have position data
+        if (specificPosition) {
+            this.updateTabPositionVisualization(tabId, specificPosition.chromosome, specificPosition.start, specificPosition.end);
+        } else if (this.genomeBrowser.currentChromosome && this.genomeBrowser.currentPosition) {
+            // Use current browser position if no specific position provided
+            this.updateTabPositionVisualization(
+                tabId, 
+                this.genomeBrowser.currentChromosome, 
+                this.genomeBrowser.currentPosition.start + 1, 
+                this.genomeBrowser.currentPosition.end
+            );
+        }
+        
         // Switch to new tab
         this.switchToTab(tabId);
         
@@ -255,6 +273,9 @@ class TabManager {
             e.stopPropagation();
             this.closeTab(tabId);
         });
+        
+        // Initialize position indicator with default visibility
+        this.initializeTabPositionVisualization(tab);
         
         return tab;
     }
@@ -1509,6 +1530,46 @@ class TabManager {
     }
 
     /**
+     * Initialize tab position visualization with default visible styling
+     */
+    initializeTabPositionVisualization(tabElement) {
+        const chromosomeTrack = tabElement.querySelector('.chromosome-track');
+        const positionIndicator = tabElement.querySelector('.position-indicator');
+        
+        if (!chromosomeTrack || !positionIndicator) return;
+        
+        try {
+            // Set default chromosome color (blue)
+            const defaultColor = '#1a73e8';
+            
+            // Initialize chromosome track with default styling
+            chromosomeTrack.style.background = `linear-gradient(to right, ${defaultColor}22, ${defaultColor}44)`;
+            chromosomeTrack.style.borderColor = defaultColor;
+            chromosomeTrack.style.display = 'block';
+            chromosomeTrack.style.visibility = 'visible';
+            
+            // Initialize position indicator with highly visible default styling
+            positionIndicator.style.left = '10%';
+            positionIndicator.style.width = '15%';
+            positionIndicator.style.backgroundColor = defaultColor;
+            positionIndicator.style.border = `2px solid ${defaultColor}`;
+            positionIndicator.style.boxShadow = `0 0 6px ${defaultColor}88, inset 0 0 3px rgba(255, 255, 255, 0.4)`;
+            positionIndicator.style.minWidth = '4px';
+            positionIndicator.style.zIndex = '10';
+            positionIndicator.style.display = 'block';
+            positionIndicator.style.visibility = 'visible';
+            positionIndicator.style.opacity = '1';
+            
+            // Set default tooltip
+            chromosomeTrack.title = 'Position indicator will update when genome data is loaded';
+            
+            console.log(`Initialized position visualization for tab with default styling`);
+        } catch (error) {
+            console.error('Error initializing tab position visualization:', error);
+        }
+    }
+
+    /**
      * Update tab position visualization
      */
     updateTabPositionVisualization(tabId, chromosome, start, end) {
@@ -1523,7 +1584,10 @@ class TabManager {
         try {
             // Get chromosome length
             const sequence = this.genomeBrowser.currentSequence;
-            if (!sequence || !sequence[chromosome]) return;
+            if (!sequence || !sequence[chromosome]) {
+                console.warn(`No sequence data for chromosome ${chromosome}`);
+                return;
+            }
             
             const chromosomeLength = sequence[chromosome].length;
             
@@ -1541,28 +1605,33 @@ class TabManager {
             // Update chromosome track background color
             chromosomeTrack.style.background = `linear-gradient(to right, ${chromosomeColor}22, ${chromosomeColor}44)`;
             chromosomeTrack.style.borderColor = chromosomeColor;
+            chromosomeTrack.style.display = 'block';
+            chromosomeTrack.style.visibility = 'visible';
             
             // Update position indicator with enhanced visibility
             positionIndicator.style.left = `${startPercent}%`;
             
             // Calculate width with better minimum visibility
-            const calculatedWidth = Math.max(2, widthPercent); // Minimum 2% width for better visibility
-            const displayWidth = calculatedWidth > 50 ? 50 : calculatedWidth; // Cap at 50% to avoid overwhelming
+            const calculatedWidth = Math.max(3, widthPercent); // Minimum 3% width for better visibility
+            const displayWidth = calculatedWidth > 80 ? 80 : calculatedWidth; // Cap at 80% to avoid overwhelming
             positionIndicator.style.width = `${displayWidth}%`;
             
             // Enhanced styling for better visibility
             positionIndicator.style.backgroundColor = chromosomeColor;
-            positionIndicator.style.border = `1px solid ${chromosomeColor}`;
-            positionIndicator.style.boxShadow = `0 0 4px ${chromosomeColor}88, inset 0 0 2px rgba(255, 255, 255, 0.3)`;
-            positionIndicator.style.minWidth = '3px'; // Absolute minimum width in pixels
+            positionIndicator.style.border = `2px solid ${chromosomeColor}`;
+            positionIndicator.style.boxShadow = `0 0 6px ${chromosomeColor}88, inset 0 0 3px rgba(255, 255, 255, 0.4)`;
+            positionIndicator.style.minWidth = '4px'; // Absolute minimum width in pixels
             positionIndicator.style.zIndex = '10'; // Ensure it's above the track
+            positionIndicator.style.display = 'block';
+            positionIndicator.style.visibility = 'visible';
+            positionIndicator.style.opacity = '1';
             
             // Update tooltip
             const range = end - start;
             const tooltipText = `${chromosome}: ${start.toLocaleString()}-${end.toLocaleString()} (${range.toLocaleString()} bp)`;
             chromosomeTrack.title = tooltipText;
             
-            console.log(`Updated position visualization for tab ${tabId}: ${chromosome} ${startPercent.toFixed(1)}%-${endPercent.toFixed(1)}%`);
+            console.log(`Updated position visualization for tab ${tabId}: ${chromosome} ${startPercent.toFixed(1)}%-${endPercent.toFixed(1)}% (width: ${displayWidth.toFixed(1)}%)`);
         } catch (error) {
             console.error('Error updating tab position visualization:', error);
         }
@@ -1580,6 +1649,32 @@ class TabManager {
                     tabState.currentPosition.start + 1,
                     tabState.currentPosition.end
                 );
+            }
+        });
+    }
+
+    /**
+     * Force visibility of all position indicators (for debugging and fixing display issues)
+     */
+    forcePositionIndicatorVisibility() {
+        this.tabs.forEach((tabElement, tabId) => {
+            const positionIndicator = tabElement.querySelector('.position-indicator');
+            if (positionIndicator) {
+                positionIndicator.style.display = 'block';
+                positionIndicator.style.visibility = 'visible';
+                positionIndicator.style.opacity = '1';
+                
+                // Apply some default visible styling if not already set
+                if (!positionIndicator.style.backgroundColor) {
+                    positionIndicator.style.backgroundColor = '#1a73e8';
+                    positionIndicator.style.border = '2px solid #1a73e8';
+                    positionIndicator.style.boxShadow = '0 0 6px rgba(26, 115, 232, 0.8)';
+                    positionIndicator.style.minWidth = '4px';
+                    positionIndicator.style.left = '10%';
+                    positionIndicator.style.width = '15%';
+                }
+                
+                console.log(`Forced visibility for position indicator in tab ${tabId}`);
             }
         });
     }
@@ -1604,3 +1699,75 @@ class TabManager {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TabManager;
 }
+
+// Global debugging function for position indicators
+window.debugPositionIndicators = function() {
+    console.log('=== Position Indicators Debug ===');
+    
+    const tabs = document.querySelectorAll('.genome-tab');
+    tabs.forEach((tab, index) => {
+        const tabId = tab.dataset.tabId;
+        const positionIndicator = tab.querySelector('.position-indicator');
+        const chromosomeTrack = tab.querySelector('.chromosome-track');
+        
+        console.log(`Tab ${index + 1} (${tabId}):`);
+        console.log('  Tab element:', tab);
+        console.log('  Position indicator:', positionIndicator);
+        console.log('  Chromosome track:', chromosomeTrack);
+        
+        if (positionIndicator) {
+            const styles = window.getComputedStyle(positionIndicator);
+            console.log('  Position indicator styles:');
+            console.log('    display:', styles.display);
+            console.log('    visibility:', styles.visibility);
+            console.log('    opacity:', styles.opacity);
+            console.log('    width:', styles.width);
+            console.log('    height:', styles.height);
+            console.log('    left:', styles.left);
+            console.log('    background-color:', styles.backgroundColor);
+            console.log('    border:', styles.border);
+            console.log('    box-shadow:', styles.boxShadow);
+            console.log('    z-index:', styles.zIndex);
+            
+            // Force visibility for debugging
+            positionIndicator.style.display = 'block';
+            positionIndicator.style.visibility = 'visible';
+            positionIndicator.style.opacity = '1';
+            positionIndicator.style.backgroundColor = '#ff0000'; // Red for debugging
+            positionIndicator.style.border = '2px solid #ff0000';
+            positionIndicator.style.width = '20%';
+            positionIndicator.style.left = '10%';
+            positionIndicator.style.minWidth = '10px';
+            positionIndicator.style.zIndex = '999';
+            
+            console.log('  → Forced red visibility for debugging');
+        } else {
+            console.log('  → No position indicator found!');
+        }
+    });
+    
+    console.log('=== End Debug ===');
+    
+    // Also check for CSS conflicts
+    const allStyles = document.querySelectorAll('style, link[rel="stylesheet"]');
+    console.log('CSS sources:', allStyles.length);
+    allStyles.forEach((style, index) => {
+        if (style.tagName === 'STYLE') {
+            const content = style.textContent || style.innerText;
+            if (content.includes('position-indicator')) {
+                console.log(`Style ${index}: Contains position-indicator rules`);
+            }
+        } else if (style.tagName === 'LINK') {
+            console.log(`Style ${index}: External stylesheet ${style.href}`);
+        }
+    });
+};
+
+// Add to global scope for easy access
+window.forcePositionIndicatorVisibility = function() {
+    if (window.genomeBrowser && window.genomeBrowser.tabManager) {
+        window.genomeBrowser.tabManager.forcePositionIndicatorVisibility();
+    } else {
+        console.warn('TabManager not available');
+    }
+};
