@@ -268,7 +268,21 @@ class ConfigManager {
                 },
                 animations: true,
                 autoSaveInterval: 30000, // 30 seconds
-                confirmDeleteActions: true
+                confirmDeleteActions: true,
+                // Tab-specific configurations
+                tabSettings: {
+                    persistTabStates: true,
+                    maxStoredTabs: 50,
+                    autoSaveTabStates: true,
+                    saveInterval: 5000 // 5 seconds
+                }
+            },
+            // Tab states storage - each tab has independent configuration
+            tabs: {
+                states: {},
+                activeTabId: null,
+                lastSessionTabs: [],
+                restoreTabsOnStartup: true
             },
             chat: {
                 history: [],
@@ -1218,5 +1232,144 @@ class ConfigManager {
         
         await this.saveConfig();
         console.log('Evo2 analysis history updated');
+    }
+
+    // Tab state management methods
+    async getTabStates() {
+        await this.waitForInitialization();
+        return this.config.tabs?.states || {};
+    }
+
+    async setTabState(tabId, tabState) {
+        await this.waitForInitialization();
+        
+        if (!this.config.tabs) {
+            this.config.tabs = { states: {}, activeTabId: null, lastSessionTabs: [], restoreTabsOnStartup: true };
+        }
+        if (!this.config.tabs.states) {
+            this.config.tabs.states = {};
+        }
+        
+        // Add metadata
+        tabState.lastSaved = new Date().toISOString();
+        tabState.tabId = tabId;
+        
+        this.config.tabs.states[tabId] = tabState;
+        
+        // Update last session tabs list
+        if (!this.config.tabs.lastSessionTabs.includes(tabId)) {
+            this.config.tabs.lastSessionTabs.push(tabId);
+        }
+        
+        // Limit stored tabs
+        const maxTabs = this.config.ui?.tabSettings?.maxStoredTabs || 50;
+        const allTabIds = Object.keys(this.config.tabs.states);
+        if (allTabIds.length > maxTabs) {
+            // Remove oldest tabs
+            const sortedTabs = allTabIds.sort((a, b) => {
+                const timeA = new Date(this.config.tabs.states[a].lastSaved || 0);
+                const timeB = new Date(this.config.tabs.states[b].lastSaved || 0);
+                return timeA - timeB;
+            });
+            
+            const tabsToRemove = sortedTabs.slice(0, allTabIds.length - maxTabs);
+            tabsToRemove.forEach(id => {
+                delete this.config.tabs.states[id];
+                const index = this.config.tabs.lastSessionTabs.indexOf(id);
+                if (index > -1) {
+                    this.config.tabs.lastSessionTabs.splice(index, 1);
+                }
+            });
+        }
+        
+        if (this.config.ui?.tabSettings?.autoSaveTabStates) {
+            this.debouncedSave();
+        }
+        
+        console.log(`Tab state saved for: ${tabId}`);
+    }
+
+    async getTabState(tabId) {
+        await this.waitForInitialization();
+        return this.config.tabs?.states?.[tabId] || null;
+    }
+
+    async removeTabState(tabId) {
+        await this.waitForInitialization();
+        
+        if (this.config.tabs?.states?.[tabId]) {
+            delete this.config.tabs.states[tabId];
+            
+            // Remove from last session tabs
+            const index = this.config.tabs.lastSessionTabs.indexOf(tabId);
+            if (index > -1) {
+                this.config.tabs.lastSessionTabs.splice(index, 1);
+            }
+            
+            await this.saveConfig();
+            console.log(`Tab state removed for: ${tabId}`);
+            return true;
+        }
+        return false;
+    }
+
+    async setActiveTab(tabId) {
+        await this.waitForInitialization();
+        
+        if (!this.config.tabs) {
+            this.config.tabs = { states: {}, activeTabId: null, lastSessionTabs: [], restoreTabsOnStartup: true };
+        }
+        
+        this.config.tabs.activeTabId = tabId;
+        
+        if (this.config.ui?.tabSettings?.autoSaveTabStates) {
+            this.debouncedSave();
+        }
+    }
+
+    async getActiveTab() {
+        await this.waitForInitialization();
+        return this.config.tabs?.activeTabId || null;
+    }
+
+    async getLastSessionTabs() {
+        await this.waitForInitialization();
+        return this.config.tabs?.lastSessionTabs || [];
+    }
+
+    async clearTabStates() {
+        await this.waitForInitialization();
+        
+        if (!this.config.tabs) {
+            this.config.tabs = { states: {}, activeTabId: null, lastSessionTabs: [], restoreTabsOnStartup: true };
+        }
+        
+        this.config.tabs.states = {};
+        this.config.tabs.lastSessionTabs = [];
+        this.config.tabs.activeTabId = null;
+        
+        await this.saveConfig();
+        console.log('All tab states cleared');
+    }
+
+    async getTabSettings() {
+        await this.waitForInitialization();
+        return this.config.ui?.tabSettings || {};
+    }
+
+    async setTabSettings(settings) {
+        await this.waitForInitialization();
+        
+        if (!this.config.ui.tabSettings) {
+            this.config.ui.tabSettings = {};
+        }
+        
+        this.config.ui.tabSettings = {
+            ...this.config.ui.tabSettings,
+            ...settings
+        };
+        
+        await this.saveConfig();
+        console.log('Tab settings updated');
     }
 } 

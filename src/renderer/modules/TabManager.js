@@ -25,9 +25,13 @@ class TabManager {
             cacheTimeout: 30 * 60 * 1000 // 30 minutes cache timeout
         };
         
+        // Configuration manager integration for persistent storage
+        this.configManager = this.genomeBrowser.configManager;
+        this.isPersistenceEnabled = false;
+        
         this.initializeEventListeners();
         this.initializeTabSettings();
-        this.createInitialTab();
+        this.initializePersistence();
     }
     
     /**
@@ -70,6 +74,111 @@ class TabManager {
                 }
             }
         });
+    }
+    
+    /**
+     * Initialize persistence system with ConfigManager
+     */
+    async initializePersistence() {
+        if (!this.configManager) {
+            console.warn('ConfigManager not available, tab persistence disabled');
+            return;
+        }
+        
+        try {
+            // Wait for ConfigManager to be ready
+            await this.configManager.waitForInitialization();
+            
+            // Check if persistence is enabled
+            const tabSettings = await this.configManager.getTabSettings();
+            this.isPersistenceEnabled = tabSettings.persistTabStates !== false;
+            
+            if (this.isPersistenceEnabled) {
+                console.log('Tab persistence enabled');
+                
+                // Try to restore tabs from last session
+                if (tabSettings.restoreTabsOnStartup) {
+                    await this.restoreSessionTabs();
+                } else {
+                    this.createInitialTab();
+                }
+            } else {
+                console.log('Tab persistence disabled');
+                this.createInitialTab();
+            }
+        } catch (error) {
+            console.error('Failed to initialize tab persistence:', error);
+            this.createInitialTab();
+        }
+    }
+    
+    /**
+     * Restore tabs from last session
+     */
+    async restoreSessionTabs() {
+        try {
+            const lastSessionTabs = await this.configManager.getLastSessionTabs();
+            const tabStates = await this.configManager.getTabStates();
+            
+            if (lastSessionTabs.length > 0) {
+                let restoredCount = 0;
+                
+                for (const tabId of lastSessionTabs) {
+                    const savedState = tabStates[tabId];
+                    if (savedState) {
+                        await this.restoreTabFromState(tabId, savedState);
+                        restoredCount++;
+                    }
+                }
+                
+                if (restoredCount > 0) {
+                    // Restore active tab
+                    const activeTabId = await this.configManager.getActiveTab();
+                    if (activeTabId && this.tabs.has(activeTabId)) {
+                        this.switchToTab(activeTabId);
+                    } else {
+                        // Switch to first tab if active tab not found
+                        const firstTab = Array.from(this.tabs.keys())[0];
+                        if (firstTab) {
+                            this.switchToTab(firstTab);
+                        }
+                    }
+                    
+                    console.log(`Restored ${restoredCount} tabs from last session`);
+                    return;
+                }
+            }
+            
+            // If no tabs were restored, create initial tab
+            this.createInitialTab();
+        } catch (error) {
+            console.error('Error restoring session tabs:', error);
+            this.createInitialTab();
+        }
+    }
+    
+    /**
+     * Restore a specific tab from saved state
+     */
+    async restoreTabFromState(tabId, savedState) {
+        try {
+            // Create tab element without navigating to it
+            const tabElement = this.createTabElement(tabId, savedState.title || 'Restored Tab');
+            this.tabs.set(tabId, tabElement);
+            
+            // Store the saved state
+            this.tabStates.set(tabId, savedState);
+            
+            // Update nextTabId to avoid conflicts
+            const tabNumber = parseInt(tabId.replace('tab-', ''));
+            if (tabNumber >= this.nextTabId) {
+                this.nextTabId = tabNumber + 1;
+            }
+            
+            console.log(`Tab ${tabId} restored: ${savedState.title}`);
+        } catch (error) {
+            console.error(`Error restoring tab ${tabId}:`, error);
+        }
     }
     
     /**
@@ -266,6 +375,11 @@ class TabManager {
             tabState.lastAccessedAt = new Date();
         }
         
+        // Persist active tab change if enabled
+        if (this.isPersistenceEnabled && this.configManager) {
+            this.configManager.setActiveTab(tabId);
+        }
+        
         console.log(`Switched to tab: ${tabId}`);
     }
     
@@ -313,6 +427,11 @@ class TabManager {
         this.tabs.delete(tabId);
         this.tabStates.delete(tabId);
         this.clearTabCache(tabId);
+        
+        // Remove from persistent storage if enabled
+        if (this.isPersistenceEnabled && this.configManager) {
+            this.configManager.removeTabState(tabId);
+        }
         
         // If closing active tab, switch to another tab
         if (this.activeTabId === tabId) {
@@ -386,6 +505,9 @@ class TabManager {
             tabState.selectedRead = this.genomeBrowser.selectedRead;
             
             console.log(`Saved state for tab: ${this.activeTabId} at position ${tabState.currentChromosome}:${tabState.currentPosition.start}-${tabState.currentPosition.end}`);
+            
+            // Persist to ConfigManager if enabled
+            this.persistTabState();
         } catch (error) {
             console.error('Error saving tab state:', error);
         }
@@ -440,7 +562,13 @@ class TabManager {
             if (this.genomeBrowser.trackRenderer && tabState.trackSettings) {
                 this.genomeBrowser.trackRenderer.trackSettings = { ...tabState.trackSettings };
                 if (tabState.headerStates) {
-                    this.genomeBrowser.trackRenderer.headerStates = new Map(tabState.headerStates);
+                    // Handle both Map and Object formats for backward compatibility
+                    if (tabState.headerStates instanceof Map) {
+                        this.genomeBrowser.trackRenderer.headerStates = new Map(tabState.headerStates);
+                    } else if (typeof tabState.headerStates === 'object') {
+                        // Convert from persisted object format back to Map
+                        this.genomeBrowser.trackRenderer.headerStates = new Map(Object.entries(tabState.headerStates));
+                    }
                 }
             }
             
@@ -456,6 +584,14 @@ class TabManager {
             
             // Update track visibility controls in UI
             this.updateTrackVisibilityControls();
+            
+            // Restore track order if saved
+            if (tabState.trackOrder && Array.isArray(tabState.trackOrder)) {
+                // Apply track order after a short delay to ensure tracks are rendered
+                setTimeout(() => {
+                    this.applyTrackOrder(tabState.trackOrder);
+                }, 100);
+            }
             
             // Refresh the display if there's genome data
             if (tabState.currentSequence && tabState.currentChromosome) {
@@ -925,6 +1061,35 @@ class TabManager {
             console.log('Applied track order:', trackOrder);
         } catch (error) {
             console.error('Error applying track order:', error);
+        }
+    }
+    
+    /**
+     * Persist current tab state to ConfigManager
+     */
+    async persistTabState() {
+        if (!this.isPersistenceEnabled || !this.configManager || !this.activeTabId) {
+            return;
+        }
+        
+        try {
+            const tabState = this.tabStates.get(this.activeTabId);
+            if (tabState) {
+                // Create a clean copy for persistence (remove non-serializable data)
+                const persistableState = {
+                    ...tabState,
+                    // Convert Map to regular object for JSON serialization
+                    headerStates: tabState.headerStates ? Object.fromEntries(tabState.headerStates) : {}
+                };
+                
+                // Remove function references and other non-serializable data
+                delete persistableState.readsManager;
+                delete persistableState.loadedFiles;
+                
+                await this.configManager.setTabState(this.activeTabId, persistableState);
+            }
+        } catch (error) {
+            console.error('Error persisting tab state:', error);
         }
     }
     
