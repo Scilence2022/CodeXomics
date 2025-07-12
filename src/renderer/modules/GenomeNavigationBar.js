@@ -594,6 +594,15 @@ class GenomeNavigationBar {
                 this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
                 this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
                 
+                // Update current tab title with new position (from drag/resize)
+                if (this.genomeBrowser.tabManager) {
+                    this.genomeBrowser.tabManager.updateCurrentTabPosition(
+                        this.currentChromosome, 
+                        this.genomeBrowser.currentPosition.start + 1, 
+                        this.genomeBrowser.currentPosition.end
+                    );
+                }
+                
                 console.log(`GenomeNavigationBar: Range updated to ${this.genomeBrowser.currentPosition.start}-${this.genomeBrowser.currentPosition.end}`);
             }
             
@@ -743,6 +752,15 @@ class GenomeNavigationBar {
         const sequence = this.genomeBrowser.currentSequence[this.currentChromosome];
         this.genomeBrowser.updateStatistics(this.currentChromosome, sequence);
         this.genomeBrowser.displayGenomeView(this.currentChromosome, sequence);
+        
+        // Update current tab title with new position (from zoom)
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(
+                this.currentChromosome, 
+                newStart + 1, 
+                newEnd
+            );
+        }
         
         console.log(`GenomeNavigationBar: Zoomed to position ${position} with range ${zoomRange}`);
     }

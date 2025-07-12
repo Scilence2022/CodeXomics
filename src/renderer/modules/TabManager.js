@@ -142,6 +142,7 @@ class TabManager {
         // Inherit current genome data from the browser
         const currentGenome = this.genomeBrowser.currentSequence || null;
         const currentAnnotations = this.genomeBrowser.currentAnnotations || null;
+        const currentVariants = this.genomeBrowser.currentVariants || null;
         const currentChromosome = this.genomeBrowser.currentChromosome || null;
         
         // Use specific position if provided, otherwise use current position
@@ -168,26 +169,26 @@ class TabManager {
             isActive: false,
             isLoading: false,
             
-            // Inherit genome data state from current browser
+            // Inherit genome data state from current browser (shared across all tabs)
             genomeData: currentGenome,
             currentChromosome: currentChromosome,
             currentSequence: currentGenome,
             currentAnnotations: currentAnnotations,
+            currentVariants: currentVariants,
             currentPosition: position,
             
-            // File management state (inherit loaded files info)
-            loadedFiles: {
-                genome: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.find(f => f.type === 'genome') : null,
-                annotations: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'annotation') : [],
-                variants: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'variant') : [],
-                reads: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'reads') : [],
-                wig: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'wig') : []
-            },
+            // Reference shared managers (these are shared across all tabs)
+            readsManager: this.genomeBrowser.readsManager,
+            currentWIGTracks: this.genomeBrowser.currentWIGTracks || {},
             
-            // UI state (inherit current state)
+            // File management state (shared references to loaded files)
+            loadedFiles: this.genomeBrowser.loadedFiles || [],
+            
+            // UI state (inherit current state but keep independent)
             sidebarVisible: currentSidebarVisible,
             activeTrackTypes: currentTrackTypes,
             trackSettings: this.genomeBrowser.trackRenderer ? { ...this.genomeBrowser.trackRenderer.trackSettings } : {},
+            headerStates: this.genomeBrowser.trackRenderer ? new Map(this.genomeBrowser.trackRenderer.headerStates) : new Map(),
             
             // History for navigation (start fresh for each tab)
             navigationHistory: [],
@@ -316,20 +317,31 @@ class TabManager {
         if (!tabState) return;
         
         try {
-            // Save current genome state
+            // Save position-specific state (unique per tab)
             tabState.currentChromosome = this.genomeBrowser.currentChromosome;
-            tabState.currentSequence = this.genomeBrowser.currentSequence;
-            tabState.currentAnnotations = this.genomeBrowser.currentAnnotations;
             tabState.currentPosition = { ...this.genomeBrowser.currentPosition };
             
-            // Save UI state
+            // Update shared data references (same across all tabs)
+            tabState.currentSequence = this.genomeBrowser.currentSequence;
+            tabState.currentAnnotations = this.genomeBrowser.currentAnnotations;
+            tabState.currentVariants = this.genomeBrowser.currentVariants;
+            tabState.currentWIGTracks = this.genomeBrowser.currentWIGTracks;
+            tabState.loadedFiles = this.genomeBrowser.loadedFiles;
+            
+            // Save UI state (independent per tab)
             tabState.sidebarVisible = !document.getElementById('sidebar').classList.contains('hidden');
             
-            // Save selected items
+            // Save track renderer states (independent per tab)
+            if (this.genomeBrowser.trackRenderer) {
+                tabState.trackSettings = { ...this.genomeBrowser.trackRenderer.trackSettings };
+                tabState.headerStates = new Map(this.genomeBrowser.trackRenderer.headerStates);
+            }
+            
+            // Save selected items (unique per tab)
             tabState.selectedGene = this.genomeBrowser.selectedGene;
             tabState.selectedRead = this.genomeBrowser.selectedRead;
             
-            console.log(`Saved state for tab: ${this.activeTabId}`);
+            console.log(`Saved state for tab: ${this.activeTabId} at position ${tabState.currentChromosome}:${tabState.currentPosition.start}-${tabState.currentPosition.end}`);
         } catch (error) {
             console.error('Error saving tab state:', error);
         }
@@ -343,11 +355,16 @@ class TabManager {
         if (!tabState) return;
         
         try {
-            // Restore genome state
+            // Restore position-specific state (unique per tab)
             this.genomeBrowser.currentChromosome = tabState.currentChromosome;
+            this.genomeBrowser.currentPosition = { ...tabState.currentPosition };
+            
+            // Restore shared data (same across all tabs - ensure all tabs see latest data)
             this.genomeBrowser.currentSequence = tabState.currentSequence;
             this.genomeBrowser.currentAnnotations = tabState.currentAnnotations;
-            this.genomeBrowser.currentPosition = { ...tabState.currentPosition };
+            this.genomeBrowser.currentVariants = tabState.currentVariants;
+            this.genomeBrowser.currentWIGTracks = tabState.currentWIGTracks;
+            this.genomeBrowser.loadedFiles = tabState.loadedFiles;
             
             // Restore UI state
             const sidebar = document.getElementById('sidebar');
@@ -357,16 +374,30 @@ class TabManager {
                 sidebar.classList.add('hidden');
             }
             
-            // Restore selected items
+            // Restore track renderer states (independent per tab)
+            if (this.genomeBrowser.trackRenderer && tabState.trackSettings) {
+                this.genomeBrowser.trackRenderer.trackSettings = { ...tabState.trackSettings };
+                if (tabState.headerStates) {
+                    this.genomeBrowser.trackRenderer.headerStates = new Map(tabState.headerStates);
+                }
+            }
+            
+            // Restore selected items (unique per tab)
             this.genomeBrowser.selectedGene = tabState.selectedGene;
             this.genomeBrowser.selectedRead = tabState.selectedRead;
+            
+            // Update chromosome selector to match tab state
+            const chromosomeSelect = document.getElementById('chromosomeSelect');
+            if (chromosomeSelect && tabState.currentChromosome) {
+                chromosomeSelect.value = tabState.currentChromosome;
+            }
             
             // Refresh the display if there's genome data
             if (tabState.currentSequence && tabState.currentChromosome) {
                 this.genomeBrowser.refreshCurrentView();
             }
             
-            console.log(`Restored state for tab: ${tabId}`);
+            console.log(`Restored state for tab: ${tabId} at position ${tabState.currentChromosome}:${tabState.currentPosition.start}-${tabState.currentPosition.end}`);
         } catch (error) {
             console.error('Error restoring tab state:', error);
         }
@@ -523,6 +554,36 @@ class TabManager {
         }
         
         console.log(`Updated all tabs with new genome data from: ${filename}`);
+    }
+    
+    /**
+     * Handle loading of additional files (VCF, BAM, WIG) - share across all tabs
+     */
+    onAdditionalFileLoaded(fileType, fileData, filename) {
+        // Update all existing tabs with the new file data
+        this.tabStates.forEach((tabState, tabId) => {
+            switch(fileType) {
+                case 'variant':
+                case 'vcf':
+                    tabState.currentVariants = this.genomeBrowser.currentVariants;
+                    break;
+                case 'reads':
+                case 'bam':
+                case 'sam':
+                    // ReadsManager is shared, so just update the reference
+                    tabState.readsManager = this.genomeBrowser.readsManager;
+                    break;
+                case 'wig':
+                    tabState.currentWIGTracks = this.genomeBrowser.currentWIGTracks;
+                    break;
+            }
+            
+            // Update loadedFiles list
+            tabState.loadedFiles = this.genomeBrowser.loadedFiles;
+            tabState.lastAccessedAt = new Date();
+        });
+        
+        console.log(`Updated all tabs with new ${fileType} data from: ${filename}`);
     }
     
     /**

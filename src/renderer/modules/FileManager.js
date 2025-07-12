@@ -652,6 +652,11 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             
             this.genomeBrowser.updateStatus(`✅ VCF file loaded: ${result.metadata.name} (${result.metadata.variantCount} variants)`);
         
+        // Update all tabs with new VCF data
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.onAdditionalFileLoaded('vcf', this.genomeBrowser.currentVariants, this.currentFile?.path);
+        }
+        
         // Auto-enable variants track
         this.autoEnableTracksForFileType('.vcf');
         
@@ -758,6 +763,11 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
                 `⚠️ BAM file loaded: ${result.metadata.name} (${stats.references.length} chromosomes, no index)`;
             
             this.genomeBrowser.updateStatus(statusMessage);
+            
+            // Update all tabs with new BAM data
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.onAdditionalFileLoaded('bam', null, this.currentFile?.path);
+            }
             
             // Show index recommendation if no index found
             if (!stats.hasIndex) {
@@ -1102,6 +1112,11 @@ Original error: ${error.message}`;
         });
         
         this.genomeBrowser.updateStatus(`Added ${newTracksCount} WIG track(s). Total: ${totalTracksAfterMerge} tracks`);
+        
+        // Update all tabs with new WIG data
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.onAdditionalFileLoaded('wig', this.genomeBrowser.currentWIGTracks, this.currentFile?.path);
+        }
         
         // Only auto-enable WIG tracks if this is not part of a multiple file loading operation
         // (to avoid multiple calls that cause duplication)
