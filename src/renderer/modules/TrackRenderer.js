@@ -1784,6 +1784,12 @@ class TrackRenderer {
         geneGroup.addEventListener('click', () => {
             this.showGeneDetails(gene, operonInfo);
         });
+        
+        // Add right-click context menu for opening in new tab
+        geneGroup.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this.showGeneContextMenu(e, gene);
+        });
 
         // Handle selection state
         if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene && 
@@ -9256,6 +9262,116 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             
             verticalScrollCheckbox.addEventListener('change', toggleScrollSettings);
             toggleScrollSettings(); // Initial state
+        }
+    }
+    
+    /**
+     * Show context menu for gene elements
+     */
+    showGeneContextMenu(event, gene) {
+        // Remove any existing context menu
+        const existingMenu = document.querySelector('.gene-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+        
+        // Create context menu
+        const menu = document.createElement('div');
+        menu.className = 'gene-context-menu';
+        menu.style.cssText = `
+            position: fixed;
+            left: ${event.clientX}px;
+            top: ${event.clientY}px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+            min-width: 180px;
+            font-size: 14px;
+        `;
+        
+        // Create menu items
+        const menuItems = [
+            {
+                text: 'View Details',
+                icon: 'fas fa-info-circle',
+                action: () => this.showGeneDetails(gene)
+            },
+            {
+                text: 'Open in New Tab',
+                icon: 'fas fa-external-link-alt',
+                action: () => {
+                    if (this.genomeBrowser.tabManager) {
+                        this.genomeBrowser.tabManager.createTabForGene(gene);
+                    }
+                }
+            },
+            {
+                text: 'Copy Gene Info',
+                icon: 'fas fa-copy',
+                action: () => {
+                    const geneInfo = `Gene: ${gene.name || gene.id || 'Unknown'}\nPosition: ${gene.start}-${gene.end}\nStrand: ${gene.strand}\nType: ${gene.type}`;
+                    navigator.clipboard.writeText(geneInfo);
+                }
+            }
+        ];
+        
+        menuItems.forEach((item, index) => {
+            const menuItem = document.createElement('div');
+            menuItem.className = 'context-menu-item';
+            menuItem.style.cssText = `
+                padding: 8px 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: ${index < menuItems.length - 1 ? '1px solid #eee' : 'none'};
+            `;
+            
+            menuItem.innerHTML = `
+                <i class="${item.icon}" style="color: #666; width: 14px;"></i>
+                <span>${item.text}</span>
+            `;
+            
+            menuItem.addEventListener('mouseenter', () => {
+                menuItem.style.backgroundColor = '#f5f5f5';
+            });
+            
+            menuItem.addEventListener('mouseleave', () => {
+                menuItem.style.backgroundColor = 'transparent';
+            });
+            
+            menuItem.addEventListener('click', () => {
+                item.action();
+                menu.remove();
+            });
+            
+            menu.appendChild(menuItem);
+        });
+        
+        // Add to document
+        document.body.appendChild(menu);
+        
+        // Remove menu when clicking elsewhere
+        const removeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', removeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', removeMenu);
+        }, 0);
+        
+        // Adjust menu position if it goes off screen
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            menu.style.left = (event.clientX - rect.width) + 'px';
+        }
+        if (rect.bottom > window.innerHeight) {
+            menu.style.top = (event.clientY - rect.height) + 'px';
         }
     }
 }
