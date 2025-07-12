@@ -214,14 +214,26 @@ class ActionManager {
             );
             
             if (sequence) {
+                // Collect comprehensive data including features
+                const comprehensiveData = await this.collectComprehensiveData(
+                    selectionInfo.chromosome, 
+                    selectionInfo.start, 
+                    selectionInfo.end, 
+                    selectionInfo.strand
+                );
+                
                 this.clipboard = {
                     type: 'copy',
                     sequence: sequence,
                     source: `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`,
                     timestamp: new Date(),
-                    sourceInfo: selectionInfo
+                    sourceInfo: selectionInfo,
+                    comprehensiveData: comprehensiveData
                 };
-                console.log('📋 [ActionManager] Clipboard set for copy:', this.clipboard);
+                console.log('📋 [ActionManager] Clipboard set for copy with features:', {
+                    sequence: sequence.length + ' bp',
+                    features: comprehensiveData.features.length
+                });
             }
             
             this.createActionFromSelection('copy', selectionInfo);
@@ -246,14 +258,26 @@ class ActionManager {
             );
             
             if (sequence) {
+                // Collect comprehensive data including features
+                const comprehensiveData = await this.collectComprehensiveData(
+                    selectionInfo.chromosome, 
+                    selectionInfo.start, 
+                    selectionInfo.end, 
+                    selectionInfo.strand
+                );
+                
                 this.clipboard = {
                     type: 'cut',
                     sequence: sequence,
                     source: `${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}`,
                     timestamp: new Date(),
-                    sourceInfo: selectionInfo
+                    sourceInfo: selectionInfo,
+                    comprehensiveData: comprehensiveData
                 };
-                console.log('📋 [ActionManager] Clipboard set for cut:', this.clipboard);
+                console.log('📋 [ActionManager] Clipboard set for cut with features:', {
+                    sequence: sequence.length + ' bp',
+                    features: comprehensiveData.features.length
+                });
             }
             
             this.createActionFromSelection('cut', selectionInfo);
@@ -907,13 +931,20 @@ class ActionManager {
                     // Get sequence and set clipboard immediately for copy
                     const copySequence = await this.getSequenceForRegion(chromosome, start, end, strand);
                     if (copySequence) {
+                        // Collect comprehensive data including features
+                        const copyComprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
+                        
                         this.clipboard = {
                             type: 'copy',
                             sequence: copySequence,
                             source: target,
-                            timestamp: new Date()
+                            timestamp: new Date(),
+                            comprehensiveData: copyComprehensiveData
                         };
-                        console.log('📋 [ActionManager] Clipboard set for copy (modal):', this.clipboard);
+                        console.log('📋 [ActionManager] Clipboard set for copy (modal) with features:', {
+                            sequence: copySequence.length + ' bp',
+                            features: copyComprehensiveData.features.length
+                        });
                     }
                     
                     this.addAction(
@@ -928,13 +959,20 @@ class ActionManager {
                     // Get sequence and set clipboard immediately for cut
                     const cutSequence = await this.getSequenceForRegion(chromosome, start, end, strand);
                     if (cutSequence) {
+                        // Collect comprehensive data including features
+                        const cutComprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
+                        
                         this.clipboard = {
                             type: 'cut',
                             sequence: cutSequence,
                             source: target,
-                            timestamp: new Date()
+                            timestamp: new Date(),
+                            comprehensiveData: cutComprehensiveData
                         };
-                        console.log('📋 [ActionManager] Clipboard set for cut (modal):', this.clipboard);
+                        console.log('📋 [ActionManager] Clipboard set for cut (modal) with features:', {
+                            sequence: cutSequence.length + ' bp',
+                            features: cutComprehensiveData.features.length
+                        });
                     }
                     
                     this.addAction(
@@ -1526,17 +1564,44 @@ class ActionManager {
             operation: 'cut' // Mark this as part of cut operation
         });
         
+        // Remove features from source location (cut operation)
+        let removedFeaturesCount = 0;
+        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
+            const annotations = this.genomeBrowser.currentAnnotations[chromosome];
+            const initialCount = annotations.length;
+            
+            // Remove features that are within the cut region
+            this.genomeBrowser.currentAnnotations[chromosome] = annotations.filter(feature => 
+                !(feature.start >= start && feature.end <= end)
+            );
+            
+            removedFeaturesCount = initialCount - this.genomeBrowser.currentAnnotations[chromosome].length;
+            
+            console.log('✂️ [ActionManager] Removed features from cut region:', {
+                chromosome: chromosome,
+                region: `${start}-${end}`,
+                removedFeatures: removedFeaturesCount,
+                remainingFeatures: this.genomeBrowser.currentAnnotations[chromosome].length
+            });
+            
+            // Notify genome browser to update displays
+            if (this.genomeBrowser.trackRenderer) {
+                this.genomeBrowser.trackRenderer.updateFeatureTrack();
+            }
+        }
+        
         return {
             operation: 'cut',
             sequenceLength: sequence.length,
             source: action.target,
             chromosome: chromosome,
-            cutRegion: { start, end }
+            cutRegion: { start, end },
+            removedFeaturesCount: removedFeaturesCount
         };
     }
     
     /**
-     * Execute paste sequence action
+     * Execute paste sequence action with comprehensive features handling
      */
     async executePasteSequence(action) {
         const { chromosome, start, end } = action.metadata;
@@ -1546,28 +1611,28 @@ class ActionManager {
             throw new Error('No clipboard data available for pasting');
         }
         
+        console.log('🔄 [ActionManager] Executing paste with comprehensive data:', {
+            actionId: action.id,
+            target: action.target,
+            clipboardFeatures: clipboardData.comprehensiveData?.features?.length || 0,
+            hasComprehensiveData: !!clipboardData.comprehensiveData
+        });
+        
         // Determine if this is an insert or replace based on start/end
-        if (start === end) {
-            // Insert operation
+        const isInsert = (start === end);
+        const operation = isInsert ? 'paste-insert' : 'paste-replace';
+        
+        // Record sequence modification
+        if (isInsert) {
             this.recordSequenceModification(chromosome, {
                 type: 'insert',
                 position: start,
                 sequence: clipboardData.sequence,
                 length: clipboardData.sequence.length,
                 actionId: action.id,
-                operation: 'paste-insert'
+                operation: operation
             });
-            
-            return {
-                operation: 'paste-insert',
-                sequenceLength: clipboardData.sequence.length,
-                target: action.target,
-                source: clipboardData.source,
-                chromosome: chromosome,
-                position: start
-            };
         } else {
-            // Replace operation
             this.recordSequenceModification(chromosome, {
                 type: 'replace',
                 start: start,
@@ -1576,18 +1641,130 @@ class ActionManager {
                 newSequence: clipboardData.sequence,
                 newLength: clipboardData.sequence.length,
                 actionId: action.id,
-                operation: 'paste-replace'
+                operation: operation
+            });
+        }
+        
+        // Handle features copying and position adjustment
+        let copiedFeaturesCount = 0;
+        if (clipboardData.comprehensiveData && clipboardData.comprehensiveData.features && clipboardData.comprehensiveData.features.length > 0) {
+            copiedFeaturesCount = await this.copyFeaturesFromClipboard(clipboardData, chromosome, start, end, isInsert);
+        }
+        
+        const result = {
+            operation: operation,
+            sequenceLength: clipboardData.sequence.length,
+            target: action.target,
+            source: clipboardData.source,
+            chromosome: chromosome,
+            copiedFeaturesCount: copiedFeaturesCount
+        };
+        
+        if (isInsert) {
+            result.position = start;
+        } else {
+            result.originalLength = end - start + 1;
+            result.newLength = clipboardData.sequence.length;
+            result.replacedRegion = { start, end };
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Copy features from clipboard to target location with position adjustment
+     */
+    async copyFeaturesFromClipboard(clipboardData, targetChromosome, targetStart, targetEnd, isInsert) {
+        try {
+            const comprehensiveData = clipboardData.comprehensiveData;
+            const sourceFeatures = comprehensiveData.features;
+            const sourceRegion = comprehensiveData.region;
+            
+            if (!sourceFeatures || sourceFeatures.length === 0) {
+                return 0;
+            }
+            
+            console.log('🧬 [ActionManager] Copying features from clipboard:', {
+                sourceFeatures: sourceFeatures.length,
+                sourceRegion: sourceRegion,
+                targetLocation: `${targetChromosome}:${targetStart}-${targetEnd}`,
+                isInsert: isInsert
             });
             
-            return {
-                operation: 'paste-replace',
-                originalLength: end - start + 1,
-                newLength: clipboardData.sequence.length,
-                target: action.target,
-                source: clipboardData.source,
-                chromosome: chromosome,
-                replacedRegion: { start, end }
-            };
+            // Calculate position offset for features
+            const sourceStart = sourceRegion.start;
+            const sourceEnd = sourceRegion.end;
+            
+            // For both insert and replace, features are positioned relative to the target start
+            const positionOffset = targetStart - sourceStart;
+            
+            // Create new features with adjusted positions
+            const newFeatures = sourceFeatures.map(feature => {
+                const newFeature = JSON.parse(JSON.stringify(feature)); // Deep copy
+                
+                // Adjust positions
+                newFeature.start = feature.start + positionOffset;
+                newFeature.end = feature.end + positionOffset;
+                newFeature.chromosome = targetChromosome;
+                
+                // Add metadata about the copy operation
+                newFeature.copied = {
+                    from: `${sourceRegion.chromosome}:${feature.start}-${feature.end}`,
+                    to: `${targetChromosome}:${newFeature.start}-${newFeature.end}`,
+                    actionId: `paste-${Date.now()}`,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Update any name/ID to avoid conflicts
+                if (newFeature.name) {
+                    newFeature.name = `${newFeature.name}_copy_${Date.now()}`;
+                }
+                if (newFeature.locus_tag) {
+                    newFeature.locus_tag = `${newFeature.locus_tag}_copy_${Date.now()}`;
+                }
+                
+                console.log('🎯 [ActionManager] Adjusted feature position:', {
+                    originalName: feature.name,
+                    newName: newFeature.name,
+                    originalPos: `${feature.start}-${feature.end}`,
+                    newPos: `${newFeature.start}-${newFeature.end}`,
+                    offset: positionOffset
+                });
+                
+                return newFeature;
+            });
+            
+            // Insert new features into target chromosome annotations
+            if (!this.genomeBrowser.currentAnnotations) {
+                this.genomeBrowser.currentAnnotations = {};
+            }
+            
+            if (!this.genomeBrowser.currentAnnotations[targetChromosome]) {
+                this.genomeBrowser.currentAnnotations[targetChromosome] = [];
+            }
+            
+            // Add new features to the target chromosome
+            this.genomeBrowser.currentAnnotations[targetChromosome].push(...newFeatures);
+            
+            // Sort features by position for better organization
+            this.genomeBrowser.currentAnnotations[targetChromosome].sort((a, b) => a.start - b.start);
+            
+            console.log('✅ [ActionManager] Successfully copied features:', {
+                targetChromosome: targetChromosome,
+                featuresAdded: newFeatures.length,
+                totalFeaturesNow: this.genomeBrowser.currentAnnotations[targetChromosome].length
+            });
+            
+            // Notify genome browser to update displays
+            if (this.genomeBrowser.trackRenderer) {
+                this.genomeBrowser.trackRenderer.updateFeatureTrack();
+            }
+            
+            return newFeatures.length;
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error copying features from clipboard:', error);
+            return 0;
         }
     }
     
@@ -1614,12 +1791,39 @@ class ActionManager {
             actionId: action.id
         });
         
+        // Remove features from deleted region
+        let deletedFeaturesCount = 0;
+        if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
+            const annotations = this.genomeBrowser.currentAnnotations[chromosome];
+            const initialCount = annotations.length;
+            
+            // Remove features that are within the deleted region
+            this.genomeBrowser.currentAnnotations[chromosome] = annotations.filter(feature => 
+                !(feature.start >= start && feature.end <= end)
+            );
+            
+            deletedFeaturesCount = initialCount - this.genomeBrowser.currentAnnotations[chromosome].length;
+            
+            console.log('🗑️ [ActionManager] Removed features from deleted region:', {
+                chromosome: chromosome,
+                region: `${start}-${end}`,
+                deletedFeatures: deletedFeaturesCount,
+                remainingFeatures: this.genomeBrowser.currentAnnotations[chromosome].length
+            });
+            
+            // Notify genome browser to update displays
+            if (this.genomeBrowser.trackRenderer) {
+                this.genomeBrowser.trackRenderer.updateFeatureTrack();
+            }
+        }
+        
         return {
             operation: 'delete',
             sequenceLength: end - start + 1,
             target: action.target,
             chromosome: chromosome,
-            deletedRegion: { start, end }
+            deletedRegion: { start, end },
+            deletedFeaturesCount: deletedFeaturesCount
         };
     }
     

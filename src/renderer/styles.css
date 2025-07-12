@@ -33017,8 +33017,8 @@ path.svg-gene-element.selected {
 }
 
 .action-list-content {
-    min-height: 300px;
-    max-height: 500px;
+    min-height: 600px;
+    max-height: 800px;
     overflow-y: auto;
 }
 
