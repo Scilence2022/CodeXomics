@@ -25,6 +25,19 @@ class TabManager {
             cacheTimeout: 30 * 60 * 1000 // 30 minutes cache timeout
         };
         
+        // Position indicator settings
+        this.positionIndicatorSettings = {
+            height: 3, // Height in pixels
+            defaultColor: '#1a73e8', // Default indicator color
+            opacity: 0.8, // Indicator opacity
+            borderWidth: 2, // Border width in pixels
+            trackBackgroundColor: '#e0e0e0', // Track background color
+            trackBorderColor: '#cccccc', // Track border color
+            trackBorderRadius: 2, // Track border radius in pixels
+            enableChromosomeColors: true, // Use chromosome-specific colors
+            enableAnimations: true // Enable hover animations
+        };
+        
         // Configuration manager integration for persistent storage
         this.configManager = this.genomeBrowser.configManager;
         this.isPersistenceEnabled = false;
@@ -36,6 +49,8 @@ class TabManager {
         // Force visibility of position indicators after a short delay
         setTimeout(() => {
             this.forcePositionIndicatorVisibility();
+            // Apply initial position indicator settings
+            this.applyPositionIndicatorSettings();
         }, 1000);
     }
     
@@ -276,6 +291,11 @@ class TabManager {
         
         // Initialize position indicator with default visibility
         this.initializeTabPositionVisualization(tab);
+        
+        // Apply animation setting
+        if (this.positionIndicatorSettings.enableAnimations) {
+            tab.classList.add('animations-enabled');
+        }
         
         return tab;
     }
@@ -1293,6 +1313,75 @@ class TabManager {
     }
     
     /**
+     * Update position indicator settings
+     */
+    updatePositionIndicatorSettings(newSettings) {
+        this.positionIndicatorSettings = { ...this.positionIndicatorSettings, ...newSettings };
+        
+        // Store in ConfigManager if available
+        if (this.configManager) {
+            this.configManager.setTabSettings({
+                positionIndicatorSettings: this.positionIndicatorSettings
+            }).catch(error => {
+                console.error('Failed to save position indicator settings:', error);
+            });
+        }
+        
+        console.log('Position indicator settings updated:', this.positionIndicatorSettings);
+    }
+    
+    /**
+     * Apply position indicator settings to all existing tabs
+     */
+    applyPositionIndicatorSettings() {
+        // Update CSS custom properties for global styling
+        const root = document.documentElement;
+        root.style.setProperty('--tab-indicator-height', `${this.positionIndicatorSettings.height}px`);
+        root.style.setProperty('--tab-indicator-opacity', this.positionIndicatorSettings.opacity);
+        root.style.setProperty('--tab-indicator-border-width', `${this.positionIndicatorSettings.borderWidth}px`);
+        root.style.setProperty('--tab-track-border-radius', `${this.positionIndicatorSettings.trackBorderRadius}px`);
+        
+        // Apply settings to all existing tabs
+        this.tabs.forEach((tabElement, tabId) => {
+            const chromosomeTrack = tabElement.querySelector('.chromosome-track');
+            const positionIndicator = tabElement.querySelector('.position-indicator');
+            const tabVisualization = tabElement.querySelector('.tab-position-visualization');
+            
+            if (chromosomeTrack && positionIndicator && tabVisualization) {
+                // Update visualization height
+                tabVisualization.style.height = `${this.positionIndicatorSettings.height}px`;
+                
+                // Update track styling with defaults
+                chromosomeTrack.style.borderRadius = `${this.positionIndicatorSettings.trackBorderRadius}px`;
+                
+                // Update indicator styling with defaults
+                positionIndicator.style.opacity = this.positionIndicatorSettings.opacity;
+                positionIndicator.style.borderWidth = `${this.positionIndicatorSettings.borderWidth}px`;
+                
+                // Remove/add animation class based on settings
+                if (this.positionIndicatorSettings.enableAnimations) {
+                    tabElement.classList.add('animations-enabled');
+                } else {
+                    tabElement.classList.remove('animations-enabled');
+                }
+                
+                // If the tab has position data, re-apply the visualization
+                const tabState = this.tabStates.get(tabId);
+                if (tabState && tabState.currentChromosome && tabState.currentPosition) {
+                    this.updateTabPositionVisualization(
+                        tabId,
+                        tabState.currentChromosome,
+                        tabState.currentPosition.start + 1,
+                        tabState.currentPosition.end
+                    );
+                }
+            }
+        });
+        
+        console.log('Applied position indicator settings to all tabs');
+    }
+    
+    /**
      * Get cache statistics
      */
     getCacheStats() {
@@ -1325,6 +1414,27 @@ class TabManager {
         const cacheTimeout = document.getElementById('cacheTimeout');
         const clearCacheBtn = document.getElementById('clearCacheBtn');
         const saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
+        const resetTabSettingsBtn = document.getElementById('resetTabSettingsBtn');
+        
+        // Position indicator controls
+        const indicatorHeight = document.getElementById('indicatorHeight');
+        const indicatorHeightValue = document.getElementById('indicatorHeightValue');
+        const indicatorColor = document.getElementById('indicatorColor');
+        const resetIndicatorColor = document.getElementById('resetIndicatorColor');
+        const indicatorOpacity = document.getElementById('indicatorOpacity');
+        const indicatorOpacityValue = document.getElementById('indicatorOpacityValue');
+        const indicatorBorderWidth = document.getElementById('indicatorBorderWidth');
+        const indicatorBorderWidthValue = document.getElementById('indicatorBorderWidthValue');
+        
+        // Chromosome track controls
+        const trackBackgroundColor = document.getElementById('trackBackgroundColor');
+        const resetTrackBackgroundColor = document.getElementById('resetTrackBackgroundColor');
+        const trackBorderColor = document.getElementById('trackBorderColor');
+        const resetTrackBorderColor = document.getElementById('resetTrackBorderColor');
+        const trackBorderRadius = document.getElementById('trackBorderRadius');
+        const trackBorderRadiusValue = document.getElementById('trackBorderRadiusValue');
+        const enableChromosomeColors = document.getElementById('enableChromosomeColors');
+        const enableAnimations = document.getElementById('enableAnimations');
         
         // Modal close functionality
         const closeButtons = modal.querySelectorAll('.modal-close');
@@ -1346,9 +1456,71 @@ class TabManager {
             this.updateCacheStatsDisplay();
         });
         
+        // Position indicator settings event listeners
+        indicatorHeight.addEventListener('input', () => {
+            indicatorHeightValue.textContent = `${indicatorHeight.value}px`;
+            this.updatePreview();
+        });
+        
+        indicatorColor.addEventListener('change', () => {
+            this.updatePreview();
+        });
+        
+        resetIndicatorColor.addEventListener('click', () => {
+            indicatorColor.value = '#1a73e8';
+            this.updatePreview();
+        });
+        
+        indicatorOpacity.addEventListener('input', () => {
+            indicatorOpacityValue.textContent = indicatorOpacity.value;
+            this.updatePreview();
+        });
+        
+        indicatorBorderWidth.addEventListener('input', () => {
+            indicatorBorderWidthValue.textContent = `${indicatorBorderWidth.value}px`;
+            this.updatePreview();
+        });
+        
+        // Chromosome track settings event listeners
+        trackBackgroundColor.addEventListener('change', () => {
+            this.updatePreview();
+        });
+        
+        resetTrackBackgroundColor.addEventListener('click', () => {
+            trackBackgroundColor.value = '#e0e0e0';
+            this.updatePreview();
+        });
+        
+        trackBorderColor.addEventListener('change', () => {
+            this.updatePreview();
+        });
+        
+        resetTrackBorderColor.addEventListener('click', () => {
+            trackBorderColor.value = '#cccccc';
+            this.updatePreview();
+        });
+        
+        trackBorderRadius.addEventListener('input', () => {
+            trackBorderRadiusValue.textContent = `${trackBorderRadius.value}px`;
+            this.updatePreview();
+        });
+        
+        enableChromosomeColors.addEventListener('change', () => {
+            this.updatePreview();
+        });
+        
+        enableAnimations.addEventListener('change', () => {
+            this.updatePreview();
+        });
+        
         // Save settings button
         saveTabSettingsBtn.addEventListener('click', () => {
             this.saveTabSettings();
+        });
+        
+        // Reset settings button
+        resetTabSettingsBtn.addEventListener('click', () => {
+            this.resetTabSettings();
         });
         
         // Close modal on backdrop click
@@ -1364,20 +1536,59 @@ class TabManager {
      */
     openTabSettingsModal() {
         const modal = document.getElementById('tabSettingsModal');
+        
+        // Cache settings
         const tabCacheEnabled = document.getElementById('tabCacheEnabled');
         const maxCacheSize = document.getElementById('maxCacheSize');
         const cacheTimeout = document.getElementById('cacheTimeout');
         
-        // Populate current settings
+        // Position indicator settings
+        const indicatorHeight = document.getElementById('indicatorHeight');
+        const indicatorHeightValue = document.getElementById('indicatorHeightValue');
+        const indicatorColor = document.getElementById('indicatorColor');
+        const indicatorOpacity = document.getElementById('indicatorOpacity');
+        const indicatorOpacityValue = document.getElementById('indicatorOpacityValue');
+        const indicatorBorderWidth = document.getElementById('indicatorBorderWidth');
+        const indicatorBorderWidthValue = document.getElementById('indicatorBorderWidthValue');
+        
+        // Chromosome track settings
+        const trackBackgroundColor = document.getElementById('trackBackgroundColor');
+        const trackBorderColor = document.getElementById('trackBorderColor');
+        const trackBorderRadius = document.getElementById('trackBorderRadius');
+        const trackBorderRadiusValue = document.getElementById('trackBorderRadiusValue');
+        const enableChromosomeColors = document.getElementById('enableChromosomeColors');
+        const enableAnimations = document.getElementById('enableAnimations');
+        
+        // Populate cache settings
         tabCacheEnabled.checked = this.cacheSettings.enabled;
         maxCacheSize.value = this.cacheSettings.maxCacheSize;
         cacheTimeout.value = Math.round(this.cacheSettings.cacheTimeout / (60 * 1000)); // Convert to minutes
+        
+        // Populate position indicator settings
+        indicatorHeight.value = this.positionIndicatorSettings.height;
+        indicatorHeightValue.textContent = `${this.positionIndicatorSettings.height}px`;
+        indicatorColor.value = this.positionIndicatorSettings.defaultColor;
+        indicatorOpacity.value = this.positionIndicatorSettings.opacity;
+        indicatorOpacityValue.textContent = this.positionIndicatorSettings.opacity;
+        indicatorBorderWidth.value = this.positionIndicatorSettings.borderWidth;
+        indicatorBorderWidthValue.textContent = `${this.positionIndicatorSettings.borderWidth}px`;
+        
+        // Populate chromosome track settings
+        trackBackgroundColor.value = this.positionIndicatorSettings.trackBackgroundColor;
+        trackBorderColor.value = this.positionIndicatorSettings.trackBorderColor;
+        trackBorderRadius.value = this.positionIndicatorSettings.trackBorderRadius;
+        trackBorderRadiusValue.textContent = `${this.positionIndicatorSettings.trackBorderRadius}px`;
+        enableChromosomeColors.checked = this.positionIndicatorSettings.enableChromosomeColors;
+        enableAnimations.checked = this.positionIndicatorSettings.enableAnimations;
         
         // Update visibility
         this.toggleCacheSettingsVisibility(this.cacheSettings.enabled);
         
         // Update cache stats
         this.updateCacheStatsDisplay();
+        
+        // Update preview
+        this.updatePreview();
         
         // Show modal
         modal.style.display = 'flex';
@@ -1420,6 +1631,53 @@ class TabManager {
     }
     
     /**
+     * Update live preview of position indicator settings
+     */
+    updatePreview() {
+        const previewTrack = document.getElementById('previewTrack');
+        const previewIndicator = document.getElementById('previewIndicator');
+        const previewVisualization = document.getElementById('previewVisualization');
+        
+        if (!previewTrack || !previewIndicator || !previewVisualization) return;
+        
+        // Get current setting values
+        const height = document.getElementById('indicatorHeight').value;
+        const color = document.getElementById('indicatorColor').value;
+        const opacity = document.getElementById('indicatorOpacity').value;
+        const borderWidth = document.getElementById('indicatorBorderWidth').value;
+        const trackBgColor = document.getElementById('trackBackgroundColor').value;
+        const trackBorderColor = document.getElementById('trackBorderColor').value;
+        const trackRadius = document.getElementById('trackBorderRadius').value;
+        const enableChromosomeColors = document.getElementById('enableChromosomeColors').checked;
+        const enableAnimations = document.getElementById('enableAnimations').checked;
+        
+        // Update preview visualization height
+        previewVisualization.style.height = `${height}px`;
+        
+        // Update chromosome track styling
+        const finalTrackBgColor = enableChromosomeColors ? color + '22' : trackBgColor;
+        const finalTrackBorderColor = enableChromosomeColors ? color : trackBorderColor;
+        
+        previewTrack.style.background = `linear-gradient(to right, ${finalTrackBgColor}, ${finalTrackBgColor}88)`;
+        previewTrack.style.borderColor = finalTrackBorderColor;
+        previewTrack.style.borderRadius = `${trackRadius}px`;
+        
+        // Update position indicator styling
+        previewIndicator.style.backgroundColor = color;
+        previewIndicator.style.borderColor = color;
+        previewIndicator.style.borderWidth = `${borderWidth}px`;
+        previewIndicator.style.opacity = opacity;
+        previewIndicator.style.borderRadius = `${Math.min(trackRadius, 2)}px`;
+        
+        // Add/remove animation class
+        if (enableAnimations) {
+            previewIndicator.style.animation = 'position-pulse 2s ease-in-out infinite';
+        } else {
+            previewIndicator.style.animation = 'none';
+        }
+    }
+
+    /**
      * Save tab settings
      */
     saveTabSettings() {
@@ -1427,30 +1685,101 @@ class TabManager {
         const maxCacheSize = document.getElementById('maxCacheSize');
         const cacheTimeout = document.getElementById('cacheTimeout');
         
-        const newSettings = {
+        // Position indicator settings
+        const indicatorHeight = document.getElementById('indicatorHeight');
+        const indicatorColor = document.getElementById('indicatorColor');
+        const indicatorOpacity = document.getElementById('indicatorOpacity');
+        const indicatorBorderWidth = document.getElementById('indicatorBorderWidth');
+        
+        // Chromosome track settings
+        const trackBackgroundColor = document.getElementById('trackBackgroundColor');
+        const trackBorderColor = document.getElementById('trackBorderColor');
+        const trackBorderRadius = document.getElementById('trackBorderRadius');
+        const enableChromosomeColors = document.getElementById('enableChromosomeColors');
+        const enableAnimations = document.getElementById('enableAnimations');
+        
+        const newCacheSettings = {
             enabled: tabCacheEnabled.checked,
             maxCacheSize: parseInt(maxCacheSize.value),
             cacheTimeout: parseInt(cacheTimeout.value) * 60 * 1000 // Convert to milliseconds
         };
         
-        // Validate settings
-        if (newSettings.maxCacheSize < 1 || newSettings.maxCacheSize > 20) {
+        const newPositionIndicatorSettings = {
+            height: parseInt(indicatorHeight.value),
+            defaultColor: indicatorColor.value,
+            opacity: parseFloat(indicatorOpacity.value),
+            borderWidth: parseInt(indicatorBorderWidth.value),
+            trackBackgroundColor: trackBackgroundColor.value,
+            trackBorderColor: trackBorderColor.value,
+            trackBorderRadius: parseInt(trackBorderRadius.value),
+            enableChromosomeColors: enableChromosomeColors.checked,
+            enableAnimations: enableAnimations.checked
+        };
+        
+        // Validate cache settings
+        if (newCacheSettings.maxCacheSize < 1 || newCacheSettings.maxCacheSize > 20) {
             alert('Maximum cache size must be between 1 and 20');
             return;
         }
         
-        if (newSettings.cacheTimeout < 60000 || newSettings.cacheTimeout > 7200000) { // 1 min to 120 min
+        if (newCacheSettings.cacheTimeout < 60000 || newCacheSettings.cacheTimeout > 7200000) { // 1 min to 120 min
             alert('Cache timeout must be between 1 and 120 minutes');
             return;
         }
         
+        // Validate position indicator settings
+        if (newPositionIndicatorSettings.height < 2 || newPositionIndicatorSettings.height > 8) {
+            alert('Indicator height must be between 2 and 8 pixels');
+            return;
+        }
+        
+        if (newPositionIndicatorSettings.opacity < 0.3 || newPositionIndicatorSettings.opacity > 1.0) {
+            alert('Indicator opacity must be between 0.3 and 1.0');
+            return;
+        }
+        
         // Update settings
-        this.updateCacheSettings(newSettings);
+        this.updateCacheSettings(newCacheSettings);
+        this.updatePositionIndicatorSettings(newPositionIndicatorSettings);
+        
+        // Apply new settings to all existing tabs
+        this.applyPositionIndicatorSettings();
         
         // Close modal
         this.closeTabSettingsModal();
         
         console.log('Tab settings saved successfully');
+    }
+    
+    /**
+     * Reset tab settings to defaults
+     */
+    resetTabSettings() {
+        if (confirm('Are you sure you want to reset all tab settings to their default values?')) {
+            // Reset to default settings
+            this.cacheSettings = {
+                enabled: true,
+                maxCacheSize: 10,
+                cacheTimeout: 30 * 60 * 1000
+            };
+            
+            this.positionIndicatorSettings = {
+                height: 3,
+                defaultColor: '#1a73e8',
+                opacity: 0.8,
+                borderWidth: 2,
+                trackBackgroundColor: '#e0e0e0',
+                trackBorderColor: '#cccccc',
+                trackBorderRadius: 2,
+                enableChromosomeColors: true,
+                enableAnimations: true
+            };
+            
+            // Re-populate the modal with default values
+            this.openTabSettingsModal();
+            
+            console.log('Tab settings reset to defaults');
+        }
     }
     
     /**
@@ -1539,31 +1868,38 @@ class TabManager {
         if (!chromosomeTrack || !positionIndicator) return;
         
         try {
-            // Set default chromosome color (blue)
-            const defaultColor = '#1a73e8';
+            // Use settings-based default color
+            const defaultColor = this.positionIndicatorSettings.defaultColor;
             
-            // Initialize chromosome track with default styling
-            chromosomeTrack.style.background = `linear-gradient(to right, ${defaultColor}22, ${defaultColor}44)`;
-            chromosomeTrack.style.borderColor = defaultColor;
+            // Initialize chromosome track with settings-based styling
+            chromosomeTrack.style.background = `linear-gradient(to right, ${this.positionIndicatorSettings.trackBackgroundColor}, ${this.positionIndicatorSettings.trackBackgroundColor}88)`;
+            chromosomeTrack.style.borderColor = this.positionIndicatorSettings.trackBorderColor;
+            chromosomeTrack.style.borderRadius = `${this.positionIndicatorSettings.trackBorderRadius}px`;
             chromosomeTrack.style.display = 'block';
             chromosomeTrack.style.visibility = 'visible';
             
-            // Initialize position indicator with highly visible default styling
+            // Initialize position indicator with settings-based styling
             positionIndicator.style.left = '10%';
             positionIndicator.style.width = '15%';
             positionIndicator.style.backgroundColor = defaultColor;
-            positionIndicator.style.border = `2px solid ${defaultColor}`;
+            positionIndicator.style.border = `${this.positionIndicatorSettings.borderWidth}px solid ${defaultColor}`;
             positionIndicator.style.boxShadow = `0 0 6px ${defaultColor}88, inset 0 0 3px rgba(255, 255, 255, 0.4)`;
             positionIndicator.style.minWidth = '4px';
             positionIndicator.style.zIndex = '10';
             positionIndicator.style.display = 'block';
             positionIndicator.style.visibility = 'visible';
-            positionIndicator.style.opacity = '1';
+            positionIndicator.style.opacity = this.positionIndicatorSettings.opacity;
+            
+            // Set the visualization height
+            const tabVisualization = tabElement.querySelector('.tab-position-visualization');
+            if (tabVisualization) {
+                tabVisualization.style.height = `${this.positionIndicatorSettings.height}px`;
+            }
             
             // Set default tooltip
             chromosomeTrack.title = 'Position indicator will update when genome data is loaded';
             
-            console.log(`Initialized position visualization for tab with default styling`);
+            console.log(`Initialized position visualization for tab with settings-based styling`);
         } catch (error) {
             console.error('Error initializing tab position visualization:', error);
         }
@@ -1596,19 +1932,29 @@ class TabManager {
             const endPercent = (end / chromosomeLength) * 100;
             const widthPercent = endPercent - startPercent;
             
-            // Get chromosome color
-            const chromosomeColor = this.getChromosomeColor(chromosome);
+            // Get chromosome color (or use default)
+            const chromosomeColor = this.positionIndicatorSettings.enableChromosomeColors ? 
+                this.getChromosomeColor(chromosome) : 
+                this.positionIndicatorSettings.defaultColor;
             
             // Update tab element data attribute for CSS chromosome colors
             tabElement.setAttribute('data-chromosome', chromosome);
             
             // Update chromosome track background color
-            chromosomeTrack.style.background = `linear-gradient(to right, ${chromosomeColor}22, ${chromosomeColor}44)`;
-            chromosomeTrack.style.borderColor = chromosomeColor;
+            const trackBgColor = this.positionIndicatorSettings.enableChromosomeColors ? 
+                `linear-gradient(to right, ${chromosomeColor}22, ${chromosomeColor}44)` :
+                `linear-gradient(to right, ${this.positionIndicatorSettings.trackBackgroundColor}, ${this.positionIndicatorSettings.trackBackgroundColor}88)`;
+            const trackBorderColor = this.positionIndicatorSettings.enableChromosomeColors ?
+                chromosomeColor :
+                this.positionIndicatorSettings.trackBorderColor;
+                
+            chromosomeTrack.style.background = trackBgColor;
+            chromosomeTrack.style.borderColor = trackBorderColor;
+            chromosomeTrack.style.borderRadius = `${this.positionIndicatorSettings.trackBorderRadius}px`;
             chromosomeTrack.style.display = 'block';
             chromosomeTrack.style.visibility = 'visible';
             
-            // Update position indicator with enhanced visibility
+            // Update position indicator with settings-based styling
             positionIndicator.style.left = `${startPercent}%`;
             
             // Calculate width with better minimum visibility
@@ -1616,15 +1962,15 @@ class TabManager {
             const displayWidth = calculatedWidth > 80 ? 80 : calculatedWidth; // Cap at 80% to avoid overwhelming
             positionIndicator.style.width = `${displayWidth}%`;
             
-            // Enhanced styling for better visibility
+            // Apply settings-based styling
             positionIndicator.style.backgroundColor = chromosomeColor;
-            positionIndicator.style.border = `2px solid ${chromosomeColor}`;
+            positionIndicator.style.border = `${this.positionIndicatorSettings.borderWidth}px solid ${chromosomeColor}`;
             positionIndicator.style.boxShadow = `0 0 6px ${chromosomeColor}88, inset 0 0 3px rgba(255, 255, 255, 0.4)`;
             positionIndicator.style.minWidth = '4px'; // Absolute minimum width in pixels
             positionIndicator.style.zIndex = '10'; // Ensure it's above the track
             positionIndicator.style.display = 'block';
             positionIndicator.style.visibility = 'visible';
-            positionIndicator.style.opacity = '1';
+            positionIndicator.style.opacity = this.positionIndicatorSettings.opacity;
             
             // Update tooltip
             const range = end - start;
