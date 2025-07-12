@@ -170,6 +170,11 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
+        
+        // Update current tab title with new position
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end);
+        }
     }
 
     // Search functionality
@@ -405,6 +410,11 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
+        
+        // Update current tab title with new position
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end);
+        }
         
         this.currentSearchIndex = index;
         

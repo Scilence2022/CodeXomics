@@ -4306,6 +4306,11 @@ class GenomeBrowser {
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.updateStatistics(currentChr, this.currentSequence[currentChr]);
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+            
+            // Update current tab title with new position
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+            }
         }
     }
 
@@ -4743,6 +4748,11 @@ class GenomeBrowser {
         if (currentChr && this.currentSequence && this.currentSequence[currentChr]) {
             this.updateStatistics(currentChr, this.currentSequence[currentChr]);
             this.displayGenomeView(currentChr, this.currentSequence[currentChr]);
+            
+            // Update current tab title with new position
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+            }
         }
     }
 

@@ -70,24 +70,36 @@ class TabManager {
     }
     
     /**
-     * Create a new tab
+     * Create a new tab for the same genome at current or specified position
      */
-    createNewTab(title = 'New Genome', genomeData = null) {
+    createNewTab(title = null, specificPosition = null) {
         const tabId = `tab-${this.nextTabId++}`;
+        
+        // Auto-generate title based on current position if not provided
+        if (!title) {
+            if (this.genomeBrowser.currentChromosome && this.genomeBrowser.currentPosition) {
+                const chr = this.genomeBrowser.currentChromosome;
+                const start = this.genomeBrowser.currentPosition.start;
+                const end = this.genomeBrowser.currentPosition.end;
+                title = `${chr}:${start.toLocaleString()}-${end.toLocaleString()}`;
+            } else {
+                title = 'New Position';
+            }
+        }
         
         // Create tab element
         const tabElement = this.createTabElement(tabId, title);
         this.tabContainer.appendChild(tabElement);
         
-        // Create tab state
-        const tabState = this.createTabState(tabId, title, genomeData);
+        // Create tab state inheriting current genome data
+        const tabState = this.createTabState(tabId, title, specificPosition);
         this.tabs.set(tabId, tabElement);
         this.tabStates.set(tabId, tabState);
         
         // Switch to new tab
         this.switchToTab(tabId);
         
-        console.log(`Created new tab: ${tabId} - ${title}`);
+        console.log(`Created new tab: ${tabId} - ${title} (same genome, different position)`);
         return tabId;
     }
     
@@ -124,41 +136,64 @@ class TabManager {
     }
     
     /**
-     * Create isolated tab state
+     * Create tab state inheriting current genome data for position-based browsing
      */
-    createTabState(tabId, title, genomeData = null) {
+    createTabState(tabId, title, specificPosition = null) {
+        // Inherit current genome data from the browser
+        const currentGenome = this.genomeBrowser.currentSequence || null;
+        const currentAnnotations = this.genomeBrowser.currentAnnotations || null;
+        const currentChromosome = this.genomeBrowser.currentChromosome || null;
+        
+        // Use specific position if provided, otherwise use current position
+        let position;
+        if (specificPosition) {
+            position = { ...specificPosition };
+        } else if (this.genomeBrowser.currentPosition) {
+            position = { ...this.genomeBrowser.currentPosition };
+        } else {
+            position = { start: 0, end: 1000 };
+        }
+        
+        // Copy current UI state
+        const currentSidebarVisible = !document.getElementById('sidebar')?.classList.contains('hidden');
+        const currentTrackTypes = new Set(this.genomeBrowser.trackVisibility ? 
+            Object.entries(this.genomeBrowser.trackVisibility)
+                .filter(([_, visible]) => visible)
+                .map(([type, _]) => type) : 
+            ['genes', 'sequence']);
+        
         return {
             id: tabId,
             title: title,
             isActive: false,
             isLoading: false,
             
-            // Genome data state
-            genomeData: genomeData,
-            currentChromosome: null,
-            currentSequence: null,
-            currentAnnotations: null,
-            currentPosition: { start: 0, end: 1000 },
+            // Inherit genome data state from current browser
+            genomeData: currentGenome,
+            currentChromosome: currentChromosome,
+            currentSequence: currentGenome,
+            currentAnnotations: currentAnnotations,
+            currentPosition: position,
             
-            // File management state
+            // File management state (inherit loaded files info)
             loadedFiles: {
-                genome: null,
-                annotations: [],
-                variants: [],
-                reads: [],
-                wig: []
+                genome: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.find(f => f.type === 'genome') : null,
+                annotations: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'annotation') : [],
+                variants: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'variant') : [],
+                reads: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'reads') : [],
+                wig: this.genomeBrowser.loadedFiles ? this.genomeBrowser.loadedFiles.filter(f => f.type === 'wig') : []
             },
             
-            // UI state
-            sidebarVisible: true,
-            activeTrackTypes: new Set(['genes', 'sequence']),
-            trackSettings: {},
+            // UI state (inherit current state)
+            sidebarVisible: currentSidebarVisible,
+            activeTrackTypes: currentTrackTypes,
+            trackSettings: this.genomeBrowser.trackRenderer ? { ...this.genomeBrowser.trackRenderer.trackSettings } : {},
             
-            // History for navigation
+            // History for navigation (start fresh for each tab)
             navigationHistory: [],
             historyIndex: -1,
             
-            // Chat and AI state
+            // Chat and AI state (start fresh for each tab)
             chatHistory: [],
             selectedGene: null,
             selectedRead: null,
@@ -356,6 +391,52 @@ class TabManager {
     }
     
     /**
+     * Update current tab title based on position (called when user navigates)
+     */
+    updateCurrentTabPosition(chromosome, start, end) {
+        if (!this.activeTabId) return;
+        
+        // Generate position-based title
+        const positionTitle = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
+        
+        // Update current tab title
+        this.updateTabTitle(this.activeTabId, positionTitle);
+        
+        // Update tab state position
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (tabState) {
+            tabState.currentChromosome = chromosome;
+            tabState.currentPosition = { start, end };
+            tabState.lastAccessedAt = new Date();
+        }
+        
+        console.log(`Updated tab ${this.activeTabId} position to: ${positionTitle}`);
+    }
+    
+    /**
+     * Create a new tab for a specific gene or position
+     */
+    createTabForPosition(chromosome, start, end, title = null) {
+        if (!title) {
+            title = `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`;
+        }
+        
+        const specificPosition = { start: start - 1, end }; // Convert to 0-based internally
+        return this.createNewTab(title, specificPosition);
+    }
+    
+    /**
+     * Create a new tab focused on a specific gene
+     */
+    createTabForGene(gene, padding = 500) {
+        const newStart = Math.max(0, gene.start - padding);
+        const newEnd = gene.end + padding;
+        const title = `Gene: ${gene.name || gene.id || 'Unknown'}`;
+        
+        return this.createTabForPosition(gene.chromosome || this.genomeBrowser.currentChromosome, newStart + 1, newEnd, title);
+    }
+    
+    /**
      * Set tab loading state
      */
     setTabLoading(tabId, isLoading) {
@@ -415,39 +496,33 @@ class TabManager {
     }
     
     /**
-     * Load genome data into current tab
+     * Handle initial genome loading (updates all existing tabs with genome data)
      */
-    loadGenomeIntoCurrentTab(genomeData, filename) {
-        if (!this.activeTabId) return;
+    onGenomeLoaded(genomeData, filename) {
+        // Update all existing tabs with the new genome data
+        this.tabStates.forEach((tabState, tabId) => {
+            // Update genome data in all tabs
+            tabState.genomeData = genomeData;
+            tabState.currentSequence = genomeData;
+            tabState.lastAccessedAt = new Date();
+        });
         
-        const tabState = this.tabStates.get(this.activeTabId);
-        if (!tabState) return;
-        
-        // Update tab title based on filename
-        const tabTitle = filename ? filename.replace(/\.[^/.]+$/, '') : 'Genome Analysis';
-        this.updateTabTitle(this.activeTabId, tabTitle);
-        
-        // Update tab icon based on file type
-        const tabElement = this.tabs.get(this.activeTabId);
-        if (tabElement) {
-            const iconElement = tabElement.querySelector('.tab-icon');
-            if (iconElement) {
-                // Determine icon based on file type
-                if (filename?.toLowerCase().includes('fasta')) {
-                    iconElement.className = 'tab-icon fas fa-dna';
-                } else if (filename?.toLowerCase().includes('genbank')) {
-                    iconElement.className = 'tab-icon fas fa-file-medical';
-                } else {
-                    iconElement.className = 'tab-icon fas fa-dna';
+        // If this is the first genome being loaded and current tab is "Welcome", 
+        // update it with an appropriate initial position
+        if (this.activeTabId) {
+            const activeState = this.tabStates.get(this.activeTabId);
+            if (activeState && activeState.title === 'Welcome') {
+                // Set initial position for the welcome tab
+                const firstChr = Object.keys(genomeData)[0];
+                if (firstChr) {
+                    const chrLength = genomeData[firstChr].length;
+                    const initialEnd = Math.min(1000, chrLength);
+                    this.updateCurrentTabPosition(firstChr, 1, initialEnd);
                 }
             }
         }
         
-        // Store genome data in tab state
-        tabState.genomeData = genomeData;
-        tabState.lastAccessedAt = new Date();
-        
-        console.log(`Loaded genome data into tab: ${this.activeTabId} - ${tabTitle}`);
+        console.log(`Updated all tabs with new genome data from: ${filename}`);
     }
     
     /**
