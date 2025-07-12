@@ -130,6 +130,9 @@ class GenomeBrowser {
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
         this.multiFileManager = new MultiFileManager(this); // Initialize multi-file manager
         
+        // Initialize Tab Management System (for multi-genome analysis)
+        this.tabManager = new TabManager(this);
+        
         // Initialize Action Management System
         this.initializeActionSystem();
         
@@ -1790,6 +1793,16 @@ class GenomeBrowser {
             this.showNotification('Recent projects cleared', 'info');
             // TODO: 实现清除最近项目逻辑
         });
+    }
+
+    // Refresh the current view (used by TabManager for state restoration)
+    refreshCurrentView() {
+        if (this.currentChromosome && this.currentSequence && this.currentSequence[this.currentChromosome]) {
+            console.log(`Refreshing view for chromosome: ${this.currentChromosome}`);
+            this.displayGenomeView(this.currentChromosome, this.currentSequence[this.currentChromosome]);
+        } else {
+            console.log('No current chromosome/sequence to refresh');
+        }
     }
 
     // Core genome display method

@@ -341,6 +341,11 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             this.genomeBrowser.exportManager.updateExportMenuState();
         }
         
+        // Update current tab with loaded genome data
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.loadGenomeIntoCurrentTab(sequences, this.currentFile?.path);
+        }
+        
         // Select first chromosome by default
         const firstChr = Object.keys(sequences)[0];
         if (firstChr) {
@@ -540,6 +545,11 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         // Update export menu state
         if (this.genomeBrowser.exportManager) {
             this.genomeBrowser.exportManager.updateExportMenuState();
+        }
+        
+        // Update current tab with loaded genome data
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.loadGenomeIntoCurrentTab(sequences, this.currentFile?.path);
         }
         
         // Select first chromosome by default

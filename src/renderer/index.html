@@ -167,6 +167,16 @@
             </div>
         </header>
 
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="tabBar">
+            <div class="tab-container" id="tabContainer">
+                <!-- Tabs will be dynamically added here -->
+            </div>
+            <button class="new-tab-button" id="newTabButton" title="New Genome Analysis">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+
         <!-- Toolbar -->
         <div class="toolbar">
             <div class="toolbar-section">
@@ -2664,6 +2674,9 @@
     <!-- Action Management System -->
     <script src="modules/ActionManager.js"></script>
     <script src="modules/CheckpointManager.js"></script>
+    
+    <!-- Tab Management System -->
+    <script src="modules/TabManager.js"></script>
     
     <!-- Main application -->
     <script src="renderer-modular.js"></script>
