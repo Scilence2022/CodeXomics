@@ -20,7 +20,7 @@ class TabManager {
         // Tab rendering cache system
         this.tabCache = new Map(); // Store cached DOM content for each tab
         this.cacheSettings = {
-            enabled: true, // Default to enabled
+            enabled: false, // Default to disabled
             maxCacheSize: 10, // Maximum number of cached tabs
             cacheTimeout: 30 * 60 * 1000 // 30 minutes cache timeout
         };
@@ -1758,7 +1758,7 @@ class TabManager {
         if (confirm('Are you sure you want to reset all tab settings to their default values?')) {
             // Reset to default settings
             this.cacheSettings = {
-                enabled: true,
+                enabled: false,
                 maxCacheSize: 10,
                 cacheTimeout: 30 * 60 * 1000
             };
