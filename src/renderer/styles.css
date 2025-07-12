@@ -32956,7 +32956,7 @@ path.svg-gene-element.selected {
     flex-direction: column;
     gap: 20px;
     max-height: calc(90vh - 120px);
-    overflow-y: auto;
+    overflow: hidden;
     padding: 20px;
 }
 
@@ -33002,6 +33002,9 @@ path.svg-gene-element.selected {
     box-shadow: var(--shadow-md);
     overflow: hidden;
     border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
 .action-list-header {
@@ -33014,12 +33017,13 @@ path.svg-gene-element.selected {
     font-weight: 600;
     font-size: 14px;
     color: var(--text-primary);
+    flex-shrink: 0;
 }
 
 .action-list-content {
-    min-height: 600px;
-    max-height: 800px;
+    height: 600px;
     overflow-y: auto;
+    flex: 1;
 }
 
 .action-item {
