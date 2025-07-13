@@ -1,5 +1,6 @@
 /**
  * MCPServerManager - Manages multiple MCP server connections and their tools
+ * Now supports both legacy WebSocket servers and Claude MCP protocol servers
  */
 class MCPServerManager {
     constructor(configManager = null) {
@@ -9,6 +10,10 @@ class MCPServerManager {
         this.serverTools = new Map(); // serverId -> array of tools
         this.activeServers = new Set(); // Set of connected server IDs
         this.eventHandlers = new Map(); // event -> handlers
+        
+        // Claude MCP specific properties
+        this.claudeMCPServers = new Map(); // serverId -> Claude MCP server info
+        this.claudeMCPConnections = new Map(); // serverId -> Claude MCP connection
         
         this.loadServerConfigurations();
         this.setupAutoConnect();
@@ -41,75 +46,78 @@ class MCPServerManager {
                 reconnectDelay: 5,
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation'],
-                isBuiltin: true
+                isBuiltin: true,
+                protocol: 'websocket' // Legacy WebSocket protocol
+            }],
+            // Claude MCP Server
+            ['claude-mcp-genome', {
+                id: 'claude-mcp-genome',
+                name: 'Claude MCP Genome Server',
+                description: 'Claude MCP compliant genome analysis server',
+                url: 'ws://localhost:3001', // WebSocket URL for browser communication
+                enabled: true,
+                autoConnect: true,
+                reconnectDelay: 5,
+                category: 'genomics',
+                capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration'],
+                isBuiltin: true,
+                protocol: 'claude-mcp', // Claude MCP protocol
+                mcpConfig: {
+                    stdio: false, // Use WebSocket for browser integration
+                    serverPath: './src/mcp-server-claude.js'
+                }
             }],
             // Example local development server
             ['dev-local', {
                 id: 'dev-local',
                 name: 'Local Development Tools',
                 url: 'ws://localhost:3001',
-                category: 'development',
-                description: 'Local development and testing tools',
                 enabled: false,
-                isBuiltin: true
-            }],
-            
-            // Example BLAST server
-            ['blast-server', {
-                id: 'blast-server',
-                name: 'BLAST Search Server',
-                url: 'ws://localhost:3002',
-                category: 'bioinformatics',
-                description: 'Advanced BLAST search capabilities with local databases',
-                enabled: true,
                 autoConnect: false,
                 reconnectDelay: 5,
-                capabilities: ['blast-search', 'sequence-alignment', 'database-search', 'batch-blast'],
-                tools: [
-                    'blast_nucleotide_search',
-                    'blast_protein_search', 
-                    'blast_translated_search',
-                    'get_blast_databases',
-                    'batch_blast_search',
-                    'local_blast_database_info'
-                ],
-                isBuiltin: true
+                category: 'development',
+                capabilities: ['testing', 'debugging'],
+                isBuiltin: false,
+                protocol: 'websocket'
             }]
         ]);
 
-        if (this.configManager) {
-            const savedServers = this.configManager.get('mcpServers', {});
-            // Merge default servers with saved servers
-            for (const [id, config] of Object.entries(savedServers)) {
-                this.servers.set(id, config);
-            }
-            // Ensure built-in server is always present
-            if (!this.servers.has('genome-studio')) {
-                this.servers.set('genome-studio', defaultServers.get('genome-studio'));
-            }
+        // Load from config or use defaults
+        const savedServers = this.configManager ? 
+            this.configManager.get('mcpServers', defaultServers) : 
+            defaultServers;
+
+        // Convert to Map if it's an object
+        if (savedServers instanceof Map) {
+            this.servers = savedServers;
         } else {
-            this.servers = defaultServers;
+            this.servers = new Map(Object.entries(savedServers));
         }
+
+        // Ensure default servers exist
+        defaultServers.forEach((server, id) => {
+            if (!this.servers.has(id)) {
+                this.servers.set(id, server);
+            }
+        });
     }
 
     // Save server configurations to storage
     saveServerConfigurations() {
         if (this.configManager) {
-            const serversObj = {};
-            for (const [id, config] of this.servers.entries()) {
-                serversObj[id] = config;
-            }
+            // Convert Map to object for storage
+            const serversObj = Object.fromEntries(this.servers);
             this.configManager.set('mcpServers', serversObj);
         }
     }
 
-    // Add a new MCP server
+    // Add a new server configuration
     addServer(serverConfig) {
-        const id = serverConfig.id || this.generateServerId();
+        const serverId = serverConfig.id || this.generateServerId();
         
-        const config = {
-            id: id,
-            name: serverConfig.name || 'Unnamed Server',
+        const fullConfig = {
+            id: serverId,
+            name: serverConfig.name || 'Unknown Server',
             description: serverConfig.description || '',
             url: serverConfig.url,
             enabled: serverConfig.enabled !== false,
@@ -117,63 +125,56 @@ class MCPServerManager {
             reconnectDelay: serverConfig.reconnectDelay || 5,
             category: serverConfig.category || 'general',
             capabilities: serverConfig.capabilities || [],
-            apiKey: serverConfig.apiKey || '',
-            headers: serverConfig.headers || {},
-            isBuiltin: false
+            isBuiltin: serverConfig.isBuiltin || false,
+            protocol: serverConfig.protocol || 'websocket', // Default to WebSocket
+            mcpConfig: serverConfig.mcpConfig || null,
+            headers: serverConfig.headers || {}
         };
 
-        this.servers.set(id, config);
+        this.servers.set(serverId, fullConfig);
         this.saveServerConfigurations();
-        this.emit('serverAdded', config);
         
-        if (config.enabled && config.autoConnect) {
-            this.connectToServer(id);
-        }
-
-        return id;
+        this.emit('serverAdded', { serverId, server: fullConfig });
+        return serverId;
     }
 
-    // Remove an MCP server
+    // Remove a server configuration
     removeServer(serverId) {
         const server = this.servers.get(serverId);
         if (!server) {
-            throw new Error(`Server ${serverId} not found`);
+            return false;
         }
 
+        // Don't allow removal of builtin servers
         if (server.isBuiltin) {
-            throw new Error('Cannot remove built-in servers');
+            console.warn(`Cannot remove builtin server: ${serverId}`);
+            return false;
         }
 
+        // Disconnect if connected
         this.disconnectFromServer(serverId);
+        
         this.servers.delete(serverId);
-        this.serverTools.delete(serverId);
         this.saveServerConfigurations();
+        
         this.emit('serverRemoved', { serverId, server });
+        return true;
     }
 
     // Update server configuration
     updateServer(serverId, updates) {
         const server = this.servers.get(serverId);
         if (!server) {
-            throw new Error(`Server ${serverId} not found`);
+            return false;
         }
 
-        const wasConnected = this.activeServers.has(serverId);
-        
-        // Disconnect if URL changed
-        if (updates.url && updates.url !== server.url && wasConnected) {
-            this.disconnectFromServer(serverId);
-        }
-
-        Object.assign(server, updates);
-        this.servers.set(serverId, server);
+        // Merge updates
+        const updatedServer = { ...server, ...updates };
+        this.servers.set(serverId, updatedServer);
         this.saveServerConfigurations();
-        this.emit('serverUpdated', server);
-
-        // Reconnect if it was connected and enabled
-        if (wasConnected && server.enabled && server.autoConnect) {
-            this.connectToServer(serverId);
-        }
+        
+        this.emit('serverUpdated', { serverId, server: updatedServer });
+        return true;
     }
 
     // Connect to a specific server
@@ -183,7 +184,7 @@ class MCPServerManager {
             throw new Error(`Server ${serverId} not found`);
         }
 
-        if (this.connections.has(serverId)) {
+        if (this.connections.has(serverId) || this.claudeMCPConnections.has(serverId)) {
             console.log(`Already connected to server ${serverId}`);
             return;
         }
@@ -192,75 +193,137 @@ class MCPServerManager {
             console.log(`Connecting to MCP server: ${server.name} (${server.url})`);
             this.emit('serverConnecting', { serverId, server });
 
-            const ws = new WebSocket(server.url);
-            
-            // Add authentication headers if needed
-            if (server.headers && Object.keys(server.headers).length > 0) {
-                // Note: WebSocket API doesn't support custom headers directly
-                // For authentication, we'll send them in the first message
-                ws.authHeaders = server.headers;
+            if (server.protocol === 'claude-mcp') {
+                await this.connectToClaudeMCPServer(serverId, server);
+            } else {
+                await this.connectToWebSocketServer(serverId, server);
             }
 
-            ws.onopen = () => {
-                console.log(`Connected to MCP server: ${server.name}`);
-                this.connections.set(serverId, ws);
-                this.activeServers.add(serverId);
-                this.emit('serverConnected', { serverId, server });
-                
-                // Send authentication if headers are present
-                if (ws.authHeaders) {
-                    ws.send(JSON.stringify({
-                        type: 'authenticate',
-                        headers: ws.authHeaders
-                    }));
-                }
-
-                // Request available tools
-                this.requestServerTools(serverId);
-            };
-
-            ws.onmessage = (event) => {
-                this.handleServerMessage(serverId, event);
-            };
-
-            ws.onclose = () => {
-                console.log(`Disconnected from MCP server: ${server.name}`);
-                this.connections.delete(serverId);
-                this.activeServers.delete(serverId);
-                this.serverTools.delete(serverId);
-                this.emit('serverDisconnected', { serverId, server });
-
-                // Auto-reconnect if enabled and auto-activation is allowed
-                const defaultSettings = { allowAutoActivation: false };
-                const mcpSettings = this.configManager ? 
-                    this.configManager.get('mcpSettings', defaultSettings) : 
-                    defaultSettings;
-                    
-                if (mcpSettings.allowAutoActivation && server.enabled && server.autoConnect) {
-                    setTimeout(() => {
-                        this.connectToServer(serverId);
-                    }, server.reconnectDelay * 1000);
-                }
-            };
-
-            ws.onerror = (error) => {
-                console.error(`MCP server connection error (${server.name}):`, error);
-                this.emit('serverError', { serverId, server, error });
-            };
-
         } catch (error) {
-            console.error(`Failed to connect to MCP server ${server.name}:`, error);
+            console.error(`Failed to connect to server ${serverId}:`, error);
             this.emit('serverError', { serverId, server, error });
+            throw error;
         }
     }
 
-    // Disconnect from a specific server
+    // Connect to Claude MCP server
+    async connectToClaudeMCPServer(serverId, server) {
+        // For browser integration, we still use WebSocket to communicate with the Claude MCP server
+        // The Claude MCP server handles the protocol conversion
+        const ws = new WebSocket(server.url);
+        
+        ws.onopen = () => {
+            console.log(`Connected to Claude MCP server: ${server.name}`);
+            this.claudeMCPConnections.set(serverId, ws);
+            this.activeServers.add(serverId);
+            this.emit('serverConnected', { serverId, server });
+            
+            // Send identification message for Claude MCP
+            ws.send(JSON.stringify({
+                type: 'claude-mcp-client',
+                clientId: this.generateClientId(),
+                protocol: 'claude-mcp',
+                capabilities: ['tool-execution', 'state-sync']
+            }));
+
+            // Request available tools
+            this.requestClaudeMCPTools(serverId);
+        };
+
+        ws.onmessage = (event) => {
+            this.handleClaudeMCPMessage(serverId, event);
+        };
+
+        ws.onerror = (error) => {
+            console.error(`Claude MCP server error (${serverId}):`, error);
+            this.emit('serverError', { serverId, server, error });
+        };
+
+        ws.onclose = () => {
+            console.log(`Claude MCP server disconnected: ${server.name}`);
+            this.claudeMCPConnections.delete(serverId);
+            this.activeServers.delete(serverId);
+            this.serverTools.delete(serverId);
+            this.emit('serverDisconnected', { serverId, server });
+            
+            // Auto-reconnect if enabled
+            if (server.autoConnect && server.enabled) {
+                setTimeout(() => {
+                    this.connectToServer(serverId);
+                }, server.reconnectDelay * 1000);
+            }
+        };
+    }
+
+    // Connect to legacy WebSocket server
+    async connectToWebSocketServer(serverId, server) {
+        const ws = new WebSocket(server.url);
+        
+        // Add authentication headers if needed
+        if (server.headers && Object.keys(server.headers).length > 0) {
+            // Note: WebSocket API doesn't support custom headers directly
+            // For authentication, we'll send them in the first message
+            ws.authHeaders = server.headers;
+        }
+
+        ws.onopen = () => {
+            console.log(`Connected to WebSocket server: ${server.name}`);
+            this.connections.set(serverId, ws);
+            this.activeServers.add(serverId);
+            this.emit('serverConnected', { serverId, server });
+            
+            // Send authentication if headers are present
+            if (ws.authHeaders) {
+                ws.send(JSON.stringify({
+                    type: 'authenticate',
+                    headers: ws.authHeaders
+                }));
+            }
+
+            // Request available tools
+            this.requestServerTools(serverId);
+        };
+
+        ws.onmessage = (event) => {
+            this.handleServerMessage(serverId, event);
+        };
+
+        ws.onerror = (error) => {
+            console.error(`WebSocket server error (${serverId}):`, error);
+            this.emit('serverError', { serverId, server, error });
+        };
+
+        ws.onclose = () => {
+            console.log(`WebSocket server disconnected: ${server.name}`);
+            this.connections.delete(serverId);
+            this.activeServers.delete(serverId);
+            this.serverTools.delete(serverId);
+            this.emit('serverDisconnected', { serverId, server });
+            
+            // Auto-reconnect if enabled
+            if (server.autoConnect && server.enabled) {
+                setTimeout(() => {
+                    this.connectToServer(serverId);
+                }, server.reconnectDelay * 1000);
+            }
+        };
+    }
+
+    // Disconnect from a server
     disconnectFromServer(serverId) {
         const ws = this.connections.get(serverId);
+        const claudeWs = this.claudeMCPConnections.get(serverId);
+        
         if (ws) {
             ws.close();
+            this.connections.delete(serverId);
         }
-        this.connections.delete(serverId);
+        
+        if (claudeWs) {
+            claudeWs.close();
+            this.claudeMCPConnections.delete(serverId);
+        }
+        
         this.activeServers.delete(serverId);
         this.serverTools.delete(serverId);
         
@@ -268,94 +331,174 @@ class MCPServerManager {
         this.emit('serverDisconnected', { serverId, server });
     }
 
-    // Handle messages from MCP servers
+    // Handle Claude MCP server messages
+    handleClaudeMCPMessage(serverId, event) {
+        try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'tools-list') {
+                // Handle tools list from Claude MCP server
+                this.serverTools.set(serverId, data.tools || []);
+                this.emit('toolsUpdated', { serverId, tools: data.tools });
+            } else if (data.type === 'tool-response') {
+                // Handle tool execution response
+                this.emit('toolResponse', { serverId, data });
+            } else if (data.type === 'error') {
+                console.error(`Claude MCP server error (${serverId}):`, data.error);
+                this.emit('serverError', { serverId, error: data.error });
+            }
+        } catch (error) {
+            console.error(`Error parsing Claude MCP message from ${serverId}:`, error);
+        }
+    }
+
+    // Handle legacy WebSocket server messages
     handleServerMessage(serverId, event) {
         try {
             const data = JSON.parse(event.data);
             
-            switch (data.type) {
-                case 'tools':
-                    this.serverTools.set(serverId, data.tools || []);
-                    this.emit('toolsUpdated', { serverId, tools: data.tools });
-                    break;
-                    
-                case 'tool-response':
-                    this.emit('toolResponse', { serverId, ...data });
-                    break;
-                    
-                case 'connection':
-                    // Handle connection acknowledgment
-                    break;
-                    
-                default:
-                    this.emit('serverMessage', { serverId, data });
+            if (data.type === 'tools') {
+                // Handle tools list from legacy server
+                this.serverTools.set(serverId, data.tools || []);
+                this.emit('toolsUpdated', { serverId, tools: data.tools });
+            } else if (data.type === 'tool-response') {
+                // Handle tool execution response
+                this.emit('toolResponse', { serverId, data });
+            } else if (data.type === 'error') {
+                console.error(`Server error (${serverId}):`, data.error);
+                this.emit('serverError', { serverId, error: data.error });
             }
         } catch (error) {
-            console.error(`Error parsing message from server ${serverId}:`, error);
+            console.error(`Error parsing message from ${serverId}:`, error);
         }
     }
 
-    // Request tools from a server
-    requestServerTools(serverId) {
-        const ws = this.connections.get(serverId);
+    // Request tools from Claude MCP server
+    requestClaudeMCPTools(serverId) {
+        const ws = this.claudeMCPConnections.get(serverId);
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
-                type: 'request-tools'
+                type: 'list-tools',
+                requestId: this.generateRequestId()
             }));
         }
     }
 
-    // Execute a tool on a specific server
-    async executeToolOnServer(serverId, toolName, parameters) {
+    // Request tools from legacy server
+    requestServerTools(serverId) {
         const ws = this.connections.get(serverId);
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            throw new Error(`Server ${serverId} is not connected`);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'get-tools',
+                requestId: this.generateRequestId()
+            }));
+        }
+    }
+
+    // Execute tool on a specific server
+    async executeToolOnServer(serverId, toolName, parameters) {
+        const server = this.servers.get(serverId);
+        if (!server) {
+            throw new Error(`Server ${serverId} not found`);
         }
 
-        const requestId = this.generateRequestId();
-        
+        if (server.protocol === 'claude-mcp') {
+            return await this.executeClaudeMCPTool(serverId, toolName, parameters);
+        } else {
+            return await this.executeWebSocketTool(serverId, toolName, parameters);
+        }
+    }
+
+    // Execute tool on Claude MCP server
+    async executeClaudeMCPTool(serverId, toolName, parameters) {
+        const ws = this.claudeMCPConnections.get(serverId);
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            throw new Error(`Claude MCP server ${serverId} not connected`);
+        }
+
         return new Promise((resolve, reject) => {
+            const requestId = this.generateRequestId();
             const timeout = setTimeout(() => {
-                reject(new Error(`Tool execution timeout for ${toolName} on server ${serverId}`));
+                reject(new Error(`Tool execution timeout: ${toolName}`));
             }, 30000);
 
             const handler = (data) => {
-                if (data.requestId === requestId) {
+                if (data.serverId === serverId && data.data.requestId === requestId) {
                     clearTimeout(timeout);
                     this.off('toolResponse', handler);
                     
-                    if (data.error) {
-                        reject(new Error(data.error));
+                    if (data.data.success) {
+                        resolve(data.data.result);
                     } else {
-                        resolve(data.result);
+                        reject(new Error(data.data.error || 'Tool execution failed'));
                     }
                 }
             };
 
             this.on('toolResponse', handler);
-
+            
+            // Send Claude MCP tool execution request
             ws.send(JSON.stringify({
-                type: 'execute-tool',
-                requestId,
-                toolName,
-                parameters
+                type: 'call-tool',
+                requestId: requestId,
+                toolName: toolName,
+                parameters: parameters
             }));
         });
     }
 
-    // Get all available tools across all connected servers
+    // Execute tool on legacy WebSocket server
+    async executeWebSocketTool(serverId, toolName, parameters) {
+        const ws = this.connections.get(serverId);
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            throw new Error(`Server ${serverId} not connected`);
+        }
+
+        return new Promise((resolve, reject) => {
+            const requestId = this.generateRequestId();
+            const timeout = setTimeout(() => {
+                reject(new Error(`Tool execution timeout: ${toolName}`));
+            }, 30000);
+
+            const handler = (data) => {
+                if (data.serverId === serverId && data.data.requestId === requestId) {
+                    clearTimeout(timeout);
+                    this.off('toolResponse', handler);
+                    
+                    if (data.data.success) {
+                        resolve(data.data.result);
+                    } else {
+                        reject(new Error(data.data.error || 'Tool execution failed'));
+                    }
+                }
+            };
+
+            this.on('toolResponse', handler);
+            
+            // Send legacy tool execution request
+            ws.send(JSON.stringify({
+                type: 'execute-tool',
+                requestId: requestId,
+                toolName: toolName,
+                parameters: parameters
+            }));
+        });
+    }
+
+    // Get all available tools from all connected servers
     getAllAvailableTools() {
         const allTools = [];
         
-        for (const [serverId, tools] of this.serverTools.entries()) {
+        for (const [serverId, tools] of this.serverTools) {
             const server = this.servers.get(serverId);
             if (server && this.activeServers.has(serverId)) {
                 tools.forEach(tool => {
                     allTools.push({
                         ...tool,
-                        serverId,
+                        serverId: serverId,
                         serverName: server.name,
-                        category: server.category
+                        serverCategory: server.category,
+                        protocol: server.protocol || 'websocket'
                     });
                 });
             }
@@ -364,23 +507,33 @@ class MCPServerManager {
         return allTools;
     }
 
-    // Get tools by category
+    // Get tools grouped by category
     getToolsByCategory() {
         const categories = {};
-        const allTools = this.getAllAvailableTools();
         
-        allTools.forEach(tool => {
-            const category = tool.category || 'general';
-            if (!categories[category]) {
-                categories[category] = [];
+        for (const [serverId, tools] of this.serverTools) {
+            const server = this.servers.get(serverId);
+            if (server && this.activeServers.has(serverId)) {
+                const category = server.category || 'general';
+                if (!categories[category]) {
+                    categories[category] = [];
+                }
+                
+                tools.forEach(tool => {
+                    categories[category].push({
+                        ...tool,
+                        serverId: serverId,
+                        serverName: server.name,
+                        protocol: server.protocol || 'websocket'
+                    });
+                });
             }
-            categories[category].push(tool);
-        });
+        }
         
         return categories;
     }
 
-    // Execute a tool on the best available server
+    // Execute tool on any available server
     async executeTool(toolName, parameters) {
         const allTools = this.getAllAvailableTools();
         const tool = allTools.find(t => t.name === toolName);
@@ -389,42 +542,44 @@ class MCPServerManager {
             throw new Error(`Tool ${toolName} not found on any connected server`);
         }
         
-        return this.executeToolOnServer(tool.serverId, toolName, parameters);
+        return await this.executeToolOnServer(tool.serverId, toolName, parameters);
     }
 
     // Setup auto-connect for enabled servers
     setupAutoConnect() {
-        // Check global auto-activation setting
-        const defaultSettings = { allowAutoActivation: false };
-        const mcpSettings = this.configManager ? 
-            this.configManager.get('mcpSettings', defaultSettings) : 
-            defaultSettings;
-            
-        if (!mcpSettings.allowAutoActivation) {
-            console.log('MCP auto-activation is disabled, skipping auto-connect');
-            return;
-        }
-        
-        for (const [serverId, server] of this.servers.entries()) {
-            if (server.enabled && server.autoConnect) {
-                this.connectToServer(serverId);
+        // Auto-connect to enabled servers after a short delay
+        setTimeout(() => {
+            for (const [serverId, server] of this.servers) {
+                if (server.enabled && server.autoConnect) {
+                    this.connectToServer(serverId).catch(error => {
+                        console.warn(`Failed to auto-connect to server ${serverId}:`, error.message);
+                    });
+                }
             }
-        }
+        }, 1000);
     }
 
     // Get server status information
     getServerStatus() {
         const status = [];
         
-        for (const [serverId, server] of this.servers.entries()) {
-            const isConnected = this.activeServers.has(serverId);
+        for (const [serverId, server] of this.servers) {
+            const connected = this.activeServers.has(serverId);
             const tools = this.serverTools.get(serverId) || [];
             
             status.push({
-                ...server,
-                connected: isConnected,
+                id: serverId,
+                name: server.name,
+                description: server.description,
+                url: server.url,
+                category: server.category,
+                protocol: server.protocol || 'websocket',
+                connected: connected,
+                enabled: server.enabled,
+                autoConnect: server.autoConnect,
                 toolCount: tools.length,
-                tools: tools.map(t => t.name)
+                isBuiltin: server.isBuiltin,
+                capabilities: server.capabilities || []
             });
         }
         
@@ -444,7 +599,7 @@ class MCPServerManager {
 
     // Generate unique server ID
     generateServerId() {
-        return 'mcp-server-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        return 'server-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     }
 
     // Generate unique request ID
@@ -452,7 +607,12 @@ class MCPServerManager {
         return 'req-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     }
 
-    // Get connected servers count
+    // Generate unique client ID
+    generateClientId() {
+        return 'client-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Get count of connected servers
     getConnectedServersCount() {
         return this.activeServers.size;
     }
@@ -467,56 +627,59 @@ class MCPServerManager {
         return Array.from(this.servers.values());
     }
 
-    // Test connection to a server
+    // Test server connection
     async testServerConnection(serverConfig) {
         return new Promise((resolve, reject) => {
-            const ws = new WebSocket(serverConfig.url);
+            const testWs = new WebSocket(serverConfig.url);
             
             const timeout = setTimeout(() => {
-                ws.close();
+                testWs.close();
                 reject(new Error('Connection timeout'));
-            }, 10000);
+            }, 5000);
             
-            ws.onopen = () => {
+            testWs.onopen = () => {
                 clearTimeout(timeout);
-                ws.close();
+                testWs.close();
                 resolve(true);
             };
             
-            ws.onerror = (error) => {
+            testWs.onerror = (error) => {
                 clearTimeout(timeout);
                 reject(error);
             };
         });
     }
 
-    // Disconnect all servers
+    // Disconnect from all servers
     disconnectAll() {
         for (const serverId of this.activeServers) {
             this.disconnectFromServer(serverId);
         }
     }
 
-    // Connect all enabled servers
+    // Connect to all enabled servers
     connectAll() {
-        for (const [serverId, server] of this.servers.entries()) {
-            if (server.enabled) {
-                this.connectToServer(serverId);
+        for (const [serverId, server] of this.servers) {
+            if (server.enabled && !this.activeServers.has(serverId)) {
+                this.connectToServer(serverId).catch(error => {
+                    console.warn(`Failed to connect to server ${serverId}:`, error.message);
+                });
             }
         }
     }
 
-    // Reconnect all enabled servers
+    // Reconnect to all servers
     reconnectAll() {
-        for (const [serverId, server] of this.servers.entries()) {
-            if (server.enabled && server.autoConnect) {
-                this.connectToServer(serverId);
-            }
-        }
+        this.disconnectAll();
+        setTimeout(() => {
+            this.connectAll();
+        }, 1000);
     }
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MCPServerManager;
+} else if (typeof window !== 'undefined') {
+    window.MCPServerManager = MCPServerManager;
 } 

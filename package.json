@@ -8,7 +8,9 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "mcp-server": "node start-mcp-server.js",
+    "claude-mcp-server": "node start-claude-mcp-server.js",
     "start-with-mcp": "concurrently \"npm run mcp-server\" \"npm start\"",
+    "start-with-claude-mcp": "concurrently \"npm run claude-mcp-server\" \"npm start\"",
     "version-sync": "node scripts/update-version.js",
     "version-validate": "node scripts/validate-versions.js",
     "prebuild": "npm run version-sync",
@@ -52,6 +54,7 @@
   },
   "dependencies": {
     "@gmod/bam": "^6.0.4",
+    "@modelcontextprotocol/sdk": "^1.15.1",
     "cors": "^2.8.5",
     "d3": "^7.8.5",
     "express": "^4.21.2",
