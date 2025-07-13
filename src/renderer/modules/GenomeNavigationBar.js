@@ -73,8 +73,8 @@ class GenomeNavigationBar {
             position: absolute;
             top: 5px;
             right: 10px;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             border: 1px solid #cbd5e1;
             border-radius: 4px;
             background: #ffffff;
