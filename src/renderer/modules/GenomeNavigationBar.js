@@ -71,8 +71,8 @@ class GenomeNavigationBar {
         this.selectionToggle.title = 'Toggle sequence selection mode';
         this.selectionToggle.style.cssText = `
             position: absolute;
-            top: 5px;
-            right: 10px;
+            top: 2px;
+            right: 2px;
             width: 24px;
             height: 24px;
             border: 1px solid #cbd5e1;
@@ -83,7 +83,7 @@ class GenomeNavigationBar {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 10px;
             color: #64748b;
             transition: all 0.2s ease;
         `;
