@@ -12,12 +12,14 @@ const {
 const WebSocket = require('ws');
 const https = require('https');
 const { v4: uuidv4 } = require('uuid');
+const net = require('net');
 
 class ClaudeMCPGenomeServer {
     constructor() {
         this.server = new Server({
             name: "genome-ai-studio-server",
-            version: "1.0.0"
+            version: "1.0.0",
+            description: "Claude MCP Server for Genome AI Studio - Comprehensive genomics analysis tools"
         }, {
             capabilities: {
                 tools: {}
@@ -33,42 +35,65 @@ class ClaudeMCPGenomeServer {
         this.setupWebSocketServer();
     }
 
-    setupWebSocketServer() {
-        this.wsServer = new WebSocket.Server({ port: this.wsPort });
-        
-        this.wsServer.on('connection', (ws) => {
-            const clientId = uuidv4();
-            console.log(`New client connected: ${clientId}`);
-            
-            this.clients.set(clientId, ws);
-            this.browserState.set(clientId, {
-                currentChromosome: null,
-                currentPosition: { start: 0, end: 0 },
-                loadedFiles: [],
-                visibleTracks: [],
-                selectedFeatures: [],
-                sequenceLength: 0,
-                annotations: [],
-                searchResults: []
+    // Find available port
+    async findAvailablePort(startPort = 3001) {
+        return new Promise((resolve, reject) => {
+            const server = net.createServer();
+            server.listen(startPort, () => {
+                const port = server.address().port;
+                server.close(() => resolve(port));
             });
-
-            ws.on('message', (message) => {
-                try {
-                    const data = JSON.parse(message);
-                    this.handleBrowserMessage(clientId, data);
-                } catch (error) {
-                    console.error('Error parsing message:', error);
+            server.on('error', (err) => {
+                if (err.code === 'EADDRINUSE') {
+                    this.findAvailablePort(startPort + 1).then(resolve).catch(reject);
+                } else {
+                    reject(err);
                 }
             });
-
-            ws.on('close', () => {
-                console.log(`Client disconnected: ${clientId}`);
-                this.clients.delete(clientId);
-                this.browserState.delete(clientId);
-            });
         });
+    }
 
-        console.log(`WebSocket server started on port ${this.wsPort}`);
+    async setupWebSocketServer() {
+        try {
+            this.wsPort = await this.findAvailablePort(3001);
+            this.wsServer = new WebSocket.Server({ port: this.wsPort });
+            
+            this.wsServer.on('connection', (ws) => {
+                const clientId = uuidv4();
+                process.stderr.write(`New client connected: ${clientId}\n`);
+                
+                this.clients.set(clientId, ws);
+                this.browserState.set(clientId, {
+                    currentChromosome: null,
+                    currentPosition: { start: 0, end: 0 },
+                    loadedFiles: [],
+                    visibleTracks: [],
+                    selectedFeatures: [],
+                    sequenceLength: 0,
+                    annotations: [],
+                    searchResults: []
+                });
+
+                ws.on('message', (message) => {
+                    try {
+                        const data = JSON.parse(message);
+                        this.handleBrowserMessage(clientId, data);
+                    } catch (error) {
+                        process.stderr.write(`Error parsing message: ${error}\n`);
+                    }
+                });
+
+                ws.on('close', () => {
+                    process.stderr.write(`Client disconnected: ${clientId}\n`);
+                    this.clients.delete(clientId);
+                    this.browserState.delete(clientId);
+                });
+            });
+            
+            process.stderr.write(`WebSocket server started on port ${this.wsPort}\n`);
+        } catch (error) {
+            process.stderr.write(`Failed to start WebSocket server: ${error}\n`);
+        }
     }
 
     handleBrowserMessage(clientId, data) {
@@ -808,15 +833,16 @@ class ClaudeMCPGenomeServer {
 
     async start() {
         try {
-            console.log('🧬 Starting Claude MCP Genome Server...');
+            // For stdio transport, we must not output to stdout - only stderr
+            process.stderr.write('🧬 Starting Claude MCP Genome Server...\n');
             
             // Connect to stdio transport
             const transport = new StdioServerTransport();
             await this.server.connect(transport);
             
-            console.log('✅ Claude MCP Server started successfully');
-            console.log('📡 WebSocket server running on port', this.wsPort);
-            console.log('🔗 Ready for Claude Desktop integration');
+            process.stderr.write('✅ Claude MCP Server started successfully\n');
+            process.stderr.write(`📡 WebSocket server running on port ${this.wsPort}\n`);
+            process.stderr.write('🔗 Ready for Claude Desktop integration\n');
             
             return {
                 success: true,
@@ -824,14 +850,14 @@ class ClaudeMCPGenomeServer {
                 wsPort: this.wsPort
             };
         } catch (error) {
-            console.error('❌ Failed to start Claude MCP Server:', error);
+            process.stderr.write(`❌ Failed to start Claude MCP Server: ${error}\n`);
             throw error;
         }
     }
 
     async stop() {
         try {
-            console.log('🛑 Stopping Claude MCP Server...');
+            process.stderr.write('🛑 Stopping Claude MCP Server...\n');
             
             // Close WebSocket server
             if (this.wsServer) {
