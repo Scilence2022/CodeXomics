@@ -386,7 +386,7 @@ class ChatManager {
             },
             metadata: {
                 source: 'chatbox',
-                chatboxVersion: '1.0.0',
+                chatboxVersion: window.VERSION_INFO ? window.VERSION_INFO.fullVersion : '0.3.0-beta',
                 features: {
                     thinkingProcess: this.showThinkingProcess,
                     toolCalls: this.showToolCalls,

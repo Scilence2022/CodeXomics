@@ -2,9 +2,10 @@ const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electro
 const path = require('path');
 const fs = require('fs');
 const MCPGenomeBrowserServer = require('./mcp-server');
+const VERSION_INFO = require('./version');
 
 // Application constants
-const APP_NAME = 'Genome AI Studio';
+const APP_NAME = VERSION_INFO.appName;
 const PROJECT_DIRECTORY_NAME = 'Genome AI Studio Projects';
 
 let mainWindow;
@@ -38,7 +39,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         },
         { type: 'separator' },
         {
-          label: 'Hide Genome AI Studio',
+          label: `Hide ${APP_NAME}`,
           accelerator: 'Cmd+H',
           role: 'hide'
         },
@@ -53,7 +54,7 @@ function createToolWindowMenu(toolWindow, toolName) {
         },
         { type: 'separator' },
         {
-          label: 'Quit Genome AI Studio',
+          label: `Quit ${APP_NAME}`,
           accelerator: 'Cmd+Q',
           click: () => {
             app.quit();
@@ -1587,13 +1588,13 @@ function createMenu() {
       submenu: [
         ...(process.platform !== 'darwin' ? [
           {
-                      label: 'About Genome AI Studio',
+                      label: `About ${APP_NAME}`,
           click: () => {
             const currentWindow = getCurrentMainWindow();
             dialog.showMessageBox(currentWindow || null, {
               type: 'info',
-              title: 'About Genome AI Studio',
-              message: 'Genome AI Studio v0.2 beta',
+              title: `About ${APP_NAME}`,
+              message: VERSION_INFO.appTitle,
                 detail: 'A modern AI-powered genome analysis studio built with Electron'
               });
             }
@@ -1623,16 +1624,16 @@ function createMenu() {
     },
     // 添加 Genome AI Studio 品牌菜单项（仅在 macOS 上）
     {
-      label: 'Genome AI Studio',
+      label: APP_NAME,
       submenu: [
         {
-          label: 'About Genome AI Studio',
+          label: `About ${APP_NAME}`,
           click: () => {
             const currentWindow = getCurrentMainWindow();
             dialog.showMessageBox(currentWindow || null, {
               type: 'info',
-              title: 'About Genome AI Studio',
-              message: 'Genome AI Studio v0.2 beta',
+              title: `About ${APP_NAME}`,
+              message: VERSION_INFO.appTitle,
               detail: 'An intelligent genome analysis platform with AI-powered features.',
               buttons: ['OK']
             });
@@ -1646,7 +1647,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Hide Genome AI Studio',
+          label: `Hide ${APP_NAME}`,
           accelerator: 'Command+H',
           role: 'hide'
         },
@@ -1661,7 +1662,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Quit Genome AI Studio',
+          label: `Quit ${APP_NAME}`,
           accelerator: 'Command+Q',
           click: () => app.quit()
         }

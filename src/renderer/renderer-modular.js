@@ -222,6 +222,10 @@ class GenomeBrowser {
         // Force reload timestamp: 2025-05-31-15:05
         console.log('🚀 GenomeBrowser initialization starting...');
         
+        // Step 0: Initialize version information
+        console.log('📋 Initializing version information...');
+        this.initializeVersionInfo();
+        
         // Step 1: Setup basic event listeners
         console.log('📝 Setting up event listeners...');
         this.setupEventListeners();
@@ -349,6 +353,41 @@ class GenomeBrowser {
         
         // Initialize Action Management System
         this.initializeActionSystem();
+    }
+    
+    /**
+     * Initialize version information display
+     */
+    initializeVersionInfo() {
+        try {
+            // Update version tag in header
+            const versionTag = document.getElementById('version-tag');
+            if (versionTag && typeof VERSION_INFO !== 'undefined') {
+                versionTag.textContent = VERSION_INFO.displayVersion;
+            }
+            
+            // Update version in about dialog
+            const aboutVersion = document.getElementById('about-version');
+            if (aboutVersion && typeof VERSION_INFO !== 'undefined') {
+                aboutVersion.textContent = `Version ${VERSION_INFO.fullVersion}`;
+            }
+            
+            // Update document title
+            if (typeof VERSION_INFO !== 'undefined') {
+                document.title = VERSION_INFO.appTitle;
+            }
+            
+            // Make version info globally available
+            if (typeof VERSION_INFO !== 'undefined') {
+                window.appVersion = VERSION_INFO;
+                console.log(`✅ Version information initialized: ${VERSION_INFO.appTitle}`);
+            } else {
+                console.warn('⚠️ VERSION_INFO not available');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error initializing version information:', error);
+        }
     }
     
     /**
