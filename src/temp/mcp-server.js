@@ -44,20 +44,12 @@ class MCPGenomeBrowserServer {
         this.app.post('/execute-tool', async (req, res) => {
             try {
                 const { toolName, parameters, clientId } = req.body;
-                console.log(`=== MCP EXECUTE TOOL: ${toolName} ===`);
-                console.log('Client ID:', clientId);
-                console.log('Parameters:', JSON.stringify(parameters, null, 2));
                 
                 const result = await this.executeTool(toolName, parameters, clientId);
-                console.log('Tool execution successful');
-                console.log('=== MCP EXECUTE TOOL END ===');
                 
                 res.json({ success: true, result });
             } catch (error) {
-                console.error(`=== MCP EXECUTE TOOL ERROR: ${toolName} ===`);
-                console.error('Error:', error.message);
-                console.error('Stack:', error.stack);
-                console.error('=== MCP EXECUTE TOOL ERROR END ===');
+                process.stderr.write(`Tool execution error: ${error.message}\n`);
                 
                 res.status(500).json({ success: false, error: error.message, stack: error.stack });
             }
@@ -78,7 +70,6 @@ class MCPGenomeBrowserServer {
         
         this.wss.on('connection', (ws) => {
             const clientId = uuidv4();
-            console.log(`New client connected: ${clientId}`);
             
             this.clients.set(clientId, ws);
             this.browserState.set(clientId, {
@@ -97,12 +88,11 @@ class MCPGenomeBrowserServer {
                     const data = JSON.parse(message);
                     this.handleBrowserMessage(clientId, data);
                 } catch (error) {
-                    console.error('Error parsing message:', error);
+                    process.stderr.write(`Error parsing message: ${error.message}\n`);
                 }
             });
 
             ws.on('close', () => {
-                console.log(`Client disconnected: ${clientId}`);
                 this.clients.delete(clientId);
                 this.browserState.delete(clientId);
             });
@@ -950,6 +940,11 @@ class MCPGenomeBrowserServer {
         const client = this.clients.get(clientId);
         const state = this.browserState.get(clientId);
 
+        // Check if client exists and is connected
+        if (!client || client.readyState !== 1) { // 1 = WebSocket.OPEN
+            throw new Error(`Client ${clientId || 'unknown'} is not connected. Please ensure Genome AI Studio is running and connected.`);
+        }
+
         return new Promise((resolve, reject) => {
             const requestId = uuidv4();
             const timeout = setTimeout(() => {
@@ -1626,10 +1621,7 @@ class MCPGenomeBrowserServer {
                         // Start WebSocket server only after HTTP server is ready
                         this.setupWebSocket();
                         
-                        console.log(`MCP Server running on port ${this.port}`);
-                        console.log(`WebSocket server running on port ${this.wsPort}`);
-                        console.log(`MCP Server Tools: ${Object.keys(this.tools).length} tools available`);
-                        console.log('Key tools:', Object.keys(this.tools).slice(0, 10).join(', '), Object.keys(this.tools).length > 10 ? '...' : '');
+                        // Silent startup to avoid JSON-RPC interference
                         
                         resolve({
                             httpPort: this.port,

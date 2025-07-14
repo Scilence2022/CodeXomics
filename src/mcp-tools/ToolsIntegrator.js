@@ -41,7 +41,18 @@ class ToolsIntegrator {
     }
 
     getAvailableTools() {
-        return Object.values(this.allTools);
+        const tools = Object.values(this.allTools);
+        
+        // Convert 'parameters' to 'inputSchema' for MCP SDK compatibility
+        return tools.map(tool => {
+            if (tool.parameters && !tool.inputSchema) {
+                return {
+                    ...tool,
+                    inputSchema: tool.parameters
+                };
+            }
+            return tool;
+        });
     }
 
     getToolByName(toolName) {

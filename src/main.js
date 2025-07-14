@@ -1,7 +1,8 @@
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const MCPGenomeBrowserServer = require('./mcp-server');
+const UnifiedClaudeMCPServer = require('./mcp-server-claude-unified');
+const genomeStudioRPC = require('./genome-studio-rpc');
 const VERSION_INFO = require('./version');
 
 // Application constants
@@ -9,8 +10,10 @@ const APP_NAME = VERSION_INFO.appName;
 const PROJECT_DIRECTORY_NAME = 'Genome AI Studio Projects';
 
 let mainWindow;
-let mcpServer = null;
-let mcpServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
+
+// Unified Claude MCP Server
+let unifiedMCPServer = null;
+let unifiedServerStatus = 'stopped'; // 'stopped', 'starting', 'running', 'stopping'
 
 // 为生物信息学工具窗口创建独立菜单
 // 存储各个工具窗口的菜单模板
@@ -857,6 +860,9 @@ function createWindow() {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    
+    // Initialize RPC interface after window is ready
+    genomeStudioRPC.setMainWindow(mainWindow);
   });
 
   // Open DevTools for debugging (can be disabled in production)
@@ -1692,12 +1698,18 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Clean up MCP server when app is quitting
-app.on('before-quit', () => {
-  if (mcpServer) {
-    console.log('Shutting down MCP Server...');
-    mcpServer.stop();
-    mcpServer = null;
+// Clean up Unified MCP server when app is quitting
+app.on('before-quit', async () => {
+  // Clean up Unified Claude MCP server
+  if (unifiedMCPServer) {
+    console.log('Shutting down Unified Claude MCP Server...');
+    try {
+      await unifiedMCPServer.stop();
+      unifiedMCPServer = null;
+      unifiedServerStatus = 'stopped';
+    } catch (error) {
+      console.error('Error stopping Unified Claude MCP Server:', error);
+    }
   }
 });
 
@@ -1850,96 +1862,108 @@ ipcMain.handle('get-file-info', async (event, filePath) => {
   }
 });
 
-// Add MCP Server IPC handlers
+// Add Unified MCP Server IPC handlers
 ipcMain.handle('mcp-server-start', async () => {
   try {
-    if (mcpServerStatus === 'running') {
+    // Check if Unified MCP Server is already running
+    if (unifiedServerStatus === 'running') {
       return { 
         success: true, 
-        message: 'MCP Server is already running', 
+        message: 'Unified Claude MCP Server is already running', 
         status: 'running',
-        httpPort: 3000,
-        wsPort: 3001
+        serverType: 'unified-claude-mcp',
+        httpPort: 3002,
+        wsPort: 3003
       };
     }
     
-    if (mcpServerStatus === 'starting') {
-      return { success: false, message: 'MCP Server is already starting', status: 'starting' };
+    if (unifiedServerStatus === 'starting') {
+      return { success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting' };
     }
 
-    mcpServerStatus = 'starting';
+    unifiedServerStatus = 'starting';
     
     try {
-      // Create MCP server
-      mcpServer = new MCPGenomeBrowserServer(3000, 3001);
+      // Create Unified Claude MCP server with ports 3002 and 3003, and main window
+      unifiedMCPServer = new UnifiedClaudeMCPServer(3002, 3003, mainWindow);
       
-      // Start the server (now async)
-      const startResult = await mcpServer.start();
+      // Start the server
+      await unifiedMCPServer.start();
       
-      mcpServerStatus = 'running';
-      console.log('MCP Server started successfully');
+      unifiedServerStatus = 'running';
+      console.log('Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)');
       
       return { 
         success: true, 
-        message: startResult.message, 
+        message: 'Unified Claude MCP Server started successfully', 
         status: 'running',
-        httpPort: startResult.httpPort,
-        wsPort: startResult.wsPort
+        serverType: 'unified-claude-mcp',
+        httpPort: 3002,
+        wsPort: 3003
       };
     } catch (error) {
-      mcpServerStatus = 'stopped';
-      mcpServer = null; // Clear the server instance on failure
-      console.error('Failed to start MCP Server:', error);
+      unifiedServerStatus = 'stopped';
+      unifiedMCPServer = null; // Clear the server instance on failure
+      console.error('Failed to start Unified Claude MCP Server:', error);
       
       return { 
         success: false, 
-        message: `Failed to start MCP Server: ${error.message}`, 
+        message: `Failed to start Unified Claude MCP Server: ${error.message}`, 
         status: 'stopped' 
       };
     }
   } catch (error) {
-    mcpServerStatus = 'stopped';
+    unifiedServerStatus = 'stopped';
     return { success: false, message: error.message, status: 'stopped' };
   }
 });
 
 ipcMain.handle('mcp-server-stop', async () => {
   try {
-    if (mcpServerStatus === 'stopped') {
-      return { success: true, message: 'MCP Server is already stopped', status: 'stopped' };
+    // Stop Unified MCP Server if running
+    if (unifiedServerStatus === 'running') {
+      unifiedServerStatus = 'stopping';
+      
+      if (unifiedMCPServer) {
+        await unifiedMCPServer.stop();
+        unifiedMCPServer = null;
+      }
+      
+      unifiedServerStatus = 'stopped';
+      console.log('Unified Claude MCP Server stopped successfully');
+      
+      return { 
+        success: true, 
+        message: 'Unified Claude MCP Server stopped successfully', 
+        status: 'stopped',
+        serverType: 'unified-claude-mcp'
+      };
     }
     
-    if (mcpServerStatus === 'stopping') {
-      return { success: false, message: 'MCP Server is already stopping', status: 'stopping' };
+    if (unifiedServerStatus === 'stopped') {
+      return { success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped' };
+    }
+    
+    if (unifiedServerStatus === 'stopping') {
+      return { success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping' };
     }
 
-    mcpServerStatus = 'stopping';
-    
-    if (mcpServer) {
-      mcpServer.stop();
-      mcpServer = null;
-    }
-    
-    mcpServerStatus = 'stopped';
-    console.log('MCP Server stopped successfully');
-    
-    return { 
-      success: true, 
-      message: 'MCP Server stopped successfully', 
-      status: 'stopped' 
-    };
+    return { success: true, message: 'No MCP Server is running', status: 'stopped' };
   } catch (error) {
-    mcpServerStatus = 'stopped';
+    unifiedServerStatus = 'stopped';
     return { success: false, message: error.message, status: 'stopped' };
   }
 });
 
 ipcMain.handle('mcp-server-status', async () => {
+  // Return Unified Claude MCP Server status
   return { 
-    status: mcpServerStatus,
-    isRunning: mcpServerStatus === 'running',
-    httpPort: mcpServerStatus === 'running' ? 3000 : null,
-    wsPort: mcpServerStatus === 'running' ? 3001 : null
+    status: unifiedServerStatus,
+    isRunning: unifiedServerStatus === 'running',
+    serverType: unifiedServerStatus === 'running' ? 'unified-claude-mcp' : 'none',
+    httpPort: unifiedServerStatus === 'running' ? 3002 : null,
+    wsPort: unifiedServerStatus === 'running' ? 3003 : null,
+    connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0
   };
 });
 

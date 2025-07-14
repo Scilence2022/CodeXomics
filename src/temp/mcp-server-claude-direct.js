@@ -16,21 +16,26 @@ const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontext
 const MCPGenomeBrowserServer = require('./mcp-server.js');
 
 // Import the organized tools integrator
-const ToolsIntegrator = require('./mcp-tools/ToolsIntegrator.js');
+const ToolsIntegrator = require('../mcp-tools/ToolsIntegrator.js');
 
 class ClaudeDirectMCPServer {
-    constructor() {
+    constructor(httpPort = 3002, wsPort = 3003) {
+        this.httpPort = httpPort;
+        this.wsPort = wsPort;
+        
         this.server = new Server({
             name: 'genome-ai-studio-direct',
             version: '1.0.0',
         }, {
             capabilities: {
-                tools: {},
+                tools: {
+                    listChanged: false,
+                },
             },
         });
 
-        // Initialize the backend MCP server for complex operations
-        this.backendServer = new MCPGenomeBrowserServer();
+        // Initialize the backend MCP server for complex operations with custom ports
+        this.backendServer = new MCPGenomeBrowserServer(this.httpPort, this.wsPort);
         
         // Initialize the tools integrator
         this.toolsIntegrator = new ToolsIntegrator(this.backendServer);
@@ -43,12 +48,6 @@ class ClaudeDirectMCPServer {
         // Handle tool listing
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             const tools = this.toolsIntegrator.getAvailableTools();
-            const categories = this.toolsIntegrator.getToolsByCategory();
-            const statistics = this.toolsIntegrator.getToolStatistics();
-
-            process.stderr.write(`📊 Loaded ${statistics.totalTools} tools across ${statistics.categories} categories\n`);
-            process.stderr.write(`📂 Categories: ${Object.keys(categories).join(', ')}\n`);
-
             return {
                 tools: tools
             };
@@ -57,9 +56,6 @@ class ClaudeDirectMCPServer {
         // Handle tool execution
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name: toolName, arguments: args } = request.params;
-            
-            process.stderr.write(`🔧 Executing tool: ${toolName}\n`);
-            process.stderr.write(`📋 Parameters: ${JSON.stringify(args, null, 2)}\n`);
 
             try {
                 // Validate parameters
@@ -67,8 +63,6 @@ class ClaudeDirectMCPServer {
 
                 // Execute the tool
                 const result = await this.toolsIntegrator.executeTool(toolName, args, args.clientId);
-                
-                process.stderr.write(`✅ Tool execution successful: ${toolName}\n`);
                 
                 return {
                     content: [
@@ -79,9 +73,6 @@ class ClaudeDirectMCPServer {
                     ]
                 };
             } catch (error) {
-                process.stderr.write(`❌ Tool execution failed: ${toolName}\n`);
-                process.stderr.write(`💥 Error: ${error.message}\n`);
-                
                 return {
                     content: [
                         {
@@ -101,11 +92,10 @@ class ClaudeDirectMCPServer {
 
     setupErrorHandling() {
         this.server.onerror = (error) => {
-            process.stderr.write(`🚨 Server error: ${error.message}\n`);
+            // Silent error handling to avoid JSON-RPC interference
         };
 
         process.on('SIGINT', async () => {
-            process.stderr.write('🛑 Shutting down server...\n');
             await this.server.close();
             process.exit(0);
         });
@@ -113,37 +103,50 @@ class ClaudeDirectMCPServer {
 
     async start() {
         try {
-            // Start the backend server
-            process.stderr.write('🚀 Starting backend MCP server...\n');
+            // Start the backend server silently
             await this.backendServer.start();
             
-            // Start the Claude MCP server
-            process.stderr.write('🎯 Starting Claude MCP server...\n');
+            // Output port information to stderr to avoid JSON-RPC interference
+            process.stderr.write(`🧬 Genome AI Studio Direct MCP Server started\n`);
+            process.stderr.write(`📡 HTTP Server: http://localhost:${this.httpPort}\n`);
+            process.stderr.write(`🔌 WebSocket: ws://localhost:${this.wsPort}\n`);
+            process.stderr.write(`\n`);
+            
+            // Start the Claude MCP server silently
             const transport = new StdioServerTransport();
             await this.server.connect(transport);
             
-            const statistics = this.toolsIntegrator.getToolStatistics();
-            process.stderr.write(`✨ Claude MCP Server started successfully!\n`);
-            process.stderr.write(`📊 Available tools: ${statistics.totalTools}\n`);
-            process.stderr.write(`🔧 Server-side tools: ${statistics.serverSideTools}\n`);
-            process.stderr.write(`🖥️  Client-side tools: ${statistics.clientSideTools}\n`);
-            
-            // Log tool categories
-            const categories = this.toolsIntegrator.getToolsByCategory();
-            for (const [key, category] of Object.entries(categories)) {
-                process.stderr.write(`📁 ${category.name}: ${category.tools.length} tools\n`);
+        } catch (error) {
+            process.stderr.write(`Failed to start server: ${error.message}\n`);
+            process.exit(1);
+        }
+    }
+
+    async stop() {
+        try {
+            // Stop the Claude MCP server
+            if (this.server) {
+                await this.server.close();
             }
             
+            // Stop the backend server
+            if (this.backendServer) {
+                this.backendServer.stop();
+            }
         } catch (error) {
-            process.stderr.write(`💥 Failed to start server: ${error.message}\n`);
-            process.exit(1);
+            process.stderr.write(`Error stopping server: ${error.message}\n`);
         }
     }
 }
 
-// Start the server
-const server = new ClaudeDirectMCPServer();
-server.start().catch((error) => {
-    process.stderr.write(`💥 Startup error: ${error.message}\n`);
-    process.exit(1);
-}); 
+// Export the class for external use
+module.exports = ClaudeDirectMCPServer;
+
+// Only start the server if this file is run directly
+if (require.main === module) {
+    const server = new ClaudeDirectMCPServer();
+    server.start().catch((error) => {
+        process.stderr.write(`💥 Startup error: ${error.message}\n`);
+        process.exit(1);
+    });
+} 

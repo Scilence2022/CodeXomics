@@ -90,11 +90,55 @@ if (typeof window !== 'undefined') {
         });
     };
 
+    // Load GenomeStudioRPCHandler
+    const loadGenomeStudioRPCHandler = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof GenomeStudioRPCHandler !== 'undefined') {
+                resolve();
+                return;
+            }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/GenomeStudioRPCHandler.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'modules/GenomeStudioRPCHandler.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
+    // Load InternalMCPServer
+    const loadInternalMCPServer = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof InternalMCPServer !== 'undefined') {
+                resolve();
+                return;
+            }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/InternalMCPServer.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'modules/InternalMCPServer.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
     // Load modules in sequence
     loadFunctionCallsOrganizer()
         .then(() => loadPluginFunctionCallsIntegrator())
         .then(() => loadSmartExecutor())
         .then(() => loadModalDragManager())
+        .then(() => loadGenomeStudioRPCHandler())
+        .then(() => loadInternalMCPServer())
         .then(() => {
             console.log('✅ Smart Execution System modules loaded successfully');
             // Initialize ModalDragManager
@@ -132,6 +176,9 @@ class GenomeBrowser {
         
         // Initialize Tab Management System (for multi-genome analysis)
         this.tabManager = new TabManager(this);
+        
+        // Initialize Internal MCP Server for direct communication with main process MCP server
+        this.initializeInternalMCPServer();
         
         // Initialize Action Management System
         this.initializeActionSystem();
@@ -393,6 +440,30 @@ class GenomeBrowser {
     /**
      * Initialize Action Management System
      */
+    initializeInternalMCPServer() {
+        // Initialize Internal MCP Server for direct communication with main process MCP server
+        setTimeout(() => {
+            try {
+                if (typeof InternalMCPServer !== 'undefined') {
+                    this.internalMCPServer = new InternalMCPServer();
+                    
+                    // Initialize with this Genome Studio instance
+                    this.internalMCPServer.initialize(this);
+                    
+                    // Start the internal server
+                    this.internalMCPServer.start();
+                    
+                    window.internalMCPServer = this.internalMCPServer; // Keep for debugging
+                    console.log('✅ Internal MCP Server initialized and started');
+                } else {
+                    console.warn('⚠️ InternalMCPServer class not available');
+                }
+            } catch (error) {
+                console.error('❌ Failed to initialize Internal MCP Server:', error);
+            }
+        }, 200); // Small delay to ensure modules are ready
+    }
+
     initializeActionSystem() {
         // Initialize Action Manager and Checkpoint Manager after DOM is ready
         setTimeout(() => {
@@ -5743,7 +5814,7 @@ class GenomeBrowser {
                 statusTextElement.textContent = 'Stopped';
                 statusDot?.classList.add('status-stopped');
                 btn.disabled = false;
-                btn.title = 'Start MCP Server';
+                btn.title = 'Start Unified Claude MCP Server';
                 break;
             case 'starting':
                 statusText.textContent = 'Starting...';
@@ -5751,7 +5822,7 @@ class GenomeBrowser {
                 statusDot?.classList.add('status-starting');
                 btn.classList.add('starting');
                 btn.disabled = true;
-                btn.title = 'MCP Server is starting...';
+                btn.title = 'Unified Claude MCP Server is starting...';
                 break;
             case 'running':
                 statusText.textContent = 'Stop';
@@ -5760,7 +5831,8 @@ class GenomeBrowser {
                 statusDot?.classList.add('status-running');
                 btn.classList.add('running');
                 btn.disabled = false;
-                btn.title = `Stop MCP Server (HTTP: ${info.httpPort || 3000}, WS: ${info.wsPort || 3001})${connectedText}`;
+                const serverTypeText = info.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
+                btn.title = `Stop ${serverTypeText} (Connect Claude Desktop to: http://localhost:${info.httpPort || 3000}/mcp)${connectedText}`;
                 break;
             case 'stopping':
                 statusText.textContent = 'Stopping...';
@@ -5768,7 +5840,7 @@ class GenomeBrowser {
                 statusDot?.classList.add('status-stopping');
                 btn.classList.add('stopping');
                 btn.disabled = true;
-                btn.title = 'MCP Server is stopping...';
+                btn.title = 'Unified Claude MCP Server is stopping...';
                 break;
         }
     }
@@ -5817,7 +5889,8 @@ class GenomeBrowser {
                 const result = await ipcRenderer.invoke('mcp-server-start');
                 
                 if (result.success) {
-                    this.showNotification(`MCP Server started successfully on ports ${result.httpPort} (HTTP) and ${result.wsPort} (WebSocket)`, 'success');
+                    const serverTypeText = result.serverType === 'unified-claude-mcp' ? 'Unified Claude MCP Server' : 'MCP Server';
+                    this.showNotification(`${serverTypeText} started successfully! Claude Desktop can connect via custom connector: http://localhost:${result.httpPort}/mcp`, 'success');
                     
                     // Auto-connect the ChatManager to the built-in server after starting (only if auto-activation is allowed)
                     const currentSettings = this.configManager ? 
@@ -5825,15 +5898,9 @@ class GenomeBrowser {
                         { allowAutoActivation: false };
                         
                     if (currentSettings.allowAutoActivation) {
-                        setTimeout(() => {
-                            if (this.chatManager?.mcpServerManager) {
-                                try {
-                                    this.chatManager.mcpServerManager.connectToServer('genome-studio');
-                                } catch (error) {
-                                    console.warn('Failed to auto-connect to built-in server:', error);
-                                }
-                            }
-                        }, 1000);
+                        // For unified RPC server, no WebSocket connection needed
+                        // The RPC interface is automatically available when the server starts
+                        console.log('✅ Unified Claude MCP Server RPC interface is ready');
                     }
                 } else {
                     this.showNotification(`Failed to start MCP Server: ${result.message}`, 'error');
