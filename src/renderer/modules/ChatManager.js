@@ -435,7 +435,7 @@ class ChatManager {
         const defaultSettings = {
             allowAutoActivation: false, // NEW: Default to false to avoid unwanted connections
             autoConnect: false, // Default to false to avoid unwanted connections
-            serverUrl: 'ws://localhost:3001',
+            serverUrl: 'ws://localhost:3003',
             reconnectDelay: 5
         };
         
@@ -452,7 +452,7 @@ class ChatManager {
     async setupMCPConnection(manualConnection = false) {
         const defaultSettings = {
             autoConnect: false,
-            serverUrl: 'ws://localhost:3001',
+            serverUrl: 'ws://localhost:3003',
             reconnectDelay: 5
         };
         

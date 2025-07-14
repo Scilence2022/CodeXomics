@@ -40,7 +40,7 @@ class MCPServerManager {
                 id: 'genome-studio',
                 name: 'Genome AI Studio',
                 description: 'Built-in genome analysis tools',
-                url: 'ws://localhost:3001',
+                url: 'ws://localhost:3003',
                 enabled: true,
                 autoConnect: true,
                 reconnectDelay: 5,
@@ -49,12 +49,31 @@ class MCPServerManager {
                 isBuiltin: true,
                 protocol: 'websocket' // Legacy WebSocket protocol
             }],
+            // Unified Claude MCP Server
+            ['unified-claude-mcp', {
+                id: 'unified-claude-mcp',
+                name: 'Unified Claude MCP Server',
+                description: 'Unified Claude MCP server with direct RPC communication and integrated genomics tools',
+                url: null, // No WebSocket URL - uses direct RPC
+                enabled: true,
+                autoConnect: true,
+                reconnectDelay: 5,
+                category: 'genomics',
+                capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration', 'mcp-protocol', 'direct-rpc'],
+                isBuiltin: true,
+                protocol: 'rpc',
+                mcpConfig: {
+                    stdio: false,
+                    serverPath: './src/mcp-server-claude-unified.js',
+                    communicationType: 'direct-rpc'
+                }
+            }],
             // Claude MCP Server
             ['claude-mcp-genome', {
                 id: 'claude-mcp-genome',
                 name: 'Claude MCP Genome Server',
                 description: 'Claude MCP compliant genome analysis server',
-                url: 'ws://localhost:3001', // WebSocket URL for browser communication
+                url: 'ws://localhost:3003', // WebSocket URL for browser communication
                 enabled: true,
                 autoConnect: true,
                 reconnectDelay: 5,
@@ -71,7 +90,7 @@ class MCPServerManager {
             ['dev-local', {
                 id: 'dev-local',
                 name: 'Local Development Tools',
-                url: 'ws://localhost:3001',
+                url: 'ws://localhost:3003',
                 enabled: false,
                 autoConnect: false,
                 reconnectDelay: 5,
@@ -98,7 +117,7 @@ class MCPServerManager {
         defaultServers.forEach((server, id) => {
             if (!this.servers.has(id)) {
                 this.servers.set(id, server);
-            }
+        }
         });
     }
 
@@ -257,56 +276,56 @@ class MCPServerManager {
 
     // Connect to legacy WebSocket server
     async connectToWebSocketServer(serverId, server) {
-        const ws = new WebSocket(server.url);
-        
-        // Add authentication headers if needed
-        if (server.headers && Object.keys(server.headers).length > 0) {
-            // Note: WebSocket API doesn't support custom headers directly
-            // For authentication, we'll send them in the first message
-            ws.authHeaders = server.headers;
-        }
-
-        ws.onopen = () => {
-            console.log(`Connected to WebSocket server: ${server.name}`);
-            this.connections.set(serverId, ws);
-            this.activeServers.add(serverId);
-            this.emit('serverConnected', { serverId, server });
+            const ws = new WebSocket(server.url);
             
-            // Send authentication if headers are present
-            if (ws.authHeaders) {
-                ws.send(JSON.stringify({
-                    type: 'authenticate',
-                    headers: ws.authHeaders
-                }));
+            // Add authentication headers if needed
+            if (server.headers && Object.keys(server.headers).length > 0) {
+                // Note: WebSocket API doesn't support custom headers directly
+                // For authentication, we'll send them in the first message
+                ws.authHeaders = server.headers;
             }
 
-            // Request available tools
-            this.requestServerTools(serverId);
-        };
+            ws.onopen = () => {
+            console.log(`Connected to WebSocket server: ${server.name}`);
+                this.connections.set(serverId, ws);
+                this.activeServers.add(serverId);
+                this.emit('serverConnected', { serverId, server });
+                
+                // Send authentication if headers are present
+                if (ws.authHeaders) {
+                    ws.send(JSON.stringify({
+                        type: 'authenticate',
+                        headers: ws.authHeaders
+                    }));
+                }
 
-        ws.onmessage = (event) => {
-            this.handleServerMessage(serverId, event);
-        };
+                // Request available tools
+                this.requestServerTools(serverId);
+            };
+
+            ws.onmessage = (event) => {
+                this.handleServerMessage(serverId, event);
+            };
 
         ws.onerror = (error) => {
             console.error(`WebSocket server error (${serverId}):`, error);
             this.emit('serverError', { serverId, server, error });
         };
 
-        ws.onclose = () => {
+            ws.onclose = () => {
             console.log(`WebSocket server disconnected: ${server.name}`);
-            this.connections.delete(serverId);
-            this.activeServers.delete(serverId);
-            this.serverTools.delete(serverId);
-            this.emit('serverDisconnected', { serverId, server });
-            
+                this.connections.delete(serverId);
+                this.activeServers.delete(serverId);
+                this.serverTools.delete(serverId);
+                this.emit('serverDisconnected', { serverId, server });
+
             // Auto-reconnect if enabled
             if (server.autoConnect && server.enabled) {
-                setTimeout(() => {
-                    this.connectToServer(serverId);
-                }, server.reconnectDelay * 1000);
-            }
-        };
+                    setTimeout(() => {
+                        this.connectToServer(serverId);
+                    }, server.reconnectDelay * 1000);
+                }
+            };
     }
 
     // Disconnect from a server
@@ -316,7 +335,7 @@ class MCPServerManager {
         
         if (ws) {
             ws.close();
-            this.connections.delete(serverId);
+        this.connections.delete(serverId);
         }
         
         if (claudeWs) {
@@ -359,8 +378,8 @@ class MCPServerManager {
             
             if (data.type === 'tools') {
                 // Handle tools list from legacy server
-                this.serverTools.set(serverId, data.tools || []);
-                this.emit('toolsUpdated', { serverId, tools: data.tools });
+                    this.serverTools.set(serverId, data.tools || []);
+                    this.emit('toolsUpdated', { serverId, tools: data.tools });
             } else if (data.type === 'tool-response') {
                 // Handle tool execution response
                 this.emit('toolResponse', { serverId, data });
@@ -453,7 +472,7 @@ class MCPServerManager {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             throw new Error(`Server ${serverId} not connected`);
         }
-
+        
         return new Promise((resolve, reject) => {
             const requestId = this.generateRequestId();
             const timeout = setTimeout(() => {
@@ -474,7 +493,7 @@ class MCPServerManager {
             };
 
             this.on('toolResponse', handler);
-            
+
             // Send legacy tool execution request
             ws.send(JSON.stringify({
                 type: 'execute-tool',
@@ -515,9 +534,9 @@ class MCPServerManager {
             const server = this.servers.get(serverId);
             if (server && this.activeServers.has(serverId)) {
                 const category = server.category || 'general';
-                if (!categories[category]) {
-                    categories[category] = [];
-                }
+            if (!categories[category]) {
+                categories[category] = [];
+            }
                 
                 tools.forEach(tool => {
                     categories[category].push({
@@ -526,7 +545,7 @@ class MCPServerManager {
                         serverName: server.name,
                         protocol: server.protocol || 'websocket'
                     });
-                });
+        });
             }
         }
         
@@ -550,11 +569,11 @@ class MCPServerManager {
         // Auto-connect to enabled servers after a short delay
         setTimeout(() => {
             for (const [serverId, server] of this.servers) {
-                if (server.enabled && server.autoConnect) {
+            if (server.enabled && server.autoConnect) {
                     this.connectToServer(serverId).catch(error => {
                         console.warn(`Failed to auto-connect to server ${serverId}:`, error.message);
                     });
-                }
+        }
             }
         }, 1000);
     }
