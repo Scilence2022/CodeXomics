@@ -241,89 +241,8 @@ class ChatBoxSettingsManager {
         modal.className = 'modal draggable-modal';
         
         modal.innerHTML = `
-            <style>
-                .priority-container {
-                    border: 1px solid #ddd;
-                    border-radius: 8px;
-                    background: #f8f9fa;
-                    padding: 10px;
-                    margin: 10px 0;
-                }
-                
-                .priority-item {
-                    display: flex;
-                    align-items: center;
-                    background: white;
-                    border: 1px solid #dee2e6;
-                    border-radius: 6px;
-                    padding: 12px;
-                    margin: 8px 0;
-                    cursor: move;
-                    transition: all 0.2s ease;
-                }
-                
-                .priority-item:hover {
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                    transform: translateY(-1px);
-                }
-                
-                .priority-number {
-                    background: #007bff;
-                    color: white;
-                    border-radius: 50%;
-                    width: 24px;
-                    height: 24px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 12px;
-                    font-weight: bold;
-                    margin-right: 12px;
-                    flex-shrink: 0;
-                }
-                
-                .priority-label {
-                    flex: 1;
-                    font-weight: 500;
-                    color: #333;
-                }
-                
-                .priority-controls {
-                    display: flex;
-                    gap: 4px;
-                }
-                
-                .priority-btn {
-                    background: #f8f9fa;
-                    border: 1px solid #dee2e6;
-                    border-radius: 4px;
-                    width: 28px;
-                    height: 28px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    font-size: 14px;
-                    color: #495057;
-                    transition: all 0.2s ease;
-                }
-                
-                .priority-btn:hover {
-                    background: #e9ecef;
-                    border-color: #adb5bd;
-                }
-                
-                .priority-btn:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-                
-                .priority-item.dragging {
-                    opacity: 0.7;
-                    transform: rotate(5deg);
-                }
-            </style>
-            <div class="modal-content llm-config-modal resizable-modal-content">
+            
+            <div class="modal-content chatbox-settings-modal-content resizable-modal-content">
                 <div class="modal-header draggable-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
                     <button class="modal-close" onclick="this.closest('.modal').style.display='none'">
@@ -331,7 +250,7 @@ class ChatBoxSettingsManager {
                     </button>
                 </div>
                 
-                <div class="modal-body">
+                <div class="modal-body" >
                     <div class="llm-provider-tabs">
                         <button class="tab-button active" data-tab="display">
                             <i class="fas fa-eye"></i> Display
