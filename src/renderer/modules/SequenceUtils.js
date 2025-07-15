@@ -1080,25 +1080,54 @@ class SequenceUtils {
             return this._cachedCharWidth;
         }
         
-        // Create a temporary element to measure character width
-        const testElement = document.createElement('span');
-        testElement.textContent = 'ATCG'; // Use representative DNA bases
-        testElement.style.fontFamily = "'Courier New', monospace";
-        testElement.style.fontSize = '14px';
-        testElement.style.fontWeight = '600';
-        testElement.style.visibility = 'hidden';
-        testElement.style.position = 'absolute';
-        testElement.style.whiteSpace = 'nowrap';
-        testElement.style.letterSpacing = '1px'; // Match the CSS letter-spacing
+        // Use multiple measurements for better accuracy
+        const measurements = [];
+        const charCounts = [16, 32, 64]; // Use different character counts for validation
         
-        container.appendChild(testElement);
-        const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
-        container.removeChild(testElement);
+        charCounts.forEach(count => {
+            const testElement = document.createElement('span');
+            testElement.textContent = 'ATCG'.repeat(count / 4);
+            testElement.style.cssText = `
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                font-weight: 600;
+                visibility: hidden;
+                position: absolute;
+                white-space: nowrap;
+                letter-spacing: 1px;
+            `;
+            
+            container.appendChild(testElement);
+            const totalWidth = testElement.offsetWidth;
+            const charWidth = totalWidth / count;
+            container.removeChild(testElement);
+            
+            if (charWidth > 0) {
+                measurements.push(charWidth);
+            }
+        });
+        
+        // Calculate average and standard deviation for validation
+        const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+        const variance = measurements.reduce((a, b) => a + Math.pow(b - average, 2), 0) / measurements.length;
+        const stdDev = Math.sqrt(variance);
+        
+        // Use the most consistent measurement (lowest variance)
+        const mostConsistent = measurements.reduce((prev, current) => 
+            Math.abs(current - average) < Math.abs(prev - average) ? current : prev
+        );
         
         // Use actual measured width, with a fallback if measurement fails
-        this._cachedCharWidth = width > 0 ? width : 9.5;
+        this._cachedCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
         
-        console.log('🔧 [SequenceUtils] Measured character width:', this._cachedCharWidth);
+        console.log('🔧 [SequenceUtils] Character width measurement:', {
+            measurements: measurements.map(m => m.toFixed(3)),
+            average: average.toFixed(3),
+            stdDev: stdDev.toFixed(3),
+            selectedWidth: this._cachedCharWidth.toFixed(3),
+            effectiveCharWidth: (this._cachedCharWidth + 1).toFixed(3)
+        });
+        
         return this._cachedCharWidth;
     }
 
@@ -1154,13 +1183,36 @@ class SequenceUtils {
         const effectiveCharWidth = charWidth + 1; // Add letter-spacing
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
         
+        // Calculate actual width that will be used
+        const actualUsedWidth = optimalLineLength * effectiveCharWidth;
+        const remainingWidth = availableWidth - actualUsedWidth;
+        
         console.log('🔧 [SequenceUtils] Line calculation:', {
             containerWidth,
             charWidth,
             effectiveCharWidth,
             availableWidth,
-            optimalLineLength
+            optimalLineLength,
+            actualUsedWidth,
+            remainingWidth,
+            utilizationPercentage: ((actualUsedWidth / availableWidth) * 100).toFixed(1) + '%'
         });
+        
+        // If there's significant unused space, try to optimize
+        if (remainingWidth > effectiveCharWidth && optimalLineLength < 100) {
+            const additionalChars = Math.floor(remainingWidth / effectiveCharWidth);
+            const newOptimalLength = optimalLineLength + additionalChars;
+            console.log('🔧 [SequenceUtils] Optimizing line length:', {
+                originalLength: optimalLineLength,
+                additionalChars,
+                newLength: newOptimalLength,
+                newUsedWidth: newOptimalLength * effectiveCharWidth
+            });
+            // Use the optimized length if it doesn't exceed container
+            if (newOptimalLength * effectiveCharWidth <= availableWidth) {
+                optimalLineLength = newOptimalLength;
+            }
+        }
         
         // Get sequence track settings
         const sequenceSettings = this.getSequenceTrackSettings();

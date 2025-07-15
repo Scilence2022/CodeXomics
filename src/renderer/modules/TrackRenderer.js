@@ -2131,19 +2131,38 @@ class TrackRenderer {
         document.body.appendChild(tempContainer);
         
         // Measure actual character width using the same method as SequenceUtils
-        const testElement = document.createElement('span');
-        testElement.textContent = 'ATCG';
-        testElement.style.cssText = `
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: 600;
-            visibility: hidden;
-            position: absolute;
-            white-space: nowrap;
-            letter-spacing: 1px;
-        `;
-        tempContainer.appendChild(testElement);
-        const measuredCharWidth = testElement.offsetWidth / 4;
+        const measurements = [];
+        const charCounts = [16, 32, 64]; // Use different character counts for validation
+        
+        charCounts.forEach(count => {
+            const testElement = document.createElement('span');
+            testElement.textContent = 'ATCG'.repeat(count / 4);
+            testElement.style.cssText = `
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                font-weight: 600;
+                visibility: hidden;
+                position: absolute;
+                white-space: nowrap;
+                letter-spacing: 1px;
+            `;
+            tempContainer.appendChild(testElement);
+            const totalWidth = testElement.offsetWidth;
+            const charWidth = totalWidth / count;
+            tempContainer.removeChild(testElement);
+            
+            if (charWidth > 0) {
+                measurements.push(charWidth);
+            }
+        });
+        
+        // Calculate average and use most consistent measurement
+        const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+        const mostConsistent = measurements.reduce((prev, current) => 
+            Math.abs(current - average) < Math.abs(prev - average) ? current : prev
+        );
+        
+        const measuredCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
         document.body.removeChild(tempContainer);
         
         // Use measured width or fallback
@@ -2174,7 +2193,10 @@ class TrackRenderer {
             charWidth,
             effectiveCharWidth,
             finalFontSize,
-            finalCharWidth
+            finalCharWidth,
+            measurements: measurements.map(m => m.toFixed(3)),
+            average: average.toFixed(3),
+            selectedWidth: measuredCharWidth.toFixed(3)
         });
         
         // Create sequence bases with initial positioning
@@ -2202,20 +2224,38 @@ class TrackRenderer {
         const sequenceLength = viewport.range;
         
         // Measure actual character width for accurate calculation
-        const testElement = document.createElement('span');
-        testElement.textContent = 'ATCG';
-        testElement.style.cssText = `
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: 600;
-            visibility: hidden;
-            position: absolute;
-            white-space: nowrap;
-            letter-spacing: 1px;
-        `;
-        document.body.appendChild(testElement);
-        const measuredCharWidth = testElement.offsetWidth / 4;
-        document.body.removeChild(testElement);
+        const measurements = [];
+        const charCounts = [16, 32, 64]; // Use different character counts for validation
+        
+        charCounts.forEach(count => {
+            const testElement = document.createElement('span');
+            testElement.textContent = 'ATCG'.repeat(count / 4);
+            testElement.style.cssText = `
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                font-weight: 600;
+                visibility: hidden;
+                position: absolute;
+                white-space: nowrap;
+                letter-spacing: 1px;
+            `;
+            document.body.appendChild(testElement);
+            const totalWidth = testElement.offsetWidth;
+            const charWidth = totalWidth / count;
+            document.body.removeChild(testElement);
+            
+            if (charWidth > 0) {
+                measurements.push(charWidth);
+            }
+        });
+        
+        // Calculate average and use most consistent measurement
+        const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+        const mostConsistent = measurements.reduce((prev, current) => 
+            Math.abs(current - average) < Math.abs(prev - average) ? current : prev
+        );
+        
+        const measuredCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
         
         // Use measured width or fallback
         const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
@@ -2244,7 +2284,10 @@ class TrackRenderer {
             charWidth,
             effectiveCharWidth,
             finalFontSize,
-            finalCharWidth
+            finalCharWidth,
+            measurements: measurements.map(m => m.toFixed(3)),
+            average: average.toFixed(3),
+            selectedWidth: measuredCharWidth.toFixed(3)
         });
         
         // Update all base elements with precise positioning
