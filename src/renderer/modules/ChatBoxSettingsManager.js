@@ -238,7 +238,7 @@ class ChatBoxSettingsManager {
     createSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'chatboxSettingsModal';
-        modal.className = 'modal';
+        modal.className = 'modal draggable-modal';
         
         modal.innerHTML = `
             <style>
@@ -323,7 +323,7 @@ class ChatBoxSettingsManager {
                     transform: rotate(5deg);
                 }
             </style>
-            <div class="modal-content llm-config-modal draggable-modal">
+            <div class="modal-content llm-config-modal resizable-modal-content">
                 <div class="modal-header draggable-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
                     <button class="modal-close" onclick="this.closest('.modal').style.display='none'">
@@ -386,7 +386,7 @@ class ChatBoxSettingsManager {
                                         <input type="checkbox" id="showToolCallSource" class="setting-checkbox">
                                         Show tool call source
                                     </label>
-                                    <small class="help-text">显示每个tool call的具体来源（MCP Server或内部函数）</small>
+                                    <small class="help-text">Display the specific source of each tool call (MCP Server or internal function)</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -394,7 +394,7 @@ class ChatBoxSettingsManager {
                                         <input type="checkbox" id="showDetailedToolData" class="setting-checkbox">
                                         Show detailed tool data
                                     </label>
-                                    <small class="help-text">显示tool call返回的详细数据内容</small>
+                                    <small class="help-text">Display detailed data content returned by tool calls</small>
                                 </div>
                             </div>
                             
@@ -612,6 +612,16 @@ class ChatBoxSettingsManager {
                         </button>
                     </div>
                 </div>
+                
+                <!-- Resize handles -->
+                <div class="resize-handle resize-handle-n"></div>
+                <div class="resize-handle resize-handle-s"></div>
+                <div class="resize-handle resize-handle-e"></div>
+                <div class="resize-handle resize-handle-w"></div>
+                <div class="resize-handle resize-handle-ne"></div>
+                <div class="resize-handle resize-handle-nw"></div>
+                <div class="resize-handle resize-handle-se"></div>
+                <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
         
@@ -640,6 +650,9 @@ class ChatBoxSettingsManager {
         // Setup dragging functionality
         this.setupModalDragging(modal);
         
+        // Setup resizing functionality
+        this.setupModalResizing(modal);
+        
         // Setup tool priority functionality
         this.setupToolPriorityHandlers(modal);
         
@@ -650,84 +663,133 @@ class ChatBoxSettingsManager {
      * Setup dragging functionality for the settings modal
      */
     setupModalDragging(modal) {
-        const modalContent = modal.querySelector('.modal-content');
         const header = modal.querySelector('.draggable-header');
+        if (!header) return;
+
         let isDragging = false;
-        let currentX = 0;
-        let currentY = 0;
-        let initialX = 0;
-        let initialY = 0;
-        let xOffset = 0;
-        let yOffset = 0;
+        let startX, startY, startLeft, startTop;
 
-        // Make header cursor indicate draggable
-        if (header) {
-            header.style.cursor = 'move';
-        }
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('modal-close')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = modal.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            modal.classList.add('dragging');
+            e.preventDefault();
+        });
 
-        // Mouse events
-        header.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', dragMove);
-        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newLeft = startLeft + deltaX;
+            const newTop = startTop + deltaY;
+            
+            // Keep modal within viewport bounds
+            const maxLeft = window.innerWidth - modal.offsetWidth;
+            const maxTop = window.innerHeight - modal.offsetHeight;
+            
+            modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+            modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+        });
 
-        // Touch events for mobile support
-        header.addEventListener('touchstart', dragStart);
-        document.addEventListener('touchmove', dragMove);
-        document.addEventListener('touchend', dragEnd);
-
-        function dragStart(e) {
-            // Don't drag if clicking on buttons
-            if (e.target.closest('button')) return;
-
-            if (e.type === 'touchstart') {
-                initialX = e.touches[0].clientX - xOffset;
-                initialY = e.touches[0].clientY - yOffset;
-            } else {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-            }
-
-            if (e.target === header || header.contains(e.target)) {
-                isDragging = true;
-                modalContent.classList.add('dragging');
-                document.body.style.userSelect = 'none';
-            }
-        }
-
-        function dragMove(e) {
-            if (isDragging) {
-                e.preventDefault();
-
-                if (e.type === 'touchmove') {
-                    currentX = e.touches[0].clientX - initialX;
-                    currentY = e.touches[0].clientY - initialY;
-                } else {
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                }
-
-                xOffset = currentX;
-                yOffset = currentY;
-
-                // Constrain to viewport
-                const rect = modalContent.getBoundingClientRect();
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
-
-                xOffset = Math.max(-rect.width + 100, Math.min(xOffset, maxX - 100));
-                yOffset = Math.max(0, Math.min(yOffset, maxY));
-
-                modalContent.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
-            }
-        }
-
-        function dragEnd() {
+        document.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
-                modalContent.classList.remove('dragging');
-                document.body.style.userSelect = '';
+                modal.classList.remove('dragging');
             }
-        }
+        });
+    }
+
+    /**
+     * Setup resizing functionality for the settings modal
+     */
+    setupModalResizing(modal) {
+        const content = modal.querySelector('.resizable-modal-content');
+        if (!content) return;
+
+        const handles = modal.querySelectorAll('.resize-handle');
+        let isResizing = false;
+        let currentHandle = null;
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                currentHandle = handle;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = content.getBoundingClientRect();
+                startWidth = rect.width;
+                startHeight = rect.height;
+                startLeft = rect.left;
+                startTop = rect.top;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing || !currentHandle) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const handleClass = currentHandle.className;
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newLeft = startLeft;
+            let newTop = startTop;
+            
+            // Handle different resize directions
+            if (handleClass.includes('e')) {
+                newWidth = Math.max(400, startWidth + deltaX);
+            }
+            if (handleClass.includes('w')) {
+                const widthChange = Math.min(deltaX, startWidth - 400);
+                newWidth = startWidth - widthChange;
+                newLeft = startLeft + widthChange;
+            }
+            if (handleClass.includes('s')) {
+                newHeight = Math.max(300, startHeight + deltaY);
+            }
+            if (handleClass.includes('n')) {
+                const heightChange = Math.min(deltaY, startHeight - 300);
+                newHeight = startHeight - heightChange;
+                newTop = startTop + heightChange;
+            }
+            
+            // Apply new dimensions
+            content.style.width = newWidth + 'px';
+            content.style.height = newHeight + 'px';
+            
+            // Update modal dimensions to match content
+            modal.style.width = newWidth + 'px';
+            modal.style.height = newHeight + 'px';
+            
+            // Adjust position if resizing from left or top
+            if (handleClass.includes('w') || handleClass.includes('n')) {
+                modal.style.left = newLeft + 'px';
+                modal.style.top = newTop + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                currentHandle = null;
+            }
+        });
     }
 
     /**

@@ -27729,9 +27729,14 @@ path.svg-gene-element.selected {
 
 /* ===== CHATBOX SETTINGS MODAL STYLES ===== */
 
-/* ChatBox Settings Modal - using LLM config modal styles */
+/* ChatBox Settings Modal - enhanced with draggable and resizable functionality */
+#chatboxSettingsModal {
+    width: 900px !important; /* Increased from 600px by 1.5x */
+    max-width: 90vw !important;
+}
+
 #chatboxSettingsModal .llm-config-modal {
-    max-width: 600px;
+    max-width: 900px;
     width: 95%;
     max-height: calc(100vh - 40px);
     display: flex;
@@ -32775,9 +32780,14 @@ path.svg-gene-element.selected {
 
 /* ===== CHATBOX SETTINGS MODAL DRAGGABLE STYLES ===== */
 
-/* ChatBox Settings Modal - enhanced with draggable functionality */
+/* ChatBox Settings Modal - enhanced with draggable and resizable functionality */
+#chatboxSettingsModal {
+    width: 900px !important; /* Increased from 600px by 1.5x */
+    max-width: 90vw !important;
+}
+
 #chatboxSettingsModal .llm-config-modal {
-    max-width: 600px;
+    max-width: 900px;
     width: 95%;
     max-height: calc(100vh - 40px);
     display: flex;
