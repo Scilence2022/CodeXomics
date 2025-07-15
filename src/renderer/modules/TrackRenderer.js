@@ -7308,15 +7308,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
     
     /**
-     * Create track settings modal
+     * Create track settings modal with draggable and resizable functionality
      */
     createTrackSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'trackSettingsModal';
-        modal.className = 'modal';
+        modal.className = 'modal draggable-modal';
         modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
+            <div class="modal-content resizable-modal-content">
+                <div class="modal-header draggable-header">
                     <h3 id="trackSettingsTitle">Track Settings</h3>
                     <button class="modal-close" id="closeTrackSettingsModal">&times;</button>
                 </div>
@@ -7327,6 +7327,15 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     <button class="btn btn-secondary modal-close">Cancel</button>
                     <button class="btn btn-primary" id="applyTrackSettings">Apply</button>
                 </div>
+                <!-- Resize handles -->
+                <div class="resize-handle resize-handle-n"></div>
+                <div class="resize-handle resize-handle-s"></div>
+                <div class="resize-handle resize-handle-e"></div>
+                <div class="resize-handle resize-handle-w"></div>
+                <div class="resize-handle resize-handle-ne"></div>
+                <div class="resize-handle resize-handle-nw"></div>
+                <div class="resize-handle resize-handle-se"></div>
+                <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
         
@@ -7341,9 +7350,13 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             this.applyTrackSettings();
         });
         
+        // Make modal draggable and resizable
+        this.makeModalDraggable(modal);
+        this.makeModalResizable(modal);
+        
         return modal;
     }
-    
+
     /**
      * Load track-specific settings content
      */
@@ -9498,6 +9511,139 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         if (rect.bottom > window.innerHeight) {
             menu.style.top = (event.clientY - rect.height) + 'px';
         }
+    }
+
+    /**
+     * Make modal draggable
+     */
+    makeModalDraggable(modal) {
+        const header = modal.querySelector('.draggable-header');
+        if (!header) return;
+
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('modal-close')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = modal.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            modal.classList.add('dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newLeft = startLeft + deltaX;
+            const newTop = startTop + deltaY;
+            
+            // Keep modal within viewport bounds
+            const maxLeft = window.innerWidth - modal.offsetWidth;
+            const maxTop = window.innerHeight - modal.offsetHeight;
+            
+            modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+            modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                modal.classList.remove('dragging');
+            }
+        });
+    }
+
+    /**
+     * Make modal resizable
+     */
+    makeModalResizable(modal) {
+        const content = modal.querySelector('.resizable-modal-content');
+        if (!content) return;
+
+        const handles = modal.querySelectorAll('.resize-handle');
+        let isResizing = false;
+        let currentHandle = null;
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                currentHandle = handle;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = content.getBoundingClientRect();
+                startWidth = rect.width;
+                startHeight = rect.height;
+                startLeft = rect.left;
+                startTop = rect.top;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing || !currentHandle) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const handleClass = currentHandle.className;
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newLeft = startLeft;
+            let newTop = startTop;
+            
+            // Handle different resize directions
+            if (handleClass.includes('e')) {
+                newWidth = Math.max(400, startWidth + deltaX);
+            }
+            if (handleClass.includes('w')) {
+                const widthChange = Math.min(deltaX, startWidth - 400);
+                newWidth = startWidth - widthChange;
+                newLeft = startLeft + widthChange;
+            }
+            if (handleClass.includes('s')) {
+                newHeight = Math.max(300, startHeight + deltaY);
+            }
+            if (handleClass.includes('n')) {
+                const heightChange = Math.min(deltaY, startHeight - 300);
+                newHeight = startHeight - heightChange;
+                newTop = startTop + heightChange;
+            }
+            
+            // Apply new dimensions
+            content.style.width = newWidth + 'px';
+            content.style.height = newHeight + 'px';
+            
+            // Update modal dimensions to match content
+            modal.style.width = newWidth + 'px';
+            modal.style.height = newHeight + 'px';
+            
+            // Adjust position if resizing from left or top
+            if (handleClass.includes('w') || handleClass.includes('n')) {
+                modal.style.left = newLeft + 'px';
+                modal.style.top = newTop + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                currentHandle = null;
+            }
+        });
     }
 }
 

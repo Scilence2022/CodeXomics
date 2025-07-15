@@ -31,12 +31,12 @@ class SequenceUtils {
         this.svgCache = new Map(); // Cache for SVG indicators
         this.lastRenderParams = null; // Track last render parameters
         
-        // Virtual scrolling parameters
+        // Virtual scrolling parameters - FIXED: Use actual line height + spacing
         this.virtualScrolling = {
             enabled: false,
             visibleLines: 20,
             bufferLines: 5,
-            lineHeight: 32,
+            lineHeight: 36, // FIXED: lineHeight + lineSpacing = 28 + 8 = 36
             scrollTop: 0
         };
         
@@ -366,73 +366,37 @@ class SequenceUtils {
     }
     
     /**
-     * Update CSS variables for sequence line height and spacing with enhanced verification
+     * Update sequence line height CSS variables and recalculate virtual scrolling
      */
     updateSequenceLineHeightCSS() {
         const root = document.documentElement;
-        const lineHeightRatio = Math.max(1.2, this.lineHeight / 16);
         
-        // Ensure line spacing doesn't go below minimum value
-        const effectiveLineSpacing = Math.max(this.lineSpacing, this.minLineSpacing);
-        
-        // Force remove existing variables first to ensure fresh application
+        // Remove existing properties first
         root.style.removeProperty('--sequence-line-height');
         root.style.removeProperty('--sequence-line-ratio');
         root.style.removeProperty('--sequence-line-spacing');
+        root.style.removeProperty('--min-sequence-line-spacing');
         
-        // Apply new values with forced reapplication and minimum spacing protection
+        // Calculate line height ratio for better text rendering
+        const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
+        
+        // Set CSS custom properties with important flag
         root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
         root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString(), 'important');
-        root.style.setProperty('--sequence-line-spacing', `${effectiveLineSpacing}px`, 'important');
+        root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`, 'important');
+        root.style.setProperty('--min-sequence-line-spacing', `${this.minLineSpacing}px`, 'important');
         
-        // Debug: Log the applied values
-        console.log('🔧 [SequenceUtils] CSS variables updated:', {
-            lineHeight: this.lineHeight + 'px',
-            lineRatio: lineHeightRatio,
-            lineSpacing: this.lineSpacing + 'px',
-            effectiveLineSpacing: effectiveLineSpacing + 'px',
-            minLineSpacing: this.minLineSpacing + 'px',
-            currentMode: this.displayMode
-        });
+        // FIXED: Update virtual scrolling line height to match actual rendering
+        this.virtualScrolling.lineHeight = this.lineHeight + this.lineSpacing;
         
-        // Force multiple style recalculations to ensure proper application
-        document.body.offsetHeight;
-        root.offsetHeight;
+        console.log(`🔧 [SequenceUtils] Updated line height: ${this.lineHeight}px, spacing: ${this.lineSpacing}px, virtual line height: ${this.virtualScrolling.lineHeight}px`);
         
-        // Verify the values were applied correctly with timeout-based verification
+        // Verify the CSS properties were applied correctly
         setTimeout(() => {
             const appliedLineHeight = getComputedStyle(root).getPropertyValue('--sequence-line-height');
-            const appliedLineRatio = getComputedStyle(root).getPropertyValue('--sequence-line-ratio');
-            const appliedLineSpacing = getComputedStyle(root).getPropertyValue('--sequence-line-spacing');
-            
-            const verification = {
-                applied: {
-                    lineHeight: appliedLineHeight.trim(),
-                    lineRatio: appliedLineRatio.trim(),
-                    lineSpacing: appliedLineSpacing.trim()
-                },
-                expected: {
-                    lineHeight: this.lineHeight + 'px',
-                    lineRatio: lineHeightRatio.toString(),
-                    lineSpacing: this.lineSpacing + 'px'
-                }
-            };
-            
-            console.log('✅ [SequenceUtils] CSS variables verification:', verification);
-            
-            // Check if reapplication is needed
-            const heightMatch = verification.applied.lineHeight === verification.expected.lineHeight;
-            const spacingMatch = verification.applied.lineSpacing === verification.expected.lineSpacing;
-            
-            if (!heightMatch || !spacingMatch) {
-                console.warn('⚠️ [SequenceUtils] CSS variables mismatch detected - reapplying');
-                root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
-                root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`, 'important');
-                
-                // Force another style recalculation
-                document.body.offsetHeight;
-            }
-        }, 50);
+            const appliedSpacing = getComputedStyle(root).getPropertyValue('--sequence-line-spacing');
+            console.log(`🔧 [SequenceUtils] Applied CSS - line height: ${appliedLineHeight}, spacing: ${appliedSpacing}`);
+        }, 10);
     }
     
     /**
@@ -1401,10 +1365,24 @@ class SequenceUtils {
         const verticalOffset = sequenceSettings.verticalOffset || 0;
         const heightCorrection = (sequenceSettings.heightCorrection || 100) / 100;
         
+        // FIXED: Calculate vertical position considering line height compression
+        const actualLineHeight = this.lineHeight;
+        const actualLineSpacing = this.lineSpacing;
+        const totalLineHeight = actualLineHeight + actualLineSpacing;
+        
+        // FIXED: Calculate indicator position to be closer to current sequence line
+        // The indicator should be positioned just below the sequence text, not closer to next line
+        const sequenceTextHeight = actualLineHeight * 0.8; // Approximate text height within line
+        const textBottomOffset = (actualLineHeight - sequenceTextHeight) / 2; // Distance from text bottom to line bottom
+        
+        // Position indicator closer to current line by reducing bottom margin
+        const indicatorMarginTop = -textBottomOffset; // Move indicator up to be closer to text
+        const indicatorMarginBottom = actualLineSpacing - textBottomOffset + 2; // Add small gap to next line
+        
         const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
         const correctedHeight = 12 * heightCorrection;
-        const correctedMarginTop = -2 + verticalOffset;
-        const correctedMarginBottom = 2 - verticalOffset;
+        const correctedMarginTop = indicatorMarginTop + verticalOffset;
+        const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
         
         indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
         indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
@@ -1534,12 +1512,15 @@ class SequenceUtils {
     }
     
     /**
-     * Render virtualized sequence for large sequences
+     * Render virtualized sequence with corrected line height calculation
      */
     renderVirtualizedSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
         console.log('🔧 [SequenceUtils] Using virtualized rendering for large sequence');
         
         const totalLines = Math.ceil(subsequence.length / optimalLineLength);
+        
+        // FIXED: Use actual line height + spacing for virtual scrolling
+        const actualLineHeight = this.lineHeight + this.lineSpacing;
         
         // Calculate actual available height instead of using fixed 600px
         const parentContainer = document.getElementById('sequenceContent');
@@ -1553,15 +1534,15 @@ class SequenceUtils {
             availableHeight = Math.max(200, sectionRect.height - headerHeight - 40); // Reserve space for padding
         }
         
-        // Calculate optimal container height
-        const maxPossibleHeight = totalLines * this.virtualScrolling.lineHeight;
+        // Calculate optimal container height using actual line height
+        const maxPossibleHeight = totalLines * actualLineHeight;
         const containerHeight = Math.min(availableHeight, maxPossibleHeight);
         
         // Update virtual scrolling parameters based on actual container size
-        const dynamicVisibleLines = Math.floor(containerHeight / this.virtualScrolling.lineHeight);
+        const dynamicVisibleLines = Math.floor(containerHeight / actualLineHeight);
         const needsScrolling = totalLines > dynamicVisibleLines;
         
-        console.log(`🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}`);
+        console.log(`🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}, actualLineHeight=${actualLineHeight}px`);
         
         // Create virtualized container
         const virtualContainer = document.createElement('div');
@@ -1600,6 +1581,7 @@ class SequenceUtils {
         // Store dynamic parameters for scroll handling
         const virtualScrollingParams = {
             ...this.virtualScrolling,
+            lineHeight: actualLineHeight, // FIXED: Use actual line height
             visibleLines: dynamicVisibleLines,
             containerHeight: containerHeight,
             totalLines: totalLines,
@@ -1631,17 +1613,20 @@ class SequenceUtils {
     }
     
     /**
-     * Update virtualized content based on scroll position
+     * Update virtualized content based on scroll position with corrected line height
      */
     updateVirtualizedContent(visibleContent, scrollTop, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup, totalLines, virtualScrollingParams = null) {
         // Use dynamic parameters if provided, otherwise fall back to instance parameters
         const params = virtualScrollingParams || this.virtualScrolling;
-        const lineHeight = params.lineHeight;
+        const lineHeight = params.lineHeight || (this.lineHeight + this.lineSpacing); // FIXED: Use actual line height
         const visibleLines = params.visibleLines;
         const bufferLines = params.bufferLines;
         
         const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
         const endLine = Math.min(totalLines, startLine + visibleLines + bufferLines * 2);
+        
+        // FIXED: Save selection state before clearing content
+        const savedSelection = this.saveSelectionState();
         
         // Clear existing content
         visibleContent.innerHTML = '';
@@ -1656,14 +1641,17 @@ class SequenceUtils {
             
             const lineElement = this.renderSequenceLine(lineSubsequence, lineStartPos, chromosome, annotations, operons, charWidth, sequenceSettings, featureLookup);
             lineElement.style.position = 'absolute';
-            lineElement.style.top = `${lineIndex * lineHeight}px`;
+            lineElement.style.top = `${lineIndex * lineHeight}px`; // FIXED: Use correct line height
             lineElement.style.left = '0';
             lineElement.style.right = '0';
             
             visibleContent.appendChild(lineElement);
         }
         
-        console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px`);
+        // FIXED: Restore selection state after content update
+        this.restoreSelectionState(savedSelection);
+        
+        console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px, lineHeight=${lineHeight}px`);
     }
     
     /**
@@ -2904,6 +2892,114 @@ class SequenceUtils {
              cursorStatusElement.textContent = `Cursor: ${position + 1}`;
          }
      }
+
+    /**
+     * Save current text selection state for virtual scrolling
+     */
+    saveSelectionState() {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+            return null;
+        }
+
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        
+        // Find the sequence container
+        const sequenceContainer = container.closest('.detailed-sequence-view');
+        if (!sequenceContainer) {
+            return null;
+        }
+
+        // Calculate relative positions within the sequence
+        const containerRect = sequenceContainer.getBoundingClientRect();
+        const startNode = range.startContainer;
+        const endNode = range.endContainer;
+        
+        // Get genomic positions if possible
+        let startPos = null;
+        let endPos = null;
+        
+        // Try to extract genomic position from sequence spans
+        if (startNode.nodeType === Node.TEXT_NODE && startNode.parentElement) {
+            const startSpan = startNode.parentElement.closest('.sequence-bases span');
+            if (startSpan && startSpan.onclick) {
+                const match = startSpan.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
+                if (match) {
+                    startPos = parseInt(match[1]) + range.startOffset;
+                }
+            }
+        }
+        
+        if (endNode.nodeType === Node.TEXT_NODE && endNode.parentElement) {
+            const endSpan = endNode.parentElement.closest('.sequence-bases span');
+            if (endSpan && endSpan.onclick) {
+                const match = endSpan.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
+                if (match) {
+                    endPos = parseInt(match[1]) + range.endOffset;
+                }
+            }
+        }
+
+        return {
+            startPos,
+            endPos,
+            startOffset: range.startOffset,
+            endOffset: range.endOffset,
+            startContainer: startNode,
+            endContainer: endNode,
+            collapsed: range.collapsed,
+            timestamp: Date.now()
+        };
+    }
+
+    /**
+     * Restore text selection state after virtual scrolling
+     */
+    restoreSelectionState(savedSelection) {
+        if (!savedSelection || !savedSelection.startPos || !savedSelection.endPos) {
+            return;
+        }
+
+        // Find the sequence container
+        const sequenceContainer = document.querySelector('.detailed-sequence-view');
+        if (!sequenceContainer) {
+            return;
+        }
+
+        // Find the sequence spans at the saved positions
+        const startSpan = this.findSequenceSpanAtPosition(savedSelection.startPos, sequenceContainer);
+        const endSpan = this.findSequenceSpanAtPosition(savedSelection.endPos, sequenceContainer);
+        
+        if (!startSpan || !endSpan) {
+            return;
+        }
+
+        // Create new selection
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        try {
+            // Set range start and end
+            if (startSpan === endSpan) {
+                // Same span, use offsets
+                range.setStart(startSpan.firstChild, Math.min(savedSelection.startOffset, startSpan.firstChild.length));
+                range.setEnd(startSpan.firstChild, Math.min(savedSelection.endOffset, startSpan.firstChild.length));
+            } else {
+                // Different spans
+                range.setStart(startSpan.firstChild, Math.min(savedSelection.startOffset, startSpan.firstChild.length));
+                range.setEnd(endSpan.firstChild, Math.min(savedSelection.endOffset, endSpan.firstChild.length));
+            }
+            
+            // Apply selection
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            console.log(`🔧 [SequenceUtils] Selection restored: ${savedSelection.startPos}-${savedSelection.endPos}`);
+        } catch (error) {
+            console.warn('🔧 [SequenceUtils] Failed to restore selection:', error);
+        }
+    }
 }
 
 // Export for use in other modules

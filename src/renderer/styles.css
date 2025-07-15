@@ -34997,3 +34997,157 @@ input:checked + .slider:before {
     opacity: 0.6;
     pointer-events: none;
 }
+
+/* =====================================================
+   DRAGGABLE AND RESIZABLE MODAL STYLES
+   ===================================================== */
+
+/* Draggable modal styles */
+.draggable-modal {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10000 !important;
+    transition: transform 0.2s ease;
+}
+
+.draggable-modal.dragging {
+    z-index: 10001 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    transform: scale(1.02) !important;
+}
+
+.draggable-header {
+    cursor: move !important;
+    user-select: none !important;
+}
+
+.draggable-header:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Resizable modal content */
+.resizable-modal-content {
+    position: relative !important;
+    min-width: 600px !important; /* Increased from 400px by 1.5x */
+    min-height: 400px !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    overflow: hidden !important;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute !important;
+    background: transparent !important;
+    z-index: 10002 !important;
+}
+
+.resize-handle-n {
+    top: 0 !important;
+    left: 10px !important;
+    right: 10px !important;
+    height: 6px !important;
+    cursor: n-resize !important;
+}
+
+.resize-handle-s {
+    bottom: 0 !important;
+    left: 10px !important;
+    right: 10px !important;
+    height: 6px !important;
+    cursor: s-resize !important;
+}
+
+.resize-handle-e {
+    top: 10px !important;
+    right: 0 !important;
+    bottom: 10px !important;
+    width: 6px !important;
+    cursor: e-resize !important;
+}
+
+.resize-handle-w {
+    top: 10px !important;
+    left: 0 !important;
+    bottom: 10px !important;
+    width: 6px !important;
+    cursor: w-resize !important;
+}
+
+.resize-handle-ne {
+    top: 0 !important;
+    right: 0 !important;
+    width: 10px !important;
+    height: 10px !important;
+    cursor: ne-resize !important;
+}
+
+.resize-handle-nw {
+    top: 0 !important;
+    left: 0 !important;
+    width: 10px !important;
+    height: 10px !important;
+    cursor: nw-resize !important;
+}
+
+.resize-handle-se {
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 10px !important;
+    height: 10px !important;
+    cursor: se-resize !important;
+}
+
+.resize-handle-sw {
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 10px !important;
+    height: 10px !important;
+    cursor: sw-resize !important;
+}
+
+/* Hover effects for resize handles */
+.resize-handle:hover {
+    background: rgba(0, 123, 255, 0.1) !important;
+}
+
+/* Ensure modal content is properly sized */
+.resizable-modal-content .modal-body {
+    overflow-y: auto !important;
+    max-height: calc(100vh - 200px) !important;
+    padding: 20px !important;
+}
+
+/* Track settings modal specific styles */
+#trackSettingsModal {
+    width: 900px !important; /* Increased from 600px by 1.5x */
+    max-width: 90vw !important;
+}
+
+#trackSettingsModal .modal-content {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 500px !important;
+}
+
+#trackSettingsModal .modal-body {
+    max-height: 600px !important;
+    overflow-y: auto !important;
+}
+
+/* Ensure sequence settings tabs work properly in resizable modal */
+#trackSettingsModal .sequence-settings-tabs {
+    width: 100% !important;
+    height: auto !important;
+}
+
+#trackSettingsModal .tab-content {
+    min-height: 400px !important;
+}
+
+#trackSettingsModal .tab-panel {
+    min-height: 350px !important;
+    padding: 20px !important;
+}
