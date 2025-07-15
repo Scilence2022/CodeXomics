@@ -3163,6 +3163,59 @@ Format: {"tool_name": "tool_name", "parameters": {"param": "value"}}
 
 ${toolPriority}
 
+===SEQUENCE EDITING FUNCTIONS - DETAILED USAGE===
+
+SEQUENCE EDITING WORKFLOW:
+1. Find gene location: search_gene_by_name
+2. Use appropriate editing function (deleteSequence, insertSequence, etc.)
+3. Execute all pending actions: executeActions
+4. IMPORTANT: Actions are queued until executeActions is called
+
+EDITING FUNCTIONS WITH PARAMETERS:
+
+• deleteSequence - Delete a DNA sequence region
+  Parameters: chromosome (string), start (number), end (number), strand (optional: "+" or "-")
+  Example: {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
+
+• insertSequence - Insert DNA sequence at a specific position
+  Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N)
+  Example: {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
+
+• replaceSequence - Replace sequence in a region with new sequence
+  Parameters: chromosome (string), start (number), end (number), sequence (string), strand (optional)
+  Example: {"tool_name": "replaceSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+
+• copySequence - Copy sequence region to clipboard
+  Parameters: chromosome (string), start (number), end (number), strand (optional)
+  Example: {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+
+• cutSequence - Cut sequence (copy to clipboard and mark for deletion)
+  Parameters: chromosome (string), start (number), end (number), strand (optional)
+  Example: {"tool_name": "cutSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+
+• pasteSequence - Paste sequence from clipboard
+  Parameters: chromosome (string), position (number)
+  Example: {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+
+• executeActions - Execute all queued sequence editing actions
+  Parameters: confirm (optional boolean, default: false)
+  Example: {"tool_name": "executeActions", "parameters": {}}
+
+• getActionList - View current action queue
+  Parameters: status (optional: "all", "pending", "completed", "failed")
+  Example: {"tool_name": "getActionList", "parameters": {"status": "pending"}}
+
+CRITICAL GENE DELETION WORKFLOW:
+To delete a gene (like "delete gene yaaJ"):
+1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
+2. Use gene coordinates from result in deleteSequence
+3. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
+4. {"tool_name": "executeActions", "parameters": {}}
+
+CHROMOSOME NAMES:
+- Current genome uses "COLI-K12" as chromosome identifier
+- Always use the exact chromosome name from current genome state
+
 COMMON TASK PATTERNS:
 • Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
 • Protein Structure: search_alphafold_by_gene → open_alphafold_viewer
@@ -3170,7 +3223,9 @@ COMMON TASK PATTERNS:
 • Navigation: jump_to_gene → navigate_to_position
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
-• Sequence Editing: copySequence/cutSequence → pasteSequence → executeActions
+• Gene Deletion: search_gene_by_name → deleteSequence → executeActions
+• Sequence Insertion: insertSequence → executeActions
+• Copy/Paste: copySequence → pasteSequence → executeActions
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
@@ -3192,39 +3247,33 @@ Before using get_coding_sequence or other gene-specific functions:
 3. Check current genome state with get_genome_info
 
 WORKFLOW EXAMPLES:
+• Gene Deletion Workflow:
+  1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
+  2. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
+  3. {"tool_name": "executeActions", "parameters": {}}
+
 • Gene Analysis Workflow:
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "lysC"}}
   2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "lysC"}}
   3. {"tool_name": "translate_sequence", "parameters": {"sequence": "ATGCGC..."}}
 
-• Selected Gene Analysis:
-  1. {"tool_name": "get_selected_gene", "parameters": {}}
-  2. {"tool_name": "get_coding_sequence", "parameters": {"identifier": "selectedGeneName"}}
+• Sequence Insertion Workflow:
+  1. {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
+  2. {"tool_name": "executeActions", "parameters": {}}
 
-• Region Analysis:
-  1. {"tool_name": "get_current_region_details", "parameters": {}}
-  2. {"tool_name": "find_orfs", "parameters": {"sequence": "regionSequence"}}
-
-• Sequence Selection Analysis:
-  1. {"tool_name": "get_sequence_selection", "parameters": {}}
-  2. {"tool_name": "translate_dna", "parameters": {"sequence": "selectedSequence"}}
-
-• Data Verification:
-  1. {"tool_name": "get_genome_info", "parameters": {}}
-  2. {"tool_name": "get_current_state", "parameters": {}}
+• Copy/Paste Workflow:
+  1. {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+  2. {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+  3. {"tool_name": "executeActions", "parameters": {}}
 
 EXAMPLES:
 • Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
-• Get CDS: {"tool_name": "get_coding_sequence", "parameters": {"identifier": "thrC"}}
-• Selected gene: {"tool_name": "get_selected_gene", "parameters": {}}
-• Current region: {"tool_name": "get_current_region_details", "parameters": {}}
-• Sequence selection: {"tool_name": "get_sequence_selection", "parameters": {}}
-• AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
-• Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
-• BLAST: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGC...", "blastType": "blastn"}}
-• Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-• Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
-• Execute actions: {"tool_name": "executeActions", "parameters": {}}`;
+• Delete gene: {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
+• Insert DNA: {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
+• Execute actions: {"tool_name": "executeActions", "parameters": {}}
+• Get action list: {"tool_name": "getActionList", "parameters": {}}
+• Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+• Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}`;
     }
 
     /**
