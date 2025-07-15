@@ -49,14 +49,14 @@ class MCPServerManager {
                 isBuiltin: true,
                 protocol: 'websocket' // Legacy WebSocket protocol
             }],
-            // Unified Claude MCP Server
+            // Unified Claude MCP Server (disabled by default to prevent conflicts)
             ['unified-claude-mcp', {
                 id: 'unified-claude-mcp',
                 name: 'Unified Claude MCP Server',
                 description: 'Unified Claude MCP server with direct RPC communication and integrated genomics tools',
-                url: null, // No WebSocket URL - uses direct RPC
-                enabled: true,
-                autoConnect: true,
+                url: 'ws://localhost:3003', // Fixed URL to prevent null errors
+                enabled: false, // Disabled by default
+                autoConnect: false, // No auto-connect to prevent multiple connections
                 reconnectDelay: 5,
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration', 'mcp-protocol', 'direct-rpc'],
@@ -68,14 +68,14 @@ class MCPServerManager {
                     communicationType: 'direct-rpc'
                 }
             }],
-            // Claude MCP Server
+            // Claude MCP Server (disabled by default to prevent conflicts)
             ['claude-mcp-genome', {
                 id: 'claude-mcp-genome',
                 name: 'Claude MCP Genome Server',
                 description: 'Claude MCP compliant genome analysis server',
                 url: 'ws://localhost:3003', // WebSocket URL for browser communication
-                enabled: true,
-                autoConnect: true,
+                enabled: false, // Disabled by default
+                autoConnect: false, // No auto-connect to prevent multiple connections
                 reconnectDelay: 5,
                 category: 'genomics',
                 capabilities: ['genome-navigation', 'sequence-analysis', 'annotation', 'protein-structure', 'database-integration'],
@@ -206,6 +206,11 @@ class MCPServerManager {
         if (this.connections.has(serverId) || this.claudeMCPConnections.has(serverId)) {
             console.log(`Already connected to server ${serverId}`);
             return;
+        }
+
+        // Prevent connecting to servers with null or invalid URLs
+        if (!server.url || server.url === 'null') {
+            throw new Error(`Server ${serverId} has invalid URL: ${server.url}`);
         }
 
         try {
@@ -569,11 +574,16 @@ class MCPServerManager {
         // Auto-connect to enabled servers after a short delay
         setTimeout(() => {
             for (const [serverId, server] of this.servers) {
-            if (server.enabled && server.autoConnect) {
-                    this.connectToServer(serverId).catch(error => {
-                        console.warn(`Failed to auto-connect to server ${serverId}:`, error.message);
-                    });
-        }
+                if (server.enabled && server.autoConnect) {
+                    // Additional check for valid URL
+                    if (server.url && server.url !== 'null') {
+                        this.connectToServer(serverId).catch(error => {
+                            console.warn(`Failed to auto-connect to server ${serverId}:`, error.message);
+                        });
+                    } else {
+                        console.warn(`Skipping auto-connect for server ${serverId} - invalid URL: ${server.url}`);
+                    }
+                }
             }
         }, 1000);
     }
