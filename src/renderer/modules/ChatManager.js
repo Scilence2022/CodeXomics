@@ -3069,6 +3069,10 @@ Data Management:
             ],
             'AI & PREDICTION': [
                 'evo2_generate_sequence', 'evo2_predict_function', 'evo2_design_crispr'
+            ],
+            'SEQUENCE EDITING': [
+                'copySequence', 'cutSequence', 'pasteSequence', 'deleteSequence',
+                'insertSequence', 'replaceSequence', 'executeActions', 'getActionList'
             ]
         };
 
@@ -3166,6 +3170,7 @@ COMMON TASK PATTERNS:
 • Navigation: jump_to_gene → navigate_to_position
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
+• Sequence Editing: copySequence/cutSequence → pasteSequence → executeActions
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
@@ -3178,6 +3183,7 @@ ANALYSIS FUNCTIONS:
 - Composition: compute_gc, sequence_statistics, codon_usage_analysis
 - Features: find_orfs, predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
+- Editing: copySequence, cutSequence, pasteSequence, deleteSequence, insertSequence, replaceSequence
 
 IMPORTANT PREREQUISITES:
 Before using get_coding_sequence or other gene-specific functions:
@@ -3215,7 +3221,10 @@ EXAMPLES:
 • Sequence selection: {"tool_name": "get_sequence_selection", "parameters": {}}
 • AlphaFold: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "thrC"}}
 • Navigate: {"tool_name": "jump_to_gene", "parameters": {"geneName": "thrC"}}
-• BLAST: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGC...", "blastType": "blastn"}}`;
+• BLAST: {"tool_name": "blast_search", "parameters": {"sequence": "ATGCGC...", "blastType": "blastn"}}
+• Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+• Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+• Execute actions: {"tool_name": "executeActions", "parameters": {}}`;
     }
 
     /**
@@ -3325,6 +3334,16 @@ Basic Tool Examples:
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
 - Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+
+Sequence Editing Examples:
+- Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Cut sequence: {"tool_name": "cutSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Replace sequence: {"tool_name": "replaceSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+- Execute actions: {"tool_name": "executeActions", "parameters": {}}
+- Get action list: {"tool_name": "getActionList", "parameters": {}}
 
 MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
@@ -3572,6 +3591,16 @@ Basic Tool Examples:
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
 - Get sequence: {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
+
+Sequence Editing Examples:
+- Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Cut sequence: {"tool_name": "cutSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
+- Replace sequence: {"tool_name": "replaceSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+- Execute actions: {"tool_name": "executeActions", "parameters": {}}
+- Get action list: {"tool_name": "getActionList", "parameters": {}}
 
 MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
