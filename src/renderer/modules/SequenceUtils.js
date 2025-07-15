@@ -1089,12 +1089,16 @@ class SequenceUtils {
         testElement.style.visibility = 'hidden';
         testElement.style.position = 'absolute';
         testElement.style.whiteSpace = 'nowrap';
+        testElement.style.letterSpacing = '1px'; // Match the CSS letter-spacing
         
         container.appendChild(testElement);
         const width = testElement.offsetWidth / 4; // Divide by 4 since we measured 4 characters
         container.removeChild(testElement);
         
-        this._cachedCharWidth = 9.5; //width; //Math.ceil(width); // Round up to be conservative and cache result
+        // Use actual measured width, with a fallback if measurement fails
+        this._cachedCharWidth = width > 0 ? width : 9.5;
+        
+        console.log('🔧 [SequenceUtils] Measured character width:', this._cachedCharWidth);
         return this._cachedCharWidth;
     }
 
@@ -1141,8 +1145,22 @@ class SequenceUtils {
         const containerWidth = container.offsetWidth || 800;
         const charWidth = this.measureCharacterWidth(container);
         const positionWidth = 100;
-        const availableWidth = containerWidth - positionWidth - 30;
-        const optimalLineLength = Math.max(10, Math.floor(availableWidth / charWidth));
+        const marginRight = 15; // Position span margin-right
+        const padding = 30; // Container padding
+        const availableWidth = containerWidth - positionWidth - marginRight - padding;
+        
+        // Calculate optimal line length with better precision
+        // Account for letter spacing and ensure we don't exceed container width
+        const effectiveCharWidth = charWidth + 1; // Add letter-spacing
+        const optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
+        
+        console.log('🔧 [SequenceUtils] Line calculation:', {
+            containerWidth,
+            charWidth,
+            effectiveCharWidth,
+            availableWidth,
+            optimalLineLength
+        });
         
         // Get sequence track settings
         const sequenceSettings = this.getSequenceTrackSettings();

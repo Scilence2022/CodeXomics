@@ -2117,15 +2117,44 @@ class TrackRenderer {
             white-space: nowrap;
         `;
         
-        // Use a more flexible approach - calculate after element is added to DOM
-        // Initial render with estimated values
+        // Get actual container dimensions for accurate calculation
         const sequenceLength = viewport.range;
-        const estimatedContainerWidth = 800; // Initial estimation
         
-        // Calculate initial font size and character width
+        // Create a temporary measurement element to get actual container width
+        const tempContainer = document.createElement('div');
+        tempContainer.style.cssText = `
+            position: absolute;
+            visibility: hidden;
+            width: 100%;
+            height: 30px;
+        `;
+        document.body.appendChild(tempContainer);
+        
+        // Measure actual character width using the same method as SequenceUtils
+        const testElement = document.createElement('span');
+        testElement.textContent = 'ATCG';
+        testElement.style.cssText = `
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            visibility: hidden;
+            position: absolute;
+            white-space: nowrap;
+            letter-spacing: 1px;
+        `;
+        tempContainer.appendChild(testElement);
+        const measuredCharWidth = testElement.offsetWidth / 4;
+        document.body.removeChild(tempContainer);
+        
+        // Use measured width or fallback
+        const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
+        const effectiveCharWidth = charWidth + 1; // Account for letter-spacing
+        
+        // Calculate optimal font size and character width
         const maxFontSize = 16;
         const minFontSize = 4;
-        const availableWidth = estimatedContainerWidth * 0.95; // Leave 5% margin
+        const containerWidth = 800; // Initial estimation, will be updated in adjustSequenceDisplay
+        const availableWidth = containerWidth * 0.95; // Leave 5% margin
         const maxCharWidth = availableWidth / sequenceLength;
         
         // Calculate optimal font size
@@ -2139,6 +2168,14 @@ class TrackRenderer {
         
         const finalFontSize = Math.max(minFontSize, fontSize);
         const finalCharWidth = availableWidth / sequenceLength;
+        
+        console.log('🔧 [TrackRenderer] Sequence display calculation:', {
+            sequenceLength,
+            charWidth,
+            effectiveCharWidth,
+            finalFontSize,
+            finalCharWidth
+        });
         
         // Create sequence bases with initial positioning
         for (let i = 0; i < subsequence.length; i++) {
@@ -2164,7 +2201,27 @@ class TrackRenderer {
         const containerWidth = seqDisplay.parentElement.getBoundingClientRect().width || 800;
         const sequenceLength = viewport.range;
         
-        // Recalculate with actual dimensions
+        // Measure actual character width for accurate calculation
+        const testElement = document.createElement('span');
+        testElement.textContent = 'ATCG';
+        testElement.style.cssText = `
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            visibility: hidden;
+            position: absolute;
+            white-space: nowrap;
+            letter-spacing: 1px;
+        `;
+        document.body.appendChild(testElement);
+        const measuredCharWidth = testElement.offsetWidth / 4;
+        document.body.removeChild(testElement);
+        
+        // Use measured width or fallback
+        const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
+        const effectiveCharWidth = charWidth + 1; // Account for letter-spacing
+        
+        // Recalculate with actual dimensions and measured character width
         const maxFontSize = 16;
         const minFontSize = 4;
         const availableWidth = containerWidth * 0.95;
@@ -2180,6 +2237,15 @@ class TrackRenderer {
         
         const finalFontSize = Math.max(minFontSize, fontSize);
         const finalCharWidth = availableWidth / sequenceLength;
+        
+        console.log('🔧 [TrackRenderer] Adjusted sequence display:', {
+            containerWidth,
+            sequenceLength,
+            charWidth,
+            effectiveCharWidth,
+            finalFontSize,
+            finalCharWidth
+        });
         
         // Update all base elements with precise positioning
         const baseElements = seqDisplay.querySelectorAll('.sequence-base-inline');
