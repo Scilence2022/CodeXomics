@@ -2864,8 +2864,11 @@ class ActionManager {
                 const modifiedSequence = this.applySequenceModifications(chr, this.genomeBrowser.currentSequence[chr]);
                 const sequence = modifiedSequence;
                 
+                // 🔧 CRITICAL FIX: Use execution genome data for features to preserve strand information
+                const featuresSource = executionGenomeData?.annotations?.[chr] || this.genomeBrowser.currentAnnotations?.[chr] || [];
+                
                 // Adjust feature positions based on sequence modifications
-                const adjustedFeatures = this.adjustFeaturePositions(chr, this.genomeBrowser.currentAnnotations[chr] || []);
+                const adjustedFeatures = this.adjustFeaturePositions(chr, featuresSource);
                 const features = adjustedFeatures;
                 
                 // Get executed actions for modification history from execution copy
