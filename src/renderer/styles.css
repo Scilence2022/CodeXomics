@@ -662,6 +662,101 @@ body {
     width: 98%;
 }
 
+/* Resizable modal styles */
+.modal-content.resizable {
+    position: relative;
+    min-width: 400px;
+    min-height: 300px;
+    resize: none; /* Disable browser default resize */
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+
+.resize-handle-n {
+    top: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: n-resize;
+}
+
+.resize-handle-s {
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: s-resize;
+}
+
+.resize-handle-e {
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: e-resize;
+}
+
+.resize-handle-w {
+    top: 10px;
+    left: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: w-resize;
+}
+
+.resize-handle-ne {
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: ne-resize;
+}
+
+.resize-handle-nw {
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nw-resize;
+}
+
+.resize-handle-se {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
+}
+
+.resize-handle-sw {
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: sw-resize;
+}
+
+/* Hover effects for resize handles */
+.resize-handle:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.resize-handle:active {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+/* Modal controls layout */
+.modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;

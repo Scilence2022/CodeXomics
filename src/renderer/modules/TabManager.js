@@ -42,8 +42,13 @@ class TabManager {
         this.configManager = this.genomeBrowser.configManager;
         this.isPersistenceEnabled = false;
         
+        // Modal managers for draggable and resizable functionality
+        this.modalDragManager = null;
+        this.resizableModalManager = null;
+        
         this.initializeEventListeners();
         this.initializeTabSettings();
+        this.initializeModalManagers();
         this.initializePersistence();
         
         // Force visibility of position indicators after a short delay
@@ -1399,6 +1404,19 @@ class TabManager {
     }
     
     /**
+     * Initialize modal managers for draggable and resizable functionality
+     */
+    initializeModalManagers() {
+        // Initialize modal managers if they exist
+        if (typeof ModalDragManager !== 'undefined') {
+            this.modalDragManager = new ModalDragManager();
+        }
+        if (typeof ResizableModalManager !== 'undefined') {
+            this.resizableModalManager = new ResizableModalManager();
+        }
+    }
+
+    /**
      * Initialize tab settings functionality
      */
     initializeTabSettings() {
@@ -1443,6 +1461,19 @@ class TabManager {
                 this.closeTabSettingsModal();
             });
         });
+        
+        // Reset position button functionality
+        const resetPositionBtn = modal.querySelector('.reset-position-btn');
+        if (resetPositionBtn) {
+            resetPositionBtn.addEventListener('click', () => {
+                if (this.modalDragManager) {
+                    this.modalDragManager.resetPosition('#tabSettingsModal');
+                }
+                if (this.resizableModalManager) {
+                    this.resizableModalManager.resetSize('#tabSettingsModal');
+                }
+            });
+        }
         
         // Cache enabled toggle
         tabCacheEnabled.addEventListener('change', () => {
@@ -1536,6 +1567,14 @@ class TabManager {
      */
     openTabSettingsModal() {
         const modal = document.getElementById('tabSettingsModal');
+        
+        // Make modal draggable and resizable
+        if (this.modalDragManager) {
+            this.modalDragManager.makeDraggable('#tabSettingsModal');
+        }
+        if (this.resizableModalManager) {
+            this.resizableModalManager.makeResizable('#tabSettingsModal');
+        }
         
         // Cache settings
         const tabCacheEnabled = document.getElementById('tabCacheEnabled');
