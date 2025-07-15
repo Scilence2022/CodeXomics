@@ -12,16 +12,17 @@ class NavigationTools {
         return {
             navigate_to_position: {
                 name: 'navigate_to_position',
-                description: 'Navigate to a specific genomic position',
+                description: 'Navigate to a specific genomic position. If only position is provided, defaults to 2000bp range centered on that position.',
                 parameters: {
                     type: 'object',
                     properties: {
                         chromosome: { type: 'string', description: 'Chromosome name' },
-                        start: { type: 'number', description: 'Start position' },
-                        end: { type: 'number', description: 'End position' },
+                        start: { type: 'number', description: 'Start position (optional if position provided)' },
+                        end: { type: 'number', description: 'End position (optional if position provided)' },
+                        position: { type: 'number', description: 'Center position (creates 2000bp range if start/end not provided)' },
                         clientId: { type: 'string', description: 'Browser client ID' }
                     },
-                    required: ['chromosome', 'start', 'end']
+                    required: ['chromosome']
                 }
             },
 

@@ -152,9 +152,9 @@ class ActionManager {
     }
     
     /**
-     * Add action to the queue
+     * Create action object (without adding to queue)
      */
-    addAction(type, target, details, metadata = {}) {
+    createAction(type, target, details, metadata = {}) {
         const action = {
             id: this.nextActionId++,
             type: type,
@@ -167,6 +167,24 @@ class ActionManager {
             result: null,
             error: null
         };
+        
+        return action;
+    }
+
+    /**
+     * Add action to the queue
+     */
+    addAction(type, target, details, metadata = {}) {
+        let action;
+        
+        // Handle both cases: action object or parameters
+        if (typeof type === 'object' && type.id !== undefined) {
+            // type is actually an action object
+            action = type;
+        } else {
+            // Create new action from parameters
+            action = this.createAction(type, target, details, metadata);
+        }
         
         this.actions.push(action);
         this.updateActionListUI();

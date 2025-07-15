@@ -1126,7 +1126,7 @@ class ChatManager {
 
     // Tool implementations
     async navigateToPosition(params) {
-        const { chromosome, start, end } = params;
+        let { chromosome, start, end, position } = params;
         
         console.log('navigateToPosition called with params:', params);
         
@@ -1137,6 +1137,19 @@ class ChatManager {
         // Check if the target chromosome exists in loaded data
         if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
             throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+        }
+        
+        // Handle position parameter with default 2000bp range
+        if (position !== undefined && (start === undefined || end === undefined)) {
+            const defaultRange = 2000;
+            start = Math.max(1, position - Math.floor(defaultRange / 2));
+            end = position + Math.floor(defaultRange / 2);
+            console.log(`Using position ${position} with default ${defaultRange}bp range: ${start}-${end}`);
+        }
+        
+        // Validate required parameters
+        if (!chromosome || start === undefined || end === undefined) {
+            throw new Error('Missing required parameters: chromosome and either (start, end) or position');
         }
         
         // First, switch to the target chromosome if it's not currently selected
@@ -1182,7 +1195,8 @@ class ChatManager {
             chromosome: chromosome,
             start: start,
             end: end,
-            message: `Navigated to ${chromosome}:${start}-${end}`
+            message: `Navigated to ${chromosome}:${start}-${end}`,
+            usedDefaultRange: position !== undefined && (params.start === undefined || params.end === undefined)
         };
     }
 
@@ -2327,7 +2341,8 @@ class ChatManager {
         
         switch (toolName) {
             case 'navigate_to_position':
-                return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}`;
+                const rangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
+                return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}${rangeInfo}`;
                 
             case 'search_features':
                 if (result.count > 0) {
@@ -2976,6 +2991,7 @@ Protein Structure:
 TOOL USAGE EXAMPLES:
 Basic Navigation:
   {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+  {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
   {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
 
 Sequence Analysis:
@@ -3369,6 +3385,7 @@ When a user asks you to perform ANY action that requires using one of these tool
 
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
+{"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
@@ -3378,6 +3395,7 @@ Tool Selection Priority:
 
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
@@ -3626,6 +3644,7 @@ When a user asks you to perform ANY action that requires using one of these tool
 
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
+{"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
@@ -3635,6 +3654,7 @@ Tool Selection Priority:
 
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
