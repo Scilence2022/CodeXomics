@@ -222,8 +222,16 @@ class ChatBoxSettingsManager {
         // Populate current settings
         this.populateSettingsForm(modal);
         
-        // Show modal
-        modal.style.display = 'flex';
+        // Show modal with proper positioning
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        
+        // Reset to center position if not already positioned
+        if (!modal.style.left && !modal.style.top) {
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.top = '50%';
+            modal.style.left = '50%';
+        }
         
         // Focus first input
         const firstInput = modal.querySelector('input, select');
@@ -245,7 +253,7 @@ class ChatBoxSettingsManager {
             <div class="modal-content chatbox-settings-modal-content resizable-modal-content">
                 <div class="modal-header draggable-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'">
+                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
                         &times;
                     </button>
                 </div>
@@ -595,9 +603,15 @@ class ChatBoxSettingsManager {
             startX = e.clientX;
             startY = e.clientY;
             
+            // Get current modal position
             const rect = modal.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
+            
+            // Remove the default centered positioning
+            modal.style.transform = 'none';
+            modal.style.top = startTop + 'px';
+            modal.style.left = startLeft + 'px';
             
             modal.classList.add('dragging');
             e.preventDefault();
@@ -613,11 +627,15 @@ class ChatBoxSettingsManager {
             const newTop = startTop + deltaY;
             
             // Keep modal within viewport bounds
-            const maxLeft = window.innerWidth - modal.offsetWidth;
-            const maxTop = window.innerHeight - modal.offsetHeight;
+            const modalRect = modal.getBoundingClientRect();
+            const maxLeft = window.innerWidth - modalRect.width;
+            const maxTop = window.innerHeight - modalRect.height;
             
-            modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
-            modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+            const clampedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            const clampedTop = Math.max(0, Math.min(newTop, maxTop));
+            
+            modal.style.left = clampedLeft + 'px';
+            modal.style.top = clampedTop + 'px';
         });
 
         document.addEventListener('mouseup', () => {
