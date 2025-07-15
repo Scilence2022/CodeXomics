@@ -3463,6 +3463,615 @@ class ActionManager {
             // Don't throw here as this is defensive programming
         }
     }
+
+    // =================================================================
+    // FUNCTION CALL WRAPPERS FOR AI INTEGRATION
+    // =================================================================
+
+    /**
+     * Get all available action functions for AI integration
+     */
+    getAvailableActionFunctions() {
+        return {
+            // Copy sequence function
+            copySequence: {
+                name: 'copySequence',
+                description: 'Copy a sequence region to clipboard',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        start: { type: 'number', description: 'Start position (1-based)' },
+                        end: { type: 'number', description: 'End position (1-based)' },
+                        strand: { type: 'string', enum: ['+', '-'], description: 'Strand direction', default: '+' }
+                    },
+                    required: ['chromosome', 'start', 'end']
+                }
+            },
+
+            // Cut sequence function
+            cutSequence: {
+                name: 'cutSequence',
+                description: 'Cut a sequence region and store in clipboard',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        start: { type: 'number', description: 'Start position (1-based)' },
+                        end: { type: 'number', description: 'End position (1-based)' },
+                        strand: { type: 'string', enum: ['+', '-'], description: 'Strand direction', default: '+' }
+                    },
+                    required: ['chromosome', 'start', 'end']
+                }
+            },
+
+            // Paste sequence function
+            pasteSequence: {
+                name: 'pasteSequence',
+                description: 'Paste sequence from clipboard at specified position',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        position: { type: 'number', description: 'Insert position (1-based)' }
+                    },
+                    required: ['chromosome', 'position']
+                }
+            },
+
+            // Delete sequence function
+            deleteSequence: {
+                name: 'deleteSequence',
+                description: 'Delete a sequence region',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        start: { type: 'number', description: 'Start position (1-based)' },
+                        end: { type: 'number', description: 'End position (1-based)' },
+                        strand: { type: 'string', enum: ['+', '-'], description: 'Strand direction', default: '+' }
+                    },
+                    required: ['chromosome', 'start', 'end']
+                }
+            },
+
+            // Insert sequence function
+            insertSequence: {
+                name: 'insertSequence',
+                description: 'Insert sequence at specified position',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        position: { type: 'number', description: 'Insert position (1-based)' },
+                        sequence: { type: 'string', description: 'Sequence to insert' }
+                    },
+                    required: ['chromosome', 'position', 'sequence']
+                }
+            },
+
+            // Replace sequence function
+            replaceSequence: {
+                name: 'replaceSequence',
+                description: 'Replace sequence in specified region',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome identifier' },
+                        start: { type: 'number', description: 'Start position (1-based)' },
+                        end: { type: 'number', description: 'End position (1-based)' },
+                        sequence: { type: 'string', description: 'Replacement sequence' },
+                        strand: { type: 'string', enum: ['+', '-'], description: 'Strand direction', default: '+' }
+                    },
+                    required: ['chromosome', 'start', 'end', 'sequence']
+                }
+            },
+
+            // Get action list function
+            getActionList: {
+                name: 'getActionList',
+                description: 'Get current list of pending and completed actions',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        status: { type: 'string', enum: ['pending', 'completed', 'failed', 'all'], description: 'Filter by status', default: 'all' }
+                    }
+                }
+            },
+
+            // Execute actions function
+            executeActions: {
+                name: 'executeActions',
+                description: 'Execute all pending actions',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        confirm: { type: 'boolean', description: 'Confirm execution without user prompt', default: false }
+                    }
+                }
+            },
+
+            // Clear actions function
+            clearActions: {
+                name: 'clearActions',
+                description: 'Clear all actions from the queue',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        status: { type: 'string', enum: ['pending', 'completed', 'failed', 'all'], description: 'Clear actions by status', default: 'all' }
+                    }
+                }
+            },
+
+            // Undo last action function
+            undoLastAction: {
+                name: 'undoLastAction',
+                description: 'Undo the last completed action',
+                parameters: {
+                    type: 'object',
+                    properties: {}
+                }
+            },
+
+            // Get clipboard content function
+            getClipboardContent: {
+                name: 'getClipboardContent',
+                description: 'Get current clipboard content',
+                parameters: {
+                    type: 'object',
+                    properties: {}
+                }
+            }
+        };
+    }
+
+    /**
+     * Execute action function by name
+     */
+    async executeActionFunction(functionName, parameters = {}) {
+        console.log(`🔧 [ActionManager] Executing action function: ${functionName}`, parameters);
+
+        try {
+            switch (functionName) {
+                case 'copySequence':
+                    return await this.functionCopySequence(parameters);
+
+                case 'cutSequence':
+                    return await this.functionCutSequence(parameters);
+
+                case 'pasteSequence':
+                    return await this.functionPasteSequence(parameters);
+
+                case 'deleteSequence':
+                    return await this.functionDeleteSequence(parameters);
+
+                case 'insertSequence':
+                    return await this.functionInsertSequence(parameters);
+
+                case 'replaceSequence':
+                    return await this.functionReplaceSequence(parameters);
+
+                case 'getActionList':
+                    return this.functionGetActionList(parameters);
+
+                case 'executeActions':
+                    return await this.functionExecuteActions(parameters);
+
+                case 'clearActions':
+                    return this.functionClearActions(parameters);
+
+                case 'undoLastAction':
+                    return await this.functionUndoLastAction(parameters);
+
+                case 'getClipboardContent':
+                    return this.functionGetClipboardContent(parameters);
+
+                default:
+                    throw new Error(`Unknown action function: ${functionName}`);
+            }
+        } catch (error) {
+            console.error(`❌ [ActionManager] Function ${functionName} failed:`, error);
+            throw error;
+        }
+    }
+
+    // =================================================================
+    // FUNCTION IMPLEMENTATIONS
+    // =================================================================
+
+    async functionCopySequence(params) {
+        const { chromosome, start, end, strand = '+' } = params;
+        
+        // Validate parameters
+        if (!chromosome || !start || !end) {
+            throw new Error('Missing required parameters: chromosome, start, end');
+        }
+        
+        if (start > end) {
+            throw new Error('Start position must be less than or equal to end position');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.COPY_SEQUENCE,
+            `${chromosome}:${start}-${end}(${strand})`,
+            `Copy sequence from ${chromosome}:${start}-${end} (${strand})`
+        );
+
+        action.metadata = {
+            chromosome,
+            start: parseInt(start),
+            end: parseInt(end),
+            strand,
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence copy action created for ${chromosome}:${start}-${end} (${strand})`,
+            details: {
+                chromosome,
+                start,
+                end,
+                strand,
+                length: end - start + 1
+            }
+        };
+    }
+
+    async functionCutSequence(params) {
+        const { chromosome, start, end, strand = '+' } = params;
+        
+        // Validate parameters
+        if (!chromosome || !start || !end) {
+            throw new Error('Missing required parameters: chromosome, start, end');
+        }
+        
+        if (start > end) {
+            throw new Error('Start position must be less than or equal to end position');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.CUT_SEQUENCE,
+            `${chromosome}:${start}-${end}(${strand})`,
+            `Cut sequence from ${chromosome}:${start}-${end} (${strand})`
+        );
+
+        action.metadata = {
+            chromosome,
+            start: parseInt(start),
+            end: parseInt(end),
+            strand,
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence cut action created for ${chromosome}:${start}-${end} (${strand})`,
+            details: {
+                chromosome,
+                start,
+                end,
+                strand,
+                length: end - start + 1
+            }
+        };
+    }
+
+    async functionPasteSequence(params) {
+        const { chromosome, position } = params;
+        
+        // Validate parameters
+        if (!chromosome || !position) {
+            throw new Error('Missing required parameters: chromosome, position');
+        }
+
+        // Check if clipboard has content
+        if (!this.clipboard) {
+            throw new Error('Clipboard is empty. Please copy or cut a sequence first.');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.PASTE_SEQUENCE,
+            `${chromosome}:${position}`,
+            `Paste sequence at ${chromosome}:${position}`
+        );
+
+        action.metadata = {
+            chromosome,
+            position: parseInt(position),
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence paste action created for ${chromosome}:${position}`,
+            details: {
+                chromosome,
+                position,
+                clipboardLength: this.clipboard ? this.clipboard.sequence.length : 0
+            }
+        };
+    }
+
+    async functionDeleteSequence(params) {
+        const { chromosome, start, end, strand = '+' } = params;
+        
+        // Validate parameters
+        if (!chromosome || !start || !end) {
+            throw new Error('Missing required parameters: chromosome, start, end');
+        }
+        
+        if (start > end) {
+            throw new Error('Start position must be less than or equal to end position');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.DELETE_SEQUENCE,
+            `${chromosome}:${start}-${end}(${strand})`,
+            `Delete sequence from ${chromosome}:${start}-${end} (${strand})`
+        );
+
+        action.metadata = {
+            chromosome,
+            start: parseInt(start),
+            end: parseInt(end),
+            strand,
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence delete action created for ${chromosome}:${start}-${end} (${strand})`,
+            details: {
+                chromosome,
+                start,
+                end,
+                strand,
+                length: end - start + 1
+            }
+        };
+    }
+
+    async functionInsertSequence(params) {
+        const { chromosome, position, sequence } = params;
+        
+        // Validate parameters
+        if (!chromosome || !position || !sequence) {
+            throw new Error('Missing required parameters: chromosome, position, sequence');
+        }
+
+        // Validate sequence
+        if (!/^[ATCGN]+$/i.test(sequence)) {
+            throw new Error('Sequence contains invalid characters. Only A, T, C, G, N are allowed.');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.INSERT_SEQUENCE,
+            `${chromosome}:${position}`,
+            `Insert ${sequence.length}bp sequence at ${chromosome}:${position}`
+        );
+
+        action.metadata = {
+            chromosome,
+            position: parseInt(position),
+            sequence: sequence.toUpperCase(),
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence insert action created for ${chromosome}:${position}`,
+            details: {
+                chromosome,
+                position,
+                sequenceLength: sequence.length,
+                sequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : '')
+            }
+        };
+    }
+
+    async functionReplaceSequence(params) {
+        const { chromosome, start, end, sequence, strand = '+' } = params;
+        
+        // Validate parameters
+        if (!chromosome || !start || !end || !sequence) {
+            throw new Error('Missing required parameters: chromosome, start, end, sequence');
+        }
+        
+        if (start > end) {
+            throw new Error('Start position must be less than or equal to end position');
+        }
+
+        // Validate sequence
+        if (!/^[ATCGN]+$/i.test(sequence)) {
+            throw new Error('Sequence contains invalid characters. Only A, T, C, G, N are allowed.');
+        }
+
+        // Create action
+        const action = this.createAction(
+            this.ACTION_TYPES.REPLACE_SEQUENCE,
+            `${chromosome}:${start}-${end}(${strand})`,
+            `Replace sequence in ${chromosome}:${start}-${end} (${strand}) with ${sequence.length}bp`
+        );
+
+        action.metadata = {
+            chromosome,
+            start: parseInt(start),
+            end: parseInt(end),
+            strand,
+            sequence: sequence.toUpperCase(),
+            source: 'function_call'
+        };
+
+        this.addAction(action);
+
+        return {
+            success: true,
+            actionId: action.id,
+            message: `Sequence replace action created for ${chromosome}:${start}-${end} (${strand})`,
+            details: {
+                chromosome,
+                start,
+                end,
+                strand,
+                originalLength: end - start + 1,
+                newLength: sequence.length,
+                sequence: sequence.substring(0, 50) + (sequence.length > 50 ? '...' : '')
+            }
+        };
+    }
+
+    functionGetActionList(params) {
+        const { status = 'all' } = params;
+        
+        let actions = this.actions;
+        
+        // Filter by status if specified
+        if (status !== 'all') {
+            actions = actions.filter(action => action.status === status);
+        }
+
+        return {
+            success: true,
+            totalActions: this.actions.length,
+            filteredActions: actions.length,
+            actions: actions.map(action => ({
+                id: action.id,
+                type: action.type,
+                target: action.target,
+                details: action.details,
+                status: action.status,
+                created: action.created,
+                executionStart: action.executionStart,
+                executionEnd: action.executionEnd,
+                actualTime: action.actualTime,
+                metadata: action.metadata
+            }))
+        };
+    }
+
+    async functionExecuteActions(params) {
+        const { confirm = false } = params;
+        
+        const pendingActions = this.actions.filter(action => action.status === this.STATUS.PENDING);
+        
+        if (pendingActions.length === 0) {
+            return {
+                success: true,
+                message: 'No pending actions to execute',
+                executedActions: 0
+            };
+        }
+
+        if (this.isExecuting) {
+            throw new Error('Actions are already being executed');
+        }
+
+        try {
+            await this.executeAllActions();
+            
+            return {
+                success: true,
+                message: `Successfully executed ${pendingActions.length} actions`,
+                executedActions: pendingActions.length
+            };
+        } catch (error) {
+            throw new Error(`Failed to execute actions: ${error.message}`);
+        }
+    }
+
+    functionClearActions(params) {
+        const { status = 'all' } = params;
+        
+        let clearedCount = 0;
+        
+        if (status === 'all') {
+            clearedCount = this.actions.length;
+            this.actions = [];
+        } else {
+            const originalLength = this.actions.length;
+            this.actions = this.actions.filter(action => action.status !== status);
+            clearedCount = originalLength - this.actions.length;
+        }
+
+        this.updateActionListUI();
+        this.updateStats();
+
+        return {
+            success: true,
+            message: `Cleared ${clearedCount} actions`,
+            clearedActions: clearedCount,
+            remainingActions: this.actions.length
+        };
+    }
+
+    async functionUndoLastAction(params) {
+        const completedActions = this.actions.filter(action => action.status === this.STATUS.COMPLETED);
+        
+        if (completedActions.length === 0) {
+            throw new Error('No completed actions to undo');
+        }
+
+        // For now, we'll just mark the last action as failed and provide information
+        // Full undo functionality would require maintaining state snapshots
+        const lastAction = completedActions[completedActions.length - 1];
+        
+        return {
+            success: true,
+            message: 'Undo functionality is not yet implemented',
+            lastAction: {
+                id: lastAction.id,
+                type: lastAction.type,
+                target: lastAction.target,
+                details: lastAction.details
+            },
+            note: 'Consider using the rollback feature or manually reversing the operation'
+        };
+    }
+
+    functionGetClipboardContent(params) {
+        if (!this.clipboard) {
+            return {
+                success: true,
+                hasContent: false,
+                message: 'Clipboard is empty'
+            };
+        }
+
+        return {
+            success: true,
+            hasContent: true,
+            content: {
+                sequence: this.clipboard.sequence,
+                length: this.clipboard.sequence.length,
+                chromosome: this.clipboard.chromosome,
+                start: this.clipboard.start,
+                end: this.clipboard.end,
+                strand: this.clipboard.strand,
+                type: this.clipboard.type
+            }
+        };
+    }
 }
 
 // Make ActionManager available globally

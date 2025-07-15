@@ -10,6 +10,7 @@ const DatabaseTools = require('./database/DatabaseTools');
 const Evo2Tools = require('./evo2/Evo2Tools');
 const DataTools = require('./data/DataTools');
 const PathwayTools = require('./pathway/PathwayTools');
+const ActionTools = require('./action/ActionTools');
 
 class ToolsIntegrator {
     constructor(server) {
@@ -23,6 +24,7 @@ class ToolsIntegrator {
         this.evo2Tools = new Evo2Tools(server);
         this.dataTools = new DataTools(server);
         this.pathwayTools = new PathwayTools(server);
+        this.actionTools = new ActionTools(server);
         
         // Combine all tools
         this.allTools = this.combineAllTools();
@@ -36,7 +38,8 @@ class ToolsIntegrator {
             ...this.databaseTools.getTools(),
             ...this.evo2Tools.getTools(),
             ...this.dataTools.getTools(),
-            ...this.pathwayTools.getTools()
+            ...this.pathwayTools.getTools(),
+            ...this.actionTools.getTools()
         };
     }
 
@@ -179,6 +182,36 @@ class ToolsIntegrator {
                         );
                     default:
                         return await this.pathwayTools.executeClientTool(toolName, parameters, clientId);
+                }
+            }
+            
+            // Action tools
+            if (this.actionTools.getTools()[toolName]) {
+                switch (toolName) {
+                    case 'copySequence':
+                        return await this.actionTools.copySequence(parameters, clientId);
+                    case 'cutSequence':
+                        return await this.actionTools.cutSequence(parameters, clientId);
+                    case 'pasteSequence':
+                        return await this.actionTools.pasteSequence(parameters, clientId);
+                    case 'deleteSequence':
+                        return await this.actionTools.deleteSequence(parameters, clientId);
+                    case 'insertSequence':
+                        return await this.actionTools.insertSequence(parameters, clientId);
+                    case 'replaceSequence':
+                        return await this.actionTools.replaceSequence(parameters, clientId);
+                    case 'getActionList':
+                        return await this.actionTools.getActionList(parameters, clientId);
+                    case 'executeActions':
+                        return await this.actionTools.executeActions(parameters, clientId);
+                    case 'clearActions':
+                        return await this.actionTools.clearActions(parameters, clientId);
+                    case 'getClipboardContent':
+                        return await this.actionTools.getClipboardContent(parameters, clientId);
+                    case 'undoLastAction':
+                        return await this.actionTools.undoLastAction(parameters, clientId);
+                    default:
+                        return await this.actionTools.executeClientTool(toolName, parameters, clientId);
                 }
             }
             

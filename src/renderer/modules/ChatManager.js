@@ -4445,6 +4445,51 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.findPathwayGenes(parameters);
                     break;
                     
+                // Action Manager functions
+                case 'copySequence':
+                    result = await this.executeActionFunction('copySequence', parameters);
+                    break;
+                    
+                case 'cutSequence':
+                    result = await this.executeActionFunction('cutSequence', parameters);
+                    break;
+                    
+                case 'pasteSequence':
+                    result = await this.executeActionFunction('pasteSequence', parameters);
+                    break;
+                    
+                case 'deleteSequence':
+                    result = await this.executeActionFunction('deleteSequence', parameters);
+                    break;
+                    
+                case 'insertSequence':
+                    result = await this.executeActionFunction('insertSequence', parameters);
+                    break;
+                    
+                case 'replaceSequence':
+                    result = await this.executeActionFunction('replaceSequence', parameters);
+                    break;
+                    
+                case 'getActionList':
+                    result = await this.executeActionFunction('getActionList', parameters);
+                    break;
+                    
+                case 'executeActions':
+                    result = await this.executeActionFunction('executeActions', parameters);
+                    break;
+                    
+                case 'clearActions':
+                    result = await this.executeActionFunction('clearActions', parameters);
+                    break;
+                    
+                case 'getClipboardContent':
+                    result = await this.executeActionFunction('getClipboardContent', parameters);
+                    break;
+                    
+                case 'undoLastAction':
+                    result = await this.executeActionFunction('undoLastAction', parameters);
+                    break;
+                    
                 // Plugin system functions
                 default:
                     // Try to execute as plugin function
@@ -4479,6 +4524,30 @@ ${this.getPluginSystemInfo()}`;
                 parameters: parameters,
                 timestamp: new Date().toISOString()
             };
+        }
+    }
+
+    /**
+     * Execute action function through ActionManager
+     */
+    async executeActionFunction(functionName, parameters) {
+        console.log(`🔧 [ChatManager] Executing action function: ${functionName}`, parameters);
+
+        try {
+            // Check if ActionManager is available
+            if (!this.app.actionManager) {
+                throw new Error('ActionManager not available');
+            }
+
+            // Execute the action function
+            const result = await this.app.actionManager.executeActionFunction(functionName, parameters);
+            
+            console.log(`✅ [ChatManager] Action function ${functionName} executed successfully:`, result);
+            return result;
+
+        } catch (error) {
+            console.error(`❌ [ChatManager] Action function ${functionName} failed:`, error);
+            throw error;
         }
     }
 
@@ -4579,7 +4648,20 @@ ${this.getPluginSystemInfo()}`;
             
             // Metabolic Pathways
             'show_metabolic_pathway',
-            'find_pathway_genes'
+            'find_pathway_genes',
+            
+            // Action Manager - Sequence Editing
+            'copySequence',
+            'cutSequence',
+            'pasteSequence',
+            'deleteSequence',
+            'insertSequence',
+            'replaceSequence',
+            'getActionList',
+            'executeActions',
+            'clearActions',
+            'getClipboardContent',
+            'undoLastAction'
         ];
         
         // Add plugin functions if available

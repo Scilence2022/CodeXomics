@@ -1913,6 +1913,54 @@ class GenomeBrowser {
             this.showNotification('Recent projects cleared', 'info');
             // TODO: 实现清除最近项目逻辑
         });
+
+        // Handle MCP tool calls for action functions
+        ipcRenderer.on('mcp-tool-call', async (event, data) => {
+            console.log('🔧 MCP tool call received:', data);
+            
+            try {
+                const { requestId, method, parameters } = data;
+                
+                // Check if this is an action function call
+                if (method && method.startsWith('action_')) {
+                    const actionFunctionName = method.substring(7); // Remove 'action_' prefix
+                    
+                    if (this.actionManager) {
+                        const result = await this.actionManager.executeActionFunction(actionFunctionName, parameters);
+                        
+                        // Send success response
+                        ipcRenderer.send('mcp-tool-response', {
+                            requestId,
+                            success: true,
+                            result
+                        });
+                    } else {
+                        // Send error response
+                        ipcRenderer.send('mcp-tool-response', {
+                            requestId,
+                            success: false,
+                            error: 'ActionManager not available'
+                        });
+                    }
+                } else {
+                    // Not an action function, send error
+                    ipcRenderer.send('mcp-tool-response', {
+                        requestId,
+                        success: false,
+                        error: `Unknown MCP tool method: ${method}`
+                    });
+                }
+            } catch (error) {
+                console.error('Error handling MCP tool call:', error);
+                
+                // Send error response
+                ipcRenderer.send('mcp-tool-response', {
+                    requestId: data.requestId,
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
     }
 
     // Refresh the current view (used by TabManager for state restoration)
