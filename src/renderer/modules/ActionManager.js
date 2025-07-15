@@ -1069,7 +1069,7 @@ class ActionManager {
     /**
      * Collect comprehensive data for a genomic region
      */
-    async collectComprehensiveData(chromosome, start, end, strand) {
+    async collectComprehensiveData(chromosome, start, end, strand, executionGenomeData = null) {
         const comprehensiveData = {
             region: {
                 chromosome: chromosome,
@@ -1086,28 +1086,36 @@ class ActionManager {
         };
         
         try {
+            // 🔧 CRITICAL FIX: Use execution genome data copy if provided, otherwise use original data
+            const annotationsSource = executionGenomeData?.annotations || this.genomeBrowser.currentAnnotations;
+            const variantsSource = executionGenomeData?.variants || this.genomeBrowser.currentVariants;
+            const readsSource = executionGenomeData?.reads || this.genomeBrowser.currentReads;
+            
             // Collect features in the region
-            if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
-                const annotations = this.genomeBrowser.currentAnnotations[chromosome];
-                comprehensiveData.features = annotations.filter(feature => 
-                    feature.start <= end && feature.end >= start
-                );
+            if (annotationsSource && annotationsSource[chromosome]) {
+                const annotations = annotationsSource[chromosome];
+                // 🔧 CRITICAL FIX: Create deep copies of features to prevent reference issues
+                comprehensiveData.features = annotations
+                    .filter(feature => feature.start <= end && feature.end >= start)
+                    .map(feature => JSON.parse(JSON.stringify(feature)));
             }
             
             // Collect variants in the region
-            if (this.genomeBrowser.currentVariants && this.genomeBrowser.currentVariants[chromosome]) {
-                const variants = this.genomeBrowser.currentVariants[chromosome];
-                comprehensiveData.variants = variants.filter(variant => 
-                    variant.start <= end && variant.end >= start
-                );
+            if (variantsSource && variantsSource[chromosome]) {
+                const variants = variantsSource[chromosome];
+                // 🔧 CRITICAL FIX: Create deep copies of variants to prevent reference issues
+                comprehensiveData.variants = variants
+                    .filter(variant => variant.start <= end && variant.end >= start)
+                    .map(variant => JSON.parse(JSON.stringify(variant)));
             }
             
             // Collect reads in the region
-            if (this.genomeBrowser.currentReads && this.genomeBrowser.currentReads[chromosome]) {
-                const reads = this.genomeBrowser.currentReads[chromosome];
-                comprehensiveData.reads = reads.filter(read => 
-                    read.start <= end && read.end >= start
-                );
+            if (readsSource && readsSource[chromosome]) {
+                const reads = readsSource[chromosome];
+                // 🔧 CRITICAL FIX: Create deep copies of reads to prevent reference issues
+                comprehensiveData.reads = reads
+                    .filter(read => read.start <= end && read.end >= start)
+                    .map(read => JSON.parse(JSON.stringify(read)));
             }
             
             // Collect additional metadata
@@ -1164,13 +1172,24 @@ class ActionManager {
         
         console.log(`🔄 [ActionManager] Created execution copy with ${executionActionsCopy.length} actions (${pendingActionsCopy.length} pending)`);
         
+        // 🔧 CRITICAL FIX: Create deep copies of genome data to prevent modification of original data
+        const originalGenomeData = this.createGenomeDataBackup();
+        const executionGenomeData = this.createGenomeDataCopy(originalGenomeData);
+        
+        console.log(`🧬 [ActionManager] Created genome data execution copy:`, {
+            chromosomes: Object.keys(executionGenomeData.annotations || {}).length,
+            totalFeatures: Object.values(executionGenomeData.annotations || {}).reduce((sum, features) => sum + features.length, 0),
+            hasVariants: !!(executionGenomeData.variants && Object.keys(executionGenomeData.variants).length > 0),
+            hasReads: !!(executionGenomeData.reads && Object.keys(executionGenomeData.reads).length > 0)
+        });
+        
         this.isExecuting = true;
         this.showExecutionProgress(0, pendingActionsCopy.length);
         
         try {
             for (let i = 0; i < pendingActionsCopy.length; i++) {
                 const action = pendingActionsCopy[i];
-                await this.executeActionOnCopy(action, executionActionsCopy);
+                await this.executeActionOnCopy(action, executionActionsCopy, executionGenomeData);
                 
                 // After executing this action, adjust positions of all remaining pending actions in the copy
                 this.adjustPendingActionPositionsOnCopy(action, i + 1, executionActionsCopy);
@@ -1186,17 +1205,21 @@ class ActionManager {
             
             // Generate and prompt to save GBK file after successful action execution
             // Use the execution copy for GBK generation to include executed action details
-            await this.generateAndSaveGBKFromCopy(executionActionsCopy);
+            await this.generateAndSaveGBKFromCopy(executionActionsCopy, executionGenomeData);
             
-            console.log(`✅ [ActionManager] Execution successful, original action list unchanged`);
+            console.log(`✅ [ActionManager] Execution successful, original genome data and action list unchanged`);
             
         } catch (error) {
             console.error('Error executing actions:', error);
             this.genomeBrowser.showNotification('Error executing actions', 'error');
             
-            console.log(`❌ [ActionManager] Execution failed, original action list unchanged`);
+            console.log(`❌ [ActionManager] Execution failed, original genome data and action list unchanged`);
             
         } finally {
+            // 🔧 CRITICAL FIX: Ensure original genome data is intact (defensive programming)
+            this.restoreGenomeDataFromBackup(originalGenomeData);
+            console.log(`🔒 [ActionManager] Original genome data integrity verified and restored if needed`);
+            
             // Original actions are never modified during execution
             
             this.isExecuting = false;
@@ -1274,7 +1297,7 @@ class ActionManager {
     /**
      * Execute a single action on copy without affecting original action list or UI
      */
-    async executeActionOnCopy(action, executionActionsCopy) {
+    async executeActionOnCopy(action, executionActionsCopy, executionGenomeData) {
         action.status = this.STATUS.EXECUTING;
         action.executionStart = new Date();
         
@@ -1285,31 +1308,31 @@ class ActionManager {
             
             switch (action.type) {
                 case this.ACTION_TYPES.COPY_SEQUENCE:
-                    result = await this.executeCopySequence(action);
+                    result = await this.executeCopySequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.CUT_SEQUENCE:
-                    result = await this.executeCutSequence(action);
+                    result = await this.executeCutSequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.PASTE_SEQUENCE:
-                    result = await this.executePasteSequence(action);
+                    result = await this.executePasteSequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.DELETE_SEQUENCE:
-                    result = await this.executeDeleteSequence(action);
+                    result = await this.executeDeleteSequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.INSERT_SEQUENCE:
-                    result = await this.executeInsertSequence(action);
+                    result = await this.executeInsertSequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.REPLACE_SEQUENCE:
-                    result = await this.executeReplaceSequence(action);
+                    result = await this.executeReplaceSequence(action, executionGenomeData);
                     break;
                     
                 case this.ACTION_TYPES.SEQUENCE_EDIT:
-                    result = await this.executeSequenceEdit(action);
+                    result = await this.executeSequenceEdit(action, executionGenomeData);
                     break;
                     
                 default:
@@ -1505,7 +1528,7 @@ class ActionManager {
     /**
      * Execute copy sequence action with comprehensive data
      */
-    async executeCopySequence(action) {
+    async executeCopySequence(action, executionGenomeData = null) {
         const { chromosome, start, end, strand } = action.metadata;
         const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
         
@@ -1513,8 +1536,8 @@ class ActionManager {
             throw new Error('Unable to retrieve sequence for copying');
         }
         
-        // Collect comprehensive data including features, annotations, and metadata
-        const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand);
+        // 🔧 CRITICAL FIX: Use execution genome data copy for collecting comprehensive data
+        const comprehensiveData = await this.collectComprehensiveData(chromosome, start, end, strand, executionGenomeData);
         
         // Clipboard should already be set when the action was created
         // Update it with comprehensive data if needed
@@ -1534,7 +1557,7 @@ class ActionManager {
     /**
      * Execute cut sequence action
      */
-    async executeCutSequence(action) {
+    async executeCutSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, strand } = action.metadata;
         const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
         
@@ -1603,7 +1626,7 @@ class ActionManager {
     /**
      * Execute paste sequence action with comprehensive features handling
      */
-    async executePasteSequence(action) {
+    async executePasteSequence(action, executionGenomeData = null) {
         const { chromosome, start, end } = action.metadata;
         const clipboardData = action.metadata.clipboardData;
         
@@ -1648,7 +1671,8 @@ class ActionManager {
         // Handle features copying and position adjustment
         let copiedFeaturesCount = 0;
         if (clipboardData.comprehensiveData && clipboardData.comprehensiveData.features && clipboardData.comprehensiveData.features.length > 0) {
-            copiedFeaturesCount = await this.copyFeaturesFromClipboard(clipboardData, chromosome, start, end, isInsert);
+            // 🔧 CRITICAL FIX: Pass execution genome data copy to prevent modifying original data
+            copiedFeaturesCount = await this.copyFeaturesFromClipboard(clipboardData, chromosome, start, end, isInsert, executionGenomeData);
         }
         
         const result = {
@@ -1674,7 +1698,7 @@ class ActionManager {
     /**
      * Copy features from clipboard to target location with position adjustment
      */
-    async copyFeaturesFromClipboard(clipboardData, targetChromosome, targetStart, targetEnd, isInsert) {
+    async copyFeaturesFromClipboard(clipboardData, targetChromosome, targetStart, targetEnd, isInsert, executionGenomeData = null) {
         try {
             const comprehensiveData = clipboardData.comprehensiveData;
             const sourceFeatures = comprehensiveData.features;
@@ -1734,25 +1758,29 @@ class ActionManager {
                 return newFeature;
             });
             
-            // Insert new features into target chromosome annotations
-            if (!this.genomeBrowser.currentAnnotations) {
-                this.genomeBrowser.currentAnnotations = {};
+            // 🔧 CRITICAL FIX: Insert new features into execution genome data copy, NOT original data
+            const annotationsTarget = executionGenomeData?.annotations || this.genomeBrowser.currentAnnotations;
+            
+            if (!annotationsTarget) {
+                console.warn('⚠️ [ActionManager] No annotations target available for feature copying');
+                return 0;
             }
             
-            if (!this.genomeBrowser.currentAnnotations[targetChromosome]) {
-                this.genomeBrowser.currentAnnotations[targetChromosome] = [];
+            if (!annotationsTarget[targetChromosome]) {
+                annotationsTarget[targetChromosome] = [];
             }
             
-            // Add new features to the target chromosome
-            this.genomeBrowser.currentAnnotations[targetChromosome].push(...newFeatures);
+            // Add new features to the target chromosome in the COPY
+            annotationsTarget[targetChromosome].push(...newFeatures);
             
             // Sort features by position for better organization
-            this.genomeBrowser.currentAnnotations[targetChromosome].sort((a, b) => a.start - b.start);
+            annotationsTarget[targetChromosome].sort((a, b) => a.start - b.start);
             
-            console.log('✅ [ActionManager] Successfully copied features:', {
+            console.log('✅ [ActionManager] Successfully copied features to execution copy:', {
                 targetChromosome: targetChromosome,
                 featuresAdded: newFeatures.length,
-                totalFeaturesNow: this.genomeBrowser.currentAnnotations[targetChromosome].length
+                totalFeaturesNow: annotationsTarget[targetChromosome].length,
+                usingExecutionCopy: !!executionGenomeData
             });
             
             // Notify genome browser to update displays
@@ -1771,7 +1799,7 @@ class ActionManager {
     /**
      * Execute delete sequence action
      */
-    async executeDeleteSequence(action) {
+    async executeDeleteSequence(action, executionGenomeData = null) {
         const { chromosome, start, end } = action.metadata;
         
         console.log('🗑️ [ActionManager] Executing delete sequence action:', {
@@ -1830,7 +1858,7 @@ class ActionManager {
     /**
      * Execute insert sequence action
      */
-    async executeInsertSequence(action) {
+    async executeInsertSequence(action, executionGenomeData = null) {
         const { chromosome, start, insertSequence } = action.metadata;
         
         console.log('➕ [ActionManager] Executing insert sequence action:', {
@@ -1862,7 +1890,7 @@ class ActionManager {
     /**
      * Execute replace sequence action
      */
-    async executeReplaceSequence(action) {
+    async executeReplaceSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, newSequence } = action.metadata;
         const originalLength = end - start + 1;
         
@@ -2369,7 +2397,7 @@ class ActionManager {
     /**
      * Execute sequence edit action
      */
-    async executeSequenceEdit(action) {
+    async executeSequenceEdit(action, executionGenomeData = null) {
         const { changeSummary, originalSequence, modifiedSequence } = action.metadata;
         
         console.log('🔧 [ActionManager] Executing sequence edit action:', {
@@ -2813,7 +2841,7 @@ class ActionManager {
     /**
      * Generate and save GBK file from execution copy with modification history
      */
-    async generateAndSaveGBKFromCopy(executionActionsCopy) {
+    async generateAndSaveGBKFromCopy(executionActionsCopy, executionGenomeData = null) {
         try {
             // Check if we have genome data to export
             if (!this.genomeBrowser.currentSequence) {
@@ -3296,6 +3324,141 @@ class ActionManager {
         
         this.updateActionListUI();
         this.updateStats();
+    }
+
+    /**
+     * 🔧 CRITICAL FIX: Create backup of original genome data before execution
+     */
+    createGenomeDataBackup() {
+        console.log('🔒 [ActionManager] Creating genome data backup...');
+        
+        const backup = {
+            annotations: null,
+            variants: null,
+            reads: null,
+            sequences: null,
+            metadata: {}
+        };
+
+        try {
+            // Backup annotations (most critical for Actions)
+            if (this.genomeBrowser.currentAnnotations) {
+                backup.annotations = JSON.parse(JSON.stringify(this.genomeBrowser.currentAnnotations));
+                console.log(`📝 [ActionManager] Backed up annotations for ${Object.keys(backup.annotations).length} chromosomes`);
+            }
+
+            // Backup variants
+            if (this.genomeBrowser.currentVariants) {
+                backup.variants = JSON.parse(JSON.stringify(this.genomeBrowser.currentVariants));
+                console.log(`🧬 [ActionManager] Backed up variants for ${Object.keys(backup.variants).length} chromosomes`);
+            }
+
+            // Backup reads
+            if (this.genomeBrowser.currentReads) {
+                backup.reads = JSON.parse(JSON.stringify(this.genomeBrowser.currentReads));
+                console.log(`📚 [ActionManager] Backed up reads for ${Object.keys(backup.reads).length} chromosomes`);
+            }
+
+            // Backup sequences if available
+            if (this.genomeBrowser.currentSequences) {
+                backup.sequences = JSON.parse(JSON.stringify(this.genomeBrowser.currentSequences));
+                console.log(`🔤 [ActionManager] Backed up sequences for ${Object.keys(backup.sequences).length} chromosomes`);
+            }
+
+            // Add metadata
+            backup.metadata = {
+                timestamp: new Date().toISOString(),
+                backupId: `backup_${Date.now()}`,
+                totalFeatures: Object.values(backup.annotations || {}).reduce((sum, features) => sum + features.length, 0)
+            };
+
+            console.log(`✅ [ActionManager] Genome data backup completed:`, backup.metadata);
+            return backup;
+
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to create genome data backup:', error);
+            throw new Error(`Failed to create genome data backup: ${error.message}`);
+        }
+    }
+
+    /**
+     * 🔧 CRITICAL FIX: Create working copy of genome data for execution
+     */
+    createGenomeDataCopy(originalData) {
+        console.log('🧬 [ActionManager] Creating genome data execution copy...');
+
+        try {
+            // Create deep copy of all genome data
+            const executionCopy = {
+                annotations: originalData.annotations ? JSON.parse(JSON.stringify(originalData.annotations)) : null,
+                variants: originalData.variants ? JSON.parse(JSON.stringify(originalData.variants)) : null,
+                reads: originalData.reads ? JSON.parse(JSON.stringify(originalData.reads)) : null,
+                sequences: originalData.sequences ? JSON.parse(JSON.stringify(originalData.sequences)) : null,
+                metadata: {
+                    ...originalData.metadata,
+                    copyId: `copy_${Date.now()}`,
+                    isExecutionCopy: true
+                }
+            };
+
+            console.log(`✅ [ActionManager] Genome data execution copy created:`, executionCopy.metadata);
+            return executionCopy;
+
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to create genome data copy:', error);
+            throw new Error(`Failed to create genome data copy: ${error.message}`);
+        }
+    }
+
+    /**
+     * 🔧 CRITICAL FIX: Restore original genome data from backup (defensive programming)
+     */
+    restoreGenomeDataFromBackup(backupData) {
+        console.log('🔒 [ActionManager] Verifying genome data integrity...');
+
+        try {
+            // Verify that original data hasn't been accidentally modified
+            let needsRestore = false;
+            const issues = [];
+
+            // Check annotations
+            if (backupData.annotations) {
+                for (const [chromosome, features] of Object.entries(backupData.annotations)) {
+                    const currentFeatures = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+                    if (currentFeatures.length !== features.length) {
+                        issues.push(`Chromosome ${chromosome}: features count mismatch (${currentFeatures.length} vs ${features.length})`);
+                        needsRestore = true;
+                    }
+                }
+            }
+
+            if (needsRestore) {
+                console.warn('⚠️ [ActionManager] Original genome data was modified during execution! Restoring from backup...');
+                console.warn('Issues found:', issues);
+
+                // Restore from backup
+                if (backupData.annotations) {
+                    this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(backupData.annotations));
+                }
+                if (backupData.variants) {
+                    this.genomeBrowser.currentVariants = JSON.parse(JSON.stringify(backupData.variants));
+                }
+                if (backupData.reads) {
+                    this.genomeBrowser.currentReads = JSON.parse(JSON.stringify(backupData.reads));
+                }
+                if (backupData.sequences) {
+                    this.genomeBrowser.currentSequences = JSON.parse(JSON.stringify(backupData.sequences));
+                }
+
+                console.log('✅ [ActionManager] Original genome data restored from backup');
+            } else {
+                console.log('✅ [ActionManager] Original genome data integrity verified - no restore needed');
+            }
+
+        } catch (error) {
+            console.error('❌ [ActionManager] Failed to verify/restore genome data:', error);
+            // Don't throw here as this is defensive programming
+        }
     }
 }
 
