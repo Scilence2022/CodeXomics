@@ -27731,13 +27731,13 @@ path.svg-gene-element.selected {
 
 /* ChatBox Settings Modal - enhanced with draggable and resizable functionality */
 #chatboxSettingsModal {
-    width: 900px !important; /* Increased from 600px by 1.5x */
+    width: 600px !important; /* Increased from 600px by 1.5x */
     max-width: 90vw !important;
 }
 
 #chatboxSettingsModal .llm-config-modal {
     max-width: 900px;
-    width: 95%;
+    /* width: 95%; */
     max-height: calc(100vh - 40px);
     display: flex;
     flex-direction: column;
