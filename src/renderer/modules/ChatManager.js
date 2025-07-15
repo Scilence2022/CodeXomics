@@ -35,6 +35,8 @@ class ChatManager {
         // 思考过程和工具调用显示 - 现在从设置管理器获取
         this.showThinkingProcess = true;
         this.showToolCalls = true;
+        this.showToolCallSource = true;
+        this.showDetailedToolData = true;
         this.detailedLogging = true;
         
         // Initialize LLM configuration manager with config integration
@@ -119,6 +121,8 @@ class ChatManager {
         if (this.chatBoxSettingsManager) {
             this.showThinkingProcess = this.chatBoxSettingsManager.getSetting('showThinkingProcess', true);
             this.showToolCalls = this.chatBoxSettingsManager.getSetting('showToolCalls', true);
+            this.showToolCallSource = this.chatBoxSettingsManager.getSetting('showToolCallSource', true);
+            this.showDetailedToolData = this.chatBoxSettingsManager.getSetting('showDetailedToolData', true);
             this.hideThinkingAfterConversation = this.chatBoxSettingsManager.getSetting('hideThinkingAfterConversation', false);
             this.autoScrollToBottom = this.chatBoxSettingsManager.getSetting('autoScrollToBottom', true);
             this.showTimestamps = this.chatBoxSettingsManager.getSetting('showTimestamps', false);
@@ -2123,7 +2127,7 @@ class ChatManager {
                     console.log('==========================');
                     
                     // 显示工具调用信息
-                    this.showToolCalls && this.addToolCallMessage(toolsToExecute);
+                    this.showToolCalls && await this.addToolCallMessage(toolsToExecute);
                     
                     try {
                         console.log('Executing tool(s)...');
@@ -9269,7 +9273,7 @@ ${this.getPluginSystemInfo()}`;
     /**
      * 添加工具调用消息
      */
-    addToolCallMessage(toolsToExecute) {
+    async addToolCallMessage(toolsToExecute) {
         // Add to Evolution data first (always record tool calls)
         this.addToEvolutionData({
             type: 'tool_calls',
@@ -9289,11 +9293,107 @@ ${this.getPluginSystemInfo()}`;
             return;
         }
         
-        const toolList = toolsToExecute.map(tool => 
-            `• ${tool.tool_name}(${JSON.stringify(tool.parameters)})`
-        ).join('<br>');
+        // 为每个工具获取来源信息
+        const toolsWithSource = await Promise.all(toolsToExecute.map(async (tool) => {
+            const source = await this.getToolSource(tool.tool_name);
+            return { ...tool, source };
+        }));
         
-        this.updateThinkingMessage(`⚡ Executing tool calls:<br>${toolList}`);
+        const toolList = toolsWithSource.map(tool => {
+            let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
+            
+            // 显示来源信息（如果启用）
+            if (this.showToolCallSource && tool.source) {
+                const sourceColor = this.getSourceColor(tool.source.type);
+                toolDisplay += ` <span style="color: ${sourceColor}; font-size: 0.9em;">[${tool.source.display}]</span>`;
+            }
+            
+            // 显示参数
+            const paramsStr = JSON.stringify(tool.parameters, null, 2);
+            toolDisplay += `<br>&nbsp;&nbsp;<em>Parameters:</em> <code style="font-size: 0.8em;">${paramsStr}</code>`;
+            
+            return toolDisplay;
+        }).join('<br><br>');
+        
+        this.updateThinkingMessage(`⚡ Executing tool calls:<br><br>${toolList}`);
+    }
+
+    /**
+     * 获取工具来源信息
+     */
+    async getToolSource(toolName) {
+        try {
+            // 检查是否是MCP服务器工具
+            const allMCPTools = this.mcpServerManager.getAllAvailableTools();
+            const mcpTool = allMCPTools.find(t => t.name === toolName);
+            
+            if (mcpTool) {
+                return {
+                    type: 'mcp',
+                    display: `MCP: ${mcpTool.serverName}`,
+                    serverId: mcpTool.serverId,
+                    serverName: mcpTool.serverName
+                };
+            }
+            
+            // 检查是否是插件函数
+            if (this.pluginFunctionCallsIntegrator && this.pluginFunctionCallsIntegrator.isPluginFunction(toolName)) {
+                return {
+                    type: 'plugin',
+                    display: 'Plugin Function',
+                    source: 'plugin-system'
+                };
+            }
+            
+            // 检查是否是内置本地函数
+            const localTools = [
+                'navigate_to_position', 'search_features', 'get_current_state',
+                'get_sequence', 'toggle_track', 'create_annotation', 'analyze_region',
+                'export_data', 'jump_to_gene', 'get_genome_info', 'search_gene_by_name',
+                'compute_gc', 'translate_dna', 'reverse_complement', 'find_orfs',
+                'search_sequence_motif', 'get_nearby_features', 'get_feature_details',
+                'export_sequence', 'import_sequence_data', 'search_go_terms',
+                'search_kegg_pathways', 'get_protein_info'
+            ];
+            
+            if (localTools.includes(toolName)) {
+                return {
+                    type: 'local',
+                    display: 'Internal Function',
+                    source: 'genome-ai-studio'
+                };
+            }
+            
+            // 未知工具
+            return {
+                type: 'unknown',
+                display: 'Unknown Source',
+                source: 'unknown'
+            };
+            
+        } catch (error) {
+            console.warn(`Failed to get source for tool ${toolName}:`, error);
+            return {
+                type: 'error',
+                display: 'Source Error',
+                source: 'error'
+            };
+        }
+    }
+
+    /**
+     * 获取不同来源类型的颜色
+     */
+    getSourceColor(sourceType) {
+        const colors = {
+            'mcp': '#2196F3',      // 蓝色 - MCP服务器
+            'plugin': '#FF9800',   // 橙色 - 插件
+            'local': '#4CAF50',    // 绿色 - 内置函数
+            'unknown': '#9E9E9E',  // 灰色 - 未知
+            'error': '#F44336'     // 红色 - 错误
+        };
+        
+        return colors[sourceType] || colors['unknown'];
     }
 
     /**
@@ -9402,11 +9502,174 @@ ${this.getPluginSystemInfo()}`;
         // 显示详细结果
         const detailsHtml = toolResults.map(result => {
             const icon = result.success ? '✅' : '❌';
-            const status = result.success ? 'succeeded' : `failed: ${result.error}`;
-            return `${icon} ${result.tool}: ${status}`;
-        }).join('<br>');
+            let resultDisplay = `<div style="margin: 8px 0; padding: 8px; border-left: 3px solid ${result.success ? '#4CAF50' : '#F44336'};">`;
+            resultDisplay += `<strong>${icon} ${result.tool}</strong><br>`;
+            
+            if (result.success) {
+                resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
+                
+                // 显示详细数据（如果启用）
+                if (this.showDetailedToolData && result.data) {
+                    resultDisplay += `<br><details style="margin-top: 8px;">`;
+                    resultDisplay += `<summary style="cursor: pointer; color: #2196F3;">📊 Show detailed data</summary>`;
+                    resultDisplay += `<div style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto;">`;
+                    
+                    try {
+                        // 格式化数据显示
+                        const formattedData = this.formatToolResultData(result.data);
+                        resultDisplay += formattedData;
+                    } catch (error) {
+                        resultDisplay += `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                    }
+                    
+                    resultDisplay += `</div></details>`;
+                }
+            } else {
+                resultDisplay += `<span style="color: #F44336;">Status: Failed</span>`;
+                if (result.error) {
+                    resultDisplay += `<br><span style="color: #F44336; font-size: 0.9em;">Error: ${result.error}</span>`;
+                }
+            }
+            
+            resultDisplay += `</div>`;
+            return resultDisplay;
+        }).join('');
         
-        this.updateThinkingMessage(`${resultMessage}<br><details><summary>Detailed results</summary>${detailsHtml}</details>`);
+        this.updateThinkingMessage(`${resultMessage}<br><div style="margin-top: 8px;">${detailsHtml}</div>`);
+    }
+
+    /**
+     * 格式化工具结果数据显示
+     */
+    formatToolResultData(data) {
+        if (!data) return 'No data available';
+        
+        try {
+            // 如果是字符串，尝试解析为JSON
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch {
+                    // 如果不是JSON，直接显示字符串
+                    return `<pre>${this.escapeHtml(data)}</pre>`;
+                }
+            }
+            
+            // 如果是数组
+            if (Array.isArray(data)) {
+                if (data.length === 0) {
+                    return '<em>Empty array</em>';
+                }
+                
+                // 如果数组元素是对象，创建表格
+                if (typeof data[0] === 'object' && data[0] !== null) {
+                    return this.formatArrayAsTable(data);
+                } else {
+                    return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            }
+            
+            // 如果是对象
+            if (typeof data === 'object' && data !== null) {
+                return this.formatObjectAsKeyValue(data);
+            }
+            
+            // 其他类型直接显示
+            return `<pre>${String(data)}</pre>`;
+            
+        } catch (error) {
+            console.warn('Error formatting tool result data:', error);
+            return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+    }
+
+    /**
+     * 将数组格式化为表格
+     */
+    formatArrayAsTable(array) {
+        if (array.length === 0) return '<em>Empty array</em>';
+        
+        const sample = array[0];
+        const keys = Object.keys(sample);
+        
+        let table = '<table style="width: 100%; border-collapse: collapse; margin: 4px 0;">';
+        
+        // 表头
+        table += '<thead><tr>';
+        keys.forEach(key => {
+            table += `<th style="border: 1px solid #ddd; padding: 4px 8px; background: #f0f0f0; text-align: left;">${this.escapeHtml(key)}</th>`;
+        });
+        table += '</tr></thead>';
+        
+        // 表体
+        table += '<tbody>';
+        array.slice(0, 100).forEach(item => { // 限制显示前100行
+            table += '<tr>';
+            keys.forEach(key => {
+                const value = item[key];
+                const displayValue = value !== null && value !== undefined ? String(value) : '';
+                table += `<td style="border: 1px solid #ddd; padding: 4px 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(displayValue)}">${this.escapeHtml(displayValue)}</td>`;
+            });
+            table += '</tr>';
+        });
+        table += '</tbody>';
+        table += '</table>';
+        
+        if (array.length > 100) {
+            table += `<div style="margin-top: 8px; color: #666; font-size: 0.8em;">... and ${array.length - 100} more items</div>`;
+        }
+        
+        return table;
+    }
+
+    /**
+     * 将对象格式化为键值对
+     */
+    formatObjectAsKeyValue(obj) {
+        let html = '<div style="font-family: monospace;">';
+        
+        for (const [key, value] of Object.entries(obj)) {
+            html += '<div style="margin: 4px 0; padding: 2px 0; border-bottom: 1px solid #eee;">';
+            html += `<strong style="color: #2196F3;">${this.escapeHtml(key)}:</strong> `;
+            
+            if (value === null || value === undefined) {
+                html += '<em style="color: #999;">null</em>';
+            } else if (typeof value === 'object') {
+                // 递归处理嵌套对象，但限制深度
+                html += '<br><div style="margin-left: 16px; font-size: 0.9em;">';
+                if (Array.isArray(value)) {
+                    html += `<em>Array(${value.length})</em>: `;
+                    if (value.length <= 5) {
+                        html += JSON.stringify(value);
+                    } else {
+                        html += `[${value.slice(0, 3).map(v => JSON.stringify(v)).join(', ')}, ... ${value.length - 3} more]`;
+                    }
+                } else {
+                    const keys = Object.keys(value);
+                    html += `<em>Object(${keys.length} keys)</em>: {${keys.slice(0, 3).join(', ')}${keys.length > 3 ? ', ...' : ''}}`;
+                }
+                html += '</div>';
+            } else if (typeof value === 'string' && value.length > 100) {
+                // 长字符串截断显示
+                html += `<span title="${this.escapeHtml(value)}">${this.escapeHtml(value.substring(0, 100))}...</span>`;
+            } else {
+                html += this.escapeHtml(String(value));
+            }
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * HTML转义
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     /**

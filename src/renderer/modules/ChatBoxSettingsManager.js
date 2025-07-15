@@ -9,6 +9,8 @@ class ChatBoxSettingsManager {
             // Display settings
             showThinkingProcess: true,
             showToolCalls: true,
+            showToolCallSource: true, // 新增：显示tool call来源
+            showDetailedToolData: true, // 新增：显示详细数据展示
             hideThinkingAfterConversation: false,
             preserveThinkingHistory: true, // 新增：保留历史思考过程
             
@@ -116,6 +118,8 @@ class ChatBoxSettingsManager {
         const defaultSettings = {
             showThinkingProcess: true,
             showToolCalls: true,
+            showToolCallSource: true,
+            showDetailedToolData: true,
             hideThinkingAfterConversation: false,
             autoScrollToBottom: true,
             showTimestamps: false,
@@ -375,6 +379,22 @@ class ChatBoxSettingsManager {
                                         Show tool calls
                                     </label>
                                     <small class="help-text">Display detailed information about tool execution</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="showToolCallSource" class="setting-checkbox">
+                                        Show tool call source
+                                    </label>
+                                    <small class="help-text">显示每个tool call的具体来源（MCP Server或内部函数）</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="showDetailedToolData" class="setting-checkbox">
+                                        Show detailed tool data
+                                    </label>
+                                    <small class="help-text">显示tool call返回的详细数据内容</small>
                                 </div>
                             </div>
                             
