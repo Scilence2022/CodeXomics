@@ -1247,7 +1247,37 @@ class LLMConfigManager {
         }
 
         const data = await response.json();
-        return data.choices[0].message.content;
+        console.log('SiliconFlow Raw Response Data:', data);
+        
+        // Check if choices array exists and has content
+        if (!data.choices || data.choices.length === 0) {
+            console.error('SiliconFlow: No choices in response');
+            throw new Error('No choices in LLM response');
+        }
+        
+        const choice = data.choices[0];
+        console.log('SiliconFlow Choice Object:', choice);
+        
+        if (!choice.message) {
+            console.error('SiliconFlow: No message in choice');
+            throw new Error('No message in LLM choice');
+        }
+        
+        console.log('SiliconFlow Message Object:', choice.message);
+        const content = choice.message.content;
+        console.log('SiliconFlow Content Extracted:', content);
+        console.log('Content type:', typeof content);
+        console.log('Content length:', content ? content.length : 'null/undefined');
+        
+        // Handle empty content
+        if (!content || content === null || content === undefined || content.trim() === '') {
+            console.warn('SiliconFlow: Empty content returned, completion_tokens:', data.usage?.completion_tokens);
+            // Don't throw error immediately - let ChatManager handle empty responses and check history
+            console.warn('SiliconFlow: Returning empty content to ChatManager for history check');
+            return ''; // Return empty string for ChatManager to process
+        }
+        
+        return content;
     }
 
     async sendLocalMessage(provider, message, context) {

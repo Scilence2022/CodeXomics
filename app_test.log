@@ -1,0 +1,31 @@
+
+> genome-ai-studio@0.3.0-beta start
+> electron .
+
+Switched to main window menu
+🔧 Setting up MCP Server handlers
+✅ MCP Server handlers configured
+🌐 Setting up Express app
+✅ Express app configured
+🔧 Setting up WebSocket server
+✅ WebSocket server configured
+🔧 Setting up IPC communication
+✅ IPC communication configured
+🚀 Starting Standard Claude MCP Server
+💥 Uncaught exception: Error: listen EADDRINUSE: address already in use :::3002
+    at Server.setupListenHandle [as _listen2] (node:net:1751:16)
+    at listenInCluster (node:net:1799:12)
+    at Server.listen (node:net:1887:7)
+    at Function.listen (/Users/song/Github-Repos/GenomeExplorer/node_modules/express/lib/application.js:635:24)
+    at httpServer.keepAliveTimeout (/Users/song/Github-Repos/GenomeExplorer/src/mcp-server-claude-unified.js:793:44)
+    at new Promise (<anonymous>)
+    at StandardClaudeMCPServer.start (/Users/song/Github-Repos/GenomeExplorer/src/mcp-server-claude-unified.js:792:19)
+    at /Users/song/Github-Repos/GenomeExplorer/src/main.js:1891:30
+    at WebContents.<anonymous> (node:electron/js2c/browser_init:2:79681)
+    at WebContents.emit (node:events:514:28) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3002
+}

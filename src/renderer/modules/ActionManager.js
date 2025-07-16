@@ -395,6 +395,20 @@ class ActionManager {
     }
     
     /**
+     * Handle replace sequence action
+     */
+    handleReplaceSequence() {
+        // Try to create action directly from current selections
+        const selectionInfo = this.getActiveSelection();
+        if (selectionInfo && selectionInfo.hasSelection) {
+            // Show modal to input replacement sequence
+            this.showSequenceReplaceModal(selectionInfo);
+        } else {
+            this.showSequenceSelectionModal('replace');
+        }
+    }
+    
+    /**
      * Handle delete sequence action
      */
     handleDeleteSequence() {
@@ -727,6 +741,173 @@ class ActionManager {
         
         if (seqTextarea) {
             seqTextarea.addEventListener('input', () => this.validateInsertSequence());
+        }
+    }
+    
+    /**
+     * Show sequence replace modal
+     */
+    showSequenceReplaceModal(selectionInfo) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('sequenceReplaceModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'sequenceReplaceModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-exchange-alt"></i> Replace Sequence</h3>
+                        <button class="modal-close" onclick="actionManager.closeSequenceReplaceModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Target Region:</label>
+                            <div id="replaceTargetInfo" class="info-display"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="replaceSequenceText">New Sequence:</label>
+                            <textarea id="replaceSequenceText" rows="4" placeholder="Enter DNA sequence (A, T, C, G, N)" required></textarea>
+                            <small class="form-text">Only DNA characters (A, T, C, G, N) are allowed</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Preview:</label>
+                            <div id="replaceSequencePreview" class="sequence-preview"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="actionManager.closeSequenceReplaceModal()">Cancel</button>
+                        <button class="btn btn-primary" onclick="actionManager.confirmSequenceReplace()">Replace Sequence</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Set target region info
+        const targetInfo = document.getElementById('replaceTargetInfo');
+        targetInfo.innerHTML = `
+            <strong>${selectionInfo.chromosome}:${selectionInfo.start}-${selectionInfo.end}</strong><br>
+            <small>Length: ${selectionInfo.end - selectionInfo.start + 1} bp</small>
+        `;
+        
+        // Store selection info for confirmation
+        this.currentReplaceSelection = selectionInfo;
+        
+        // Setup event listeners
+        this.setupReplaceModalEventListeners();
+        
+        // Show modal
+        modal.style.display = 'block';
+    }
+    
+    /**
+     * Setup event listeners for replace modal
+     */
+    setupReplaceModalEventListeners() {
+        const seqTextarea = document.getElementById('replaceSequenceText');
+        if (seqTextarea) {
+            seqTextarea.addEventListener('input', () => this.validateReplaceSequence());
+        }
+    }
+    
+    /**
+     * Validate replace sequence
+     */
+    validateReplaceSequence() {
+        const seqTextarea = document.getElementById('replaceSequenceText');
+        const validationMsg = document.getElementById('replaceSequenceValidation');
+        
+        if (!seqTextarea) return;
+        
+        const sequence = seqTextarea.value.toUpperCase().replace(/\s/g, '');
+        const validNucleotides = /^[ATGC]*$/;
+        
+        if (sequence === '') {
+            if (validationMsg) {
+                validationMsg.textContent = '';
+                validationMsg.className = 'validation-message';
+            }
+            return true;
+        }
+        
+        if (validNucleotides.test(sequence)) {
+            if (validationMsg) {
+                validationMsg.textContent = `✓ Valid sequence (${sequence.length} nucleotides)`;
+                validationMsg.className = 'validation-message valid';
+            }
+            return true;
+        } else {
+            if (validationMsg) {
+                validationMsg.textContent = '✗ Invalid sequence - only A, T, G, C allowed';
+                validationMsg.className = 'validation-message invalid';
+            }
+            return false;
+        }
+    }
+    
+    /**
+     * Confirm sequence replace
+     */
+    confirmSequenceReplace() {
+        if (!this.currentReplaceSelection) {
+            this.genomeBrowser.showNotification('No target region selected', 'warning');
+            return;
+        }
+        
+        const sequence = document.getElementById('replaceSequenceText').value.toUpperCase().replace(/\s/g, '');
+        
+        if (!sequence) {
+            this.genomeBrowser.showNotification('Please enter a sequence to replace with', 'warning');
+            return;
+        }
+        
+        if (!this.validateReplaceSequence()) {
+            this.genomeBrowser.showNotification('Please enter a valid DNA sequence', 'warning');
+            return;
+        }
+        
+        const { chromosome, start, end } = this.currentReplaceSelection;
+        
+        // Create replace action
+        const target = `${chromosome}:${start}-${end}`;
+        const metadata = {
+            chromosome,
+            start,
+            end,
+            strand: '+',
+            newSequence: sequence,
+            selectionSource: 'manual_input'
+        };
+        
+        this.addAction(
+            this.ACTION_TYPES.REPLACE_SEQUENCE,
+            target,
+            `Replace ${end - start + 1} bp with ${sequence.length} bp at ${chromosome}:${start}-${end}`,
+            metadata
+        );
+        
+        this.genomeBrowser.showNotification(
+            `Replace action queued: ${end - start + 1} → ${sequence.length} bp at ${chromosome}:${start}-${end}`,
+            'success'
+        );
+        
+        // Close modal
+        const modal = document.getElementById('sequenceReplaceModal');
+        if (modal) modal.style.display = 'none';
+        
+        // Clear stored selection
+        this.currentReplaceSelection = null;
+    }
+    
+    /**
+     * Close sequence replace modal
+     */
+    closeSequenceReplaceModal() {
+        const modal = document.getElementById('sequenceReplaceModal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.currentReplaceSelection = null;
         }
     }
     
@@ -4089,6 +4270,45 @@ class ActionManager {
                 type: this.clipboard.type
             }
         };
+    }
+    
+    /**
+     * Get clipboard content (UI response function)
+     */
+    getClipboardContent() {
+        if (!this.clipboard) {
+            this.genomeBrowser.showNotification('Clipboard is empty', 'warning');
+            return null;
+        }
+        
+        return {
+            type: this.clipboard.type,
+            sequence: this.clipboard.sequence,
+            source: this.clipboard.source,
+            timestamp: this.clipboard.timestamp,
+            length: this.clipboard.sequence.length
+        };
+    }
+    
+    /**
+     * Undo last action (UI response function)
+     */
+    undoLastAction() {
+        if (this.actions.length === 0) {
+            this.genomeBrowser.showNotification('No actions to undo', 'warning');
+            return false;
+        }
+        
+        const lastAction = this.actions[this.actions.length - 1];
+        if (lastAction.status === this.STATUS.COMPLETED) {
+            this.actions.pop();
+            this.genomeBrowser.showNotification(`Undid last action: ${lastAction.type}`, 'success');
+            this.updateActionListUI();
+            return true;
+        } else {
+            this.genomeBrowser.showNotification('Cannot undo action that is not completed', 'warning');
+            return false;
+        }
     }
 }
 

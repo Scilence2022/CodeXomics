@@ -26,6 +26,23 @@ class NavigationTools {
                 }
             },
 
+            open_new_tab: {
+                name: 'open_new_tab',
+                description: 'Open a new tab window for parallel genome analysis. Can open tab for specific position, gene, or current state.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome name (optional if geneName provided)' },
+                        start: { type: 'number', description: 'Start position (optional if position or geneName provided)' },
+                        end: { type: 'number', description: 'End position (optional if position or geneName provided)' },
+                        position: { type: 'number', description: 'Center position (creates 2000bp range if start/end not provided)' },
+                        geneName: { type: 'string', description: 'Gene name to open tab for (searches and focuses on gene)' },
+                        title: { type: 'string', description: 'Custom title for the new tab (optional)' },
+                        clientId: { type: 'string', description: 'Browser client ID' }
+                    }
+                }
+            },
+
             search_features: {
                 name: 'search_features',
                 description: 'Search for genomic features',

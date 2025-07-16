@@ -174,8 +174,8 @@ class GenomeBrowser {
         this.blastManager = new BlastManager(this); // Initialize BLAST manager
         this.multiFileManager = new MultiFileManager(this); // Initialize multi-file manager
         
-        // Initialize Tab Management System (for multi-genome analysis)
-        this.tabManager = new TabManager(this);
+        // Initialize Tab Management System (for multi-genome analysis) - delayed to ensure DOM is ready
+        this.initializeTabManager();
         
         // Initialize Internal MCP Server for direct communication with main process MCP server
         this.initializeInternalMCPServer();
@@ -462,6 +462,37 @@ class GenomeBrowser {
                 console.error('❌ Failed to initialize Internal MCP Server:', error);
             }
         }, 200); // Small delay to ensure modules are ready
+    }
+    
+    /**
+     * Initialize Tab Management System with DOM ready check
+     */
+    initializeTabManager() {
+        // Use a timeout to ensure DOM is fully ready
+        setTimeout(() => {
+            try {
+                // Check if DOM elements exist before initializing
+                const tabContainer = document.getElementById('tabContainer');
+                const newTabButton = document.getElementById('newTabButton');
+                const tabSettingsButton = document.getElementById('tabSettingsButton');
+                
+                if (!tabContainer || !newTabButton || !tabSettingsButton) {
+                    console.warn('⚠️ Tab UI elements not found, retrying TabManager initialization...');
+                    // Retry after another delay
+                    setTimeout(() => this.initializeTabManager(), 500);
+                    return;
+                }
+                
+                // Initialize TabManager
+                this.tabManager = new TabManager(this);
+                console.log('✅ TabManager initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize TabManager:', error);
+                // Retry once more
+                setTimeout(() => this.initializeTabManager(), 1000);
+            }
+        }, 100); // Initial delay to ensure DOM is ready
     }
 
     initializeActionSystem() {

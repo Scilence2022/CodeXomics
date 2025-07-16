@@ -11,8 +11,8 @@ class ActionTools {
 
     defineTools() {
         return {
-            copySequence: {
-                name: 'copySequence',
+            copy_sequence: {
+                name: 'copy_sequence',
                 description: 'Copy a sequence region to clipboard for later use',
                 parameters: {
                     type: 'object',
@@ -40,8 +40,8 @@ class ActionTools {
                 }
             },
 
-            cutSequence: {
-                name: 'cutSequence',
+            cut_sequence: {
+                name: 'cut_sequence',
                 description: 'Cut a sequence region (copy to clipboard and mark for deletion)',
                 parameters: {
                     type: 'object',
@@ -69,8 +69,8 @@ class ActionTools {
                 }
             },
 
-            pasteSequence: {
-                name: 'pasteSequence',
+            paste_sequence: {
+                name: 'paste_sequence',
                 description: 'Paste sequence from clipboard at specified position',
                 parameters: {
                     type: 'object',
@@ -88,8 +88,8 @@ class ActionTools {
                 }
             },
 
-            deleteSequence: {
-                name: 'deleteSequence',
+            delete_sequence: {
+                name: 'delete_sequence',
                 description: 'Delete a sequence region',
                 parameters: {
                     type: 'object',
@@ -117,8 +117,8 @@ class ActionTools {
                 }
             },
 
-            insertSequence: {
-                name: 'insertSequence',
+            insert_sequence: {
+                name: 'insert_sequence',
                 description: 'Insert a DNA sequence at specified position',
                 parameters: {
                     type: 'object',
@@ -140,8 +140,8 @@ class ActionTools {
                 }
             },
 
-            replaceSequence: {
-                name: 'replaceSequence',
+            replace_sequence: {
+                name: 'replace_sequence',
                 description: 'Replace sequence in specified region with new sequence',
                 parameters: {
                     type: 'object',
@@ -173,8 +173,8 @@ class ActionTools {
                 }
             },
 
-            getActionList: {
-                name: 'getActionList',
+            get_action_list: {
+                name: 'get_action_list',
                 description: 'Get current list of pending and completed sequence actions',
                 parameters: {
                     type: 'object',
@@ -189,8 +189,8 @@ class ActionTools {
                 }
             },
 
-            executeActions: {
-                name: 'executeActions',
+            execute_actions: {
+                name: 'execute_actions',
                 description: 'Execute all pending sequence actions',
                 parameters: {
                     type: 'object',
@@ -204,8 +204,8 @@ class ActionTools {
                 }
             },
 
-            clearActions: {
-                name: 'clearActions',
+            clear_actions: {
+                name: 'clear_actions',
                 description: 'Clear actions from the queue',
                 parameters: {
                     type: 'object',
@@ -220,8 +220,8 @@ class ActionTools {
                 }
             },
 
-            getClipboardContent: {
-                name: 'getClipboardContent',
+            get_clipboard_content: {
+                name: 'get_clipboard_content',
                 description: 'Get current clipboard content information',
                 parameters: {
                     type: 'object',
@@ -229,8 +229,8 @@ class ActionTools {
                 }
             },
 
-            undoLastAction: {
-                name: 'undoLastAction',
+            undo_last_action: {
+                name: 'undo_last_action',
                 description: 'Attempt to undo the last completed action',
                 parameters: {
                     type: 'object',
@@ -265,48 +265,48 @@ class ActionTools {
     }
 
     // Direct execution methods for server-side processing
-    async copySequence(params, clientId) {
-        return await this.executeClientTool('copySequence', params, clientId);
+    async copy_sequence(params, clientId) {
+        return await this.executeClientTool('copy_sequence', params, clientId);
     }
 
-    async cutSequence(params, clientId) {
-        return await this.executeClientTool('cutSequence', params, clientId);
+    async cut_sequence(params, clientId) {
+        return await this.executeClientTool('cut_sequence', params, clientId);
     }
 
-    async pasteSequence(params, clientId) {
-        return await this.executeClientTool('pasteSequence', params, clientId);
+    async paste_sequence(params, clientId) {
+        return await this.executeClientTool('paste_sequence', params, clientId);
     }
 
-    async deleteSequence(params, clientId) {
-        return await this.executeClientTool('deleteSequence', params, clientId);
+    async delete_sequence(params, clientId) {
+        return await this.executeClientTool('delete_sequence', params, clientId);
     }
 
-    async insertSequence(params, clientId) {
-        return await this.executeClientTool('insertSequence', params, clientId);
+    async insert_sequence(params, clientId) {
+        return await this.executeClientTool('insert_sequence', params, clientId);
     }
 
-    async replaceSequence(params, clientId) {
-        return await this.executeClientTool('replaceSequence', params, clientId);
+    async replace_sequence(params, clientId) {
+        return await this.executeClientTool('replace_sequence', params, clientId);
     }
 
-    async getActionList(params, clientId) {
-        return await this.executeClientTool('getActionList', params, clientId);
+    async get_action_list(params, clientId) {
+        return await this.executeClientTool('get_action_list', params, clientId);
     }
 
-    async executeActions(params, clientId) {
-        return await this.executeClientTool('executeActions', params, clientId);
+    async execute_actions(params, clientId) {
+        return await this.executeClientTool('execute_actions', params, clientId);
     }
 
-    async clearActions(params, clientId) {
-        return await this.executeClientTool('clearActions', params, clientId);
+    async clear_actions(params, clientId) {
+        return await this.executeClientTool('clear_actions', params, clientId);
     }
 
-    async getClipboardContent(params, clientId) {
-        return await this.executeClientTool('getClipboardContent', params, clientId);
+    async get_clipboard_content(params, clientId) {
+        return await this.executeClientTool('get_clipboard_content', params, clientId);
     }
 
-    async undoLastAction(params, clientId) {
-        return await this.executeClientTool('undoLastAction', params, clientId);
+    async undo_last_action(params, clientId) {
+        return await this.executeClientTool('undo_last_action', params, clientId);
     }
 }
 

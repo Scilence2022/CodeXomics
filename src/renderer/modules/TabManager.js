@@ -14,6 +14,17 @@ class TabManager {
         this.newTabButton = document.getElementById('newTabButton');
         this.tabSettingsButton = document.getElementById('tabSettingsButton');
         
+        // Check if required elements exist
+        if (!this.tabContainer) {
+            console.error('TabManager: Required DOM element "tabContainer" not found');
+        }
+        if (!this.newTabButton) {
+            console.error('TabManager: Required DOM element "newTabButton" not found');
+        }
+        if (!this.tabSettingsButton) {
+            console.error('TabManager: Required DOM element "tabSettingsButton" not found');
+        }
+        
         // Tab state isolation
         this.tabStates = new Map(); // Store individual tab states
         
@@ -210,6 +221,11 @@ class TabManager {
      * Create initial tab on startup
      */
     createInitialTab() {
+        // Check if tab container exists before creating tab
+        if (!this.tabContainer) {
+            console.error('TabManager: tabContainer element not found. Tab functionality will be disabled.');
+            return;
+        }
         this.createNewTab('Welcome');
     }
     
@@ -217,6 +233,12 @@ class TabManager {
      * Create a new tab for the same genome at current or specified position
      */
     createNewTab(title = null, specificPosition = null) {
+        // Check if tab container exists
+        if (!this.tabContainer) {
+            console.error('TabManager: Cannot create tab - tabContainer element not found');
+            return null;
+        }
+        
         const tabId = `tab-${this.nextTabId++}`;
         
         // Auto-generate title based on current position if not provided

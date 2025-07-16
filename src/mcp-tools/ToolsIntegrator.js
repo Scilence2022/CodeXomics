@@ -188,28 +188,28 @@ class ToolsIntegrator {
             // Action tools
             if (this.actionTools.getTools()[toolName]) {
                 switch (toolName) {
-                    case 'copySequence':
-                        return await this.actionTools.copySequence(parameters, clientId);
-                    case 'cutSequence':
-                        return await this.actionTools.cutSequence(parameters, clientId);
-                    case 'pasteSequence':
-                        return await this.actionTools.pasteSequence(parameters, clientId);
-                    case 'deleteSequence':
-                        return await this.actionTools.deleteSequence(parameters, clientId);
-                    case 'insertSequence':
-                        return await this.actionTools.insertSequence(parameters, clientId);
-                    case 'replaceSequence':
-                        return await this.actionTools.replaceSequence(parameters, clientId);
-                    case 'getActionList':
-                        return await this.actionTools.getActionList(parameters, clientId);
-                    case 'executeActions':
-                        return await this.actionTools.executeActions(parameters, clientId);
-                    case 'clearActions':
-                        return await this.actionTools.clearActions(parameters, clientId);
-                    case 'getClipboardContent':
-                        return await this.actionTools.getClipboardContent(parameters, clientId);
-                    case 'undoLastAction':
-                        return await this.actionTools.undoLastAction(parameters, clientId);
+                    case 'copy_sequence':
+                        return await this.actionTools.copy_sequence(parameters, clientId);
+                    case 'cut_sequence':
+                        return await this.actionTools.cut_sequence(parameters, clientId);
+                    case 'paste_sequence':
+                        return await this.actionTools.paste_sequence(parameters, clientId);
+                    case 'delete_sequence':
+                        return await this.actionTools.delete_sequence(parameters, clientId);
+                    case 'insert_sequence':
+                        return await this.actionTools.insert_sequence(parameters, clientId);
+                    case 'replace_sequence':
+                        return await this.actionTools.replace_sequence(parameters, clientId);
+                    case 'get_action_list':
+                        return await this.actionTools.get_action_list(parameters, clientId);
+                    case 'execute_actions':
+                        return await this.actionTools.execute_actions(parameters, clientId);
+                    case 'clear_actions':
+                        return await this.actionTools.clear_actions(parameters, clientId);
+                    case 'get_clipboard_content':
+                        return await this.actionTools.get_clipboard_content(parameters, clientId);
+                    case 'undo_last_action':
+                        return await this.actionTools.undo_last_action(parameters, clientId);
                     default:
                         return await this.actionTools.executeClientTool(toolName, parameters, clientId);
                 }

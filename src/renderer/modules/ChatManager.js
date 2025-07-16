@@ -741,6 +741,10 @@ class ChatManager {
                 case 'navigate_to_position':
                     result = await this.navigateToPosition(parameters);
                     break;
+                
+                case 'open_new_tab':
+                    result = await this.openNewTab(parameters);
+                    break;
                     
                 case 'search_features':
                     result = await this.searchFeatures(parameters);
@@ -1198,6 +1202,111 @@ class ChatManager {
             message: `Navigated to ${chromosome}:${start}-${end}`,
             usedDefaultRange: position !== undefined && (params.start === undefined || params.end === undefined)
         };
+    }
+
+    async openNewTab(params) {
+        const { chromosome, start, end, position, title, geneName } = params;
+        
+        console.log('🔧 [ChatManager] openNewTab called with params:', params);
+        
+        try {
+            // Use window.genomeBrowser instead of this.app for access
+            const genomeBrowser = window.genomeBrowser;
+            if (!genomeBrowser) {
+                throw new Error('Genome browser not available via window.genomeBrowser');
+            }
+            
+            // Wait for TabManager to be initialized with retry mechanism
+            if (!genomeBrowser.tabManager) {
+                console.log('⏳ TabManager not ready, waiting...');
+                // Wait for TabManager with retry logic
+                let retries = 0;
+                const maxRetries = 10;
+                while (!genomeBrowser.tabManager && retries < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    retries++;
+                    console.log(`⏳ Waiting for TabManager... attempt ${retries}/${maxRetries}`);
+                }
+                
+                if (!genomeBrowser.tabManager) {
+                    throw new Error('Tab manager not available after waiting - check TabManager initialization');
+                }
+            }
+            
+            let tabId;
+            let finalTitle = title;
+            let usedDefaultRange = false;
+            
+            // Handle different ways to create a new tab
+            if (geneName) {
+                // Open tab for specific gene
+                const geneResults = await this.searchFeatures({ query: geneName, caseSensitive: false });
+                if (geneResults.count > 0 && geneResults.results.length > 0) {
+                    const gene = geneResults.results[0];
+                    // Use the UI response function instead of direct manager access
+                    tabId = genomeBrowser.tabManager.createTabForGene(gene, 500);
+                    finalTitle = finalTitle || `Gene: ${gene.name || gene.id || geneName}`;
+                } else {
+                    throw new Error(`Gene '${geneName}' not found`);
+                }
+            } else if (chromosome) {
+                // Open tab for specific position
+                let finalStart = start;
+                let finalEnd = end;
+                
+                // Handle position parameter with default 2000bp range
+                if (position !== undefined && (start === undefined || end === undefined)) {
+                    const defaultRange = 2000;
+                    finalStart = Math.max(1, position - Math.floor(defaultRange / 2));
+                    finalEnd = position + Math.floor(defaultRange / 2);
+                    usedDefaultRange = true;
+                    console.log(`Using position ${position} with default ${defaultRange}bp range: ${finalStart}-${finalEnd}`);
+                }
+                
+                if (finalStart && finalEnd) {
+                    // Check if chromosome exists
+                    if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
+                        throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+                    }
+                    
+                    // Use the UI response function instead of direct manager access
+                    tabId = genomeBrowser.tabManager.createTabForPosition(chromosome, finalStart, finalEnd, finalTitle);
+                    finalTitle = finalTitle || `${chromosome}:${finalStart.toLocaleString()}-${finalEnd.toLocaleString()}`;
+                } else {
+                    throw new Error('Missing required parameters: start and end positions, or position parameter');
+                }
+            } else {
+                // Create new tab with current position - use the same method as the + button
+                // This is the key change: use the actual UI response function
+                const newTabButton = document.getElementById('newTabButton');
+                if (newTabButton) {
+                    // Simulate the + button click to use the actual UI response function
+                    newTabButton.click();
+                    // Get the newly created tab ID from the tab manager
+                    const tabIds = Array.from(genomeBrowser.tabManager.tabs.keys());
+                    tabId = tabIds[tabIds.length - 1]; // Get the most recently created tab
+                    finalTitle = finalTitle || 'New Tab';
+                } else {
+                    // Fallback to direct manager access if button not found
+                    tabId = genomeBrowser.tabManager.createNewTab(finalTitle);
+                    finalTitle = finalTitle || 'New Tab';
+                }
+            }
+            
+            console.log(`✅ [ChatManager] Successfully created new tab: ${tabId} - ${finalTitle}`);
+            
+            return {
+                success: true,
+                tabId: tabId,
+                title: finalTitle,
+                message: `Opened new tab: ${finalTitle}`,
+                usedDefaultRange: usedDefaultRange
+            };
+            
+        } catch (error) {
+            console.error('❌ [ChatManager] Error opening new tab:', error);
+            throw error;
+        }
     }
 
     async searchFeatures(params) {
@@ -2095,7 +2204,11 @@ class ChatManager {
                 console.log('=== LLM Raw Response ===');
                 console.log('Response type:', typeof response);
                 console.log('Response length:', response ? response.length : 'null');
+                console.log('Response is null:', response === null);
+                console.log('Response is undefined:', response === undefined);
+                console.log('Response is empty string:', response === '');
                 console.log('Full response:', response);
+                console.log('JSON.stringify response:', JSON.stringify(response));
                 console.log('========================');
                 
                 // 显示LLM的思考过程（如果响应包含思考标签）
@@ -2112,7 +2225,63 @@ class ChatManager {
                 console.log('Multiple tool calls found:', multipleToolCalls.length);
                 
                 // Determine which tools to execute
-                const toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
+                let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
+                
+                // CRITICAL FIX: If current response has no tools, check previous assistant messages 
+                // in conversation history for unexecuted tool calls
+                // This covers both empty responses and task completion responses
+                if (toolsToExecute.length === 0) {
+                    console.log('=== CHECKING PREVIOUS ROUNDS FOR UNEXECUTED TOOL CALLS ===');
+                    console.log('Current conversation history length:', conversationHistory.length);
+                    console.log('Current response has no tools, looking for previous tool calls...');
+                    
+                    // Log the entire conversation history for debugging
+                    conversationHistory.forEach((msg, index) => {
+                        console.log(`History[${index}] Role: ${msg.role}, Content length: ${msg.content ? msg.content.length : 'null'}`);
+                        if (msg.content && msg.content.length < 200) {
+                            console.log(`History[${index}] Content preview:`, msg.content);
+                        }
+                    });
+                    
+                    // Track executed tools to avoid duplicate execution
+                    const executedTools = new Set();
+                    
+                    // Look for tool results in history to mark as executed
+                    conversationHistory.forEach(msg => {
+                        if (msg.role === 'user' && msg.content && msg.content.includes('executed successfully')) {
+                            // Extract tool name from result message
+                            const toolMatch = msg.content.match(/(\w+) executed successfully/);
+                            if (toolMatch) {
+                                executedTools.add(toolMatch[1]);
+                            }
+                        }
+                    });
+                    
+                    console.log('Already executed tools:', Array.from(executedTools));
+                    
+                    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+                        const msg = conversationHistory[i];
+                        console.log(`Examining message ${i}: role=${msg.role}, has_content=${!!msg.content}`);
+                        if (msg.role === 'assistant' && msg.content) {
+                            console.log(`Checking assistant message ${i} for tool calls:`, msg.content);
+                            const previousToolCall = this.parseToolCall(msg.content);
+                            console.log(`Parse result for message ${i}:`, previousToolCall);
+                            if (previousToolCall && !executedTools.has(previousToolCall.tool_name)) {
+                                console.log('✅ Found unexecuted tool call from previous round:', previousToolCall);
+                                toolsToExecute = [previousToolCall];
+                                break;
+                            } else if (previousToolCall && executedTools.has(previousToolCall.tool_name)) {
+                                console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed, skipping`);
+                            } else {
+                                console.log(`❌ No tool call found in message ${i}`);
+                            }
+                        } else {
+                            console.log(`Skipping message ${i}: role=${msg.role}, has_content=${!!msg.content}`);
+                        }
+                    }
+                    console.log('Final toolsToExecute after history check:', toolsToExecute);
+                    console.log('=== END PREVIOUS ROUNDS CHECK ===');
+                }
                 
                 // Check for task completion signals if early completion is enabled
                 // BUT ONLY if there are NO tool calls to execute
@@ -2343,6 +2512,10 @@ class ChatManager {
             case 'navigate_to_position':
                 const rangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
                 return `✅ Navigated to ${result.chromosome}:${result.start}-${result.end}${rangeInfo}`;
+                
+            case 'open_new_tab':
+                const tabRangeInfo = result.usedDefaultRange ? ' (2000bp default range)' : '';
+                return `🗂️ Opened new tab: ${result.title}${tabRangeInfo}`;
                 
             case 'search_features':
                 if (result.count > 0) {
@@ -2993,6 +3166,8 @@ Basic Navigation:
   {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
   {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
   {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
+  {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+  {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 
 Sequence Analysis:
   {"tool_name": "get_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
@@ -3057,7 +3232,7 @@ Data Management:
         const categories = {
             'SEARCH & NAVIGATION': [
                 'search_gene_by_name', 'search_features', 'jump_to_gene', 
-                'navigate_to_position', 'search_by_position'
+                'navigate_to_position', 'search_by_position', 'open_new_tab'
             ],
             'SYSTEM STATUS': [
                 'get_genome_info', 'check_genomics_environment', 'get_file_info', 
@@ -3087,8 +3262,8 @@ Data Management:
                 'evo2_generate_sequence', 'evo2_predict_function', 'evo2_design_crispr'
             ],
             'SEQUENCE EDITING': [
-                'copySequence', 'cutSequence', 'pasteSequence', 'deleteSequence',
-                'insertSequence', 'replaceSequence', 'executeActions', 'getActionList'
+                'copy_sequence', 'cut_sequence', 'paste_sequence', 'delete_sequence',
+                'insert_sequence', 'replace_sequence', 'execute_actions', 'get_action_list'
             ]
         };
 
@@ -3184,49 +3359,49 @@ ${toolPriority}
 SEQUENCE EDITING WORKFLOW:
 1. Find gene location: search_gene_by_name
 2. Use appropriate editing function (deleteSequence, insertSequence, etc.)
-3. Execute all pending actions: executeActions
-4. IMPORTANT: Actions are queued until executeActions is called
+3. Execute all pending actions: execute_actions
+4. IMPORTANT: Actions are queued until execute_actions is called
 
 EDITING FUNCTIONS WITH PARAMETERS:
 
-• deleteSequence - Delete a DNA sequence region
+• delete_sequence - Delete a DNA sequence region
   Parameters: chromosome (string), start (number), end (number), strand (optional: "+" or "-")
-  Example: {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
+  Example: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 
-• insertSequence - Insert DNA sequence at a specific position
+• insert_sequence - Insert DNA sequence at a specific position
   Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N)
-  Example: {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
+  Example: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
 
-• replaceSequence - Replace sequence in a region with new sequence
+• replace_sequence - Replace sequence in a region with new sequence
   Parameters: chromosome (string), start (number), end (number), sequence (string), strand (optional)
-  Example: {"tool_name": "replaceSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+  Example: {"tool_name": "replace_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
 
-• copySequence - Copy sequence region to clipboard
+• copy_sequence - Copy sequence region to clipboard
   Parameters: chromosome (string), start (number), end (number), strand (optional)
-  Example: {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+  Example: {"tool_name": "copy_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
 
-• cutSequence - Cut sequence (copy to clipboard and mark for deletion)
+• cut_sequence - Cut sequence (copy to clipboard and mark for deletion)
   Parameters: chromosome (string), start (number), end (number), strand (optional)
-  Example: {"tool_name": "cutSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+  Example: {"tool_name": "cut_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
 
-• pasteSequence - Paste sequence from clipboard
+• paste_sequence - Paste sequence from clipboard
   Parameters: chromosome (string), position (number)
-  Example: {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+  Example: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
 
-• executeActions - Execute all queued sequence editing actions
+• execute_actions - Execute all queued sequence editing actions
   Parameters: confirm (optional boolean, default: false)
-  Example: {"tool_name": "executeActions", "parameters": {}}
+  Example: {"tool_name": "execute_actions", "parameters": {}}
 
-• getActionList - View current action queue
+• get_action_list - View current action queue
   Parameters: status (optional: "all", "pending", "completed", "failed")
-  Example: {"tool_name": "getActionList", "parameters": {"status": "pending"}}
+  Example: {"tool_name": "get_action_list", "parameters": {"status": "pending"}}
 
 CRITICAL GENE DELETION WORKFLOW:
 To delete a gene (like "delete gene yaaJ"):
 1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
 2. Use gene coordinates from result in deleteSequence
 3. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
-4. {"tool_name": "executeActions", "parameters": {}}
+4. {"tool_name": "execute_actions", "parameters": {}}
 
 CHROMOSOME NAMES:
 - Current genome uses "COLI-K12" as chromosome identifier
@@ -3237,11 +3412,12 @@ COMMON TASK PATTERNS:
 • Protein Structure: search_alphafold_by_gene → open_alphafold_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
 • Navigation: jump_to_gene → navigate_to_position
+• New Tab: open_new_tab → for parallel analysis
 • BLAST Search: blast_search → analyze results
 • Pathway Analysis: show_metabolic_pathway → find_pathway_genes
-• Gene Deletion: search_gene_by_name → deleteSequence → executeActions
-• Sequence Insertion: insertSequence → executeActions
-• Copy/Paste: copySequence → pasteSequence → executeActions
+• Gene Deletion: search_gene_by_name → deleteSequence → execute_actions
+• Sequence Insertion: insertSequence → execute_actions
+• Copy/Paste: copy_sequence → paste_sequence → execute_actions
 
 SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
@@ -3254,7 +3430,7 @@ ANALYSIS FUNCTIONS:
 - Composition: compute_gc, sequence_statistics, codon_usage_analysis
 - Features: find_orfs, predict_promoter, predict_rbs, find_restriction_sites
 - Comparison: blast_search, compare_regions, find_similar_sequences
-- Editing: copySequence, cutSequence, pasteSequence, deleteSequence, insertSequence, replaceSequence
+- Editing: copy_sequence, cut_sequence, paste_sequence, deleteSequence, insertSequence, replace_sequence
 
 IMPORTANT PREREQUISITES:
 Before using get_coding_sequence or other gene-specific functions:
@@ -3266,7 +3442,7 @@ WORKFLOW EXAMPLES:
 • Gene Deletion Workflow:
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
   2. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
-  3. {"tool_name": "executeActions", "parameters": {}}
+  3. {"tool_name": "execute_actions", "parameters": {}}
 
 • Gene Analysis Workflow:
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "lysC"}}
@@ -3275,21 +3451,21 @@ WORKFLOW EXAMPLES:
 
 • Sequence Insertion Workflow:
   1. {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
-  2. {"tool_name": "executeActions", "parameters": {}}
+  2. {"tool_name": "execute_actions", "parameters": {}}
 
 • Copy/Paste Workflow:
-  1. {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
-  2. {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
-  3. {"tool_name": "executeActions", "parameters": {}}
+  1. {"tool_name": "copy_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+  2. {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}
+  3. {"tool_name": "execute_actions", "parameters": {}}
 
 EXAMPLES:
 • Find gene: {"tool_name": "search_gene_by_name", "parameters": {"name": "thrC"}}
 • Delete gene: {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 • Insert DNA: {"tool_name": "insertSequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGC"}}
-• Execute actions: {"tool_name": "executeActions", "parameters": {}}
-• Get action list: {"tool_name": "getActionList", "parameters": {}}
-• Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
-• Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}`;
+• Execute actions: {"tool_name": "execute_actions", "parameters": {}}
+• Get action list: {"tool_name": "get_action_list", "parameters": {}}
+• Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 1500}}
+• Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "COLI-K12", "position": 2000}}`;
     }
 
     /**
@@ -3386,6 +3562,8 @@ When a user asks you to perform ANY action that requires using one of these tool
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
+{"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+{"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
@@ -3396,6 +3574,8 @@ Tool Selection Priority:
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
+- Open new tab: {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Open tab for gene: {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
@@ -3403,14 +3583,14 @@ Basic Tool Examples:
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
 
 Sequence Editing Examples:
-- Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Cut sequence: {"tool_name": "cutSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
 - Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
-- Replace sequence: {"tool_name": "replaceSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
-- Execute actions: {"tool_name": "executeActions", "parameters": {}}
-- Get action list: {"tool_name": "getActionList", "parameters": {}}
+- Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+- Execute actions: {"tool_name": "execute_actions", "parameters": {}}
+- Get action list: {"tool_name": "get_action_list", "parameters": {}}
 
 MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
@@ -3514,7 +3694,7 @@ Metabolic Pathway Examples:
         // Get a sample of key tools from each category
         const keyTools = [
             // Navigation & State
-            'navigate_to_position', 'get_current_state', 'jump_to_gene', 'zoom_to_gene',
+            'navigate_to_position', 'get_current_state', 'jump_to_gene', 'zoom_to_gene', 'open_new_tab',
             // Search & Discovery  
             'search_features', 'search_gene_by_name', 'search_sequence_motif',
             // Sequence Analysis
@@ -3542,7 +3722,7 @@ AVAILABLE TOOLS SUMMARY:
 - MCP Tools: ${context.genomeBrowser.toolSources.mcp}
 
 KEY TOOLS BY CATEGORY:
-Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene
+Navigation & State: navigate_to_position, get_current_state, jump_to_gene, zoom_to_gene, open_new_tab
 Search & Discovery: search_features, search_gene_by_name, search_sequence_motif
 Sequence Analysis: get_sequence, translate_dna, compute_gc, reverse_complement  
 Advanced Analysis: analyze_region, predict_promoter, find_restriction_sites
@@ -3645,6 +3825,8 @@ When a user asks you to perform ANY action that requires using one of these tool
 CORRECT format:
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "U00096", "start": 1000, "end": 2000}}
 {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
+{"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+{"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 
 Tool Selection Priority:
 1. First try MCP server tools (if available and connected)
@@ -3655,6 +3837,8 @@ Tool Selection Priority:
 Basic Tool Examples:
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
+- Open new tab: {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
+- Open tab for gene: {"tool_name": "open_new_tab", "parameters": {"geneName": "lacZ"}}
 - Search genes: {"tool_name": "search_features", "parameters": {"query": "lacZ", "caseSensitive": false}}
 - Get current state: {"tool_name": "get_current_state", "parameters": {}}
 - Get genome info: {"tool_name": "get_genome_info", "parameters": {}}
@@ -3662,14 +3846,14 @@ Basic Tool Examples:
 - Toggle track: {"tool_name": "toggle_track", "parameters": {"trackName": "genes", "visible": true}}
 
 Sequence Editing Examples:
-- Copy sequence: {"tool_name": "copySequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Cut sequence: {"tool_name": "cutSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
-- Paste sequence: {"tool_name": "pasteSequence", "parameters": {"chromosome": "chr1", "position": 2000}}
+- Copy sequence: {"tool_name": "copy_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Cut sequence: {"tool_name": "cut_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
+- Paste sequence: {"tool_name": "paste_sequence", "parameters": {"chromosome": "chr1", "position": 2000}}
 - Delete sequence: {"tool_name": "deleteSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500}}
 - Insert sequence: {"tool_name": "insertSequence", "parameters": {"chromosome": "chr1", "position": 1000, "sequence": "ATGCGC"}}
-- Replace sequence: {"tool_name": "replaceSequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
-- Execute actions: {"tool_name": "executeActions", "parameters": {}}
-- Get action list: {"tool_name": "getActionList", "parameters": {}}
+- Replace sequence: {"tool_name": "replace_sequence", "parameters": {"chromosome": "chr1", "start": 1000, "end": 1500, "sequence": "ATGCGC"}}
+- Execute actions: {"tool_name": "execute_actions", "parameters": {}}
+- Get action list: {"tool_name": "get_action_list", "parameters": {}}
 
 MicrobeGenomicsFunctions Examples:
 - Navigate to gene: {"tool_name": "jump_to_gene", "parameters": {"geneName": "lacZ"}}
@@ -3881,6 +4065,30 @@ ${this.getPluginSystemInfo()}`;
         console.log('Input response:', response);
         console.log('Response type:', typeof response);
         console.log('Response length:', response ? response.length : 'null');
+        console.log('Response is null:', response === null);
+        console.log('Response is undefined:', response === undefined);
+        console.log('Response is empty string:', response === '');
+        console.log('Response.trim() length:', response && typeof response === 'string' ? response.trim().length : 'N/A');
+        
+        // Log the actual characters for debugging
+        if (response && typeof response === 'string') {
+            console.log('Response characters (first 100):', JSON.stringify(response.substring(0, 100)));
+            console.log('Response hex dump (first 50 chars):', 
+                response.substring(0, 50).split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join(' ')
+            );
+        }
+        
+        // Early return for null/undefined responses but NOT empty strings
+        if (response === null || response === undefined) {
+            console.log('Response is null or undefined - returning null');
+            console.log('=== parseToolCall DEBUG END (NULL/UNDEFINED RESPONSE) ===');
+            return null;
+        }
+        
+        // Handle empty strings differently - they might be valid in some contexts
+        if (response === '') {
+            console.log('Response is empty string - continuing with parsing logic');
+        }
         
         try {
             // Clean the response by removing any leading/trailing whitespace
@@ -4122,6 +4330,10 @@ ${this.getPluginSystemInfo()}`;
             switch (toolName) {
                 case 'navigate_to_position':
                     result = await this.navigateToPosition(parameters);
+                    break;
+                
+                case 'open_new_tab':
+                    result = await this.openNewTab(parameters);
                     break;
                     
                 case 'search_features':
@@ -4543,17 +4755,62 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.findPathwayGenes(parameters);
                     break;
                     
-                // Action Manager functions
-                case 'copySequence':
-                    result = await this.executeActionFunction('copySequence', parameters);
+                // Action Manager functions (underscore naming convention)
+                case 'copy_sequence':
+                    result = await this.executeActionFunction('copy_sequence', parameters);
                     break;
                     
-                case 'cutSequence':
-                    result = await this.executeActionFunction('cutSequence', parameters);
+                case 'cut_sequence':
+                    result = await this.executeActionFunction('cut_sequence', parameters);
                     break;
                     
-                case 'pasteSequence':
-                    result = await this.executeActionFunction('pasteSequence', parameters);
+                case 'paste_sequence':
+                    result = await this.executeActionFunction('paste_sequence', parameters);
+                    break;
+                    
+                case 'delete_sequence':
+                    result = await this.executeActionFunction('deleteSequence', parameters);
+                    break;
+                    
+                case 'insert_sequence':
+                    result = await this.executeActionFunction('insertSequence', parameters);
+                    break;
+                    
+                case 'replace_sequence':
+                    result = await this.executeActionFunction('replace_sequence', parameters);
+                    break;
+                    
+                case 'get_action_list':
+                    result = await this.executeActionFunction('get_action_list', parameters);
+                    break;
+                    
+                case 'execute_actions':
+                    result = await this.executeActionFunction('execute_actions', parameters);
+                    break;
+                    
+                case 'clear_actions':
+                    result = await this.executeActionFunction('clearActions', parameters);
+                    break;
+                    
+                case 'get_clipboard_content':
+                    result = await this.executeActionFunction('getClipboardContent', parameters);
+                    break;
+                    
+                case 'undo_last_action':
+                    result = await this.executeActionFunction('undoLastAction', parameters);
+                    break;
+                    
+                // Legacy camelCase support for backward compatibility
+                case 'copy_sequence':
+                    result = await this.executeActionFunction('copy_sequence', parameters);
+                    break;
+                    
+                case 'cut_sequence':
+                    result = await this.executeActionFunction('cut_sequence', parameters);
+                    break;
+                    
+                case 'paste_sequence':
+                    result = await this.executeActionFunction('paste_sequence', parameters);
                     break;
                     
                 case 'deleteSequence':
@@ -4564,16 +4821,16 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeActionFunction('insertSequence', parameters);
                     break;
                     
-                case 'replaceSequence':
-                    result = await this.executeActionFunction('replaceSequence', parameters);
+                case 'replace_sequence':
+                    result = await this.executeActionFunction('replace_sequence', parameters);
                     break;
                     
-                case 'getActionList':
-                    result = await this.executeActionFunction('getActionList', parameters);
+                case 'get_action_list':
+                    result = await this.executeActionFunction('get_action_list', parameters);
                     break;
                     
-                case 'executeActions':
-                    result = await this.executeActionFunction('executeActions', parameters);
+                case 'execute_actions':
+                    result = await this.executeActionFunction('execute_actions', parameters);
                     break;
                     
                 case 'clearActions':
@@ -4626,22 +4883,54 @@ ${this.getPluginSystemInfo()}`;
     }
 
     /**
-     * Execute action function through ActionManager
+     * Execute action function through UI response functions
      */
     async executeActionFunction(functionName, parameters) {
         console.log(`🔧 [ChatManager] Executing action function: ${functionName}`, parameters);
 
         try {
-            // Check if ActionManager is available
-            if (!this.app.actionManager) {
-                throw new Error('ActionManager not available');
+            // Use window.genomeBrowser for access
+            const genomeBrowser = window.genomeBrowser;
+            if (!genomeBrowser) {
+                throw new Error('Genome browser not available via window.genomeBrowser');
+            }
+            
+            if (!genomeBrowser.actionManager) {
+                throw new Error('ActionManager not available in genome browser');
             }
 
-            // Execute the action function
-            const result = await this.app.actionManager.executeActionFunction(functionName, parameters);
+            // Map function names to UI response functions
+            const actionFunctionMap = {
+                'copy_sequence': () => genomeBrowser.actionManager.handleCopySequence(),
+                'cut_sequence': () => genomeBrowser.actionManager.handleCutSequence(),
+                'paste_sequence': () => genomeBrowser.actionManager.handlePasteSequence(),
+                'deleteSequence': () => genomeBrowser.actionManager.handleDeleteSequence(),
+                'insertSequence': () => genomeBrowser.actionManager.handleInsertSequence(),
+                'replace_sequence': () => genomeBrowser.actionManager.handleReplaceSequence(),
+                'get_action_list': () => genomeBrowser.actionManager.showActionList(),
+                'execute_actions': () => genomeBrowser.actionManager.executeAllActions(),
+                'clearActions': () => genomeBrowser.actionManager.clearAllActions(),
+                'getClipboardContent': () => genomeBrowser.actionManager.getClipboardContent(),
+                'undoLastAction': () => genomeBrowser.actionManager.undoLastAction()
+            };
+
+            // Check if function is supported
+            if (!actionFunctionMap[functionName]) {
+                throw new Error(`Action function '${functionName}' not supported via UI response functions`);
+            }
+
+            // Execute the UI response function
+            const result = actionFunctionMap[functionName]();
             
-            console.log(`✅ [ChatManager] Action function ${functionName} executed successfully:`, result);
-            return result;
+            console.log(`✅ [ChatManager] Action function ${functionName} executed successfully via UI response:`, result);
+            
+            // Return a standardized result format
+            return {
+                success: true,
+                function: functionName,
+                message: `Action '${functionName}' executed via UI response function`,
+                timestamp: new Date().toISOString()
+            };
 
         } catch (error) {
             console.error(`❌ [ChatManager] Action function ${functionName} failed:`, error);
@@ -4659,6 +4948,7 @@ ${this.getPluginSystemInfo()}`;
             'get_current_state',
             'get_current_region',
             'jump_to_gene',
+            'open_new_tab',
             'scroll_left',
             'scroll_right',
             'zoom_in',
@@ -4749,17 +5039,17 @@ ${this.getPluginSystemInfo()}`;
             'find_pathway_genes',
             
             // Action Manager - Sequence Editing
-            'copySequence',
-            'cutSequence',
-            'pasteSequence',
-            'deleteSequence',
-            'insertSequence',
-            'replaceSequence',
-            'getActionList',
-            'executeActions',
-            'clearActions',
-            'getClipboardContent',
-            'undoLastAction'
+            'copy_sequence',
+            'cut_sequence',
+            'paste_sequence',
+            'delete_sequence',
+            'insert_sequence',
+            'replace_sequence',
+            'get_action_list',
+            'execute_actions',
+            'clear_actions',
+            'get_clipboard_content',
+            'undo_last_action'
         ];
         
         // Add plugin functions if available
@@ -9527,7 +9817,7 @@ ${this.getPluginSystemInfo()}`;
             
             // 检查是否是内置本地函数
             const localTools = [
-                'navigate_to_position', 'search_features', 'get_current_state',
+                'navigate_to_position', 'search_features', 'get_current_state', 'open_new_tab',
                 'get_sequence', 'toggle_track', 'create_annotation', 'analyze_region',
                 'export_data', 'jump_to_gene', 'get_genome_info', 'search_gene_by_name',
                 'compute_gc', 'translate_dna', 'reverse_complement', 'find_orfs',

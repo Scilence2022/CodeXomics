@@ -1,0 +1,4941 @@
+
+> genome-ai-studio@0.3.0-beta start
+> electron .
+
+Switched to main window menu
+🔧 Setting up MCP Server handlers
+✅ MCP Server handlers configured
+🌐 Setting up Express app
+✅ Express app configured
+🔧 Setting up WebSocket server
+✅ WebSocket server configured
+🔧 Setting up IPC communication
+✅ IPC communication configured
+🚀 Starting Standard Claude MCP Server
+❌ WebSocket server error: Error: listen EADDRINUSE: address already in use :::3003
+    at Server.setupListenHandle [as _listen2] (node:net:1751:16)
+    at listenInCluster (node:net:1799:12)
+    at Server.listen (node:net:1887:7)
+    at new WebSocketServer (/Users/song/Github-Repos/GenomeExplorer/node_modules/ws/lib/websocket-server.js:102:20)
+    at StandardClaudeMCPServer.setupWebSocketServer (/Users/song/Github-Repos/GenomeExplorer/src/mcp-server-claude-unified.js:300:25)
+    at new StandardClaudeMCPServer (/Users/song/Github-Repos/GenomeExplorer/src/mcp-server-claude-unified.js:73:14)
+    at /Users/song/Github-Repos/GenomeExplorer/src/main.js:1888:26
+    at WebContents.<anonymous> (node:electron/js2c/browser_init:2:79681)
+    at WebContents.emit (node:events:514:28) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3003
+}
+✅ Standard Claude MCP Server started successfully
+📡 HTTP Server: http://localhost:3002
+🌐 SSE Endpoint: http://localhost:3002/sse
+📋 Server Info: http://localhost:3002/mcp
+🔗 WebSocket Server: ws://localhost:3003
+🔧 IPC Communication: true
+
+🎯 Ready for Claude Desktop connections!
+
+Unified Claude MCP Server started successfully on ports 3002 (HTTP) and 3003 (WebSocket)
+2025-07-16 09:34:24.429 Electron[54345:17150217] The class 'NSOpenPanel' overrides the method identifier.  This method is implemented by class 'NSWindow'
+2025-07-16 09:34:29.819 Electron[54345:17150217] TSM AdjustCapsLockLEDForKeyTransitionHandling - _ISSetPhysicalKeyboardCapsLockLED Inhibit
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 7
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 6
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 5
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 4
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 3
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 2
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 1
+🔌 MCP Server connection closed
+🔌 SSE response closed
+❌ SSE connection error: Error: aborted
+    at connResetException (node:internal/errors:720:14)
+    at abortIncoming (node:_http_server:766:17)
+    at socketOnClose (node:_http_server:760:3)
+    at Socket.emit (node:events:526:35)
+    at TCP.<anonymous> (node:net:323:12) {
+  code: 'ECONNRESET'
+}
+🔌 SSE connection closed by client
+📊 Active connections: 0
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 1
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 2
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 3
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 4
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 5
+✅ SSE connection established and MCP server connected
+📥 GET /sse
+🔄 New SSE connection request
+📊 Active connections: 6
+✅ SSE connection established and MCP server connected
+📥 GET /SSE
+🔄 New SSE connection request
+📊 Active connections: 7
+✅ SSE connection established and MCP server connected
+📥 GET /
+🔄 New SSE connection request
+📊 Active connections: 8
+✅ SSE connection established and MCP server connected
+Shutting down Unified Claude MCP Server...
+🛑 Stopping Standard Claude MCP Server
+🔓 Cleaning up all file locks before quit...
