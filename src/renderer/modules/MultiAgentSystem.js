@@ -166,6 +166,13 @@ class MultiAgentSystem {
      * Execute function with intelligent agent routing
      */
     async executeFunction(functionName, parameters, context = {}) {
+        return await this.executeTool(functionName, parameters, context);
+    }
+    
+    /**
+     * Execute tool with intelligent agent routing (alias for executeFunction)
+     */
+    async executeTool(functionName, parameters, context = {}) {
         const startTime = performance.now();
         const executionId = this.generateExecutionId();
         

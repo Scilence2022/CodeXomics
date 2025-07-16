@@ -9,6 +9,9 @@ class ChatManager {
         this.mcpServerManager = null;
         this.chatHistory = [];
         
+        // Event emitter functionality
+        this.eventHandlers = new Map();
+        
         // Context mode toggle state - false means send full conversation, true means send only current message
         this.contextModeEnabled = true; // Default to Current message only mode
         
@@ -54,7 +57,22 @@ class ChatManager {
         
         // Initialize Plugin Function Calls Integrator
         this.pluginFunctionCallsIntegrator = null;
+        
+        // Initialize Multi-Agent System
+        this.multiAgentSystem = null;
+        this.memorySystem = null;
+        this.agentSystemEnabled = false;
+        this.agentSystemSettings = {
+            enabled: false,
+            autoOptimize: true,
+            showAgentInfo: true,
+            memoryEnabled: true,
+            cacheEnabled: true
+        };
         this.initializePluginFunctionCallsIntegrator();
+        
+        // Initialize Multi-Agent System
+        this.initializeMultiAgentSystem();
         
         // Initialize Smart Execution System
         this.smartExecutor = null;
@@ -79,6 +97,9 @@ class ChatManager {
         // Load chat history AFTER UI is initialized
         setTimeout(() => {
             this.loadChatHistory();
+            
+            // Update agent system button state after UI is ready
+            this.updateAgentSystemButton();
         }, 100);
     }
 
@@ -260,6 +281,127 @@ class ChatManager {
         } catch (error) {
             console.error('Failed to initialize PluginFunctionCallsIntegrator:', error);
         }
+    }
+    
+    /**
+     * Initialize Multi-Agent System
+     */
+    async initializeMultiAgentSystem() {
+        try {
+            // Load required modules
+            await this.loadScript('modules/MultiAgentSystem.js');
+            await this.loadScript('modules/Agents/AgentBase.js');
+            await this.loadScript('modules/Agents/NavigationAgent.js');
+            await this.loadScript('modules/MemorySystem.js');
+            await this.loadScript('modules/MemoryLayers/ShortTermMemory.js');
+            
+            // Initialize Multi-Agent System
+            if (typeof MultiAgentSystem !== 'undefined') {
+                this.multiAgentSystem = new MultiAgentSystem(this, this.configManager);
+                await this.multiAgentSystem.initialize();
+                
+                // Initialize Memory System
+                if (typeof MemorySystem !== 'undefined') {
+                    this.memorySystem = new MemorySystem(this.multiAgentSystem);
+                    await this.memorySystem.initialize();
+                }
+                
+                // Load settings from config
+                this.loadAgentSystemSettings();
+                
+                console.log('🤖 Multi-Agent System initialized successfully');
+                this.agentSystemEnabled = this.agentSystemSettings.enabled;
+                
+                // Emit initialization event
+                this.emit('agent-system-initialized', {
+                    enabled: this.agentSystemEnabled,
+                    agentCount: this.multiAgentSystem.agents.size
+                });
+                
+            } else {
+                console.warn('MultiAgentSystem not available');
+            }
+            
+        } catch (error) {
+            console.error('Failed to initialize Multi-Agent System:', error);
+        }
+    }
+    
+    /**
+     * Load agent system settings from config
+     */
+    loadAgentSystemSettings() {
+        try {
+            const savedSettings = this.configManager.get('agentSystemSettings', {});
+            this.agentSystemSettings = {
+                ...this.agentSystemSettings,
+                ...savedSettings
+            };
+        } catch (error) {
+            console.warn('Failed to load agent system settings:', error);
+        }
+    }
+    
+    /**
+     * Save agent system settings to config
+     */
+    saveAgentSystemSettings() {
+        try {
+            this.configManager.set('agentSystemSettings', this.agentSystemSettings);
+        } catch (error) {
+            console.warn('Failed to save agent system settings:', error);
+        }
+    }
+    
+    /**
+     * Toggle agent system on/off
+     */
+    toggleAgentSystem(enabled = null) {
+        const newState = enabled !== null ? enabled : !this.agentSystemEnabled;
+        this.agentSystemEnabled = newState;
+        this.agentSystemSettings.enabled = newState;
+        this.saveAgentSystemSettings();
+        
+        console.log(`🤖 Agent system ${newState ? 'enabled' : 'disabled'}`);
+        
+        // Emit state change event
+        this.emit('agent-system-state-changed', {
+            enabled: this.agentSystemEnabled,
+            settings: this.agentSystemSettings
+        });
+        
+        return this.agentSystemEnabled;
+    }
+    
+    /**
+     * Update agent system settings
+     */
+    updateAgentSystemSettings(settings) {
+        this.agentSystemSettings = {
+            ...this.agentSystemSettings,
+            ...settings
+        };
+        this.saveAgentSystemSettings();
+        
+        console.log('🤖 Agent system settings updated:', this.agentSystemSettings);
+        
+        // Emit settings update event
+        this.emit('agent-system-settings-updated', {
+            settings: this.agentSystemSettings
+        });
+    }
+    
+    /**
+     * Get agent system status
+     */
+    getAgentSystemStatus() {
+        return {
+            enabled: this.agentSystemEnabled,
+            initialized: this.multiAgentSystem !== null,
+            settings: this.agentSystemSettings,
+            stats: this.multiAgentSystem ? this.multiAgentSystem.getSystemStats() : null,
+            memoryStats: this.memorySystem ? this.memorySystem.getMemoryStats() : null
+        };
     }
 
     /**
@@ -707,6 +849,304 @@ class ChatManager {
             icon.className = 'fas fa-plug';
             toggleBtn.title = 'Connect to MCP Server';
         }
+    }
+    
+    /**
+     * Update agent system button appearance
+     */
+    updateAgentSystemButton() {
+        const button = document.getElementById('agentSystemBtn');
+        if (button) {
+            const isEnabled = this.agentSystemEnabled;
+            button.setAttribute('data-enabled', isEnabled.toString());
+            button.title = isEnabled ? 'Disable Multi-Agent System' : 'Enable Multi-Agent System';
+            
+            // Update icon and styling
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.className = isEnabled ? 'fas fa-robot' : 'fas fa-robot';
+            }
+            
+            button.classList.toggle('enabled', isEnabled);
+            
+            // Add visual feedback
+            if (isEnabled) {
+                button.style.color = '#4CAF50';
+                button.style.textShadow = '0 0 8px rgba(76, 175, 80, 0.5)';
+            } else {
+                button.style.color = '';
+                button.style.textShadow = '';
+            }
+        }
+    }
+    
+    /**
+     * Show agent system settings modal
+     */
+    showAgentSystemSettings() {
+        // Create settings modal if it doesn't exist
+        let modal = document.getElementById('agentSystemSettingsModal');
+        if (!modal) {
+            modal = this.createAgentSystemSettingsModal();
+            document.body.appendChild(modal);
+        }
+        
+        // Populate current settings
+        this.populateAgentSystemSettingsForm(modal);
+        
+        // Show modal
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        
+        // Center modal
+        if (!modal.style.left && !modal.style.top) {
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.top = '50%';
+            modal.style.left = '50%';
+        }
+    }
+    
+    /**
+     * Create agent system settings modal
+     */
+    createAgentSystemSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'agentSystemSettingsModal';
+        modal.className = 'modal draggable-modal';
+        
+        modal.innerHTML = `
+            <div class="modal-content agent-settings-modal-content resizable-modal-content">
+                <div class="modal-header draggable-header" id="agentSystemSettingsHeader">
+                    <h3><i class="fas fa-robot"></i> Multi-Agent System Settings</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
+                        &times;
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-section">
+                        <h4>🤖 System Status</h4>
+                        <div class="status-display" id="agentSystemStatus">
+                            <div class="status-item">
+                                <span class="status-label">System:</span>
+                                <span class="status-value" id="systemStatus">Loading...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Agents:</span>
+                                <span class="status-value" id="agentCount">Loading...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Memory:</span>
+                                <span class="status-value" id="memoryStatus">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>⚙️ Core Settings</h4>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="agentSystemEnabled" class="setting-checkbox">
+                                Enable Multi-Agent System
+                            </label>
+                            <small class="help-text">Enable intelligent agent-based tool execution</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="agentAutoOptimize" class="setting-checkbox">
+                                Auto-optimize execution paths
+                            </label>
+                            <small class="help-text">Automatically optimize tool execution based on memory and performance data</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="agentShowInfo" class="setting-checkbox">
+                                Show agent information
+                            </label>
+                            <small class="help-text">Display which agent is handling each tool execution</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>🧠 Memory System</h4>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="agentMemoryEnabled" class="setting-checkbox">
+                                Enable memory system
+                            </label>
+                            <small class="help-text">Enable intelligent memory caching and context management</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="agentCacheEnabled" class="setting-checkbox">
+                                Enable execution caching
+                            </label>
+                            <small class="help-text">Cache successful tool executions for faster future execution</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>📊 Performance</h4>
+                        <div class="performance-metrics" id="agentPerformanceMetrics">
+                            <div class="metric-item">
+                                <span class="metric-label">Cache Hit Rate</span>
+                                <span class="metric-value" id="cacheHitRate">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Avg Execution Time</span>
+                                <span class="metric-value" id="avgExecutionTime">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Memory Usage</span>
+                                <span class="metric-value" id="memoryUsage">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="window.chatManager.resetAgentSystemSettings(); window.chatManager.populateAgentSystemSettingsForm(this.closest('.modal'));">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">
+                            Cancel
+                        </button>
+                        <button class="btn btn-primary" onclick="window.chatManager.saveAgentSystemSettingsFromForm(this.closest('.modal'))">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Resize handles -->
+                <div class="resize-handle resize-handle-n"></div>
+                <div class="resize-handle resize-handle-s"></div>
+                <div class="resize-handle resize-handle-e"></div>
+                <div class="resize-handle resize-handle-w"></div>
+                <div class="resize-handle resize-handle-ne"></div>
+                <div class="resize-handle resize-handle-nw"></div>
+                <div class="resize-handle resize-handle-se"></div>
+                <div class="resize-handle resize-handle-sw"></div>
+            </div>
+        `;
+        
+        return modal;
+    }
+    
+    /**
+     * Populate agent system settings form
+     */
+    populateAgentSystemSettingsForm(modal) {
+        const status = this.getAgentSystemStatus();
+        
+        // Update status display
+        modal.querySelector('#systemStatus').textContent = status.enabled ? 'Enabled' : 'Disabled';
+        modal.querySelector('#agentCount').textContent = status.stats ? status.stats.agentCount : '0';
+        modal.querySelector('#memoryStatus').textContent = status.memoryStats ? 'Active' : 'Inactive';
+        
+        // Update checkboxes
+        modal.querySelector('#agentSystemEnabled').checked = this.agentSystemSettings.enabled;
+        modal.querySelector('#agentAutoOptimize').checked = this.agentSystemSettings.autoOptimize;
+        modal.querySelector('#agentShowInfo').checked = this.agentSystemSettings.showAgentInfo;
+        modal.querySelector('#agentMemoryEnabled').checked = this.agentSystemSettings.memoryEnabled;
+        modal.querySelector('#agentCacheEnabled').checked = this.agentSystemSettings.cacheEnabled;
+        
+        // Update performance metrics
+        if (status.stats) {
+            modal.querySelector('#cacheHitRate').textContent = `${status.stats.cacheHitRate || 0}%`;
+            modal.querySelector('#avgExecutionTime').textContent = `${status.stats.avgExecutionTime || 0}ms`;
+            modal.querySelector('#memoryUsage').textContent = `${status.stats.memoryUsage || 0}KB`;
+        }
+    }
+    
+    /**
+     * Save agent system settings from form
+     */
+    saveAgentSystemSettingsFromForm(modal) {
+        const newSettings = {
+            enabled: modal.querySelector('#agentSystemEnabled').checked,
+            autoOptimize: modal.querySelector('#agentAutoOptimize').checked,
+            showAgentInfo: modal.querySelector('#agentShowInfo').checked,
+            memoryEnabled: modal.querySelector('#agentMemoryEnabled').checked,
+            cacheEnabled: modal.querySelector('#agentCacheEnabled').checked
+        };
+        
+        this.updateAgentSystemSettings(newSettings);
+        
+        // Update button state
+        this.updateAgentSystemButton();
+        
+        // Close modal
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        
+        // Show success message
+        this.showNotification('Agent system settings saved successfully', 'success');
+    }
+    
+    /**
+     * Reset agent system settings to defaults
+     */
+    resetAgentSystemSettings() {
+        this.agentSystemSettings = {
+            enabled: false,
+            autoOptimize: true,
+            showAgentInfo: true,
+            memoryEnabled: true,
+            cacheEnabled: true
+        };
+        this.saveAgentSystemSettings();
+    }
+    
+    /**
+     * Event emitter functionality
+     */
+    on(eventType, handler) {
+        if (!this.eventHandlers.has(eventType)) {
+            this.eventHandlers.set(eventType, []);
+        }
+        this.eventHandlers.get(eventType).push(handler);
+    }
+    
+    /**
+     * Remove event handler
+     */
+    off(eventType, handler) {
+        if (this.eventHandlers.has(eventType)) {
+            const handlers = this.eventHandlers.get(eventType);
+            const index = handlers.indexOf(handler);
+            if (index > -1) {
+                handlers.splice(index, 1);
+            }
+        }
+    }
+    
+    /**
+     * Emit event
+     */
+    emit(eventType, data) {
+        // Call local handlers
+        if (this.eventHandlers.has(eventType)) {
+            this.eventHandlers.get(eventType).forEach(handler => {
+                try {
+                    handler(data);
+                } catch (error) {
+                    console.error(`Error in event handler for ${eventType}:`, error);
+                }
+            });
+        }
+        
+        // Emit to window for global event handling
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent(`chatmanager-${eventType}`, {
+                detail: data
+            }));
+        }
+        
+        console.log(`🔔 ChatManager event: ${eventType}`, data);
     }
 
     handleMCPMessage(data) {
@@ -1690,6 +2130,9 @@ class ChatManager {
                             <i class="fas fa-circle"></i>
                             <span>Connecting...</span>
                         </div>
+                        <button id="agentSystemBtn" class="btn btn-sm chat-btn" title="Multi-Agent System" data-enabled="false">
+                            <i class="fas fa-robot"></i>
+                        </button>
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -1816,6 +2259,10 @@ class ChatManager {
                         <button id="exportChatBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-download"></i>
                             Export
+                        </button>
+                        <button id="agentSettingsBtn" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-robot"></i>
+                            Agent Settings
                         </button>
                         <button id="configBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-cog"></i>
@@ -1996,6 +2443,16 @@ class ChatManager {
 
         document.getElementById('suggestionsBtn')?.addEventListener('click', () => {
             this.showSuggestions();
+        });
+
+        // Multi-Agent System event listeners
+        document.getElementById('agentSystemBtn')?.addEventListener('click', () => {
+            this.toggleAgentSystem();
+            this.updateAgentSystemButton();
+        });
+
+        document.getElementById('agentSettingsBtn')?.addEventListener('click', () => {
+            this.showAgentSystemSettings();
         });
 
         // New button event listeners
@@ -4309,7 +4766,36 @@ ${this.getPluginSystemInfo()}`;
     async executeToolByName(toolName, parameters) {
         console.log(`Executing tool: ${toolName} with parameters:`, parameters);
         
+        // 记录工具调用到内存系统
+        if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+            this.memorySystem.recordToolCall(toolName, parameters);
+        }
+        
         try {
+            // 如果启用了多智能体系统，尝试通过智能体执行
+            if (this.agentSystemEnabled && this.multiAgentSystem) {
+                try {
+                    console.log(`🤖 Attempting agent-based execution for: ${toolName}`);
+                    const agentResult = await this.multiAgentSystem.executeTool(toolName, parameters);
+                    
+                    if (agentResult.success) {
+                        console.log(`🤖 Agent execution successful for ${toolName}`);
+                        
+                        // 记录成功执行到内存
+                        if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
+                            this.memorySystem.recordSuccessfulExecution(toolName, parameters, agentResult);
+                        }
+                        
+                        return agentResult.result;
+                    } else {
+                        console.warn(`🤖 Agent execution failed for ${toolName}, falling back to standard execution`);
+                    }
+                } catch (agentError) {
+                    console.warn(`🤖 Agent execution error for ${toolName}:`, agentError.message);
+                    // Fall through to standard execution
+                }
+            }
+            
             // First, try to execute on MCP servers
             const allTools = this.mcpServerManager.getAllAvailableTools();
             const mcpTool = allTools.find(t => t.name === toolName);
@@ -9788,6 +10274,14 @@ ${this.getPluginSystemInfo()}`;
         
         const toolList = toolsWithSource.map(tool => {
             let toolDisplay = `• <strong>${tool.tool_name}</strong>`;
+            
+            // 显示智能体信息（如果启用）
+            if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
+                const agentInfo = this.multiAgentSystem.getAgentForTool(tool.tool_name);
+                if (agentInfo) {
+                    toolDisplay += ` <span class="agent-info" style="color: #4CAF50; font-size: 0.9em;"><i class="fas fa-robot"></i>[${agentInfo.name}]</span>`;
+                }
+            }
             
             // 显示来源信息（如果启用）
             if (this.showToolCallSource && tool.source) {

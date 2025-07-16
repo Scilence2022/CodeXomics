@@ -369,3 +369,277 @@
 @keyframes fadeOut {
     to { opacity: 0; transform: translateX(100%); }
 } 
+
+/* Multi-Agent System Styles */
+
+/* Agent System Button */
+#agentSystemBtn {
+    transition: all 0.3s ease;
+}
+
+#agentSystemBtn.enabled {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4CAF50;
+}
+
+#agentSystemBtn.enabled:hover {
+    background: rgba(76, 175, 80, 0.3);
+    transform: scale(1.05);
+}
+
+/* Agent Settings Modal */
+.agent-settings-modal-content {
+    max-width: 600px;
+    min-width: 500px;
+    max-height: 80vh;
+}
+
+.agent-settings-modal-content .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Status Display */
+.status-display {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.status-value {
+    font-family: monospace;
+    color: #2196F3;
+    font-weight: 600;
+}
+
+/* Performance Metrics */
+.performance-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.metric-item {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    display: block;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 8px;
+    border-left: 4px solid #2196F3;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+.setting-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #2196F3;
+}
+
+.help-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Agent System Button Animation */
+@keyframes agentPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+#agentSystemBtn.enabled {
+    animation: agentPulse 2s infinite;
+}
+
+/* Agent Info Display */
+.agent-info {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    font-size: 12px;
+    color: #2e7d32;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agent-info i {
+    color: #4CAF50;
+}
+
+/* Memory System Indicators */
+.memory-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.memory-indicator.active {
+    background: #4CAF50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.5);
+}
+
+.memory-indicator.inactive {
+    background: #ccc;
+}
+
+/* Agent Execution Log */
+.agent-execution-log {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+
+.agent-execution-log .log-entry {
+    margin-bottom: 4px;
+    padding: 2px 0;
+}
+
+.agent-execution-log .log-entry.success {
+    color: #4CAF50;
+}
+
+.agent-execution-log .log-entry.error {
+    color: #f44336;
+}
+
+.agent-execution-log .log-entry.info {
+    color: #2196F3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .agent-settings-modal-content {
+        min-width: 90vw;
+        max-width: 95vw;
+    }
+    
+    .performance-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-display {
+        padding: 12px;
+    }
+    
+    .form-section {
+        padding: 12px;
+    }
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    .status-display {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .status-item {
+        border-bottom-color: #444;
+    }
+    
+    .status-label {
+        color: #e0e0e0;
+    }
+    
+    .form-section {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .form-section h4 {
+        color: #e0e0e0;
+    }
+    
+    .form-group label {
+        color: #e0e0e0;
+    }
+    
+    .help-text {
+        color: #aaa;
+    }
+    
+    .metric-item {
+        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    }
+} 
