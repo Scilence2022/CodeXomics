@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Open New Tab Function Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .warning {
+            color: #ffc107;
+        }
+        .info {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Test Open New Tab Function Fix</h1>
+        <p>This test will help debug why the <code>open_new_tab</code> function call is not executing properly.</p>
+
+        <div class="test-section">
+            <h3>1. Environment Check</h3>
+            <button class="test-button" onclick="checkEnvironment()">Check Environment</button>
+            <div id="environmentLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. DOM Elements Check</h3>
+            <button class="test-button" onclick="checkDOMElements()">Check DOM Elements</button>
+            <div id="domLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. TabManager Check</h3>
+            <button class="test-button" onclick="checkTabManager()">Check TabManager</button>
+            <div id="tabManagerLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. ChatManager Check</h3>
+            <button class="test-button" onclick="checkChatManager()">Check ChatManager</button>
+            <div id="chatManagerLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Direct Function Test</h3>
+            <button class="test-button" onclick="testDirectFunction()">Test Direct Function Call</button>
+            <div id="directTestLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Tool Execution Test</h3>
+            <button class="test-button" onclick="testToolExecution()">Test Tool Execution</button>
+            <div id="toolTestLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>7. Manual Tab Creation Test</h3>
+            <button class="test-button" onclick="testManualTabCreation()">Test Manual Tab Creation</button>
+            <div id="manualTabLog" class="log-output"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info', elementId) {
+            const logElement = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function checkEnvironment() {
+            const logElement = document.getElementById('environmentLog');
+            logElement.innerHTML = '';
+            
+            log('Checking environment...', 'info', 'environmentLog');
+            
+            // Check if we're in a browser environment
+            if (typeof window !== 'undefined') {
+                log('✅ Browser environment detected', 'success', 'environmentLog');
+            } else {
+                log('❌ Not in browser environment', 'error', 'environmentLog');
+                return;
+            }
+
+            // Check if document is available
+            if (typeof document !== 'undefined') {
+                log('✅ Document object available', 'success', 'environmentLog');
+            } else {
+                log('❌ Document object not available', 'error', 'environmentLog');
+                return;
+            }
+
+            // Check if we're in the main window
+            if (window.location.href.includes('index.html') || window.location.href.includes('renderer')) {
+                log('✅ In main renderer window', 'success', 'environmentLog');
+            } else {
+                log('⚠️ Not in main renderer window', 'warning', 'environmentLog');
+            }
+
+            // Check for global objects
+            if (window.genomeBrowser) {
+                log('✅ genomeBrowser global object found', 'success', 'environmentLog');
+            } else {
+                log('❌ genomeBrowser global object not found', 'error', 'environmentLog');
+            }
+
+            if (window.chatManager) {
+                log('✅ chatManager global object found', 'success', 'environmentLog');
+            } else {
+                log('❌ chatManager global object not found', 'error', 'environmentLog');
+            }
+
+            if (window.tabManager) {
+                log('✅ tabManager global object found', 'success', 'environmentLog');
+            } else {
+                log('❌ tabManager global object not found', 'error', 'environmentLog');
+            }
+        }
+
+        function checkDOMElements() {
+            const logElement = document.getElementById('domLog');
+            logElement.innerHTML = '';
+            
+            log('Checking DOM elements...', 'info', 'domLog');
+            
+            const elements = [
+                'tabContainer',
+                'newTabButton', 
+                'tabSettingsButton',
+                'tabBar'
+            ];
+
+            elements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    log(`✅ ${elementId} found`, 'success', 'domLog');
+                    log(`   - Tag: ${element.tagName}`, 'info', 'domLog');
+                    log(`   - Classes: ${element.className}`, 'info', 'domLog');
+                    log(`   - Visible: ${element.offsetParent !== null}`, 'info', 'domLog');
+                } else {
+                    log(`❌ ${elementId} not found`, 'error', 'domLog');
+                }
+            });
+        }
+
+        function checkTabManager() {
+            const logElement = document.getElementById('tabManagerLog');
+            logElement.innerHTML = '';
+            
+            log('Checking TabManager...', 'info', 'tabManagerLog');
+            
+            if (!window.genomeBrowser) {
+                log('❌ genomeBrowser not available', 'error', 'tabManagerLog');
+                return;
+            }
+
+            if (!window.genomeBrowser.tabManager) {
+                log('❌ TabManager not available in genomeBrowser', 'error', 'tabManagerLog');
+                return;
+            }
+
+            const tabManager = window.genomeBrowser.tabManager;
+            log('✅ TabManager found', 'success', 'tabManagerLog');
+            
+            log(`   - Tabs count: ${tabManager.tabs.size}`, 'info', 'tabManagerLog');
+            log(`   - Active tab: ${tabManager.activeTabId}`, 'info', 'tabManagerLog');
+            log(`   - Next tab ID: ${tabManager.nextTabId}`, 'info', 'tabManagerLog');
+            
+            if (tabManager.tabContainer) {
+                log('✅ Tab container element found', 'success', 'tabManagerLog');
+            } else {
+                log('❌ Tab container element not found', 'error', 'tabManagerLog');
+            }
+            
+            if (tabManager.newTabButton) {
+                log('✅ New tab button found', 'success', 'tabManagerLog');
+            } else {
+                log('❌ New tab button not found', 'error', 'tabManagerLog');
+            }
+
+            // Test tab creation method
+            if (typeof tabManager.createNewTab === 'function') {
+                log('✅ createNewTab method available', 'success', 'tabManagerLog');
+            } else {
+                log('❌ createNewTab method not available', 'error', 'tabManagerLog');
+            }
+        }
+
+        function checkChatManager() {
+            const logElement = document.getElementById('chatManagerLog');
+            logElement.innerHTML = '';
+            
+            log('Checking ChatManager...', 'info', 'chatManagerLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager global object not found', 'error', 'chatManagerLog');
+                return;
+            }
+
+            const chatManager = window.chatManager;
+            log('✅ ChatManager found', 'success', 'chatManagerLog');
+            
+            if (typeof chatManager.openNewTab === 'function') {
+                log('✅ openNewTab method available', 'success', 'chatManagerLog');
+            } else {
+                log('❌ openNewTab method not available', 'error', 'chatManagerLog');
+            }
+
+            if (typeof chatManager.executeToolByName === 'function') {
+                log('✅ executeToolByName method available', 'success', 'chatManagerLog');
+            } else {
+                log('❌ executeToolByName method not available', 'error', 'chatManagerLog');
+            }
+
+            if (typeof chatManager.executeToolRequest === 'function') {
+                log('✅ executeToolRequest method available', 'success', 'chatManagerLog');
+            } else {
+                log('❌ executeToolRequest method not available', 'error', 'chatManagerLog');
+            }
+        }
+
+        async function testDirectFunction() {
+            const logElement = document.getElementById('directTestLog');
+            logElement.innerHTML = '';
+            
+            log('Testing direct function call...', 'info', 'directTestLog');
+            
+            if (!window.chatManager) {
+                log('❌ ChatManager not available', 'error', 'directTestLog');
+                return;
+            }
+
+            try {
+                log('Calling chatManager.openNewTab({})...', 'info', 'directTestLog');
+                const result = await window.chatManager.openNewTab({});
+                log(`✅ Function executed successfully: ${JSON.stringify(result)}`, 'success', 'directTestLog');
+            } catch (error) {
+                log(`❌ Function execution failed: ${error.message}`, 'error', 'directTestLog');
+                log(`   Stack: ${error.stack}`, 'error', 'directTestLog');
+            }
+        }
+
+        async function testToolExecution() {
+            const logElement = document.getElementById('toolTestLog');
+            logElement.innerHTML = '';
+            
+            log('Testing tool execution...', 'info', 'toolTestLog');
+            
+            if (!window.chatManager) {
+                log('❌ ChatManager not available', 'error', 'toolTestLog');
+                return;
+            }
+
+            try {
+                log('Calling chatManager.executeToolByName("open_new_tab", {})...', 'info', 'toolTestLog');
+                const result = await window.chatManager.executeToolByName('open_new_tab', {});
+                log(`✅ Tool execution successful: ${JSON.stringify(result)}`, 'success', 'toolTestLog');
+            } catch (error) {
+                log(`❌ Tool execution failed: ${error.message}`, 'error', 'toolTestLog');
+                log(`   Stack: ${error.stack}`, 'error', 'toolTestLog');
+            }
+        }
+
+        function testManualTabCreation() {
+            const logElement = document.getElementById('manualTabLog');
+            logElement.innerHTML = '';
+            
+            log('Testing manual tab creation...', 'info', 'manualTabLog');
+            
+            // Test clicking the new tab button directly
+            const newTabButton = document.getElementById('newTabButton');
+            if (!newTabButton) {
+                log('❌ New tab button not found', 'error', 'manualTabLog');
+                return;
+            }
+
+            log('Clicking new tab button...', 'info', 'manualTabLog');
+            newTabButton.click();
+            log('✅ New tab button clicked', 'success', 'manualTabLog');
+
+            // Check if tab was created
+            setTimeout(() => {
+                if (window.genomeBrowser && window.genomeBrowser.tabManager) {
+                    const tabCount = window.genomeBrowser.tabManager.tabs.size;
+                    log(`Tab count after click: ${tabCount}`, 'info', 'manualTabLog');
+                    
+                    if (tabCount > 0) {
+                        log('✅ Tab creation successful', 'success', 'manualTabLog');
+                    } else {
+                        log('❌ Tab creation failed', 'error', 'manualTabLog');
+                    }
+                } else {
+                    log('❌ TabManager not available after click', 'error', 'manualTabLog');
+                }
+            }, 100);
+        }
+
+        // Auto-run environment check on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkEnvironment();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

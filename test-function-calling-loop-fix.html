@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Calling Loop Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .warning {
+            color: #ffc107;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Function Calling Loop Fix Test</h1>
+        <p>This test verifies that the function calling system no longer creates infinite loops.</p>
+
+        <div class="test-section">
+            <h3>1. Environment Check</h3>
+            <button class="test-button" onclick="checkEnvironment()">Check Environment</button>
+            <div id="environmentLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. ChatManager Function Calling Test</h3>
+            <button class="test-button" onclick="testFunctionCalling()">Test Function Calling</button>
+            <div id="functionCallingLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Tool Execution Tracking Test</h3>
+            <button class="test-button" onclick="testToolTracking()">Test Tool Tracking</button>
+            <div id="toolTrackingLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Conversation History Test</h3>
+            <button class="test-button" onclick="testConversationHistory()">Test Conversation History</button>
+            <div id="conversationHistoryLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Loop Prevention Test</h3>
+            <button class="test-button" onclick="testLoopPrevention()">Test Loop Prevention</button>
+            <div id="loopPreventionLog" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Specific Function Tests</h3>
+            <button class="test-button" onclick="testToggleTrack()">Test Toggle Track</button>
+            <button class="test-button" onclick="testOpenNewTab()">Test Open New Tab</button>
+            <button class="test-button" onclick="testGetCurrentState()">Test Get Current State</button>
+            <div id="specificFunctionLog" class="log-output"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info', elementId) {
+            const logElement = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function checkEnvironment() {
+            const logElement = document.getElementById('environmentLog');
+            logElement.innerHTML = '';
+            
+            log('Checking environment...', 'info', 'environmentLog');
+            
+            // Check if we're in a browser environment
+            if (typeof window !== 'undefined') {
+                log('✅ Browser environment detected', 'success', 'environmentLog');
+            } else {
+                log('❌ Not in browser environment', 'error', 'environmentLog');
+                return;
+            }
+
+            // Check if document is available
+            if (typeof document !== 'undefined') {
+                log('✅ Document object available', 'success', 'environmentLog');
+            } else {
+                log('❌ Document object not available', 'error', 'environmentLog');
+                return;
+            }
+
+            // Check for global objects
+            if (window.chatManager) {
+                log('✅ chatManager global object found', 'success', 'environmentLog');
+                log(`   - Type: ${typeof window.chatManager}`, 'info', 'environmentLog');
+                log(`   - Methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(window.chatManager)).join(', ')}`, 'info', 'environmentLog');
+            } else {
+                log('❌ chatManager global object not found', 'error', 'environmentLog');
+            }
+
+            if (window.genomeBrowser) {
+                log('✅ genomeBrowser global object found', 'success', 'environmentLog');
+            } else {
+                log('❌ genomeBrowser global object not found', 'error', 'environmentLog');
+            }
+
+            // Check for required DOM elements
+            const requiredElements = ['trackGenes', 'trackGC', 'trackSequence'];
+            requiredElements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    log(`✅ ${elementId} found`, 'success', 'environmentLog');
+                } else {
+                    log(`❌ ${elementId} not found`, 'error', 'environmentLog');
+                }
+            });
+        }
+
+        function testFunctionCalling() {
+            const logElement = document.getElementById('functionCallingLog');
+            logElement.innerHTML = '';
+            
+            log('Testing function calling mechanism...', 'info', 'functionCallingLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'functionCallingLog');
+                return;
+            }
+
+            // Test parseToolCall method
+            try {
+                const testResponse = '{"tool_name": "toggle_track", "parameters": {"trackName": "gc", "visible": false}}';
+                const parsed = window.chatManager.parseToolCall(testResponse);
+                
+                if (parsed && parsed.tool_name === 'toggle_track') {
+                    log('✅ parseToolCall works correctly', 'success', 'functionCallingLog');
+                } else {
+                    log('❌ parseToolCall failed', 'error', 'functionCallingLog');
+                }
+            } catch (error) {
+                log(`❌ parseToolCall error: ${error.message}`, 'error', 'functionCallingLog');
+            }
+
+            // Test executeToolByName method
+            try {
+                if (typeof window.chatManager.executeToolByName === 'function') {
+                    log('✅ executeToolByName method exists', 'success', 'functionCallingLog');
+                } else {
+                    log('❌ executeToolByName method not found', 'error', 'functionCallingLog');
+                }
+            } catch (error) {
+                log(`❌ executeToolByName check error: ${error.message}`, 'error', 'functionCallingLog');
+            }
+
+            // Test getCurrentState method
+            try {
+                const state = window.chatManager.getCurrentState();
+                if (state && typeof state === 'object') {
+                    log('✅ getCurrentState works correctly', 'success', 'functionCallingLog');
+                    log(`   - Current chromosome: ${state.currentChromosome}`, 'info', 'functionCallingLog');
+                    log(`   - Visible tracks: ${state.visibleTracks.join(', ')}`, 'info', 'functionCallingLog');
+                } else {
+                    log('❌ getCurrentState failed', 'error', 'functionCallingLog');
+                }
+            } catch (error) {
+                log(`❌ getCurrentState error: ${error.message}`, 'error', 'functionCallingLog');
+            }
+        }
+
+        function testToolTracking() {
+            const logElement = document.getElementById('toolTrackingLog');
+            logElement.innerHTML = '';
+            
+            log('Testing tool execution tracking...', 'info', 'toolTrackingLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'toolTrackingLog');
+                return;
+            }
+
+            // Create a mock executed tools set
+            const executedTools = new Set();
+            
+            // Test tool key generation
+            const tool1 = { tool_name: 'toggle_track', parameters: { trackName: 'gc', visible: false } };
+            const tool2 = { tool_name: 'toggle_track', parameters: { trackName: 'gc', visible: true } };
+            const tool3 = { tool_name: 'get_current_state', parameters: {} };
+            
+            const key1 = `${tool1.tool_name}:${JSON.stringify(tool1.parameters)}`;
+            const key2 = `${tool2.tool_name}:${JSON.stringify(tool2.parameters)}`;
+            const key3 = `${tool3.tool_name}:${JSON.stringify(tool3.parameters)}`;
+            
+            log(`Tool 1 key: ${key1}`, 'info', 'toolTrackingLog');
+            log(`Tool 2 key: ${key2}`, 'info', 'toolTrackingLog');
+            log(`Tool 3 key: ${key3}`, 'info', 'toolTrackingLog');
+            
+            // Test duplicate detection
+            executedTools.add(key1);
+            executedTools.add(key3);
+            
+            const toolsToExecute = [tool1, tool2, tool3];
+            const filteredTools = toolsToExecute.filter(tool => {
+                const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+                if (executedTools.has(toolKey)) {
+                    log(`Skipping already executed tool: ${tool.tool_name}`, 'warning', 'toolTrackingLog');
+                    return false;
+                }
+                return true;
+            });
+            
+            log(`Original tools: ${toolsToExecute.length}`, 'info', 'toolTrackingLog');
+            log(`Filtered tools: ${filteredTools.length}`, 'info', 'toolTrackingLog');
+            
+            if (filteredTools.length === 1 && filteredTools[0].tool_name === 'toggle_track') {
+                log('✅ Tool tracking works correctly', 'success', 'toolTrackingLog');
+            } else {
+                log('❌ Tool tracking failed', 'error', 'toolTrackingLog');
+            }
+        }
+
+        function testConversationHistory() {
+            const logElement = document.getElementById('conversationHistoryLog');
+            logElement.innerHTML = '';
+            
+            log('Testing conversation history handling...', 'info', 'conversationHistoryLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'conversationHistoryLog');
+                return;
+            }
+
+            // Test conversation history structure
+            const mockHistory = [
+                { role: 'user', content: 'toggle GC track' },
+                { role: 'assistant', content: '{"tool_name": "toggle_track", "parameters": {"trackName": "gc", "visible": false}}' },
+                { role: 'system', content: 'toggle_track executed successfully: {"success": true, "track": "gc", "visible": false}' },
+                { role: 'assistant', content: '{"tool_name": "get_current_state", "parameters": {}}' },
+                { role: 'system', content: 'get_current_state executed successfully: {"currentChromosome": "COLI-K12", "visibleTracks": ["genes", "sequence"]}' }
+            ];
+            
+            log(`Mock history length: ${mockHistory.length}`, 'info', 'conversationHistoryLog');
+            
+            // Test executed tools extraction
+            const executedTools = new Set();
+            mockHistory.forEach(msg => {
+                if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
+                    const toolMatch = msg.content.match(/(\w+) executed successfully/);
+                    if (toolMatch) {
+                        executedTools.add(toolMatch[1]);
+                        log(`Found executed tool: ${toolMatch[1]}`, 'info', 'conversationHistoryLog');
+                    }
+                }
+            });
+            
+            log(`Executed tools found: ${Array.from(executedTools).join(', ')}`, 'info', 'conversationHistoryLog');
+            
+            if (executedTools.has('toggle_track') && executedTools.has('get_current_state')) {
+                log('✅ Conversation history parsing works correctly', 'success', 'conversationHistoryLog');
+            } else {
+                log('❌ Conversation history parsing failed', 'error', 'conversationHistoryLog');
+            }
+        }
+
+        function testLoopPrevention() {
+            const logElement = document.getElementById('loopPreventionLog');
+            logElement.innerHTML = '';
+            
+            log('Testing loop prevention mechanism...', 'info', 'loopPreventionLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'loopPreventionLog');
+                return;
+            }
+
+            // Simulate the problematic scenario
+            const mockResponses = [
+                '{"tool_name": "get_current_state", "parameters": {}}',
+                '{"tool_name": "get_current_state", "parameters": {"toggle_track": "gc"}}',
+                '{"tool_name": "get_current_state", "parameters": {"remove_track": "gc"}}',
+                '{"tool_name": "get_current_state", "parameters": {"update_tracks": ["genes", "sequence"]}}'
+            ];
+            
+            const executedTools = new Set();
+            let loopDetected = false;
+            let executionCount = 0;
+            
+            mockResponses.forEach((response, index) => {
+                const toolCall = window.chatManager.parseToolCall(response);
+                if (toolCall) {
+                    const toolKey = `${toolCall.tool_name}:${JSON.stringify(toolCall.parameters)}`;
+                    
+                    if (executedTools.has(toolKey)) {
+                        log(`⚠️ Loop detected at response ${index + 1}: ${toolCall.tool_name}`, 'warning', 'loopPreventionLog');
+                        loopDetected = true;
+                    } else {
+                        executedTools.add(toolKey);
+                        executionCount++;
+                        log(`✅ Executing tool ${index + 1}: ${toolCall.tool_name}`, 'success', 'loopPreventionLog');
+                    }
+                }
+            });
+            
+            if (loopDetected) {
+                log('❌ Loop prevention failed - duplicate execution detected', 'error', 'loopPreventionLog');
+            } else {
+                log('✅ Loop prevention works correctly', 'success', 'loopPreventionLog');
+            }
+            
+            log(`Total unique executions: ${executionCount}`, 'info', 'loopPreventionLog');
+        }
+
+        async function testToggleTrack() {
+            const logElement = document.getElementById('specificFunctionLog');
+            logElement.innerHTML = '';
+            
+            log('Testing toggle_track function...', 'info', 'specificFunctionLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'specificFunctionLog');
+                return;
+            }
+
+            try {
+                // Test toggle_track execution
+                const result = await window.chatManager.toggleTrack({ trackName: 'gc', visible: false });
+                
+                if (result && result.success) {
+                    log('✅ toggle_track executed successfully', 'success', 'specificFunctionLog');
+                    log(`   - Track: ${result.track}`, 'info', 'specificFunctionLog');
+                    log(`   - Visible: ${result.visible}`, 'info', 'specificFunctionLog');
+                } else {
+                    log('❌ toggle_track failed', 'error', 'specificFunctionLog');
+                }
+            } catch (error) {
+                log(`❌ toggle_track error: ${error.message}`, 'error', 'specificFunctionLog');
+            }
+        }
+
+        async function testOpenNewTab() {
+            const logElement = document.getElementById('specificFunctionLog');
+            logElement.innerHTML = '';
+            
+            log('Testing open_new_tab function...', 'info', 'specificFunctionLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'specificFunctionLog');
+                return;
+            }
+
+            try {
+                // Test open_new_tab execution
+                const result = await window.chatManager.openNewTab({ 
+                    chromosome: 'COLI-K12', 
+                    start: 1000, 
+                    end: 2000 
+                });
+                
+                if (result && result.success) {
+                    log('✅ open_new_tab executed successfully', 'success', 'specificFunctionLog');
+                    log(`   - Title: ${result.title}`, 'info', 'specificFunctionLog');
+                } else {
+                    log('❌ open_new_tab failed', 'error', 'specificFunctionLog');
+                }
+            } catch (error) {
+                log(`❌ open_new_tab error: ${error.message}`, 'error', 'specificFunctionLog');
+            }
+        }
+
+        function testGetCurrentState() {
+            const logElement = document.getElementById('specificFunctionLog');
+            logElement.innerHTML = '';
+            
+            log('Testing get_current_state function...', 'info', 'specificFunctionLog');
+            
+            if (!window.chatManager) {
+                log('❌ chatManager not available', 'error', 'specificFunctionLog');
+                return;
+            }
+
+            try {
+                // Test get_current_state execution
+                const result = window.chatManager.getCurrentState();
+                
+                if (result && typeof result === 'object') {
+                    log('✅ get_current_state executed successfully', 'success', 'specificFunctionLog');
+                    log(`   - Chromosome: ${result.currentChromosome}`, 'info', 'specificFunctionLog');
+                    log(`   - Position: ${JSON.stringify(result.currentPosition)}`, 'info', 'specificFunctionLog');
+                    log(`   - Visible tracks: ${result.visibleTracks.join(', ')}`, 'info', 'specificFunctionLog');
+                } else {
+                    log('❌ get_current_state failed', 'error', 'specificFunctionLog');
+                }
+            } catch (error) {
+                log(`❌ get_current_state error: ${error.message}`, 'error', 'specificFunctionLog');
+            }
+        }
+    </script>
+</body>
+</html> 

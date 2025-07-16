@@ -3820,6 +3820,23 @@ class ActionManager {
                     type: 'object',
                     properties: {}
                 }
+            },
+
+            // Open new tab function - ADDED FOR AI INTEGRATION
+            openNewTab: {
+                name: 'openNewTab',
+                description: 'Open a new tab window for parallel genome analysis',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        chromosome: { type: 'string', description: 'Chromosome name (optional)' },
+                        start: { type: 'number', description: 'Start position (optional)' },
+                        end: { type: 'number', description: 'End position (optional)' },
+                        position: { type: 'number', description: 'Center position (creates 2000bp range if start/end not provided)' },
+                        geneName: { type: 'string', description: 'Gene name to open tab for (searches and focuses on gene)' },
+                        title: { type: 'string', description: 'Custom title for the new tab (optional)' }
+                    }
+                }
             }
         };
     }
@@ -3864,6 +3881,9 @@ class ActionManager {
 
                 case 'getClipboardContent':
                     return this.functionGetClipboardContent(parameters);
+
+                case 'openNewTab':
+                    return await this.functionOpenNewTab(parameters);
 
                 default:
                     throw new Error(`Unknown action function: ${functionName}`);
@@ -4270,6 +4290,135 @@ class ActionManager {
                 type: this.clipboard.type
             }
         };
+    }
+
+    /**
+     * Open new tab function for AI integration
+     */
+    async functionOpenNewTab(params) {
+        const { chromosome, start, end, position, geneName, title } = params;
+        
+        console.log('🔧 [ActionManager] Opening new tab with params:', params);
+        
+        try {
+            // Check if genome browser and tab manager are available
+            if (!this.genomeBrowser) {
+                throw new Error('Genome browser not available');
+            }
+
+            if (!this.genomeBrowser.tabManager) {
+                throw new Error('Tab manager not available');
+            }
+
+            let tabId;
+            let finalTitle = title;
+            let usedDefaultRange = false;
+
+            // Handle different ways to create a new tab
+            if (geneName) {
+                // Open tab for specific gene
+                console.log(`🔧 [ActionManager] Opening tab for gene: ${geneName}`);
+                
+                // Search for the gene
+                const searchResults = await this.searchGeneByName(geneName);
+                if (searchResults && searchResults.length > 0) {
+                    const gene = searchResults[0];
+                    tabId = this.genomeBrowser.tabManager.createTabForGene(gene, 500);
+                    finalTitle = finalTitle || `Gene: ${gene.name || gene.id || geneName}`;
+                } else {
+                    throw new Error(`Gene '${geneName}' not found`);
+                }
+            } else if (chromosome) {
+                // Open tab for specific position
+                let finalStart = start;
+                let finalEnd = end;
+                
+                // Handle position parameter with default 2000bp range
+                if (position !== undefined && (start === undefined || end === undefined)) {
+                    const defaultRange = 2000;
+                    finalStart = Math.max(1, position - Math.floor(defaultRange / 2));
+                    finalEnd = position + Math.floor(defaultRange / 2);
+                    usedDefaultRange = true;
+                    console.log(`🔧 [ActionManager] Using position ${position} with default ${defaultRange}bp range: ${finalStart}-${finalEnd}`);
+                }
+                
+                if (finalStart && finalEnd) {
+                    // Check if chromosome exists
+                    if (!this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[chromosome]) {
+                        throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+                    }
+                    
+                    tabId = this.genomeBrowser.tabManager.createTabForPosition(chromosome, finalStart, finalEnd, finalTitle);
+                    finalTitle = finalTitle || `${chromosome}:${finalStart.toLocaleString()}-${finalEnd.toLocaleString()}`;
+                } else {
+                    throw new Error('Missing required parameters: start and end positions, or position parameter');
+                }
+            } else {
+                // Create new tab with current position
+                console.log('🔧 [ActionManager] Creating new tab with current position');
+                const newTabButton = document.getElementById('newTabButton');
+                if (newTabButton) {
+                    // Simulate the + button click
+                    newTabButton.click();
+                    // Get the newly created tab ID
+                    const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
+                    tabId = tabIds[tabIds.length - 1];
+                    finalTitle = finalTitle || 'New Tab';
+                } else {
+                    // Fallback to direct manager access
+                    tabId = this.genomeBrowser.tabManager.createNewTab(finalTitle);
+                    finalTitle = finalTitle || 'New Tab';
+                }
+            }
+            
+            console.log(`✅ [ActionManager] Successfully created new tab: ${tabId} - ${finalTitle}`);
+            
+            return {
+                success: true,
+                tabId: tabId,
+                title: finalTitle,
+                message: `Opened new tab: ${finalTitle}`,
+                usedDefaultRange: usedDefaultRange
+            };
+            
+        } catch (error) {
+            console.error('❌ [ActionManager] Error opening new tab:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search for gene by name (helper function for openNewTab)
+     */
+    async searchGeneByName(geneName) {
+        try {
+            // Use the genome browser's search functionality if available
+            if (this.genomeBrowser.navigationManager) {
+                this.genomeBrowser.navigationManager.performSearch(geneName);
+                return this.genomeBrowser.navigationManager.searchResults || [];
+            }
+            
+            // Fallback: search in current annotations
+            if (this.genomeBrowser.currentAnnotations) {
+                const results = [];
+                for (const [chromosome, features] of Object.entries(this.genomeBrowser.currentAnnotations)) {
+                    const matchingFeatures = features.filter(feature => 
+                        feature.name && feature.name.toLowerCase().includes(geneName.toLowerCase()) ||
+                        feature.qualifiers && feature.qualifiers.gene && 
+                        feature.qualifiers.gene.toLowerCase().includes(geneName.toLowerCase()) ||
+                        feature.qualifiers && feature.qualifiers.locus_tag && 
+                        feature.qualifiers.locus_tag.toLowerCase().includes(geneName.toLowerCase())
+                    );
+                    results.push(...matchingFeatures);
+                }
+                return results;
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('Error searching for gene:', error);
+            return [];
+        }
     }
     
     /**

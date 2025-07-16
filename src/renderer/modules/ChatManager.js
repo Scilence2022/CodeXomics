@@ -2178,6 +2178,7 @@ class ChatManager {
             let currentRound = 0;
             let finalResponse = null;
             let taskCompleted = false;
+            let executedTools = new Set(); // Track executed tools to prevent re-execution
             
             // Iterative function calling loop
             while (currentRound < maxRounds && !taskCompleted) {
@@ -2227,6 +2228,16 @@ class ChatManager {
                 // Determine which tools to execute
                 let toolsToExecute = multipleToolCalls.length > 0 ? multipleToolCalls : (toolCall ? [toolCall] : []);
                 
+                // Filter out already executed tools to prevent infinite loops
+                toolsToExecute = toolsToExecute.filter(tool => {
+                    const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+                    if (executedTools.has(toolKey)) {
+                        console.log(`Skipping already executed tool: ${tool.tool_name}`);
+                        return false;
+                    }
+                    return true;
+                });
+                
                 // CRITICAL FIX: If current response has no tools, check previous assistant messages 
                 // in conversation history for unexecuted tool calls
                 // This covers both empty responses and task completion responses
@@ -2243,12 +2254,9 @@ class ChatManager {
                         }
                     });
                     
-                    // Track executed tools to avoid duplicate execution
-                    const executedTools = new Set();
-                    
                     // Look for tool results in history to mark as executed
                     conversationHistory.forEach(msg => {
-                        if (msg.role === 'user' && msg.content && msg.content.includes('executed successfully')) {
+                        if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
                             // Extract tool name from result message
                             const toolMatch = msg.content.match(/(\w+) executed successfully/);
                             if (toolMatch) {
@@ -2266,12 +2274,15 @@ class ChatManager {
                             console.log(`Checking assistant message ${i} for tool calls:`, msg.content);
                             const previousToolCall = this.parseToolCall(msg.content);
                             console.log(`Parse result for message ${i}:`, previousToolCall);
-                            if (previousToolCall && !executedTools.has(previousToolCall.tool_name)) {
-                                console.log('✅ Found unexecuted tool call from previous round:', previousToolCall);
-                                toolsToExecute = [previousToolCall];
-                                break;
-                            } else if (previousToolCall && executedTools.has(previousToolCall.tool_name)) {
-                                console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed, skipping`);
+                            if (previousToolCall) {
+                                const toolKey = `${previousToolCall.tool_name}:${JSON.stringify(previousToolCall.parameters)}`;
+                                if (!executedTools.has(toolKey)) {
+                                    console.log('✅ Found unexecuted tool call from previous round:', previousToolCall);
+                                    toolsToExecute = [previousToolCall];
+                                    break;
+                                } else {
+                                    console.log(`⚠️ Tool ${previousToolCall.tool_name} already executed, skipping`);
+                                }
                             } else {
                                 console.log(`❌ No tool call found in message ${i}`);
                             }
@@ -2413,6 +2424,12 @@ class ChatManager {
                         
                         console.log('Tool execution completed. Results:', toolResults);
                         
+                        // Track executed tools to prevent re-execution
+                        toolsToExecute.forEach(tool => {
+                            const toolKey = `${tool.tool_name}:${JSON.stringify(tool.parameters)}`;
+                            executedTools.add(toolKey);
+                        });
+                        
                         // 显示工具执行结果
                         this.showToolCalls && this.addToolResultMessage(toolResults);
                         
@@ -2430,26 +2447,26 @@ class ChatManager {
                         const failedResults = toolResults.filter(r => !r.success);
                         
                         if (successfulResults.length > 0) {
-                            // Add successful tool results to conversation
+                            // Add successful tool results to conversation with SYSTEM role to prevent re-execution
                             const successMessages = successfulResults.map(result => 
                                 `${result.tool} executed successfully: ${JSON.stringify(result.result)}`
                             );
                             conversationHistory.push({
-                                role: 'user',
-                                content: `Tool results: ${successMessages.join('; ')}`
+                                role: 'system',
+                                content: `Tool execution completed: ${successMessages.join('; ')}`
                             });
                             
                             console.log(`${successfulResults.length} tool(s) executed successfully. Continuing to round ${currentRound + 1} to check for follow-up actions.`);
                         }
                         
                         if (failedResults.length > 0) {
-                            // Add failed tool results to conversation
+                            // Add failed tool results to conversation with SYSTEM role
                             const errorMessages = failedResults.map(result => 
                                 `${result.tool} failed: ${result.error || 'Unknown error'}`
                             );
                             conversationHistory.push({
-                                role: 'user',
-                                content: `Tool errors: ${errorMessages.join('; ')}`
+                                role: 'system',
+                                content: `Tool execution errors: ${errorMessages.join('; ')}`
                             });
                             console.log(`${failedResults.length} tool(s) failed:`, failedResults);
                         }
@@ -2461,7 +2478,7 @@ class ChatManager {
                         
                         // Add error to conversation and continue
                         conversationHistory.push({
-                            role: 'user',
+                            role: 'system',
                             content: `Tool execution error: ${error.message}`
                         });
                     }
