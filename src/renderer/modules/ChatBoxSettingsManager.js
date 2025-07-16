@@ -44,7 +44,21 @@ class ChatBoxSettingsManager {
             // Window settings
             rememberPosition: true,
             rememberSize: true,
-            startMinimized: false
+            startMinimized: false,
+            
+            // Multi-Agent System settings
+            agentSystemEnabled: false,
+            agentAutoOptimize: true,
+            agentShowInfo: true,
+            agentMemoryEnabled: true,
+            agentCacheEnabled: true,
+            
+            // Memory System settings
+            memorySystemEnabled: true,
+            memoryCacheEnabled: true,
+            memoryOptimizationEnabled: true,
+            memoryCleanupInterval: 300000, // 5 minutes
+            memoryMaxEntries: 10000
         };
         
         this.loadSettings();
@@ -266,6 +280,12 @@ class ChatBoxSettingsManager {
                         <button class="tab-button" data-tab="behavior">
                             <i class="fas fa-cogs"></i> Behavior
                         </button>
+                        <button class="tab-button" data-tab="agents">
+                            <i class="fas fa-robot"></i> Multi-Agent
+                        </button>
+                        <button class="tab-button" data-tab="memory">
+                            <i class="fas fa-brain"></i> Memory
+                        </button>
                         <button class="tab-button" data-tab="advanced">
                             <i class="fas fa-tools"></i> Advanced
                         </button>
@@ -399,6 +419,94 @@ class ChatBoxSettingsManager {
                                     <label for="responseTimeout">Response timeout (seconds):</label>
                                     <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
                                     <small class="help-text">How long to wait for LLM responses</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Multi-Agent Tab -->
+                        <div class="provider-config" data-panel="agents">
+                            <div class="form-section">
+                                <h4>🤖 Multi-Agent System</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentSystemEnabled" class="setting-checkbox">
+                                        Enable Multi-Agent System
+                                    </label>
+                                    <small class="help-text">Enable intelligent agent-based tool execution</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentAutoOptimize" class="setting-checkbox">
+                                        Auto-optimize execution paths
+                                    </label>
+                                    <small class="help-text">Automatically optimize tool execution based on memory and performance data</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentShowInfo" class="setting-checkbox">
+                                        Show agent information
+                                    </label>
+                                    <small class="help-text">Display which agent is handling each tool execution</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentMemoryEnabled" class="setting-checkbox">
+                                        Enable agent memory integration
+                                    </label>
+                                    <small class="help-text">Enable memory system integration for agents</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentCacheEnabled" class="setting-checkbox">
+                                        Enable agent execution caching
+                                    </label>
+                                    <small class="help-text">Cache successful agent executions for faster future execution</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Memory Tab -->
+                        <div class="provider-config" data-panel="memory">
+                            <div class="form-section">
+                                <h4>🧠 Memory System</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="memorySystemEnabled" class="setting-checkbox">
+                                        Enable Memory System
+                                    </label>
+                                    <small class="help-text">Enable intelligent memory caching and context management</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="memoryCacheEnabled" class="setting-checkbox">
+                                        Enable memory caching
+                                    </label>
+                                    <small class="help-text">Cache memory operations for improved performance</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="memoryOptimizationEnabled" class="setting-checkbox">
+                                        Enable memory optimization
+                                    </label>
+                                    <small class="help-text">Automatically optimize memory usage and cleanup</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="memoryCleanupInterval">Memory cleanup interval (minutes):</label>
+                                    <input type="number" id="memoryCleanupInterval" class="input-full" min="1" max="60" step="1">
+                                    <small class="help-text">How often to perform memory cleanup operations</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="memoryMaxEntries">Maximum memory entries:</label>
+                                    <input type="number" id="memoryMaxEntries" class="input-full" min="100" max="100000" step="100">
+                                    <small class="help-text">Maximum number of entries to keep in memory</small>
                                 </div>
                             </div>
                         </div>
@@ -868,7 +976,13 @@ class ChatBoxSettingsManager {
                 if (element.type === 'checkbox') {
                     element.checked = value;
                 } else if (element.type === 'number') {
-                    element.value = key === 'responseTimeout' ? value / 1000 : value;
+                    if (key === 'responseTimeout') {
+                        element.value = value / 1000;
+                    } else if (key === 'memoryCleanupInterval') {
+                        element.value = value / 60000; // Convert from ms to minutes
+                    } else {
+                        element.value = value;
+                    }
                 } else {
                     element.value = value;
                 }
@@ -895,7 +1009,13 @@ class ChatBoxSettingsManager {
                     newSettings[key] = element.checked;
                 } else if (element.type === 'number') {
                     const value = parseInt(element.value);
-                    newSettings[key] = key === 'responseTimeout' ? value * 1000 : value;
+                    if (key === 'responseTimeout') {
+                        newSettings[key] = value * 1000;
+                    } else if (key === 'memoryCleanupInterval') {
+                        newSettings[key] = value * 60000; // Convert from minutes to ms
+                    } else {
+                        newSettings[key] = value;
+                    }
                 } else {
                     newSettings[key] = element.value;
                 }

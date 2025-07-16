@@ -150,6 +150,19 @@ class ChatManager {
             this.maxHistoryMessages = this.chatBoxSettingsManager.getSetting('maxHistoryMessages', 1000);
             this.responseTimeout = this.chatBoxSettingsManager.getSetting('responseTimeout', 30000);
             
+            // Update agent system settings
+            const agentSystemEnabled = this.chatBoxSettingsManager.getSetting('agentSystemEnabled', false);
+            if (agentSystemEnabled !== this.agentSystemEnabled) {
+                this.agentSystemEnabled = agentSystemEnabled;
+                this.agentSystemSettings.enabled = agentSystemEnabled;
+                this.updateAgentSystemButton();
+            }
+            
+            this.agentSystemSettings.autoOptimize = this.chatBoxSettingsManager.getSetting('agentAutoOptimize', true);
+            this.agentSystemSettings.showAgentInfo = this.chatBoxSettingsManager.getSetting('agentShowInfo', true);
+            this.agentSystemSettings.memoryEnabled = this.chatBoxSettingsManager.getSetting('agentMemoryEnabled', true);
+            this.agentSystemSettings.cacheEnabled = this.chatBoxSettingsManager.getSetting('agentCacheEnabled', true);
+            
             console.log('🔧 Settings updated from ChatBoxSettingsManager');
         }
     }
