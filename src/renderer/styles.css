@@ -29205,6 +29205,18 @@ path.svg-gene-element.selected {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+.multi-agent-settings-modal.resizable {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 800px;
+    min-height: 600px;
+    max-width: 95vw;
+    max-height: 90vh;
 }
 
 .multi-agent-tabs {
@@ -29456,6 +29468,98 @@ input:checked + .slider:before {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+/* Resize handles for Multi-Agent Settings Modal */
+.multi-agent-settings-modal .resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 1000;
+}
+
+.multi-agent-settings-modal .resize-handle-n {
+    top: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: n-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-s {
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: s-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-e {
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: e-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-w {
+    top: 10px;
+    left: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: w-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-ne {
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: ne-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-nw {
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nw-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-se {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
+}
+
+.multi-agent-settings-modal .resize-handle-sw {
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: sw-resize;
+}
+
+.multi-agent-settings-modal .resize-handle:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.multi-agent-settings-modal .resize-handle-n:hover,
+.multi-agent-settings-modal .resize-handle-s:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.multi-agent-settings-modal .resize-handle-e:hover,
+.multi-agent-settings-modal .resize-handle-w:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.multi-agent-settings-modal .resize-handle-ne:hover,
+.multi-agent-settings-modal .resize-handle-nw:hover,
+.multi-agent-settings-modal .resize-handle-se:hover,
+.multi-agent-settings-modal .resize-handle-sw:hover {
+    background: rgba(102, 126, 234, 0.3);
 }
 
 /* MCP Settings Modal Styles */
