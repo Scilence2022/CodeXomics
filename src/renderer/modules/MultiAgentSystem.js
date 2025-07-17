@@ -744,6 +744,40 @@ class MultiAgentSystem {
     }
     
     /**
+     * Get agent information for a specific tool
+     */
+    getAgentForTool(toolName) {
+        const candidates = [];
+        
+        // Evaluate each agent's capability
+        for (const [agentName, agent] of this.agents) {
+            const capability = agent.canExecute(toolName, {});
+            if (capability.canExecute) {
+                const score = this.calculateAgentScore(agentName, toolName, {});
+                candidates.push({
+                    agent,
+                    name: agentName,
+                    capability,
+                    score
+                });
+            }
+        }
+        
+        // Sort by score and return best match
+        candidates.sort((a, b) => b.score - a.score);
+        
+        if (candidates.length === 0) {
+            return null;
+        }
+        
+        return {
+            name: candidates[0].name,
+            score: candidates[0].score,
+            capability: candidates[0].capability
+        };
+    }
+    
+    /**
      * Get system statistics
      */
     getSystemStats() {

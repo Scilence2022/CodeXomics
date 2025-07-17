@@ -163,6 +163,16 @@ class ChatManager {
             this.agentSystemSettings.memoryEnabled = this.chatBoxSettingsManager.getSetting('agentMemoryEnabled', true);
             this.agentSystemSettings.cacheEnabled = this.chatBoxSettingsManager.getSetting('agentCacheEnabled', true);
             
+            // Update agent LLM settings
+            this.agentSystemSettings.llmProvider = this.chatBoxSettingsManager.getSetting('agentLLMProvider', 'auto');
+            this.agentSystemSettings.llmModel = this.chatBoxSettingsManager.getSetting('agentLLMModel', 'auto');
+            this.agentSystemSettings.llmTemperature = this.chatBoxSettingsManager.getSetting('agentLLMTemperature', 0.7);
+            this.agentSystemSettings.llmMaxTokens = this.chatBoxSettingsManager.getSetting('agentLLMMaxTokens', 4000);
+            this.agentSystemSettings.llmTimeout = this.chatBoxSettingsManager.getSetting('agentLLMTimeout', 30000);
+            this.agentSystemSettings.llmRetryAttempts = this.chatBoxSettingsManager.getSetting('agentLLMRetryAttempts', 3);
+            this.agentSystemSettings.llmUseSystemPrompt = this.chatBoxSettingsManager.getSetting('agentLLMUseSystemPrompt', true);
+            this.agentSystemSettings.llmEnableFunctionCalling = this.chatBoxSettingsManager.getSetting('agentLLMEnableFunctionCalling', true);
+            
             console.log('🔧 Settings updated from ChatBoxSettingsManager');
         }
     }

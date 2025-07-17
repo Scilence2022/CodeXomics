@@ -58,7 +58,17 @@ class ChatBoxSettingsManager {
             memoryCacheEnabled: true,
             memoryOptimizationEnabled: true,
             memoryCleanupInterval: 300000, // 5 minutes
-            memoryMaxEntries: 10000
+            memoryMaxEntries: 10000,
+            
+            // Multi-Agent LLM settings
+            agentLLMProvider: 'auto', // auto, openai, anthropic, google, local
+            agentLLMModel: 'auto', // auto or specific model
+            agentLLMTemperature: 0.7,
+            agentLLMMaxTokens: 4000,
+            agentLLMTimeout: 30000,
+            agentLLMRetryAttempts: 3,
+            agentLLMUseSystemPrompt: true,
+            agentLLMEnableFunctionCalling: true
         };
         
         this.loadSettings();
@@ -465,6 +475,77 @@ class ChatBoxSettingsManager {
                                         Enable agent execution caching
                                     </label>
                                     <small class="help-text">Cache successful agent executions for faster future execution</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>🧠 Agent LLM Configuration</h4>
+                                <div class="form-group">
+                                    <label for="agentLLMProvider">LLM Provider:</label>
+                                    <select id="agentLLMProvider" class="input-full">
+                                        <option value="auto">Auto (Use main LLM)</option>
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic">Anthropic (Claude)</option>
+                                        <option value="google">Google (Gemini)</option>
+                                        <option value="local">Local LLM</option>
+                                    </select>
+                                    <small class="help-text">Choose LLM provider for agent decision making</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="agentLLMModel">LLM Model:</label>
+                                    <select id="agentLLMModel" class="input-full">
+                                        <option value="auto">Auto (Use provider default)</option>
+                                        <option value="gpt-4">GPT-4</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                        <option value="claude-3-opus">Claude 3 Opus</option>
+                                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                                        <option value="claude-3-haiku">Claude 3 Haiku</option>
+                                        <option value="gemini-pro">Gemini Pro</option>
+                                        <option value="gemini-flash">Gemini Flash</option>
+                                    </select>
+                                    <small class="help-text">Choose specific model for agent operations</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="agentLLMTemperature">Temperature:</label>
+                                    <input type="range" id="agentLLMTemperature" class="input-full" min="0" max="2" step="0.1" value="0.7">
+                                    <div class="range-value" id="agentLLMTemperatureValue">0.7</div>
+                                    <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very creative)</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="agentLLMMaxTokens">Max Tokens:</label>
+                                    <input type="number" id="agentLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
+                                    <small class="help-text">Maximum tokens for agent LLM responses</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="agentLLMTimeout">Timeout (seconds):</label>
+                                    <input type="number" id="agentLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
+                                    <small class="help-text">Timeout for agent LLM requests</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="agentLLMRetryAttempts">Retry Attempts:</label>
+                                    <input type="number" id="agentLLMRetryAttempts" class="input-full" min="1" max="5" step="1" value="3">
+                                    <small class="help-text">Number of retry attempts for failed agent LLM requests</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentLLMUseSystemPrompt" class="setting-checkbox" checked>
+                                        Use system prompt for agents
+                                    </label>
+                                    <small class="help-text">Enable system prompts for better agent behavior</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="agentLLMEnableFunctionCalling" class="setting-checkbox" checked>
+                                        Enable function calling for agents
+                                    </label>
+                                    <small class="help-text">Allow agents to use function calling capabilities</small>
                                 </div>
                             </div>
                         </div>
@@ -980,14 +1061,41 @@ class ChatBoxSettingsManager {
                         element.value = value / 1000;
                     } else if (key === 'memoryCleanupInterval') {
                         element.value = value / 60000; // Convert from ms to minutes
+                    } else if (key === 'agentLLMTimeout') {
+                        element.value = value / 1000; // Convert from ms to seconds
                     } else {
                         element.value = value;
+                    }
+                } else if (element.type === 'range') {
+                    element.value = value;
+                    // Update range value display
+                    const valueDisplay = modal.querySelector(`#${key}Value`);
+                    if (valueDisplay) {
+                        valueDisplay.textContent = value;
                     }
                 } else {
                     element.value = value;
                 }
             }
         }
+        
+        // Setup range slider event listeners
+        this.setupRangeSliders(modal);
+    }
+    
+    /**
+     * Setup range slider event listeners
+     */
+    setupRangeSliders(modal) {
+        const rangeSliders = modal.querySelectorAll('input[type="range"]');
+        rangeSliders.forEach(slider => {
+            const valueDisplay = modal.querySelector(`#${slider.id}Value`);
+            if (valueDisplay) {
+                slider.addEventListener('input', () => {
+                    valueDisplay.textContent = slider.value;
+                });
+            }
+        });
     }
 
     /**
@@ -1013,9 +1121,13 @@ class ChatBoxSettingsManager {
                         newSettings[key] = value * 1000;
                     } else if (key === 'memoryCleanupInterval') {
                         newSettings[key] = value * 60000; // Convert from minutes to ms
+                    } else if (key === 'agentLLMTimeout') {
+                        newSettings[key] = value * 1000; // Convert from seconds to ms
                     } else {
                         newSettings[key] = value;
                     }
+                } else if (element.type === 'range') {
+                    newSettings[key] = parseFloat(element.value);
                 } else {
                     newSettings[key] = element.value;
                 }
@@ -1036,15 +1148,97 @@ class ChatBoxSettingsManager {
         const hasChanges = this.updateSettings(newSettings);
         
         if (hasChanges) {
-            // Show success message
-            this.showNotification('Settings saved successfully!', 'success');
+            // Show success message with detailed feedback
+            this.showSaveSuccessMessage(newSettings);
             
             // Close modal
             modal.style.display = 'none';
         } else {
-            // Close modal anyway
+            // Show no changes message
+            this.showNotification('No changes detected. Settings are already up to date.', 'info');
+            
+            // Close modal
             modal.style.display = 'none';
         }
+    }
+    
+    /**
+     * Show detailed save success message
+     */
+    showSaveSuccessMessage(newSettings) {
+        const changedSettings = [];
+        
+        // Check which settings were changed
+        for (const [key, value] of Object.entries(newSettings)) {
+            if (this.settings[key] !== value) {
+                changedSettings.push(key);
+            }
+        }
+        
+        if (changedSettings.length === 0) {
+            this.showNotification('Settings saved successfully!', 'success');
+            return;
+        }
+        
+        // Create detailed message
+        let message = '✅ Settings saved successfully!\n\n';
+        message += 'Updated settings:\n';
+        
+        changedSettings.forEach(setting => {
+            const value = newSettings[setting];
+            const displayValue = typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : value;
+            message += `• ${this.getSettingDisplayName(setting)}: ${displayValue}\n`;
+        });
+        
+        // Show notification
+        this.showNotification(message, 'success');
+        
+        // Also log to console for debugging
+        console.log('💾 Settings saved:', changedSettings);
+    }
+    
+    /**
+     * Get display name for setting key
+     */
+    getSettingDisplayName(key) {
+        const displayNames = {
+            'agentSystemEnabled': 'Multi-Agent System',
+            'agentAutoOptimize': 'Agent Auto-Optimization',
+            'agentShowInfo': 'Agent Information Display',
+            'agentMemoryEnabled': 'Agent Memory Integration',
+            'agentCacheEnabled': 'Agent Execution Caching',
+            'agentLLMProvider': 'Agent LLM Provider',
+            'agentLLMModel': 'Agent LLM Model',
+            'agentLLMTemperature': 'Agent LLM Temperature',
+            'agentLLMMaxTokens': 'Agent LLM Max Tokens',
+            'agentLLMTimeout': 'Agent LLM Timeout',
+            'agentLLMRetryAttempts': 'Agent LLM Retry Attempts',
+            'agentLLMUseSystemPrompt': 'Agent LLM System Prompt',
+            'agentLLMEnableFunctionCalling': 'Agent LLM Function Calling',
+            'memorySystemEnabled': 'Memory System',
+            'memoryCacheEnabled': 'Memory Caching',
+            'memoryOptimizationEnabled': 'Memory Optimization',
+            'memoryCleanupInterval': 'Memory Cleanup Interval',
+            'memoryMaxEntries': 'Memory Max Entries',
+            'showThinkingProcess': 'Thinking Process Display',
+            'showToolCalls': 'Tool Calls Display',
+            'showToolCallSource': 'Tool Call Source Display',
+            'showDetailedToolData': 'Detailed Tool Data',
+            'responseTimeout': 'Response Timeout',
+            'autoScrollToBottom': 'Auto Scroll to Bottom',
+            'showTimestamps': 'Show Timestamps',
+            'maxHistoryMessages': 'Max History Messages',
+            'animateThinking': 'Animate Thinking',
+            'compactMode': 'Compact Mode',
+            'rememberPosition': 'Remember Position',
+            'rememberSize': 'Remember Size',
+            'startMinimized': 'Start Minimized',
+            'useOptimizedPrompt': 'Use Optimized Prompt',
+            'debugMode': 'Debug Mode',
+            'logToolCalls': 'Log Tool Calls'
+        };
+        
+        return displayNames[key] || key;
     }
 
     /**
