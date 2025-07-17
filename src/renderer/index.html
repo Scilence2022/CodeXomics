@@ -62,6 +62,10 @@
                             <i class="fas fa-robot"></i>
                             Configure LLMs
                         </button>
+                        <button class="dropdown-item" id="multiAgentSettingsBtn">
+                            <i class="fas fa-users-cog"></i>
+                            Multi-Agent Settings
+                        </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="mcpSettingsBtn">
                             <i class="fas fa-server"></i>
@@ -2838,6 +2842,448 @@
         </div>
     </div>
 
+    <!-- Multi-Agent Settings Modal -->
+    <div id="multiAgentSettingsModal" class="modal">
+        <div class="modal-content multi-agent-settings-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-users-cog"></i> Multi-Agent System Settings</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="multi-agent-tabs">
+                    <button class="tab-button active" data-tab="system">System</button>
+                    <button class="tab-button" data-tab="llm">LLM Configuration</button>
+                    <button class="tab-button" data-tab="agents">Agent Management</button>
+                    <button class="tab-button" data-tab="memory">Memory System</button>
+                    <button class="tab-button" data-tab="performance">Performance</button>
+                </div>
+                
+                <div class="multi-agent-content">
+                    <!-- System Tab -->
+                    <div id="system-tab" class="tab-content active">
+                        <div class="form-section">
+                            <h4>🤖 Multi-Agent System</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentSystemEnabled" class="setting-checkbox">
+                                    Enable Multi-Agent System
+                                </label>
+                                <small class="help-text">Enable intelligent agent-based tool execution and coordination</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentAutoOptimize" class="setting-checkbox" checked>
+                                    Auto-optimize execution paths
+                                </label>
+                                <small class="help-text">Automatically optimize tool execution based on memory and performance data</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentShowInfo" class="setting-checkbox" checked>
+                                    Show agent information
+                                </label>
+                                <small class="help-text">Display which agent is handling each tool execution</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentMemoryEnabled" class="setting-checkbox" checked>
+                                    Enable agent memory integration
+                                </label>
+                                <small class="help-text">Enable memory system integration for agents</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentCacheEnabled" class="setting-checkbox" checked>
+                                    Enable agent execution caching
+                                </label>
+                                <small class="help-text">Cache successful agent executions for faster future execution</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>🎯 Agent Coordination</h4>
+                            <div class="form-group">
+                                <label for="multiAgentMaxConcurrent">Maximum Concurrent Agents:</label>
+                                <input type="number" id="multiAgentMaxConcurrent" class="input-full" min="1" max="10" value="3">
+                                <small class="help-text">Maximum number of agents that can execute simultaneously</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentTimeout">Agent Execution Timeout (seconds):</label>
+                                <input type="number" id="multiAgentTimeout" class="input-full" min="5" max="300" value="30">
+                                <small class="help-text">Timeout for individual agent executions</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentRetryAttempts">Retry Attempts:</label>
+                                <input type="number" id="multiAgentRetryAttempts" class="input-full" min="1" max="5" value="3">
+                                <small class="help-text">Number of retry attempts for failed agent executions</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- LLM Configuration Tab -->
+                    <div id="llm-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4>🧠 Agent LLM Configuration</h4>
+                            <div class="form-group">
+                                <label for="multiAgentLLMProvider">LLM Provider:</label>
+                                <select id="multiAgentLLMProvider" class="input-full">
+                                    <option value="auto">Auto (Use main LLM)</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic (Claude)</option>
+                                    <option value="google">Google (Gemini)</option>
+                                    <option value="deepseek">DeepSeek</option>
+                                    <option value="siliconflow">SiliconFlow</option>
+                                    <option value="mistral">Mistral AI</option>
+                                    <option value="cohere">Cohere</option>
+                                    <option value="perplexity">Perplexity</option>
+                                    <option value="local">Local LLM</option>
+                                    <option value="custom">Custom Provider</option>
+                                </select>
+                                <small class="help-text">Choose LLM provider for agent decision making</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentLLMModel">LLM Model:</label>
+                                <select id="multiAgentLLMModel" class="input-full">
+                                    <option value="auto">Auto (Use provider default)</option>
+                                </select>
+                                <small class="help-text">Choose specific model for agent operations</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentLLMTemperature">Temperature:</label>
+                                <input type="range" id="multiAgentLLMTemperature" class="input-full" min="0" max="2" step="0.1" value="0.7">
+                                <div class="range-value" id="multiAgentLLMTemperatureValue">0.7</div>
+                                <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very creative)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentLLMMaxTokens">Max Tokens:</label>
+                                <input type="number" id="multiAgentLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
+                                <small class="help-text">Maximum tokens for agent LLM responses</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentLLMTimeout">Timeout (seconds):</label>
+                                <input type="number" id="multiAgentLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
+                                <small class="help-text">Timeout for agent LLM requests</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentLLMUseSystemPrompt" class="setting-checkbox" checked>
+                                    Use system prompt for agents
+                                </label>
+                                <small class="help-text">Enable system prompts for better agent behavior</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentLLMEnableFunctionCalling" class="setting-checkbox" checked>
+                                    Enable function calling for agents
+                                </label>
+                                <small class="help-text">Allow agents to use function calling capabilities</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>🔑 API Configuration</h4>
+                            <div class="form-group">
+                                <label for="multiAgentApiKey">API Key:</label>
+                                <div class="input-with-button">
+                                    <input type="password" id="multiAgentApiKey" placeholder="Enter API key..." class="input-full">
+                                    <button type="button" class="btn btn-sm btn-paste" id="pasteMultiAgentApiKeyBtn" title="Paste API Key">
+                                        <i class="fas fa-paste"></i>
+                                    </button>
+                                </div>
+                                <small class="help-text">API key for the selected LLM provider</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentBaseUrl">Base URL (optional):</label>
+                                <input type="text" id="multiAgentBaseUrl" placeholder="https://api.provider.com/v1" class="input-full">
+                                <small class="help-text">Custom base URL for the LLM provider</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Agent Management Tab -->
+                    <div id="agents-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4>🤖 Agent Configuration</h4>
+                            <div class="agent-list">
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-route"></i> Navigation Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentNavigationEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Handles navigation, positioning, and spatial operations
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-chart-line"></i> Analysis Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentAnalysisEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Performs data analysis, statistics, and pattern recognition
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-database"></i> Data Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentDataEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Manages data retrieval, storage, and export operations
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-dna"></i> Sequence Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentSequenceEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Handles DNA/RNA sequence analysis and manipulation
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-atom"></i> Protein Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentProteinEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Manages protein structure and function analysis
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-network-wired"></i> Network Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentNetworkEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Handles network analysis and pathway visualization
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-globe"></i> External Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentExternalEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Manages external API calls and data integration
+                                    </div>
+                                </div>
+                                
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-puzzle-piece"></i> Plugin Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentPluginEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Handles plugin system integration and management
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Memory System Tab -->
+                    <div id="memory-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4>🧠 Memory System</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentMemorySystemEnabled" class="setting-checkbox" checked>
+                                    Enable Memory System
+                                </label>
+                                <small class="help-text">Enable intelligent memory caching and context management</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentMemoryCacheEnabled" class="setting-checkbox" checked>
+                                    Enable memory caching
+                                </label>
+                                <small class="help-text">Cache memory operations for improved performance</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentMemoryOptimizationEnabled" class="setting-checkbox" checked>
+                                    Enable memory optimization
+                                </label>
+                                <small class="help-text">Automatically optimize memory usage and cleanup</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentMemoryCleanupInterval">Memory cleanup interval (minutes):</label>
+                                <input type="number" id="multiAgentMemoryCleanupInterval" class="input-full" min="1" max="60" step="1" value="5">
+                                <small class="help-text">How often to perform memory cleanup operations</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentMemoryMaxEntries">Maximum memory entries:</label>
+                                <input type="number" id="multiAgentMemoryMaxEntries" class="input-full" min="100" max="100000" step="100" value="10000">
+                                <small class="help-text">Maximum number of entries to keep in memory</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>📊 Memory Layers</h4>
+                            <div class="memory-layer">
+                                <h6>Short-term Memory</h6>
+                                <div class="form-group">
+                                    <label for="multiAgentShortTermMaxSize">Max size:</label>
+                                    <input type="number" id="multiAgentShortTermMaxSize" class="input-full" min="100" max="10000" step="100" value="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label for="multiAgentShortTermTTL">TTL (minutes):</label>
+                                    <input type="number" id="multiAgentShortTermTTL" class="input-full" min="1" max="60" step="1" value="30">
+                                </div>
+                            </div>
+                            
+                            <div class="memory-layer">
+                                <h6>Medium-term Memory</h6>
+                                <div class="form-group">
+                                    <label for="multiAgentMediumTermMaxSize">Max size:</label>
+                                    <input type="number" id="multiAgentMediumTermMaxSize" class="input-full" min="500" max="50000" step="500" value="5000">
+                                </div>
+                                <div class="form-group">
+                                    <label for="multiAgentMediumTermTTL">TTL (hours):</label>
+                                    <input type="number" id="multiAgentMediumTermTTL" class="input-full" min="1" max="168" step="1" value="24">
+                                </div>
+                            </div>
+                            
+                            <div class="memory-layer">
+                                <h6>Long-term Memory</h6>
+                                <div class="form-group">
+                                    <label for="multiAgentLongTermMaxSize">Max size:</label>
+                                    <input type="number" id="multiAgentLongTermMaxSize" class="input-full" min="1000" max="100000" step="1000" value="10000">
+                                </div>
+                                <div class="form-group">
+                                    <label for="multiAgentLongTermTTL">TTL (days):</label>
+                                    <input type="number" id="multiAgentLongTermLongTermTTL" class="input-full" min="1" max="365" step="1" value="30">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Tab -->
+                    <div id="performance-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4>⚡ Performance Optimization</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentPerformanceMonitoring" class="setting-checkbox" checked>
+                                    Enable performance monitoring
+                                </label>
+                                <small class="help-text">Monitor agent performance and execution metrics</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="multiAgentAutoScaling" class="setting-checkbox" checked>
+                                    Enable auto-scaling
+                                </label>
+                                <small class="help-text">Automatically scale agent resources based on workload</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentMaxConcurrentTasks">Max concurrent tasks:</label>
+                                <input type="number" id="multiAgentMaxConcurrentTasks" class="input-full" min="1" max="20" value="5">
+                                <small class="help-text">Maximum number of concurrent tasks across all agents</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiAgentTaskQueueSize">Task queue size:</label>
+                                <input type="number" id="multiAgentTaskQueueSize" class="input-full" min="10" max="1000" step="10" value="100">
+                                <small class="help-text">Maximum size of the task queue</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>📈 Performance Metrics</h4>
+                            <div class="performance-metrics">
+                                <div class="metric-item">
+                                    <span class="metric-label">Average Response Time:</span>
+                                    <span class="metric-value" id="avgResponseTime">--</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Success Rate:</span>
+                                    <span class="metric-value" id="successRate">--</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Cache Hit Rate:</span>
+                                    <span class="metric-value" id="cacheHitRate">--</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Active Agents:</span>
+                                    <span class="metric-value" id="activeAgents">--</span>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-secondary" id="refreshMetricsBtn">
+                                <i class="fas fa-sync"></i> Refresh Metrics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="resetMultiAgentSettingsBtn">
+                    <i class="fas fa-undo"></i> Reset to Defaults
+                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" id="cancelMultiAgentSettingsBtn">
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary" id="saveMultiAgentSettingsBtn">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!--script src="https://cdn.jsdelivr.net/npm/igv@2.15.8/dist/igv.min.js"></script -->
@@ -2855,6 +3301,7 @@
     <script src="modules/SequenceUtils.js"></script>
     <script src="modules/ExportManager.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
+    <script src="modules/MultiAgentSettingsManager.js"></script>
 <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
     <script src="modules/ChatManager.js"></script>

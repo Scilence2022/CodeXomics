@@ -302,6 +302,16 @@ class GenomeBrowser {
         } catch (error) {
             console.error('❌ Error initializing ChatManager:', error);
         }
+        
+        // Step 5.1: Initialize MultiAgentSettingsManager
+        console.log('🤖 About to initialize MultiAgentSettingsManager...');
+        try {
+            this.multiAgentSettingsManager = new MultiAgentSettingsManager(this.configManager);
+            window.multiAgentSettingsManager = this.multiAgentSettingsManager;
+            console.log('✅ MultiAgentSettingsManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing MultiAgentSettingsManager:', error);
+        }
 
         // Step 5.5: Initialize Plugin Management UI
         console.log('🧩 About to initialize PluginManagementUI...');
