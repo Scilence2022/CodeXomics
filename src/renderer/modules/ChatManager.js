@@ -5362,6 +5362,13 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeActionFunction('undoLastAction', parameters);
                     break;
                     
+                case 'open_new_tab':
+                    console.log('🔧 [ChatManager] Executing open_new_tab with parameters:', parameters);
+                    console.log('🔧 [ChatManager] Calling this.openNewTab(parameters) directly...');
+                    result = await this.openNewTab(parameters);
+                    console.log('🔧 [ChatManager] openNewTab result:', result);
+                    break;
+                    
                 // Legacy camelCase support for backward compatibility
                 case 'copy_sequence':
                     result = await this.executeActionFunction('copy_sequence', parameters);
@@ -5456,14 +5463,19 @@ ${this.getPluginSystemInfo()}`;
      */
     async executeActionFunction(functionName, parameters) {
         console.log(`🔧 [ChatManager] Executing action function: ${functionName}`, parameters);
+        console.log(`🔧 [ChatManager] Parameters type:`, typeof parameters);
+        console.log(`🔧 [ChatManager] Parameters keys:`, Object.keys(parameters || {}));
 
         try {
             // Use window.genomeBrowser for access
             const genomeBrowser = window.genomeBrowser;
+            console.log(`🔧 [ChatManager] window.genomeBrowser available:`, !!genomeBrowser);
+            
             if (!genomeBrowser) {
                 throw new Error('Genome browser not available via window.genomeBrowser');
             }
             
+            console.log(`🔧 [ChatManager] genomeBrowser.actionManager available:`, !!genomeBrowser.actionManager);
             if (!genomeBrowser.actionManager) {
                 throw new Error('ActionManager not available in genome browser');
             }
@@ -5483,13 +5495,19 @@ ${this.getPluginSystemInfo()}`;
                 'undoLastAction': () => genomeBrowser.actionManager.undoLastAction()
             };
 
+            console.log(`🔧 [ChatManager] Available action functions:`, Object.keys(actionFunctionMap));
+            console.log(`🔧 [ChatManager] Requested function: ${functionName}`);
+            console.log(`🔧 [ChatManager] Function exists in map:`, !!actionFunctionMap[functionName]);
+
             // Check if function is supported
             if (!actionFunctionMap[functionName]) {
                 throw new Error(`Action function '${functionName}' not supported via UI response functions`);
             }
 
             // Execute the UI response function
+            console.log(`🔧 [ChatManager] About to execute: actionFunctionMap["${functionName}"]()`);
             const result = actionFunctionMap[functionName]();
+            console.log(`🔧 [ChatManager] Function execution completed, result:`, result);
             
             console.log(`✅ [ChatManager] Action function ${functionName} executed successfully via UI response:`, result);
             
@@ -8888,20 +8906,26 @@ ${this.getPluginSystemInfo()}`;
             
             // If no pdbData provided but pdbId is available, fetch the protein structure first
             if (!pdbData && pdbId) {
-                console.log('No PDB data provided, fetching structure for PDB ID:', pdbId);
+                console.log('🔬 [openProteinViewer] No PDB data provided, fetching structure for PDB ID:', pdbId);
                 
                 try {
                     // Use the fetch_protein_structure tool to get the data
+                    console.log('🔬 [openProteinViewer] Calling fetch_protein_structure with pdbId:', pdbId);
                     const fetchResult = await this.executeToolByName('fetch_protein_structure', { pdbId });
+                    console.log('🔬 [openProteinViewer] fetch_protein_structure result:', fetchResult);
                     
-                    if (fetchResult.success) {
+                    if (fetchResult && fetchResult.success) {
                         pdbData = fetchResult.pdbData;
                         proteinName = fetchResult.geneName || pdbId;
-                        console.log('Successfully fetched protein structure data');
+                        console.log('🔬 [openProteinViewer] Successfully fetched protein structure data, pdbData length:', pdbData?.length);
                     } else {
-                        throw new Error('Failed to fetch protein structure data');
+                        console.error('🔬 [openProteinViewer] fetch_protein_structure returned failure or no result:', fetchResult);
+                        throw new Error(`Failed to fetch protein structure data: ${fetchResult?.error || 'Unknown error'}`);
                     }
                 } catch (fetchError) {
+                    console.error('🔬 [openProteinViewer] Error during fetch_protein_structure:', fetchError);
+                    console.error('🔬 [openProteinViewer] fetchError.message:', fetchError.message);
+                    console.error('🔬 [openProteinViewer] fetchError.stack:', fetchError.stack);
                     throw new Error(`Failed to fetch protein structure for ${pdbId}: ${fetchError.message}`);
                 }
             }
@@ -8989,16 +9013,23 @@ ${this.getPluginSystemInfo()}`;
      */
     async downloadPDBFile(pdbId) {
         try {
-            console.log(`Downloading PDB file for ID: ${pdbId}`);
+            console.log(`🌐 [downloadPDBFile] Starting download for PDB ID: ${pdbId}`);
             
             const url = `https://files.rcsb.org/download/${pdbId}.pdb`;
+            console.log(`🌐 [downloadPDBFile] Fetching URL: ${url}`);
+            
             const response = await fetch(url);
+            console.log(`🌐 [downloadPDBFile] Response status: ${response.status} ${response.statusText}`);
+            console.log(`🌐 [downloadPDBFile] Response headers:`, Object.fromEntries(response.headers.entries()));
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
+            console.log(`🌐 [downloadPDBFile] Reading response text...`);
             const pdbData = await response.text();
+            console.log(`🌐 [downloadPDBFile] Response text length: ${pdbData.length}`);
+            console.log(`🌐 [downloadPDBFile] First 200 chars:`, pdbData.substring(0, 200));
             
             if (!pdbData || pdbData.trim().length === 0) {
                 throw new Error('Empty PDB file received');
@@ -9006,14 +9037,18 @@ ${this.getPluginSystemInfo()}`;
             
             // Basic validation - check if it looks like a PDB file
             if (!pdbData.includes('HEADER') && !pdbData.includes('ATOM')) {
+                console.error(`🌐 [downloadPDBFile] Invalid PDB format. Content preview:`, pdbData.substring(0, 500));
                 throw new Error('Invalid PDB file format');
             }
             
-            console.log(`Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`);
+            console.log(`✅ [downloadPDBFile] Successfully downloaded PDB file for ${pdbId}, size: ${pdbData.length} characters`);
             return pdbData;
             
         } catch (error) {
-            console.error(`Error downloading PDB file for ${pdbId}:`, error);
+            console.error(`❌ [downloadPDBFile] Error downloading PDB file for ${pdbId}:`, error);
+            console.error(`❌ [downloadPDBFile] Error type:`, error.constructor.name);
+            console.error(`❌ [downloadPDBFile] Error message:`, error.message);
+            console.error(`❌ [downloadPDBFile] Error stack:`, error.stack);
             throw new Error(`Failed to download PDB file for ${pdbId}: ${error.message}`);
         }
     }

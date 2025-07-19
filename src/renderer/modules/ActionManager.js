@@ -4296,15 +4296,32 @@ class ActionManager {
      * Open new tab function for AI integration
      */
     async functionOpenNewTab(params) {
-        const { chromosome, start, end, position, geneName, title } = params;
+        console.log('🔧 [ActionManager] ===== FUNCTION OPEN NEW TAB START =====');
+        console.log('🔧 [ActionManager] Received params:', params);
+        console.log('🔧 [ActionManager] Params type:', typeof params);
+        console.log('🔧 [ActionManager] Params keys:', Object.keys(params || {}));
         
-        console.log('🔧 [ActionManager] Opening new tab with params:', params);
+        const { chromosome, start, end, position, geneName, title } = params || {};
+        
+        console.log('🔧 [ActionManager] Destructured params:');
+        console.log('  - chromosome:', chromosome);
+        console.log('  - start:', start);
+        console.log('  - end:', end);
+        console.log('  - position:', position);
+        console.log('  - geneName:', geneName);
+        console.log('  - title:', title);
         
         try {
             // Check if genome browser and tab manager are available
+            console.log('🔧 [ActionManager] Checking genome browser availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser available:', !!this.genomeBrowser);
+            
             if (!this.genomeBrowser) {
                 throw new Error('Genome browser not available');
             }
+
+            console.log('🔧 [ActionManager] Checking tab manager availability...');
+            console.log('🔧 [ActionManager] this.genomeBrowser.tabManager available:', !!this.genomeBrowser.tabManager);
 
             if (!this.genomeBrowser.tabManager) {
                 throw new Error('Tab manager not available');
@@ -4313,6 +4330,9 @@ class ActionManager {
             let tabId;
             let finalTitle = title;
             let usedDefaultRange = false;
+
+            console.log('🔧 [ActionManager] Starting tab creation logic...');
+            console.log('🔧 [ActionManager] Current tab count before creation:', this.genomeBrowser.tabManager.tabs.size);
 
             // Handle different ways to create a new tab
             if (geneName) {
@@ -4323,6 +4343,7 @@ class ActionManager {
                 const searchResults = await this.searchGeneByName(geneName);
                 if (searchResults && searchResults.length > 0) {
                     const gene = searchResults[0];
+                    console.log(`🔧 [ActionManager] Found gene:`, gene);
                     tabId = this.genomeBrowser.tabManager.createTabForGene(gene, 500);
                     finalTitle = finalTitle || `Gene: ${gene.name || gene.id || geneName}`;
                 } else {
@@ -4356,22 +4377,42 @@ class ActionManager {
             } else {
                 // Create new tab with current position
                 console.log('🔧 [ActionManager] Creating new tab with current position');
+                console.log('🔧 [ActionManager] Looking for newTabButton element...');
+                
                 const newTabButton = document.getElementById('newTabButton');
+                console.log('🔧 [ActionManager] newTabButton found:', !!newTabButton);
+                console.log('🔧 [ActionManager] newTabButton element:', newTabButton);
+                
                 if (newTabButton) {
                     // Simulate the + button click
+                    console.log('🔧 [ActionManager] Simulating newTabButton.click()...');
                     newTabButton.click();
+                    console.log('🔧 [ActionManager] Click simulation completed');
+                    
                     // Get the newly created tab ID
                     const tabIds = Array.from(this.genomeBrowser.tabManager.tabs.keys());
+                    console.log('🔧 [ActionManager] All tab IDs after click:', tabIds);
                     tabId = tabIds[tabIds.length - 1];
+                    console.log('🔧 [ActionManager] Selected tab ID:', tabId);
                     finalTitle = finalTitle || 'New Tab';
                 } else {
                     // Fallback to direct manager access
+                    console.log('🔧 [ActionManager] newTabButton not found, using direct manager access...');
+                    console.log('🔧 [ActionManager] Calling this.genomeBrowser.tabManager.createNewTab()...');
                     tabId = this.genomeBrowser.tabManager.createNewTab(finalTitle);
+                    console.log('🔧 [ActionManager] Direct createNewTab result:', tabId);
                     finalTitle = finalTitle || 'New Tab';
                 }
             }
             
+            console.log(`🔧 [ActionManager] Tab creation completed`);
+            console.log(`🔧 [ActionManager] Final tab ID: ${tabId}`);
+            console.log(`🔧 [ActionManager] Final title: ${finalTitle}`);
+            console.log(`🔧 [ActionManager] Current tab count after creation:`, this.genomeBrowser.tabManager.tabs.size);
+            console.log(`🔧 [ActionManager] All tabs after creation:`, Array.from(this.genomeBrowser.tabManager.tabs.keys()));
+            
             console.log(`✅ [ActionManager] Successfully created new tab: ${tabId} - ${finalTitle}`);
+            console.log('🔧 [ActionManager] ===== FUNCTION OPEN NEW TAB END =====');
             
             return {
                 success: true,
@@ -4383,6 +4424,8 @@ class ActionManager {
             
         } catch (error) {
             console.error('❌ [ActionManager] Error opening new tab:', error);
+            console.error('❌ [ActionManager] Error stack:', error.stack);
+            console.log('🔧 [ActionManager] ===== FUNCTION OPEN NEW TAB ERROR =====');
             throw error;
         }
     }

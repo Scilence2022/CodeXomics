@@ -1448,6 +1448,44 @@ function createMenu() {
               }
             }
           ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Open Test File',
+          submenu: [
+            {
+              label: 'Open New Tab Quick Fix Test',
+              accelerator: 'CmdOrCtrl+Shift+T',
+              click: () => {
+                openTestFile('test-open-new-tab-quick-fix.html');
+              }
+            },
+            {
+              label: 'Open New Tab Debug Test',
+              click: () => {
+                openTestFile('test-open-new-tab-debug.html');
+              }
+            },
+            {
+              label: 'Open New Tab Simple Test',
+              click: () => {
+                openTestFile('test-open-new-tab-simple.html');
+              }
+            },
+            {
+              label: 'Open New Tab Function Call Test',
+              click: () => {
+                openTestFile('test-open-new-tab-function-call-fix.html');
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Open Debug Console Script',
+              click: () => {
+                openTestFile('debug-open-new-tab.js');
+              }
+            }
+          ]
         }
       ]
     },
@@ -6518,6 +6556,69 @@ function resetWindowPositions() {
 }
 
 // ========== END WINDOW LAYOUT FUNCTIONS ==========
+
+/**
+ * Open test file in a new window
+ */
+function openTestFile(filename) {
+  try {
+    const currentWindow = getCurrentMainWindow();
+    if (!currentWindow) {
+      console.error('No main window available to open test file');
+      return;
+    }
+
+    // Get the project root directory
+    const projectRoot = path.resolve(__dirname, '..');
+    const testFilePath = path.join(projectRoot, filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(testFilePath)) {
+      console.error(`Test file not found: ${testFilePath}`);
+      dialog.showErrorBox('File Not Found', `Test file "${filename}" not found in the project directory.`);
+      return;
+    }
+
+    // Create a new window for the test file
+    const testWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true
+      },
+      title: `Test: ${filename}`,
+      icon: path.join(__dirname, 'assets', 'icon.png')
+    });
+
+    // Load the test file
+    const fileUrl = `file://${testFilePath}`;
+    testWindow.loadURL(fileUrl);
+
+    // Handle window close
+    testWindow.on('closed', () => {
+      console.log(`Test window closed: ${filename}`);
+    });
+
+    // Show window when ready
+    testWindow.once('ready-to-show', () => {
+      testWindow.show();
+      testWindow.focus();
+      console.log(`✅ Test file opened: ${filename}`);
+    });
+
+    // Handle errors
+    testWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error(`Failed to load test file ${filename}:`, errorDescription);
+      dialog.showErrorBox('Load Error', `Failed to load test file "${filename}": ${errorDescription}`);
+    });
+
+  } catch (error) {
+    console.error('Error opening test file:', error);
+    dialog.showErrorBox('Error', `Failed to open test file "${filename}": ${error.message}`);
+  }
+}
 
 // Handle getting project directory name
 ipcMain.handle('getProjectDirectoryName', async () => {

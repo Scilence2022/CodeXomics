@@ -1151,6 +1151,16 @@ class SequenceUtils {
         const actualUsedWidth = optimalLineLength * effectiveCharWidth;
         const remainingWidth = availableWidth - actualUsedWidth;
         
+        console.log('🔧 [SequenceUtils] Width calculation details:', {
+            containerWidth,
+            availableWidth,
+            charWidth,
+            effectiveCharWidth,
+            optimalLineLength,
+            actualUsedWidth,
+            remainingWidth
+        });
+        
         console.log('🔧 [SequenceUtils] Line calculation:', {
             containerWidth,
             charWidth,
@@ -1344,7 +1354,7 @@ class SequenceUtils {
         // Sequence bases
         const basesDiv = document.createElement('div');
         basesDiv.className = 'sequence-bases';
-        basesDiv.style.cssText = 'flex: 1; word-break: break-all; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;';
+        basesDiv.style.cssText = 'flex: 1; white-space: nowrap; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6; letter-spacing: 1px; overflow: hidden;';
         basesDiv.innerHTML = this.colorizeSequenceWithFeaturesOptimized(lineSubsequence, lineStartPos, featureLookup, operons);
         
         sequenceLine.appendChild(positionSpan);
@@ -1643,7 +1653,13 @@ class SequenceUtils {
             lineElement.style.position = 'absolute';
             lineElement.style.top = `${lineIndex * lineHeight}px`; // FIXED: Use correct line height
             lineElement.style.left = '0';
-            lineElement.style.right = '0';
+            // Calculate actual width needed instead of using right: 0
+            const effectiveCharWidth = charWidth + 1; // Include letter-spacing
+            const positionWidth = 100;
+            const marginRight = 15;
+            const padding = 30;
+            const actualLineWidth = positionWidth + marginRight + (lineSubsequence.length * effectiveCharWidth) + padding;
+            lineElement.style.width = `${actualLineWidth}px`;
             
             visibleContent.appendChild(lineElement);
         }
@@ -2905,8 +2921,14 @@ class SequenceUtils {
         const range = selection.getRangeAt(0);
         const container = range.commonAncestorContainer;
         
-        // Find the sequence container
-        const sequenceContainer = container.closest('.detailed-sequence-view');
+        // Find the sequence container - handle both element and text nodes
+        let sequenceContainer;
+        if (container.nodeType === Node.ELEMENT_NODE) {
+            sequenceContainer = container.closest('.detailed-sequence-view');
+        } else {
+            // If it's a text node, check its parent element
+            sequenceContainer = container.parentElement?.closest('.detailed-sequence-view');
+        }
         if (!sequenceContainer) {
             return null;
         }
