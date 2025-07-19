@@ -1,5 +1,5 @@
 ---
-description: 
+description: 本项目是一个Electron项目，请根据Electron项目的特色进行开发和调试。
 globs: 
 alwaysApply: true
 ---

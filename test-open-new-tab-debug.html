@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open New Tab Function Call Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .debug-log {
+            background-color: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .error {
+            color: #ff4444;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #44aa44;
+            background-color: #e6ffe6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #ff8800;
+            background-color: #fff3e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #0066cc;
+            background-color: #e6f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-info { background-color: #17a2b8; }
+        .tab-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Open New Tab Function Call Debug Test</h1>
+        <p>This test will help diagnose why the <code>open_new_tab</code> function call is not working while the "+" button works fine.</p>
+
+        <div class="test-section">
+            <h3>📊 Test Status</h3>
+            <div id="testStatus">
+                <div><span class="status-indicator status-info"></span>Ready to run tests</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test Controls</h3>
+            <button onclick="runEnvironmentCheck()">1. Environment Check</button>
+            <button onclick="runComponentCheck()">2. Component Check</button>
+            <button onclick="runFunctionCallTest()">3. Function Call Test</button>
+            <button onclick="runManualButtonTest()">4. Manual Button Test</button>
+            <button onclick="runComparisonTest()">5. Comparison Test</button>
+            <button onclick="runAllTests()">🚀 Run All Tests</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Debug Log</h3>
+            <div id="debugLog" class="debug-log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Current Tab Information</h3>
+            <div id="tabInfo" class="tab-info">
+                <div>Tab count: <span id="tabCount">-</span></div>
+                <div>Active tab: <span id="activeTab">-</span></div>
+                <div>All tabs: <span id="allTabs">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+        let originalConsoleWarn = console.warn;
+
+        // Override console methods to capture logs
+        function setupLogCapture() {
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                addToLog('LOG', args.join(' '));
+            };
+            console.error = function(...args) {
+                originalConsoleError.apply(console, args);
+                addToLog('ERROR', args.join(' '));
+            };
+            console.warn = function(...args) {
+                originalConsoleWarn.apply(console, args);
+                addToLog('WARN', args.join(' '));
+            };
+        }
+
+        function addToLog(level, message) {
+            const logElement = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${level}: ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function addTestResult(testName, status, message, details = null) {
+            const result = {
+                test: testName,
+                status: status,
+                message: message,
+                details: details,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            testResults.push(result);
+            updateTestResults();
+        }
+
+        function updateTestResults() {
+            const resultsElement = document.getElementById('testResults');
+            resultsElement.innerHTML = testResults.map(result => {
+                const statusClass = result.status === 'PASS' ? 'success' : 
+                                  result.status === 'FAIL' ? 'error' : 
+                                  result.status === 'WARN' ? 'warning' : 'info';
+                return `
+                    <div class="${statusClass}">
+                        <strong>${result.test}</strong> (${result.timestamp}) - ${result.message}
+                        ${result.details ? `<br><small>${result.details}</small>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateTabInfo() {
+            try {
+                const genomeBrowser = window.genomeBrowser;
+                if (genomeBrowser && genomeBrowser.tabManager) {
+                    const tabCount = genomeBrowser.tabManager.tabs.size;
+                    const activeTab = genomeBrowser.tabManager.activeTab;
+                    const allTabs = Array.from(genomeBrowser.tabManager.tabs.keys()).join(', ');
+                    
+                    document.getElementById('tabCount').textContent = tabCount;
+                    document.getElementById('activeTab').textContent = activeTab || 'None';
+                    document.getElementById('allTabs').textContent = allTabs || 'None';
+                } else {
+                    document.getElementById('tabCount').textContent = 'N/A';
+                    document.getElementById('activeTab').textContent = 'N/A';
+                    document.getElementById('allTabs').textContent = 'N/A';
+                }
+            } catch (error) {
+                addToLog('ERROR', `Failed to update tab info: ${error.message}`);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '';
+            testResults = [];
+            updateTestResults();
+            addToLog('INFO', 'Log cleared');
+        }
+
+        async function runEnvironmentCheck() {
+            addToLog('INFO', '=== ENVIRONMENT CHECK START ===');
+            
+            try {
+                // Check if we're in the right environment
+                const isElectron = typeof window !== 'undefined' && window.process && window.process.type;
+                addTestResult('Environment Check', 'INFO', `Running in ${isElectron ? 'Electron' : 'Browser'} environment`);
+                
+                // Check for required global objects
+                const genomeBrowser = window.genomeBrowser;
+                if (genomeBrowser) {
+                    addTestResult('Genome Browser', 'PASS', 'window.genomeBrowser is available');
+                    
+                    if (genomeBrowser.actionManager) {
+                        addTestResult('Action Manager', 'PASS', 'genomeBrowser.actionManager is available');
+                    } else {
+                        addTestResult('Action Manager', 'FAIL', 'genomeBrowser.actionManager is not available');
+                    }
+                    
+                    if (genomeBrowser.tabManager) {
+                        addTestResult('Tab Manager', 'PASS', 'genomeBrowser.tabManager is available');
+                    } else {
+                        addTestResult('Tab Manager', 'FAIL', 'genomeBrowser.tabManager is not available');
+                    }
+                    
+                    if (genomeBrowser.chatManager) {
+                        addTestResult('Chat Manager', 'PASS', 'genomeBrowser.chatManager is available');
+                    } else {
+                        addTestResult('Chat Manager', 'FAIL', 'genomeBrowser.chatManager is not available');
+                    }
+                } else {
+                    addTestResult('Genome Browser', 'FAIL', 'window.genomeBrowser is not available');
+                }
+                
+                // Check for DOM elements
+                const newTabButton = document.getElementById('newTabButton');
+                if (newTabButton) {
+                    addTestResult('New Tab Button', 'PASS', 'newTabButton element found in DOM');
+                } else {
+                    addTestResult('New Tab Button', 'WARN', 'newTabButton element not found in DOM');
+                }
+                
+                updateTabInfo();
+                
+            } catch (error) {
+                addTestResult('Environment Check', 'FAIL', `Error during environment check: ${error.message}`);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== ENVIRONMENT CHECK END ===');
+        }
+
+        async function runComponentCheck() {
+            addToLog('INFO', '=== COMPONENT CHECK START ===');
+            
+            try {
+                const genomeBrowser = window.genomeBrowser;
+                if (!genomeBrowser) {
+                    addTestResult('Component Check', 'FAIL', 'Genome browser not available');
+                    return;
+                }
+
+                // Check ActionManager functions
+                if (genomeBrowser.actionManager) {
+                    const availableFunctions = genomeBrowser.actionManager.getAvailableActionFunctions();
+                    addToLog('INFO', `Available action functions: ${JSON.stringify(availableFunctions)}`);
+                    
+                    if (availableFunctions.includes('openNewTab')) {
+                        addTestResult('openNewTab Function', 'PASS', 'openNewTab is registered in ActionManager');
+                    } else {
+                        addTestResult('openNewTab Function', 'FAIL', 'openNewTab is not registered in ActionManager');
+                    }
+                    
+                    // Check if functionOpenNewTab method exists
+                    if (typeof genomeBrowser.actionManager.functionOpenNewTab === 'function') {
+                        addTestResult('functionOpenNewTab Method', 'PASS', 'functionOpenNewTab method exists');
+                    } else {
+                        addTestResult('functionOpenNewTab Method', 'FAIL', 'functionOpenNewTab method does not exist');
+                    }
+                }
+
+                // Check ChatManager functions
+                if (genomeBrowser.chatManager) {
+                    if (typeof genomeBrowser.chatManager.executeToolByName === 'function') {
+                        addTestResult('executeToolByName Method', 'PASS', 'executeToolByName method exists');
+                    } else {
+                        addTestResult('executeToolByName Method', 'FAIL', 'executeToolByName method does not exist');
+                    }
+                    
+                    if (typeof genomeBrowser.chatManager.executeActionFunction === 'function') {
+                        addTestResult('executeActionFunction Method', 'PASS', 'executeActionFunction method exists');
+                    } else {
+                        addTestResult('executeActionFunction Method', 'FAIL', 'executeActionFunction method does not exist');
+                    }
+                }
+
+                // Check TabManager functions
+                if (genomeBrowser.tabManager) {
+                    if (typeof genomeBrowser.tabManager.createNewTab === 'function') {
+                        addTestResult('createNewTab Method', 'PASS', 'createNewTab method exists');
+                    } else {
+                        addTestResult('createNewTab Method', 'FAIL', 'createNewTab method does not exist');
+                    }
+                    
+                    if (typeof genomeBrowser.tabManager.createTabForPosition === 'function') {
+                        addTestResult('createTabForPosition Method', 'PASS', 'createTabForPosition method exists');
+                    } else {
+                        addTestResult('createTabForPosition Method', 'FAIL', 'createTabForPosition method does not exist');
+                    }
+                }
+                
+            } catch (error) {
+                addTestResult('Component Check', 'FAIL', `Error during component check: ${error.message}`);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== COMPONENT CHECK END ===');
+        }
+
+        async function runFunctionCallTest() {
+            addToLog('INFO', '=== FUNCTION CALL TEST START ===');
+            
+            try {
+                const genomeBrowser = window.genomeBrowser;
+                if (!genomeBrowser || !genomeBrowser.chatManager) {
+                    addTestResult('Function Call Test', 'FAIL', 'ChatManager not available');
+                    return;
+                }
+
+                const initialTabCount = genomeBrowser.tabManager ? genomeBrowser.tabManager.tabs.size : 0;
+                addToLog('INFO', `Initial tab count: ${initialTabCount}`);
+
+                // Test the function call
+                addToLog('INFO', 'Calling chatManager.executeToolByName("open_new_tab", {})...');
+                const result = await genomeBrowser.chatManager.executeToolByName('open_new_tab', {});
+                addToLog('INFO', `Function call result: ${JSON.stringify(result)}`);
+
+                // Wait a bit for the tab to be created
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const finalTabCount = genomeBrowser.tabManager ? genomeBrowser.tabManager.tabs.size : 0;
+                addToLog('INFO', `Final tab count: ${finalTabCount}`);
+
+                if (result && result.success) {
+                    addTestResult('Function Call Success', 'PASS', `Function call returned success: ${result.message}`);
+                } else {
+                    addTestResult('Function Call Success', 'FAIL', `Function call failed: ${JSON.stringify(result)}`);
+                }
+
+                if (finalTabCount > initialTabCount) {
+                    addTestResult('Tab Creation', 'PASS', `Tab count increased from ${initialTabCount} to ${finalTabCount}`);
+                } else {
+                    addTestResult('Tab Creation', 'FAIL', `Tab count did not increase (${initialTabCount} -> ${finalTabCount})`);
+                }
+
+                updateTabInfo();
+                
+            } catch (error) {
+                addTestResult('Function Call Test', 'FAIL', `Error during function call test: ${error.message}`);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== FUNCTION CALL TEST END ===');
+        }
+
+        async function runManualButtonTest() {
+            addToLog('INFO', '=== MANUAL BUTTON TEST START ===');
+            
+            try {
+                const genomeBrowser = window.genomeBrowser;
+                if (!genomeBrowser || !genomeBrowser.tabManager) {
+                    addTestResult('Manual Button Test', 'FAIL', 'TabManager not available');
+                    return;
+                }
+
+                const newTabButton = document.getElementById('newTabButton');
+                if (!newTabButton) {
+                    addTestResult('Manual Button Test', 'FAIL', 'newTabButton element not found');
+                    return;
+                }
+
+                const initialTabCount = genomeBrowser.tabManager.tabs.size;
+                addToLog('INFO', `Initial tab count: ${initialTabCount}`);
+
+                // Simulate button click
+                addToLog('INFO', 'Simulating newTabButton.click()...');
+                newTabButton.click();
+                addToLog('INFO', 'Button click simulation completed');
+
+                // Wait a bit for the tab to be created
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                const finalTabCount = genomeBrowser.tabManager.tabs.size;
+                addToLog('INFO', `Final tab count: ${finalTabCount}`);
+
+                if (finalTabCount > initialTabCount) {
+                    addTestResult('Manual Button Test', 'PASS', `Button click increased tab count from ${initialTabCount} to ${finalTabCount}`);
+                } else {
+                    addTestResult('Manual Button Test', 'FAIL', `Button click did not increase tab count (${initialTabCount} -> ${finalTabCount})`);
+                }
+
+                updateTabInfo();
+                
+            } catch (error) {
+                addTestResult('Manual Button Test', 'FAIL', `Error during manual button test: ${error.message}`);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== MANUAL BUTTON TEST END ===');
+        }
+
+        async function runComparisonTest() {
+            addToLog('INFO', '=== COMPARISON TEST START ===');
+            
+            try {
+                const genomeBrowser = window.genomeBrowser;
+                if (!genomeBrowser || !genomeBrowser.tabManager) {
+                    addTestResult('Comparison Test', 'FAIL', 'TabManager not available');
+                    return;
+                }
+
+                // Test direct ActionManager call
+                addToLog('INFO', 'Testing direct ActionManager.functionOpenNewTab() call...');
+                const directResult = await genomeBrowser.actionManager.functionOpenNewTab({});
+                addToLog('INFO', `Direct call result: ${JSON.stringify(directResult)}`);
+
+                // Wait a bit
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Test ChatManager route
+                addToLog('INFO', 'Testing ChatManager.executeToolByName() route...');
+                const chatResult = await genomeBrowser.chatManager.executeToolByName('open_new_tab', {});
+                addToLog('INFO', `ChatManager route result: ${JSON.stringify(chatResult)}`);
+
+                // Compare results
+                if (directResult && directResult.success && chatResult && chatResult.success) {
+                    addTestResult('Comparison Test', 'PASS', 'Both direct and routed calls succeeded');
+                } else if (directResult && directResult.success && (!chatResult || !chatResult.success)) {
+                    addTestResult('Comparison Test', 'WARN', 'Direct call succeeded but routed call failed - routing issue detected');
+                } else if (!directResult || !directResult.success) {
+                    addTestResult('Comparison Test', 'FAIL', 'Direct call failed - core functionality issue');
+                }
+
+                updateTabInfo();
+                
+            } catch (error) {
+                addTestResult('Comparison Test', 'FAIL', `Error during comparison test: ${error.message}`);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== COMPARISON TEST END ===');
+        }
+
+        async function runAllTests() {
+            addToLog('INFO', '🚀 RUNNING ALL TESTS...');
+            
+            await runEnvironmentCheck();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await runComponentCheck();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await runManualButtonTest();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await runFunctionCallTest();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await runComparisonTest();
+            
+            addToLog('INFO', '🎯 ALL TESTS COMPLETED');
+            
+            // Summary
+            const passCount = testResults.filter(r => r.status === 'PASS').length;
+            const failCount = testResults.filter(r => r.status === 'FAIL').length;
+            const warnCount = testResults.filter(r => r.status === 'WARN').length;
+            
+            addToLog('INFO', `📊 SUMMARY: ${passCount} PASS, ${failCount} FAIL, ${warnCount} WARN`);
+            
+            if (failCount === 0) {
+                addToLog('INFO', '✅ All tests passed! The function call should be working.');
+            } else {
+                addToLog('INFO', '❌ Some tests failed. Check the results above for details.');
+            }
+        }
+
+        // Initialize
+        setupLogCapture();
+        addToLog('INFO', 'Debug test page loaded');
+        addToLog('INFO', 'Ready to run tests. Click "Run All Tests" to start comprehensive debugging.');
+        
+        // Auto-update tab info every 2 seconds
+        setInterval(updateTabInfo, 2000);
+    </script>
+</body>
+</html> 

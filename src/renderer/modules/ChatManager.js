@@ -385,6 +385,9 @@ class ChatManager {
         this.agentSystemSettings.enabled = newState;
         this.saveAgentSystemSettings();
         
+        // Sync to ChatBoxSettingsManager to maintain consistency
+        this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newState);
+        
         console.log(`🤖 Agent system ${newState ? 'enabled' : 'disabled'}`);
         
         // Emit state change event
@@ -1098,6 +1101,16 @@ class ChatManager {
         };
         
         this.updateAgentSystemSettings(newSettings);
+        
+        // Sync settings back to ChatBoxSettingsManager to maintain consistency
+        this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newSettings.enabled);
+        this.chatBoxSettingsManager.setSetting('agentAutoOptimize', newSettings.autoOptimize);
+        this.chatBoxSettingsManager.setSetting('agentShowInfo', newSettings.showAgentInfo);
+        this.chatBoxSettingsManager.setSetting('agentMemoryEnabled', newSettings.memoryEnabled);
+        this.chatBoxSettingsManager.setSetting('agentCacheEnabled', newSettings.cacheEnabled);
+        
+        // Update the main agent system enabled state
+        this.agentSystemEnabled = newSettings.enabled;
         
         // Update button state
         this.updateAgentSystemButton();

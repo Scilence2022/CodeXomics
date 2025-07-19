@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Open New Tab Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .debug-log {
+            background-color: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .success {
+            color: #44aa44;
+            background-color: #e6ffe6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #ff4444;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Quick Open New Tab Fix Test</h1>
+        <p>This test verifies that the <code>open_new_tab</code> function call fix is working.</p>
+
+        <div class="test-section">
+            <h3>🎯 Test Controls</h3>
+            <button onclick="runQuickTest()">🚀 Run Quick Test</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Debug Log</h3>
+            <div id="debugLog" class="debug-log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+
+        // Override console methods to capture logs
+        function setupLogCapture() {
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                addToLog('LOG', args.join(' '));
+            };
+            console.error = function(...args) {
+                originalConsoleError.apply(console, args);
+                addToLog('ERROR', args.join(' '));
+            };
+        }
+
+        function addToLog(level, message) {
+            const logElement = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${level}: ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function addTestResult(message, isSuccess = true) {
+            const resultsElement = document.getElementById('testResults');
+            const resultClass = isSuccess ? 'success' : 'error';
+            const resultDiv = document.createElement('div');
+            resultDiv.className = resultClass;
+            resultDiv.innerHTML = `<strong>${isSuccess ? '✅' : '❌'}</strong> ${message}`;
+            resultsElement.appendChild(resultDiv);
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '';
+            document.getElementById('testResults').innerHTML = '';
+            addToLog('INFO', 'Log cleared');
+        }
+
+        async function runQuickTest() {
+            addToLog('INFO', '=== QUICK TEST START ===');
+            
+            try {
+                // Check if genome browser is available
+                const genomeBrowser = window.genomeBrowser;
+                if (!genomeBrowser) {
+                    addTestResult('Genome browser not available', false);
+                    return;
+                }
+                addTestResult('Genome browser available');
+
+                // Check if chat manager is available
+                if (!genomeBrowser.chatManager) {
+                    addTestResult('Chat manager not available', false);
+                    return;
+                }
+                addTestResult('Chat manager available');
+
+                // Check if tab manager is available
+                if (!genomeBrowser.tabManager) {
+                    addTestResult('Tab manager not available', false);
+                    return;
+                }
+                addTestResult('Tab manager available');
+
+                // Get initial tab count
+                const initialTabCount = genomeBrowser.tabManager.tabs.size;
+                addToLog('INFO', `Initial tab count: ${initialTabCount}`);
+
+                // Test the function call
+                addToLog('INFO', 'Testing chatManager.executeToolByName("open_new_tab", {})...');
+                const result = await genomeBrowser.chatManager.executeToolByName('open_new_tab', {});
+                addToLog('INFO', `Function call result: ${JSON.stringify(result)}`);
+
+                // Wait a bit for the tab to be created
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Check final tab count
+                const finalTabCount = genomeBrowser.tabManager.tabs.size;
+                addToLog('INFO', `Final tab count: ${finalTabCount}`);
+
+                if (result && result.success) {
+                    addTestResult(`Function call succeeded: ${result.message}`);
+                } else {
+                    addTestResult('Function call failed', false);
+                }
+
+                if (finalTabCount > initialTabCount) {
+                    addTestResult(`Tab created successfully: ${initialTabCount} → ${finalTabCount}`);
+                } else {
+                    addTestResult('Tab was not created', false);
+                }
+
+                // Test manual button as comparison
+                const newTabButton = document.getElementById('newTabButton');
+                if (newTabButton) {
+                    addTestResult('New tab button found in DOM');
+                } else {
+                    addTestResult('New tab button not found in DOM', false);
+                }
+
+            } catch (error) {
+                addTestResult(`Test failed with error: ${error.message}`, false);
+                addToLog('ERROR', error.stack);
+            }
+            
+            addToLog('INFO', '=== QUICK TEST END ===');
+        }
+
+        // Initialize
+        setupLogCapture();
+        addToLog('INFO', 'Quick test page loaded');
+        addToLog('INFO', 'Ready to test the open_new_tab function call fix.');
+    </script>
+</body>
+</html> 

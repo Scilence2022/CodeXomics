@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Open New Tab Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Simple Open New Tab Test</h1>
+        <p>This test verifies that the <code>open_new_tab</code> function call fix works.</p>
+
+        <div class="test-section">
+            <h3>Test Open New Tab Function Call</h3>
+            <button class="test-button" onclick="testOpenNewTab()">Test Open New Tab</button>
+            <div id="testLog" class="log-output"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        async function testOpenNewTab() {
+            log('Starting open_new_tab function call test...', 'info');
+            
+            // Check if ChatManager is available
+            if (!window.chatManager) {
+                log('❌ ChatManager not available', 'error');
+                return;
+            }
+            
+            log('✅ ChatManager found', 'success');
+            
+            try {
+                // Test the exact function call that the AI would make
+                log('Calling chatManager.executeToolByName("open_new_tab", {})...', 'info');
+                
+                const result = await window.chatManager.executeToolByName('open_new_tab', {});
+                
+                log(`✅ Function call successful!`, 'success');
+                log(`Result: ${JSON.stringify(result, null, 2)}`, 'info');
+                
+                // Check if a new tab was actually created
+                setTimeout(() => {
+                    if (window.genomeBrowser && window.genomeBrowser.tabManager) {
+                        const tabCount = window.genomeBrowser.tabManager.tabs.size;
+                        log(`Tab count after function call: ${tabCount}`, 'info');
+                        
+                        if (tabCount > 0) {
+                            log('✅ New tab was created successfully!', 'success');
+                        } else {
+                            log('⚠️ Function executed but no tab was created', 'error');
+                        }
+                    } else {
+                        log('❌ TabManager not available to check tab count', 'error');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                log(`❌ Function call failed: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Auto-run test on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('Page loaded, ready to test...', 'info');
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 
