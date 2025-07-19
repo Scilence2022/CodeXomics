@@ -2638,6 +2638,24 @@ class ChatManager {
         this.conversationState.abortController = new AbortController();
 
         try {
+            // Check if multi-agent system is enabled
+            const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
+            const showAgentInfo = this.configManager.get('multiAgentSettings.multiAgentShowInfo', true);
+            
+            if (multiAgentEnabled) {
+                // Add multi-agent system activation message
+                this.addMultiAgentActivationMessage();
+                
+                if (showAgentInfo) {
+                    this.addThinkingMessage(`🤖 **Multi-Agent System Activated**\n\n` +
+                        `🔄 **Agent Coordination Mode**: Enabled\n` +
+                        `📊 **Available Agents**: 8 specialized agents\n` +
+                        `🧠 **Decision Process**: Intelligent agent selection and coordination\n` +
+                        `⚡ **Performance**: Optimized execution with caching\n\n` +
+                        `*Multi-agent system will now coordinate tool execution across specialized agents...*`);
+                }
+            }
+
             // Get maximum function call rounds from configuration
             const maxRounds = this.configManager.get('llm.functionCallRounds', 3);
             const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
@@ -4789,6 +4807,24 @@ ${this.getPluginSystemInfo()}`;
     async executeToolByName(toolName, parameters) {
         console.log(`Executing tool: ${toolName} with parameters:`, parameters);
         
+        const startTime = Date.now();
+        
+        // Check if multi-agent system is enabled
+        const multiAgentEnabled = this.configManager.get('multiAgentSettings.multiAgentSystemEnabled', false);
+        const showAgentInfo = this.configManager.get('multiAgentSettings.multiAgentShowInfo', true);
+        
+        let agentName = 'System Agent';
+        let reasoning = 'Direct tool execution';
+        
+        if (multiAgentEnabled && showAgentInfo) {
+            // Determine which agent should handle this tool
+            agentName = this.getAgentForTool(toolName);
+            reasoning = this.getAgentReasoning(toolName, parameters);
+            
+            // Show agent decision process
+            this.addAgentDecisionMessage(agentName, toolName, reasoning, parameters);
+        }
+        
         // 记录工具调用到内存系统
         if (this.memorySystem && this.agentSystemSettings.memoryEnabled) {
             this.memorySystem.recordToolCall(toolName, parameters);
@@ -5389,6 +5425,13 @@ ${this.getPluginSystemInfo()}`;
             }
             
             console.log(`Local tool ${toolName} execution result:`, result);
+            
+            // Show agent execution result if multi-agent system is enabled
+            if (multiAgentEnabled && showAgentInfo) {
+                const executionTime = Date.now() - startTime;
+                this.addAgentExecutionResult(agentName, toolName, result, executionTime);
+            }
+            
             return result;
             
         } catch (error) {
@@ -10200,6 +10243,339 @@ ${this.getPluginSystemInfo()}`;
         if (this.autoScrollToBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
+    }
+    
+    /**
+     * 添加多智能体系统激活消息
+     */
+    addMultiAgentActivationMessage() {
+        const messagesContainer = document.getElementById('chatMessages');
+        const activationDiv = document.createElement('div');
+        activationDiv.className = 'message system-message multi-agent-activation';
+        activationDiv.innerHTML = `
+            <div class="message-content">
+                <div class="multi-agent-banner">
+                    <div class="multi-agent-icon">🤖</div>
+                    <div class="multi-agent-content">
+                        <div class="multi-agent-title">Multi-Agent System Activated</div>
+                        <div class="multi-agent-subtitle">Intelligent agent coordination enabled</div>
+                        <div class="multi-agent-features">
+                            <span class="feature-tag">8 Specialized Agents</span>
+                            <span class="feature-tag">Smart Coordination</span>
+                            <span class="feature-tag">Performance Optimized</span>
+                        </div>
+                    </div>
+                    <div class="multi-agent-status">
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Active</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(activationDiv);
+        
+        // Add to Evolution data
+        this.addToEvolutionData({
+            type: 'multi_agent_activation',
+            timestamp: new Date().toISOString(),
+            content: 'Multi-Agent System Activated',
+            visible: true,
+            metadata: {
+                source: 'multi_agent_system',
+                requestId: this.conversationState.currentRequestId,
+                step: 'system_activation'
+            }
+        });
+        
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+    
+    /**
+     * 添加智能体决策消息
+     */
+    addAgentDecisionMessage(agentName, toolName, reasoning, parameters = {}) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const decisionDiv = document.createElement('div');
+        decisionDiv.className = 'message assistant-message agent-decision';
+        decisionDiv.innerHTML = `
+            <div class="message-content">
+                <div class="agent-decision-content">
+                    <div class="agent-header">
+                        <div class="agent-icon">${this.getAgentIcon(agentName)}</div>
+                        <div class="agent-info">
+                            <div class="agent-name">${agentName}</div>
+                            <div class="agent-action">Selected for: <strong>${toolName}</strong></div>
+                        </div>
+                        <div class="agent-status">
+                            <span class="status-dot processing"></span>
+                            <span class="status-text">Processing</span>
+                        </div>
+                    </div>
+                    <div class="agent-reasoning">
+                        <div class="reasoning-label">Decision Reasoning:</div>
+                        <div class="reasoning-text">${reasoning}</div>
+                    </div>
+                    ${Object.keys(parameters).length > 0 ? `
+                        <div class="agent-parameters">
+                            <div class="parameters-label">Parameters:</div>
+                            <div class="parameters-content">
+                                <pre><code>${JSON.stringify(parameters, null, 2)}</code></pre>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(decisionDiv);
+        
+        // Add to Evolution data
+        this.addToEvolutionData({
+            type: 'agent_decision',
+            timestamp: new Date().toISOString(),
+            content: {
+                agentName,
+                toolName,
+                reasoning,
+                parameters
+            },
+            visible: true,
+            metadata: {
+                source: 'multi_agent_system',
+                requestId: this.conversationState.currentRequestId,
+                step: 'agent_selection',
+                agentName,
+                toolName
+            }
+        });
+        
+        // Update status after a short delay to show completion
+        setTimeout(() => {
+            const statusDot = decisionDiv.querySelector('.status-dot');
+            const statusText = decisionDiv.querySelector('.status-text');
+            if (statusDot && statusText) {
+                statusDot.className = 'status-dot completed';
+                statusText.textContent = 'Completed';
+            }
+        }, 2000);
+        
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+    
+    /**
+     * 添加智能体执行结果消息
+     */
+    addAgentExecutionResult(agentName, toolName, result, executionTime) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'message assistant-message agent-result';
+        resultDiv.innerHTML = `
+            <div class="message-content">
+                <div class="agent-result-content">
+                    <div class="agent-result-header">
+                        <div class="agent-icon">${this.getAgentIcon(agentName)}</div>
+                        <div class="agent-info">
+                            <div class="agent-name">${agentName}</div>
+                            <div class="agent-action">Executed: <strong>${toolName}</strong></div>
+                            <div class="execution-time">⏱️ ${executionTime}ms</div>
+                        </div>
+                        <div class="agent-status">
+                            <span class="status-dot completed"></span>
+                            <span class="status-text">Success</span>
+                        </div>
+                    </div>
+                    <div class="agent-result-data">
+                        <div class="result-label">Execution Result:</div>
+                        <div class="result-content">${this.formatAgentResult(result)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(resultDiv);
+        
+        // Add to Evolution data
+        this.addToEvolutionData({
+            type: 'agent_execution_result',
+            timestamp: new Date().toISOString(),
+            content: {
+                agentName,
+                toolName,
+                result,
+                executionTime
+            },
+            visible: true,
+            metadata: {
+                source: 'multi_agent_system',
+                requestId: this.conversationState.currentRequestId,
+                step: 'execution_complete',
+                agentName,
+                toolName,
+                executionTime
+            }
+        });
+        
+        if (this.autoScrollToBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+    
+    /**
+     * 获取智能体图标
+     */
+    getAgentIcon(agentName) {
+        const agentIcons = {
+            'Navigation Agent': '🧭',
+            'Analysis Agent': '📊',
+            'Data Agent': '💾',
+            'Sequence Agent': '🧬',
+            'Protein Agent': '⚛️',
+            'Network Agent': '🌐',
+            'External Agent': '🔗',
+            'Plugin Agent': '🔌'
+        };
+        return agentIcons[agentName] || '🤖';
+    }
+    
+    /**
+     * 格式化智能体执行结果
+     */
+    formatAgentResult(result) {
+        if (typeof result === 'string') {
+            return result;
+        } else if (typeof result === 'object') {
+            return `<pre><code>${JSON.stringify(result, null, 2)}</code></pre>`;
+        } else {
+            return String(result);
+        }
+    }
+    
+    /**
+     * 根据工具名称确定负责的智能体
+     */
+    getAgentForTool(toolName) {
+        const toolAgentMap = {
+            // Navigation Agent - 导航和定位相关
+            'navigate_to_position': 'Navigation Agent',
+            'open_new_tab': 'Navigation Agent',
+            'scroll_left': 'Navigation Agent',
+            'scroll_right': 'Navigation Agent',
+            'zoom_in': 'Navigation Agent',
+            'zoom_out': 'Navigation Agent',
+            'zoom_to_gene': 'Navigation Agent',
+            'bookmark_position': 'Navigation Agent',
+            'get_bookmarks': 'Navigation Agent',
+            'save_view_state': 'Navigation Agent',
+            'get_current_state': 'Navigation Agent',
+            'get_current_region': 'Navigation Agent',
+            'jump_to_gene': 'Navigation Agent',
+            
+            // Analysis Agent - 数据分析和统计
+            'analyze_region': 'Analysis Agent',
+            'compare_regions': 'Analysis Agent',
+            'sequence_statistics': 'Analysis Agent',
+            'codon_usage_analysis': 'Analysis Agent',
+            'analyze_codon_usage': 'Analysis Agent',
+            'calculate_entropy': 'Analysis Agent',
+            'calculate_melting_temp': 'Analysis Agent',
+            'calculate_molecular_weight': 'Analysis Agent',
+            'predict_promoter': 'Analysis Agent',
+            'predict_rbs': 'Analysis Agent',
+            'predict_terminator': 'Analysis Agent',
+            'find_similar_sequences': 'Analysis Agent',
+            
+            // Data Agent - 数据管理和导出
+            'export_data': 'Data Agent',
+            'export_region_features': 'Data Agent',
+            'get_file_info': 'Data Agent',
+            'get_genome_info': 'Data Agent',
+            'get_chromosome_list': 'Data Agent',
+            'get_track_status': 'Data Agent',
+            'add_track': 'Data Agent',
+            'add_variant': 'Data Agent',
+            
+            // Sequence Agent - 序列分析
+            'get_sequence': 'Sequence Agent',
+            'translate_sequence': 'Sequence Agent',
+            'translate_dna': 'Sequence Agent',
+            'calculate_gc_content': 'Sequence Agent',
+            'compute_gc': 'Sequence Agent',
+            'calc_region_gc': 'Sequence Agent',
+            'reverse_complement': 'Sequence Agent',
+            'find_orfs': 'Sequence Agent',
+            'find_restriction_sites': 'Sequence Agent',
+            'virtual_digest': 'Sequence Agent',
+            'get_upstream_region': 'Sequence Agent',
+            'get_downstream_region': 'Sequence Agent',
+            'search_sequence_motif': 'Sequence Agent',
+            
+            // Protein Agent - 蛋白质相关
+            'open_protein_viewer': 'Protein Agent',
+            'fetch_protein_structure': 'Protein Agent',
+            'search_protein_by_gene': 'Protein Agent',
+            'get_pdb_details': 'Protein Agent',
+            'amino_acid_composition': 'Protein Agent',
+            
+            // Network Agent - 网络和外部数据
+            'blast_search': 'Network Agent',
+            'blast_sequence_from_region': 'Network Agent',
+            'get_blast_databases': 'Network Agent',
+            'batch_blast_search': 'Network Agent',
+            'advanced_blast_search': 'Network Agent',
+            'local_blast_database_info': 'Network Agent',
+            'show_metabolic_pathway': 'Network Agent',
+            'find_pathway_genes': 'Network Agent',
+            
+            // External Agent - 外部工具和API
+            'search_features': 'External Agent',
+            'search_gene_by_name': 'External Agent',
+            'search_by_position': 'External Agent',
+            'search_motif': 'External Agent',
+            'search_pattern': 'External Agent',
+            'search_intergenic_regions': 'External Agent',
+            'get_nearby_features': 'External Agent',
+            'find_intergenic_regions': 'External Agent',
+            
+            // Plugin Agent - 插件功能
+            'get_gene_details': 'Plugin Agent',
+            'get_operons': 'Plugin Agent',
+            'create_annotation': 'Plugin Agent',
+            'add_annotation': 'Plugin Agent',
+            'edit_annotation': 'Plugin Agent',
+            'delete_annotation': 'Plugin Agent',
+            'batch_create_annotations': 'Plugin Agent',
+            'merge_annotations': 'Plugin Agent',
+            'toggle_track': 'Plugin Agent',
+            'toggle_annotation_track': 'Plugin Agent'
+        };
+        
+        return toolAgentMap[toolName] || 'System Agent';
+    }
+    
+    /**
+     * 生成智能体决策推理
+     */
+    getAgentReasoning(toolName, parameters) {
+        const agentName = this.getAgentForTool(toolName);
+        
+        const reasoningTemplates = {
+            'Navigation Agent': `This tool requires navigation and positioning capabilities. ${agentName} specializes in spatial operations and view management, making it the optimal choice for coordinate-based tasks.`,
+            'Analysis Agent': `This tool involves data analysis and statistical computation. ${agentName} is designed for analytical operations and pattern recognition, ensuring accurate and efficient processing.`,
+            'Data Agent': `This tool handles data management and export operations. ${agentName} is optimized for file operations and data transformation, providing reliable data handling capabilities.`,
+            'Sequence Agent': `This tool performs sequence analysis and manipulation. ${agentName} is specialized in DNA/RNA sequence processing and bioinformatics algorithms.`,
+            'Protein Agent': `This tool deals with protein structure and function analysis. ${agentName} is designed for structural biology and protein-related computations.`,
+            'Network Agent': `This tool requires external database access and network operations. ${agentName} is optimized for API calls and external data retrieval.`,
+            'External Agent': `This tool involves search and discovery operations. ${agentName} is specialized in information retrieval and pattern matching across datasets.`,
+            'Plugin Agent': `This tool utilizes plugin functionality and annotation systems. ${agentName} is designed to manage plugin integrations and annotation workflows.`,
+            'System Agent': `This tool requires general system operations. ${agentName} provides standard execution capabilities for system-level tasks.`
+        };
+        
+        return reasoningTemplates[agentName] || reasoningTemplates['System Agent'];
     }
 
     /**

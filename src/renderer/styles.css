@@ -29208,6 +29208,253 @@ path.svg-gene-element.selected {
     position: relative;
 }
 
+/* Multi-Agent Chat Messages Styles */
+.multi-agent-activation {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    margin: 10px 0;
+}
+
+.multi-agent-banner {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    color: white;
+    border-radius: 8px;
+}
+
+.multi-agent-icon {
+    font-size: 24px;
+    margin-right: 15px;
+    animation: pulse 2s infinite;
+}
+
+.multi-agent-content {
+    flex: 1;
+}
+
+.multi-agent-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.multi-agent-subtitle {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.multi-agent-features {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.feature-tag {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.multi-agent-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: blink 1.5s infinite;
+}
+
+.status-indicator.active {
+    background: #4CAF50;
+}
+
+.status-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Agent Decision Messages */
+.agent-decision {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    margin: 8px 0;
+}
+
+.agent-decision-content {
+    padding: 15px;
+    color: white;
+    border-radius: 8px;
+}
+
+.agent-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.agent-icon {
+    font-size: 20px;
+    margin-right: 12px;
+}
+
+.agent-info {
+    flex: 1;
+}
+
+.agent-name {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.agent-action {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.agent-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FFD700;
+}
+
+.status-dot.processing {
+    background: #FFD700;
+    animation: pulse 1s infinite;
+}
+
+.status-dot.completed {
+    background: #4CAF50;
+}
+
+.status-text {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.agent-reasoning {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.reasoning-label {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+
+.reasoning-text {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.agent-parameters {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.parameters-label {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+
+.parameters-content pre {
+    font-size: 10px;
+    margin: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+/* Agent Execution Result Messages */
+.agent-result {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border: none;
+    margin: 8px 0;
+}
+
+.agent-result-content {
+    padding: 15px;
+    color: white;
+    border-radius: 8px;
+}
+
+.agent-result-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.execution-time {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.agent-result-data {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.result-label {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+
+.result-content {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.result-content pre {
+    font-size: 10px;
+    margin: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
 .multi-agent-settings-modal.resizable {
     position: absolute;
     top: 50%;
