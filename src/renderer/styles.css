@@ -10056,14 +10056,17 @@ path.svg-gene-element.selected {
 .llm-provider-config {
     padding: 20px;
     min-height: 300px;
+    overflow-x: hidden;
 }
 
 .provider-config {
     display: none;
+    overflow-x: hidden;
 }
 
 .provider-config.active {
     display: block;
+    overflow-x: hidden;
 }
 
 .provider-config .form-group {
@@ -10318,6 +10321,7 @@ path.svg-gene-element.selected {
         padding: 0 !important;
         min-height: 0 !important; /* Allow content to shrink */
         overflow-y: auto !important; /* Ensure scrollability */
+        overflow-x: hidden !important; /* Prevent horizontal scroll */
         flex: 1 1 auto !important; /* Allow body to grow and shrink */
         max-height: calc(100vh - 120px) !important; /* Leave space for header and footer */
     }
@@ -26484,10 +26488,15 @@ path.svg-gene-element.selected {
     
     .llm-provider-tabs {
         flex-direction: column;
+        overflow-x: visible;
+        overflow-y: auto;
     }
     
     .tab-button {
         border-bottom: 1px solid #dee2e6;
+        text-align: left;
+        justify-content: flex-start;
+        white-space: nowrap;
     }
     
     .tab-button:last-child {
