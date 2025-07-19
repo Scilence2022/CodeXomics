@@ -290,9 +290,6 @@ class ChatBoxSettingsManager {
                         <button class="tab-button" data-tab="behavior">
                             <i class="fas fa-cogs"></i> Behavior
                         </button>
-                        <button class="tab-button" data-tab="agents">
-                            <i class="fas fa-robot"></i> Multi-Agent
-                        </button>
                         <button class="tab-button" data-tab="memory">
                             <i class="fas fa-brain"></i> Memory
                         </button>
@@ -429,123 +426,6 @@ class ChatBoxSettingsManager {
                                     <label for="responseTimeout">Response timeout (seconds):</label>
                                     <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
                                     <small class="help-text">How long to wait for LLM responses</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Multi-Agent Tab -->
-                        <div class="provider-config" data-panel="agents">
-                            <div class="form-section">
-                                <h4>🤖 Multi-Agent System</h4>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentSystemEnabled" class="setting-checkbox">
-                                        Enable Multi-Agent System
-                                    </label>
-                                    <small class="help-text">Enable intelligent agent-based tool execution</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentAutoOptimize" class="setting-checkbox">
-                                        Auto-optimize execution paths
-                                    </label>
-                                    <small class="help-text">Automatically optimize tool execution based on memory and performance data</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentShowInfo" class="setting-checkbox">
-                                        Show agent information
-                                    </label>
-                                    <small class="help-text">Display which agent is handling each tool execution</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentMemoryEnabled" class="setting-checkbox">
-                                        Enable agent memory integration
-                                    </label>
-                                    <small class="help-text">Enable memory system integration for agents</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentCacheEnabled" class="setting-checkbox">
-                                        Enable agent execution caching
-                                    </label>
-                                    <small class="help-text">Cache successful agent executions for faster future execution</small>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4>🧠 Agent LLM Configuration</h4>
-                                <div class="form-group">
-                                    <label for="agentLLMProvider">LLM Provider:</label>
-                                    <select id="agentLLMProvider" class="input-full">
-                                        <option value="auto">Auto (Use main LLM)</option>
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="google">Google (Gemini)</option>
-                                        <option value="local">Local LLM</option>
-                                    </select>
-                                    <small class="help-text">Choose LLM provider for agent decision making</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="agentLLMModel">LLM Model:</label>
-                                    <select id="agentLLMModel" class="input-full">
-                                        <option value="auto">Auto (Use provider default)</option>
-                                        <option value="gpt-4">GPT-4</option>
-                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                        <option value="claude-3-opus">Claude 3 Opus</option>
-                                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                                        <option value="claude-3-haiku">Claude 3 Haiku</option>
-                                        <option value="gemini-pro">Gemini Pro</option>
-                                        <option value="gemini-flash">Gemini Flash</option>
-                                    </select>
-                                    <small class="help-text">Choose specific model for agent operations</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="agentLLMTemperature">Temperature:</label>
-                                    <input type="range" id="agentLLMTemperature" class="input-full" min="0" max="2" step="0.1" value="0.7">
-                                    <div class="range-value" id="agentLLMTemperatureValue">0.7</div>
-                                    <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very creative)</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="agentLLMMaxTokens">Max Tokens:</label>
-                                    <input type="number" id="agentLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
-                                    <small class="help-text">Maximum tokens for agent LLM responses</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="agentLLMTimeout">Timeout (seconds):</label>
-                                    <input type="number" id="agentLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
-                                    <small class="help-text">Timeout for agent LLM requests</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="agentLLMRetryAttempts">Retry Attempts:</label>
-                                    <input type="number" id="agentLLMRetryAttempts" class="input-full" min="1" max="5" step="1" value="3">
-                                    <small class="help-text">Number of retry attempts for failed agent LLM requests</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentLLMUseSystemPrompt" class="setting-checkbox" checked>
-                                        Use system prompt for agents
-                                    </label>
-                                    <small class="help-text">Enable system prompts for better agent behavior</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="agentLLMEnableFunctionCalling" class="setting-checkbox" checked>
-                                        Enable function calling for agents
-                                    </label>
-                                    <small class="help-text">Allow agents to use function calling capabilities</small>
                                 </div>
                             </div>
                         </div>

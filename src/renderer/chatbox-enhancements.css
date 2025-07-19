@@ -22,6 +22,7 @@
     max-width: 600px;
     width: 95vw;
     max-height: calc(100vh - 40px);
+    min-height: 500px;
     display: flex;
     flex-direction: column;
     background: white;
@@ -163,6 +164,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Form Sections */
