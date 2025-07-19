@@ -5344,7 +5344,7 @@ ${this.getPluginSystemInfo()}`;
                     break;
                     
                 case 'delete_sequence':
-                    result = await this.executeActionFunction('deleteSequence', parameters);
+                    result = await this.executeDeleteSequence(parameters);
                     break;
                     
                 case 'insert_sequence':
@@ -5468,6 +5468,66 @@ ${this.getPluginSystemInfo()}`;
                 parameters: parameters,
                 timestamp: new Date().toISOString()
             };
+        }
+    }
+
+    /**
+     * Execute delete sequence function directly
+     */
+    async executeDeleteSequence(parameters) {
+        console.log(`🔧 [ChatManager] Executing delete_sequence with parameters:`, parameters);
+        
+        try {
+            const { chromosome, start, end, strand = '+' } = parameters;
+            
+            // Validate parameters
+            if (!chromosome || start === undefined || end === undefined) {
+                throw new Error('Missing required parameters: chromosome, start, end');
+            }
+            
+            if (start > end) {
+                throw new Error('Start position must be less than or equal to end position');
+            }
+            
+            // Use MicrobeGenomicsFunctions if available
+            if (window.MicrobeFns && window.MicrobeFns.delete_sequence) {
+                const result = window.MicrobeFns.delete_sequence(chromosome, start, end);
+                console.log(`✅ [ChatManager] delete_sequence executed via MicrobeFns:`, result);
+                return result;
+            }
+            
+            // Fallback to ActionManager if MicrobeFns not available
+            const genomeBrowser = window.genomeBrowser;
+            if (!genomeBrowser || !genomeBrowser.actionManager) {
+                throw new Error('Neither MicrobeFns nor ActionManager available');
+            }
+            
+            const target = `${chromosome}:${start}-${end}`;
+            const length = end - start + 1;
+            const metadata = { chromosome, start, end, strand, selectionSource: 'function_call' };
+            
+            const actionId = genomeBrowser.actionManager.addAction(
+                genomeBrowser.actionManager.ACTION_TYPES.DELETE_SEQUENCE,
+                target,
+                `Delete ${length.toLocaleString()} bp from ${chromosome}:${start}-${end}`,
+                metadata
+            );
+            
+            const result = {
+                success: true,
+                actionId: actionId,
+                action: 'delete',
+                target: target,
+                length: length,
+                message: `Delete action queued for ${chromosome}:${start}-${end} (${length} bp)`
+            };
+            
+            console.log(`✅ [ChatManager] delete_sequence executed via ActionManager:`, result);
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] delete_sequence failed:`, error);
+            throw error;
         }
     }
 

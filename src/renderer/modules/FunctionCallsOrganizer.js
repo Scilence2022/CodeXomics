@@ -122,7 +122,13 @@ class FunctionCallsOrganizer {
                     'export_data',
                     'export_region_features',
                     'add_track',
-                    'add_variant'
+                    'add_variant',
+                    'delete_sequence',
+                    'insert_sequence',
+                    'replace_sequence',
+                    'copy_sequence',
+                    'cut_sequence',
+                    'paste_sequence'
                 ]
             },
             
