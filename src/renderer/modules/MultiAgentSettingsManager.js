@@ -364,8 +364,8 @@ class MultiAgentSettingsManager {
         if (!modalContent) return;
         
         // Initialize drag functionality using existing ModalDragManager
-        if (window.ModalDragManager) {
-            window.ModalDragManager.makeDraggable(modalContent, this.modal);
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#multiAgentSettingsModal');
         }
         
         // Initialize resize functionality using existing ResizableModalManager
