@@ -28,7 +28,8 @@ class FunctionCallsOrganizer {
                     'save_view_state',
                     'navigate_to',
                     'jump_to_gene',
-                    'get_current_region'
+                    'get_current_region',
+                    'open_new_tab'
                 ]
             },
             
