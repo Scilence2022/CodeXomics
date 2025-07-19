@@ -1664,37 +1664,63 @@ class GenomeBrowser {
         ipcRenderer.on('show-plugin-management', () => {
             console.log('🧩 Plugin Management requested from main menu');
             
-            // Try multiple approaches to open plugin management
-            const pluginManagerBtn = document.getElementById('pluginManagerBtn');
-            
-            if (pluginManagerBtn) {
-                console.log('✅ Plugin Manager button found, clicking...');
-                pluginManagerBtn.click();
+            // Try to show the modal directly if PluginManagementUI is available
+            if (window.pluginManagementUI) {
+                console.log('✅ PluginManagementUI found globally, showing modal directly...');
+                window.pluginManagementUI.showPluginModal();
+            } else if (this.pluginManagementUI) {
+                console.log('✅ PluginManagementUI found on instance, showing modal directly...');
+                this.pluginManagementUI.showPluginModal();
             } else {
-                console.warn('⚠️ Plugin Manager button not found, trying direct approach...');
+                console.warn('⚠️ PluginManagementUI not yet initialized, retrying in 500ms...');
+                setTimeout(() => {
+                    if (window.pluginManagementUI) {
+                        console.log('🔄 Retry: Using global PluginManagementUI...');
+                        window.pluginManagementUI.showPluginModal();
+                    } else {
+                        console.error('❌ Plugin Management system not available after retry');
+                        // Fallback: show a simple notification
+                        if (window.genomeBrowser && window.genomeBrowser.showNotification) {
+                            window.genomeBrowser.showNotification('Plugin Management system is still initializing. Please try again in a moment.', 'warning');
+                        }
+                    }
+                }, 500);
+            }
+        });
+
+        ipcRenderer.on('show-plugin-marketplace', () => {
+            console.log('🛒 Plugin Marketplace requested from main menu');
+            
+            // Try multiple approaches to open plugin marketplace
+            const pluginMarketplaceBtn = document.getElementById('pluginMarketplaceBtn');
+            
+            if (pluginMarketplaceBtn) {
+                console.log('✅ Plugin Marketplace button found, clicking...');
+                pluginMarketplaceBtn.click();
+            } else {
+                console.warn('⚠️ Plugin Marketplace button not found, trying direct approach...');
                 
-                // Try to show the modal directly if PluginManagementUI is available
+                // Try to show the marketplace directly if PluginManagementUI is available
                 if (window.pluginManagementUI) {
-                    console.log('✅ PluginManagementUI found globally, showing modal directly...');
-                    window.pluginManagementUI.showPluginModal();
+                    console.log('✅ PluginManagementUI found globally, opening marketplace directly...');
+                    window.pluginManagementUI.openPluginMarketplace();
                 } else if (this.pluginManagementUI) {
-                    console.log('✅ PluginManagementUI found on instance, showing modal directly...');
-                    this.pluginManagementUI.showPluginModal();
+                    console.log('✅ PluginManagementUI found on instance, opening marketplace directly...');
+                    this.pluginManagementUI.openPluginMarketplace();
                 } else {
                     console.warn('⚠️ PluginManagementUI not yet initialized, retrying in 500ms...');
                     setTimeout(() => {
-                        const retryBtn = document.getElementById('pluginManagerBtn');
+                        const retryBtn = document.getElementById('pluginMarketplaceBtn');
                         if (retryBtn) {
-                            console.log('🔄 Retry: Plugin Manager button found, clicking...');
+                            console.log('🔄 Retry: Plugin Marketplace button found, clicking...');
                             retryBtn.click();
                         } else if (window.pluginManagementUI) {
-                            console.log('🔄 Retry: Using global PluginManagementUI...');
-                            window.pluginManagementUI.showPluginModal();
+                            console.log('🔄 Retry: Opening marketplace directly...');
+                            window.pluginManagementUI.openPluginMarketplace();
                         } else {
-                            console.error('❌ Plugin Management system not available after retry');
                             // Fallback: show a simple notification
                             if (window.genomeBrowser && window.genomeBrowser.showNotification) {
-                                window.genomeBrowser.showNotification('Plugin Management system is still initializing. Please try again in a moment.', 'warning');
+                                window.genomeBrowser.showNotification('Plugin Marketplace system is still initializing. Please try again in a moment.', 'warning');
                             }
                         }
                     }, 500);
@@ -1762,6 +1788,46 @@ class GenomeBrowser {
             const mcpSettingsBtn = document.getElementById('mcpSettingsBtn');
             if (mcpSettingsBtn) {
                 mcpSettingsBtn.click();
+            }
+        });
+
+        ipcRenderer.on('multi-agent-settings', () => {
+            console.log('🤖 Multi-Agent Settings requested from main menu');
+            
+            // Try multiple approaches to open multi-agent settings
+            const multiAgentSettingsBtn = document.getElementById('multiAgentSettingsBtn');
+            
+            if (multiAgentSettingsBtn) {
+                console.log('✅ Multi-Agent Settings button found, clicking...');
+                multiAgentSettingsBtn.click();
+            } else {
+                console.warn('⚠️ Multi-Agent Settings button not found, trying direct approach...');
+                
+                // Try to show the modal directly if MultiAgentSettingsManager is available
+                if (window.multiAgentSettingsManager) {
+                    console.log('✅ MultiAgentSettingsManager found globally, showing modal directly...');
+                    window.multiAgentSettingsManager.showModal();
+                } else if (this.multiAgentSettingsManager) {
+                    console.log('✅ MultiAgentSettingsManager found on instance, showing modal directly...');
+                    this.multiAgentSettingsManager.showModal();
+                } else {
+                    console.warn('⚠️ MultiAgentSettingsManager not yet initialized, retrying in 500ms...');
+                    setTimeout(() => {
+                        const retryBtn = document.getElementById('multiAgentSettingsBtn');
+                        if (retryBtn) {
+                            console.log('🔄 Retry: Multi-Agent Settings button found, clicking...');
+                            retryBtn.click();
+                        } else if (window.multiAgentSettingsManager) {
+                            console.log('🔄 Retry: Showing modal directly...');
+                            window.multiAgentSettingsManager.showModal();
+                        } else {
+                            // Fallback: show a simple notification
+                            if (window.genomeBrowser && window.genomeBrowser.showNotification) {
+                                window.genomeBrowser.showNotification('Multi-Agent Settings system is still initializing. Please try again in a moment.', 'warning');
+                            }
+                        }
+                    }, 500);
+                }
             }
         });
 

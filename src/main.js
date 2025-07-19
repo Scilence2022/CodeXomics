@@ -1500,6 +1500,13 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Multi-Agent Settings',
+          click: () => {
+            sendToCurrentMainWindow('multi-agent-settings');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'ChatBox Settings',
           click: () => {
             sendToCurrentMainWindow('chatbox-settings');
@@ -1529,6 +1536,12 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Alt+P',
           click: () => {
             sendToCurrentMainWindow('show-plugin-management');
+          }
+        },
+        {
+          label: 'Plugin Marketplace',
+          click: () => {
+            sendToCurrentMainWindow('show-plugin-marketplace');
           }
         },
         { type: 'separator' },
