@@ -4,6 +4,72 @@
 class UIManager {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
+        this.initializeDropdownHandlers();
+    }
+
+    // Initialize dropdown event handlers
+    initializeDropdownHandlers() {
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            const fileDropdown = document.getElementById('fileDropdownMenu');
+            const exportDropdown = document.getElementById('exportDropdownMenu');
+            const fileButton = document.getElementById('openFileBtn');
+            const exportButton = document.getElementById('exportFileBtn');
+
+            // Close file dropdown if click is outside
+            if (fileDropdown && fileDropdown.classList.contains('show')) {
+                if (!fileButton.contains(e.target) && !fileDropdown.contains(e.target)) {
+                    this.closeFileDropdown();
+                }
+            }
+
+            // Close export dropdown if click is outside
+            if (exportDropdown && exportDropdown.classList.contains('show')) {
+                if (!exportButton.contains(e.target) && !exportDropdown.contains(e.target)) {
+                    this.closeExportDropdown();
+                }
+            }
+        });
+
+        // Reposition dropdowns on window resize
+        window.addEventListener('resize', () => {
+            const fileDropdown = document.getElementById('fileDropdownMenu');
+            const exportDropdown = document.getElementById('exportDropdownMenu');
+
+            if (fileDropdown && fileDropdown.classList.contains('show')) {
+                const button = document.getElementById('openFileBtn');
+                this.positionDropdown(fileDropdown, button);
+            }
+
+            if (exportDropdown && exportDropdown.classList.contains('show')) {
+                const button = document.getElementById('exportFileBtn');
+                this.positionDropdown(exportDropdown, button);
+            }
+        });
+    }
+
+    // Helper method to position dropdowns correctly
+    positionDropdown(dropdown, button) {
+        const rect = button.getBoundingClientRect();
+        const dropdownWidth = 250; // min-width from CSS
+        const dropdownHeight = 400; // max-height from CSS
+        
+        // Calculate position
+        let top = rect.bottom + 2;
+        let right = window.innerWidth - rect.right;
+        
+        // Ensure dropdown doesn't go off screen vertically
+        if (top + dropdownHeight > window.innerHeight) {
+            top = rect.top - dropdownHeight - 2; // Show above button
+        }
+        
+        // Ensure dropdown doesn't go off screen horizontally
+        if (right + dropdownWidth > window.innerWidth) {
+            right = window.innerWidth - rect.left - dropdownWidth;
+        }
+        
+        dropdown.style.top = Math.max(0, top) + 'px';
+        dropdown.style.right = Math.max(0, right) + 'px';
     }
 
     // Panel management
@@ -296,7 +362,14 @@ class UIManager {
     // File dropdown management
     toggleFileDropdown() {
         const dropdown = document.getElementById('fileDropdownMenu');
-        dropdown.classList.toggle('show');
+        const button = document.getElementById('openFileBtn');
+        
+        if (dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+        } else {
+            this.positionDropdown(dropdown, button);
+            dropdown.classList.add('show');
+        }
     }
 
     closeFileDropdown() {
@@ -307,7 +380,14 @@ class UIManager {
     // Export dropdown management
     toggleExportDropdown() {
         const dropdown = document.getElementById('exportDropdownMenu');
-        dropdown.classList.toggle('show');
+        const button = document.getElementById('exportFileBtn');
+        
+        if (dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+        } else {
+            this.positionDropdown(dropdown, button);
+            dropdown.classList.add('show');
+        }
     }
 
     closeExportDropdown() {

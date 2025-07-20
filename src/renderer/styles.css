@@ -3482,17 +3482,17 @@ svg {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     min-width: 250px;
-    z-index: 1001;
+    z-index: 10000; /* Increased z-index significantly */
     display: none;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: 400px; /* Add max-height to prevent overly tall menus */
+    overflow-y: auto; /* Add scroll if content is too tall */
 }
 
 .dropdown-menu.show {
@@ -7901,17 +7901,17 @@ svg {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     min-width: 250px;
-    z-index: 1001;
+    z-index: 10000; /* Increased z-index significantly */
     display: none;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: 400px; /* Add max-height to prevent overly tall menus */
+    overflow-y: auto; /* Add scroll if content is too tall */
 }
 
 .dropdown-menu.show {
@@ -15218,17 +15218,17 @@ svg {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     min-width: 250px;
-    z-index: 1001;
+    z-index: 10000; /* Increased z-index significantly */
     display: none;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: 400px; /* Add max-height to prevent overly tall menus */
+    overflow-y: auto; /* Add scroll if content is too tall */
 }
 
 .dropdown-menu.show {
@@ -19194,17 +19194,17 @@ svg {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     min-width: 250px;
-    z-index: 1001;
+    z-index: 10000; /* Increased z-index significantly */
     display: none;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: 400px; /* Add max-height to prevent overly tall menus */
+    overflow-y: auto; /* Add scroll if content is too tall */
 }
 
 .dropdown-menu.show {
@@ -24649,17 +24649,17 @@ svg {
 }
 
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     min-width: 250px;
-    z-index: 1001;
+    z-index: 10000; /* Increased z-index significantly */
     display: none;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: 400px; /* Add max-height to prevent overly tall menus */
+    overflow-y: auto; /* Add scroll if content is too tall */
 }
 
 .dropdown-menu.show {
