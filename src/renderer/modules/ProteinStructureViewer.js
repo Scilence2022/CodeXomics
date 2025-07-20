@@ -21,35 +21,230 @@ class ProteinStructureViewer {
     }
 
     /**
-     * Add protein viewer button to the main interface
+     * Add unified protein search button to the main interface
      */
     addProteinViewerButton() {
         const toolbar = document.querySelector('.toolbar') || document.querySelector('.navigation-controls');
         if (!toolbar) return;
 
-        // Check if buttons already exist
-        if (document.getElementById('protein-viewer-btn')) return;
+        // Check if button already exists
+        if (document.getElementById('unified-protein-search-btn')) return;
 
-        const proteinBtn = document.createElement('button');
-        proteinBtn.id = 'protein-viewer-btn';
-        proteinBtn.className = 'btn';
-        proteinBtn.innerHTML = '<i class="fas fa-cube"></i> 3D Proteins';
-        proteinBtn.title = 'Open Protein Structure Viewer (PDB)';
-        proteinBtn.onclick = () => this.showProteinSearchDialog();
+        // Remove old separate buttons if they exist
+        const oldProteinBtn = document.getElementById('protein-viewer-btn');
+        const oldAlphaFoldBtn = document.getElementById('alphafold-viewer-btn');
+        if (oldProteinBtn) oldProteinBtn.remove();
+        if (oldAlphaFoldBtn) oldAlphaFoldBtn.remove();
+
+        const unifiedBtn = document.createElement('button');
+        unifiedBtn.id = 'unified-protein-search-btn';
+        unifiedBtn.className = 'btn';
+        unifiedBtn.innerHTML = '<i class="fas fa-cubes"></i> Protein Search';
+        unifiedBtn.title = 'Search Protein Structures (PDB & AlphaFold)';
+        unifiedBtn.onclick = () => this.showUnifiedProteinSearchDialog();
         
-        const alphaFoldBtn = document.createElement('button');
-        alphaFoldBtn.id = 'alphafold-viewer-btn';
-        alphaFoldBtn.className = 'btn';
-        alphaFoldBtn.innerHTML = '<i class="fas fa-dna"></i> AlphaFold';
-        alphaFoldBtn.title = 'Search AlphaFold Database';
-        alphaFoldBtn.onclick = () => this.showAlphaFoldSearchDialog();
-        
-        toolbar.appendChild(proteinBtn);
-        toolbar.appendChild(alphaFoldBtn);
+        toolbar.appendChild(unifiedBtn);
     }
 
     /**
-     * Show dialog to search for protein structures
+     * Show unified protein search dialog
+     */
+    showUnifiedProteinSearchDialog() {
+        // Remove any existing dialogs first
+        const existingDialogs = document.querySelectorAll('.unified-protein-search-dialog, .protein-search-dialog, .alphafold-search-dialog');
+        existingDialogs.forEach(dialog => dialog.remove());
+        
+        const dialog = this.createUnifiedProteinSearchDialog();
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        
+        // Focus the input field
+        setTimeout(() => {
+            const inputField = document.getElementById('unified-search-input');
+            if (inputField) {
+                inputField.value = '';
+                inputField.focus();
+            }
+        }, 100);
+    }
+
+    /**
+     * Create unified protein search dialog
+     */
+    createUnifiedProteinSearchDialog() {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'unified-protein-search-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-content">
+                <div class="dialog-header draggable-header" data-dialog-id="unified-protein-search">
+                    <h3>Protein Structure Search</h3>
+                    <button class="close-btn" onclick="this.closest('dialog').close()">×</button>
+                </div>
+                <div class="dialog-body">
+                    <div class="input-group">
+                        <label for="unified-search-input">Gene Name or PDB ID:</label>
+                        <input type="text" id="unified-search-input" placeholder="Enter gene name (e.g., TP53, lysC) or PDB ID (e.g., 1TUP)">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="database-selection">Database:</label>
+                        <select id="database-selection">
+                            <option value="both">Both PDB & AlphaFold</option>
+                            <option value="pdb">PDB Experimental Structures</option>
+                            <option value="alphafold">AlphaFold Predictions</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="species-selection">Species:</label>
+                        <select id="species-selection">
+                            <option value="auto">Auto-detect from current genome</option>
+                            <option value="all">All species (no restriction)</option>
+                            <option value="Homo sapiens">Human (Homo sapiens)</option>
+                            <option value="Escherichia coli">E. coli (Escherichia coli)</option>
+                            <option value="Corynebacterium glutamicum">C. glutamicum (Corynebacterium glutamicum)</option>
+                            <option value="Bacillus subtilis">B. subtilis (Bacillus subtilis)</option>
+                            <option value="Saccharomyces cerevisiae">Yeast (Saccharomyces cerevisiae)</option>
+                            <option value="Mus musculus">Mouse (Mus musculus)</option>
+                            <option value="Drosophila melanogaster">Fruit fly (Drosophila melanogaster)</option>
+                            <option value="Caenorhabditis elegans">C. elegans</option>
+                        </select>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="proteinStructureViewer.executeUnifiedSearch()">
+                            <i class="fas fa-search"></i> Search Structures
+                        </button>
+                        <button class="btn btn-secondary" onclick="this.closest('dialog').close()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return dialog;
+    }
+
+    /**
+     * Execute unified protein structure search
+     */
+    executeUnifiedSearch() {
+        const searchInput = document.getElementById('unified-search-input');
+        const databaseSelect = document.getElementById('database-selection');
+        const speciesSelect = document.getElementById('species-selection');
+        
+        if (!searchInput || !searchInput.value.trim()) {
+            alert('Please enter a gene name or PDB ID');
+            return;
+        }
+        
+        const query = searchInput.value.trim();
+        const database = databaseSelect.value;
+        const species = speciesSelect.value;
+        
+        // Close the dialog
+        const dialog = document.querySelector('.unified-protein-search-dialog');
+        if (dialog) dialog.close();
+        
+        // Determine the organism for the search
+        let organism = species;
+        if (species === 'auto') {
+            // Try to auto-detect from current genome if available
+            if (window.genomeBrowser && typeof window.genomeBrowser.getCurrentOrganismInfo === 'function') {
+                organism = window.genomeBrowser.getCurrentOrganismInfo();
+            } else {
+                organism = 'Unknown organism';
+            }
+        } else if (species === 'all') {
+            organism = '';
+        }
+        
+        // Execute search based on database selection
+        if (database === 'both') {
+            this.searchBothDatabases(query, organism);
+        } else if (database === 'pdb') {
+            this.searchPDBOnly(query, organism);
+        } else if (database === 'alphafold') {
+            this.searchAlphaFoldOnly(query, organism);
+        }
+    }
+
+    /**
+     * Search both PDB and AlphaFold databases
+     */
+    searchBothDatabases(query, organism) {
+        if (!window.chatManager) {
+            console.error('ChatManager not available');
+            return;
+        }
+        
+        let searchMessage;
+        if (organism && organism !== 'Unknown organism') {
+            searchMessage = `Search protein structures for "${query}" in ${organism}. Please search both PDB experimental structures and AlphaFold predictions for this protein.`;
+        } else {
+            searchMessage = `Search protein structures for "${query}". Please search both PDB experimental structures and AlphaFold predictions for this protein.`;
+        }
+        
+        window.chatManager.sendMessageProgrammatically(searchMessage);
+        this.showChatIfHidden();
+    }
+
+    /**
+     * Search PDB database only
+     */
+    searchPDBOnly(query, organism) {
+        if (!window.chatManager) {
+            console.error('ChatManager not available');
+            return;
+        }
+        
+        let searchMessage;
+        if (organism && organism !== 'Unknown organism') {
+            searchMessage = `Search PDB protein structures for "${query}" in ${organism}.`;
+        } else {
+            searchMessage = `Search PDB protein structures for "${query}".`;
+        }
+        
+        window.chatManager.sendMessageProgrammatically(searchMessage);
+        this.showChatIfHidden();
+    }
+
+    /**
+     * Search AlphaFold database only
+     */
+    searchAlphaFoldOnly(query, organism) {
+        if (!window.chatManager) {
+            console.error('ChatManager not available');
+            return;
+        }
+        
+        let searchMessage;
+        if (organism && organism !== 'Unknown organism') {
+            searchMessage = `Search AlphaFold protein structures for "${query}" in ${organism}.`;
+        } else {
+            searchMessage = `Search AlphaFold protein structures for "${query}".`;
+        }
+        
+        window.chatManager.sendMessageProgrammatically(searchMessage);
+        this.showChatIfHidden();
+    }
+
+    /**
+     * Show chat box if hidden
+     */
+    showChatIfHidden() {
+        const chatBox = document.querySelector('.chat-container');
+        if (chatBox && !chatBox.classList.contains('visible')) {
+            const toggleChatBtn = document.getElementById('toggleChatBtn');
+            if (toggleChatBtn) {
+                toggleChatBtn.click();
+            }
+        }
+    }
+
+    /**
+     * Show dialog to search for protein structures (Legacy method - kept for compatibility)
      */
     showProteinSearchDialog() {
         // Remove any existing dialog first

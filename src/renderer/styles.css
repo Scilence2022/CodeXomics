@@ -35408,6 +35408,135 @@ input:checked + .slider:before {
     border-color: #d97706 !important;
 }
 
+/* Unified Protein Search Dialog Styles */
+.unified-protein-search-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+}
+
+.unified-protein-search-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.unified-protein-search-dialog .dialog-content {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.unified-protein-search-dialog .dialog-header {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.unified-protein-search-dialog .dialog-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.unified-protein-search-dialog .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.unified-protein-search-dialog .close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.unified-protein-search-dialog .dialog-body {
+    padding: 24px;
+}
+
+.unified-protein-search-dialog .input-group {
+    margin-bottom: 20px;
+}
+
+.unified-protein-search-dialog .input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 14px;
+}
+
+.unified-protein-search-dialog input[type="text"],
+.unified-protein-search-dialog select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.unified-protein-search-dialog input[type="text"]:focus,
+.unified-protein-search-dialog select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.unified-protein-search-dialog .button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.unified-protein-search-dialog .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.unified-protein-search-dialog .btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.unified-protein-search-dialog .btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.unified-protein-search-dialog .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.unified-protein-search-dialog .btn-secondary:hover {
+    background: #e5e7eb;
+}
+
 /* Sequence Validation Styling */
 .validation-message {
     font-size: 12px;
