@@ -3503,11 +3503,14 @@ class GenomeBrowser {
             `;
         }
         
-        // Add search structure button for proteins/genes
+        // Add search structure buttons for proteins/genes
         if (geneType === 'CDS' || geneType === 'gene') {
             html += `
-                <button class="btn gene-search-structure-btn gene-action-btn" onclick="window.genomeBrowser.searchProteinStructures('${geneName}')">
-                    <i class="fas fa-cube"></i> Search Structure
+                <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" title="Search experimental structures in PDB">
+                    <i class="fas fa-microscope"></i> Search PDB
+                </button>
+                <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" title="Search AI-predicted structures in AlphaFold">
+                    <i class="fas fa-brain"></i> Search AlphaFold
                 </button>
             `;
         }
@@ -4752,7 +4755,67 @@ class GenomeBrowser {
         });
     }
 
-    // Search protein structures for the selected gene
+    // Search PDB experimental structures for the selected gene
+    searchPDBStructures(geneName) {
+        if (!this.chatManager) {
+            console.error('ChatManager not available for PDB structure search');
+            return;
+        }
+
+        if (!geneName) {
+            console.warn('No gene name provided for PDB structure search');
+            return;
+        }
+
+        // Get current organism/species information
+        const organism = this.getCurrentOrganismInfo();
+        
+        // Create a specific PDB search message
+        const searchMessage = `Search PDB experimental structures for gene ${geneName} from ${organism}. Please find experimentally determined protein structures in the Protein Data Bank (PDB) for this protein, including X-ray crystallography, NMR, and cryo-EM structures.`;
+        
+        // Send the search message to the chat manager
+        this.chatManager.sendMessageProgrammatically(searchMessage);
+        
+        // Optionally show the chat box if it's hidden
+        this.showChatIfHidden();
+        
+        // Update status
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Searching PDB structures for ${geneName} in ${organism}...`);
+        }
+    }
+
+    // Search AlphaFold predicted structures for the selected gene
+    searchAlphaFoldStructures(geneName) {
+        if (!this.chatManager) {
+            console.error('ChatManager not available for AlphaFold structure search');
+            return;
+        }
+
+        if (!geneName) {
+            console.warn('No gene name provided for AlphaFold structure search');
+            return;
+        }
+
+        // Get current organism/species information
+        const organism = this.getCurrentOrganismInfo();
+        
+        // Create a specific AlphaFold search message
+        const searchMessage = `Search AlphaFold predicted structures for gene ${geneName} from ${organism}. Please find AI-predicted protein structures from the AlphaFold database for this protein, including confidence scores and structural predictions.`;
+        
+        // Send the search message to the chat manager
+        this.chatManager.sendMessageProgrammatically(searchMessage);
+        
+        // Optionally show the chat box if it's hidden
+        this.showChatIfHidden();
+        
+        // Update status
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Searching AlphaFold structures for ${geneName} in ${organism}...`);
+        }
+    }
+
+    // Legacy method for backward compatibility - now searches both
     searchProteinStructures(geneName) {
         if (!this.chatManager) {
             console.error('ChatManager not available for protein structure search');
@@ -4774,6 +4837,16 @@ class GenomeBrowser {
         this.chatManager.sendMessageProgrammatically(searchMessage);
         
         // Optionally show the chat box if it's hidden
+        this.showChatIfHidden();
+        
+        // Update status
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Searching protein structures for ${geneName}...`);
+        }
+    }
+
+    // Helper method to show chat if hidden
+    showChatIfHidden() {
         const chatBox = document.querySelector('.chat-container');
         if (chatBox && !chatBox.classList.contains('visible')) {
             const toggleChatBtn = document.getElementById('toggleChatBtn');
@@ -4781,11 +4854,97 @@ class GenomeBrowser {
                 toggleChatBtn.click();
             }
         }
-        
-        // Update status
-        if (this.uiManager) {
-            this.uiManager.updateStatus(`Searching protein structures for ${geneName}...`);
+    }
+
+    // Standardize organism name by removing strain, serovar, and other subspecific information
+    standardizeOrganismName(organismName) {
+        if (!organismName || typeof organismName !== 'string') {
+            return 'Unknown organism';
         }
+
+        // Common patterns to remove (strain, serovar, subspecies, etc.)
+        const cleaningPatterns = [
+            // Strain patterns
+            /\s+str\.\s+\S+/gi,           // str. K-12
+            /\s+strain\s+\S+/gi,         // strain K-12
+            /\s+K-12\s*\S*/gi,           // K-12 MG1655
+            /\s+MG1655/gi,               // MG1655
+            /\s+W3110/gi,                // W3110
+            /\s+DH5α/gi,                 // DH5α
+            /\s+BL21/gi,                 // BL21
+            
+            // Serovar patterns
+            /\s+serovar\s+\S+/gi,        // serovar Typhimurium
+            /\s+sv\.\s+\S+/gi,           // sv. Typhimurium
+            
+            // Subspecies patterns
+            /\s+subsp\.\s+\S+/gi,        // subsp. enterica
+            /\s+subspecies\s+\S+/gi,     // subspecies enterica
+            
+            // Other common patterns
+            /\s+ATCC\s+\d+/gi,           // ATCC numbers
+            /\s+DSM\s+\d+/gi,            // DSM numbers
+            /\s+NCTC\s+\d+/gi,           // NCTC numbers
+            /\s+\([^)]*\)/g,             // Content in parentheses
+            /\s+var\.\s+\S+/gi,          // var. variant
+            /\s+f\.\s+sp\.\s+\S+/gi,     // f. sp. formae speciales
+            
+            // Plasmid and specific identifiers
+            /\s+plasmid\s+\S+/gi,        // plasmid names
+            /\s+chromosome\s+\S+/gi,     // chromosome identifiers
+            
+            // Generic patterns for numbered strains
+            /\s+[A-Z]+\d+[A-Z]*\d*/gi,  // ABC123, K12, etc.
+            /\s+\d+[A-Z]+\d*/gi,        // 123ABC, etc.
+        ];
+
+        let cleanName = organismName;
+        
+        // Apply all cleaning patterns
+        for (const pattern of cleaningPatterns) {
+            cleanName = cleanName.replace(pattern, '');
+        }
+        
+        // Remove extra whitespace and clean up
+        cleanName = cleanName.replace(/\s+/g, ' ').trim();
+        
+        // Handle specific known mappings
+        const specificMappings = {
+            'Escherichia coli': 'Escherichia coli',
+            'E. coli': 'Escherichia coli',
+            'Salmonella enterica': 'Salmonella enterica',
+            'S. enterica': 'Salmonella enterica',
+            'Bacillus subtilis': 'Bacillus subtilis',
+            'B. subtilis': 'Bacillus subtilis',
+            'Staphylococcus aureus': 'Staphylococcus aureus',
+            'S. aureus': 'Staphylococcus aureus',
+            'Pseudomonas aeruginosa': 'Pseudomonas aeruginosa',
+            'P. aeruginosa': 'Pseudomonas aeruginosa',
+            'Saccharomyces cerevisiae': 'Saccharomyces cerevisiae',
+            'S. cerevisiae': 'Saccharomyces cerevisiae',
+            'Homo sapiens': 'Homo sapiens',
+            'H. sapiens': 'Homo sapiens',
+            'Mus musculus': 'Mus musculus',
+            'M. musculus': 'Mus musculus',
+            'Arabidopsis thaliana': 'Arabidopsis thaliana',
+            'A. thaliana': 'Arabidopsis thaliana'
+        };
+        
+        // Check for specific mappings first
+        for (const [key, value] of Object.entries(specificMappings)) {
+            if (cleanName.toLowerCase().includes(key.toLowerCase())) {
+                return value;
+            }
+        }
+        
+        // If we have a valid genus species format, return it
+        const genusSpeciesMatch = cleanName.match(/^([A-Z][a-z]+)\s+([a-z]+)/);
+        if (genusSpeciesMatch) {
+            return `${genusSpeciesMatch[1]} ${genusSpeciesMatch[2]}`;
+        }
+        
+        // Return cleaned name or fallback
+        return cleanName || 'Unknown organism';
     }
 
     // Get current organism information for structure searches
@@ -4796,12 +4955,12 @@ class GenomeBrowser {
             
             // Check GenBank ORGANISM field
             if (fileInfo.organism) {
-                return fileInfo.organism;
+                return this.standardizeOrganismName(fileInfo.organism);
             }
             
             // Check other common organism indicators
             if (fileInfo.source) {
-                return fileInfo.source;
+                return this.standardizeOrganismName(fileInfo.source);
             }
             
             // Check for species in features
@@ -4809,10 +4968,10 @@ class GenomeBrowser {
                 for (const feature of fileInfo.features) {
                     if (feature.qualifiers) {
                         if (feature.qualifiers.organism) {
-                            return feature.qualifiers.organism;
+                            return this.standardizeOrganismName(feature.qualifiers.organism);
                         }
                         if (feature.qualifiers.species) {
-                            return feature.qualifiers.species;
+                            return this.standardizeOrganismName(feature.qualifiers.species);
                         }
                     }
                 }
@@ -4834,15 +4993,15 @@ class GenomeBrowser {
             
             // Check for exact matches
             if (organismMap[currentChr]) {
-                return organismMap[currentChr];
+                return this.standardizeOrganismName(organismMap[currentChr]);
             }
             
             // Check for partial matches
             if (currentChr.startsWith('chr') && currentChr.length <= 5) {
-                return 'Homo sapiens';
+                return this.standardizeOrganismName('Homo sapiens');
             }
             if (currentChr.includes('COLI') || currentChr.includes('coli')) {
-                return 'Escherichia coli';
+                return this.standardizeOrganismName('Escherichia coli');
             }
         }
         

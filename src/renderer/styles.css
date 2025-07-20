@@ -35408,6 +35408,60 @@ input:checked + .slider:before {
     border-color: #d97706 !important;
 }
 
+/* PDB Search Button - Blue theme for experimental structures */
+.gene-search-pdb-btn {
+    background: #3b82f6 !important; /* Blue background */
+    color: white !important;
+    border: 1px solid #3b82f6 !important;
+    position: relative;
+}
+
+.gene-search-pdb-btn:hover {
+    background: #2563eb !important; /* Darker blue on hover */
+    border-color: #2563eb !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.gene-search-pdb-btn::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+/* AlphaFold Search Button - Purple theme for AI predictions */
+.gene-search-alphafold-btn {
+    background: #8b5cf6 !important; /* Purple background */
+    color: white !important;
+    border: 1px solid #8b5cf6 !important;
+    position: relative;
+}
+
+.gene-search-alphafold-btn:hover {
+    background: #7c3aed !important; /* Darker purple on hover */
+    border-color: #7c3aed !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+}
+
+.gene-search-alphafold-btn::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
 /* Unified Protein Search Dialog Styles */
 .unified-protein-search-dialog {
     border: none;
