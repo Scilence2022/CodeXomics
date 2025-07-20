@@ -3396,6 +3396,11 @@ class GenomeBrowser {
         if (geneDetailsSection) {
             geneDetailsSection.style.display = 'block';
             this.uiManager.showSidebarIfHidden();
+            
+            // Update tab manager about sidebar panel state change
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
+            }
         }
     }
 
@@ -3404,6 +3409,11 @@ class GenomeBrowser {
         if (readDetailsSection) {
             readDetailsSection.style.display = 'block';
             this.uiManager.showSidebarIfHidden();
+            
+            // Update tab manager about sidebar panel state change
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, readDetailsSection.innerHTML);
+            }
         }
     }
 
@@ -3515,6 +3525,14 @@ class GenomeBrowser {
         
         // Add event listeners for expandable sections
         this.setupExpandableSequences();
+        
+        // Update tab manager about gene details content change
+        if (this.tabManager) {
+            const geneDetailsSection = document.getElementById('geneDetailsSection');
+            if (geneDetailsSection && geneDetailsSection.style.display !== 'none') {
+                this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
+            }
+        }
     }
 
     populateReadDetails(read, fileInfo = null) {
@@ -4844,6 +4862,11 @@ class GenomeBrowser {
         this.clearSequenceHighlights();
         this.clearSequenceSelection();
         
+        // Update tab manager about gene selection clear
+        if (this.tabManager) {
+            this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', false, null);
+        }
+        
         console.log('Cleared gene selection');
     }
 
@@ -5194,6 +5217,11 @@ class GenomeBrowser {
             const readDetailsSection = document.getElementById('readDetailsSection');
             if (readDetailsSection) {
                 readDetailsSection.style.display = 'none';
+            }
+            
+            // Update tab manager about read selection clear
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', false, null);
             }
             
             this.uiManager.checkAndHideSidebarIfAllPanelsClosed();

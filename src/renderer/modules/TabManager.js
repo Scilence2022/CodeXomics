@@ -406,6 +406,13 @@ class TabManager {
             selectedGene: null,
             selectedRead: null,
             
+            // Sidebar state (independent per tab)
+            sidebarPanels: {
+                geneDetailsSection: { visible: false, content: null },
+                readDetailsSection: { visible: false, content: null },
+                searchResultsSection: { visible: false, content: null }
+            },
+            
             // Created timestamp
             createdAt: new Date(),
             lastAccessedAt: new Date()
@@ -587,6 +594,9 @@ class TabManager {
             tabState.selectedGene = this.genomeBrowser.selectedGene;
             tabState.selectedRead = this.genomeBrowser.selectedRead;
             
+            // Save sidebar panel states (unique per tab)
+            this.saveSidebarPanelStates(tabState);
+            
             console.log(`Saved state for tab: ${this.activeTabId} at position ${tabState.currentChromosome}:${tabState.currentPosition.start}-${tabState.currentPosition.end}`);
             
             // Persist to ConfigManager if enabled
@@ -658,6 +668,9 @@ class TabManager {
             // Restore selected items (unique per tab)
             this.genomeBrowser.selectedGene = tabState.selectedGene;
             this.genomeBrowser.selectedRead = tabState.selectedRead;
+            
+            // Restore sidebar panel states (unique per tab)
+            this.restoreSidebarPanelStates(tabState);
             
             // Update chromosome selector to match tab state
             const chromosomeSelect = document.getElementById('chromosomeSelect');
@@ -2055,6 +2068,144 @@ class TabManager {
         } catch (error) {
             console.error('Error updating tab position visualization:', error);
         }
+    }
+
+    /**
+     * Save sidebar panel states to tab state
+     */
+    saveSidebarPanelStates(tabState) {
+        if (!tabState.sidebarPanels) {
+            tabState.sidebarPanels = {
+                geneDetailsSection: { visible: false, content: null },
+                readDetailsSection: { visible: false, content: null },
+                searchResultsSection: { visible: false, content: null }
+            };
+        }
+
+        // Save gene details panel state
+        const genePanel = document.getElementById('geneDetailsSection');
+        if (genePanel) {
+            tabState.sidebarPanels.geneDetailsSection.visible = genePanel.style.display !== 'none';
+            if (tabState.sidebarPanels.geneDetailsSection.visible) {
+                tabState.sidebarPanels.geneDetailsSection.content = genePanel.innerHTML;
+            }
+        }
+
+        // Save read details panel state
+        const readPanel = document.getElementById('readDetailsSection');
+        if (readPanel) {
+            tabState.sidebarPanels.readDetailsSection.visible = readPanel.style.display !== 'none';
+            if (tabState.sidebarPanels.readDetailsSection.visible) {
+                tabState.sidebarPanels.readDetailsSection.content = readPanel.innerHTML;
+            }
+        }
+
+        // Save search results panel state
+        const searchPanel = document.getElementById('searchResultsSection');
+        if (searchPanel) {
+            tabState.sidebarPanels.searchResultsSection.visible = searchPanel.style.display !== 'none';
+            if (tabState.sidebarPanels.searchResultsSection.visible) {
+                tabState.sidebarPanels.searchResultsSection.content = searchPanel.innerHTML;
+            }
+        }
+
+        console.log(`Saved sidebar panel states for tab: ${tabState.id}`);
+    }
+
+    /**
+     * Restore sidebar panel states from tab state
+     */
+    restoreSidebarPanelStates(tabState) {
+        if (!tabState.sidebarPanels) {
+            // Initialize with default state if not present
+            tabState.sidebarPanels = {
+                geneDetailsSection: { visible: false, content: null },
+                readDetailsSection: { visible: false, content: null },
+                searchResultsSection: { visible: false, content: null }
+            };
+        }
+
+        // Restore gene details panel
+        const genePanel = document.getElementById('geneDetailsSection');
+        if (genePanel && tabState.sidebarPanels.geneDetailsSection) {
+            if (tabState.sidebarPanels.geneDetailsSection.visible && tabState.sidebarPanels.geneDetailsSection.content) {
+                genePanel.innerHTML = tabState.sidebarPanels.geneDetailsSection.content;
+                genePanel.style.display = 'block';
+            } else {
+                genePanel.style.display = 'none';
+            }
+        }
+
+        // Restore read details panel
+        const readPanel = document.getElementById('readDetailsSection');
+        if (readPanel && tabState.sidebarPanels.readDetailsSection) {
+            if (tabState.sidebarPanels.readDetailsSection.visible && tabState.sidebarPanels.readDetailsSection.content) {
+                readPanel.innerHTML = tabState.sidebarPanels.readDetailsSection.content;
+                readPanel.style.display = 'block';
+            } else {
+                readPanel.style.display = 'none';
+            }
+        }
+
+        // Restore search results panel
+        const searchPanel = document.getElementById('searchResultsSection');
+        if (searchPanel && tabState.sidebarPanels.searchResultsSection) {
+            if (tabState.sidebarPanels.searchResultsSection.visible && tabState.sidebarPanels.searchResultsSection.content) {
+                searchPanel.innerHTML = tabState.sidebarPanels.searchResultsSection.content;
+                searchPanel.style.display = 'block';
+            } else {
+                searchPanel.style.display = 'none';
+            }
+        }
+
+        // Update sidebar visibility based on panel states
+        this.updateSidebarVisibilityForTab(tabState);
+
+        console.log(`Restored sidebar panel states for tab: ${tabState.id}`);
+    }
+
+    /**
+     * Update sidebar visibility based on current tab's panel states
+     */
+    updateSidebarVisibilityForTab(tabState) {
+        if (!tabState.sidebarPanels) return;
+
+        const hasVisiblePanels = Object.values(tabState.sidebarPanels).some(panel => panel.visible);
+        
+        if (hasVisiblePanels) {
+            // Show sidebar if any panels are visible
+            this.genomeBrowser.uiManager.showSidebarIfHidden();
+        } else {
+            // Hide sidebar if no panels are visible
+            this.genomeBrowser.uiManager.checkAndHideSidebarIfAllPanelsClosed();
+        }
+    }
+
+    /**
+     * Update current tab sidebar panel state when a panel is shown/hidden
+     */
+    updateCurrentTabSidebarPanel(panelId, visible, content = null) {
+        if (!this.activeTabId) return;
+
+        const tabState = this.tabStates.get(this.activeTabId);
+        if (!tabState) return;
+
+        if (!tabState.sidebarPanels) {
+            tabState.sidebarPanels = {
+                geneDetailsSection: { visible: false, content: null },
+                readDetailsSection: { visible: false, content: null },
+                searchResultsSection: { visible: false, content: null }
+            };
+        }
+
+        if (tabState.sidebarPanels[panelId]) {
+            tabState.sidebarPanels[panelId].visible = visible;
+            if (visible && content) {
+                tabState.sidebarPanels[panelId].content = content;
+            }
+        }
+
+        console.log(`Updated sidebar panel ${panelId} for tab ${this.activeTabId}: visible=${visible}`);
     }
 
     /**

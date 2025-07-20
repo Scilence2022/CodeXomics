@@ -14,6 +14,11 @@ class UIManager {
             
             // Show sidebar and splitter if they were hidden
             this.showSidebarIfHidden();
+            
+            // Update tab manager about sidebar panel state change
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel(panelId, true, panel.innerHTML);
+            }
         }
     }
 
@@ -21,6 +26,11 @@ class UIManager {
         const panel = document.getElementById(panelId);
         if (panel) {
             panel.style.display = 'none';
+            
+            // Update tab manager about sidebar panel state change
+            if (this.genomeBrowser.tabManager) {
+                this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel(panelId, false, null);
+            }
             
             // Special handling for gene details panel
             if (panelId === 'geneDetailsSection') {

@@ -375,6 +375,11 @@ class NavigationManager {
         // Ensure sidebar is visible when showing search results
         this.genomeBrowser.uiManager.showSidebarIfHidden();
         
+        // Update tab manager about search results panel state change
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', true, searchResultsSection.innerHTML);
+        }
+        
         // Create header
         let html = `<div class="search-results-header">Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"</div>`;
         
@@ -410,6 +415,11 @@ class NavigationManager {
         const firstItem = searchResultsList.querySelector('.search-result-item');
         if (firstItem) {
             firstItem.classList.add('selected');
+        }
+        
+        // Update tab manager with final search results content
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', true, searchResultsSection.innerHTML);
         }
     }
 
@@ -1013,6 +1023,11 @@ class NavigationManager {
         
         if (searchResultsSection) {
             searchResultsSection.style.display = 'none';
+        }
+        
+        // Update tab manager about search results panel state change
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', false, null);
         }
         
         if (searchResultsList) {
