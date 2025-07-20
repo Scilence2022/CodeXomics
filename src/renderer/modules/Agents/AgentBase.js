@@ -207,6 +207,12 @@ class AgentBase {
         const available = this.multiAgentSystem.resourceManager;
         const currentUsage = this.resourceUsage;
         
+        // Add null checks for resource manager properties
+        if (!available || !available.cpu || !available.memory || !available.network || !available.cache) {
+            console.warn('ResourceManager not properly initialized, allowing execution');
+            return { available: true, reason: 'Resource checking disabled' };
+        }
+        
         if (currentUsage.cpu + requirements.cpu > available.cpu.available) {
             return { available: false, reason: 'Insufficient CPU' };
         }

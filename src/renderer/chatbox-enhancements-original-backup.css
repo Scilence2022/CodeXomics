@@ -1,0 +1,648 @@
+/* ===== CHATBOX SETTINGS MODAL DRAGGABLE STYLES ===== */
+
+/* ChatBox Settings Modal - Independent styles (not inheriting from ChatBox) */
+#chatboxSettingsModal {
+    /* Override the default modal positioning for draggable behavior */
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    z-index: 10000 !important;
+    display: none;
+}
+
+#chatboxSettingsModal.show {
+    display: block !important;
+}
+
+#chatboxSettingsModal .chatbox-settings-modal-content {
+    max-width: 600px;
+    width: 95vw;
+    max-height: calc(100vh - 40px);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+}
+
+#chatboxSettingsModal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+#chatboxSettingsModal .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#chatboxSettingsModal .modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+#chatboxSettingsModal .modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Tab styles for ChatBox Settings */
+#chatboxSettingsModal .llm-provider-tabs {
+    display: flex;
+    border-bottom: 1px solid #e1e5e9;
+    background: #f8f9fa;
+    padding: 0 20px;
+}
+
+#chatboxSettingsModal .tab-button {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#chatboxSettingsModal .tab-button:hover {
+    color: #374151;
+    background-color: #f1f3f4;
+}
+
+#chatboxSettingsModal .tab-button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background-color: white;
+}
+
+#chatboxSettingsModal .tab-button i {
+    font-size: 16px;
+}
+
+/* Tab content */
+#chatboxSettingsModal .llm-provider-config {
+    flex: 1;
+    overflow: hidden;
+}
+
+#chatboxSettingsModal .provider-config {
+    display: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+#chatboxSettingsModal .provider-config.active {
+    display: block;
+}
+
+/* Draggable modal styles */
+.draggable-modal {
+    position: fixed !important;
+    transition: transform 0.2s ease;
+}
+
+.draggable-modal.dragging {
+    z-index: 10001 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+}
+
+.draggable-header {
+    cursor: move;
+    user-select: none;
+}
+
+.draggable-header:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b7db8 100%);
+}
+
+#chatboxSettingsModal .modal-body {
+    padding: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
+    min-height: 0;
+}
+
+#chatboxSettingsModal .modal-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Form Groups */
+#chatboxSettingsModal .form-group {
+    margin-bottom: 16px;
+}
+
+#chatboxSettingsModal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#chatboxSettingsModal .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#chatboxSettingsModal .form-group label input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.1);
+}
+
+#chatboxSettingsModal .help-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* Form Controls */
+#chatboxSettingsModal .input-full,
+#chatboxSettingsModal .select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+#chatboxSettingsModal .input-full:focus,
+#chatboxSettingsModal .select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Checkbox Styling */
+#chatboxSettingsModal .setting-checkbox {
+    appearance: none;
+    width: 44px;
+    height: 24px;
+    background: #e5e7eb;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+#chatboxSettingsModal .setting-checkbox:checked {
+    background: #667eea;
+}
+
+#chatboxSettingsModal .setting-checkbox::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#chatboxSettingsModal .setting-checkbox:checked::before {
+    transform: translateX(20px);
+}
+
+/* Buttons */
+#chatboxSettingsModal .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#chatboxSettingsModal .btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+#chatboxSettingsModal .btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+#chatboxSettingsModal .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+#chatboxSettingsModal .btn-secondary:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+/* MCP Toggle Button Styles */
+.mcp-toggle-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.mcp-toggle-btn.connected {
+    background: rgba(16, 185, 129, 0.8) !important;
+    border-color: rgba(16, 185, 129, 0.9) !important;
+    color: white !important;
+}
+
+.mcp-toggle-btn.connected:hover {
+    background: rgba(16, 185, 129, 0.9) !important;
+    border-color: rgba(16, 185, 129, 1) !important;
+    transform: scale(1.05);
+}
+
+.mcp-toggle-btn.disconnected {
+    background: rgba(239, 68, 68, 0.8) !important;
+    border-color: rgba(239, 68, 68, 0.9) !important;
+    color: white !important;
+}
+
+.mcp-toggle-btn.disconnected:hover {
+    background: rgba(239, 68, 68, 0.9) !important;
+    border-color: rgba(239, 68, 68, 1) !important;
+    transform: scale(1.05);
+}
+
+/* ChatBox Settings Button */
+#chatBoxSettingsBtn {
+    transition: all 0.2s ease;
+}
+
+#chatBoxSettingsBtn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: scale(1.05);
+}
+
+/* Success notification for settings */
+.settings-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateX(100%); }
+} 
+
+/* Multi-Agent System Styles */
+
+/* Agent System Button */
+#agentSystemBtn {
+    transition: all 0.3s ease;
+}
+
+#agentSystemBtn.enabled {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4CAF50;
+}
+
+#agentSystemBtn.enabled:hover {
+    background: rgba(76, 175, 80, 0.3);
+    transform: scale(1.05);
+}
+
+/* Agent Settings Modal */
+.agent-settings-modal-content {
+    max-width: 600px;
+    min-width: 500px;
+    max-height: 80vh;
+}
+
+.agent-settings-modal-content .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Status Display */
+.status-display {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.status-value {
+    font-family: monospace;
+    color: #2196F3;
+    font-weight: 600;
+}
+
+/* Performance Metrics */
+.performance-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.metric-item {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    display: block;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 8px;
+    border-left: 4px solid #2196F3;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+.setting-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #2196F3;
+}
+
+.help-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Agent System Button Animation */
+@keyframes agentPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+#agentSystemBtn.enabled {
+    animation: agentPulse 2s infinite;
+}
+
+/* Agent Info Display */
+.agent-info {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    font-size: 12px;
+    color: #2e7d32;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agent-info i {
+    color: #4CAF50;
+}
+
+/* Memory System Indicators */
+.memory-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.memory-indicator.active {
+    background: #4CAF50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.5);
+}
+
+.memory-indicator.inactive {
+    background: #ccc;
+}
+
+/* Agent Execution Log */
+.agent-execution-log {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+
+.agent-execution-log .log-entry {
+    margin-bottom: 4px;
+    padding: 2px 0;
+}
+
+.agent-execution-log .log-entry.success {
+    color: #4CAF50;
+}
+
+.agent-execution-log .log-entry.error {
+    color: #f44336;
+}
+
+.agent-execution-log .log-entry.info {
+    color: #2196F3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .agent-settings-modal-content {
+        min-width: 90vw;
+        max-width: 95vw;
+    }
+    
+    .performance-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-display {
+        padding: 12px;
+    }
+    
+    .form-section {
+        padding: 12px;
+    }
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    .status-display {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .status-item {
+        border-bottom-color: #444;
+    }
+    
+    .status-label {
+        color: #e0e0e0;
+    }
+    
+    .form-section {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .form-section h4 {
+        color: #e0e0e0;
+    }
+    
+    .form-group label {
+        color: #e0e0e0;
+    }
+    
+    .help-text {
+        color: #aaa;
+    }
+    
+    .metric-item {
+        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    }
+} 
