@@ -1614,9 +1614,32 @@ class ChatManager {
             throw new Error('Genome browser not initialized');
         }
         
+        // Auto-detect chromosome if not provided
+        if (!chromosome) {
+            // Try to get current chromosome from the chromosome selector
+            const chromosomeSelect = document.getElementById('chromosomeSelect');
+            if (chromosomeSelect && chromosomeSelect.value) {
+                chromosome = chromosomeSelect.value;
+                console.log(`Auto-detected chromosome: ${chromosome}`);
+            } else if (this.app.currentSequence) {
+                // If no chromosome is selected, use the first available chromosome
+                const availableChromosomes = Object.keys(this.app.currentSequence);
+                if (availableChromosomes.length > 0) {
+                    chromosome = availableChromosomes[0];
+                    console.log(`Using first available chromosome: ${chromosome}`);
+                }
+            }
+            
+            if (!chromosome) {
+                throw new Error('No chromosome specified and unable to auto-detect current chromosome. Please load genome data first.');
+            }
+        }
+        
         // Check if the target chromosome exists in loaded data
         if (!this.app.currentSequence || !this.app.currentSequence[chromosome]) {
-            throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+            // List available chromosomes for better error message
+            const availableChromosomes = this.app.currentSequence ? Object.keys(this.app.currentSequence) : [];
+            throw new Error(`Chromosome ${chromosome} not found in loaded genome data. Available chromosomes: ${availableChromosomes.join(', ')}`);
         }
         
         // Handle position parameter with default 2000bp range
