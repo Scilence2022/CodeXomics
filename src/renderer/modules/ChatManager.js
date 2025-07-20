@@ -3776,8 +3776,8 @@ Data Management:
                 'find_restriction_sites', 'sequence_statistics'
             ],
             'PROTEIN STRUCTURE': [
-                'search_alphafold_by_gene', 'fetch_alphafold_structure', 'open_alphafold_viewer',
-                'search_protein_by_gene', 'open_protein_viewer'
+                'search_protein_by_gene', 'open_protein_viewer', 'fetch_protein_structure',
+                'search_alphafold_by_gene', 'fetch_alphafold_structure', 'open_alphafold_viewer'
             ],
             'BLAST & SIMILARITY': [
                 'blast_search', 'advanced_blast_search', 'batch_blast_search',
@@ -3882,6 +3882,24 @@ Format: {"tool_name": "tool_name", "parameters": {"param": "value"}}
 
 ${toolPriority}
 
+===PROTEIN STRUCTURE SEARCH DISAMBIGUATION===
+CRITICAL: Choose the correct protein structure function based on user intent:
+
+• For PDB database searches (experimental structures):
+  - Keywords: "PDB", "PDB database", "experimental structure", "crystal structure", "NMR structure"
+  - Use: search_protein_by_gene
+  - Example: "search PDB protein structure for lysC" → search_protein_by_gene
+
+• For AlphaFold predictions (AI-predicted structures):
+  - Keywords: "AlphaFold", "predicted structure", "AI prediction", "fold prediction"
+  - Use: search_alphafold_by_gene
+  - Example: "find AlphaFold structure for lysC" → search_alphafold_by_gene
+
+• Default behavior (when unspecified):
+  - If user mentions "PDB" explicitly → use search_protein_by_gene
+  - If user mentions "AlphaFold" explicitly → use search_alphafold_by_gene
+  - If context is unclear, prefer search_protein_by_gene for experimental data
+
 ===SEQUENCE EDITING FUNCTIONS - DETAILED USAGE===
 
 SEQUENCE EDITING WORKFLOW:
@@ -3937,7 +3955,8 @@ CHROMOSOME NAMES:
 
 COMMON TASK PATTERNS:
 • Gene Analysis: search_gene_by_name → get_coding_sequence → analyze features
-• Protein Structure: search_alphafold_by_gene → open_alphafold_viewer
+• AlphaFold AI Predictions: search_alphafold_by_gene → open_alphafold_viewer
+• PDB Experimental Structures: search_protein_by_gene → open_protein_viewer
 • Sequence Analysis: get_sequence → compute_gc/translate_dna/find_orfs
 • Navigation: jump_to_gene → navigate_to_position
 • New Tab: open_new_tab → for parallel analysis
@@ -3951,7 +3970,8 @@ SEARCH FUNCTIONS GUIDE:
 - Gene names/products: search_gene_by_name, search_features
 - Genomic positions: search_by_position, get_nearby_features  
 - Sequence motifs: search_sequence_motif
-- Protein structures: search_alphafold_by_gene, search_protein_by_gene
+- PDB experimental structures: search_protein_by_gene (for known PDB entries)
+- AlphaFold AI predictions: search_alphafold_by_gene (for AI-predicted structures)
 
 ANALYSIS FUNCTIONS:
 - Sequence: get_coding_sequence, translate_dna, reverse_complement
@@ -4159,7 +4179,13 @@ Common Analysis Tools:
 Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
-- Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search PDB proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
+
+PROTEIN STRUCTURE DISAMBIGUATION:
+- For "PDB" searches or experimental structures → use search_protein_by_gene
+- For "AlphaFold" or AI predictions → use search_alphafold_by_gene
+- Example: "search PDB protein structure for lysC" → search_protein_by_gene
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
 
@@ -4420,7 +4446,13 @@ Common Analysis Tools:
 Protein Structure Tools:
 - Display protein 3D structure: {"tool_name": "open_protein_viewer", "parameters": {"pdbId": "1TUP"}}
 - Fetch protein structure data: {"tool_name": "fetch_protein_structure", "parameters": {"pdbId": "6SSC"}}
-- Search proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search PDB proteins by gene: {"tool_name": "search_protein_by_gene", "parameters": {"geneName": "p53", "organism": "Homo sapiens"}}
+- Search AlphaFold by gene: {"tool_name": "search_alphafold_by_gene", "parameters": {"geneName": "lysC", "organism": "Escherichia coli"}}
+
+PROTEIN STRUCTURE DISAMBIGUATION:
+- For "PDB" searches or experimental structures → use search_protein_by_gene
+- For "AlphaFold" or AI predictions → use search_alphafold_by_gene
+- Example: "search PDB protein structure for lysC" → search_protein_by_gene
 
 IMPORTANT: For protein structure display requests, use "open_protein_viewer" with just the pdbId parameter. The system will automatically fetch the structure data if needed.
 
