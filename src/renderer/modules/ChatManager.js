@@ -2638,6 +2638,51 @@ class ChatManager {
         }
     }
 
+    /**
+     * Programmatically send a message to the chat (for API calls from other modules)
+     */
+    async sendMessageProgrammatically(message) {
+        if (!message || !message.trim()) {
+            console.warn('No message provided to sendMessageProgrammatically');
+            return;
+        }
+
+        const trimmedMessage = message.trim();
+        
+        // 检查是否正在处理中
+        if (this.conversationState.isProcessing) {
+            this.showNotification('Conversation in progress, please wait or click abort button', 'warning');
+            return;
+        }
+
+        // 初始化对话状态
+        this.startConversation();
+        
+        // Add user message to chat
+        this.addMessageToChat(trimmedMessage, 'user');
+
+        // Show typing indicator and thinking process
+        this.showThinkingProcess && this.addThinkingMessage('Analyzing your question...');
+        this.showTypingIndicator();
+
+        try {
+            // Send to LLM via MCP or direct API
+            const response = await this.sendToLLM(trimmedMessage);
+            this.removeTypingIndicator();
+            this.addMessageToChat(response, 'assistant');
+        } catch (error) {
+            this.removeTypingIndicator();
+            if (error.name === 'AbortError') {
+                this.addMessageToChat('Conversation aborted by user.', 'assistant', false, 'warning');
+            } else {
+                this.addMessageToChat('Sorry, I encountered an error. Please try again.', 'assistant', true);
+                console.error('Error in sendMessageProgrammatically:', error);
+            }
+        } finally {
+            this.endConversation();
+        }
+    }
+
     async sendToLLM(message) {
         // Check if LLM is configured
         if (!this.llmConfigManager.isConfigured()) {

@@ -4753,7 +4753,7 @@ class GenomeBrowser {
         const searchMessage = `Search protein structures for gene ${geneName} in ${organism}. Please search both PDB experimental structures and AlphaFold predictions for this protein.`;
         
         // Send the search message to the chat manager
-        this.chatManager.handleUserMessage(searchMessage);
+        this.chatManager.sendMessageProgrammatically(searchMessage);
         
         // Optionally show the chat box if it's hidden
         const chatBox = document.querySelector('.chat-container');
