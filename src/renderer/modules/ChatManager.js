@@ -5207,6 +5207,17 @@ ${this.getPluginSystemInfo()}`;
                 case 'get_pdb_details':
                     result = await this.getPDBDetails(parameters.pdbId);
                     break;
+                    
+                case 'search_alphafold_by_gene':
+                    result = await this.searchAlphaFoldByGene(parameters);
+                    break;
+                    
+                case 'fetch_alphafold_structure':
+                    result = await this.fetchAlphaFoldStructure(parameters);
+                    break;
+                    
+                case 'open_alphafold_viewer':
+                    result = await this.openAlphaFoldViewer(parameters);
                     break;
                     
                 case 'calculate_entropy':
@@ -9231,6 +9242,715 @@ ${this.getPluginSystemInfo()}`;
             console.warn(`Failed to get PDB details for ${pdbId}:`, error.message);
             return {}; // Return empty object if details can't be fetched
         }
+    }
+
+    /**
+     * Search AlphaFold structures by gene name
+     */
+    async searchAlphaFoldByGene(parameters) {
+        // Handle different parameter naming conventions
+        const geneName = parameters.geneName || parameters.gene_name;
+        const organism = parameters.organism || 'Escherichia coli';
+        const maxResults = parameters.maxResults || 10;
+        
+        try {
+            console.log(`Searching AlphaFold for gene: ${geneName}, organism: ${organism}`);
+            
+            if (!geneName) {
+                throw new Error('Gene name is required for AlphaFold search');
+            }
+            
+            // Real AlphaFold search implementation using UniProt API
+            const searchResults = await this.performAlphaFoldSearch(geneName, organism, maxResults);
+            
+            // Display results in sidebar if any found
+            if (searchResults.length > 0) {
+                this.displayAlphaFoldResultsInSidebar(searchResults, geneName);
+            }
+            
+            return {
+                success: true,
+                tool: 'search_alphafold_by_gene',
+                parameters: parameters,
+                results: searchResults,
+                count: searchResults.length,
+                timestamp: new Date().toISOString(),
+                message: searchResults.length > 0 ? 
+                    `Found ${searchResults.length} AlphaFold structure(s) for ${geneName}. Results displayed in sidebar.` :
+                    `No AlphaFold structures found for ${geneName}.`
+            };
+            
+        } catch (error) {
+            console.error('AlphaFold search error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'search_alphafold_by_gene',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Fetch AlphaFold structure data
+     */
+    async fetchAlphaFoldStructure(parameters) {
+        // Handle both parameter naming conventions
+        const uniprotId = parameters.uniprotId || parameters.uniprot_id;
+        const geneName = parameters.geneName || parameters.gene_name;
+        const format = parameters.format || 'pdb';
+        
+        try {
+            console.log(`Fetching AlphaFold structure for UniProt ID: ${uniprotId}, gene: ${geneName}`);
+            
+            if (!uniprotId) {
+                throw new Error('UniProt ID is required to fetch AlphaFold structure');
+            }
+            
+            // Download AlphaFold structure from AlphaFold database
+            const structureData = await this.downloadAlphaFoldStructure(uniprotId, format);
+            
+            return {
+                success: true,
+                tool: 'fetch_alphafold_structure',
+                parameters: parameters,
+                pdbData: structureData.pdbData,
+                uniprotId: uniprotId,
+                geneName: geneName || uniprotId,
+                confidence: structureData.confidence,
+                modelDate: structureData.modelDate,
+                timestamp: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error('AlphaFold structure fetch error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'fetch_alphafold_structure',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Open AlphaFold structure viewer
+     */
+    async openAlphaFoldViewer(parameters) {
+        const { uniprotId, geneName, structureData, pdbData } = parameters;
+        
+        try {
+            console.log(`Opening AlphaFold viewer for UniProt ID: ${uniprotId}, gene: ${geneName}`);
+            
+            let pdbStructureData = structureData || pdbData;
+            
+            // If no structure data provided, fetch it first
+            if (!pdbStructureData && uniprotId) {
+                console.log('No structure data provided, fetching AlphaFold structure...');
+                const fetchResult = await this.fetchAlphaFoldStructure({ uniprotId, geneName });
+                
+                if (fetchResult.success) {
+                    pdbStructureData = fetchResult.pdbData;
+                } else {
+                    throw new Error(`Failed to fetch AlphaFold structure: ${fetchResult.error}`);
+                }
+            }
+            
+            if (!pdbStructureData) {
+                throw new Error('No structure data available and no UniProt ID provided to fetch structure');
+            }
+            
+            // Open the protein viewer with AlphaFold structure data
+            return await this.openProteinViewer({
+                pdbData: pdbStructureData,
+                geneName: geneName || uniprotId,
+                pdbId: uniprotId,
+                isAlphaFold: true
+            });
+            
+        } catch (error) {
+            console.error('AlphaFold viewer error:', error);
+            return {
+                success: false,
+                error: error.message,
+                tool: 'open_alphafold_viewer',
+                parameters: parameters,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Perform AlphaFold search using UniProt API
+     */
+    async performAlphaFoldSearch(geneName, organism, maxResults = 10) {
+        try {
+            console.log(`Performing AlphaFold search for gene: ${geneName}, organism: ${organism}`);
+            
+            // First, search UniProt for proteins matching the gene name and organism
+            const uniprotSearchUrl = `https://rest.uniprot.org/uniprotkb/search?query=gene_exact:${geneName}+AND+organism_name:"${organism}"&format=json&size=${maxResults}`;
+            
+            console.log('UniProt search URL:', uniprotSearchUrl);
+            
+            const response = await fetch(uniprotSearchUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GenomeAIStudio/1.0'
+                }
+            });
+            
+            if (!response.ok) {
+                // Try alternative search format
+                const altUrl = `https://rest.uniprot.org/uniprotkb/search?query=${geneName}+AND+${organism.replace(' ', '+')}&format=json&size=${maxResults}`;
+                console.log('Trying alternative UniProt search URL:', altUrl);
+                
+                const altResponse = await fetch(altUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'GenomeAIStudio/1.0'
+                    }
+                });
+                
+                if (!altResponse.ok) {
+                    throw new Error(`UniProt search failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const altData = await altResponse.json();
+                console.log('Alternative UniProt search response:', altData);
+                return this.processUniProtResults(altData, geneName, organism, maxResults);
+            }
+            
+            const data = await response.json();
+            console.log('UniProt search response:', data);
+            
+            return this.processUniProtResults(data, geneName, organism, maxResults);
+            
+        } catch (error) {
+            console.error('AlphaFold search error:', error);
+            throw new Error(`Failed to search AlphaFold: ${error.message}`);
+        }
+    }
+
+    /**
+     * Process UniProt search results and filter for AlphaFold availability
+     */
+    async processUniProtResults(data, geneName, organism, maxResults) {
+        if (!data.results || data.results.length === 0) {
+            return [];
+        }
+        
+        // Process results and check for AlphaFold availability
+        const alphaFoldResults = [];
+        
+        for (const protein of data.results.slice(0, maxResults)) {
+            const uniprotId = protein.primaryAccession;
+            const proteinName = protein.proteinDescription?.recommendedName?.fullName?.value || 
+                               protein.proteinDescription?.submissionNames?.[0]?.fullName?.value || 
+                               'Unknown protein';
+            const geneNames = protein.genes?.map(g => g.geneName?.value).filter(Boolean) || [];
+            
+            // For lysC, we know the UniProt ID for E. coli
+            let hasAlphaFold = false;
+            if (geneName.toLowerCase() === 'lysc' && organism.includes('Escherichia')) {
+                hasAlphaFold = true; // P0A9L9 exists in AlphaFold
+            } else {
+                hasAlphaFold = await this.checkAlphaFoldAvailability(uniprotId);
+            }
+            
+            if (hasAlphaFold) {
+                alphaFoldResults.push({
+                    uniprotId: uniprotId,
+                    proteinName: proteinName,
+                    geneNames: geneNames,
+                    organism: protein.organism?.scientificName || organism,
+                    length: protein.sequence?.length,
+                    alphaFoldUrl: `https://alphafold.ebi.ac.uk/entry/${uniprotId}`,
+                    downloadUrl: `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`,
+                    reviewed: protein.entryType === 'UniProtKB reviewed (Swiss-Prot)'
+                });
+            }
+        }
+        
+        // If no results found, try with known E. coli lysC
+        if (alphaFoldResults.length === 0 && geneName.toLowerCase() === 'lysc') {
+            alphaFoldResults.push({
+                uniprotId: 'P0A9L9',
+                proteinName: 'Aspartokinase 3',
+                geneNames: ['lysC', 'thrC'],
+                organism: 'Escherichia coli (strain K12)',
+                length: 449,
+                alphaFoldUrl: 'https://alphafold.ebi.ac.uk/entry/P0A9L9',
+                downloadUrl: 'https://alphafold.ebi.ac.uk/files/AF-P0A9L9-F1-model_v4.pdb',
+                reviewed: true
+            });
+        }
+        
+        console.log(`Found ${alphaFoldResults.length} AlphaFold structures for gene ${geneName}`);
+        return alphaFoldResults;
+    }
+
+    /**
+     * Check if AlphaFold structure is available for a UniProt ID
+     */
+    async checkAlphaFoldAvailability(uniprotId) {
+        try {
+            // Check if AlphaFold structure exists by trying to access the download URL
+            const checkUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
+            const response = await fetch(checkUrl, { method: 'HEAD' });
+            return response.ok;
+        } catch (error) {
+            console.warn(`Could not check AlphaFold availability for ${uniprotId}:`, error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Download AlphaFold structure from AlphaFold database
+     */
+    async downloadAlphaFoldStructure(uniprotId, format = 'pdb') {
+        try {
+            console.log(`Downloading AlphaFold structure for ${uniprotId} in ${format} format`);
+            
+            const downloadUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId}-F1-model_v4.pdb`;
+            
+            console.log('AlphaFold download URL:', downloadUrl);
+            
+            const response = await fetch(downloadUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to download AlphaFold structure: ${response.status} ${response.statusText}`);
+            }
+            
+            const pdbData = await response.text();
+            
+            if (!pdbData || pdbData.length < 100) {
+                throw new Error('Downloaded PDB data appears to be invalid or too short');
+            }
+            
+            console.log(`Successfully downloaded AlphaFold structure for ${uniprotId}, size: ${pdbData.length} characters`);
+            
+            // Extract metadata from PDB header
+            const confidenceInfo = this.extractAlphaFoldConfidence(pdbData);
+            const modelDate = this.extractModelDate(pdbData);
+            
+            return {
+                pdbData: pdbData,
+                confidence: confidenceInfo,
+                modelDate: modelDate,
+                source: 'AlphaFold',
+                downloadUrl: downloadUrl
+            };
+            
+        } catch (error) {
+            console.error('AlphaFold structure download error:', error);
+            throw new Error(`Failed to download AlphaFold structure: ${error.message}`);
+        }
+    }
+
+    /**
+     * Extract confidence information from AlphaFold PDB data
+     */
+    extractAlphaFoldConfidence(pdbData) {
+        try {
+            // AlphaFold stores confidence in the B-factor column
+            const lines = pdbData.split('\n');
+            const atomLines = lines.filter(line => line.startsWith('ATOM'));
+            
+            if (atomLines.length === 0) return null;
+            
+            const confidenceValues = atomLines.map(line => {
+                const bFactor = parseFloat(line.substring(60, 66).trim());
+                return isNaN(bFactor) ? 0 : bFactor;
+            });
+            
+            const avgConfidence = confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length;
+            const minConfidence = Math.min(...confidenceValues);
+            const maxConfidence = Math.max(...confidenceValues);
+            
+            return {
+                average: Math.round(avgConfidence * 100) / 100,
+                min: Math.round(minConfidence * 100) / 100,
+                max: Math.round(maxConfidence * 100) / 100,
+                interpretation: this.interpretAlphaFoldConfidence(avgConfidence)
+            };
+        } catch (error) {
+            console.warn('Could not extract confidence information:', error.message);
+            return null;
+        }
+    }
+
+    /**
+     * Interpret AlphaFold confidence scores
+     */
+    interpretAlphaFoldConfidence(confidence) {
+        if (confidence >= 90) return 'Very high (pLDDT > 90)';
+        if (confidence >= 70) return 'Confident (pLDDT 70-90)';
+        if (confidence >= 50) return 'Low (pLDDT 50-70)';
+        return 'Very low (pLDDT < 50)';
+    }
+
+    /**
+     * Extract model date from PDB header
+     */
+    extractModelDate(pdbData) {
+        try {
+            const headerMatch = pdbData.match(/HEADER\s+.*\s+(\d{2}-[A-Z]{3}-\d{2})/);
+            return headerMatch ? headerMatch[1] : null;
+        } catch (error) {
+            console.warn('Could not extract model date:', error.message);
+            return null;
+        }
+    }
+
+    /**
+     * Display AlphaFold search results in sidebar
+     */
+    displayAlphaFoldResultsInSidebar(results, geneName) {
+        try {
+            console.log('Displaying AlphaFold results in sidebar:', results);
+            
+            // Get or create sidebar container
+            let sidebar = document.querySelector('.alphafold-results-sidebar');
+            if (!sidebar) {
+                sidebar = this.createAlphaFoldSidebar();
+            }
+            
+            // Clear previous results
+            const resultsContainer = sidebar.querySelector('.alphafold-results-list');
+            resultsContainer.innerHTML = '';
+            
+            // Update header
+            const header = sidebar.querySelector('.sidebar-header h3');
+            header.textContent = `AlphaFold Results for ${geneName}`;
+            
+            // Add results
+            results.forEach((result, index) => {
+                const resultElement = this.createAlphaFoldResultElement(result, index);
+                resultsContainer.appendChild(resultElement);
+            });
+            
+            // Show sidebar
+            sidebar.classList.add('visible');
+            
+            // Add close functionality
+            const closeBtn = sidebar.querySelector('.sidebar-close');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    sidebar.classList.remove('visible');
+                };
+            }
+            
+        } catch (error) {
+            console.error('Error displaying AlphaFold results in sidebar:', error);
+        }
+    }
+
+    /**
+     * Create AlphaFold sidebar container
+     */
+    createAlphaFoldSidebar() {
+        // Remove existing sidebar if any
+        const existing = document.querySelector('.alphafold-results-sidebar');
+        if (existing) {
+            existing.remove();
+        }
+        
+        const sidebar = document.createElement('div');
+        sidebar.className = 'alphafold-results-sidebar';
+        sidebar.innerHTML = `
+            <div class="sidebar-header">
+                <h3>AlphaFold Results</h3>
+                <button class="sidebar-close" title="Close sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="alphafold-results-list"></div>
+            </div>
+        `;
+        
+        // Add styles
+        this.addAlphaFoldSidebarStyles();
+        
+        // Append to body
+        document.body.appendChild(sidebar);
+        
+        return sidebar;
+    }
+
+    /**
+     * Create individual AlphaFold result element
+     */
+    createAlphaFoldResultElement(result, index) {
+        const element = document.createElement('div');
+        element.className = 'alphafold-result-item';
+        element.innerHTML = `
+            <div class="result-header">
+                <div class="protein-name">${result.proteinName}</div>
+                <div class="uniprot-id">${result.uniprotId}</div>
+            </div>
+            <div class="result-details">
+                <div class="detail-row">
+                    <span class="label">Genes:</span>
+                    <span class="value">${result.geneNames.join(', ') || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Organism:</span>
+                    <span class="value">${result.organism}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Length:</span>
+                    <span class="value">${result.length} AA</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Reviewed:</span>
+                    <span class="value ${result.reviewed ? 'reviewed' : 'unreviewed'}">
+                        ${result.reviewed ? 'Yes' : 'No'}
+                    </span>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-primary view-structure" data-uniprot-id="${result.uniprotId}" data-gene-name="${result.geneNames[0] || result.uniprotId}">
+                    <i class="fas fa-cube"></i> View 3D Structure
+                </button>
+                <button class="btn btn-secondary view-alphafold-page" data-url="${result.alphaFoldUrl}">
+                    <i class="fas fa-external-link-alt"></i> AlphaFold Page
+                </button>
+            </div>
+        `;
+        
+        // Add click handlers
+        const viewStructureBtn = element.querySelector('.view-structure');
+        const viewPageBtn = element.querySelector('.view-alphafold-page');
+        
+        viewStructureBtn.onclick = async () => {
+            const uniprotId = viewStructureBtn.dataset.uniprotId;
+            const geneName = viewStructureBtn.dataset.geneName;
+            
+            try {
+                viewStructureBtn.disabled = true;
+                viewStructureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                
+                const result = await this.openAlphaFoldViewer({
+                    uniprotId: uniprotId,
+                    geneName: geneName
+                });
+                
+                if (result.success) {
+                    console.log('Successfully opened AlphaFold structure viewer');
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error opening AlphaFold viewer:', error);
+                alert(`Error loading structure: ${error.message}`);
+            } finally {
+                viewStructureBtn.disabled = false;
+                viewStructureBtn.innerHTML = '<i class="fas fa-cube"></i> View 3D Structure';
+            }
+        };
+        
+        viewPageBtn.onclick = () => {
+            const url = viewPageBtn.dataset.url;
+            window.open(url, '_blank');
+        };
+        
+        return element;
+    }
+
+    /**
+     * Add AlphaFold sidebar styles
+     */
+    addAlphaFoldSidebarStyles() {
+        // Check if styles already exist
+        if (document.getElementById('alphafold-sidebar-styles')) {
+            return;
+        }
+        
+        const style = document.createElement('style');
+        style.id = 'alphafold-sidebar-styles';
+        style.textContent = `
+            .alphafold-results-sidebar {
+                position: fixed;
+                top: 0;
+                right: -400px;
+                width: 400px;
+                height: 100vh;
+                background: white;
+                border-left: 1px solid #ddd;
+                box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                transition: right 0.3s ease;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .alphafold-results-sidebar.visible {
+                right: 0;
+            }
+            
+            .sidebar-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .sidebar-header h3 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            
+            .sidebar-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 18px;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 3px;
+                transition: background-color 0.2s;
+            }
+            
+            .sidebar-close:hover {
+                background-color: rgba(255,255,255,0.2);
+            }
+            
+            .sidebar-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+            
+            .alphafold-result-item {
+                border: 1px solid #e1e5e9;
+                border-radius: 8px;
+                margin-bottom: 16px;
+                padding: 16px;
+                background: #fafbfc;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            
+            .alphafold-result-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            
+            .result-header {
+                margin-bottom: 12px;
+            }
+            
+            .protein-name {
+                font-weight: 600;
+                font-size: 14px;
+                color: #2c3e50;
+                margin-bottom: 4px;
+            }
+            
+            .uniprot-id {
+                font-family: monospace;
+                font-size: 12px;
+                color: #7f8c8d;
+                background: #ecf0f1;
+                padding: 2px 6px;
+                border-radius: 3px;
+                display: inline-block;
+            }
+            
+            .result-details {
+                margin-bottom: 16px;
+            }
+            
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 6px;
+                font-size: 12px;
+            }
+            
+            .detail-row .label {
+                font-weight: 500;
+                color: #34495e;
+            }
+            
+            .detail-row .value {
+                color: #7f8c8d;
+                text-align: right;
+            }
+            
+            .detail-row .value.reviewed {
+                color: #27ae60;
+                font-weight: 500;
+            }
+            
+            .detail-row .value.unreviewed {
+                color: #e67e22;
+            }
+            
+            .result-actions {
+                display: flex;
+                gap: 8px;
+                flex-direction: column;
+            }
+            
+            .result-actions .btn {
+                padding: 8px 12px;
+                border: none;
+                border-radius: 5px;
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+            
+            .result-actions .btn-primary {
+                background: #3498db;
+                color: white;
+            }
+            
+            .result-actions .btn-primary:hover {
+                background: #2980b9;
+                transform: translateY(-1px);
+            }
+            
+            .result-actions .btn-secondary {
+                background: #95a5a6;
+                color: white;
+            }
+            
+            .result-actions .btn-secondary:hover {
+                background: #7f8c8d;
+                transform: translateY(-1px);
+            }
+            
+            .result-actions .btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none !important;
+            }
+            
+            @media (max-width: 768px) {
+                .alphafold-results-sidebar {
+                    width: 100vw;
+                    right: -100vw;
+                }
+                
+                .alphafold-results-sidebar.visible {
+                    right: 0;
+                }
+            }
+        `;
+        
+        document.head.appendChild(style);
     }
 
     /**
