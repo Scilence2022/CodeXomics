@@ -35397,6 +35397,17 @@ input:checked + .slider:before {
     border-color: #f87171 !important; /* Medium red border on hover */
 }
 
+.gene-search-structure-btn {
+    background: #f59e0b !important; /* Amber background */
+    color: white !important;
+    border: 1px solid #f59e0b !important;
+}
+
+.gene-search-structure-btn:hover {
+    background: #d97706 !important; /* Darker amber on hover */
+    border-color: #d97706 !important;
+}
+
 /* Sequence Validation Styling */
 .validation-message {
     font-size: 12px;

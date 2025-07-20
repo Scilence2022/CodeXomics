@@ -3493,6 +3493,15 @@ class GenomeBrowser {
             `;
         }
         
+        // Add search structure button for proteins/genes
+        if (geneType === 'CDS' || geneType === 'gene') {
+            html += `
+                <button class="btn gene-search-structure-btn gene-action-btn" onclick="window.genomeBrowser.searchProteinStructures('${geneName}')">
+                    <i class="fas fa-cube"></i> Search Structure
+                </button>
+            `;
+        }
+        
         // Add edit button
         html += `
                 <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
@@ -4723,6 +4732,104 @@ class GenomeBrowser {
                 }
             }
         });
+    }
+
+    // Search protein structures for the selected gene
+    searchProteinStructures(geneName) {
+        if (!this.chatManager) {
+            console.error('ChatManager not available for protein structure search');
+            return;
+        }
+
+        if (!geneName) {
+            console.warn('No gene name provided for structure search');
+            return;
+        }
+
+        // Get current organism/species information
+        const organism = this.getCurrentOrganismInfo();
+        
+        // Create a comprehensive search message that will trigger both PDB and AlphaFold searches
+        const searchMessage = `Search protein structures for gene ${geneName} in ${organism}. Please search both PDB experimental structures and AlphaFold predictions for this protein.`;
+        
+        // Send the search message to the chat manager
+        this.chatManager.handleUserMessage(searchMessage);
+        
+        // Optionally show the chat box if it's hidden
+        const chatBox = document.querySelector('.chat-container');
+        if (chatBox && !chatBox.classList.contains('visible')) {
+            const toggleChatBtn = document.getElementById('toggleChatBtn');
+            if (toggleChatBtn) {
+                toggleChatBtn.click();
+            }
+        }
+        
+        // Update status
+        if (this.uiManager) {
+            this.uiManager.updateStatus(`Searching protein structures for ${geneName}...`);
+        }
+    }
+
+    // Get current organism information for structure searches
+    getCurrentOrganismInfo() {
+        // Try to get organism from loaded file metadata
+        if (this.fileManager && this.fileManager.currentFileInfo) {
+            const fileInfo = this.fileManager.currentFileInfo;
+            
+            // Check GenBank ORGANISM field
+            if (fileInfo.organism) {
+                return fileInfo.organism;
+            }
+            
+            // Check other common organism indicators
+            if (fileInfo.source) {
+                return fileInfo.source;
+            }
+            
+            // Check for species in features
+            if (fileInfo.features) {
+                for (const feature of fileInfo.features) {
+                    if (feature.qualifiers) {
+                        if (feature.qualifiers.organism) {
+                            return feature.qualifiers.organism;
+                        }
+                        if (feature.qualifiers.species) {
+                            return feature.qualifiers.species;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Try to infer from current chromosome name
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (currentChr) {
+            // Common organism mappings based on chromosome names
+            const organismMap = {
+                'COLI-K12': 'Escherichia coli K-12',
+                'NC_000913': 'Escherichia coli K-12 MG1655',
+                'chr': 'Homo sapiens', // Generic human chromosome
+                'chrI': 'Saccharomyces cerevisiae',
+                'chrII': 'Saccharomyces cerevisiae',
+                'chrIII': 'Saccharomyces cerevisiae'
+            };
+            
+            // Check for exact matches
+            if (organismMap[currentChr]) {
+                return organismMap[currentChr];
+            }
+            
+            // Check for partial matches
+            if (currentChr.startsWith('chr') && currentChr.length <= 5) {
+                return 'Homo sapiens';
+            }
+            if (currentChr.includes('COLI') || currentChr.includes('coli')) {
+                return 'Escherichia coli';
+            }
+        }
+        
+        // Default fallback
+        return 'Unknown organism';
     }
 
     clearGeneSelection() {
