@@ -99,7 +99,7 @@ class ChatManager {
             this.loadChatHistory();
             
             // Update agent system button state after UI is ready
-            this.updateAgentSystemButton();
+            this.updateMultiAgentToggleButton();
         }, 100);
     }
 
@@ -125,6 +125,12 @@ class ChatManager {
                 
                 // Set global reference for settings modal
                 window.chatBoxSettingsManager = this.chatBoxSettingsManager;
+                
+                // Listen for Multi-Agent Settings changes
+                window.addEventListener('multiAgentSettingsChanged', (event) => {
+                    console.log('Multi-Agent settings changed, updating toggle button');
+                    this.updateMultiAgentToggleButton();
+                });
                 
                 console.log('ChatBoxSettingsManager initialized successfully');
             } else {
@@ -155,7 +161,7 @@ class ChatManager {
             if (agentSystemEnabled !== this.agentSystemEnabled) {
                 this.agentSystemEnabled = agentSystemEnabled;
                 this.agentSystemSettings.enabled = agentSystemEnabled;
-                this.updateAgentSystemButton();
+                this.updateMultiAgentToggleButton();
             }
             
             this.agentSystemSettings.autoOptimize = this.chatBoxSettingsManager.getSetting('agentAutoOptimize', true);
@@ -377,24 +383,44 @@ class ChatManager {
     }
     
     /**
-     * Toggle agent system on/off
+     * Toggle multi-agent system on/off (new implementation)
      */
-    toggleAgentSystem(enabled = null) {
-        const newState = enabled !== null ? enabled : !this.agentSystemEnabled;
+    toggleMultiAgentSystem() {
+        // Get current state from Multi-Agent Settings (primary source)
+        const currentState = this.configManager?.get('multiAgentSettings.multiAgentSystemEnabled', false) || false;
+        const newState = !currentState;
+        
+        // Update Multi-Agent Settings (primary setting)
+        if (this.configManager) {
+            this.configManager.set('multiAgentSettings.multiAgentSystemEnabled', newState);
+        }
+        
+        // Sync to ChatBox settings for backward compatibility
+        if (this.chatBoxSettingsManager) {
+            this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newState);
+        }
+        
+        // Update internal state
         this.agentSystemEnabled = newState;
         this.agentSystemSettings.enabled = newState;
         this.saveAgentSystemSettings();
         
-        // Sync to ChatBoxSettingsManager to maintain consistency
-        this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newState);
+        // Update button appearance immediately
+        this.updateMultiAgentToggleButton();
         
-        console.log(`🤖 Agent system ${newState ? 'enabled' : 'disabled'}`);
+        // Show user notification
+        this.showNotification(
+            `Multi-Agent System ${newState ? 'enabled' : 'disabled'}`, 
+            newState ? 'success' : 'info'
+        );
         
         // Emit state change event
         this.emit('agent-system-state-changed', {
             enabled: this.agentSystemEnabled,
             settings: this.agentSystemSettings
         });
+        
+        console.log(`🤖 Multi-Agent system toggled: ${newState ? 'ON' : 'OFF'}`);
         
         return this.agentSystemEnabled;
     }
@@ -878,31 +904,52 @@ class ChatManager {
     }
     
     /**
-     * Update agent system button appearance
+     * Update multi-agent toggle button appearance
      */
-    updateAgentSystemButton() {
-        const button = document.getElementById('agentSystemBtn');
+    updateMultiAgentToggleButton() {
+        const button = document.getElementById('multiAgentToggleBtn');
         if (button) {
-            const isEnabled = this.agentSystemEnabled;
+            // Get the current state from Multi-Agent Settings (primary source)
+            const isEnabled = this.configManager?.get('multiAgentSettings.multiAgentSystemEnabled', false) || false;
+            
+            // Update internal state
+            this.agentSystemEnabled = isEnabled;
+            this.agentSystemSettings.enabled = isEnabled;
+            
+            // Update button attributes
             button.setAttribute('data-enabled', isEnabled.toString());
             button.title = isEnabled ? 'Disable Multi-Agent System' : 'Enable Multi-Agent System';
             
-            // Update icon and styling
+            // Update button visual state
+            button.classList.toggle('enabled', isEnabled);
+            button.classList.toggle('active', isEnabled);
+            
+            // Update icon
             const icon = button.querySelector('i');
             if (icon) {
-                icon.className = isEnabled ? 'fas fa-robot' : 'fas fa-robot';
+                icon.className = 'fas fa-users-cog';
             }
             
-            button.classList.toggle('enabled', isEnabled);
+            // Update text content
+            const textSpan = button.querySelector('.toggle-text');
+            if (textSpan) {
+                textSpan.textContent = isEnabled ? 'Multi-Agent ON' : 'Multi-Agent OFF';
+            }
             
-            // Add visual feedback
+            // Apply visual styling based on state
             if (isEnabled) {
-                button.style.color = '#4CAF50';
-                button.style.textShadow = '0 0 8px rgba(76, 175, 80, 0.5)';
+                button.style.backgroundColor = '#4CAF50';
+                button.style.color = '#ffffff';
+                button.style.border = '1px solid #4CAF50';
+                button.style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.3)';
             } else {
-                button.style.color = '';
-                button.style.textShadow = '';
+                button.style.backgroundColor = '#6c757d';
+                button.style.color = '#ffffff';
+                button.style.border = '1px solid #6c757d';
+                button.style.boxShadow = 'none';
             }
+            
+            console.log(`🤖 Multi-Agent toggle button updated: ${isEnabled ? 'ON' : 'OFF'}`);
         }
     }
     
@@ -1113,7 +1160,7 @@ class ChatManager {
         this.agentSystemEnabled = newSettings.enabled;
         
         // Update button state
-        this.updateAgentSystemButton();
+        this.updateMultiAgentToggleButton();
         
         // Close modal
         modal.style.display = 'none';
@@ -2189,8 +2236,9 @@ class ChatManager {
                             <i class="fas fa-circle"></i>
                             <span>Connecting...</span>
                         </div>
-                        <button id="agentSystemBtn" class="btn btn-sm chat-btn" title="Multi-Agent System" data-enabled="false">
-                            <i class="fas fa-robot"></i>
+                        <button id="multiAgentToggleBtn" class="btn btn-sm chat-btn multi-agent-toggle" title="Enable Multi-Agent System" data-enabled="false">
+                            <i class="fas fa-users-cog"></i>
+                            <span class="toggle-text">Multi-Agent</span>
                         </button>
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>
@@ -2505,9 +2553,8 @@ class ChatManager {
         });
 
         // Multi-Agent System event listeners
-        document.getElementById('agentSystemBtn')?.addEventListener('click', () => {
-            this.toggleAgentSystem();
-            this.updateAgentSystemButton();
+        document.getElementById('multiAgentToggleBtn')?.addEventListener('click', () => {
+            this.toggleMultiAgentSystem();
         });
 
         document.getElementById('agentSettingsBtn')?.addEventListener('click', () => {

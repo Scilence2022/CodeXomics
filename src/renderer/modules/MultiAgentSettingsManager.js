@@ -240,7 +240,19 @@ class MultiAgentSettingsManager {
     saveSettings() {
         try {
             this.configManager.set('multiAgentSettings', this.currentSettings);
-            console.log('Multi-Agent Settings saved:', this.currentSettings);
+            
+            // Sync the multiAgentSystemEnabled setting to ChatBox settings for consistency
+            if (window.chatManager && window.chatManager.chatBoxSettingsManager) {
+                const enabled = this.currentSettings.multiAgentSystemEnabled;
+                window.chatManager.chatBoxSettingsManager.setSetting('agentSystemEnabled', enabled);
+                
+                // Update ChatManager's internal state and button
+                window.chatManager.agentSystemEnabled = enabled;
+                window.chatManager.agentSystemSettings.enabled = enabled;
+                window.chatManager.updateMultiAgentToggleButton();
+            }
+            
+            console.log('Multi-Agent Settings saved and synced:', this.currentSettings);
             return true;
         } catch (error) {
             console.error('Error saving multi-agent settings:', error);
@@ -639,6 +651,11 @@ class MultiAgentSettingsManager {
             if (window.chatManager) {
                 window.chatManager.emit('multiAgentSettingsChanged', this.currentSettings);
             }
+            
+            // Also emit window event for global listening
+            window.dispatchEvent(new CustomEvent('multiAgentSettingsChanged', {
+                detail: this.currentSettings
+            }));
         } else {
             this.showErrorMessage('Failed to save settings. Please try again.');
         }

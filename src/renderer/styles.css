@@ -35976,3 +35976,92 @@ input:checked + .slider:before {
     min-height: 350px !important;
     padding: 20px !important;
 }
+
+/* Multi-Agent Toggle Button Styling */
+.multi-agent-toggle {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 6px 12px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    min-width: auto !important;
+    max-width: 140px !important;
+    white-space: nowrap !important;
+}
+
+.multi-agent-toggle i {
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+}
+
+.multi-agent-toggle .toggle-text {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Toggle button states */
+.multi-agent-toggle[data-enabled="false"] {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border: 1px solid #6c757d !important;
+    box-shadow: none !important;
+}
+
+.multi-agent-toggle[data-enabled="true"] {
+    background-color: #4CAF50 !important;
+    color: #ffffff !important;
+    border: 1px solid #4CAF50 !important;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3) !important;
+}
+
+/* Hover effects */
+.multi-agent-toggle:hover {
+    transform: scale(1.05) !important;
+    cursor: pointer !important;
+}
+
+.multi-agent-toggle[data-enabled="false"]:hover {
+    background-color: #5a6268 !important;
+    border-color: #5a6268 !important;
+}
+
+.multi-agent-toggle[data-enabled="true"]:hover {
+    background-color: #45a049 !important;
+    border-color: #45a049 !important;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4) !important;
+}
+
+/* Animation for enabled state */
+@keyframes multiAgentPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    }
+}
+
+.multi-agent-toggle[data-enabled="true"] {
+    animation: multiAgentPulse 3s ease-in-out infinite !important;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .multi-agent-toggle .toggle-text {
+        display: none !important;
+    }
+    
+    .multi-agent-toggle {
+        min-width: 32px !important;
+        max-width: 32px !important;
+        padding: 6px !important;
+        justify-content: center !important;
+    }
+}
