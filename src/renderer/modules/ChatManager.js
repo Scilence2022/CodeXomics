@@ -7558,8 +7558,6 @@ ${this.getPluginSystemInfo()}`;
             console.warn('Warning: Sequence length is not a multiple of 3, some nucleotides at the end will be ignored');
         }
         
-        let sequence = analysisSequence;
-        
         const codonCounts = {};
         const aminoAcidCounts = {};
         
@@ -7584,8 +7582,8 @@ ${this.getPluginSystemInfo()}`;
         };
         
         // Count codons
-        for (let i = 0; i < sequence.length - 2; i += 3) {
-            const codon = sequence.substring(i, i + 3);
+        for (let i = 0; i < analysisSequence.length - 2; i += 3) {
+            const codon = analysisSequence.substring(i, i + 3);
             const aminoAcid = geneticCode[codon];
             
             if (aminoAcid) {
@@ -7606,12 +7604,13 @@ ${this.getPluginSystemInfo()}`;
         
         return {
             geneName: geneName,
-            gene: gene,
+            gene: geneInfo,
             totalCodons: totalCodons,
             uniqueCodons: Object.keys(codonCounts).length,
             codonUsage: codonUsage,
             aminoAcidComposition: aminoAcidCounts,
-            mostFrequentCodons: codonUsage.slice(0, 10)
+            mostFrequentCodons: codonUsage.slice(0, 10),
+            sequenceLength: analysisSequence.length
         };
     }
 
