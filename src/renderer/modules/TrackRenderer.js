@@ -2956,14 +2956,14 @@ class TrackRenderer {
         trackContent.style.position = 'relative';
         trackContent.style.overflow = 'hidden';
         
-        // Create scrollable container
+        // Create scrollable container - extend to full width for alignment with other tracks
         const scrollContainer = document.createElement('div');
         scrollContainer.className = 'reads-scroll-container';
         scrollContainer.style.cssText = `
             position: absolute;
             top: 0;
             left: 0;
-            right: ${scrollbarWidth}px;
+            right: 0;
             bottom: 0;
             overflow: hidden;
         `;
@@ -3041,7 +3041,7 @@ class TrackRenderer {
     createVerticalScrollbar(trackHeight, contentHeight, contentViewport, scrollContainer) {
         const scrollbarWidth = 16;
         
-        // Scrollbar container
+        // Scrollbar container - positioned above content with higher z-index
         const scrollbar = document.createElement('div');
         scrollbar.className = 'reads-vertical-scrollbar';
         scrollbar.style.cssText = `
@@ -3050,9 +3050,10 @@ class TrackRenderer {
             right: 0;
             width: ${scrollbarWidth}px;
             height: ${trackHeight}px;
-            background-color: #f0f0f0;
+            background-color: rgba(240, 240, 240, 0.9);
             border-left: 1px solid #ddd;
             cursor: default;
+            z-index: 100;
         `;
         
         // Scrollbar thumb

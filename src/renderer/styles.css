@@ -33670,6 +33670,8 @@ input:checked + .slider:before {
 .reads-scroll-container {
     position: absolute;
     overflow: hidden;
+    /* Extend to full width for alignment with other tracks */
+    width: 100%;
 }
 
 .reads-content-viewport {
@@ -33679,6 +33681,30 @@ input:checked + .slider:before {
     -webkit-backface-visibility: hidden;
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
+}
+
+/* Reads track vertical scrollbar styling */
+.reads-vertical-scrollbar {
+    /* Ensure scrollbar is above content but with some transparency */
+    background-color: rgba(240, 240, 240, 0.9) !important;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 100 !important;
+    transition: opacity 0.2s ease;
+}
+
+.reads-vertical-scrollbar:hover {
+    background-color: rgba(240, 240, 240, 0.95) !important;
+}
+
+.reads-vertical-scrollbar .scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.reads-vertical-scrollbar:hover .scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Coverage visualization styling */
