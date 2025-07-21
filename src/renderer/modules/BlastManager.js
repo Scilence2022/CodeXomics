@@ -152,6 +152,17 @@ class BlastManager {
                         reject(new Error(`BLAST database error: The database directory may be corrupted or inaccessible. Please check permissions for: ${this.config.localDbPath}`));
                     } else if (stderr && stderr.includes('BLAST Database error')) {
                         reject(new Error(`BLAST database error: ${stderr.trim()}`));
+                    } else if (stderr && stderr.includes('is empty')) {
+                        reject(new Error(`makeblastdb failed: File appears empty or unreadable. Check file format and permissions. Error: ${stderr.trim()}`));
+                    } else if (stderr && stderr.includes('No such file or directory')) {
+                        reject(new Error(`makeblastdb failed: File not found in working directory. Error: ${stderr.trim()}`));
+                    } else if (command.includes('makeblastdb')) {
+                        // Enhanced error reporting for makeblastdb specifically
+                        let errorMessage = `makeblastdb failed: ${error.message}`;
+                        if (stderr) {
+                            errorMessage += ` STDERR: ${stderr.trim()}`;
+                        }
+                        reject(new Error(errorMessage));
                     } else {
                         reject(error);
                     }
@@ -1070,6 +1081,69 @@ class BlastManager {
                         throw new Error(`Source file not found: ${filePath}`);
                     }
                     
+                    // Validate file content
+                    try {
+                        const stats = await fs.promises.stat(filePath);
+                        if (stats.size === 0) {
+                            throw new Error(`Source file is empty: ${filePath}`);
+                        }
+                        
+                        // Check if file has FASTA content
+                        const fileContent = await fs.promises.readFile(filePath, 'utf8');
+                        if (!fileContent.trim()) {
+                            throw new Error(`Source file contains no content: ${filePath}`);
+                        }
+                        
+                        // Enhanced FASTA format validation
+                        const lines = fileContent.split('\n');
+                        const firstLine = lines[0].trim();
+                        
+                        // Check if first line starts with '>' (proper FASTA header)
+                        if (!firstLine.startsWith('>')) {
+                            throw new Error(`File does not appear to be in FASTA format (first line should start with '>'): ${filePath}`);
+                        }
+                        
+                        // Validate FASTA structure - should have headers and sequences
+                        let headerCount = 0;
+                        let hasSequenceData = false;
+                        
+                        for (let i = 0; i < Math.min(lines.length, 100); i++) { // Check first 100 lines
+                            const line = lines[i].trim();
+                            if (line.startsWith('>')) {
+                                headerCount++;
+                            } else if (line && /^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
+                                hasSequenceData = true;
+                            } else if (line && line.length > 0 && !/^[ACGTUNRYSWKMBDHV-]+$/i.test(line)) {
+                                // Check if it looks like GenBank or other format
+                                if (line.includes('LOCUS') || line.includes('ACCESSION') || line.includes('VERSION')) {
+                                    throw new Error(`File appears to be in GenBank format, not FASTA: ${filePath}`);
+                                }
+                            }
+                        }
+                        
+                        if (headerCount === 0) {
+                            throw new Error(`File does not contain valid FASTA headers: ${filePath}`);
+                        }
+                        
+                        if (!hasSequenceData) {
+                            throw new Error(`File does not contain valid nucleotide/protein sequence data: ${filePath}`);
+                        }
+                        
+                        // Count total sequences for reporting
+                        const sequences = fileContent.split('>').filter(seq => seq.trim()).length;
+                        
+                        this.appendLog(`✓ File validation passed: ${(stats.size / 1024).toFixed(2)} KB, ${sequences} sequences, first header: ${firstLine.substring(0, 50)}${firstLine.length > 50 ? '...' : ''}`);
+                        
+                    } catch (error) {
+                        if (error.code === 'EACCES') {
+                            throw new Error(`Cannot read source file (permission denied): ${filePath}`);
+                        } else if (error.code === 'ENOENT') {
+                            throw new Error(`Source file not found: ${filePath}`);
+                        } else {
+                            throw error;
+                        }
+                    }
+                    
                     // Check if source directory is writable
                     try {
                         await fs.promises.access(sourceDirectory, fs.constants.W_OK);
@@ -1082,8 +1156,34 @@ class BlastManager {
                     
                     this.appendLog(`Executing: ${makeblastdbCmd} in directory: ${sourceDirectory}`);
                     
+                    // Additional debugging - verify file is still accessible from working directory
+                    const fileInWorkingDir = path.join(sourceDirectory, fileName);
+                    if (!fs.existsSync(fileInWorkingDir)) {
+                        throw new Error(`File not accessible from working directory: ${fileInWorkingDir}`);
+                    }
+                    
+                    // Additional debugging - list files in working directory
+                    try {
+                        const filesInDir = await fs.promises.readdir(sourceDirectory);
+                        this.appendLog(`Files in working directory: ${filesInDir.filter(f => f.includes('.fasta') || f.includes('.fa')).join(', ')}`);
+                    } catch (error) {
+                        this.appendLog(`⚠ Could not list directory contents: ${error.message}`, 'warning');
+                    }
+                    
                     // Execute command in the source directory
-                    await this.runCommand(makeblastdbCmd, sourceDirectory);
+                    try {
+                        await this.runCommand(makeblastdbCmd, sourceDirectory);
+                    } catch (error) {
+                        // If relative path fails, try absolute path as fallback
+                        if (error.message.includes('is empty') || error.message.includes('No such file')) {
+                            this.appendLog(`⚠ Relative path failed, trying absolute path...`, 'warning');
+                            const absoluteCmd = `makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}" -title "${dbName}"`;
+                            this.appendLog(`Retrying with absolute paths: ${absoluteCmd}`);
+                            await this.runCommand(absoluteCmd);
+                        } else {
+                            throw error;
+                        }
+                    }
                     
                     // Mark as ready and store additional metadata
                     const dbEntry = this.customDatabases.get(dbId);

@@ -930,10 +930,10 @@ class ChatManager {
                 icon.className = 'fas fa-users-cog';
             }
             
-            // Update text content
+            // Update text content with shorter labels
             const textSpan = button.querySelector('.toggle-text');
             if (textSpan) {
-                textSpan.textContent = isEnabled ? 'Multi-Agent ON' : 'Multi-Agent OFF';
+                textSpan.textContent = isEnabled ? 'ON' : 'OFF';
             }
             
             // Apply visual styling based on state
@@ -2238,7 +2238,7 @@ class ChatManager {
                         </div>
                         <button id="multiAgentToggleBtn" class="btn btn-sm chat-btn multi-agent-toggle" title="Enable Multi-Agent System" data-enabled="false">
                             <i class="fas fa-users-cog"></i>
-                            <span class="toggle-text">Multi-Agent</span>
+                            <span class="toggle-text">OFF</span>
                         </button>
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>

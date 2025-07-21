@@ -2625,6 +2625,17 @@ class TrackRenderer {
             // Get reads for current region using ReadsManager with settings
             const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end, settings);
             
+            console.log(`🎯 [TrackRenderer] Retrieved reads for sequence display check:`, {
+                readsCount: visibleReads.length,
+                hasSequenceData: visibleReads.length > 0 && visibleReads.some(read => read.sequence),
+                sampleReads: visibleReads.slice(0, 3).map(read => ({
+                    id: read.id,
+                    hasSequence: !!read.sequence,
+                    sequenceLength: read.sequence ? read.sequence.length : 0,
+                    sequencePreview: read.sequence ? read.sequence.substring(0, 10) + '...' : 'NO_SEQUENCE'
+                }))
+            });
+            
             // Remove loading message
             trackContent.removeChild(loadingMsg);
             
@@ -3166,6 +3177,26 @@ class TrackRenderer {
         this.createReadGradients(defs, settings);
         svg.appendChild(defs);
         
+        // Check if we should show sequences based on zoom level
+        console.log(`🎯 [ScrollableReads] Sequence display check in renderVisibleRows:`, {
+            showSequencesSetting: settings.showSequences,
+            forceSequencesSetting: settings.forceSequences,
+            autoFontSizeSetting: settings.autoFontSize,
+            allSettings: settings
+        });
+        
+        const showSequences = settings.showSequences && this.shouldShowSequences(viewport.start, viewport.end, containerWidth, settings);
+        
+        console.log(`🎯 [ScrollableReads] Final sequence display decision: ${showSequences}`);
+        
+        // Add reference sequence track if enabled and showing sequences
+        if (showSequences && settings.showReference) {
+            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, topPadding, containerWidth, settings);
+            if (referenceGroup) {
+                svg.appendChild(referenceGroup);
+            }
+        }
+        
         // Render visible rows
         for (let rowIndex = startRow; rowIndex < endRow && rowIndex < readRows.length; rowIndex++) {
             const rowReads = readRows[rowIndex];
@@ -3186,6 +3217,28 @@ class TrackRenderer {
                 );
                 if (readGroup) {
                     svg.appendChild(readGroup);
+                    
+                    // Add sequence text if zoom level is sufficient
+                    if (showSequences && read.sequence) {
+                        console.log(`🧬 [ScrollableReads] Creating sequence for read:`, {
+                            readId: read.id,
+                            sequence: read.sequence ? read.sequence.substring(0, 20) + '...' : 'NO_SEQUENCE',
+                            sequenceLength: read.sequence ? read.sequence.length : 0
+                        });
+                        const sequenceGroup = this.createSVGSequenceElement(read, viewport.start, viewport.end, viewport.range, readHeight, relativeRowIndex, rowSpacing, topPadding, containerWidth, settings);
+                        if (sequenceGroup) {
+                            svg.appendChild(sequenceGroup);
+                            console.log(`✅ [ScrollableReads] Sequence element added for read: ${read.id}`);
+                        } else {
+                            console.log(`❌ [ScrollableReads] No sequence element created for read: ${read.id}`);
+                        }
+                    } else if (showSequences && !read.sequence) {
+                        console.log(`⚠️ [ScrollableReads] Sequence display enabled but read has no sequence:`, {
+                            readId: read.id,
+                            hasSequence: !!read.sequence,
+                            showSequences: showSequences
+                        });
+                    }
                 }
             });
         }
@@ -3269,12 +3322,54 @@ class TrackRenderer {
                     // Create read gradients with current settings
             this.createReadGradients(defs, settings);
 
+        // Check if we should show sequences based on zoom level
+        console.log(`🎯 [TrackRenderer] Sequence display check in renderReadsElementsSVG:`, {
+            showSequencesSetting: settings.showSequences,
+            forceSequencesSetting: settings.forceSequences,
+            autoFontSizeSetting: settings.autoFontSize,
+            allSettings: settings
+        });
+        
+        const showSequences = settings.showSequences && this.shouldShowSequences(start, end, containerWidth, settings);
+        
+        console.log(`🎯 [TrackRenderer] Final sequence display decision: ${showSequences}`);
+        
+        // Add reference sequence track if enabled and showing sequences
+        if (showSequences && settings.showReference) {
+            const referenceGroup = this.createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings);
+            if (referenceGroup) {
+                svg.appendChild(referenceGroup);
+            }
+        }
+        
         // Create read elements as SVG rectangles
         readRows.forEach((rowReads, rowIndex) => {
             rowReads.forEach((read) => {
                 const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings);
                 if (readGroup) {
                     svg.appendChild(readGroup);
+                    
+                    // Add sequence text if zoom level is sufficient
+                    if (showSequences && read.sequence) {
+                        console.log(`🧬 [TrackRenderer] Creating sequence for read:`, {
+                            readId: read.id,
+                            sequence: read.sequence ? read.sequence.substring(0, 20) + '...' : 'NO_SEQUENCE',
+                            sequenceLength: read.sequence ? read.sequence.length : 0
+                        });
+                        const sequenceGroup = this.createSVGSequenceElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings);
+                        if (sequenceGroup) {
+                            svg.appendChild(sequenceGroup);
+                            console.log(`✅ [TrackRenderer] Sequence element added for read: ${read.id}`);
+                        } else {
+                            console.log(`❌ [TrackRenderer] No sequence element created for read: ${read.id}`);
+                        }
+                    } else if (showSequences && !read.sequence) {
+                        console.log(`⚠️ [TrackRenderer] Sequence display enabled but read has no sequence:`, {
+                            readId: read.id,
+                            hasSequence: !!read.sequence,
+                            showSequences: showSequences
+                        });
+                    }
                 }
             });
         });
@@ -3398,6 +3493,259 @@ class TrackRenderer {
         this.addSVGReadInteraction(readGroup, read, rowIndex);
 
         return readGroup;
+    }
+
+    /**
+     * Create SVG sequence text element for read
+     */
+    createSVGSequenceElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings = {}) {
+        // Calculate position and dimensions
+        const readStart = Math.max(read.start, start);
+        const readEnd = Math.min(read.end, end);
+        const left = ((readStart - start) / range) * 100;
+        const width = Math.max(((readEnd - readStart) / range) * 100, 0.2);
+        
+        if (width <= 0) return null;
+
+        // Calculate pixel positions
+        const x = (left / 100) * containerWidth;
+        const elementWidth = Math.max((width / 100) * containerWidth, 2);
+        const y = topPadding + rowIndex * (readHeight + rowSpacing);
+
+        // Create SVG group for the sequence
+        const sequenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        sequenceGroup.setAttribute('class', 'svg-sequence-element');
+        sequenceGroup.setAttribute('transform', `translate(${x}, ${y})`);
+
+        // Calculate visible sequence portion
+        const visibleSequence = this.getVisibleSequencePortion(read, readStart, readEnd);
+        
+        // Add sequence text based on display mode
+        const basesPerPixel = range / containerWidth;
+        let shouldRenderText = false;
+        let effectiveSettings = { ...settings };
+        
+        if (settings.forceSequences) {
+            // Force mode - calculate optimal font size if auto sizing is enabled
+            shouldRenderText = true;
+            if (settings.autoFontSize !== false) {
+                const optimalFontSize = this.calculateOptimalFontSize(visibleSequence.length, elementWidth, readHeight, settings);
+                effectiveSettings.sequenceFontSize = optimalFontSize;
+                console.log(`🎯 [TrackRenderer] Auto font size for read: ${optimalFontSize}px (sequence length: ${visibleSequence.length})`);
+            }
+        } else {
+            // Standard mode - check pixel threshold
+            const minPixelsPerBase = 8;
+            shouldRenderText = basesPerPixel * minPixelsPerBase <= 1;
+        }
+        
+        if (shouldRenderText && visibleSequence && visibleSequence.length > 0) {
+            const referenceSequence = settings.showMismatches ? this.getReferenceSequence(readStart, readEnd) : null;
+            const sequenceText = this.createSVGSequenceText(visibleSequence, elementWidth, readHeight, effectiveSettings, referenceSequence);
+            if (sequenceText) {
+                sequenceGroup.appendChild(sequenceText);
+            }
+        }
+
+        return sequenceGroup;
+    }
+
+    /**
+     * Get the visible portion of read sequence for the current viewport
+     */
+    getVisibleSequencePortion(read, visibleStart, visibleEnd) {
+        if (!read.sequence) return '';
+        
+        // Calculate the offset within the read sequence
+        const readLength = read.end - read.start;
+        const sequenceLength = read.sequence.length;
+        
+        // Calculate start and end positions within the sequence
+        const startOffset = Math.max(0, visibleStart - read.start);
+        const endOffset = Math.min(readLength, visibleEnd - read.start);
+        
+        // Map to sequence indices (handle potential coordinate mismatches)
+        const startIndex = Math.floor((startOffset / readLength) * sequenceLength);
+        const endIndex = Math.ceil((endOffset / readLength) * sequenceLength);
+        
+        return read.sequence.substring(startIndex, endIndex);
+    }
+
+    /**
+     * Create SVG text element for sequence with optional mismatch highlighting
+     */
+    createSVGSequenceText(sequence, width, height, settings = {}, referenceSequence = null) {
+        const fontSize = settings.sequenceFontSize || 10;
+        const fontFamily = settings.sequenceFontFamily || 'monospace';
+        const mismatchColor = settings.mismatchColor || '#dc3545';
+        
+        // Create group for the sequence
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        
+        // Add white background for better readability
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('x', '-1');
+        bg.setAttribute('y', '0');
+        bg.setAttribute('width', width + 2);
+        bg.setAttribute('height', height);
+        bg.setAttribute('fill', 'rgba(255, 255, 255, 0.8)');
+        bg.setAttribute('stroke', 'none');
+        group.appendChild(bg);
+        
+        if (referenceSequence && settings.showMismatches && referenceSequence.length === sequence.length) {
+            // Create individual character elements with mismatch highlighting
+            const charWidth = (width - 2) / sequence.length;
+            
+            for (let i = 0; i < sequence.length; i++) {
+                const char = sequence[i];
+                const refChar = referenceSequence[i];
+                const isMismatch = char.toUpperCase() !== refChar.toUpperCase();
+                
+                // Create background for mismatch
+                if (isMismatch) {
+                    const mismatchBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    mismatchBg.setAttribute('x', i * charWidth);
+                    mismatchBg.setAttribute('y', '0');
+                    mismatchBg.setAttribute('width', charWidth);
+                    mismatchBg.setAttribute('height', height);
+                    mismatchBg.setAttribute('fill', mismatchColor);
+                    mismatchBg.setAttribute('opacity', '0.3');
+                    group.appendChild(mismatchBg);
+                }
+                
+                // Create character text
+                const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                charText.setAttribute('x', i * charWidth + charWidth / 2);
+                charText.setAttribute('y', height / 2 + fontSize / 3);
+                charText.setAttribute('font-family', fontFamily);
+                charText.setAttribute('font-size', fontSize);
+                charText.setAttribute('fill', isMismatch ? mismatchColor : '#333');
+                charText.setAttribute('font-weight', isMismatch ? 'bold' : 'normal');
+                charText.setAttribute('text-anchor', 'middle');
+                charText.setAttribute('dominant-baseline', 'middle');
+                charText.textContent = char;
+                group.appendChild(charText);
+            }
+        } else {
+            // Create simple text element without mismatch highlighting
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '0');
+            text.setAttribute('y', height / 2 + fontSize / 3);
+            text.setAttribute('font-family', fontFamily);
+            text.setAttribute('font-size', fontSize);
+            text.setAttribute('fill', '#333');
+            text.setAttribute('text-anchor', 'start');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.textContent = sequence;
+            group.appendChild(text);
+        }
+        
+        return group;
+    }
+
+    /**
+     * Create SVG reference sequence element
+     */
+    createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings = {}) {
+        // Get reference sequence from genome browser
+        const referenceSequence = this.getReferenceSequence(start, end);
+        if (!referenceSequence) return null;
+
+        // Create SVG group for the reference sequence
+        const referenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        referenceGroup.setAttribute('class', 'svg-reference-sequence');
+        
+        // Position at the top of the track
+        const y = topPadding - readHeight - 5;
+        referenceGroup.setAttribute('transform', `translate(0, ${y})`);
+
+        // Add background for reference sequence
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('x', '0');
+        bg.setAttribute('y', '0');
+        bg.setAttribute('width', containerWidth);
+        bg.setAttribute('height', readHeight);
+        bg.setAttribute('fill', '#f8f9fa');
+        bg.setAttribute('stroke', '#dee2e6');
+        bg.setAttribute('stroke-width', '1');
+        referenceGroup.appendChild(bg);
+
+        // Add reference sequence text based on display mode
+        const basesPerPixel = range / containerWidth;
+        let shouldRenderRefText = false;
+        let effectiveRefSettings = { ...settings };
+        
+        if (settings.forceSequences) {
+            // Force mode - calculate optimal font size for reference
+            shouldRenderRefText = true;
+            if (settings.autoFontSize !== false) {
+                const optimalFontSize = this.calculateOptimalFontSize(range, containerWidth, readHeight, settings);
+                effectiveRefSettings.referenceFontSize = Math.min(optimalFontSize + 1, 14); // Slightly larger for reference
+                console.log(`🎯 [TrackRenderer] Auto font size for reference: ${effectiveRefSettings.referenceFontSize}px`);
+            }
+        } else {
+            // Standard mode - check pixel threshold
+            const minPixelsPerBase = 10;
+            shouldRenderRefText = basesPerPixel * minPixelsPerBase <= 1;
+        }
+        
+        if (shouldRenderRefText) {
+            const sequenceText = this.createSVGReferenceText(referenceSequence, containerWidth, readHeight, effectiveRefSettings);
+            if (sequenceText) {
+                referenceGroup.appendChild(sequenceText);
+            }
+        }
+
+        // Add label
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', '5');
+        label.setAttribute('y', readHeight / 2 + 2);
+        label.setAttribute('font-family', 'Arial, sans-serif');
+        label.setAttribute('font-size', '10');
+        label.setAttribute('font-weight', 'bold');
+        label.setAttribute('fill', '#6c757d');
+        label.setAttribute('dominant-baseline', 'middle');
+        label.textContent = 'REF';
+        referenceGroup.appendChild(label);
+
+        return referenceGroup;
+    }
+
+    /**
+     * Get reference sequence for the specified region
+     */
+    getReferenceSequence(start, end) {
+        // Try to get reference sequence from the genome browser
+        if (this.genomeBrowser && this.genomeBrowser.currentSequence) {
+            const sequence = this.genomeBrowser.currentSequence;
+            // Convert 1-based coordinates to 0-based for string slicing
+            const startIndex = Math.max(0, start - 1);
+            const endIndex = Math.min(sequence.length, end);
+            return sequence.substring(startIndex, endIndex);
+        }
+        return null;
+    }
+
+    /**
+     * Create SVG text element for reference sequence
+     */
+    createSVGReferenceText(sequence, width, height, settings = {}) {
+        const fontSize = settings.referenceFontSize || 12;
+        const fontFamily = settings.referenceFontFamily || 'monospace';
+        
+        // Create text element
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', '25'); // Offset for "REF" label
+        text.setAttribute('y', height / 2 + fontSize / 3);
+        text.setAttribute('font-family', fontFamily);
+        text.setAttribute('font-size', fontSize);
+        text.setAttribute('fill', '#495057');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('text-anchor', 'start');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.textContent = sequence.toUpperCase();
+        
+        return text;
     }
 
     /**
@@ -3584,6 +3932,162 @@ class TrackRenderer {
             default:
                 return `${mutation.type} at ${mutation.position}`;
         }
+    }
+
+    /**
+     * Calculate if sequences should be displayed based on zoom level
+     */
+    shouldShowSequences(start, end, containerWidth, settings = {}) {
+        const range = end - start;
+        const basesPerPixel = range / containerWidth;
+        
+        // Check for force mode first
+        if (settings.forceSequences) {
+            const readHeight = settings.readHeight || 4;
+            const canRender = this.canRenderSequencesInForceMode(range, containerWidth, readHeight);
+            
+            console.log(`🔍 [TrackRenderer] Force sequence display check:`, {
+                range: range,
+                containerWidth: containerWidth,
+                basesPerPixel: basesPerPixel.toFixed(3),
+                readHeight: readHeight,
+                forceMode: true,
+                canRender: canRender
+            });
+            
+            return canRender;
+        }
+        
+        // Calculate adaptive threshold based on window size and sequence length
+        const baseThreshold = settings.sequenceThreshold || 1.0;
+        const adaptiveThreshold = this.calculateAdaptiveSequenceThreshold(range, containerWidth, settings);
+        
+        // Use the more restrictive threshold
+        const finalThreshold = Math.min(baseThreshold, adaptiveThreshold);
+        
+        const shouldShow = basesPerPixel <= finalThreshold;
+        
+        console.log(`🔍 [TrackRenderer] Standard sequence display check:`, {
+            range: range,
+            containerWidth: containerWidth,
+            basesPerPixel: basesPerPixel.toFixed(3),
+            baseThreshold: baseThreshold,
+            adaptiveThreshold: adaptiveThreshold.toFixed(3),
+            finalThreshold: finalThreshold.toFixed(3),
+            forceMode: false,
+            shouldShow: shouldShow
+        });
+        
+        return shouldShow;
+    }
+
+    /**
+     * Calculate adaptive threshold based on window size and sequence length
+     */
+    calculateAdaptiveSequenceThreshold(range, containerWidth, settings = {}) {
+        // Get general settings for minimum line spacing
+        const generalSettings = this.genomeBrowser.generalSettingsManager?.getSettings() || {};
+        const minLineSpacing = generalSettings.minLineSpacing || 12;
+        const sequenceFontSize = settings.sequenceFontSize || 10;
+        
+        // Calculate minimum pixels per base needed for readable text
+        const minPixelsPerBase = Math.max(8, sequenceFontSize * 0.8);
+        
+        // Adjust threshold based on window width (larger windows can show more detail)
+        let windowSizeFactor = 1.0;
+        if (containerWidth > 1200) {
+            windowSizeFactor = 1.5; // Allow more detail on large screens
+        } else if (containerWidth < 800) {
+            windowSizeFactor = 0.7; // Be more restrictive on small screens
+        }
+        
+        // Adjust threshold based on sequence range (shorter ranges can show more detail)
+        let rangeFactor = 1.0;
+        if (range < 100) {
+            rangeFactor = 2.0; // Very short ranges - show lots of detail
+        } else if (range < 500) {
+            rangeFactor = 1.5; // Short ranges - show more detail
+        } else if (range > 10000) {
+            rangeFactor = 0.5; // Long ranges - be more restrictive
+        }
+        
+        // Calculate adaptive threshold
+        const baseThreshold = containerWidth / (range * minPixelsPerBase);
+        const adaptiveThreshold = baseThreshold * windowSizeFactor * rangeFactor;
+        
+        console.log(`📊 [TrackRenderer] Adaptive threshold calculation:`, {
+            minPixelsPerBase: minPixelsPerBase,
+            minLineSpacing: minLineSpacing,
+            windowSizeFactor: windowSizeFactor,
+            rangeFactor: rangeFactor,
+            baseThreshold: baseThreshold.toFixed(3),
+            adaptiveThreshold: adaptiveThreshold.toFixed(3)
+        });
+        
+        return adaptiveThreshold;
+    }
+
+    /**
+     * Calculate optimal font size for sequence display based on available space
+     */
+    calculateOptimalFontSize(range, containerWidth, readHeight, settings = {}) {
+        // Calculate available space per base
+        const pixelsPerBase = containerWidth / range;
+        
+        // Get constraints
+        const minFontSize = 4; // Very small minimum for force mode
+        const maxFontSize = Math.min(16, Math.max(6, readHeight + 2)); // Allow font to be slightly larger than read height
+        const minPixelsPerChar = 4; // Minimum pixels needed per character
+        const maxPixelsPerChar = 12; // Maximum useful pixels per character
+        
+        // Calculate font size based on available space
+        let optimalFontSize = Math.floor(pixelsPerBase * 0.8); // Leave some padding
+        
+        // Apply constraints
+        optimalFontSize = Math.max(minFontSize, optimalFontSize);
+        optimalFontSize = Math.min(maxFontSize, optimalFontSize);
+        
+        // Adjust based on read density (more reads = smaller font)
+        const readDensityFactor = Math.min(1.0, 100 / range); // Reduce font size for dense regions
+        optimalFontSize = Math.floor(optimalFontSize * (0.7 + readDensityFactor * 0.3));
+        
+        console.log(`📏 [TrackRenderer] Font size calculation:`, {
+            range: range,
+            containerWidth: containerWidth,
+            pixelsPerBase: pixelsPerBase.toFixed(2),
+            readHeight: readHeight,
+            readDensityFactor: readDensityFactor.toFixed(2),
+            rawFontSize: Math.floor(pixelsPerBase * 0.8),
+            optimalFontSize: optimalFontSize,
+            constraints: { minFontSize, maxFontSize }
+        });
+        
+        return Math.max(minFontSize, optimalFontSize);
+    }
+
+    /**
+     * Check if sequences should be rendered (even very small) in force mode
+     */
+    canRenderSequencesInForceMode(range, containerWidth, readHeight) {
+        const pixelsPerBase = containerWidth / range;
+        const minViablePixelsPerBase = 0.5; // Minimum space to attempt rendering
+        const minReadHeight = 2; // Very lenient minimum height for force mode
+        
+        const canRender = pixelsPerBase >= minViablePixelsPerBase && readHeight >= minReadHeight;
+        
+        console.log(`🔍 [TrackRenderer] canRenderSequencesInForceMode details:`, {
+            range: range,
+            containerWidth: containerWidth,
+            pixelsPerBase: pixelsPerBase.toFixed(3),
+            minViablePixelsPerBase: minViablePixelsPerBase,
+            readHeight: readHeight,
+            minReadHeight: minReadHeight,
+            pixelsPerBaseOK: pixelsPerBase >= minViablePixelsPerBase,
+            readHeightOK: readHeight >= minReadHeight,
+            canRender: canRender
+        });
+        
+        return canRender;
     }
 
     /**
@@ -7772,6 +8276,64 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Sequence Display</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowSequences" ${settings.showSequences || false ? 'checked' : ''}>
+                        Show read sequences when zoomed in
+                    </label>
+                    <div class="help-text">Display individual read sequences and reference sequence when the zoom level is sufficient.</div>
+                </div>
+                <div class="form-group" id="readsForceSequencesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label>
+                        <input type="checkbox" id="readsForceSequences" ${settings.forceSequences ? 'checked' : ''}>
+                        Force show sequences (ignore zoom threshold)
+                    </label>
+                    <div class="help-text">Always show sequences regardless of zoom level, with automatic font sizing for optimal readability.</div>
+                </div>
+                <div class="form-group" id="readsAutoFontSizeGroup" style="display: ${settings.showSequences && settings.forceSequences ? 'block' : 'none'}">
+                    <label>
+                        <input type="checkbox" id="readsAutoFontSize" ${settings.autoFontSize !== false ? 'checked' : ''}>
+                        Auto-calculate font size
+                    </label>
+                    <div class="help-text">Automatically calculate optimal font size based on available space and sequence density.</div>
+                </div>
+                <div class="form-group" id="readsShowReferenceGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label>
+                        <input type="checkbox" id="readsShowReference" ${settings.showReference !== false ? 'checked' : ''}>
+                        Show reference sequence
+                    </label>
+                    <div class="help-text">Display the reference sequence above read sequences for comparison.</div>
+                </div>
+                <div class="form-group" id="readsSequenceThresholdGroup" style="display: ${settings.showSequences && !settings.forceSequences ? 'block' : 'none'}">
+                    <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
+                    <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
+                    <div class="help-text">Maximum bases per pixel to trigger sequence display. Lower values require more zoom. Default: 1.0 bp/px.</div>
+                </div>
+                <div class="form-group" id="readsSequenceFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label for="readsSequenceFontSize">Sequence font size (px):</label>
+                    <input type="number" id="readsSequenceFontSize" min="8" max="16" value="${settings.sequenceFontSize || 10}">
+                    <div class="help-text">Font size for sequence text. Smaller fonts allow more sequences to fit.</div>
+                </div>
+                <div class="form-group" id="readsSequenceHeightGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label for="readsSequenceHeight">Sequence text height (px):</label>
+                    <input type="number" id="readsSequenceHeight" min="10" max="30" value="${settings.sequenceHeight || 14}">
+                    <div class="help-text">Height of each sequence text line. Should be slightly larger than font size.</div>
+                </div>
+                <div class="form-group" id="readsHighlightMismatchesGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label>
+                        <input type="checkbox" id="readsHighlightMismatches" ${settings.highlightMismatches !== false ? 'checked' : ''}>
+                        Highlight mismatches
+                    </label>
+                    <div class="help-text">Highlight bases that differ from the reference sequence.</div>
+                </div>
+                <div class="form-group" id="readsMismatchColorGroup" style="display: ${settings.showSequences && (settings.highlightMismatches !== false) ? 'block' : 'none'}">
+                    <label for="readsMismatchColor">Mismatch highlight color:</label>
+                    <input type="color" id="readsMismatchColor" value="${settings.mismatchColor || '#ff6b6b'}">
+                    <div class="help-text">Color used to highlight mismatched bases.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Advanced Options</h4>
                 <div class="form-group">
                     <label>
@@ -7952,7 +8514,21 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 samplingMode: 'percentage',
                 samplingPercentage: 20,
                 samplingCount: 5000,
-                showSamplingInfo: true
+                showSamplingInfo: true,
+                // Sequence display settings
+                showSequences: false,
+                forceSequences: false,
+                autoFontSize: true,
+                showReference: false,
+                sequenceThreshold: 1.0,
+                sequenceFontSize: 10,
+                sequenceHeight: 14,
+                highlightMismatches: true,
+                showMismatches: true,
+                mismatchColor: '#ff6b6b',
+                referenceFontSize: 12,
+                referenceFontFamily: 'monospace',
+                sequenceFontFamily: 'monospace'
             },
             actions: {
                 actionHeight: 10, // Height of each action element in pixels
@@ -8095,6 +8671,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.samplingPercentage = parseInt(modal.querySelector('#readsSamplingPercentage').value) || 20;
                 settings.samplingCount = parseInt(modal.querySelector('#readsSamplingCount').value) || 5000;
                 settings.showSamplingInfo = modal.querySelector('#readsShowSamplingInfo').checked;
+                
+                // Sequence display settings
+                settings.showSequences = modal.querySelector('#readsShowSequences').checked;
+                settings.forceSequences = modal.querySelector('#readsForceSequences').checked;
+                settings.autoFontSize = modal.querySelector('#readsAutoFontSize').checked;
+                settings.showReference = modal.querySelector('#readsShowReference').checked;
+                settings.sequenceThreshold = parseFloat(modal.querySelector('#readsSequenceThreshold').value) || 1.0;
+                settings.sequenceFontSize = parseInt(modal.querySelector('#readsSequenceFontSize').value) || 10;
+                settings.sequenceHeight = parseInt(modal.querySelector('#readsSequenceHeight').value) || 14;
+                settings.highlightMismatches = modal.querySelector('#readsHighlightMismatches').checked;
+                settings.mismatchColor = modal.querySelector('#readsMismatchColor').value;
                 break;
                 
             case 'sequence':
@@ -8322,14 +8909,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Save track settings
      */
     saveTrackSettings(trackType, settings) {
+        console.log(`🔧 [TrackRenderer] Saving settings for ${trackType}:`, settings);
+        
         if (this.genomeBrowser.configManager) {
             this.genomeBrowser.configManager.set(`tracks.${trackType}.settings`, settings);
             this.genomeBrowser.configManager.saveConfig();
+            console.log(`🔧 [TrackRenderer] Settings saved via ConfigManager for ${trackType}`);
         } else {
             localStorage.setItem(`trackSettings_${trackType}`, JSON.stringify(settings));
+            console.log(`🔧 [TrackRenderer] Settings saved via localStorage for ${trackType}`);
         }
         
-        console.log(`Saved settings for ${trackType}:`, settings);
+        // Verify the settings were saved
+        const savedSettings = this.getTrackSettings(trackType);
+        console.log(`🔧 [TrackRenderer] Verified saved settings for ${trackType}:`, savedSettings);
     }
     
     /**
@@ -9400,6 +9993,89 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             
             verticalScrollCheckbox.addEventListener('change', toggleScrollSettings);
             toggleScrollSettings(); // Initial state
+        }
+        
+        // Sequence display toggle
+        const sequenceCheckbox = bodyElement.querySelector('#readsShowSequences');
+        const forceSequencesGroup = bodyElement.querySelector('#readsForceSequencesGroup');
+        const autoFontSizeGroup = bodyElement.querySelector('#readsAutoFontSizeGroup');
+        const sequenceThresholdGroup = bodyElement.querySelector('#readsSequenceThresholdGroup');
+        const referenceFontGroup = bodyElement.querySelector('#readsReferenceFontGroup');
+        const sequenceFontGroup = bodyElement.querySelector('#readsSequenceFontGroup');
+        const mismatchColorGroup = bodyElement.querySelector('#readsMismatchColorGroup');
+        const showReferenceGroup = bodyElement.querySelector('#readsShowReferenceGroup');
+        
+        // Force sequences toggle - define first so it can be used by main toggle
+        const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
+        let updateForceSequenceSettings = () => {}; // Default empty function
+        
+        if (forceSequenceCheckbox) {
+            updateForceSequenceSettings = () => {
+                const isSequenceEnabled = sequenceCheckbox ? sequenceCheckbox.checked : false;
+                const isForceEnabled = forceSequenceCheckbox.checked;
+                
+                if (sequenceThresholdGroup) {
+                    sequenceThresholdGroup.style.display = isSequenceEnabled && !isForceEnabled ? 'block' : 'none';
+                }
+                if (autoFontSizeGroup) {
+                    autoFontSizeGroup.style.display = isSequenceEnabled && isForceEnabled ? 'block' : 'none';
+                }
+                if (sequenceFontGroup) {
+                    // Hide manual font size when auto font size is enabled
+                    const autoFontCheckbox = bodyElement.querySelector('#readsAutoFontSize');
+                    const isAutoFont = autoFontCheckbox ? autoFontCheckbox.checked : true;
+                    const shouldShowFontGroup = isSequenceEnabled && (!isForceEnabled || !isAutoFont);
+                    sequenceFontGroup.style.display = shouldShowFontGroup ? 'block' : 'none';
+                }
+            };
+            
+            forceSequenceCheckbox.addEventListener('change', updateForceSequenceSettings);
+            updateForceSequenceSettings(); // Initial state
+        }
+        
+        if (sequenceCheckbox) {
+            const toggleSequenceSettings = () => {
+                const isChecked = sequenceCheckbox.checked;
+                if (forceSequencesGroup) forceSequencesGroup.style.display = isChecked ? 'block' : 'none';
+                if (showReferenceGroup) showReferenceGroup.style.display = isChecked ? 'block' : 'none';
+                if (sequenceFontGroup) sequenceFontGroup.style.display = isChecked ? 'block' : 'none';
+                if (mismatchColorGroup) mismatchColorGroup.style.display = isChecked ? 'block' : 'none';
+                
+                // Update force sequences dependent controls
+                updateForceSequenceSettings();
+            };
+            
+            sequenceCheckbox.addEventListener('change', toggleSequenceSettings);
+            toggleSequenceSettings(); // Initial state
+        }
+        
+        // Auto font size toggle
+        const autoFontCheckbox = bodyElement.querySelector('#readsAutoFontSize');
+        if (autoFontCheckbox) {
+            const updateAutoFontSettings = () => {
+                const isAutoEnabled = autoFontCheckbox.checked;
+                if (sequenceFontGroup) {
+                    const sequenceEnabled = sequenceCheckbox ? sequenceCheckbox.checked : false;
+                    const forceEnabled = forceSequenceCheckbox ? forceSequenceCheckbox.checked : false;
+                    const shouldShowFontGroup = sequenceEnabled && (!forceEnabled || !isAutoEnabled);
+                    sequenceFontGroup.style.display = shouldShowFontGroup ? 'block' : 'none';
+                }
+            };
+            
+            autoFontCheckbox.addEventListener('change', updateAutoFontSettings);
+            updateAutoFontSettings(); // Initial state
+        }
+        
+        // Reference sequence toggle
+        const referenceCheckbox = bodyElement.querySelector('#readsShowReference');
+        if (referenceCheckbox && referenceFontGroup) {
+            const toggleReferenceSettings = () => {
+                const isChecked = referenceCheckbox.checked;
+                referenceFontGroup.style.display = isChecked ? 'block' : 'none';
+            };
+            
+            referenceCheckbox.addEventListener('change', toggleReferenceSettings);
+            toggleReferenceSettings(); // Initial state
         }
     }
     

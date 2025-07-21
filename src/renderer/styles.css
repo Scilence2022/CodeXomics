@@ -35981,26 +35981,29 @@ input:checked + .slider:before {
 .multi-agent-toggle {
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    padding: 6px 12px !important;
-    border-radius: 20px !important;
-    font-size: 12px !important;
+    gap: 4px !important;
+    padding: 4px 8px !important;
+    border-radius: 12px !important;
+    font-size: 10px !important;
     font-weight: 500 !important;
     transition: all 0.3s ease !important;
     min-width: auto !important;
-    max-width: 140px !important;
+    max-width: 90px !important;
     white-space: nowrap !important;
+    flex-shrink: 0 !important;
 }
 
 .multi-agent-toggle i {
-    font-size: 14px !important;
+    font-size: 12px !important;
     transition: all 0.3s ease !important;
+    flex-shrink: 0 !important;
 }
 
 .multi-agent-toggle .toggle-text {
-    font-size: 11px !important;
+    font-size: 9px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
+    letter-spacing: 0.3px !important;
+    text-transform: uppercase !important;
 }
 
 /* Toggle button states */
@@ -36053,15 +36056,106 @@ input:checked + .slider:before {
 }
 
 /* Responsive design for smaller screens */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
     .multi-agent-toggle .toggle-text {
         display: none !important;
     }
     
     .multi-agent-toggle {
-        min-width: 32px !important;
-        max-width: 32px !important;
-        padding: 6px !important;
+        min-width: 28px !important;
+        max-width: 28px !important;
+        padding: 4px !important;
         justify-content: center !important;
+        gap: 0 !important;
+    }
+}
+
+/* Even smaller screens */
+@media (max-width: 600px) {
+    .multi-agent-toggle {
+        min-width: 24px !important;
+        max-width: 24px !important;
+        padding: 2px !important;
+    }
+    
+    .multi-agent-toggle i {
+        font-size: 10px !important;
+    }
+}
+
+/* Enhanced chat controls layout to prevent overlapping */
+.chat-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    overflow: hidden !important;
+}
+
+/* Ensure connection status doesn't take too much space */
+.connection-status {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    font-size: 10px !important;
+    opacity: 0.9 !important;
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+/* Connection status responsive behavior */
+@media (max-width: 1200px) {
+    .connection-status span {
+        display: none !important;
+    }
+    
+    .connection-status {
+        min-width: 12px !important;
+        max-width: 12px !important;
+        justify-content: center !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .chat-controls {
+        gap: 4px !important;
+    }
+}
+
+/* Enhanced chat header layout to prevent overlapping */
+.chat-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 14px !important;
+    min-height: 48px !important;
+    overflow: hidden !important;
+}
+
+.chat-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-weight: 600 !important;
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
+}
+
+/* Ensure proper spacing on very small screens */
+@media (max-width: 500px) {
+    .chat-header {
+        padding: 8px 10px !important;
+        min-height: 44px !important;
+    }
+    
+    .chat-title span {
+        font-size: 14px !important;
+    }
+    
+    .chat-controls {
+        gap: 3px !important;
     }
 }
