@@ -131,7 +131,7 @@ class BlastManager {
                 
                 // Properly escape the BLASTDB path for shell execution
                 const escapedDbPath = localDbPath.replace(/"/g, '\\"');
-                finalCommand = `export BLASTDB="${escapedDbPath}" && ${command}`;
+                finalCommand = `BLASTDB="${escapedDbPath}" ${command}`;
                 console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
             }
 
@@ -829,6 +829,23 @@ class BlastManager {
             console.log('✓ Create custom database button listener added');
         }
 
+        // Quick database creation buttons
+        const createNuclBtn = document.getElementById('createNuclDbBtn');
+        if (createNuclBtn) {
+            createNuclBtn.addEventListener('click', () => {
+                this.createQuickDatabase('nucl');
+            });
+            console.log('✓ Create nucleotide database button listener added');
+        }
+
+        const createProtBtn = document.getElementById('createProtDbBtn');
+        if (createProtBtn) {
+            createProtBtn.addEventListener('click', () => {
+                this.createQuickDatabase('prot');
+            });
+            console.log('✓ Create protein database button listener added');
+        }
+
         // Auto-generate database name when file is selected
         const filePathInput = document.getElementById('customFilePath');
         if (filePathInput) {
@@ -1151,8 +1168,11 @@ class BlastManager {
                         throw new Error(`Cannot write to source directory: ${sourceDirectory}. Please check permissions.`);
                     }
                     
-                    // Build command with relative paths
-                    const makeblastdbCmd = `makeblastdb -in "${fileName}" -dbtype ${dbType} -out "${outputName}" -title "${dbName}"`;
+                    // Build command with properly escaped paths
+                    const escapedFileName = fileName.replace(/"/g, '\\"');
+                    const escapedOutputName = outputName.replace(/"/g, '\\"');
+                    const escapedDbName = dbName.replace(/"/g, '\\"');
+                    const makeblastdbCmd = `makeblastdb -in "${escapedFileName}" -dbtype ${dbType} -out "${escapedOutputName}" -title "${escapedDbName}"`;
                     
                     this.appendLog(`Executing: ${makeblastdbCmd} in directory: ${sourceDirectory}`);
                     
@@ -1177,7 +1197,10 @@ class BlastManager {
                         // If relative path fails, try absolute path as fallback
                         if (error.message.includes('is empty') || error.message.includes('No such file')) {
                             this.appendLog(`⚠ Relative path failed, trying absolute path...`, 'warning');
-                            const absoluteCmd = `makeblastdb -in "${filePath}" -dbtype ${dbType} -out "${outputPath}" -title "${dbName}"`;
+                            const escapedFilePath = filePath.replace(/"/g, '\\"');
+                            const escapedOutputPath = outputPath.replace(/"/g, '\\"');
+                            const escapedDbNameFallback = dbName.replace(/"/g, '\\"');
+                            const absoluteCmd = `makeblastdb -in "${escapedFilePath}" -dbtype ${dbType} -out "${escapedOutputPath}" -title "${escapedDbNameFallback}"`;
                             this.appendLog(`Retrying with absolute paths: ${absoluteCmd}`);
                             await this.runCommand(absoluteCmd);
                         } else {
@@ -1241,6 +1264,180 @@ class BlastManager {
             
             this.showNotification(`Failed to create database: ${error.message}`, 'error');
         }
+    }
+
+    // Quick database creation for current genome
+    async createQuickDatabase(dbType) {
+        try {
+            // Check if there's a currently loaded genome
+            if (!this.app?.fileManager?.loadedGenomes) {
+                this.showNotification('No genome data loaded. Please load a genome first.', 'error');
+                return;
+            }
+
+            const loadedGenomes = this.app.fileManager.loadedGenomes;
+            const genomeNames = Object.keys(loadedGenomes);
+
+            if (genomeNames.length === 0) {
+                this.showNotification('No genome data available. Please load a genome first.', 'error');
+                return;
+            }
+
+            // Use the first loaded genome or let user choose if multiple
+            const genomeName = genomeNames[0];
+            const genome = loadedGenomes[genomeName];
+
+            if (!genome || !genome.sequences) {
+                this.showNotification('Invalid genome data structure.', 'error');
+                return;
+            }
+
+            // Show status
+            const statusDiv = document.getElementById('quickDbStatus');
+            const statusContent = document.getElementById('quickDbStatusContent');
+            if (statusDiv && statusContent) {
+                statusDiv.style.display = 'block';
+                statusContent.innerHTML = `<div class="alert alert-info">Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genomeName}...</div>`;
+            }
+
+            // Create database name
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+            const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
+
+            // Get all sequences from the genome
+            let fastaContent = '';
+            Object.keys(genome.sequences).forEach(chromName => {
+                const sequence = genome.sequences[chromName];
+                if (sequence) {
+                    fastaContent += `>${chromName}\n${sequence}\n`;
+                }
+            });
+
+            if (!fastaContent) {
+                throw new Error('No sequence data found in loaded genome');
+            }
+
+            // For protein database, we need to translate the sequences
+            if (dbType === 'prot') {
+                fastaContent = this.translateSequencesToProtein(fastaContent);
+            }
+
+            // Create temporary file
+            const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
+
+            // Create the database
+            await this.createLocalDatabase({
+                inputFile: tempFile,
+                dbName: dbName,
+                dbType: dbType,
+                title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`
+            });
+
+            // Update status
+            if (statusContent) {
+                statusContent.innerHTML = `<div class="alert alert-success">Successfully created ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database: ${dbName}</div>`;
+            }
+
+            // Refresh database list
+            await this.loadLocalDatabases();
+            this.populateAvailableDatabasesList();
+
+            this.showNotification(`${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} database created successfully: ${dbName}`, 'success');
+
+        } catch (error) {
+            console.error('Error creating quick database:', error);
+            
+            const statusContent = document.getElementById('quickDbStatusContent');
+            if (statusContent) {
+                statusContent.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+
+            this.showNotification(`Failed to create database: ${error.message}`, 'error');
+        }
+    }
+
+    // Translate nucleotide sequences to protein (simplified implementation)
+    translateSequencesToProtein(fastaContent) {
+        const codonTable = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        };
+
+        const lines = fastaContent.split('\n');
+        let translatedFasta = '';
+        let currentHeader = '';
+        let currentSequence = '';
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            if (line.startsWith('>')) {
+                // Process previous sequence if exists
+                if (currentHeader && currentSequence) {
+                    const proteinSeq = this.translateToProtein(currentSequence.toUpperCase(), codonTable);
+                    translatedFasta += `${currentHeader}_translated\n${proteinSeq}\n`;
+                }
+                
+                // Start new sequence
+                currentHeader = line;
+                currentSequence = '';
+            } else if (line) {
+                currentSequence += line;
+            }
+        }
+
+        // Process last sequence
+        if (currentHeader && currentSequence) {
+            const proteinSeq = this.translateToProtein(currentSequence.toUpperCase(), codonTable);
+            translatedFasta += `${currentHeader}_translated\n${proteinSeq}\n`;
+        }
+
+        return translatedFasta;
+    }
+
+    translateToProtein(nucleotideSeq, codonTable) {
+        let proteinSeq = '';
+        
+        // Find all possible reading frames and take the longest ORF
+        let longestORF = '';
+        
+        for (let frame = 0; frame < 3; frame++) {
+            let orf = '';
+            for (let i = frame; i < nucleotideSeq.length - 2; i += 3) {
+                const codon = nucleotideSeq.substring(i, i + 3);
+                const aminoAcid = codonTable[codon] || 'X';
+                
+                if (aminoAcid === '*') {
+                    if (orf.length > longestORF.length) {
+                        longestORF = orf;
+                    }
+                    orf = '';
+                } else {
+                    orf += aminoAcid;
+                }
+            }
+            
+            // Check final ORF
+            if (orf.length > longestORF.length) {
+                longestORF = orf;
+            }
+        }
+
+        return longestORF || 'XXXX'; // Return at least something if no valid translation
     }
 
     // Custom database deletion

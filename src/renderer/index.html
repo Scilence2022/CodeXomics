@@ -1718,6 +1718,25 @@
                         </button>
                     </div>
                     
+                    <!-- Quick Database Creation for Current Genome -->
+                    <div class="blast-db-management-section quick-db-section">
+                        <h4><i class="fas fa-bolt"></i> Quick Database Creation</h4>
+                        <p class="help-text">Create BLAST databases for the currently loaded genome data.</p>
+                        
+                        <div class="quick-db-buttons">
+                            <button id="createNuclDbBtn" class="btn btn-success">
+                                <i class="fas fa-dna"></i> Create Nucleotide Database
+                            </button>
+                            <button id="createProtDbBtn" class="btn btn-info">
+                                <i class="fas fa-circle"></i> Create Protein Database
+                            </button>
+                        </div>
+                        
+                        <div id="quickDbStatus" class="quick-db-status" style="display: none;">
+                            <div id="quickDbStatusContent"></div>
+                        </div>
+                    </div>
+                    
                     <!-- Available Databases Status -->
                     <div class="blast-db-management-section">
                         <h4><i class="fas fa-list"></i> Available Databases</h4>

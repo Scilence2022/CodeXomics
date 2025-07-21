@@ -31163,6 +31163,55 @@ input:checked + .slider:before {
     background: #f0f9ff;
 }
 
+.blast-db-management-section.quick-db-section {
+    border-left: 4px solid #10b981;
+    background: #f0fdf4;
+}
+
+.quick-db-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.quick-db-buttons .btn {
+    flex: 1;
+    min-height: 48px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.quick-db-status {
+    margin-top: 16px;
+}
+
+.quick-db-status .alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.quick-db-status .alert-info {
+    background-color: #dbeafe;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+}
+
+.quick-db-status .alert-success {
+    background-color: #d1fae5;
+    border: 1px solid #6ee7b7;
+    color: #065f46;
+}
+
+.quick-db-status .alert-danger {
+    background-color: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
 .genome-list {
     margin-top: 16px;
 }
