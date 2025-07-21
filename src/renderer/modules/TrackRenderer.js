@@ -2987,7 +2987,7 @@ class TrackRenderer {
         let visibleRowStart = 0;
         let visibleRowEnd = Math.min(readRows.length, maxVisibleRows + 2); // +2 for buffer
         
-        // Initial render of visible rows
+        // Initial render of visible rows - start from top to eliminate gap
         this.renderVisibleRows(contentViewport, readRows, viewport, readHeight, rowSpacing, topPadding, visibleRowStart, visibleRowEnd, settings);
         
         // Handle scrolling
@@ -3031,6 +3031,15 @@ class TrackRenderer {
         scrollContainer.appendChild(contentViewport);
         trackContent.appendChild(scrollContainer);
         trackContent.appendChild(scrollbar);
+        
+        // Set initial scroll position to eliminate gap with coverage track
+        if (topPadding > 0) {
+            const initialScrollTop = topPadding;
+            handleScroll(initialScrollTop);
+            if (scrollbar._updateScrollPosition) {
+                scrollbar._updateScrollPosition(initialScrollTop);
+            }
+        }
         
         console.log(`📜 [ScrollableReads] Created scrollable track: ${readRows.length} total rows, ${maxVisibleRows} visible, ${totalContentHeight}px total height`);
     }
@@ -3161,7 +3170,7 @@ class TrackRenderer {
         // Create SVG for visible rows
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         const visibleRowCount = endRow - startRow;
-        const svgHeight = topPadding + (visibleRowCount * (readHeight + rowSpacing));
+        const svgHeight = visibleRowCount * (readHeight + rowSpacing);
         
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', svgHeight);
@@ -3169,7 +3178,7 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container scrollable');
         svg.style.position = 'absolute';
-        svg.style.top = `${topPadding + startRow * (readHeight + rowSpacing)}px`;
+        svg.style.top = `${startRow * (readHeight + rowSpacing)}px`;
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
         
@@ -3192,7 +3201,7 @@ class TrackRenderer {
         
         // Add reference sequence track if enabled and showing sequences
         if (showSequences && settings.showReference) {
-            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, topPadding, containerWidth, settings);
+            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
             }
@@ -3212,7 +3221,7 @@ class TrackRenderer {
                     readHeight, 
                     relativeRowIndex, 
                     rowSpacing, 
-                    topPadding, 
+                    0, // Use 0 padding in scrollable mode for relative positioning
                     containerWidth, 
                     settings
                 );
@@ -3226,7 +3235,7 @@ class TrackRenderer {
                             sequence: read.sequence ? read.sequence.substring(0, 20) + '...' : 'NO_SEQUENCE',
                             sequenceLength: read.sequence ? read.sequence.length : 0
                         });
-                        const sequenceGroup = this.createSVGSequenceElement(read, viewport.start, viewport.end, viewport.range, readHeight, relativeRowIndex, rowSpacing, topPadding, containerWidth, settings);
+                        const sequenceGroup = this.createSVGSequenceElement(read, viewport.start, viewport.end, viewport.range, readHeight, relativeRowIndex, rowSpacing, 0, containerWidth, settings); // Use 0 padding in scrollable mode
                         if (sequenceGroup) {
                             svg.appendChild(sequenceGroup);
                             console.log(`✅ [ScrollableReads] Sequence element added for read: ${read.id}`);
