@@ -6323,7 +6323,7 @@ ${this.getPluginSystemInfo()}`;
         const annotations = this.app.currentAnnotations[chr] || [];
         const matchingGenes = annotations.filter(gene => {
             const name = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || '';
-            return name.toLowerCase().includes(geneName.toLowerCase());
+            return name && typeof name === 'string' && name.toLowerCase().includes(geneName.toLowerCase());
         });
         
         if (matchingGenes.length === 0) {
@@ -7517,22 +7517,48 @@ ${this.getPluginSystemInfo()}`;
     }
 
     async codonUsageAnalysis(params) {
-        const { geneName, chromosome } = params;
+        const { sequence, geneName, chromosome } = params;
         
-        const geneDetails = await this.getGeneDetails({ geneName, chromosome });
-        if (!geneDetails.found || geneDetails.genes.length === 0) {
-            throw new Error(`Gene "${geneName}" not found`);
+        let analysisSequence = sequence;
+        let geneInfo = null;
+        
+        // If sequence is provided directly, use it
+        if (sequence && typeof sequence === 'string') {
+            analysisSequence = sequence.replace(/\s/g, '').toUpperCase();
+            
+            // Validate DNA sequence
+            if (!/^[ATGC]+$/.test(analysisSequence)) {
+                throw new Error('Sequence must contain only A, T, G, C nucleotides');
+            }
+        } 
+        // Otherwise, try to get sequence from gene name
+        else if (geneName) {
+            const geneDetails = await this.getGeneDetails({ geneName, chromosome });
+            if (!geneDetails.found || geneDetails.genes.length === 0) {
+                throw new Error(`Gene "${geneName}" not found`);
+            }
+            
+            const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
+            const chr = geneDetails.chromosome;
+            
+            analysisSequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
+            
+            // Handle negative strand genes - get reverse complement
+            if (gene.strand === '-') {
+                analysisSequence = this.reverseComplement(analysisSequence);
+            }
+            
+            geneInfo = gene;
+        } else {
+            throw new Error('Either sequence or geneName must be provided');
         }
         
-        const gene = geneDetails.genes.find(g => g.type === 'CDS') || geneDetails.genes[0];
-        const chr = geneDetails.chromosome;
-        
-        let sequence = await this.app.getSequenceForRegion(chr, gene.start, gene.end);
-        
-        // Handle negative strand genes - get reverse complement
-        if (gene.strand === '-') {
-            sequence = this.reverseComplement(sequence);
+        // Check if sequence length is multiple of 3 (complete codons)
+        if (analysisSequence.length % 3 !== 0) {
+            console.warn('Warning: Sequence length is not a multiple of 3, some nucleotides at the end will be ignored');
         }
+        
+        let sequence = analysisSequence;
         
         const codonCounts = {};
         const aminoAcidCounts = {};
