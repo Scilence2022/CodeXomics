@@ -1356,13 +1356,24 @@ class ActionManager {
     async executeAllActions() {
         if (this.isExecuting) {
             this.genomeBrowser.showNotification('Actions are already executing', 'warning');
-            return;
+            return {
+                success: false,
+                message: 'Actions are already executing',
+                executedActions: 0,
+                totalActions: this.actions.length
+            };
         }
         
         const pendingActions = this.actions.filter(action => action.status === this.STATUS.PENDING);
         if (pendingActions.length === 0) {
             this.genomeBrowser.showNotification('No pending actions to execute', 'info');
-            return;
+            return {
+                success: true,
+                message: 'No pending actions to execute',
+                executedActions: 0,
+                totalActions: this.actions.length,
+                pendingActions: 0
+            };
         }
         
         // Create a deep copy of the entire action list for execution
@@ -1428,6 +1439,19 @@ class ActionManager {
             
             // Notify actions track to update
             this.notifyActionsTrackUpdate();
+            
+            // Return execution summary
+            const successfulActions = executionActionsCopy.filter(action => action.status === this.STATUS.COMPLETED);
+            const failedActions = executionActionsCopy.filter(action => action.status === this.STATUS.FAILED);
+            
+            return {
+                success: failedActions.length === 0,
+                message: `Executed ${successfulActions.length} actions successfully${failedActions.length > 0 ? `, ${failedActions.length} failed` : ''}`,
+                executedActions: successfulActions.length,
+                failedActions: failedActions.length,
+                totalActions: this.actions.length,
+                pendingActions: pendingActionsCopy.length
+            };
         }
     }
     
