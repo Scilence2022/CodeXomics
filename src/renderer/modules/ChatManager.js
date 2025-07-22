@@ -2246,17 +2246,16 @@ class ChatManager {
                 <div class="chat-header" id="chatHeader">
                     <div class="chat-title">
                         <i class="fas fa-robot"></i>
-                        <span>AI Assistant</span>
-                    </div>
-                    <div class="chat-controls">
-                        <div class="connection-status" id="connectionStatus">
-                            <i class="fas fa-circle"></i>
-                            <span>Connecting...</span>
-                        </div>
                         <button id="multiAgentToggleBtn" class="btn btn-sm chat-btn multi-agent-toggle" title="Enable Multi-Agent System" data-enabled="false">
                             <i class="fas fa-users-cog"></i>
                             <span class="toggle-text">OFF</span>
                         </button>
+                        <div class="connection-status" id="connectionStatus">
+                            <i class="fas fa-circle"></i>
+                            <span>Connecting...</span>
+                        </div>
+                    </div>
+                    <div class="chat-controls">
                         <button id="chatBoxSettingsBtn" class="btn btn-sm chat-btn" title="ChatBox Settings">
                             <i class="fas fa-cog"></i>
                         </button>

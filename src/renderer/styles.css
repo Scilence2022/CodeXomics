@@ -36562,3 +36562,59 @@ input:checked + .slider:before {
         gap: 3px !important;
     }
 }
+
+/* ChatBox Title Bar Multi-Agent Button Styling */
+.chat-title .multi-agent-toggle {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    margin: 0 4px !important;
+    border-radius: 3px !important;
+    min-width: 35px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+}
+
+.chat-title .multi-agent-toggle i {
+    font-size: 10px !important;
+}
+
+.chat-title .multi-agent-toggle .toggle-text {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+}
+
+.chat-title .connection-status {
+    font-size: 10px !important;
+    padding: 2px 4px !important;
+    margin: 0 2px !important;
+}
+
+.chat-title .connection-status i {
+    font-size: 8px !important;
+}
+
+.chat-title .connection-status span {
+    margin-left: 2px !important;
+    font-size: 9px !important;
+}
+
+/* Ensure proper spacing for robot icon */
+.chat-title > .fas.fa-robot {
+    margin-right: 4px !important;
+    color: #007bff !important;
+    font-size: 16px !important;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 500px) {
+    .chat-title .multi-agent-toggle .toggle-text {
+        display: none !important;
+    }
+    
+    .chat-title .connection-status span {
+        display: none !important;
+    }
+}
