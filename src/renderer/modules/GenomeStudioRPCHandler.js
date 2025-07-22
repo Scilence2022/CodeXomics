@@ -5,7 +5,17 @@
  * to Genome AI Studio functionality without WebSocket overhead.
  */
 
-const { ipcRenderer } = require('electron');
+// Access ipcRenderer without redeclaring
+let genomeRPCIpc;
+try {
+    if (typeof ipcRenderer !== 'undefined') {
+        genomeRPCIpc = ipcRenderer;
+    } else {
+        genomeRPCIpc = require('electron').ipcRenderer;
+    }
+} catch (e) {
+    genomeRPCIpc = require('electron').ipcRenderer;
+}
 
 class GenomeStudioRPCHandler {
     constructor() {
@@ -21,7 +31,7 @@ class GenomeStudioRPCHandler {
 
     // Setup IPC listeners for RPC calls
     setupIPCListeners() {
-        ipcRenderer.on('genome-rpc-call', (event, request) => {
+        genomeRPCIpc.on('genome-rpc-call', (event, request) => {
             this.handleRPCCall(request);
         });
     }
@@ -36,7 +46,7 @@ class GenomeStudioRPCHandler {
             const result = await this.executeMethod(method, parameters);
             
             // Send success response
-            ipcRenderer.send('genome-rpc-response', {
+            genomeRPCIpc.send('genome-rpc-response', {
                 requestId,
                 success: true,
                 result
@@ -46,7 +56,7 @@ class GenomeStudioRPCHandler {
             console.error(`🚨 RPC Error for method ${method}:`, error);
             
             // Send error response
-            ipcRenderer.send('genome-rpc-response', {
+            genomeRPCIpc.send('genome-rpc-response', {
                 requestId,
                 success: false,
                 error: error.message || 'Unknown RPC error'

@@ -5,7 +5,17 @@
  * It communicates with the main process MCP server via IPC.
  */
 
-const { ipcRenderer } = require('electron');
+// Access ipcRenderer without redeclaring
+let mcpServerIpc;
+try {
+    if (typeof ipcRenderer !== 'undefined') {
+        mcpServerIpc = ipcRenderer;
+    } else {
+        mcpServerIpc = require('electron').ipcRenderer;
+    }
+} catch (e) {
+    mcpServerIpc = require('electron').ipcRenderer;
+}
 
 class InternalMCPServer {
     constructor() {
@@ -22,14 +32,14 @@ class InternalMCPServer {
 
     // Setup IPC handlers for communication with main process MCP server
     setupIPCHandlers() {
-        ipcRenderer.on('mcp-tool-call', async (event, request) => {
+        mcpServerIpc.on('mcp-tool-call', async (event, request) => {
             const { requestId, method, parameters } = request;
             
             try {
                 const result = await this.executeMethod(method, parameters);
                 
                 // Send success response back to main process
-                ipcRenderer.send('mcp-tool-response', {
+                mcpServerIpc.send('mcp-tool-response', {
                     requestId,
                     success: true,
                     result
@@ -39,7 +49,7 @@ class InternalMCPServer {
                 console.error(`🚨 MCP Tool Error for method ${method}:`, error);
                 
                 // Send error response back to main process
-                ipcRenderer.send('mcp-tool-response', {
+                mcpServerIpc.send('mcp-tool-response', {
                     requestId,
                     success: false,
                     error: error.message
@@ -288,7 +298,7 @@ class InternalMCPServer {
         console.log('✅ Internal MCP Server started');
         
         // Notify main process that internal server is ready
-        ipcRenderer.send('internal-mcp-server-ready');
+        mcpServerIpc.send('internal-mcp-server-ready');
     }
 
     // Stop the internal server
@@ -297,7 +307,7 @@ class InternalMCPServer {
         console.log('🛑 Internal MCP Server stopped');
         
         // Notify main process that internal server is stopped
-        ipcRenderer.send('internal-mcp-server-stopped');
+        mcpServerIpc.send('internal-mcp-server-stopped');
     }
 
     // Get server status

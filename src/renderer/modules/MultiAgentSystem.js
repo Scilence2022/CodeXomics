@@ -821,4 +821,3 @@ class MultiAgentSystem {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MultiAgentSystem;
 } 
-window.ExecutionOptimizer = ExecutionOptimizer; 
