@@ -20,6 +20,13 @@ class NavigationManager {
             cumulativeVisualDeltaX: 0,
             lastCalculatedStart: 0, // Store the last calculated position
         };
+        
+        // Ruler update throttling
+        this.rulerUpdateThrottle = {
+            lastUpdateTime: 0,
+            updateInterval: 16, // 60fps (1000ms/60 ≈ 16ms)
+            pendingUpdate: false
+        };
 
         // Bind methods and add global listeners once
         this.handleDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
@@ -545,6 +552,9 @@ class NavigationManager {
         
         // Update detailed rulers during drag for real-time position display
         this.updateDetailedRulers();
+        
+        // Show real-time position feedback during drag
+        this.showDragPositionFeedback(newStart, newEnd, chromosome);
     }
 
     handleDocumentMouseUp(e) {
@@ -637,15 +647,89 @@ class NavigationManager {
             this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, finalNewStart + 1, finalNewEnd);
         }
         
-        // Update all detailed rulers after re-render
-        this.updateDetailedRulers();
+        // Update all detailed rulers after re-render (force update for final position)
+        this.updateDetailedRulers(true);
+        
+        // Hide drag position feedback with delay
+        setTimeout(() => this.hideDragPositionFeedback(), 1000);
         
         console.log('🔧 [DRAG-END] Re-render completed');
         console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
     }
 
-    // Update all detailed rulers to reflect the new position
-    updateDetailedRulers() {
+    // Show real-time position feedback during drag
+    showDragPositionFeedback(start, end, chromosome) {
+        // Remove existing feedback tooltip if any
+        let tooltip = document.getElementById('drag-position-tooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'drag-position-tooltip';
+            tooltip.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                z-index: 10000;
+                pointer-events: none;
+                white-space: nowrap;
+            `;
+            document.body.appendChild(tooltip);
+        }
+        
+        // Format position with commas for readability
+        const formatPosition = (pos) => (pos + 1).toLocaleString();
+        const range = end - start;
+        
+        tooltip.innerHTML = `
+            <div><strong>${chromosome}</strong></div>
+            <div>${formatPosition(start)} - ${formatPosition(end)}</div>
+            <div>Range: ${range.toLocaleString()} bp</div>
+        `;
+        
+        // Auto-hide after drag ends
+        if (!this.dragState.isDragging) {
+            setTimeout(() => {
+                if (tooltip && tooltip.parentNode) {
+                    tooltip.parentNode.removeChild(tooltip);
+                }
+            }, 1000);
+        }
+    }
+    
+    // Hide drag position feedback
+    hideDragPositionFeedback() {
+        const tooltip = document.getElementById('drag-position-tooltip');
+        if (tooltip && tooltip.parentNode) {
+            tooltip.parentNode.removeChild(tooltip);
+        }
+    }
+
+    // Update all detailed rulers to reflect the new position (with throttling)
+    updateDetailedRulers(forceUpdate = false) {
+        const now = performance.now();
+        
+        // Use throttling during drag operations to maintain performance
+        if (!forceUpdate && this.dragState.isDragging) {
+            if (now - this.rulerUpdateThrottle.lastUpdateTime < this.rulerUpdateThrottle.updateInterval) {
+                // Schedule update if not already pending
+                if (!this.rulerUpdateThrottle.pendingUpdate) {
+                    this.rulerUpdateThrottle.pendingUpdate = true;
+                    requestAnimationFrame(() => {
+                        this.updateDetailedRulers(true);
+                        this.rulerUpdateThrottle.pendingUpdate = false;
+                    });
+                }
+                return;
+            }
+        }
+        
+        this.rulerUpdateThrottle.lastUpdateTime = now;
+        
         const detailedRulers = document.querySelectorAll('.detailed-ruler-container');
         console.log('🔧 [RULER-UPDATE] Found', detailedRulers.length, 'detailed rulers to update');
         

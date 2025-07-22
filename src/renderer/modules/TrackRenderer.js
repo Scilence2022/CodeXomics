@@ -5454,8 +5454,17 @@ class TrackRenderer {
             const ctx = canvas.getContext('2d');
             ctx.scale(dpr, dpr);
             
-            // Use the ruler's stored position instead of global position
-            this.drawDetailedRulerWithPosition(ctx, rect.width, chromosome, rulerContainer._position);
+            // Always use current browser position for real-time updates during drag
+            const currentPosition = {
+                start: this.genomeBrowser.currentPosition.start,
+                end: this.genomeBrowser.currentPosition.end
+            };
+            
+            // Update the stored position to match current position
+            rulerContainer._position = currentPosition;
+            
+            // Draw with current position for dynamic updates
+            this.drawDetailedRulerWithPosition(ctx, rect.width, chromosome, currentPosition);
         };
 
         // Initial setup
