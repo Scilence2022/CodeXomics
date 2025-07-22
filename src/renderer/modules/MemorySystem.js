@@ -1162,6 +1162,22 @@ class MediumTermMemory {
     }
     
     /**
+     * Clean up expired data
+     */
+    async cleanup() {
+        // Clean up old workflow patterns (older than 30 days)
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        
+        for (const [key, workflow] of this.workflowPatterns.entries()) {
+            if (workflow.lastUsed < thirtyDaysAgo) {
+                this.workflowPatterns.delete(key);
+            }
+        }
+        
+        console.log('🧠 MediumTermMemory cleanup completed');
+    }
+    
+    /**
      * Get stats
      */
     getStats() {
@@ -1332,6 +1348,32 @@ class LongTermMemory {
         }
         
         return similarity / commonKeys.length;
+    }
+    
+    /**
+     * Clean up expired data
+     */
+    async cleanup() {
+        // Clean up old historical data (older than 90 days)
+        const ninetyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
+        
+        for (const [key, data] of this.historicalData.entries()) {
+            if (data.timestamp < ninetyDaysAgo && data.accessCount === 0) {
+                this.historicalData.delete(key);
+            }
+        }
+        
+        // Clean up low-confidence knowledge (older than 30 days and confidence < 0.3)
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        
+        for (const [domain, knowledgeList] of this.knowledgeBase.entries()) {
+            const filtered = knowledgeList.filter(k => 
+                k.timestamp > thirtyDaysAgo || k.confidence >= 0.3
+            );
+            this.knowledgeBase.set(domain, filtered);
+        }
+        
+        console.log('🧠 LongTermMemory cleanup completed');
     }
     
     /**
@@ -1509,6 +1551,37 @@ class SemanticMemory {
         }
         
         return similarity / commonKeys.length;
+    }
+    
+    /**
+     * Clean up expired data
+     */
+    async cleanup() {
+        // Clean up old concepts (older than 60 days with no instances or relationships)
+        const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
+        
+        for (const [concept, data] of this.conceptGraph.entries()) {
+            if (data.timestamp < sixtyDaysAgo && 
+                data.instances.size === 0 && 
+                data.relationships.size === 0) {
+                this.conceptGraph.delete(concept);
+                
+                // Clean up relationships involving this concept
+                for (const [relType, relationMap] of this.relationshipMap.entries()) {
+                    for (const [fromConcept, toConcepts] of relationMap.entries()) {
+                        toConcepts.delete(concept);
+                        if (toConcepts.size === 0) {
+                            relationMap.delete(fromConcept);
+                        }
+                    }
+                    if (relationMap.size === 0) {
+                        this.relationshipMap.delete(relType);
+                    }
+                }
+            }
+        }
+        
+        console.log('🧠 SemanticMemory cleanup completed');
     }
     
     /**

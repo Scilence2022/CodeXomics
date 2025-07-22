@@ -297,6 +297,40 @@ class ShortTermMemory {
     }
     
     /**
+     * Get tool usage pattern (for compatibility with MemoryOptimizer)
+     */
+    getToolUsagePattern() {
+        const patterns = new Map();
+        
+        for (const [key, entry] of this.memory.entries()) {
+            const toolName = entry.functionName;
+            if (!patterns.has(toolName)) {
+                patterns.set(toolName, {
+                    count: 0,
+                    avgExecutionTime: 0,
+                    successRate: 0,
+                    lastUsed: null,
+                    totalExecutionTime: 0,
+                    successCount: 0
+                });
+            }
+            
+            const pattern = patterns.get(toolName);
+            pattern.count++;
+            pattern.totalExecutionTime += entry.executionTime || 0;
+            pattern.avgExecutionTime = pattern.totalExecutionTime / pattern.count;
+            
+            if (entry.success) {
+                pattern.successCount++;
+            }
+            pattern.successRate = pattern.successCount / pattern.count;
+            pattern.lastUsed = entry.timestamp;
+        }
+        
+        return patterns;
+    }
+    
+    /**
      * Generate key for memory entry
      */
     generateKey(functionName, parameters) {
