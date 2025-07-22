@@ -2444,16 +2444,155 @@ class TrackRenderer {
      * Add interaction handlers to variant element
      */
     addVariantInteraction(variantElement, variant) {
+        // Basic tooltip for quick info
         const variantInfo = `Variant: ${variant.id || 'Unknown'}\n` +
-                          `Position: ${variant.start}-${variant.end}\n` +
+                          `Position: ${variant.start + 1}\n` +  // Convert to 1-based
                           `Ref: ${variant.ref || 'N/A'}\n` +
                           `Alt: ${variant.alt || 'N/A'}\n` +
                           `Quality: ${variant.quality || 'N/A'}`;
         
         variantElement.title = variantInfo;
-        variantElement.addEventListener('click', () => {
-            alert(variantInfo);
+        
+        // Enhanced click handler with detailed analysis
+        variantElement.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            
+            try {
+                // Show loading state
+                this.showVariantAnalysisLoading();
+                
+                // Initialize variant analyzer if not already done
+                if (!this.variantAnalyzer) {
+                    this.variantAnalyzer = new VariantAnalyzer(this.genomeBrowser);
+                }
+                
+                // Perform comprehensive analysis
+                const analysis = await this.variantAnalyzer.analyzeVariant(variant);
+                
+                // Display results in sidebar
+                this.displayVariantAnalysis(analysis);
+                
+            } catch (error) {
+                console.error('Error analyzing variant:', error);
+                this.showVariantAnalysisError(error.message);
+            }
         });
+
+        // Add hover effects
+        variantElement.addEventListener('mouseenter', () => {
+            variantElement.style.transform = 'scaleY(1.2)';
+            variantElement.style.zIndex = '10';
+        });
+        
+        variantElement.addEventListener('mouseleave', () => {
+            variantElement.style.transform = 'scaleY(1)';
+            variantElement.style.zIndex = '1';
+        });
+    }
+
+    /**
+     * Show loading state for variant analysis
+     */
+    showVariantAnalysisLoading() {
+        const sidebar = document.getElementById('sidebar');
+        const variantSection = document.getElementById('variantDetailsSection');
+        const variantContent = document.getElementById('variantDetailsContent');
+
+        if (!variantSection || !variantContent) {
+            console.error('Variant details section not found in sidebar');
+            return;
+        }
+
+        // Show the section
+        variantSection.style.display = 'block';
+
+        // Show loading content
+        variantContent.innerHTML = `
+            <div class="variant-loading">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <p>Analyzing variant impact...</p>
+                <div class="loading-steps">
+                    <div class="step active">📍 Identifying genomic location</div>
+                    <div class="step">🧬 Finding affected genes</div>
+                    <div class="step">⚡ Predicting functional impact</div>
+                    <div class="step">🔬 Analyzing amino acid changes</div>
+                </div>
+            </div>
+        `;
+
+        // Ensure sidebar is visible
+        if (sidebar) {
+            sidebar.style.display = 'block';
+        }
+    }
+
+    /**
+     * Display comprehensive variant analysis results
+     */
+    displayVariantAnalysis(analysis) {
+        const variantContent = document.getElementById('variantDetailsContent');
+        
+        if (!variantContent) {
+            console.error('Variant details content area not found');
+            return;
+        }
+
+        // Generate detailed HTML report
+        const reportHTML = this.variantAnalyzer.generateVariantReport(analysis);
+        
+        // Add analysis timestamp and summary stats
+        const summaryHTML = `
+            <div class="analysis-summary">
+                <div class="analysis-timestamp">
+                    <i class="fas fa-clock"></i>
+                    Analysis completed: ${new Date().toLocaleTimeString()}
+                </div>
+                <div class="analysis-stats">
+                    <span class="stat-item">
+                        <i class="fas fa-dna"></i>
+                        ${analysis.affectedGenes.length} features affected
+                    </span>
+                    <span class="stat-item">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        ${analysis.impact.severity} impact
+                    </span>
+                </div>
+            </div>
+        `;
+
+        variantContent.innerHTML = summaryHTML + reportHTML;
+        
+        // Scroll to top of analysis
+        variantContent.scrollTop = 0;
+
+        console.log('Variant analysis displayed:', analysis);
+    }
+
+    /**
+     * Show error message for variant analysis
+     */
+    showVariantAnalysisError(errorMessage) {
+        const variantContent = document.getElementById('variantDetailsContent');
+        
+        if (!variantContent) {
+            return;
+        }
+
+        variantContent.innerHTML = `
+            <div class="variant-analysis-error">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4>Analysis Failed</h4>
+                <p>Unable to complete variant analysis:</p>
+                <div class="error-details">${errorMessage}</div>
+                <button class="btn btn-sm retry-analysis" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
     }
 
     /**

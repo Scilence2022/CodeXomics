@@ -463,6 +463,21 @@
                     </div>
                 </div>
                 
+                <div class="sidebar-section" id="variantDetailsSection" style="display: none;">
+                    <div class="section-header">
+                        <h3>Variant Details</h3>
+                        <button class="close-panel-btn" data-panel="variantDetailsSection">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="variantDetailsContent" class="variant-details-content">
+                        <div class="no-variant-selected">
+                            <i class="fas fa-dna variant-icon"></i>
+                            <p>Click on a variant in the VCF track to view detailed analysis</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="sidebar-section" id="searchResultsSection" style="display: none;">
                     <div class="section-header">
                         <h3>Search Results</h3>
@@ -3318,6 +3333,7 @@
     <script src="modules/MultiFileManager.js"></script>
     <script src="modules/FileManager.js"></script>
     <script src="modules/TrackRenderer.js"></script>
+    <script src="modules/VariantAnalyzer.js"></script>
     <script src="modules/NavigationManager.js"></script>
     <script src="modules/GenomeNavigationBar.js"></script>
     <script src="modules/UIManager.js"></script>

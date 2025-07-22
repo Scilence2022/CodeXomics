@@ -31212,6 +31212,334 @@ input:checked + .slider:before {
     color: #991b1b;
 }
 
+/* Variant Details Styles */
+.variant-details-content {
+    padding: 16px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.no-variant-selected {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+}
+
+.variant-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #9ca3af;
+}
+
+.variant-analysis-report {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.variant-analysis-report h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+}
+
+.variant-basic-info, .variant-location, .variant-impact, .affected-genes {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 6px;
+    border-left: 4px solid #e5e7eb;
+}
+
+.variant-basic-info {
+    border-left-color: #3b82f6;
+}
+
+.variant-location {
+    border-left-color: #10b981;
+}
+
+.variant-impact {
+    border-left-color: #f59e0b;
+}
+
+.affected-genes {
+    border-left-color: #8b5cf6;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.info-grid > div {
+    padding: 4px 0;
+}
+
+.impact-summary {
+    margin-bottom: 12px;
+}
+
+.impact-severity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.severity-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.severity-badge.high {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.severity-badge.moderate {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.severity-badge.low {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.severity-badge.unknown {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.impact-description {
+    font-weight: 600;
+    color: #374151;
+}
+
+.impact-details {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.impact-detail {
+    padding: 4px 0;
+    color: #4b5563;
+}
+
+.genes-list {
+    space-y: 12px;
+}
+
+.gene-item {
+    background: white;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+}
+
+.gene-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.gene-type {
+    background: #e5e7eb;
+    color: #6b7280;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.gene-product {
+    color: #6b7280;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.gene-position {
+    color: #9ca3af;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+}
+
+.gene-impact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .variant-analysis-report h4 {
+    color: #e5e7eb;
+    border-bottom-color: #374151;
+}
+
+[data-theme="dark"] .variant-basic-info,
+[data-theme="dark"] .variant-location,
+[data-theme="dark"] .variant-impact,
+[data-theme="dark"] .affected-genes {
+    background: #1f2937;
+}
+
+[data-theme="dark"] .gene-item {
+    background: #111827;
+    border-color: #374151;
+}
+
+[data-theme="dark"] .impact-description {
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .impact-detail {
+    color: #9ca3af;
+}
+
+/* Variant analysis loading and error states */
+.variant-loading {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.loading-spinner {
+    font-size: 32px;
+    color: #3b82f6;
+    margin-bottom: 16px;
+}
+
+.loading-steps {
+    margin-top: 20px;
+    text-align: left;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.step {
+    padding: 8px 0;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.step.active {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.variant-analysis-error {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.error-icon {
+    font-size: 48px;
+    color: #ef4444;
+    margin-bottom: 16px;
+}
+
+.variant-analysis-error h4 {
+    color: #374151;
+    margin-bottom: 12px;
+}
+
+.error-details {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    margin: 16px 0;
+    word-break: break-word;
+}
+
+.retry-analysis {
+    margin-top: 16px;
+}
+
+/* Analysis summary */
+.analysis-summary {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.analysis-timestamp {
+    color: #0369a1;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.analysis-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.stat-item i {
+    color: #0369a1;
+}
+
+/* Dark mode for analysis elements */
+[data-theme="dark"] .variant-analysis-error h4 {
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .error-details {
+    background: #1f2937;
+    color: #fca5a5;
+    border: 1px solid #374151;
+}
+
+[data-theme="dark"] .analysis-summary {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .analysis-timestamp {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .stat-item {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .stat-item i {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .step {
+    color: #64748b;
+}
+
+[data-theme="dark"] .step.active {
+    color: #60a5fa;
+}
+
 .genome-list {
     margin-top: 16px;
 }
