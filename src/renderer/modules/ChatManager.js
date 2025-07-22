@@ -3905,7 +3905,7 @@ Data Management:
                 'evo2_generate_sequence', 'evo2_predict_function', 'evo2_design_crispr'
             ],
             'SEQUENCE EDITING': [
-                'copy_sequence', 'cut_sequence', 'paste_sequence', 'delete_sequence',
+                'copy_sequence', 'cut_sequence', 'paste_sequence', 'delete_sequence', 'delete_gene',
                 'insert_sequence', 'replace_sequence', 'execute_actions', 'get_action_list'
             ]
         };
@@ -4029,6 +4029,11 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Parameters: chromosome (string), start (number), end (number), strand (optional: "+" or "-")
   Example: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 
+• delete_gene - Delete a gene by name (automatically finds gene coordinates)
+  Parameters: geneName (string), chromosome (optional string - will auto-detect if not provided)
+  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "lacZ", "chromosome": "COLI-K12"}}
+
 • insert_sequence - Insert DNA sequence at a specific position
   Parameters: chromosome (string), position (number), sequence (string - DNA only: A,T,C,G,N)
   Example: {"tool_name": "insert_sequence", "parameters": {"chromosome": "COLI-K12", "position": 1000, "sequence": "ATGCGCTAT"}}
@@ -4058,7 +4063,11 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "get_action_list", "parameters": {"status": "pending"}}
 
 CRITICAL GENE DELETION WORKFLOW:
-To delete a gene (like "delete gene yaaJ"):
+Method 1 - Simple gene deletion by name:
+1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+2. {"tool_name": "execute_actions", "parameters": {}}
+
+Method 2 - Manual deletion with coordinates:
 1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
 2. Use gene coordinates from result in deleteSequence
 3. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": [gene_start], "end": [gene_end]}}
@@ -4103,6 +4112,11 @@ Before using get_coding_sequence or other gene-specific functions:
 
 WORKFLOW EXAMPLES:
 • Gene Deletion Workflow:
+  Method 1 (Recommended): 
+  1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+  2. {"tool_name": "execute_actions", "parameters": {}}
+  
+  Method 2 (Manual): 
   1. {"tool_name": "search_gene_by_name", "parameters": {"name": "yaaJ"}}
   2. {"tool_name": "deleteSequence", "parameters": {"chromosome": "COLI-K12", "start": 8238, "end": 9191}}
   3. {"tool_name": "execute_actions", "parameters": {}}
@@ -5505,6 +5519,10 @@ ${this.getPluginSystemInfo()}`;
                     result = await this.executeDeleteSequence(parameters);
                     break;
                     
+                case 'delete_gene':
+                    result = await this.executeDeleteGene(parameters);
+                    break;
+                    
                 case 'insert_sequence':
                     result = await this.executeActionFunction('insertSequence', parameters);
                     break;
@@ -5690,6 +5708,83 @@ ${this.getPluginSystemInfo()}`;
     }
 
     /**
+     * Execute delete gene function by name
+     */
+    async executeDeleteGene(parameters) {
+        console.log(`🔧 [ChatManager] Executing delete_gene with parameters:`, parameters);
+        
+        try {
+            const { geneName, chromosome } = parameters;
+            
+            // Validate parameters
+            if (!geneName) {
+                throw new Error('Missing required parameter: geneName');
+            }
+            
+            console.log(`🔍 [ChatManager] Searching for gene: ${geneName}`);
+            
+            // First, find the gene using existing search functionality
+            const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
+            
+            if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
+                throw new Error(`Gene "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}`);
+            }
+            
+            // Get the first matching gene (prefer CDS over other features)
+            let targetGene = searchResult.genes.find(gene => gene.type === 'CDS') || searchResult.genes[0];
+            
+            if (!targetGene || !targetGene.start || !targetGene.end) {
+                throw new Error(`Invalid gene data for "${geneName}": missing coordinates`);
+            }
+            
+            const geneChromosome = targetGene.chromosome || searchResult.chromosome;
+            const geneStart = targetGene.start;
+            const geneEnd = targetGene.end;
+            const geneStrand = targetGene.strand || '+';
+            
+            console.log(`🧬 [ChatManager] Found gene ${geneName}:`, {
+                chromosome: geneChromosome,
+                start: geneStart,
+                end: geneEnd,
+                strand: geneStrand,
+                type: targetGene.type,
+                product: targetGene.qualifiers?.product || 'Unknown'
+            });
+            
+            // Use the delete_sequence functionality with gene coordinates
+            const deleteResult = await this.executeDeleteSequence({
+                chromosome: geneChromosome,
+                start: geneStart,
+                end: geneEnd,
+                strand: geneStrand
+            });
+            
+            // Enhance the result with gene-specific information
+            const result = {
+                ...deleteResult,
+                deletedGene: {
+                    name: geneName,
+                    chromosome: geneChromosome,
+                    start: geneStart,
+                    end: geneEnd,
+                    strand: geneStrand,
+                    length: geneEnd - geneStart + 1,
+                    type: targetGene.type,
+                    product: targetGene.qualifiers?.product || 'Unknown protein'
+                },
+                message: `Gene "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`
+            };
+            
+            console.log(`✅ [ChatManager] delete_gene executed successfully:`, result);
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ [ChatManager] delete_gene failed:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Execute action function through UI response functions
      */
     async executeActionFunction(functionName, parameters) {
@@ -5861,6 +5956,7 @@ ${this.getPluginSystemInfo()}`;
             'cut_sequence',
             'paste_sequence',
             'delete_sequence',
+            'delete_gene',
             'insert_sequence',
             'replace_sequence',
             'get_action_list',
@@ -12232,7 +12328,7 @@ ${this.getPluginSystemInfo()}`;
                 'compute_gc', 'translate_dna', 'reverse_complement', 'find_orfs',
                 'search_sequence_motif', 'get_nearby_features', 'get_feature_details',
                 'export_sequence', 'import_sequence_data', 'search_go_terms',
-                'search_kegg_pathways', 'get_protein_info'
+                'search_kegg_pathways', 'get_protein_info', 'delete_gene', 'delete_sequence'
             ];
             
             if (localTools.includes(toolName)) {
