@@ -66,24 +66,29 @@ class MultiAgentSystem {
      * Initialize all agents
      */
     async initializeAgents() {
-        // Core function execution agents
-        this.registerAgent('NavigationAgent', new NavigationAgent(this));
-        this.registerAgent('AnalysisAgent', new AnalysisAgent(this));
-        this.registerAgent('DataAgent', new DataAgent(this));
-        this.registerAgent('ExternalAgent', new ExternalAgent(this));
-        this.registerAgent('PluginAgent', new PluginAgent(this));
-        
-        // Coordination and optimization agents
-        this.registerAgent('CoordinatorAgent', new CoordinatorAgent(this));
-        this.registerAgent('MemoryAgent', new MemoryAgent(this));
-        this.registerAgent('OptimizationAgent', new OptimizationAgent(this));
-        
-        // Specialized agents
-        this.registerAgent('SequenceAgent', new SequenceAgent(this));
-        this.registerAgent('ProteinAgent', new ProteinAgent(this));
-        this.registerAgent('NetworkAgent', new NetworkAgent(this));
-        
-        console.log(`🤖 Registered ${this.agents.size} agents`);
+        try {
+            // Core function execution agents (only register agents that exist)
+            this.registerAgent('NavigationAgent', new NavigationAgent(this));
+            this.registerAgent('AnalysisAgent', new AnalysisAgent(this));
+            this.registerAgent('DataAgent', new DataAgent(this));
+            this.registerAgent('ExternalAgent', new ExternalAgent(this));
+            this.registerAgent('PluginAgent', new PluginAgent(this));
+            
+            // Coordination agents
+            this.registerAgent('CoordinatorAgent', new CoordinatorAgent(this));
+            
+            // TODO: Add these agents when their implementations are available:
+            // this.registerAgent('MemoryAgent', new MemoryAgent(this));
+            // this.registerAgent('OptimizationAgent', new OptimizationAgent(this));
+            // this.registerAgent('SequenceAgent', new SequenceAgent(this));
+            // this.registerAgent('ProteinAgent', new ProteinAgent(this));
+            // this.registerAgent('NetworkAgent', new NetworkAgent(this));
+            
+            console.log(`🤖 Registered ${this.agents.size} agents`);
+        } catch (error) {
+            console.error('❌ Agent initialization failed:', error);
+            throw error;
+        }
     }
     
     /**

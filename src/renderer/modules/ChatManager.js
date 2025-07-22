@@ -319,8 +319,17 @@ class ChatManager {
         try {
             // Load required modules
             await this.loadScript('modules/MultiAgentSystem.js');
+            
+            // Load all available agent classes
             await this.loadScript('modules/Agents/AgentBase.js');
             await this.loadScript('modules/Agents/NavigationAgent.js');
+            await this.loadScript('modules/Agents/AnalysisAgent.js');
+            await this.loadScript('modules/Agents/DataAgent.js');
+            await this.loadScript('modules/Agents/ExternalAgent.js');
+            await this.loadScript('modules/Agents/PluginAgent.js');
+            await this.loadScript('modules/Agents/CoordinatorAgent.js');
+            
+            // Load memory system modules
             await this.loadScript('modules/MemorySystem.js');
             await this.loadScript('modules/MemoryLayers/ShortTermMemory.js');
             
