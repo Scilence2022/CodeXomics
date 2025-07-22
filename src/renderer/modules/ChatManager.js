@@ -4029,9 +4029,10 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Parameters: chromosome (string), start (number), end (number), strand (optional: "+" or "-")
   Example: {"tool_name": "delete_sequence", "parameters": {"chromosome": "COLI-K12", "start": 1000, "end": 2000}}
 
-• delete_gene - Delete a gene by name (automatically finds gene coordinates)
-  Parameters: geneName (string), chromosome (optional string - will auto-detect if not provided)
+• delete_gene - Delete a gene by name or locus tag (automatically finds gene coordinates)
+  Parameters: geneName (string - gene name or locus tag), chromosome (optional string - will auto-detect if not provided)
   Example: {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+  Example: {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}
   Example: {"tool_name": "delete_gene", "parameters": {"geneName": "lacZ", "chromosome": "COLI-K12"}}
 
 • insert_sequence - Insert DNA sequence at a specific position
@@ -4063,8 +4064,9 @@ EDITING FUNCTIONS WITH PARAMETERS:
   Example: {"tool_name": "get_action_list", "parameters": {"status": "pending"}}
 
 CRITICAL GENE DELETION WORKFLOW:
-Method 1 - Simple gene deletion by name:
-1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+Method 1 - Simple gene deletion by name or locus tag:
+1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}  (by gene name)
+1. {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}  (by locus tag)
 2. {"tool_name": "execute_actions", "parameters": {}}
 
 Method 2 - Manual deletion with coordinates:
@@ -4113,7 +4115,8 @@ Before using get_coding_sequence or other gene-specific functions:
 WORKFLOW EXAMPLES:
 • Gene Deletion Workflow:
   Method 1 (Recommended): 
-  1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}
+  1. {"tool_name": "delete_gene", "parameters": {"geneName": "yaaJ"}}  (by gene name)
+  1. {"tool_name": "delete_gene", "parameters": {"geneName": "b0005"}}  (by locus tag)
   2. {"tool_name": "execute_actions", "parameters": {}}
   
   Method 2 (Manual): 
@@ -5718,16 +5721,16 @@ ${this.getPluginSystemInfo()}`;
             
             // Validate parameters
             if (!geneName) {
-                throw new Error('Missing required parameter: geneName');
+                throw new Error('Missing required parameter: geneName (can be gene name or locus tag)');
             }
             
-            console.log(`🔍 [ChatManager] Searching for gene: ${geneName}`);
+            console.log(`🔍 [ChatManager] Searching for gene/locus tag: ${geneName}`);
             
             // First, find the gene using existing search functionality
             const searchResult = await this.searchGeneByName({ name: geneName, chromosome });
             
             if (!searchResult.found || !searchResult.genes || searchResult.genes.length === 0) {
-                throw new Error(`Gene "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}`);
+                throw new Error(`Gene/locus tag "${geneName}" not found${chromosome ? ` in chromosome ${chromosome}` : ''}. Make sure the gene name or locus tag is correct.`);
             }
             
             // Get the first matching gene (prefer CDS over other features)
@@ -5772,7 +5775,7 @@ ${this.getPluginSystemInfo()}`;
                     type: targetGene.type,
                     product: targetGene.qualifiers?.product || 'Unknown protein'
                 },
-                message: `Gene "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`
+                message: `Gene/locus tag "${geneName}" deletion queued: ${geneChromosome}:${geneStart}-${geneEnd} (${geneEnd - geneStart + 1} bp)`
             };
             
             console.log(`✅ [ChatManager] delete_gene executed successfully:`, result);
