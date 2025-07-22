@@ -88,6 +88,14 @@ class ChatManager {
         // Set global reference for copy button functionality
         window.chatManager = this;
         
+        // Message history browsing state
+        this.messageHistory = {
+            userMessages: [], // Filtered user messages for browsing
+            currentIndex: -1, // Current position in history (-1 means not browsing)
+            originalContent: '', // Original input content before browsing
+            isBrowsing: false // Whether currently browsing history
+        };
+        
         // DON'T load chat history here - wait for UI to be created
         
         // Legacy MCP connection check (kept for backward compatibility)
@@ -2505,17 +2513,32 @@ class ChatManager {
         const sendBtn = document.getElementById('sendChatBtn');
 
         if (chatInput && sendBtn) {
-            // Auto-resize textarea
+            // Auto-resize textarea and handle input changes during history browsing
             chatInput.addEventListener('input', () => {
                 chatInput.style.height = 'auto';
                 chatInput.style.height = chatInput.scrollHeight + 'px';
+                
+                // If user starts typing while browsing history, exit browse mode
+                if (this.messageHistory.isBrowsing) {
+                    this.exitHistoryBrowsing();
+                }
             });
 
-            // Send on Enter (Shift+Enter for new line)
+            // Send on Enter (Shift+Enter for new line) and handle arrow keys for history
             chatInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.sendMessage();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    this.browseHistoryUp();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    this.browseHistoryDown();
+                } else if (this.messageHistory.isBrowsing && (e.key === 'Escape')) {
+                    // Escape cancels history browsing and restores original content
+                    e.preventDefault();
+                    this.cancelHistoryBrowsing();
                 }
             });
 
@@ -2679,6 +2702,11 @@ class ChatManager {
         const message = chatInput.value.trim();
         
         if (!message) return;
+        
+        // Exit history browsing mode when sending message
+        if (this.messageHistory.isBrowsing) {
+            this.exitHistoryBrowsing();
+        }
         
         // 检查是否正在处理中
         if (this.conversationState.isProcessing) {
@@ -12820,6 +12848,131 @@ ${this.getPluginSystemInfo()}`;
             lastEventType: this.currentConversationData.events.length > 0 ? 
                 this.currentConversationData.events[this.currentConversationData.events.length - 1].type : 'none'
         };
+    }
+
+    /**
+     * Message History Browsing Methods
+     */
+    
+    /**
+     * Update user message history array
+     */
+    updateUserMessageHistory() {
+        try {
+            const fullHistory = this.configManager?.getChatHistory() || [];
+            this.messageHistory.userMessages = fullHistory
+                .filter(msg => msg.sender === 'user')
+                .map(msg => msg.message);
+            
+            console.log(`Updated user message history: ${this.messageHistory.userMessages.length} messages`);
+        } catch (error) {
+            console.warn('Failed to update user message history:', error);
+            this.messageHistory.userMessages = [];
+        }
+    }
+    
+    /**
+     * Browse up in message history (ArrowUp key)
+     */
+    browseHistoryUp() {
+        const chatInput = document.getElementById('chatInput');
+        if (!chatInput) return;
+        
+        // Update history array first
+        this.updateUserMessageHistory();
+        
+        // If no history available, do nothing
+        if (this.messageHistory.userMessages.length === 0) {
+            return;
+        }
+        
+        // If not currently browsing, save original content and start browsing
+        if (!this.messageHistory.isBrowsing) {
+            this.messageHistory.originalContent = chatInput.value;
+            this.messageHistory.isBrowsing = true;
+            this.messageHistory.currentIndex = this.messageHistory.userMessages.length - 1;
+        } else {
+            // Move up in history (older messages)
+            if (this.messageHistory.currentIndex > 0) {
+                this.messageHistory.currentIndex--;
+            } else {
+                // Wrap to newest message
+                this.messageHistory.currentIndex = this.messageHistory.userMessages.length - 1;
+            }
+        }
+        
+        // Set input to current history message
+        const currentMessage = this.messageHistory.userMessages[this.messageHistory.currentIndex];
+        chatInput.value = currentMessage;
+        
+        // Auto-resize textarea
+        chatInput.style.height = 'auto';
+        chatInput.style.height = chatInput.scrollHeight + 'px';
+        
+        // Position cursor at end
+        chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
+        
+        console.log(`History browse up: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`);
+    }
+    
+    /**
+     * Browse down in message history (ArrowDown key)
+     */
+    browseHistoryDown() {
+        const chatInput = document.getElementById('chatInput');
+        if (!chatInput || !this.messageHistory.isBrowsing) return;
+        
+        // Move down in history (newer messages)
+        if (this.messageHistory.currentIndex < this.messageHistory.userMessages.length - 1) {
+            this.messageHistory.currentIndex++;
+            
+            // Set input to current history message
+            const currentMessage = this.messageHistory.userMessages[this.messageHistory.currentIndex];
+            chatInput.value = currentMessage;
+        } else {
+            // At newest message, restore original content and exit browse mode
+            chatInput.value = this.messageHistory.originalContent;
+            this.exitHistoryBrowsing();
+        }
+        
+        // Auto-resize textarea
+        chatInput.style.height = 'auto';
+        chatInput.style.height = chatInput.scrollHeight + 'px';
+        
+        // Position cursor at end
+        chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
+        
+        if (this.messageHistory.isBrowsing) {
+            console.log(`History browse down: ${this.messageHistory.currentIndex + 1}/${this.messageHistory.userMessages.length}`);
+        } else {
+            console.log('History browse ended, original content restored');
+        }
+    }
+    
+    /**
+     * Cancel history browsing and restore original content (Escape key)
+     */
+    cancelHistoryBrowsing() {
+        const chatInput = document.getElementById('chatInput');
+        if (!chatInput || !this.messageHistory.isBrowsing) return;
+        
+        chatInput.value = this.messageHistory.originalContent;
+        this.exitHistoryBrowsing();
+        
+        // Auto-resize textarea
+        chatInput.style.height = 'auto';
+        chatInput.style.height = chatInput.scrollHeight + 'px';
+        
+        console.log('History browsing cancelled, original content restored');
+    }
+    
+    /**
+     * Exit history browsing mode
+     */
+    exitHistoryBrowsing() {
+        this.messageHistory.isBrowsing = false;
+        this.messageHistory.currentIndex = -1;
+        this.messageHistory.originalContent = '';
     }
 
     /**
