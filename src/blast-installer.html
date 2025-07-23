@@ -1270,17 +1270,24 @@
                     });
                     
                 } else {
-                    // macOS/Linux: Copy files from extracted directory
+                    // macOS/Linux: Copy files from extracted directory with enhanced permission handling
                     if (!global.extractedBlastPath) {
                         throw new Error('Extracted BLAST+ path not found');
                     }
                     
-                    logMessage(`Creating installation directory: ${installPath}`, 'info');
+                    logMessage(`Installing BLAST+ for ${platform}...`, 'info');
                     
-                    // Create installation directory with proper permissions
+                    // First, try to install without elevated permissions (user-local installation)
                     try {
-                        fs.mkdirSync(installPath, { recursive: true, mode: 0o755 });
-                    } catch (error) {
+                        await attemptUserInstallation(platform);
+                    } catch (userError) {
+                        logMessage(`User installation failed: ${userError.message}`, 'warning');
+                        logMessage('Attempting system-wide installation with elevated privileges...', 'info');
+                        
+                        // If user installation fails, prompt for administrator privileges
+                        await attemptSystemInstallation(platform);
+                    }
+                }
                         if (error.code === 'EACCES') {
                             // Try with sudo for system directories
                             logMessage('Requesting elevated privileges for installation...', 'warning');
@@ -1391,6 +1398,220 @@
                 const { shell } = require('electron');
                 shell.openPath(installerPath);
                 logMessage('Attempting to run installer manually...', 'info');
+            });
+        }
+
+        // Helper functions for enhanced permission handling
+        async function attemptUserInstallation(platform) {
+            logMessage('Attempting user-local installation...', 'info');
+            
+            const fs = require('fs');
+            const path = require('path');
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            
+            // Determine user-local installation path
+            const homeDir = os.homedir();
+            let userInstallPath;
+            
+            if (platform === 'darwin') {
+                userInstallPath = path.join(homeDir, 'Applications', 'blast+');
+            } else {
+                userInstallPath = path.join(homeDir, '.local', 'blast+');
+            }
+            
+            logMessage(`User installation path: ${userInstallPath}`, 'info');
+            
+            try {
+                // Create user installation directory
+                fs.mkdirSync(userInstallPath, { recursive: true, mode: 0o755 });
+                
+                // Copy BLAST+ binaries to user directory
+                const binPath = path.join(userInstallPath, 'bin');
+                fs.mkdirSync(binPath, { recursive: true, mode: 0o755 });
+                
+                const sourceBinPath = path.join(global.extractedBlastPath, 'bin');
+                await execAsync(`cp -r "${sourceBinPath}/"* "${binPath}/"`);
+                
+                // Copy other necessary directories
+                const additionalDirs = ['doc', 'data'];
+                for (const dir of additionalDirs) {
+                    const sourcePath = path.join(global.extractedBlastPath, dir);
+                    if (fs.existsSync(sourcePath)) {
+                        await execAsync(`cp -r "${sourcePath}" "${userInstallPath}/"`);
+                    }
+                }
+                
+                // Update global installPath for subsequent configuration
+                installPath = userInstallPath;
+                
+                logMessage('User-local installation completed successfully', 'success');
+                return userInstallPath;
+                
+            } catch (error) {
+                throw new Error(`User installation failed: ${error.message}`);
+            }
+        }
+
+        async function attemptSystemInstallation(platform) {
+            logMessage('Attempting system-wide installation with elevated privileges...', 'info');
+            
+            const fs = require('fs');
+            const path = require('path');
+            const { exec, spawn } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            
+            // Determine system installation path
+            let systemInstallPath;
+            if (platform === 'darwin') {
+                systemInstallPath = '/usr/local/blast+';
+            } else {
+                systemInstallPath = '/opt/blast+';
+            }
+            
+            logMessage(`System installation path: ${systemInstallPath}`, 'info');
+            
+            try {
+                if (platform === 'darwin') {
+                    // macOS: Use osascript for GUI sudo prompt
+                    await attemptMacOSElevatedInstallation(systemInstallPath);
+                } else {
+                    // Linux: Use pkexec or sudo
+                    await attemptLinuxElevatedInstallation(systemInstallPath);
+                }
+                
+                // Update global installPath for subsequent configuration
+                installPath = systemInstallPath;
+                
+                logMessage('System-wide installation completed successfully', 'success');
+                return systemInstallPath;
+                
+            } catch (error) {
+                throw new Error(`System installation failed: ${error.message}`);
+            }
+        }
+
+        async function attemptMacOSElevatedInstallation(systemInstallPath) {
+            const { spawn } = require('child_process');
+            const path = require('path');
+            
+            logMessage('Requesting macOS administrator privileges...', 'info');
+            
+            // Create AppleScript for GUI sudo prompt
+            const applescript = `
+                do shell script "mkdir -p '${systemInstallPath}' && cp -r '${global.extractedBlastPath}/'* '${systemInstallPath}/'" with administrator privileges
+            `;
+            
+            return new Promise((resolve, reject) => {
+                const osascript = spawn('osascript', ['-e', applescript]);
+                
+                let output = '';
+                let errorOutput = '';
+                
+                osascript.stdout.on('data', (data) => {
+                    output += data.toString();
+                });
+                
+                osascript.stderr.on('data', (data) => {
+                    errorOutput += data.toString();
+                });
+                
+                osascript.on('close', (code) => {
+                    if (code === 0) {
+                        logMessage('macOS elevated installation completed', 'success');
+                        resolve();
+                    } else {
+                        logMessage(`macOS elevated installation failed (code: ${code})`, 'error');
+                        if (errorOutput.includes('User canceled')) {
+                            reject(new Error('Administrator authentication was canceled by user'));
+                        } else {
+                            reject(new Error(`Elevated installation failed: ${errorOutput}`));
+                        }
+                    }
+                });
+                
+                osascript.on('error', (error) => {
+                    logMessage(`macOS osascript error: ${error.message}`, 'error');
+                    reject(new Error(`Failed to request administrator privileges: ${error.message}`));
+                });
+            });
+        }
+
+        async function attemptLinuxElevatedInstallation(systemInstallPath) {
+            const { spawn } = require('child_process');
+            const path = require('path');
+            
+            logMessage('Requesting Linux administrator privileges...', 'info');
+            
+            // Try pkexec first (GUI), then sudo (terminal)
+            const commands = [
+                {
+                    name: 'pkexec',
+                    args: ['bash', '-c', `mkdir -p '${systemInstallPath}' && cp -r '${global.extractedBlastPath}/'* '${systemInstallPath}/'`],
+                    description: 'GUI administrator prompt'
+                },
+                {
+                    name: 'sudo',
+                    args: ['bash', '-c', `mkdir -p '${systemInstallPath}' && cp -r '${global.extractedBlastPath}/'* '${systemInstallPath}/'`],
+                    description: 'Terminal sudo prompt'
+                }
+            ];
+            
+            for (const cmd of commands) {
+                try {
+                    logMessage(`Trying ${cmd.description}...`, 'info');
+                    await runElevatedCommand(cmd.name, cmd.args);
+                    logMessage(`Linux elevated installation completed using ${cmd.name}`, 'success');
+                    return;
+                } catch (error) {
+                    logMessage(`${cmd.name} failed: ${error.message}`, 'warning');
+                    continue;
+                }
+            }
+            
+            throw new Error('All elevated installation methods failed. Please run installer manually with administrator privileges.');
+        }
+
+        function runElevatedCommand(command, args) {
+            const { spawn } = require('child_process');
+            
+            return new Promise((resolve, reject) => {
+                const process = spawn(command, args, { stdio: 'pipe' });
+                
+                let output = '';
+                let errorOutput = '';
+                
+                process.stdout.on('data', (data) => {
+                    output += data.toString();
+                    logMessage(`${command}: ${data.toString().trim()}`, 'info');
+                });
+                
+                process.stderr.on('data', (data) => {
+                    errorOutput += data.toString();
+                    logMessage(`${command} error: ${data.toString().trim()}`, 'warning');
+                });
+                
+                process.on('close', (code) => {
+                    if (code === 0) {
+                        resolve(output);
+                    } else {
+                        if (errorOutput.includes('authentication')) {
+                            reject(new Error('Administrator authentication failed or was canceled'));
+                        } else {
+                            reject(new Error(`Command failed with exit code ${code}: ${errorOutput}`));
+                        }
+                    }
+                });
+                
+                process.on('error', (error) => {
+                    if (error.code === 'ENOENT') {
+                        reject(new Error(`${command} not available on this system`));
+                    } else {
+                        reject(new Error(`Failed to run ${command}: ${error.message}`));
+                    }
+                });
             });
         }
 

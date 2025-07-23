@@ -63,16 +63,71 @@ class BlastManager {
     async checkBlastInstallation() {
         console.log('BlastManager: Checking BLAST+ installation...');
         try {
-            // Check for blastn executable
-            const command = 'which blastn';
+            // Use the same logic as Install BLAST+ Tools - check version directly
+            // This is more reliable than 'which' command, especially on Windows
+            const command = 'blastn -version';
             console.log('BlastManager: Running command:', command);
             const result = await this.runCommand(command);
-            console.log('BlastManager: which blastn result:', result.trim());
-            return result.trim().length > 0;
+            console.log('BlastManager: blastn -version result:', result);
+            
+            // Parse version information like the installer does
+            const versionMatch = result.match(/blastn: ([\d.]+)/);
+            if (versionMatch) {
+                const installedVersion = versionMatch[1];
+                console.log(`BlastManager: Found BLAST+ installation: v${installedVersion}`);
+                
+                // Store version info for later use
+                this.config.installedBlastVersion = installedVersion;
+                return true;
+            } else {
+                console.warn('BlastManager: BLAST+ version could not be determined from output');
+                return false;
+            }
         } catch (error) {
-            console.error('BlastManager: Error checking BLAST+ installation:', error);
-            return false;
+            console.warn('BlastManager: BLAST+ not found or not accessible:', error.message);
+            
+            // Try fallback detection methods for different platforms
+            return await this.tryFallbackBlastDetection();
         }
+    }
+
+    async tryFallbackBlastDetection() {
+        console.log('BlastManager: Trying fallback BLAST+ detection methods...');
+        
+        // Try common installation paths
+        const commonPaths = [
+            'blastn', // Already in PATH
+            '/usr/local/bin/blastn', // Common Unix installation
+            '/usr/bin/blastn', // System installation
+            '/opt/blast+/bin/blastn', // Custom installation
+            'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe', // Windows default
+            'C:\\blast+\\bin\\blastn.exe' // Windows alternative
+        ];
+        
+        for (const blastPath of commonPaths) {
+            try {
+                console.log(`BlastManager: Trying path: ${blastPath}`);
+                const command = `"${blastPath}" -version`;
+                const result = await this.runCommand(command);
+                
+                const versionMatch = result.match(/blastn: ([\d.]+)/);
+                if (versionMatch) {
+                    const installedVersion = versionMatch[1];
+                    console.log(`BlastManager: Found BLAST+ at ${blastPath}: v${installedVersion}`);
+                    
+                    // Store the working path and version
+                    this.config.blastExecutablePath = blastPath;
+                    this.config.installedBlastVersion = installedVersion;
+                    return true;
+                }
+            } catch (error) {
+                // Continue trying other paths
+                console.debug(`BlastManager: Path ${blastPath} not accessible:`, error.message);
+            }
+        }
+        
+        console.warn('BlastManager: BLAST+ not found in any common locations');
+        return false;
     }
 
     async checkAndFixBlastDatabaseDirectory() {
@@ -114,6 +169,21 @@ class BlastManager {
 
             let finalCommand = command;
             if (isBlastCommand) {
+                // Use detected BLAST executable path if available
+                if (this.config.blastExecutablePath) {
+                    // Replace the BLAST command with the full path
+                    const blastCommands = ['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'];
+                    for (const cmd of blastCommands) {
+                        if (command.startsWith(cmd)) {
+                            const blastDir = path.dirname(this.config.blastExecutablePath);
+                            const commandExe = path.join(blastDir, cmd + (process.platform === 'win32' ? '.exe' : ''));
+                            finalCommand = command.replace(cmd, `"${commandExe}"`);
+                            console.log(`BlastManager: Using detected BLAST path: ${commandExe}`);
+                            break;
+                        }
+                    }
+                }
+                
                 // Set BLASTDB environment variable for the command
                 const localDbPath = this.config.localDbPath; // Use the configured localDbPath
                 
@@ -131,7 +201,7 @@ class BlastManager {
                 
                 // Properly escape the BLASTDB path for shell execution
                 const escapedDbPath = localDbPath.replace(/"/g, '\\"');
-                finalCommand = `BLASTDB="${escapedDbPath}" ${command}`;
+                finalCommand = `BLASTDB="${escapedDbPath}" ${finalCommand}`;
                 console.log('BlastManager: Running BLAST command with BLASTDB set:', finalCommand);
             }
 
@@ -525,7 +595,22 @@ class BlastManager {
             this.initializeModal();
             this.ensureModalFooterVisibility();
             this.selectBlastType('blastn'); // Set default BLAST type
+            this.initializeResizable(); // Make BLAST modal resizable
         }, 100);
+    }
+
+    initializeResizable() {
+        // Initialize resizable functionality for BLAST Search modal
+        try {
+            if (window.resizableModalManager) {
+                window.resizableModalManager.makeResizable('#blastSearchModal');
+                console.log('BlastManager: BLAST Search modal made resizable');
+            } else {
+                console.warn('BlastManager: ResizableModalManager not available');
+            }
+        } catch (error) {
+            console.error('BlastManager: Error initializing resizable modal:', error);
+        }
     }
 
     ensureModalFooterVisibility() {
