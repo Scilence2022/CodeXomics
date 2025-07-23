@@ -1740,11 +1740,17 @@ class MemoryOptimizer {
         // Performance optimization rules
         this.optimizationRules.set('performance', [
             {
-                condition: (memoryContext) => memoryContext.shortTermMemory.toolCallHistory.length > 50,
+                condition: (memoryContext) => {
+                    // Check if shortTermMemory exists and has memory Map
+                    return this.memorySystem.shortTermMemory && 
+                           this.memorySystem.shortTermMemory.memory && 
+                           this.memorySystem.shortTermMemory.memory.size > 100;
+                },
                 action: () => {
-                    // Clean up old short-term memory
-                    this.memorySystem.shortTermMemory.toolCallHistory = 
-                        this.memorySystem.shortTermMemory.toolCallHistory.slice(-50);
+                    // Clean up old short-term memory using the new implementation
+                    if (this.memorySystem.shortTermMemory && this.memorySystem.shortTermMemory.cleanup) {
+                        this.memorySystem.shortTermMemory.cleanup();
+                    }
                 }
             }
         ]);
@@ -1768,19 +1774,27 @@ class MemoryOptimizer {
      * Optimize memory
      */
     async optimizeMemory() {
-        const memoryContext = {
-            shortTerm: this.memorySystem.shortTermMemory.getToolUsagePattern(),
-            mediumTerm: this.memorySystem.mediumTermMemory.userPreferences,
-            longTerm: this.memorySystem.longTermMemory.knowledgeBase,
-            semantic: this.memorySystem.semanticMemory.conceptGraph
-        };
+        try {
+            const memoryContext = {
+                shortTerm: this.memorySystem.shortTermMemory?.getToolUsagePattern?.() || new Map(),
+                mediumTerm: this.memorySystem.mediumTermMemory?.userPreferences || new Map(),
+                longTerm: this.memorySystem.longTermMemory?.knowledgeBase || new Map(),
+                semantic: this.memorySystem.semanticMemory?.conceptGraph || new Map()
+            };
         
-        for (const [category, rules] of this.optimizationRules) {
-            for (const rule of rules) {
-                if (rule.condition(memoryContext)) {
-                    rule.action();
+            for (const [category, rules] of this.optimizationRules) {
+                for (const rule of rules) {
+                    try {
+                        if (rule.condition(memoryContext)) {
+                            rule.action();
+                        }
+                    } catch (error) {
+                        console.warn(`🧠 MemoryOptimizer rule failed in category ${category}:`, error);
+                    }
                 }
             }
+        } catch (error) {
+            console.error('🧠 MemoryOptimizer.optimizeMemory failed:', error);
         }
     }
     
@@ -1788,19 +1802,27 @@ class MemoryOptimizer {
      * Analyze a single memory entry for optimization
      */
     analyzeMemoryEntry(memoryEntry) {
-        const memoryContext = {
-            shortTerm: this.memorySystem.shortTermMemory.getToolUsagePattern(),
-            mediumTerm: this.memorySystem.mediumTermMemory.userPreferences,
-            longTerm: this.memorySystem.longTermMemory.knowledgeBase,
-            semantic: this.memorySystem.semanticMemory.conceptGraph
-        };
+        try {
+            const memoryContext = {
+                shortTerm: this.memorySystem.shortTermMemory?.getToolUsagePattern?.() || new Map(),
+                mediumTerm: this.memorySystem.mediumTermMemory?.userPreferences || new Map(),
+                longTerm: this.memorySystem.longTermMemory?.knowledgeBase || new Map(),
+                semantic: this.memorySystem.semanticMemory?.conceptGraph || new Map()
+            };
         
-        for (const [category, rules] of this.optimizationRules) {
-            for (const rule of rules) {
-                if (rule.condition(memoryContext)) {
-                    rule.action();
+            for (const [category, rules] of this.optimizationRules) {
+                for (const rule of rules) {
+                    try {
+                        if (rule.condition(memoryContext)) {
+                            rule.action();
+                        }
+                    } catch (error) {
+                        console.warn(`🧠 MemoryOptimizer rule failed in category ${category}:`, error);
+                    }
                 }
             }
+        } catch (error) {
+            console.error('🧠 MemoryOptimizer.analyzeMemoryEntry failed:', error);
         }
     }
     
