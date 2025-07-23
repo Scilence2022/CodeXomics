@@ -3231,8 +3231,8 @@ class GenomeBrowser {
         this.uiManager.hideWelcomeScreen();
     }
 
-    updateStatus(message) {
-        this.uiManager.updateStatus(message);
+    updateStatus(message, options = {}) {
+        this.uiManager.updateStatus(message, options);
     }
 
     showLoading(show) {
@@ -4483,20 +4483,51 @@ class GenomeBrowser {
         const fastaContent = `${header}\n${sequence}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            const successMessage = `Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`;
+            // Choose appropriate icon and color based on sequence type
+            let icon, color;
+            switch (type) {
+                case 'translation':
+                    icon = '🧬';
+                    color = '#2196F3';
+                    break;
+                case 'dna':
+                case 'cds':
+                    icon = '✅';
+                    color = '#4CAF50';
+                    break;
+                default:
+                    icon = '📋';
+                    color = '#4CAF50';
+            }
+            
+            const successMessage = `${icon} Copied ${geneName} ${description} (${sequence.length} ${type === 'translation' ? 'aa' : 'bp'}) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage);
+                this.uiManager.updateStatus(successMessage, { 
+                    highlight: true, 
+                    color: color, 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
                     statusElement.textContent = successMessage;
+                    statusElement.style.color = color;
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 4000);
                 }
             }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            const errorMessage = 'Failed to copy to clipboard';
+            const errorMessage = '❌ Failed to copy to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage);
+                this.uiManager.updateStatus(errorMessage, { 
+                    highlight: true, 
+                    color: '#f44336', 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
@@ -4543,20 +4574,34 @@ class GenomeBrowser {
         const fastaContent = `${fastaHeader}\n${cleanTranslation}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            const successMessage = `Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`;
+            const successMessage = `🧬 Copied ${geneName} translation (${cleanTranslation.length} aa) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage);
+                this.uiManager.updateStatus(successMessage, { 
+                    highlight: true, 
+                    color: '#2196F3', 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
                     statusElement.textContent = successMessage;
+                    statusElement.style.color = '#2196F3';
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 4000);
                 }
             }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            const errorMessage = 'Failed to copy to clipboard';
+            const errorMessage = '❌ Failed to copy translation to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage);
+                this.uiManager.updateStatus(errorMessage, { 
+                    highlight: true, 
+                    color: '#f44336', 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
@@ -4732,20 +4777,34 @@ class GenomeBrowser {
         const fastaContent = `${fastaHeader}\n${geneSequence}`;
         
         navigator.clipboard.writeText(fastaContent).then(() => {
-            const successMessage = `Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`;
+            const successMessage = `✅ Copied ${geneName} sequence (${geneSequence.length} bp) to clipboard`;
             if (this.uiManager) {
-                this.uiManager.updateStatus(successMessage);
+                this.uiManager.updateStatus(successMessage, { 
+                    highlight: true, 
+                    color: '#4CAF50', 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
                     statusElement.textContent = successMessage;
+                    statusElement.style.color = '#4CAF50';
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 4000);
                 }
             }
         }).catch(err => {
             console.error('Failed to copy: ', err);
-            const errorMessage = 'Failed to copy to clipboard';
+            const errorMessage = '❌ Failed to copy to clipboard';
             if (this.uiManager) {
-                this.uiManager.updateStatus(errorMessage);
+                this.uiManager.updateStatus(errorMessage, { 
+                    highlight: true, 
+                    color: '#f44336', 
+                    duration: 4000 
+                });
             } else {
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {

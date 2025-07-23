@@ -747,10 +747,31 @@ class UIManager {
         }
     }
 
-    updateStatus(message) {
+    updateStatus(message, options = {}) {
         const statusElement = document.getElementById('statusText');
         if (statusElement) {
             statusElement.textContent = message;
+            
+            // Handle highlighting options
+            if (options.highlight) {
+                // Apply bright color styling for highlighted messages
+                statusElement.style.color = options.color || '#4CAF50'; // Default to bright green
+                statusElement.style.fontWeight = 'bold';
+                statusElement.style.transition = 'color 0.3s ease, font-weight 0.3s ease';
+                
+                // Auto-remove highlighting after specified duration
+                const duration = options.duration || 3000;
+                setTimeout(() => {
+                    statusElement.style.color = ''; // Reset to default
+                    statusElement.style.fontWeight = '';
+                    statusElement.style.transition = '';
+                }, duration);
+            } else {
+                // Reset any previous highlighting
+                statusElement.style.color = '';
+                statusElement.style.fontWeight = '';
+                statusElement.style.transition = '';
+            }
         } else {
             console.warn('Status element with id "statusText" not found. Status message:', message);
         }
