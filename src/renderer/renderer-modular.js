@@ -6713,11 +6713,8 @@ class GenomeBrowser {
      */
     handleMenuCopy() {
         try {
-            // Check if this window is focused - avoid executing if tool window is active
-            if (!document.hasFocus()) {
-                console.log('Main window not focused, skipping copy operation');
-                return;
-            }
+            // Allow Edit menu to work regardless of focus state
+            // This ensures menu copy/paste work when accessed via menu bar
 
             // Get the currently focused element
             const activeElement = document.activeElement;
@@ -6780,11 +6777,8 @@ class GenomeBrowser {
      */
     handleMenuPaste() {
         try {
-            // Check if this window is focused - avoid executing if tool window is active
-            if (!document.hasFocus()) {
-                console.log('Main window not focused, skipping paste operation');
-                return;
-            }
+            // Allow Edit menu to work regardless of focus state
+            // This ensures menu copy/paste work when accessed via menu bar
 
             const activeElement = document.activeElement;
             

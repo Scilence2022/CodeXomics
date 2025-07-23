@@ -469,6 +469,7 @@ class BlastManager {
         
         // Add local databases if local service is selected
         if (activeService === 'local') {
+            // Add databases from config.localDatabases (scanned from file system)
             for (const [name, info] of this.config.localDatabases) {
                 // Check if database is compatible with the selected BLAST type
                 let isCompatible = false;
@@ -484,6 +485,33 @@ class BlastManager {
                         label: `Local: ${name}`,
                         description: info.description
                     });
+                }
+            }
+            
+            // Add databases from customDatabases (created through the app)
+            for (const [id, database] of this.customDatabases) {
+                // Only include ready databases
+                if (database.status !== 'ready') continue;
+                
+                // Check if database is compatible with the selected BLAST type
+                let isCompatible = false;
+                const dbType = database.type;
+                if (dbType === 'nucl' && (activeType === 'blastn' || activeType === 'tblastn')) {
+                    isCompatible = true;
+                } else if (dbType === 'prot' && (activeType === 'blastp' || activeType === 'blastx')) {
+                    isCompatible = true;
+                }
+                
+                if (isCompatible) {
+                    // Avoid duplicate entries - check if already added from config.localDatabases
+                    const alreadyExists = databases.some(db => db.value === database.name || db.value === id);
+                    if (!alreadyExists) {
+                        databases.push({
+                            value: id, // Use the database ID as the value
+                            label: `Custom: ${database.name}`,
+                            description: `${database.type === 'nucl' ? 'Nucleotide' : 'Protein'} database`
+                        });
+                    }
                 }
             }
         } else {
@@ -1327,6 +1355,17 @@ class BlastManager {
                     dbEntry.sourceDirectory = sourceDirectory;
                     dbEntry.location = 'source_directory';
                     dbEntry.lastUsed = new Date().toISOString();
+
+                    // Also add to config.localDatabases so it appears in BLAST search dropdown
+                    this.config.localDatabases.set(dbId, {
+                        name: dbId,
+                        type: dbType === 'nucl' ? 'blastn' : 'blastp', // Convert to BLAST type format
+                        path: sourceDirectory,
+                        description: `Custom ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database: ${dbName}`,
+                        sequences: 'Unknown', // Will be updated if stats are available
+                        letters: 'Unknown',
+                        lastUpdated: new Date().toISOString()
+                    });
                     
                     this.appendLog(`✓ Custom database created successfully: ${dbName}`, 'success');
                     
@@ -1489,6 +1528,17 @@ class BlastManager {
                     this.customDatabases.get(dbId).status = 'ready';
                     this.customDatabases.get(dbId).dbPath = require('path').join(outputDir, dbId); // Store actual database path
                     this.customDatabases.get(dbId).outputDir = outputDir; // Store output directory for reference
+
+                    // Also add to config.localDatabases so it appears in BLAST search dropdown
+                    this.config.localDatabases.set(dbId, {
+                        name: dbId,
+                        type: dbType === 'nucl' ? 'blastn' : 'blastp', // Convert to BLAST type format
+                        path: outputDir,
+                        description: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`,
+                        sequences: 'Unknown', // Will be updated if stats are available
+                        letters: 'Unknown',
+                        lastUpdated: new Date().toISOString()
+                    });
                 } catch (error) {
                     // Mark as failed
                     this.customDatabases.get(dbId).status = 'failed';
@@ -1851,6 +1901,17 @@ class BlastManager {
 
             // Remove from memory
             this.customDatabases.delete(dbId);
+
+            // Also remove from config.localDatabases if it exists there
+            // (This can happen if a custom database was later scanned by loadLocalDatabases)
+            if (this.config.localDatabases.has(database.name)) {
+                this.config.localDatabases.delete(database.name);
+                console.log(`Removed database ${database.name} from config.localDatabases`);
+            }
+            if (this.config.localDatabases.has(dbId)) {
+                this.config.localDatabases.delete(dbId);
+                console.log(`Removed database ${dbId} from config.localDatabases`);
+            }
 
             // Remove from ConfigManager
             if (this.configManager) {
@@ -4901,12 +4962,41 @@ class BlastManager {
             const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
 
             // Create database using makeblastdb
+            // Get target directory for database files (same as genome file directory)
+            // Try multiple approaches to get the current file path
+            let outputDir = this.config.localDbPath; // Default fallback
+            let currentFilePath = null;
+            
+            // Approach 1: From FileManager.currentFile.path (primary structure)
+            const currentFile = this.app?.fileManager?.currentFile;
+            if (currentFile && currentFile.path) {
+                currentFilePath = currentFile.path;
+            }
+            
+            // Approach 2: From FileManager.currentFile.info.path (alternative structure)
+            if (!currentFilePath && currentFile && currentFile.info?.path) {
+                currentFilePath = currentFile.info.path;
+            }
+            
+            // Approach 3: Check if there's a global file path stored
+            if (!currentFilePath && this.app?.currentFilePath) {
+                currentFilePath = this.app.currentFilePath;
+            }
+            
+            if (currentFilePath) {
+                outputDir = require('path').dirname(currentFilePath);
+                console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
+            } else {
+                console.log('BlastManager: Current file path not available, using default directory');
+            }
+
             await this.createLocalDatabase({
                 inputFile: tempFile,
                 dbName: dbName,
                 dbType: dbType,
                 title: `${dbName} - ${chromosome}`,
-                parseSeqids: true
+                parseSeqids: true,
+                outputDir: outputDir
             });
 
             // Clean up temporary file
@@ -5039,11 +5129,28 @@ class BlastManager {
 
         // Try to get current file directory first, fallback to temp directory
         let targetDir = os.tmpdir(); // Default fallback
+        let currentFilePath = null;
         
+        // Try multiple approaches to get the current file path
+        // Approach 1: From FileManager.currentFile.path (primary structure)
         const currentFile = this.app?.fileManager?.currentFile;
-        if (currentFile && currentFile.info?.path) {
+        if (currentFile && currentFile.path) {
+            currentFilePath = currentFile.path;
+        }
+        
+        // Approach 2: From FileManager.currentFile.info.path (alternative structure)
+        if (!currentFilePath && currentFile && currentFile.info?.path) {
+            currentFilePath = currentFile.info.path;
+        }
+        
+        // Approach 3: Check if there's a global file path stored
+        if (!currentFilePath && this.app?.currentFilePath) {
+            currentFilePath = this.app.currentFilePath;
+        }
+        
+        if (currentFilePath) {
             // Use the same directory as the loaded genome file
-            targetDir = path.dirname(currentFile.info.path);
+            targetDir = path.dirname(currentFilePath);
             console.log(`BlastManager: Using genome directory: ${targetDir}`);
         } else {
             console.log('BlastManager: Current file path not available, using temp directory');
