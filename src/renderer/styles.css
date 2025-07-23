@@ -31094,7 +31094,6 @@ input:checked + .slider:before {
 
 /* BLAST Modal Content */
 .blast-modal-content {
-    max-width: 900px;
     width: 90vw;
     max-height: 90vh;
     overflow: hidden;

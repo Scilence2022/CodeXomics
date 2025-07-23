@@ -121,7 +121,7 @@ class ResizableModalManager {
         // Apply constraints
         const minWidth = 400;
         const minHeight = 300;
-        const maxWidth = window.innerWidth - 40;
+        const maxWidth = window.innerWidth * 2; // Allow much wider than screen for multi-monitor setups
         const maxHeight = window.innerHeight - 40;
 
         newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));

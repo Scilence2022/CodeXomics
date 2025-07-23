@@ -1014,11 +1014,11 @@ class BlastManager {
                         ${database.sourceDirectory ? `<div class="database-path">Path: ${this.escapeHtml(database.sourceDirectory)}</div>` : ''}
                     </div>
                     <div class="database-actions">
-                        <div class="status-indicator status-${database.status}">
+                        <div class="status-indicator status-${database.status}" style="flex: 1; min-width: 0; margin-right: 8px;">
                             <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
-                            ${database.status.charAt(0).toUpperCase() + database.status.slice(1)}
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${database.status.charAt(0).toUpperCase() + database.status.slice(1)}</span>
                         </div>
-                        <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${id}" title="Delete database">
+                        <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${id}" title="Delete database" style="flex-shrink: 0;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1354,28 +1354,22 @@ class BlastManager {
     // Quick database creation for current genome
     async createQuickDatabase(dbType) {
         try {
-            // Check if there's a currently loaded genome
-            if (!this.app?.fileManager?.loadedGenomes) {
+            // Check if there's a currently loaded genome in currentSequence
+            if (!this.app?.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
                 this.showNotification('No genome data loaded. Please load a genome first.', 'error');
                 return;
             }
 
-            const loadedGenomes = this.app.fileManager.loadedGenomes;
-            const genomeNames = Object.keys(loadedGenomes);
+            const sequences = this.app.currentSequence;
+            const chromosomeNames = Object.keys(sequences);
 
-            if (genomeNames.length === 0) {
+            if (chromosomeNames.length === 0) {
                 this.showNotification('No genome data available. Please load a genome first.', 'error');
                 return;
             }
 
-            // Use the first loaded genome or let user choose if multiple
-            const genomeName = genomeNames[0];
-            const genome = loadedGenomes[genomeName];
-
-            if (!genome || !genome.sequences) {
-                this.showNotification('Invalid genome data structure.', 'error');
-                return;
-            }
+            // Use first chromosome name as genome name, or use a default name
+            const genomeName = this.app.currentChromosome || chromosomeNames[0] || 'genome';
 
             // Show status
             const statusDiv = document.getElementById('quickDbStatus');
@@ -1389,18 +1383,27 @@ class BlastManager {
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
             const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
 
-            // Get all sequences from the genome
+            // Get all sequences from the loaded genome and format as FASTA
             let fastaContent = '';
-            Object.keys(genome.sequences).forEach(chromName => {
-                const sequence = genome.sequences[chromName];
+            Object.keys(sequences).forEach(chromName => {
+                const sequence = sequences[chromName];
                 if (sequence) {
-                    fastaContent += `>${chromName}\n${sequence}\n`;
+                    fastaContent += `>${chromName}\n`;
+                    // Split sequence into lines of 80 characters (FASTA standard)
+                    for (let i = 0; i < sequence.length; i += 80) {
+                        fastaContent += sequence.substring(i, i + 80) + '\n';
+                    }
                 }
             });
 
             if (!fastaContent) {
                 throw new Error('No sequence data found in loaded genome');
             }
+
+            console.log(`Generated FASTA content: ${fastaContent.length} characters`);
+            
+            // Check if we need to create a FASTA file from GBK source
+            await this.createFastaFileIfNeeded(genomeName, fastaContent);
 
             // For protein database, we need to translate the sequences
             if (dbType === 'prot') {
@@ -1582,6 +1585,55 @@ class BlastManager {
             throw error;
         } finally {
             console.log(`=== BlastManager.deleteCustomDatabase Debug End: ${dbId} ===`);
+        }
+    }
+
+    // Create FASTA file from GBK if needed
+    async createFastaFileIfNeeded(genomeName, fastaContent) {
+        try {
+            // Check if the current loaded file is a GBK file
+            const currentFile = this.app?.fileManager?.currentFile;
+            if (!currentFile || !currentFile.info?.path) {
+                console.log('No current file path available, skipping FASTA file creation');
+                return;
+            }
+
+            const currentPath = currentFile.info.path;
+            const isGbkFile = currentPath.toLowerCase().endsWith('.gbk') || 
+                             currentPath.toLowerCase().endsWith('.gb') || 
+                             currentPath.toLowerCase().endsWith('.genbank');
+
+            if (!isGbkFile) {
+                console.log('Current file is not a GBK file, skipping FASTA file creation');
+                return;
+            }
+
+            // Create FASTA file in the same directory as the GBK file
+            const path = require('path');
+            const fs = require('fs');
+            
+            const gbkDir = path.dirname(currentPath);
+            const gbkBasename = path.basename(currentPath, path.extname(currentPath));
+            const fastaPath = path.join(gbkDir, `${gbkBasename}.fasta`);
+
+            // Check if FASTA file already exists
+            if (fs.existsSync(fastaPath)) {
+                console.log(`FASTA file already exists: ${fastaPath}`);
+                this.appendLog(`✓ FASTA file already exists: ${path.basename(fastaPath)}`, 'info');
+                return fastaPath;
+            }
+
+            // Write FASTA file
+            fs.writeFileSync(fastaPath, fastaContent);
+            console.log(`Created FASTA file: ${fastaPath}`);
+            this.appendLog(`✓ Created FASTA file: ${path.basename(fastaPath)}`, 'success');
+            
+            return fastaPath;
+
+        } catch (error) {
+            console.error('Error creating FASTA file:', error);
+            this.appendLog(`⚠ Could not create FASTA file: ${error.message}`, 'warning');
+            return null;
         }
     }
 

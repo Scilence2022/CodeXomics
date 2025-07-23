@@ -1288,57 +1288,6 @@
                         await attemptSystemInstallation(platform);
                     }
                 }
-                        if (error.code === 'EACCES') {
-                            // Try with sudo for system directories
-                            logMessage('Requesting elevated privileges for installation...', 'warning');
-                            try {
-                                await execAsync(`sudo mkdir -p "${installPath}"`);
-                                await execAsync(`sudo chmod 755 "${installPath}"`);
-                            } catch (sudoError) {
-                                throw new Error(`Permission denied. Please run as administrator or choose a different installation path.`);
-                            }
-                        } else {
-                            throw error;
-                        }
-                    }
-                    
-                    logMessage('Copying BLAST+ binaries...', 'info');
-                    
-                    const binSourcePath = path.join(global.extractedBlastPath, 'bin');
-                    const binDestPath = path.join(installPath, 'bin');
-                    
-                    // Copy binaries
-                    try {
-                        await execAsync(`cp -r "${binSourcePath}" "${installPath}/"`);
-                        await execAsync(`chmod +x "${binDestPath}"/*`);
-                        logMessage('Binaries copied successfully', 'success');
-                    } catch (error) {
-                        if (error.message.includes('Permission denied')) {
-                            logMessage('Using elevated privileges to copy files...', 'warning');
-                            await execAsync(`sudo cp -r "${binSourcePath}" "${installPath}/"`);
-                            await execAsync(`sudo chmod +x "${binDestPath}"/*`);
-                            await execAsync(`sudo chown -R $(whoami) "${installPath}"`);
-                        } else {
-                            throw error;
-                        }
-                    }
-                    
-                    // Copy other necessary directories
-                    const additionalDirs = ['doc', 'data'];
-                    for (const dir of additionalDirs) {
-                        const sourcePath = path.join(global.extractedBlastPath, dir);
-                        if (fs.existsSync(sourcePath)) {
-                            try {
-                                await execAsync(`cp -r "${sourcePath}" "${installPath}/"`);
-                                logMessage(`Copied ${dir} directory`, 'success');
-                            } catch (error) {
-                                logMessage(`Warning: Could not copy ${dir} directory: ${error.message}`, 'warning');
-                            }
-                        }
-                    }
-                    
-                    logMessage('BLAST+ tools installed successfully', 'success');
-                }
             } catch (error) {
                 throw new Error(`Installation failed: ${error.message}`);
             }
