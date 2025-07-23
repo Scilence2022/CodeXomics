@@ -371,9 +371,11 @@ class BlastManager {
     }
 
     buildMakeBlastDbCommand(params) {
-        const { inputFile, dbName, dbType, title, parseSeqids } = params;
+        const { inputFile, dbName, dbType, title, parseSeqids, outputDir } = params;
         
-        let command = `makeblastdb -in "${inputFile}" -dbtype ${dbType} -out "${this.config.localDbPath}/${dbName}"`;
+        // Use custom output directory if provided, otherwise use default localDbPath
+        const targetDir = outputDir || this.config.localDbPath;
+        let command = `makeblastdb -in "${inputFile}" -dbtype ${dbType} -out "${targetDir}/${dbName}"`;
         
         if (title) {
             command += ` -title "${title}"`;
@@ -1025,6 +1027,9 @@ class BlastManager {
                             <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
                             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${database.status.charAt(0).toUpperCase() + database.status.slice(1)}</span>
                         </div>
+                        <button class="btn btn-sm btn-info view-db-details-btn" data-db-id="${id}" title="View database details" style="flex-shrink: 0; margin-right: 4px;">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
                         <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${id}" title="Delete database" style="flex-shrink: 0;">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -1034,6 +1039,21 @@ class BlastManager {
         });
 
         container.innerHTML = html;
+
+        // Add event listeners for view details buttons
+        container.querySelectorAll('.view-db-details-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const dbId = btn.dataset.dbId;
+                const database = this.customDatabases.get(dbId);
+                
+                if (database) {
+                    this.showDatabaseDetails(dbId, database);
+                }
+            });
+        });
 
         // Add event listeners for delete buttons
         container.querySelectorAll('.delete-custom-db-btn').forEach(btn => {
@@ -1448,16 +1468,27 @@ class BlastManager {
             } else {
                 // Create the actual BLAST database
                 try {
+                    // Get target directory for database files (same as genome file directory)
+                    const currentFile = this.app?.fileManager?.currentFile;
+                    let outputDir = this.config.localDbPath; // Default fallback
+                    
+                    if (currentFile && currentFile.info?.path) {
+                        outputDir = require('path').dirname(currentFile.info.path);
+                        console.log(`BlastManager: Creating database in genome directory: ${outputDir}`);
+                    }
+
                     await this.createLocalDatabase({
                         inputFile: tempFile,
                         dbName: dbId, // Use dbId instead of dbName for unique identification
                         dbType: dbType,
-                        title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`
+                        title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`,
+                        outputDir: outputDir
                     });
 
                     // Update database info with success status
                     this.customDatabases.get(dbId).status = 'ready';
-                    this.customDatabases.get(dbId).dbPath = tempFile; // Store database path
+                    this.customDatabases.get(dbId).dbPath = require('path').join(outputDir, dbId); // Store actual database path
+                    this.customDatabases.get(dbId).outputDir = outputDir; // Store output directory for reference
                 } catch (error) {
                     // Mark as failed
                     this.customDatabases.get(dbId).status = 'failed';
@@ -1497,6 +1528,208 @@ class BlastManager {
             }
 
             this.showNotification(`Failed to create database: ${error.message}`, 'error');
+        }
+    }
+
+    // Show detailed information about a database
+    showDatabaseDetails(dbId, database) {
+        // Create modal HTML for database details
+        const modalHtml = `
+            <div class="modal fade" id="databaseDetailsModal" tabindex="-1" role="dialog" aria-labelledby="databaseDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="databaseDetailsModalLabel">
+                                <i class="fas fa-database"></i> Database Details: ${this.escapeHtml(database.name)}
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="database-details-content">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-info-circle"></i> Basic Information</h6>
+                                        <table class="table table-sm table-borderless">
+                                            <tr>
+                                                <td><strong>Database Name:</strong></td>
+                                                <td>${this.escapeHtml(database.name)}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Database ID:</strong></td>
+                                                <td><code>${this.escapeHtml(dbId)}</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Type:</strong></td>
+                                                <td>
+                                                    <span class="badge badge-${database.type === 'nucl' ? 'primary' : 'info'}">
+                                                        ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Status:</strong></td>
+                                                <td>
+                                                    <span class="badge badge-${database.status === 'ready' ? 'success' : database.status === 'creating' ? 'warning' : 'danger'}">
+                                                        <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
+                                                        ${database.status.charAt(0).toUpperCase() + database.status.slice(1)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Source:</strong></td>
+                                                <td>
+                                                    ${database.source === 'quick' ? 
+                                                        '<span class="badge badge-success">Quick Creation</span>' : 
+                                                        '<span class="badge badge-secondary">Custom File</span>'
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-calendar-alt"></i> Timestamps</h6>
+                                        <table class="table table-sm table-borderless">
+                                            <tr>
+                                                <td><strong>Created:</strong></td>
+                                                <td>${database.created ? new Date(database.created).toLocaleString() : 'Unknown'}</td>
+                                            </tr>
+                                        </table>
+                                        
+                                        ${database.sourceGenome ? `
+                                            <h6><i class="fas fa-dna"></i> Source Information</h6>
+                                            <table class="table table-sm table-borderless">
+                                                <tr>
+                                                    <td><strong>Source Genome:</strong></td>
+                                                    <td>${this.escapeHtml(database.sourceGenome)}</td>
+                                                </tr>
+                                            </table>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                
+                                ${database.dbPath || database.outputDir ? `
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h6><i class="fas fa-folder-open"></i> File Locations</h6>
+                                            <table class="table table-sm table-borderless">
+                                                ${database.outputDir ? `
+                                                    <tr>
+                                                        <td><strong>Database Directory:</strong></td>
+                                                         <td><code>${this.escapeHtml(database.outputDir)}</code></td>
+                                                    </tr>
+                                                ` : ''}
+                                                ${database.dbPath ? `
+                                                    <tr>
+                                                        <td><strong>Database Path:</strong></td>
+                                                        <td><code>${this.escapeHtml(database.dbPath)}</code></td>
+                                                    </tr>
+                                                ` : ''}
+                                            </table>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${database.note || database.error ? `
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h6><i class="fas fa-sticky-note"></i> Additional Information</h6>
+                                            ${database.note ? `
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle"></i> ${this.escapeHtml(database.note)}
+                                                </div>
+                                            ` : ''}
+                                            ${database.error ? `
+                                                <div class="alert alert-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> ${this.escapeHtml(database.error)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                            ${database.outputDir && database.status === 'ready' ? `
+                                <button type="button" class="btn btn-primary" onclick="window.blastManager.openDatabaseDirectory('${dbId}')">
+                                    <i class="fas fa-folder-open"></i> Open Directory
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('databaseDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal using Bootstrap
+        const modal = document.getElementById('databaseDetailsModal');
+        if (modal) {
+            // Try to use Bootstrap modal if available
+            if (window.$ && window.$.fn.modal) {
+                window.$(modal).modal('show');
+                
+                // Clean up modal when hidden
+                window.$(modal).on('hidden.bs.modal', function () {
+                    modal.remove();
+                });
+            } else {
+                // Fallback: show modal manually
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                modal.setAttribute('aria-hidden', 'false');
+                
+                // Add click handlers for close buttons
+                modal.querySelectorAll('[data-dismiss="modal"], .close').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                        modal.setAttribute('aria-hidden', 'true');
+                        setTimeout(() => modal.remove(), 300);
+                    });
+                });
+                
+                // Close on backdrop click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                        modal.setAttribute('aria-hidden', 'true');
+                        setTimeout(() => modal.remove(), 300);
+                    }
+                });
+            }
+        }
+    }
+
+    // Open database directory in file explorer
+    openDatabaseDirectory(dbId) {
+        const database = this.customDatabases.get(dbId);
+        if (database && database.outputDir) {
+            // Use Electron API to open directory
+            if (window.electronAPI && window.electronAPI.openPath) {
+                window.electronAPI.openPath(database.outputDir);
+            } else {
+                console.warn('Electron API not available for opening directory');
+                // Copy path to clipboard as fallback
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(database.outputDir).then(() => {
+                        this.showNotification('Database directory path copied to clipboard', 'info');
+                    });
+                }
+            }
         }
     }
 
@@ -4515,7 +4748,7 @@ class BlastManager {
     updateLoadedGenomeList() {
         const select = document.getElementById('loadedGenomeSelect');
         if (!select) {
-            console.warn('BlastManager: loadedGenomeSelect not found');
+            // Element doesn't exist in current UI design, skip silently
             return;
         }
 
@@ -4602,9 +4835,20 @@ class BlastManager {
 
     async createDatabaseFromLoadedGenome() {
         try {
-            const selectedGenome = document.getElementById('loadedGenomeSelect').value;
-            const dbName = document.getElementById('newDbName').value.trim();
-            const dbType = document.getElementById('newDbType').value;
+            const selectedGenomeElement = document.getElementById('loadedGenomeSelect');
+            const dbNameElement = document.getElementById('newDbName');
+            const dbTypeElement = document.getElementById('newDbType');
+
+            // Check if required elements exist
+            if (!selectedGenomeElement || !dbNameElement || !dbTypeElement) {
+                console.warn('BlastManager: Required form elements not found for database creation');
+                this.showNotification('Database creation form not available', 'error');
+                return;
+            }
+
+            const selectedGenome = selectedGenomeElement.value;
+            const dbName = dbNameElement.value.trim();
+            const dbType = dbTypeElement.value;
 
             // Validation
             if (!selectedGenome) {
@@ -4793,9 +5037,20 @@ class BlastManager {
         const path = require('path');
         const os = require('os');
 
-        const tempDir = os.tmpdir();
+        // Try to get current file directory first, fallback to temp directory
+        let targetDir = os.tmpdir(); // Default fallback
+        
+        const currentFile = this.app?.fileManager?.currentFile;
+        if (currentFile && currentFile.info?.path) {
+            // Use the same directory as the loaded genome file
+            targetDir = path.dirname(currentFile.info.path);
+            console.log(`BlastManager: Using genome directory: ${targetDir}`);
+        } else {
+            console.log('BlastManager: Current file path not available, using temp directory');
+        }
+
         const fileName = `${dbName}_${dbType}_${Date.now()}.fasta`;
-        const filePath = path.join(tempDir, fileName);
+        const filePath = path.join(targetDir, fileName);
 
         await fs.writeFile(filePath, fastaContent);
         console.log(`BlastManager: Wrote sequence to ${filePath}`);
