@@ -1003,15 +1003,22 @@ class BlastManager {
 
         // Add custom databases
         this.customDatabases.forEach((database, id) => {
-            const locationInfo = database.location === 'source_directory' ? 
-                `Located in source directory` : 
-                `Custom file database`;
+            let locationInfo = '';
+            if (database.source === 'quick') {
+                locationInfo = `Created from loaded genome: ${database.sourceGenome || 'Unknown'}`;
+            } else if (database.location === 'source_directory') {
+                locationInfo = `Located in source directory`;
+            } else {
+                locationInfo = `Custom file database`;
+            }
+            
             html += `
                 <div class="database-item">
                     <div class="database-info">
                         <div class="database-name">${this.escapeHtml(database.name)}</div>
                         <div class="database-details">Local database • ${locationInfo} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
                         ${database.sourceDirectory ? `<div class="database-path">Path: ${this.escapeHtml(database.sourceDirectory)}</div>` : ''}
+                        ${database.note ? `<div class="database-note" style="font-size: 12px; color: #666; margin-top: 4px;">${this.escapeHtml(database.note)}</div>` : ''}
                     </div>
                     <div class="database-actions">
                         <div class="status-indicator status-${database.status}" style="flex: 1; min-width: 0; margin-right: 8px;">
@@ -1379,9 +1386,10 @@ class BlastManager {
                 statusContent.innerHTML = `<div class="alert alert-info">Creating ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database for ${genomeName}...</div>`;
             }
 
-            // Create database name
+            // Create database name and ID
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
             const dbName = `${genomeName}_${dbType === 'nucl' ? 'nucleotide' : 'protein'}_${timestamp}`;
+            const dbId = `quick_${dbName.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
 
             // Get all sequences from the loaded genome and format as FASTA
             let fastaContent = '';
@@ -1402,8 +1410,23 @@ class BlastManager {
 
             console.log(`Generated FASTA content: ${fastaContent.length} characters`);
             
+            // Add to custom databases with creating status
+            this.customDatabases.set(dbId, {
+                id: dbId,
+                name: dbName,
+                type: dbType,
+                source: 'quick',
+                status: 'creating',
+                location: 'memory', // Created from loaded genome data
+                created: new Date().toISOString(),
+                sourceGenome: genomeName
+            });
+
+            // Update UI to show creating status
+            this.populateAvailableDatabasesList();
+
             // Check if we need to create a FASTA file from GBK source
-            await this.createFastaFileIfNeeded(genomeName, fastaContent);
+            const fastaFilePath = await this.createFastaFileIfNeeded(genomeName, fastaContent);
 
             // For protein database, we need to translate the sequences
             if (dbType === 'prot') {
@@ -1413,27 +1436,60 @@ class BlastManager {
             // Create temporary file
             const tempFile = await this.writeSequenceToFile(fastaContent, dbName, dbType);
 
-            // Create the database
-            await this.createLocalDatabase({
-                inputFile: tempFile,
-                dbName: dbName,
-                dbType: dbType,
-                title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`
-            });
+            // Check if BLAST+ is installed
+            const isBlastInstalled = await this.checkBlastInstallation();
+            if (!isBlastInstalled) {
+                // Mark as ready but note that BLAST+ is needed for actual searching
+                this.customDatabases.get(dbId).status = 'ready';
+                this.customDatabases.get(dbId).note = 'BLAST+ installation required for searching';
+                this.customDatabases.get(dbId).tempFile = tempFile; // Store temp file path for later use
+                
+                console.log(`Database entry created without BLAST+: ${dbName}`);
+            } else {
+                // Create the actual BLAST database
+                try {
+                    await this.createLocalDatabase({
+                        inputFile: tempFile,
+                        dbName: dbId, // Use dbId instead of dbName for unique identification
+                        dbType: dbType,
+                        title: `${genomeName} - ${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} Database`
+                    });
+
+                    // Update database info with success status
+                    this.customDatabases.get(dbId).status = 'ready';
+                    this.customDatabases.get(dbId).dbPath = tempFile; // Store database path
+                } catch (error) {
+                    // Mark as failed
+                    this.customDatabases.get(dbId).status = 'failed';
+                    this.customDatabases.get(dbId).error = error.message;
+                    throw error;
+                }
+            }
+
+            // Save custom databases to storage
+            await this.saveCustomDatabases();
 
             // Update status
             if (statusContent) {
                 statusContent.innerHTML = `<div class="alert alert-success">Successfully created ${dbType === 'nucl' ? 'nucleotide' : 'protein'} database: ${dbName}</div>`;
             }
 
-            // Refresh database list
-            await this.loadLocalDatabases();
+            // Update UI
             this.populateAvailableDatabasesList();
+            this.updateDatabaseOptions();
 
             this.showNotification(`${dbType === 'nucl' ? 'Nucleotide' : 'Protein'} database created successfully: ${dbName}`, 'success');
 
         } catch (error) {
             console.error('Error creating quick database:', error);
+            
+            // Update database status to failed if it was created
+            if (dbId && this.customDatabases.has(dbId)) {
+                this.customDatabases.get(dbId).status = 'failed';
+                this.customDatabases.get(dbId).error = error.message;
+                await this.saveCustomDatabases();
+                this.populateAvailableDatabasesList();
+            }
             
             const statusContent = document.getElementById('quickDbStatusContent');
             if (statusContent) {
