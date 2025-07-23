@@ -1426,66 +1426,11 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'System Tools',
-          submenu: [
-            {
-              label: 'Install BLAST+ Tools',
-              accelerator: 'CmdOrCtrl+Alt+B',
-              click: () => {
-                createBlastInstallerWindow();
-              }
-            },
-            {
-              label: 'Check BLAST Installation',
-              click: () => {
-                sendToCurrentMainWindow('check-blast-installation');
-              }
-            },
-            {
-              label: 'System Requirements Check',
-              click: () => {
-                sendToCurrentMainWindow('system-requirements-check');
-              }
-            }
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Open Test File',
-          submenu: [
-            {
-              label: 'Open New Tab Quick Fix Test',
-              accelerator: 'CmdOrCtrl+Shift+T',
-              click: () => {
-                openTestFile('test-open-new-tab-quick-fix.html');
-              }
-            },
-            {
-              label: 'Open New Tab Debug Test',
-              click: () => {
-                openTestFile('test-open-new-tab-debug.html');
-              }
-            },
-            {
-              label: 'Open New Tab Simple Test',
-              click: () => {
-                openTestFile('test-open-new-tab-simple.html');
-              }
-            },
-            {
-              label: 'Open New Tab Function Call Test',
-              click: () => {
-                openTestFile('test-open-new-tab-function-call-fix.html');
-              }
-            },
-            { type: 'separator' },
-            {
-              label: 'Open Debug Console Script',
-              click: () => {
-                openTestFile('debug-open-new-tab.js');
-              }
-            }
-          ]
+          label: 'Install BLAST+ Tools',
+          accelerator: 'CmdOrCtrl+Alt+B',
+          click: () => {
+            createBlastInstallerWindow();
+          }
         }
       ]
     },
@@ -4129,28 +4074,11 @@ function createProjectManagerMenu(projectManagerWindow) {
         },
         { type: 'separator' },
         {
-          label: 'System Tools',
-          submenu: [
-            {
-              label: 'Install BLAST+ Tools',
-              accelerator: 'CmdOrCtrl+Alt+B',
-              click: () => {
-                createBlastInstallerWindow();
-              }
-            },
-            {
-              label: 'Check BLAST Installation',
-              click: () => {
-                projectManagerWindow.webContents.send('check-blast-installation');
-              }
-            },
-            {
-              label: 'System Requirements Check',
-              click: () => {
-                projectManagerWindow.webContents.send('system-requirements-check');
-              }
-            }
-          ]
+          label: 'Install BLAST+ Tools',
+          accelerator: 'CmdOrCtrl+Alt+B',
+          click: () => {
+            createBlastInstallerWindow();
+          }
         },
         { type: 'separator' },
         {
