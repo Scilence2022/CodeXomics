@@ -127,6 +127,12 @@ class GenomicDataDownloader {
             selectDirBtn.addEventListener('click', () => this.selectOutputDirectory());
         }
         
+        // 文件格式选择 - 实时更新类别预览
+        const fileFormatSelect = document.getElementById('fileFormat');
+        if (fileFormatSelect) {
+            fileFormatSelect.addEventListener('change', () => this.updateCategoryPreviews());
+        }
+        
         // 下载按钮
         const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
         if (downloadSelectedBtn) {
@@ -136,6 +142,13 @@ class GenomicDataDownloader {
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         if (downloadAllBtn) {
             downloadAllBtn.addEventListener('click', () => this.downloadAll());
+        }
+    }
+    
+    // Update category previews when file format changes
+    updateCategoryPreviews() {
+        if (this.searchResults.length > 0) {
+            this.displayResults(this.searchResults);
         }
     }
     
@@ -213,10 +226,26 @@ class GenomicDataDownloader {
             // Add project info to the database info panel
             const projectInfoHtml = `
                 <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 10px 0; color: #2e7d32;">📁 Active Project</h4>
+                    <h4 style="margin: 0 0 10px 0; color: #2e7d32;">📁 Active Project - Smart File Organization</h4>
                     <p style="margin: 0; color: #424242;"><strong>Name:</strong> ${projectInfo.name || 'Unnamed Project'}</p>
                     <p style="margin: 0; color: #424242;"><strong>Data Folder:</strong> ${projectInfo.dataFolderPath || 'Not set'}</p>
-                    <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Downloaded files will be saved to: ${projectInfo.dataFolderPath}/genomes/</p>
+                    <div style="margin: 10px 0 0 0; padding: 10px; background: #f0f8f0; border-radius: 6px;">
+                        <p style="margin: 0; color: #2e7d32; font-weight: bold; font-size: 13px;">🧠 Intelligent File Categorization Enabled</p>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Files will be automatically organized into:</p>
+                        <ul style="margin: 5px 0 0 20px; padding: 0; color: #666; font-size: 12px;">
+                            <li><strong>genomes/</strong> - FASTA, GenBank, EMBL genome sequences</li>
+                            <li><strong>proteins/</strong> - Protein sequences (.faa, UniProt data)</li>
+                            <li><strong>annotations/</strong> - GFF, GTF annotation files</li>
+                            <li><strong>variants/</strong> - VCF, BCF variant files</li>
+                            <li><strong>sequencing_data/</strong> - FASTQ, SRA raw data</li>
+                            <li><strong>transcripts/</strong> - mRNA, CDS sequences</li>
+                            <li><strong>alignments/</strong> - SAM, BAM alignment files</li>
+                            <li><strong>tracks/</strong> - BED, WIG track files</li>
+                            <li><strong>metadata/</strong> - JSON, XML metadata</li>
+                            <li><strong>literature/</strong> - PubMed articles</li>
+                            <li><strong>Root directory</strong> - Unclassifiable files</li>
+                        </ul>
+                    </div>
                 </div>
             `;
             
@@ -826,6 +855,60 @@ class GenomicDataDownloader {
         return `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${database}&id=${id}&rettype=${format}&retmode=text`;
     }
     
+    // Helper function to get file category preview
+    getCategoryPreview(result) {
+        const fileFormat = document.getElementById('fileFormat').value;
+        const extension = this.getFileExtension(fileFormat);
+        const mockFilePath = `${result.accession}${extension}`;
+        
+        // Simulate the categorization logic from main.js
+        const database = result.database;
+        
+        // Database-specific categorization (highest priority)
+        if (database) {
+            switch (database) {
+                case 'protein':
+                case 'uniprot':
+                    return { category: 'proteins', icon: '🧬', color: '#e91e63' };
+                case 'sra':
+                    return { category: 'sequencing_data', icon: '🧬', color: '#9c27b0' };
+                case 'assembly':
+                    return { category: 'genomes', icon: '🧬', color: '#4caf50' };
+                case 'pubmed':
+                    return { category: 'literature', icon: '📚', color: '#ff9800' };
+                default:
+                    break;
+            }
+        }
+        
+        // Extension-based categorization
+        switch (extension.toLowerCase()) {
+            case '.fasta':
+            case '.fa':
+                if (database === 'protein') {
+                    return { category: 'proteins', icon: '🧬', color: '#e91e63' };
+                } else {
+                    return { category: 'genomes', icon: '🧬', color: '#4caf50' };
+                }
+            case '.gb':
+            case '.gbk':
+                return { category: 'genomes', icon: '🧬', color: '#4caf50' };
+            case '.gff':
+            case '.gff3':
+            case '.gtf':
+                return { category: 'annotations', icon: '📝', color: '#2196f3' };
+            case '.vcf':
+                return { category: 'variants', icon: '🔬', color: '#ff5722' };
+            case '.fastq':
+            case '.fq':
+                return { category: 'sequencing_data', icon: '🧬', color: '#9c27b0' };
+            case '.embl':
+                return { category: 'genomes', icon: '🧬', color: '#4caf50' };
+            default:
+                return { category: 'root directory', icon: '📁', color: '#607d8b' };
+        }
+    }
+
     displayResults(results) {
         const resultsContainer = document.getElementById('searchResults');
         if (!resultsContainer) return;
@@ -835,7 +918,40 @@ class GenomicDataDownloader {
             return;
         }
         
-        let html = '';
+        // Generate category distribution summary
+        const categoryDistribution = {};
+        results.forEach(result => {
+            const categoryInfo = this.getCategoryPreview(result);
+            categoryDistribution[categoryInfo.category] = (categoryDistribution[categoryInfo.category] || 0) + 1;
+        });
+        
+        // Create category summary HTML
+        let categorySummaryHtml = '<div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">';
+        categorySummaryHtml += '<h4 style="margin: 0 0 10px 0; color: #495057;">📊 File Organization Preview</h4>';
+        categorySummaryHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+        
+        Object.entries(categoryDistribution).forEach(([category, count]) => {
+            const categoryInfo = this.getCategoryPreview({ database: null }); // Get default info
+            // Find the actual category info
+            let actualInfo = { icon: '📁', color: '#607d8b' };
+            for (const result of results) {
+                const info = this.getCategoryPreview(result);
+                if (info.category === category) {
+                    actualInfo = info;
+                    break;
+                }
+            }
+            
+            categorySummaryHtml += `
+                <span style="display: inline-block; padding: 6px 12px; background: ${actualInfo.color}20; color: ${actualInfo.color}; border-radius: 16px; font-size: 13px; font-weight: bold;">
+                    ${actualInfo.icon} ${category}: ${count} file${count > 1 ? 's' : ''}
+                </span>
+            `;
+        });
+        
+        categorySummaryHtml += '</div></div>';
+        
+        let html = categorySummaryHtml;
         results.forEach((result, index) => {
             // Format length based on database type
             let lengthDisplay;
@@ -846,6 +962,9 @@ class GenomicDataDownloader {
             } else {
                 lengthDisplay = `${result.length.toLocaleString()} bp`;
             }
+
+            // Get category preview for this result
+            const categoryInfo = this.getCategoryPreview(result);
 
             // Enhanced details based on database type
             let extraDetails = '';
@@ -876,6 +995,11 @@ class GenomicDataDownloader {
                     </div>
                     ${extraDetails}
                     <div class="result-details">${result.description}</div>
+                    <div class="result-details" style="margin-top: 8px;">
+                        <span style="display: inline-block; padding: 4px 8px; background: ${categoryInfo.color}20; color: ${categoryInfo.color}; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                            ${categoryInfo.icon} Will be saved to: ${categoryInfo.category}/
+                        </span>
+                    </div>
                     <div class="result-actions">
                         <input type="checkbox" class="result-checkbox" data-index="${index}" 
                                onchange="window.genomicDownloader.toggleResultSelection(${index})">
@@ -1085,8 +1209,11 @@ class GenomicDataDownloader {
         
         for (const item of items) {
             try {
+                // Get category preview for progress display
+                const categoryInfo = this.getCategoryPreview(item);
+                
                 if (progressText) {
-                    progressText.textContent = `Downloading ${item.accession}... (${completed + 1}/${total})`;
+                    progressText.innerHTML = `${categoryInfo.icon} Downloading ${item.accession} to ${categoryInfo.category}/... (${completed + 1}/${total})`;
                 }
                 
                 await this.downloadItem(item);
@@ -1097,7 +1224,7 @@ class GenomicDataDownloader {
                     progressBar.style.width = `${progress}%`;
                 }
                 
-                this.showStatusMessage(`Downloaded ${item.accession} (${completed}/${total})`, 'success');
+                this.showStatusMessage(`✅ Downloaded & categorized ${item.accession} → ${categoryInfo.category}/ (${completed}/${total})`, 'success');
                 
             } catch (error) {
                 console.error(`Failed to download ${item.accession}:`, error);
@@ -1108,7 +1235,57 @@ class GenomicDataDownloader {
         this.isDownloading = false;
         
         if (progressElement) progressElement.style.display = 'none';
-        this.showStatusMessage(`Download completed! Downloaded ${completed}/${total} items.`, 'success');
+        
+        // Generate download completion summary with project integration stats
+        if (this.currentProject && completed > 0) {
+            // Create detailed completion summary
+            const categoryStats = {};
+            for (const item of items) {
+                if (items.indexOf(item) < completed) { // Only count completed downloads
+                    const categoryInfo = this.getCategoryPreview(item);
+                    categoryStats[categoryInfo.category] = (categoryStats[categoryInfo.category] || 0) + 1;
+                }
+            }
+            
+            let summaryHtml = `
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                    <h4 style="margin: 0 0 10px 0; color: #155724;">🎉 Download Complete - Project Integration Summary</h4>
+                    <p style="margin: 0 0 10px 0; color: #155724;"><strong>Successfully downloaded ${completed}/${total} files to project:</strong> ${this.currentProject.name}</p>
+                    <p style="margin: 0 0 10px 0; color: #155724;"><strong>File organization:</strong></p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+            `;
+            
+            Object.entries(categoryStats).forEach(([category, count]) => {
+                const categoryInfo = this.getCategoryPreview(items.find(item => this.getCategoryPreview(item).category === category));
+                summaryHtml += `
+                    <span style="display: inline-block; padding: 4px 8px; background: ${categoryInfo.color}40; color: ${categoryInfo.color}; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                        ${categoryInfo.icon} ${category}: ${count} file${count > 1 ? 's' : ''}
+                    </span>
+                `;
+            });
+            
+            summaryHtml += `
+                    </div>
+                    <p style="margin: 10px 0 0 0; color: #155724; font-size: 14px;">Files have been automatically indexed in your project and are ready to use!</p>
+                </div>
+            `;
+            
+            const statusContainer = document.getElementById('statusMessages');
+            if (statusContainer) {
+                const summaryElement = document.createElement('div');
+                summaryElement.innerHTML = summaryHtml;
+                statusContainer.appendChild(summaryElement);
+                
+                // Auto-remove summary after 10 seconds
+                setTimeout(() => {
+                    if (summaryElement.parentNode) {
+                        summaryElement.parentNode.removeChild(summaryElement);
+                    }
+                }, 10000);
+            }
+        }
+        
+        this.showStatusMessage(`🎉 Download completed! Downloaded & intelligently categorized ${completed}/${total} items into project folders.`, 'success');
     }
     
     async downloadItem(item) {
@@ -1121,8 +1298,19 @@ class GenomicDataDownloader {
         const filename = `${item.accession}${extension}`;
         const outputPath = `${this.outputDirectory}/${filename}`;
         
-        // 使用Electron的下载API，传递项目信息
-        const result = await window.electronAPI.downloadFile(item.downloadUrl, outputPath, this.currentProject);
+        // Enhance project info with database context for better categorization
+        const enhancedProjectInfo = {
+            ...this.currentProject,
+            downloadContext: {
+                database: item.database,
+                downloadType: this.currentDownloadType,
+                fileFormat: fileFormat,
+                sourceUrl: item.downloadUrl
+            }
+        };
+        
+        // 使用Electron的下载API，传递增强的项目信息
+        const result = await window.electronAPI.downloadFile(item.downloadUrl, outputPath, enhancedProjectInfo);
         
         if (!result.success) {
             throw new Error(result.error || 'Download failed');

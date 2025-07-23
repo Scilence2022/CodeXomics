@@ -6056,6 +6056,113 @@ ipcMain.handle('setActiveProject', async (event, projectInfo) => {
   return { success: true };
 });
 
+// Intelligent file categorization function for genomic data
+function categorizeGenomicFile(filePath, url, database) {
+  const fileName = path.basename(filePath);
+  const extension = path.extname(fileName).toLowerCase();
+  const baseName = path.basename(fileName, extension).toLowerCase();
+  
+  // Database-specific categorization (highest priority)
+  if (database) {
+    switch (database) {
+      case 'protein':
+      case 'uniprot':
+        return 'proteins';
+      case 'sra':
+        return 'sequencing_data';
+      case 'assembly':
+        return 'genomes';
+      case 'pubmed':
+        return 'literature';
+      default:
+        break;
+    }
+  }
+  
+  // Extension-based categorization (medium priority)
+  switch (extension) {
+    case '.fasta':
+    case '.fa':
+    case '.fas':
+    case '.fna':
+    case '.ffn':
+    case '.faa':
+      // Further categorize FASTA files based on content indicators
+      if (baseName.includes('protein') || baseName.includes('prot') || baseName.includes('aa') || extension === '.faa') {
+        return 'proteins';
+      } else if (baseName.includes('cds') || baseName.includes('mrna') || baseName.includes('transcript') || extension === '.ffn') {
+        return 'transcripts';
+      } else if (baseName.includes('genome') || baseName.includes('chromosome') || extension === '.fna') {
+        return 'genomes';
+      } else {
+        return 'genomes'; // Default for FASTA files
+      }
+      
+    case '.gb':
+    case '.gbk':
+    case '.genbank':
+      return 'genomes';
+      
+    case '.gff':
+    case '.gff3':
+    case '.gtf':
+      return 'annotations';
+      
+    case '.vcf':
+    case '.bcf':
+      return 'variants';
+      
+    case '.bed':
+    case '.wig':
+    case '.bigwig':
+    case '.bw':
+      return 'tracks';
+      
+    case '.sam':
+    case '.bam':
+      return 'alignments';
+      
+    case '.fastq':
+    case '.fq':
+    case '.sra':
+      return 'sequencing_data';
+      
+    case '.embl':
+      return 'genomes';
+      
+    case '.xml':
+      if (baseName.includes('pubmed') || baseName.includes('literature')) {
+        return 'literature';
+      }
+      return 'metadata';
+      
+    case '.json':
+    case '.yaml':
+    case '.yml':
+      return 'metadata';
+      
+    default:
+      // URL-based categorization as fallback (lowest priority)
+      if (url) {
+        const urlLower = url.toLowerCase();
+        if (urlLower.includes('protein') || urlLower.includes('uniprot')) {
+          return 'proteins';
+        } else if (urlLower.includes('sra') || urlLower.includes('fastq')) {
+          return 'sequencing_data';
+        } else if (urlLower.includes('assembly') || urlLower.includes('genome')) {
+          return 'genomes';
+        } else if (urlLower.includes('annotation') || urlLower.includes('gff')) {
+          return 'annotations';
+        } else if (urlLower.includes('variant') || urlLower.includes('vcf')) {
+          return 'variants';
+        }
+      }
+      
+      // Default fallback - return null for root directory placement
+      return null;
+  }
+}
+
 ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
   return new Promise((resolve) => {
     try {
@@ -6064,15 +6171,49 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
       const fs = require('fs');
       const path = require('path');
       
-      // If project info is provided, download to project directory
+      // If project info is provided, download to project directory with intelligent categorization
       let finalOutputPath = outputPath;
       if (projectInfo && projectInfo.dataFolderPath) {
-        // Create genomes subfolder in project data directory
-        const genomesDir = path.join(projectInfo.dataFolderPath, 'genomes');
-        if (!fs.existsSync(genomesDir)) {
-          fs.mkdirSync(genomesDir, { recursive: true });
+        // Determine file category based on extension, URL, and database type
+        const fileName = path.basename(outputPath);
+        
+        // Extract database type from enhanced project info or URL/filename patterns
+        let databaseType = null;
+        
+        // Priority 1: Use database info from download context if available
+        if (projectInfo.downloadContext && projectInfo.downloadContext.database) {
+          databaseType = projectInfo.downloadContext.database;
+        } else if (url) {
+          // Priority 2: Extract from URL patterns
+          const urlLower = url.toLowerCase();
+          if (urlLower.includes('protein') || urlLower.includes('uniprot')) {
+            databaseType = 'protein';
+          } else if (urlLower.includes('sra')) {
+            databaseType = 'sra';
+          } else if (urlLower.includes('assembly')) {
+            databaseType = 'assembly';
+          } else if (urlLower.includes('pubmed')) {
+            databaseType = 'pubmed';
+          }
         }
-        finalOutputPath = path.join(genomesDir, path.basename(outputPath));
+        
+        const category = categorizeGenomicFile(outputPath, url, databaseType);
+        
+        let targetDir;
+        if (category) {
+          // Create categorized subdirectory
+          targetDir = path.join(projectInfo.dataFolderPath, category);
+          console.log(`📁 Intelligent categorization: ${fileName} -> ${category}/ (database: ${databaseType || 'auto-detected'})`);
+        } else {
+          // Place in root directory for unclassifiable files
+          targetDir = projectInfo.dataFolderPath;
+          console.log(`📁 Root directory placement: ${fileName} (unclassifiable type)`);
+        }
+        
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        finalOutputPath = path.join(targetDir, fileName);
       }
       
       // 确保输出目录存在
@@ -6101,9 +6242,39 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
               file.on('finish', () => {
                 file.close();
                 console.log(`✅ Downloaded: ${finalOutputPath}`);
+                
+                // Enhanced project integration - notify about new file
+                if (projectInfo && projectInfo.dataFolderPath) {
+                  // Send file addition notification to project manager
+                  const allWindows = BrowserWindow.getAllWindows();
+                  const projectManagerWindow = allWindows.find(win => 
+                    win.getTitle().includes('Project Manager') || 
+                    win.webContents.getURL().includes('project-manager')
+                  );
+                  
+                  if (projectManagerWindow) {
+                    const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
+                    const category = projectInfo.downloadContext ? 
+                      categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) : 
+                      categorizeGenomicFile(finalOutputPath, url, null);
+                    
+                    projectManagerWindow.webContents.send('file-downloaded', {
+                      filePath: finalOutputPath,
+                      relativePath: relativePath,
+                      category: category || 'uncategorized',
+                      projectPath: projectInfo.dataFolderPath,
+                      downloadContext: projectInfo.downloadContext || {}
+                    });
+                    
+                    console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
+                  }
+                }
+                
                 resolve({
                   success: true,
-                  filePath: finalOutputPath
+                  filePath: finalOutputPath,
+                  category: projectInfo ? categorizeGenomicFile(finalOutputPath, url, 
+                    projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
                 });
               });
             } else {
@@ -6131,9 +6302,39 @@ ipcMain.handle('downloadFile', async (event, url, outputPath, projectInfo) => {
           file.on('finish', () => {
             file.close();
             console.log(`✅ Downloaded: ${finalOutputPath}`);
+            
+            // Enhanced project integration - notify about new file
+            if (projectInfo && projectInfo.dataFolderPath) {
+              // Send file addition notification to project manager
+              const allWindows = BrowserWindow.getAllWindows();
+              const projectManagerWindow = allWindows.find(win => 
+                win.getTitle().includes('Project Manager') || 
+                win.webContents.getURL().includes('project-manager')
+              );
+              
+              if (projectManagerWindow) {
+                const relativePath = path.relative(projectInfo.dataFolderPath, finalOutputPath);
+                const category = projectInfo.downloadContext ? 
+                  categorizeGenomicFile(finalOutputPath, url, projectInfo.downloadContext.database) : 
+                  categorizeGenomicFile(finalOutputPath, url, null);
+                
+                projectManagerWindow.webContents.send('file-downloaded', {
+                  filePath: finalOutputPath,
+                  relativePath: relativePath,
+                  category: category || 'uncategorized',
+                  projectPath: projectInfo.dataFolderPath,
+                  downloadContext: projectInfo.downloadContext || {}
+                });
+                
+                console.log(`📢 Notified project manager about new file: ${relativePath} → ${category}/`);
+              }
+            }
+            
             resolve({
               success: true,
-              filePath: finalOutputPath
+              filePath: finalOutputPath,
+              category: projectInfo ? categorizeGenomicFile(finalOutputPath, url, 
+                projectInfo.downloadContext ? projectInfo.downloadContext.database : null) : null
             });
           });
         } else {

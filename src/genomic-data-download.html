@@ -305,13 +305,14 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">File Format</label>
+                    <label class="form-label">File Format & Organization</label>
                     <select id="fileFormat" class="form-select">
-                        <option value="fasta">FASTA (.fasta)</option>
-                        <option value="genbank">GenBank (.gb)</option>
-                        <option value="gff">GFF (.gff)</option>
-                        <option value="embl">EMBL (.embl)</option>
+                        <option value="fasta">FASTA (.fasta) → genomes/ or proteins/</option>
+                        <option value="genbank">GenBank (.gb) → genomes/</option>
+                        <option value="gff">GFF (.gff) → annotations/</option>
+                        <option value="embl">EMBL (.embl) → genomes/</option>
                     </select>
+                    <div class="help-text">Files will be automatically organized into appropriate project folders based on content type</div>
                 </div>
                 
                 <div class="form-group">
