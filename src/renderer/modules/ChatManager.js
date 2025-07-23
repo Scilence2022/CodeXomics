@@ -403,11 +403,15 @@ class ChatManager {
      * Toggle multi-agent system on/off (new implementation)
      */
     toggleMultiAgentSystem() {
-        // Get current state from Multi-Agent Settings (primary source)
-        const currentState = this.configManager?.get('multiAgentSettings.multiAgentSystemEnabled', false) || false;
+        // Use current internal state as the authoritative source
+        const currentState = this.agentSystemEnabled;
         const newState = !currentState;
         
-        // Update Multi-Agent Settings (primary setting)
+        // Update internal state first
+        this.agentSystemEnabled = newState;
+        this.agentSystemSettings.enabled = newState;
+        
+        // Update Multi-Agent Settings
         if (this.configManager) {
             this.configManager.set('multiAgentSettings.multiAgentSystemEnabled', newState);
         }
@@ -417,9 +421,6 @@ class ChatManager {
             this.chatBoxSettingsManager.setSetting('agentSystemEnabled', newState);
         }
         
-        // Update internal state
-        this.agentSystemEnabled = newState;
-        this.agentSystemSettings.enabled = newState;
         this.saveAgentSystemSettings();
         
         // Update button appearance immediately
@@ -926,12 +927,8 @@ class ChatManager {
     updateMultiAgentToggleButton() {
         const button = document.getElementById('multiAgentToggleBtn');
         if (button) {
-            // Get the current state from Multi-Agent Settings (primary source)
-            const isEnabled = this.configManager?.get('multiAgentSettings.multiAgentSystemEnabled', false) || false;
-            
-            // Update internal state
-            this.agentSystemEnabled = isEnabled;
-            this.agentSystemSettings.enabled = isEnabled;
+            // Use the internal state as the authoritative source
+            const isEnabled = this.agentSystemEnabled;
             
             // Update button attributes
             button.setAttribute('data-enabled', isEnabled.toString());

@@ -36604,7 +36604,7 @@ input:checked + .slider:before {
 /* Ensure proper spacing for robot icon */
 .chat-title > .fas.fa-robot {
     margin-right: 4px !important;
-    color: #007bff !important;
+    color: white !important;
     font-size: 16px !important;
 }
 
