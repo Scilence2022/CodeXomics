@@ -181,10 +181,13 @@ class ProjectManagerWindow {
             if (window.electronAPI && window.electronAPI.getProjectDirectoryName) {
                 const result = await window.electronAPI.getProjectDirectoryName();
                 if (result.success) {
-                    const os = require('os');
-                    const path = require('path');
-                    const documentsPath = path.join(os.homedir(), 'Documents');
-                    const defaultLocation = path.join(documentsPath, result.directoryName);
+                    // 使用简单的路径构建，避免在renderer进程中使用require
+                    const documentsPath = navigator.platform.includes('Win') ? 
+                        `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents` :
+                        `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
+                    const defaultLocation = navigator.platform.includes('Win') ?
+                        `${documentsPath}\\${result.directoryName}` :
+                        `${documentsPath}/${result.directoryName}`;
                     document.getElementById('projectLocation').value = defaultLocation;
                     console.log(`📁 Default project location set to: ${defaultLocation}`);
                 }
@@ -192,10 +195,9 @@ class ProjectManagerWindow {
         } catch (error) {
             console.warn('Failed to set default project location:', error);
             // 设置一个通用的默认位置
-            const os = require('os');
-            const path = require('path');
-            const documentsPath = path.join(os.homedir(), 'Documents');
-            const defaultLocation = path.join(documentsPath, 'Genome AI Studio Projects');
+            const defaultLocation = navigator.platform.includes('Win') ? 
+                'C:\\Users\\User\\Documents\\Genome AI Studio Projects' :
+                '/Users/user/Documents/Genome AI Studio Projects';
             document.getElementById('projectLocation').value = defaultLocation;
         }
     }
@@ -1316,26 +1318,43 @@ class ProjectManagerWindow {
         
         // 如果文件有相对路径，构建绝对路径
         if (file.path && this.currentProject.dataFolderPath) {
-            const path = require('path');
-            // 确保使用正确的路径分隔符
+            // 使用简单的路径拼接，因为renderer进程不能直接使用require('path')
             const normalizedRelativePath = file.path.replace(/\\/g, '/');
-            const absolutePath = path.resolve(this.currentProject.dataFolderPath, normalizedRelativePath);
+            let absolutePath;
+            
+            // 处理不同操作系统的路径分隔符
+            if (this.currentProject.dataFolderPath.includes('\\')) {
+                // Windows路径
+                absolutePath = this.currentProject.dataFolderPath + '\\' + normalizedRelativePath.replace(/\//g, '\\');
+            } else {
+                // Unix/Linux/Mac路径
+                absolutePath = this.currentProject.dataFolderPath + '/' + normalizedRelativePath;
+            }
+            
             console.log('🔍 getFileAbsolutePath: Constructed from dataFolderPath:', absolutePath);
             return absolutePath;
         }
         
         // 兜底情况 - 使用动态项目目录名称构建路径
         if (file.path && this.currentProject.name) {
-            const path = require('path');
-            const os = require('os');
+            // 使用简单路径构建避免require('path')
+            const documentsPath = navigator.platform.includes('Win') ? 
+                `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents` :
+                `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
             
-            // 使用动态项目目录名称
-            const documentsPath = path.join(os.homedir(), 'Documents');
-            const projectsDir = path.join(documentsPath, 'Genome AI Studio Projects');
-            const projectDataPath = path.join(projectsDir, this.currentProject.name);
+            const projectsDir = navigator.platform.includes('Win') ?
+                `${documentsPath}\\Genome AI Studio Projects` :
+                `${documentsPath}/Genome AI Studio Projects`;
+                
+            const projectDataPath = navigator.platform.includes('Win') ?
+                `${projectsDir}\\${this.currentProject.name}` :
+                `${projectsDir}/${this.currentProject.name}`;
             
             const normalizedRelativePath = file.path.replace(/\\/g, '/');
-            const absolutePath = path.resolve(projectDataPath, normalizedRelativePath);
+            const absolutePath = navigator.platform.includes('Win') ?
+                `${projectDataPath}\\${normalizedRelativePath.replace(/\//g, '\\\\')}` :
+                `${projectDataPath}/${normalizedRelativePath}`;
+                
             console.log('🔍 getFileAbsolutePath: Constructed from project name:', absolutePath);
             return absolutePath;
         }
@@ -1360,8 +1379,18 @@ class ProjectManagerWindow {
         
         // 如果有绝对路径，转换为相对路径
         if (file.absolutePath && this.currentProject && this.currentProject.dataFolderPath) {
-            const path = require('path');
-            const relativePath = path.relative(this.currentProject.dataFolderPath, file.absolutePath);
+            // 使用简单的字符串操作替代path.relative
+            let relativePath = file.absolutePath;
+            const basePath = this.currentProject.dataFolderPath;
+            
+            if (relativePath.startsWith(basePath)) {
+                relativePath = relativePath.substring(basePath.length);
+                // 移除开头的路径分隔符
+                if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+                    relativePath = relativePath.substring(1);
+                }
+            }
+            
             return relativePath.replace(/\\/g, '/');
         }
         
@@ -1383,8 +1412,17 @@ class ProjectManagerWindow {
         
         // 如果没有绝对路径，尝试构建
         if (!normalizedFile.absolutePath && this.currentProject.dataFolderPath) {
-            const path = require('path');
-            normalizedFile.absolutePath = path.resolve(this.currentProject.dataFolderPath, normalizedFile.path);
+            // 使用简单的路径拼接替代path.resolve
+            const basePath = this.currentProject.dataFolderPath;
+            const relativePath = normalizedFile.path;
+            
+            if (basePath.includes('\\')) {
+                // Windows路径
+                normalizedFile.absolutePath = basePath + '\\' + relativePath.replace(/\//g, '\\');
+            } else {
+                // Unix/Linux/Mac路径
+                normalizedFile.absolutePath = basePath + '/' + relativePath;
+            }
         }
         
         return normalizedFile;
