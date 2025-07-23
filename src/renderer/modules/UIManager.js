@@ -748,33 +748,118 @@ class UIManager {
     }
 
     updateStatus(message, options = {}) {
-        const statusElement = document.getElementById('statusText');
-        if (statusElement) {
-            statusElement.textContent = message;
-            
-            // Handle highlighting options
-            if (options.highlight) {
-                // Apply bright color styling for highlighted messages
-                statusElement.style.color = options.color || '#4CAF50'; // Default to bright green
-                statusElement.style.fontWeight = 'bold';
-                statusElement.style.transition = 'color 0.3s ease, font-weight 0.3s ease';
+        // Wait for DOM to be ready if not available immediately
+        const tryUpdateStatus = () => {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = message;
                 
-                // Auto-remove highlighting after specified duration
-                const duration = options.duration || 3000;
-                setTimeout(() => {
-                    statusElement.style.color = ''; // Reset to default
+                // Handle highlighting options
+                if (options.highlight) {
+                    // Apply bright color styling for highlighted messages
+                    statusElement.style.color = options.color || '#4CAF50'; // Default to bright green
+                    statusElement.style.fontWeight = 'bold';
+                    statusElement.style.transition = 'color 0.3s ease, font-weight 0.3s ease';
+                    
+                    // Auto-remove highlighting after specified duration
+                    const duration = options.duration || 3000;
+                    setTimeout(() => {
+                        if (statusElement.parentNode) { // Check if element still exists
+                            statusElement.style.color = ''; // Reset to default
+                            statusElement.style.fontWeight = '';
+                            statusElement.style.transition = '';
+                        }
+                    }, duration);
+                } else {
+                    // Reset any previous highlighting
+                    statusElement.style.color = '';
                     statusElement.style.fontWeight = '';
                     statusElement.style.transition = '';
-                }, duration);
-            } else {
-                // Reset any previous highlighting
-                statusElement.style.color = '';
-                statusElement.style.fontWeight = '';
-                statusElement.style.transition = '';
+                }
+                return true;
             }
-        } else {
-            console.warn('Status element with id "statusText" not found. Status message:', message);
+            return false;
+        };
+
+        // Try immediately first
+        if (!tryUpdateStatus()) {
+            // If element not found, try multiple fallback strategies
+            let retryCount = 0;
+            const maxRetries = 5;
+            
+            const retryUpdate = () => {
+                retryCount++;
+                setTimeout(() => {
+                    if (!tryUpdateStatus() && retryCount < maxRetries) {
+                        retryUpdate();
+                    } else if (retryCount >= maxRetries) {
+                        // Final fallback: create a temporary notification if highlighting is enabled
+                        if (options.highlight) {
+                            this.showTemporaryNotification(message, options);
+                        } else {
+                            console.log(`[STATUS] ${message}`);
+                        }
+                    }
+                }, 50 * retryCount); // Exponential backoff
+            };
+            
+            retryUpdate();
         }
+    }
+    
+    // Fallback notification system for when statusText is not available
+    showTemporaryNotification(message, options = {}) {
+        // Create a temporary notification element
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${options.color || '#4CAF50'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease-out;
+            max-width: 400px;
+            word-wrap: break-word;
+        `;
+        
+        // Add animation styles if not already present
+        if (!document.getElementById('notification-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'notification-styles';
+            styles.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Auto-remove after duration
+        const duration = options.duration || 3000;
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, duration);
+        
+        console.log(`[NOTIFICATION] ${message}`);
     }
 
     showLoading(show) {
