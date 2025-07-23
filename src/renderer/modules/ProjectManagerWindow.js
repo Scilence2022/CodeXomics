@@ -4592,7 +4592,7 @@ To view this file, click "Open in Main Window".`;
     updateDetailsPanel() {
         // This is a compatibility method for details panel functionality
         // Currently, details panel is not fully implemented
-        console.log('updateDetailsPanel called - details panel not fully implemented');
+        console.debug('updateDetailsPanel called - details panel not fully implemented');
     }
 
     /**
