@@ -806,43 +806,202 @@ class ProjectManagerWindow {
             return;
         }
 
-        container.innerHTML = filteredFiles.map(file => {
-            const fileType = this.detectFileType(file.name);
-            const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
-            const isSelected = this.selectedFiles.has(file.id);
+        // Use virtual scrolling for better performance with large file lists
+        if (filteredFiles.length > 100) {
+            this.renderVirtualFileGrid(container, filteredFiles);
+        } else {
+            this.renderFullFileGrid(container, filteredFiles);
+        }
+    }
 
-            return `
-                <div class="file-card ${isSelected ? 'selected' : ''}" 
-                     data-file-id="${file.id}"
-                     onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                     ondblclick="projectManagerWindow.previewFile('${file.id}')"
-                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
-                    <div class="file-icon" style="background-color: ${typeConfig.color}">
-                        ${typeConfig.icon}
-                    </div>
-                    <div class="file-info">
-                        <div class="file-name" title="${file.name}">${file.name}</div>
-                        <div class="file-details">
-                            <span class="file-size">${this.formatFileSize(file.size)}</span>
-                            <span class="file-date">${this.formatDate(file.modified)}</span>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">
-                            👁️
-                        </button>
-                        <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
-                            ✏️
-                        </button>
-                        <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `;
+    renderFullFileGrid(container, filteredFiles) {
+        container.innerHTML = filteredFiles.map(file => {
+            return this.generateFileCardHTML(file);
         }).join('');
 
         this.updateFileCountDisplay(filteredFiles.length);
+    }
+
+    /**
+     * 虚拟滚动渲染大型文件列表
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} filteredFiles - 过滤后的文件列表
+     */
+    renderVirtualFileGrid(container, filteredFiles) {
+        // 初始化虚拟滚动属性
+        if (!this.virtualScrolling) {
+            this.virtualScrolling = {
+                itemHeight: 120, // 每个文件卡片的高度
+                visibleItems: Math.ceil(container.clientHeight / 120) + 5, // 可见项目数量 + 缓冲区
+                scrollTop: 0,
+                startIndex: 0,
+                endIndex: 0,
+                totalItems: 0
+            };
+        }
+
+        this.virtualScrolling.totalItems = filteredFiles.length;
+        
+        // 计算可见范围
+        this.updateVirtualScrollRange(container);
+
+        // 创建虚拟滚动容器结构
+        const virtualContainer = document.createElement('div');
+        virtualContainer.className = 'virtual-scroll-container';
+        virtualContainer.style.cssText = `
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+        `;
+
+        // 创建内容包装器
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'virtual-content-wrapper';
+        contentWrapper.style.cssText = `
+            height: ${this.virtualScrolling.totalItems * this.virtualScrolling.itemHeight}px;
+            position: relative;
+        `;
+
+        // 创建可见项目容器
+        const visibleContainer = document.createElement('div');
+        visibleContainer.className = 'virtual-visible-container';
+        visibleContainer.style.cssText = `
+            position: absolute;
+            top: ${this.virtualScrolling.startIndex * this.virtualScrolling.itemHeight}px;
+            width: 100%;
+        `;
+
+        // 渲染可见项目
+        const visibleFiles = filteredFiles.slice(
+            this.virtualScrolling.startIndex, 
+            this.virtualScrolling.endIndex
+        );
+
+        visibleContainer.innerHTML = visibleFiles.map(file => {
+            return this.generateFileCardHTML(file);
+        }).join('');
+
+        // 组装虚拟滚动结构
+        contentWrapper.appendChild(visibleContainer);
+        virtualContainer.appendChild(contentWrapper);
+
+        // 添加滚动事件监听器
+        virtualContainer.addEventListener('scroll', (e) => {
+            this.handleVirtualScroll(e, container, filteredFiles);
+        });
+
+        // 清空容器并添加虚拟滚动结构
+        container.innerHTML = '';
+        container.appendChild(virtualContainer);
+
+        this.updateFileCountDisplay(filteredFiles.length);
+    }
+
+    /**
+     * 更新虚拟滚动可见范围
+     * @param {HTMLElement} container - 容器元素
+     */
+    updateVirtualScrollRange(container) {
+        const scrollTop = this.virtualScrolling.scrollTop;
+        const containerHeight = container.clientHeight;
+        
+        this.virtualScrolling.startIndex = Math.max(0, 
+            Math.floor(scrollTop / this.virtualScrolling.itemHeight) - 2
+        );
+        
+        this.virtualScrolling.endIndex = Math.min(
+            this.virtualScrolling.totalItems,
+            this.virtualScrolling.startIndex + Math.ceil(containerHeight / this.virtualScrolling.itemHeight) + 5
+        );
+    }
+
+    /**
+     * 处理虚拟滚动事件
+     * @param {Event} e - 滚动事件
+     * @param {HTMLElement} container - 容器元素
+     * @param {Array} filteredFiles - 文件列表
+     */
+    handleVirtualScroll(e, container, filteredFiles) {
+        const scrollTop = e.target.scrollTop;
+        
+        // 节流处理，避免过度频繁的重渲染
+        if (Math.abs(scrollTop - this.virtualScrolling.scrollTop) < 10) {
+            return;
+        }
+
+        this.virtualScrolling.scrollTop = scrollTop;
+        
+        const oldStartIndex = this.virtualScrolling.startIndex;
+        this.updateVirtualScrollRange(container);
+        
+        // 只有当可见范围发生显著变化时才重新渲染
+        if (Math.abs(this.virtualScrolling.startIndex - oldStartIndex) >= 3) {
+            this.updateVirtualVisibleItems(e.target, filteredFiles);
+        }
+    }
+
+    /**
+     * 更新虚拟滚动可见项目
+     * @param {HTMLElement} scrollContainer - 滚动容器
+     * @param {Array} filteredFiles - 文件列表
+     */
+    updateVirtualVisibleItems(scrollContainer, filteredFiles) {
+        const visibleContainer = scrollContainer.querySelector('.virtual-visible-container');
+        if (!visibleContainer) return;
+
+        // 更新容器位置
+        visibleContainer.style.top = `${this.virtualScrolling.startIndex * this.virtualScrolling.itemHeight}px`;
+
+        // 渲染新的可见项目
+        const visibleFiles = filteredFiles.slice(
+            this.virtualScrolling.startIndex, 
+            this.virtualScrolling.endIndex
+        );
+
+        visibleContainer.innerHTML = visibleFiles.map(file => {
+            return this.generateFileCardHTML(file);
+        }).join('');
+    }
+
+    /**
+     * 生成文件卡片HTML
+     * @param {Object} file - 文件对象
+     * @returns {string} HTML字符串
+     */
+    generateFileCardHTML(file) {
+        const fileType = this.detectFileType(file.name);
+        const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: '#6c757d' };
+        const isSelected = this.selectedFiles.has(file.id);
+        
+        return `
+            <div class="file-card ${isSelected ? 'selected' : ''}" 
+                 data-file-id="${file.id}"
+                 onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
+                 ondblclick="projectManagerWindow.previewFile('${file.id}')"
+                 oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
+                <div class="file-icon" style="background-color: ${typeConfig.color}">
+                    ${typeConfig.icon}
+                </div>
+                <div class="file-info">
+                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-details">
+                        <span class="file-size">${this.formatFileSize(file.size)}</span>
+                        <span class="file-date">${this.formatDate(file.modified)}</span>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.previewFile('${file.id}')" title="Preview">
+                        👁️
+                    </button>
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
+                        ✏️
+                    </button>
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
     // ====== 文件管理功能 ======
@@ -1030,7 +1189,7 @@ class ProjectManagerWindow {
             
             if (window.electronAPI && window.electronAPI.saveProjectFile) {
                 // Use existing file path or create new one
-                const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.GAI`;
+                const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.gai`;
                 const result = await window.electronAPI.saveProjectFile(fileName, xmlContent);
                 
                 if (result.success) {
@@ -3110,17 +3269,29 @@ System Information:
                     const fileName = result.fileName;
                     
                     // Determine file format and parse accordingly
-                    if (fileName.toLowerCase().endsWith('.prj.gai') || fileName.toLowerCase().endsWith('.xml')) {
-                        // XML format
+                    const lowerFileName = fileName.toLowerCase();
+                    if (lowerFileName.endsWith('.prj.gai') || 
+                        lowerFileName.endsWith('.gai') || 
+                        lowerFileName.endsWith('.xml') ||
+                        lowerFileName.includes('.gai')) {
+                        // XML format - support various .GAI file naming patterns
                         if (!this.xmlHandler) {
                             this.xmlHandler = new ProjectXMLHandler();
                         }
                         project = this.xmlHandler.xmlToProject(content);
-                    } else if (fileName.toLowerCase().endsWith('.json') || fileName.toLowerCase().endsWith('.genomeproj')) {
+                    } else if (lowerFileName.endsWith('.json') || lowerFileName.endsWith('.genomeproj')) {
                         // JSON format
                         project = JSON.parse(content);
                     } else {
-                        throw new Error(`Unsupported file format: ${fileName}`);
+                        throw new Error(`Unsupported file format: ${fileName}. 
+                            Supported formats include:
+                            • .prj.gai (XML project file)
+                            • .gai (GAI project file)
+                            • .xml (XML project file)
+                            • .json (JSON project file)
+                            • .genomeproj (GenomeProj file)
+                            
+                            Please ensure your project file has the correct extension.`);
                     }
                     
                     // Validate project data

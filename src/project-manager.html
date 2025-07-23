@@ -2107,6 +2107,96 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             overflow-x: auto;
         }
+
+        /* 虚拟滚动优化样式 */
+        .virtual-scroll-container {
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+            /* 启用硬件加速 */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            /* 优化滚动性能 */
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
+
+        .virtual-content-wrapper {
+            position: relative;
+            /* 确保正确的层叠上下文 */
+            z-index: 1;
+        }
+
+        .virtual-visible-container {
+            position: absolute;
+            width: 100%;
+            /* 启用硬件加速 */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
+            /* 优化布局性能 */
+            contain: layout style paint;
+        }
+
+        /* 文件卡片性能优化 */
+        .file-card {
+            /* 启用硬件加速 */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            /* 优化重绘和重排性能 */
+            contain: layout style paint;
+            /* 减少合成层创建 */
+            will-change: transform, opacity;
+        }
+
+        .file-card:hover {
+            /* 确保悬停效果使用硬件加速 */
+            transform: translateY(-6px) scale(1.02) translateZ(0);
+            -webkit-transform: translateY(-6px) scale(1.02) translateZ(0);
+        }
+
+        .file-card.selected {
+            /* 确保选中效果使用硬件加速 */
+            transform: translateY(-4px) translateZ(0);
+            -webkit-transform: translateY(-4px) translateZ(0);
+        }
+
+        /* 滚动条优化 */
+        .virtual-scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .virtual-scroll-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .virtual-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .virtual-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+
+        /* 性能优化：减少不必要的重绘 */
+        .file-grid {
+            /* 使用CSS Grid的性能优化 */
+            contain: layout;
+        }
+
+        /* 大型列表模式的文件卡片布局优化 */
+        .virtual-scroll-container .file-card {
+            margin-bottom: 8px;
+            height: 120px;
+            /* 固定高度确保虚拟滚动计算正确 */
+            min-height: 120px;
+            max-height: 120px;
+            /* 优化flexbox性能 */
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
