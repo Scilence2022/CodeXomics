@@ -367,6 +367,85 @@
             animation: slideIn 0.3s ease-out;
         }
 
+        .installer-info {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 13px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .manual-install-actions {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .manual-install-actions .btn {
+            flex: 1;
+            min-width: 160px;
+            padding: 12px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .manual-install-actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .manual-install-actions .btn-primary {
+            background: #2196f3;
+            color: white;
+        }
+
+        .manual-install-actions .btn-primary:hover {
+            background: #1976d2;
+        }
+
+        .manual-install-actions .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .manual-install-actions .btn-success:hover {
+            background: #388e3c;
+        }
+
+        .manual-install-instructions {
+            background: rgba(255, 255, 255, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .manual-install-instructions h5 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .manual-install-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .manual-install-instructions li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
         .alert h4 {
             margin-top: 0;
             margin-bottom: 10px;
@@ -883,6 +962,12 @@
             } catch (error) {
                 logMessage('Installation failed: ' + error.message, 'error');
                 updateStatus('Installation failed', 'error');
+                
+                // Show manual installation option if available
+                if (global.downloadedInstallerPath) {
+                    logMessage('Providing manual installation option...', 'info');
+                    showManualInstallationOption(global.downloadedInstallerPath);
+                }
             } finally {
                 installationInProgress = false;
                 document.getElementById('installBtn').disabled = false;
@@ -1042,6 +1127,10 @@
                     const stats = fs.statSync(filePath);
                     if (stats.size > 100 * 1024 * 1024) { // > 100MB, likely complete
                         logMessage(`Using existing file: ${filename}`, 'success');
+                        
+                        // Store the downloaded installer path globally for manual installation option
+                        global.downloadedInstallerPath = filePath;
+                        
                         resolve(filePath);
                         return;
                     } else {
@@ -1097,6 +1186,10 @@
                         file.close();
                         const finalSize = fs.statSync(filePath).size;
                         logMessage(`Download completed: ${filename} (${(finalSize/1024/1024).toFixed(1)}MB)`, 'success');
+                        
+                        // Store the downloaded installer path globally for manual installation option
+                        global.downloadedInstallerPath = filePath;
+                        
                         resolve(filePath);
                     });
                     
@@ -1285,7 +1378,17 @@
                         logMessage('Attempting system-wide installation with elevated privileges...', 'info');
                         
                         // If user installation fails, prompt for administrator privileges
-                        await attemptSystemInstallation(platform);
+                        try {
+                            await attemptSystemInstallation(platform);
+                        } catch (systemError) {
+                            // If both user and system installation fail, show manual installation option
+                            logMessage(`System installation also failed: ${systemError.message}`, 'error');
+                            if (global.downloadedInstallerPath) {
+                                logMessage('Providing manual installation option...', 'info');
+                                showManualInstallationOption(global.downloadedInstallerPath);
+                            }
+                            throw systemError;
+                        }
                     }
                 }
             } catch (error) {
@@ -1296,10 +1399,59 @@
         function showManualInstallationOption(installerPath) {
             logMessage('=== MANUAL INSTALLATION OPTION ===', 'info');
             logMessage(`Installer downloaded to: ${installerPath}`, 'info');
-            logMessage('You can manually run the installer with administrator privileges:', 'info');
-            logMessage('1. Right-click on the installer file', 'info');
-            logMessage('2. Select "Run as administrator"', 'info');
-            logMessage('3. Follow the installation wizard', 'info');
+            
+            const platform = os.platform();
+            const path = require('path');
+            const fileName = path.basename(installerPath);
+            const isWindowsInstaller = fileName.endsWith('.exe');
+            const isMacPackage = fileName.endsWith('.dmg');
+            const isLinuxArchive = fileName.endsWith('.tar.gz');
+            
+            // Platform-specific instructions
+            let instructions = '';
+            if (isWindowsInstaller) {
+                logMessage('Windows installer detected - you can run it with administrator privileges', 'info');
+                instructions = `
+                    <h5>Windows Manual Installation Steps:</h5>
+                    <ol>
+                        <li>Click "Open Installer Location" to navigate to the installer</li>
+                        <li>Right-click on "${fileName}"</li>
+                        <li>Select "Run as administrator"</li>
+                        <li>Follow the installation wizard</li>
+                        <li>After installation, restart this application</li>
+                    </ol>`;
+            } else if (isMacPackage) {
+                logMessage('macOS package detected - you can mount and install manually', 'info');
+                instructions = `
+                    <h5>macOS Manual Installation Steps:</h5>
+                    <ol>
+                        <li>Click "Open Installer Location" to navigate to the package</li>
+                        <li>Double-click on "${fileName}" to mount the disk image</li>
+                        <li>Follow the installation instructions in the mounted image</li>
+                        <li>You may need to enter your administrator password</li>
+                        <li>After installation, restart this application</li>
+                    </ol>`;
+            } else if (isLinuxArchive) {
+                logMessage('Linux archive detected - you can extract and install manually', 'info');
+                instructions = `
+                    <h5>Linux Manual Installation Steps:</h5>
+                    <ol>
+                        <li>Click "Open Installer Location" to navigate to the archive</li>
+                        <li>Extract "${fileName}" to a directory (e.g., /opt/blast/)</li>
+                        <li>Add the bin directory to your PATH environment variable</li>
+                        <li>You may need to use sudo for system-wide installation</li>
+                        <li>After installation, restart this application</li>
+                    </ol>`;
+            } else {
+                instructions = `
+                    <h5>Manual Installation Steps:</h5>
+                    <ol>
+                        <li>Click "Open Installer Location" to navigate to the installer</li>
+                        <li>Follow the appropriate installation process for your system</li>
+                        <li>You may need administrator/root privileges</li>
+                        <li>After installation, restart this application</li>
+                    </ol>`;
+            }
             
             // Create a button to open the installer location
             const manualInstallSection = document.createElement('div');
@@ -1308,6 +1460,10 @@
                 <div class="alert alert-warning">
                     <h4><i class="fas fa-exclamation-triangle"></i> Manual Installation Required</h4>
                     <p>Automatic installation failed. You can manually install BLAST+ using the downloaded installer.</p>
+                    <div class="installer-info">
+                        <strong>Downloaded file:</strong> ${fileName}<br>
+                        <strong>Location:</strong> ${installerPath}
+                    </div>
                     <div class="manual-install-actions">
                         <button id="openInstallerLocation" class="btn btn-primary">
                             <i class="fas fa-folder-open"></i> Open Installer Location
@@ -1317,17 +1473,16 @@
                         </button>
                     </div>
                     <div class="manual-install-instructions">
-                        <h5>Manual Installation Steps:</h5>
-                        <ol>
-                            <li>Click "Open Installer Location" to navigate to the installer</li>
-                            <li>Right-click on the installer file</li>
-                            <li>Select "Run as administrator"</li>
-                            <li>Follow the installation wizard</li>
-                            <li>After installation, restart this application</li>
-                        </ol>
+                        ${instructions}
                     </div>
                 </div>
             `;
+            
+            // Remove any existing manual install section first
+            const existingSection = document.querySelector('.manual-install-section');
+            if (existingSection) {
+                existingSection.remove();
+            }
             
             // Insert the manual install section after the progress container
             const progressContainer = document.getElementById('progressContainer');
