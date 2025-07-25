@@ -246,6 +246,15 @@ class ProjectManager {
                     
                     // 保存文件路径以便后续保存
                     project.filePath = filePath;
+                    // Also set the appropriate path properties for XML save operations
+                    if (filePath.endsWith('.GAI') || filePath.endsWith('.xml')) {
+                        project.projectFilePath = filePath;
+                        project.xmlFilePath = filePath;
+                    }
+                    
+                    // Mark project as loaded (not modified) to prevent unnecessary save dialogs
+                    project.hasUnsavedChanges = false;
+                    project.justLoaded = true; // Flag to indicate this project was just loaded
                     
                     this.projects.set(project.id, project);
                     this.addToRecentProjects(project.id);
@@ -1351,7 +1360,15 @@ class ProjectManager {
                         throw new Error(result.error);
                     }
                 } else {
-                    // 如果没有现有路径，使用saveProjectFile（会弹出对话框）
+                    // Check if this is a just-loaded project to avoid unnecessary save dialogs
+                    if (project.justLoaded) {
+                        console.log(`Skipping auto-save for just-loaded project: ${project.name}`);
+                        // Clear the justLoaded flag after first save attempt
+                        delete project.justLoaded;
+                        return;
+                    }
+                    
+                    // 如果没有现有路径且项目不是刚加载的，使用saveProjectFile（会弹出对话框）
                     const defaultPath = `${project.name}.prj.GAI`;
                     const result = await window.electronAPI.saveProjectFile(defaultPath, xmlContent);
                     if (result.success) {
@@ -1491,6 +1508,11 @@ class ProjectManager {
      */
     markProjectAsModified() {
         if (!this.currentProject) return;
+        
+        // Clear the justLoaded flag when project is actually modified
+        if (this.currentProject.justLoaded) {
+            delete this.currentProject.justLoaded;
+        }
         
         this.currentProject.hasUnsavedChanges = true;
         this.currentProject.modified = new Date().toISOString();
