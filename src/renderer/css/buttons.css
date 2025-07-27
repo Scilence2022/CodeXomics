@@ -451,6 +451,144 @@
     border-color: #24292e;
 }
 
+/* Header Search/Navigation Buttons */
+.search-btn,
+.goto-btn {
+    padding: 8px 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.search-btn:hover,
+.goto-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* MCP Server Button */
+#mcpServerBtn {
+    min-width: 70px;
+    transition: all 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(5px);
+}
+
+#mcpServerBtn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#mcpServerBtn.starting,
+#mcpServerBtn.stopping {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+#mcpServerBtn.running {
+    background-color: rgba(40, 167, 69, 0.8);
+    border-color: rgba(40, 167, 69, 0.9);
+}
+
+#mcpServerBtn.running:hover {
+    background-color: rgba(40, 167, 69, 0.9);
+    border-color: rgba(40, 167, 69, 1);
+}
+
+/* Track Control Buttons */
+.track-btn {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 10px;
+    color: #6c757d;
+}
+
+.track-btn:hover {
+    background: #fff;
+    color: #495057;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.track-settings-btn:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.track-toggle-btn:hover {
+    color: #10b981;
+    border-color: #10b981;
+}
+
+.track-toggle-btn[data-locked="true"] {
+    background: #fef3c7;
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.track-close-btn:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Reset Position Button for Modals */
+.reset-position-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    margin-right: 8px;
+    transition: all 0.2s ease;
+}
+
+.reset-position-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.reset-position-btn:active {
+    transform: scale(0.95);
+}
+
+/* Welcome Screen Button */
+.btn-large {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-large:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+}
+
 /* Special Application Buttons */
 .btn-gradient {
     background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
