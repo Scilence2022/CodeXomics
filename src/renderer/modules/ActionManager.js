@@ -11,6 +11,7 @@ class ActionManager {
         this.clipboard = null; // Stores copied/cut sequence data
         this.cursorPosition = 0; // Track cursor position for paste operations
         this.sequenceModifications = new Map(); // Track sequence modifications by chromosome
+        this.originalAnnotations = null; // Backup of original annotations before any modifications
         
         // Action types
         this.ACTION_TYPES = {
@@ -32,6 +33,44 @@ class ActionManager {
         };
         
         this.initializeEventListeners();
+    }
+    
+    /**
+     * Backup original annotations before first modification
+     */
+    ensureOriginalAnnotationsBackup() {
+        if (!this.originalAnnotations && this.genomeBrowser.currentAnnotations) {
+            this.originalAnnotations = JSON.parse(JSON.stringify(this.genomeBrowser.currentAnnotations));
+            console.log('📋 [ActionManager] Backed up original annotations for rollback');
+        }
+    }
+    
+    /**
+     * Restore features from original backup - for rollback functionality
+     */
+    restoreOriginalFeatures() {
+        if (this.originalAnnotations) {
+            this.genomeBrowser.currentAnnotations = JSON.parse(JSON.stringify(this.originalAnnotations));
+            console.log('🔄 [ActionManager] Restored original features from backup');
+            
+            // Clear sequence modifications as we're back to original state
+            this.sequenceModifications.clear();
+            
+            // Update display
+            if (this.genomeBrowser.trackRenderer) {
+                this.genomeBrowser.trackRenderer.updateFeatureTrack();
+            }
+        } else {
+            console.warn('⚠️ [ActionManager] No original features backup available for restoration');
+        }
+    }
+    
+    /**
+     * Clear original annotations backup (call when saving changes permanently)
+     */
+    clearOriginalAnnotationsBackup() {
+        this.originalAnnotations = null;
+        console.log('🗑️ [ActionManager] Cleared original annotations backup');
     }
     
     initializeEventListeners() {
@@ -1782,6 +1821,10 @@ class ActionManager {
      */
     async executeCutSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, strand } = action.metadata;
+        
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
+        
         const sequence = await this.getSequenceForRegion(chromosome, start, end, strand);
         
         if (!sequence) {
@@ -1852,6 +1895,9 @@ class ActionManager {
     async executePasteSequence(action, executionGenomeData = null) {
         const { chromosome, start, end } = action.metadata;
         const clipboardData = action.metadata.clipboardData;
+        
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
         
         if (!clipboardData) {
             throw new Error('No clipboard data available for pasting');
@@ -2032,6 +2078,9 @@ class ActionManager {
             sequenceLength: end - start + 1
         });
         
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
+        
         // Record the sequence modification
         this.recordSequenceModification(chromosome, {
             type: 'delete',
@@ -2042,13 +2091,21 @@ class ActionManager {
             actionId: action.id
         });
         
-        // Remove features from deleted region
+        // Handle features in deleted region - preserve original data for rollback
         let deletedFeaturesCount = 0;
         if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) {
             const annotations = this.genomeBrowser.currentAnnotations[chromosome];
             const initialCount = annotations.length;
             
-            // Remove features that are within the deleted region
+            // Store deleted features for potential rollback (preserve original data)
+            const deletedFeatures = annotations.filter(feature => 
+                feature.start >= start && feature.end <= end
+            );
+            
+            // Store deleted features in action metadata for rollback capability
+            action.metadata.deletedFeatures = deletedFeatures;
+            
+            // Remove features that are within the deleted region from current display
             this.genomeBrowser.currentAnnotations[chromosome] = annotations.filter(feature => 
                 !(feature.start >= start && feature.end <= end)
             );
@@ -2084,6 +2141,9 @@ class ActionManager {
     async executeInsertSequence(action, executionGenomeData = null) {
         const { chromosome, start, insertSequence } = action.metadata;
         
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
+        
         console.log('➕ [ActionManager] Executing insert sequence action:', {
             actionId: action.id,
             target: action.target,
@@ -2116,6 +2176,9 @@ class ActionManager {
     async executeReplaceSequence(action, executionGenomeData = null) {
         const { chromosome, start, end, newSequence } = action.metadata;
         const originalLength = end - start + 1;
+        
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
         
         console.log('🔄 [ActionManager] Executing replace sequence action:', {
             actionId: action.id,
@@ -2458,17 +2521,23 @@ class ActionManager {
     /**
      * Adjust feature positions based on sequence modifications
      */
-    adjustFeaturePositions(chromosome, originalFeatures) {
+    adjustFeaturePositions(chromosome, originalFeatures = null) {
+        // Use provided originalFeatures or fall back to backed up original annotations
+        const sourceFeatures = originalFeatures || 
+                              (this.originalAnnotations && this.originalAnnotations[chromosome]) || 
+                              (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[chromosome]) || 
+                              [];
+        
         if (!this.sequenceModifications.has(chromosome)) {
-            return originalFeatures; // No modifications for this chromosome
+            return sourceFeatures; // No modifications for this chromosome
         }
         
         const modifications = this.sequenceModifications.get(chromosome);
         if (modifications.length === 0) {
-            return originalFeatures;
+            return sourceFeatures;
         }
         
-        console.log(`🔧 [ActionManager] Adjusting ${originalFeatures.length} features for ${chromosome} with ${modifications.length} modifications`);
+        console.log(`🔧 [ActionManager] Adjusting ${sourceFeatures.length} features for ${chromosome} with ${modifications.length} modifications`);
         
         // Sort modifications by position (ascending order for position adjustment calculation)
         const sortedModifications = [...modifications].sort((a, b) => {
@@ -2479,7 +2548,7 @@ class ActionManager {
         
         const adjustedFeatures = [];
         
-        for (const feature of originalFeatures) {
+        for (const feature of sourceFeatures) {
             const adjustedFeature = this.adjustSingleFeature(feature, sortedModifications);
             
             // Only include features that are still valid after adjustments
@@ -2488,7 +2557,7 @@ class ActionManager {
             }
         }
         
-        console.log(`🔧 [ActionManager] Feature adjustment complete: ${originalFeatures.length} → ${adjustedFeatures.length} features`);
+        console.log(`🔧 [ActionManager] Feature adjustment complete: ${sourceFeatures.length} → ${adjustedFeatures.length} features`);
         return adjustedFeatures;
     }
     
@@ -2622,6 +2691,9 @@ class ActionManager {
      */
     async executeSequenceEdit(action, executionGenomeData = null) {
         const { changeSummary, originalSequence, modifiedSequence } = action.metadata;
+        
+        // Ensure original annotations are backed up before any modification
+        this.ensureOriginalAnnotationsBackup();
         
         console.log('🔧 [ActionManager] Executing sequence edit action:', {
             actionId: action.id,
