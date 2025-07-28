@@ -83,21 +83,6 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.search-btn,
-.goto-btn {
-    padding: 8px 12px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.search-btn:hover,
-.goto-btn:hover {
-    background: var(--primary-hover);
-}
 
 .header-right {
     flex: 0 0 auto;
@@ -190,35 +175,6 @@
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -453,76 +409,6 @@
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -791,32 +677,6 @@
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -826,20 +686,6 @@
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -1140,49 +986,6 @@
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -1803,31 +1606,6 @@ svg {
 }
 
 /* Enhanced Buttons */
-.btn-group {
-    display: flex;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn {
-    border-radius: 0;
-    border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-group .btn:last-child {
-    border-right: none;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
 
 /* Enhanced Genome Viewer */
 .genome-viewer {
@@ -1892,21 +1670,6 @@ svg {
     opacity: 0.9;
 }
 
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
 
 .supported-formats {
     margin-top: 20px;
@@ -4561,21 +4324,6 @@ svg {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.search-btn,
-.goto-btn {
-    padding: 8px 12px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.search-btn:hover,
-.goto-btn:hover {
-    background: var(--primary-hover);
-}
 
 .header-right {
     flex: 0 0 auto;
@@ -4668,35 +4416,6 @@ svg {
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -4931,76 +4650,6 @@ svg {
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -5174,32 +4823,6 @@ svg {
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -5209,20 +4832,6 @@ svg {
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -5523,49 +5132,6 @@ svg {
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -6140,31 +5706,6 @@ svg {
 }
 
 /* Enhanced Buttons */
-.btn-group {
-    display: flex;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn {
-    border-radius: 0;
-    border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-group .btn:last-child {
-    border-right: none;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
 
 /* Enhanced Genome Viewer */
 .genome-viewer {
@@ -6229,21 +5770,6 @@ svg {
     opacity: 0.9;
 }
 
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
 
 .supported-formats {
     margin-top: 20px;
@@ -10354,35 +9880,6 @@ path.svg-gene-element.selected {
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -10617,76 +10114,6 @@ path.svg-gene-element.selected {
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -10860,32 +10287,6 @@ path.svg-gene-element.selected {
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -10895,20 +10296,6 @@ path.svg-gene-element.selected {
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -11209,49 +10596,6 @@ path.svg-gene-element.selected {
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -11721,21 +11065,6 @@ svg {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.search-btn,
-.goto-btn {
-    padding: 8px 12px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.search-btn:hover,
-.goto-btn:hover {
-    background: var(--primary-hover);
-}
 
 .header-right {
     flex: 0 0 auto;
@@ -11828,35 +11157,6 @@ svg {
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -12091,76 +11391,6 @@ svg {
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -12334,32 +11564,6 @@ svg {
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -12369,20 +11573,6 @@ svg {
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -12683,49 +11873,6 @@ svg {
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -13346,31 +12493,6 @@ svg {
 }
 
 /* Enhanced Buttons */
-.btn-group {
-    display: flex;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn {
-    border-radius: 0;
-    border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-group .btn:last-child {
-    border-right: none;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
 
 /* Enhanced Genome Viewer */
 .genome-viewer {
@@ -13435,21 +12557,6 @@ svg {
     opacity: 0.9;
 }
 
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
 
 .supported-formats {
     margin-top: 20px;
@@ -15615,21 +14722,6 @@ svg {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.search-btn,
-.goto-btn {
-    padding: 8px 12px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.search-btn:hover,
-.goto-btn:hover {
-    background: var(--primary-hover);
-}
 
 .header-right {
     flex: 0 0 auto;
@@ -15722,35 +14814,6 @@ svg {
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -15985,76 +15048,6 @@ svg {
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -16228,32 +15221,6 @@ svg {
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -16263,20 +15230,6 @@ svg {
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -16577,49 +15530,6 @@ svg {
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -17240,31 +16150,6 @@ svg {
 }
 
 /* Enhanced Buttons */
-.btn-group {
-    display: flex;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn {
-    border-radius: 0;
-    border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-group .btn:last-child {
-    border-right: none;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
 
 /* Enhanced Genome Viewer */
 .genome-viewer {
@@ -17329,21 +16214,6 @@ svg {
     opacity: 0.9;
 }
 
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
 
 .supported-formats {
     margin-top: 20px;
@@ -21148,35 +20018,6 @@ path.svg-gene-element.selected {
     text-transform: capitalize;
 }
 
-#mcpServerBtn {
-    min-width: 70px;
-    transition: all 0.2s ease;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(5px);
-}
-
-#mcpServerBtn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-#mcpServerBtn.starting,
-#mcpServerBtn.stopping {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-#mcpServerBtn.running {
-    background-color: rgba(40, 167, 69, 0.8);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-#mcpServerBtn.running:hover {
-    background-color: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 1);
-}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -21411,76 +20252,6 @@ path.svg-gene-element.selected {
     color: var(--text-secondary);
 }
 
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-hover);
-}
-
-.btn:active {
-    transform: translateY(1px);
-}
-
-.btn-primary {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
-
-.btn-secondary:disabled {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.btn-lg {
-    padding: 12px 24px;
-    font-size: 16px;
-}
-
-.btn-block {
-    width: 100%;
-    justify-content: center;
-}
 
 /* Form Elements */
 .select {
@@ -21654,32 +20425,6 @@ path.svg-gene-element.selected {
 }
 
 /* Reset position button */
-.reset-position-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    margin-right: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-position-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.reset-position-btn:active {
-    transform: scale(0.95);
-}
 
 .modal-footer {
     display: flex;
@@ -21689,20 +20434,6 @@ path.svg-gene-element.selected {
     border-top: 1px solid var(--border-color);
 }
 
-.modal-footer .btn {
-    min-width: 80px;
-}
-
-.modal-footer .btn.modal-close {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-footer .btn.modal-close:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--border-hover);
-}
 
 .search-options {
     margin-top: 16px;
@@ -22003,49 +20734,6 @@ path.svg-gene-element.selected {
     align-items: center;
 }
 
-.track-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 10px;
-    color: #6c757d;
-}
-
-.track-btn:hover {
-    background: #fff;
-    color: #495057;
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.track-settings-btn:hover {
-    color: #3b82f6;
-    border-color: #3b82f6;
-}
-
-.track-toggle-btn:hover {
-    color: #10b981;
-    border-color: #10b981;
-}
-
-.track-toggle-btn[data-locked="true"] {
-    background: #fef3c7;
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.track-close-btn:hover {
-    color: #ef4444;
-    border-color: #ef4444;
-}
 
 /* Track controls locked state */
 .controls-locked {
@@ -22666,31 +21354,6 @@ svg {
 }
 
 /* Enhanced Buttons */
-.btn-group {
-    display: flex;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn {
-    border-radius: 0;
-    border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-group .btn:last-child {
-    border-right: none;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
 
 /* Enhanced Genome Viewer */
 .genome-viewer {
@@ -22755,21 +21418,6 @@ svg {
     opacity: 0.9;
 }
 
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
 
 .supported-formats {
     margin-top: 20px;
