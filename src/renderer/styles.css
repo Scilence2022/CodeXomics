@@ -224,77 +224,6 @@
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -792,9 +721,6 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -885,25 +811,6 @@
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -1776,25 +1683,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -1868,15 +1756,6 @@ svg {
 }
 
 /* Sidebar responsive behavior */
-.sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
-}
-
-.main-content.sidebar-collapsed .viewer-container {
-    margin-left: 0;
-}
 
 /* Genome Navigation Buttons */
 .genome-navigation {
@@ -2030,19 +1909,6 @@ svg {
         margin: 10px 0;
     }
     
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
     
     .main-content {
         flex-direction: column;
@@ -2398,12 +2264,6 @@ svg {
 }
 
 /* Sidebar auto-hide functionality */
-.sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    border-right: none;
-}
 
 .horizontal-splitter.hidden {
     display: none;
@@ -2797,9 +2657,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
 }
 
 /* Enhanced Sequence Display Styles */
@@ -4465,77 +4322,6 @@ svg {
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -4938,9 +4724,6 @@ svg {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -5031,25 +4814,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -5876,25 +5640,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -5968,15 +5713,6 @@ svg {
 }
 
 /* Sidebar responsive behavior */
-.sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
-}
-
-.main-content.sidebar-collapsed .viewer-container {
-    margin-left: 0;
-}
 
 /* Genome Navigation Buttons */
 .genome-navigation {
@@ -6130,19 +5866,6 @@ svg {
         margin: 10px 0;
     }
     
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
     
     .main-content {
         flex-direction: column;
@@ -6498,12 +6221,6 @@ svg {
 }
 
 /* Sidebar auto-hide functionality */
-.sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    border-right: none;
-}
 
 .horizontal-splitter.hidden {
     display: none;
@@ -6897,9 +6614,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
 }
 
 /* Enhanced Sequence Display Styles */
@@ -9929,77 +9643,6 @@ path.svg-gene-element.selected {
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -10402,9 +10045,6 @@ path.svg-gene-element.selected {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -10495,25 +10135,6 @@ path.svg-gene-element.selected {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -11206,77 +10827,6 @@ svg {
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -11679,9 +11229,6 @@ svg {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -11772,25 +11319,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -12663,25 +12191,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -12755,15 +12264,6 @@ svg {
 }
 
 /* Sidebar responsive behavior */
-.sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
-}
-
-.main-content.sidebar-collapsed .viewer-container {
-    margin-left: 0;
-}
 
 /* Genome Navigation Buttons */
 .genome-navigation {
@@ -12917,19 +12417,6 @@ svg {
         margin: 10px 0;
     }
     
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
     
     .main-content {
         flex-direction: column;
@@ -13285,12 +12772,6 @@ svg {
 }
 
 /* Sidebar auto-hide functionality */
-.sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    border-right: none;
-}
 
 .horizontal-splitter.hidden {
     display: none;
@@ -13684,9 +13165,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
 }
 
 /* Enhanced Sequence Display Styles */
@@ -14863,77 +14341,6 @@ svg {
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -15336,9 +14743,6 @@ svg {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -15429,25 +14833,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -16320,25 +15705,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -16412,15 +15778,6 @@ svg {
 }
 
 /* Sidebar responsive behavior */
-.sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
-}
-
-.main-content.sidebar-collapsed .viewer-container {
-    margin-left: 0;
-}
 
 /* Genome Navigation Buttons */
 .genome-navigation {
@@ -16574,19 +15931,6 @@ svg {
         margin: 10px 0;
     }
     
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
     
     .main-content {
         flex-direction: column;
@@ -16942,12 +16286,6 @@ svg {
 }
 
 /* Sidebar auto-hide functionality */
-.sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    border-right: none;
-}
 
 .horizontal-splitter.hidden {
     display: none;
@@ -17341,9 +16679,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
 }
 
 /* Enhanced Sequence Display Styles */
@@ -20067,77 +19402,6 @@ path.svg-gene-element.selected {
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-section:last-child {
-    border-bottom: none;
-}
-
-.sidebar-section h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.file-info .no-file {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.file-info .file-details {
-    font-size: 14px;
-}
-
-.file-info .file-name {
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.file-info .file-meta {
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.navigation-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-weight: 500;
-    color: var(--text-primary);
-}
 
 /* Viewer Container */
 .viewer-container {
@@ -20540,9 +19804,6 @@ path.svg-gene-element.selected {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .sidebar {
-        width: 240px;
-    }
     
     .header-center {
         max-width: 400px;
@@ -20633,25 +19894,6 @@ path.svg-gene-element.selected {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -21524,25 +20766,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
-    
-    /* Mobile sidebar behavior */
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        width: 280px !important;
-    }
-    
-    .sidebar:not(.collapsed) {
-        transform: translateX(0);
-    }
     
     .horizontal-splitter {
         display: none !important;
@@ -21616,15 +20839,6 @@ svg {
 }
 
 /* Sidebar responsive behavior */
-.sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
-    border-right: none;
-}
-
-.main-content.sidebar-collapsed .viewer-container {
-    margin-left: 0;
-}
 
 /* Genome Navigation Buttons */
 .genome-navigation {
@@ -21778,19 +20992,6 @@ svg {
         margin: 10px 0;
     }
     
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.show {
-        transform: translateX(0);
-    }
     
     .main-content {
         flex-direction: column;
@@ -22146,12 +21347,6 @@ svg {
 }
 
 /* Sidebar auto-hide functionality */
-.sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    overflow: hidden;
-    border-right: none;
-}
 
 .horizontal-splitter.hidden {
     display: none;
@@ -22545,9 +21740,6 @@ svg {
         align-items: center;
     }
     
-    .sidebar-section {
-        padding: 16px;
-    }
 }
 
 /* Enhanced Sequence Display Styles */
