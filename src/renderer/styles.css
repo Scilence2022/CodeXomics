@@ -608,40 +608,9 @@
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -685,74 +654,16 @@
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -829,253 +740,40 @@
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
-/* Enhanced Gene Element Styles for Operon Coloring */
-.gene-element {
-    position: absolute;
-    height: 12px;
-    border-radius: 4px;
-    font-size: 10px;
-    color: white;
-    padding: 2px 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 12px;
-    border: 2px solid rgba(0,0,0,0.3);
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    z-index: 10; /* Ensure genes appear above ruler */
-}
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
-/* Direction arrows */
-.gene-element.reverse-strand::before {
-    content: '◀';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-.gene-element:not(.reverse-strand)::before {
-    content: '▶';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Operon Legend - DEPRECATED: Moved to sidebar panel */
 /*
@@ -1458,40 +1156,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -1767,60 +1434,11 @@ svg {
     border: 1px dashed #ccc;
 }
 
-/* Track Checkboxes in Toolbar */
-.track-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 250px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-    flex-wrap: nowrap;
-}
 
-.track-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
 
-.track-checkbox:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
 
-.track-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.track-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.track-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Feature Filter Controls in Toolbar */
 .toggle-btn {
@@ -1856,56 +1474,11 @@ svg {
     border-bottom: 4px solid var(--primary-color);
 }
 
-.feature-filter-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
-}
 
-.feature-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 4px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.feature-checkbox:hover {
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-}
 
-.feature-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.feature-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.feature-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Sidebar Track and Feature Controls */
 .track-controls,
@@ -2418,40 +1991,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -4427,40 +3969,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -4504,74 +4015,16 @@ svg {
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -4648,253 +4101,40 @@ svg {
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
-/* Enhanced Gene Element Styles for Operon Coloring */
-.gene-element {
-    position: absolute;
-    height: 12px;
-    border-radius: 4px;
-    font-size: 10px;
-    color: white;
-    padding: 2px 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 12px;
-    border: 2px solid rgba(0,0,0,0.3);
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    z-index: 10; /* Ensure genes appear above ruler */
-}
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
-/* Direction arrows */
-.gene-element.reverse-strand::before {
-    content: '◀';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-.gene-element:not(.reverse-strand)::before {
-    content: '▶';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Sequence Track Styles */
 .sequence-track {
@@ -5231,40 +4471,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -5540,60 +4749,11 @@ svg {
     border: 1px dashed #ccc;
 }
 
-/* Track Checkboxes in Toolbar */
-.track-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 250px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-    flex-wrap: nowrap;
-}
 
-.track-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
 
-.track-checkbox:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
 
-.track-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.track-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.track-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Feature Filter Controls in Toolbar */
 .toggle-btn {
@@ -5629,56 +4789,11 @@ svg {
     border-bottom: 4px solid var(--primary-color);
 }
 
-.feature-filter-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
-}
 
-.feature-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 4px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.feature-checkbox:hover {
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-}
 
-.feature-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.feature-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.feature-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Sidebar Track and Feature Controls */
 .track-controls,
@@ -6191,40 +5306,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -9600,40 +8684,9 @@ path.svg-gene-element.selected {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -9677,74 +8730,16 @@ path.svg-gene-element.selected {
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -9821,253 +8816,40 @@ path.svg-gene-element.selected {
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
-/* Enhanced Gene Element Styles for Operon Coloring */
-.gene-element {
-    position: absolute;
-    height: 12px;
-    border-radius: 4px;
-    font-size: 10px;
-    color: white;
-    padding: 2px 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 12px;
-    border: 2px solid rgba(0,0,0,0.3);
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    z-index: 10; /* Ensure genes appear above ruler */
-}
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
-/* Direction arrows */
-.gene-element.reverse-strand::before {
-    content: '◀';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-.gene-element:not(.reverse-strand)::before {
-    content: '▶';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Operon Legend - DEPRECATED: Moved to sidebar panel */
 /*
@@ -10629,40 +9411,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -10706,74 +9457,16 @@ svg {
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -10850,100 +9543,20 @@ svg {
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
 /* Enhanced Gene Element Styles for Operon Coloring */
 .gene-element {
@@ -10970,133 +9583,24 @@ svg {
     z-index: 10; /* Ensure genes appear above ruler */
 }
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
-/* Direction arrows */
-.gene-element.reverse-strand::before {
-    content: '◀';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-.gene-element:not(.reverse-strand)::before {
-    content: '▶';
-    margin-right: 3px;
-    font-weight: bold;
-    font-size: 8px;
-}
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Operon Legend - DEPRECATED: Moved to sidebar panel */
 /*
@@ -11479,40 +9983,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -11788,60 +10261,11 @@ svg {
     border: 1px dashed #ccc;
 }
 
-/* Track Checkboxes in Toolbar */
-.track-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 250px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-    flex-wrap: nowrap;
-}
 
-.track-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
 
-.track-checkbox:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
 
-.track-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.track-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.track-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Feature Filter Controls in Toolbar */
 .toggle-btn {
@@ -11877,56 +10301,11 @@ svg {
     border-bottom: 4px solid var(--primary-color);
 }
 
-.feature-filter-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
-}
 
-.feature-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 4px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.feature-checkbox:hover {
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-}
 
-.feature-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.feature-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.feature-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Sidebar Track and Feature Controls */
 .track-controls,
@@ -12439,40 +10818,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -13959,40 +12307,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -14036,74 +12353,16 @@ svg {
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -14180,100 +12439,20 @@ svg {
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
 /* Enhanced Gene Element Styles for Operon Coloring */
 .gene-element {
@@ -14300,107 +12479,20 @@ svg {
     z-index: 10; /* Ensure genes appear above ruler */
 }
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
 /* Direction arrows */
 .gene-element.reverse-strand::before {
@@ -14417,16 +12509,7 @@ svg {
     font-size: var(--arrow-size, 8px);
 }
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Operon Legend - DEPRECATED: Moved to sidebar panel */
 /*
@@ -14809,40 +12892,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -15118,60 +13170,11 @@ svg {
     border: 1px dashed #ccc;
 }
 
-/* Track Checkboxes in Toolbar */
-.track-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 250px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-    flex-wrap: nowrap;
-}
 
-.track-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
 
-.track-checkbox:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
 
-.track-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.track-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.track-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Feature Filter Controls in Toolbar */
 .toggle-btn {
@@ -15207,56 +13210,11 @@ svg {
     border-bottom: 4px solid var(--primary-color);
 }
 
-.feature-filter-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
-}
 
-.feature-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 4px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.feature-checkbox:hover {
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-}
 
-.feature-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.feature-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.feature-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Sidebar Track and Feature Controls */
 .track-controls,
@@ -15769,40 +13727,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -18872,40 +16799,9 @@ path.svg-gene-element.selected {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -18949,74 +16845,16 @@ path.svg-gene-element.selected {
 
 /* Removed basic HTML ruler - using superior Canvas-based GenomeNavigationBar instead */
 
-/* Gene Track Styles with Operon Support */
-.gene-track {
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-}
-
-/* Remove top margin for the first track to eliminate space at top */
-.gene-track:first-child {
-    margin-top: 0;
-}
-
-.gene-track .track-content {
-    position: relative;
-    background: #fafafa;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-    min-height: 80px; /* Minimum height for adaptive sizing */
-}
-
-.gene-stats {
-    z-index: 5;
-    user-select: none;
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 4px 12px; /* Reduced from 8px to 4px to minimize vertical spacing */
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0; /* Ensure no top margin */
-}
-
-.track-title {
-    flex: 1;
-}
-
-.track-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
 
 
-/* Track controls locked state */
-.controls-locked {
-    opacity: 0.7;
-}
 
-.controls-locked .track-header {
-    background: #fff3cd;
-    border-color: #ffeaa7;
-}
 
-.controls-locked .track-content {
-    pointer-events: none;
-    user-select: none;
-}
+
+
+
+
+
+
 
 /* Track Settings Modal */
 .settings-section {
@@ -19093,100 +16931,20 @@ path.svg-gene-element.selected {
     font-size: 13px;
 }
 
-/* Small adjustments for mobile */
-@media (max-width: 768px) {
-    .track-buttons {
-        gap: 2px;
-    }
-    
-    .track-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 11px;
-    }
-    
-    .track-header {
-        padding: 6px 8px;
-        font-size: 13px;
-    }
-}
 
 
-.track-content {
-    position: relative;
-    height: 80px;
-    padding: 10px 0;
-    background: #fafafa;
-    transition: background-color 0.2s ease;
-}
 
-.track-content:hover {
-    background: #f0f0f0;
-}
 
-.track-content.dragging {
-    background: #e8f4fd;
-    cursor: grabbing !important;
-}
 
-/* Visual dragging optimization */
-.visual-dragging {
-    cursor: grabbing !important;
-    pointer-events: none; /* Prevent interference during drag */
-}
 
-.visual-dragging .track-content {
-    transition: none !important; /* Disable transitions during drag for better performance */
-}
 
-.visual-dragging .gene-element,
-.visual-dragging .ruler,
-.visual-dragging svg {
-    transition: none !important; /* Disable transitions during drag */
-    will-change: transform; /* Optimize for transform changes */
-}
 
-/* Smooth transitions when drag ends */
-.track-content {
-    transition: transform 0.1s ease-out;
-}
 
-.gene-element,
-.ruler,
-svg {
-    transition: transform 0.1s ease-out;
-}
 
-/* Draggable cursor states */
-.track-content[style*="cursor: grab"] {
-    cursor: grab !important;
-}
 
-.track-content[style*="cursor: grabbing"] {
-    cursor: grabbing !important;
-}
 
-/* Focus styles for keyboard navigation */
-.track-content:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-.track-content:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    background: #e8f4fd;
-}
 
-/* Unified Gene Container for consistent dragging */
-.unified-gene-container {
-    position: relative;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    z-index: 5;
-}
 
 /* Enhanced Gene Element Styles for Operon Coloring */
 .gene-element {
@@ -19213,107 +16971,20 @@ svg {
     z-index: 10; /* Ensure genes appear above ruler */
 }
 
-/* Triangle shape for very small genes */
-.gene-element.gene-triangle-shape {
-    border-radius: 0;
-    padding: 0;
-    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
-}
 
-/* Reverse triangle for reverse strand genes */
-.gene-element.gene-triangle-shape.reverse-strand {
-    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-}
 
-/* Arrow shape for small genes */
-.gene-element.gene-arrow-shape {
-    padding: 1px 4px;
-    border-radius: 2px;
-}
 
-/* SVG Triangle and Arrow Styles */
-.gene-triangle {
-    transition: all 0.2s ease;
-}
 
-.gene-triangle:hover {
-    stroke-width: 2 !important;
-    filter: brightness(1.1);
-}
 
-.gene-arrow {
-    transition: all 0.2s ease;
-}
 
-.gene-arrow:hover {
-    filter: brightness(1.1);
-}
 
-/* Enhanced triangle and arrow shape hover effects */
-.gene-element.gene-triangle-shape:hover,
-.gene-element.gene-arrow-shape:hover {
-    transform: scale(1.1);
-    filter: brightness(1.2);
-}
 
-.gene-element:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    z-index: 10;
-    border-width: 3px;
-}
 
-/* Operon grouping visual indicator */
-.gene-element.in-operon {
-    border-style: solid;
-    border-width: 2px;
-}
 
-.gene-element.single-gene {
-    border-style: dashed;
-    border-width: 2px;
-    opacity: 0.9;
-}
 
-/* Enhanced visibility for small genes */
-.gene-element[style*="width: 0.3%"],
-.gene-element[style*="width: 0.4%"],
-.gene-element[style*="width: 0.5%"] {
-    min-width: 12px !important;
-    border-width: 3px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
 
-/* No genes message styling */
-.no-genes-message {
-    background: rgba(255,255,255,0.9);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-}
 
-/* Reverse strand styling - use diagonal stripes but maintain visibility */
-.gene-element.reverse-strand {
-    position: relative;
-}
 
-.gene-element.reverse-strand::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 3px,
-        rgba(255,255,255,0.3) 3px,
-        rgba(255,255,255,0.3) 6px
-    );
-    pointer-events: none;
-    border-radius: 2px;
-}
 
 /* Direction arrows */
 .gene-element.reverse-strand::before {
@@ -19330,16 +17001,7 @@ svg {
     font-size: var(--arrow-size, 8px);
 }
 
-/* Ensure text is always visible */
-.gene-element {
-    min-width: 20px;
-    text-align: center;
-}
 
-.gene-element:empty::after {
-    content: '●';
-    font-size: 8px;
-}
 
 /* Operon Legend - DEPRECATED: Moved to sidebar panel */
 /*
@@ -19722,40 +17384,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
@@ -20031,60 +17662,11 @@ svg {
     border: 1px dashed #ccc;
 }
 
-/* Track Checkboxes in Toolbar */
-.track-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 250px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
-    flex-wrap: nowrap;
-}
 
-.track-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
 
-.track-checkbox:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
 
-.track-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.track-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.track-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Feature Filter Controls in Toolbar */
 .toggle-btn {
@@ -20120,56 +17702,11 @@ svg {
     border-bottom: 4px solid var(--primary-color);
 }
 
-.feature-filter-checkboxes {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-    min-width: 200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 4px;
-}
 
-.feature-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 6px 4px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.feature-checkbox:hover {
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-}
 
-.feature-checkbox:focus-within {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
-.feature-checkbox input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-    flex-shrink: 0;
-}
 
-.feature-checkbox input[type="checkbox"]:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
 
 /* Sidebar Track and Feature Controls */
 .track-controls,
@@ -20682,40 +18219,9 @@ svg {
         flex-wrap: wrap;
     }
     
-    .track-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        min-width: auto;
-        justify-content: flex-start;
-        gap: 8px;
-    }
     
-    .track-checkbox {
-        padding: 8px 12px;
-        min-height: 44px;
-        align-items: center;
-    }
     
-    .feature-filter-checkboxes {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 10px 0;
-        box-shadow: none;
-        border: none;
-        padding: 0;
-        grid-template-columns: 1fr;
-    }
     
-    .feature-checkbox {
-        padding: 8px 4px;
-        min-height: 44px;
-    }
     
     .splitter {
         height: 12px;
