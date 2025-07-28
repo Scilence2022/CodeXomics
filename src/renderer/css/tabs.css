@@ -1,0 +1,707 @@
+
+
+/* =====================================================
+   CHROME-STYLE TAB BAR STYLES
+   ===================================================== */
+
+   .tab-bar {
+    display: flex;
+    align-items: center;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    height: 40px;
+    padding: 0 10px;
+    position: relative;
+    z-index: 999;
+}
+
+.tab-container {
+    display: flex;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 2px;
+    padding-right: 10px;
+    scroll-behavior: smooth;
+}
+
+.tab-container::-webkit-scrollbar {
+    height: 0;
+}
+
+.genome-tab {
+    display: flex;
+    align-items: center;
+    min-width: 120px;
+    max-width: 240px;
+    height: 32px;
+    background: #e8e8e8;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+    margin-right: 2px;
+}
+
+.genome-tab:hover {
+    background: #f0f0f0;
+}
+
+.genome-tab.active {
+    background: white;
+    border-color: #bbb;
+    z-index: 1;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+}
+
+.genome-tab.loading {
+    background: linear-gradient(90deg, #e8e8e8 25%, #f0f0f0 50%, #e8e8e8 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.tab-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.tab-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #333;
+}
+
+.genome-tab.active .tab-title {
+    color: #1a73e8;
+}
+
+.tab-close-button {
+    margin-left: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-close-button:hover {
+    background: #ddd;
+    color: #333;
+}
+
+.genome-tab.active .tab-close-button:hover {
+    background: #f0f0f0;
+}
+
+.new-tab-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.new-tab-button:hover {
+    background: #e3f2fd;
+    border-color: #1a73e8;
+    color: #1a73e8;
+}
+
+.new-tab-button i {
+    font-size: 14px;
+    color: #666;
+}
+
+.new-tab-button:hover i {
+    color: #1a73e8;
+}
+
+.tab-settings-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 5px;
+    flex-shrink: 0;
+}
+
+.tab-settings-button:hover {
+    background: #e8f5e8;
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.tab-settings-button i {
+    font-size: 12px;
+    color: #666;
+}
+
+.tab-settings-button:hover i {
+    color: #28a745;
+}
+
+/* =====================================================
+   TAB POSITION VISUALIZATION STYLES
+   ===================================================== */
+
+/* Tab Position Visualization */
+.tab-position-visualization {
+    position: absolute;
+    bottom: 0;
+    left: 12px;
+    right: 36px;
+    height: 3px;
+    margin-bottom: 1px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.genome-tab:hover .tab-position-visualization {
+    opacity: 1;
+}
+
+.chromosome-track {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #ddd, #eee);
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.genome-tab.active .chromosome-track {
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 4px rgba(26, 115, 232, 0.3);
+}
+
+.genome-tab .position-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2%;
+    background: #1a73e8;
+    border: 1px solid #1a73e8;
+    border-radius: 1px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 4px rgba(26, 115, 232, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3);
+    min-width: 3px; /* Increased minimum width for better visibility */
+    z-index: 10; /* Ensure it's above the track */
+    display: block; /* Ensure it's visible */
+    visibility: visible; /* Ensure it's visible */
+}
+
+.genome-tab.active .position-indicator {
+    box-shadow: 0 0 6px rgba(26, 115, 232, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.4);
+    transform: scaleY(1.3);
+    border-width: 2px;
+    display: block !important; /* Ensure it's visible */
+    visibility: visible !important; /* Ensure it's visible */
+}
+
+/* Position indicator animation on hover */
+.genome-tab:hover .position-indicator {
+    box-shadow: 0 0 5px rgba(26, 115, 232, 0.8), inset 0 0 2px rgba(255, 255, 255, 0.3);
+    display: block !important; /* Ensure it's visible during hover */
+    visibility: visible !important; /* Ensure it's visible during hover */
+}
+
+/* Animation enabled state */
+.genome-tab.animations-enabled:hover .position-indicator {
+    animation: position-pulse 2s ease-in-out infinite;
+}
+
+@keyframes position-pulse {
+    0%, 100% { 
+        opacity: 0.8;
+        transform: scaleY(1);
+        box-shadow: 0 0 4px rgba(26, 115, 232, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3);
+        display: block;
+        visibility: visible;
+    }
+    50% { 
+        opacity: 1;
+        transform: scaleY(1.2);
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.5);
+        display: block;
+        visibility: visible;
+    }
+}
+
+/* Different chromosome color themes */
+.genome-tab[data-chromosome="chr1"] .chromosome-track,
+.genome-tab[data-chromosome="chromosome"] .chromosome-track {
+    background: linear-gradient(to right, #e74c3c22, #e74c3c44);
+    border-color: #e74c3c;
+}
+
+.genome-tab[data-chromosome="chr2"] .chromosome-track {
+    background: linear-gradient(to right, #2ecc7122, #2ecc7144);
+    border-color: #2ecc71;
+}
+
+.genome-tab[data-chromosome="chr3"] .chromosome-track {
+    background: linear-gradient(to right, #f39c1222, #f39c1244);
+    border-color: #f39c12;
+}
+
+.genome-tab[data-chromosome^="plasmid"] .chromosome-track,
+.genome-tab[data-chromosome^="plas"] .chromosome-track {
+    background: linear-gradient(to right, #ffc10722, #ffc10744);
+    border-color: #ffc107;
+}
+
+/* Responsive adjustments for position visualization */
+@media (max-width: 768px) {
+    .tab-position-visualization {
+        left: 8px;
+        right: 30px;
+        height: 2px;
+    }
+    
+    .chromosome-track {
+        border-radius: 1px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .chromosome-track {
+        border-width: 2px;
+    }
+    
+    .genome-tab .position-indicator {
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+        display: block !important;
+        visibility: visible !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .genome-tab .position-indicator,
+    .chromosome-track,
+    .tab-position-visualization {
+        transition: none;
+    }
+    
+    .genome-tab:hover .position-indicator {
+        animation: none;
+        display: block !important;
+        visibility: visible !important;
+    }
+}
+
+.reads-content-viewport * {
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+/* Ensure SVG elements maintain their dimensions during transforms */
+.reads-svg-container.scrollable {
+    transform-origin: 0 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* =====================================================
+   TAB SETTINGS MODAL STYLES
+   ===================================================== */
+
+/* Enhanced settings sections */
+.settings-section {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-section h4 {
+    color: #495057;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.settings-section .help-text {
+    color: #6c757d;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+/* Setting items layout */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.setting-label {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.setting-label label {
+    font-weight: 600;
+    color: #495057;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.setting-description {
+    font-size: 12px;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+}
+
+/* Range sliders */
+.range-slider {
+    width: 120px;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.range-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.range-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.range-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    min-width: 40px;
+    text-align: center;
+    padding: 4px 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+/* Color pickers */
+.color-picker {
+    width: 50px;
+    height: 35px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+}
+
+.color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+/* Switch toggles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #3b82f6;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Cache stats display */
+.cache-stats {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.stat-item:last-child {
+    margin-bottom: 0;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Preview container */
+.preview-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80px;
+}
+
+.preview-tab {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 200px;
+}
+
+.preview-tab .tab-icon {
+    color: #3b82f6;
+    font-size: 14px;
+}
+
+.preview-tab .tab-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.preview-tab .tab-close-button {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.preview-tab .tab-close-button:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.preview-tab .tab-position-visualization {
+    position: absolute;
+    bottom: 0;
+    left: 12px;
+    right: 36px;
+    height: 3px;
+    margin-bottom: 1px;
+}
+
+.preview-tab .chromosome-track {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #ddd, #eee);
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-tab .position-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10%;
+    width: 15%;
+    background: #1a73e8;
+    border: 2px solid #1a73e8;
+    border-radius: 1px;
+    min-width: 3px;
+}
+
+/* Button enhancements */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    border-color: #545b62;
+}
+
+.btn-warning {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+    border-color: #d39e00;
+}
+
+/* Form controls */
+.number-input {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.number-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .setting-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .setting-label {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .setting-control {
+        min-width: auto;
+        justify-content: flex-start;
+    }
+    
+    .preview-container {
+        padding: 15px;
+    }
+    
+    .preview-tab {
+        min-width: 150px;
+        font-size: 12px;
+    }
+}

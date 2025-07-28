@@ -467,3 +467,345 @@
         color: var(--text-primary);
     }
 }
+
+
+
+
+/* =====================================================
+   SEQUENCE TRACK SETTINGS STYLES
+   ===================================================== */
+
+   .sequence-settings-tabs {
+    margin-top: 10px;
+}
+
+.sequence-settings-tabs .tab-buttons {
+    display: flex;
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.sequence-settings-tabs .tab-button {
+    background: #f8f9fa;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    margin-right: 4px;
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sequence-settings-tabs .tab-button:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.sequence-settings-tabs .tab-button.active {
+    background: #007bff;
+    color: white;
+    border-bottom: 2px solid #007bff;
+}
+
+.sequence-settings-tabs .tab-panel {
+    display: none;
+    min-height: 300px;
+    padding: 15px;
+}
+
+.sequence-settings-tabs .tab-panel.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    min-height: 300px !important;
+    overflow: visible !important;
+    position: static !important;
+    left: auto !important;
+}
+
+/* Ensure tab content container is properly sized */
+.sequence-settings-tabs .tab-content {
+    display: block !important;
+    min-height: 300px;
+    overflow: visible;
+}
+
+.sequence-settings-tabs .mode-indicator {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #1565c0;
+}
+
+.sequence-settings-tabs .mode-indicator i {
+    margin-right: 8px;
+}
+
+.sequence-settings-tabs .settings-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+.sequence-settings-tabs .settings-section h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.sequence-settings-tabs .form-group {
+    margin-bottom: 15px;
+}
+
+.sequence-settings-tabs .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.sequence-settings-tabs .form-group input,
+.sequence-settings-tabs .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sequence-settings-tabs .form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.sequence-settings-tabs .form-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sequence-settings-tabs .help-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Color mode settings specific styles */
+.sequence-settings-tabs .color-mode-settings {
+    margin-left: 20px;
+    padding: 10px;
+    border-left: 3px solid #007bff;
+    background: #f8f9fa;
+    border-radius: 0 4px 4px 0;
+    margin-top: 10px;
+}
+
+.sequence-settings-tabs .color-mode-settings .help-text i {
+    color: #17a2b8;
+    margin-right: 5px;
+}
+
+.sequence-settings-tabs .form-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    padding: 0;
+    border: 2px solid #ced4da;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.sequence-settings-tabs .form-group input[type="color"]:hover {
+    border-color: #007bff;
+}
+
+.sequence-settings-tabs .form-group input[type="color"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* =====================================================
+   ENHANCED SEQUENCE LINE HEIGHT SUPPORT
+   ===================================================== */
+
+/* Enhanced Sequence Line Height Support - Added for configurable line heights */
+.sequence-line {
+    display: flex !important;
+    align-items: flex-start !important;
+    flex-shrink: 0 !important;
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    padding: 4px 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+}
+
+.detailed-sequence-view .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+.protein-only-mode .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+.sequence-line-group {
+    flex-shrink: 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+.sequence-line-group .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    flex-shrink: 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+/* Ensure position labels maintain consistent width */
+.sequence-position {
+    width: 100px !important;
+    flex-shrink: 0 !important;
+    margin-right: 15px !important;
+    text-align: right !important;
+}
+
+/* Ensure sequence bases container doesn't compress */
+.sequence-bases {
+    flex: 1 !important;
+    word-break: break-all !important;
+    line-height: 1.6 !important;
+}
+
+/* Gene indicator alignment support */
+.gene-indicator-line {
+    height: 12px !important;
+    margin-bottom: 2px !important;
+    margin-top: -2px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Virtual scrolling container support */
+.virtualized .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+/* Protein sequence section support */
+.protein-sequence-section .sequence-line {
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+}
+
+/* Prevent flexbox compression at all levels */
+.detailed-sequence-view,
+.protein-only-mode,
+.sequence-line-group,
+.sequence-line {
+    flex-shrink: 0 !important;
+}
+
+/* =====================================================
+   ENHANCED SEQUENCE MODE ISOLATION STYLES
+   Added to fix style interference between View/Edit modes
+   ===================================================== */
+
+/* View Mode Style Protection - Ensure View Mode styles are preserved */
+.sequence-content:not(.vscode-sequence-editor) {
+    /* Force View Mode specific styles */
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: inherit !important;
+    overflow-y: auto !important;
+    position: relative !important;
+}
+
+/* Edit Mode Style Isolation - Prevent Edit Mode styles from bleeding into View Mode */
+.sequence-content.vscode-sequence-editor {
+    /* Allow VS Code editor to override all styles */
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    background: inherit;
+    color: inherit;
+    overflow: inherit;
+    position: inherit;
+}
+
+/* Sequence Line Style Enforcement for View Mode */
+.sequence-content:not(.vscode-sequence-editor) .sequence-line {
+    display: flex !important;
+    align-items: flex-start !important;
+    flex-shrink: 0 !important;
+    min-height: var(--sequence-line-height, 28px) !important;
+    line-height: var(--sequence-line-ratio, 1.8) !important;
+    padding: 4px 0 !important;
+    margin-bottom: max(var(--sequence-line-spacing, 8px), var(--min-sequence-line-spacing, 12px)) !important; /* 最小间隙12px */
+    font-family: 'Courier New', monospace !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
+}
+
+/* Enhanced View Mode Container Protection */
+.sequence-content:not(.vscode-sequence-editor) .sequence-position {
+    width: 100px !important;
+    flex-shrink: 0 !important;
+    margin-right: 15px !important;
+    text-align: right !important;
+    color: #6c757d !important;
+    font-weight: 600 !important;
+}
+
+.sequence-content:not(.vscode-sequence-editor) .sequence-bases {
+    flex: 1 !important;
+    word-break: break-all !important;
+    line-height: 1.6 !important;
+}
+
+/* Edit Mode CSS Variable Reset - Prevent View Mode variables from affecting Edit Mode */
+.sequence-content.vscode-sequence-editor {
+    --sequence-line-height: initial;
+    --sequence-line-ratio: initial; 
+    --sequence-line-spacing: initial;
+}
+
+/* Transition management during mode switches */
+.sequence-content.mode-switching {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* Cursor status styles */
+.status-center {
+    flex: 1;
+    text-align: center;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+}

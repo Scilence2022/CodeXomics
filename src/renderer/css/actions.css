@@ -1,0 +1,463 @@
+
+/* =====================================================
+   ACTION LIST MANAGEMENT STYLES
+   ===================================================== */
+
+/* Action List Modal */
+.action-list-modal {
+    width: 90vw;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.action-list-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: calc(90vh - 120px);
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Action List Controls */
+.action-list-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.control-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.action-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.stat-item i {
+    color: var(--primary-color);
+}
+
+/* Action List Container */
+.action-list-container {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.action-list-header {
+    display: grid;
+    grid-template-columns: 60px 120px 1fr 200px 100px 120px;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.action-list-content {
+    height: 600px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.action-item {
+    display: grid;
+    grid-template-columns: 60px 120px 1fr 200px 100px 120px;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.action-item:hover {
+    background: var(--bg-secondary);
+}
+
+.action-item.executing {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 4px solid var(--primary-color);
+}
+
+.action-item.completed {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid var(--success-color);
+}
+
+.action-item.failed {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid var(--error-color);
+}
+
+.action-order {
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.action-type {
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.action-target {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.action-details {
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.action-status {
+    text-align: center;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+    background: rgba(156, 163, 175, 0.2);
+    color: var(--text-secondary);
+}
+
+.status-badge.executing {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--primary-color);
+    animation: pulse 2s infinite;
+}
+
+.status-badge.completed {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success-color);
+}
+
+.status-badge.failed {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error-color);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.action-controls {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.action-controls .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+.empty-actions-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-actions-message i {
+    font-size: 48px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.empty-actions-message p {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.empty-actions-message small {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Checkpoint Controls */
+.checkpoint-controls {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.checkpoint-controls h4 {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkpoint-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.checkpoint-create {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.checkpoint-name-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.checkpoint-name-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkpoint-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.checkpoint-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
+    transition: all 0.2s ease;
+}
+
+.checkpoint-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-hover);
+}
+
+.checkpoint-info {
+    flex: 1;
+}
+
+.checkpoint-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.checkpoint-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.checkpoint-controls-item {
+    display: flex;
+    gap: 8px;
+}
+
+.empty-checkpoints-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-checkpoints-message i {
+    font-size: 32px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.empty-checkpoints-message p {
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.empty-checkpoints-message small {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* Sequence Selection Modal */
+.sequence-selection-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.sequence-preview {
+    margin-top: 8px;
+}
+
+.sequence-preview label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.sequence-preview-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.sequence-preview-content.has-sequence {
+    color: var(--text-primary);
+    background: #f8fafc;
+}
+
+/* Action Progress Indicator */
+.action-progress {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 20px;
+    border-left: 4px solid var(--primary-color);
+    z-index: 10000;
+    min-width: 300px;
+    animation: slideInRight 0.3s ease;
+}
+
+.action-progress-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action-progress-details {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.action-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.action-progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .action-list-header,
+    .action-item {
+        grid-template-columns: 50px 100px 1fr 80px 100px;
+        gap: 12px;
+    }
+    
+    .action-details {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .action-list-modal {
+        width: 95vw;
+        margin: 20px auto;
+    }
+    
+    .action-list-controls {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .control-group {
+        justify-content: center;
+    }
+    
+    .action-stats {
+        justify-content: center;
+    }
+    
+    .checkpoint-create {
+        flex-direction: column;
+    }
+    
+         .form-row {
+         grid-template-columns: 1fr;
+     }
+ }
