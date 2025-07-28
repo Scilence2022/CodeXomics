@@ -1,0 +1,328 @@
+/* Genome Browser Styles */
+
+/* Main Genome Browser Container */
+.genome-browser-container {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin: 10px 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 2; /* Lower than welcome screen but higher than basic genome viewer */
+    padding: 0; /* Remove any internal padding that creates spacing */
+}
+
+/* Enhanced Genome Viewer */
+.genome-viewer {
+    flex: 1;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    min-height: 400px;
+}
+
+.genome-viewer:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* IGV Container */
+.igv-container {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* Enhanced Toolbar */
+.toolbar {
+    background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-section label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+}
+
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+/* Track Controls */
+.track-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.track-controls label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: #495057;
+    cursor: pointer;
+}
+
+.track-controls input[type="checkbox"] {
+    margin: 0;
+}
+
+/* Enhanced Buttons Group */
+.btn-group {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-group .btn {
+    border-radius: 0;
+    border-right: 1px solid rgba(255,255,255,0.2);
+}
+
+.btn-group .btn:last-child {
+    border-right: none;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Navigation Bar and Controls */
+.navigation-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* App Title and Version */
+.app-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-title i {
+    color: #ecf0f1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.version-tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: #74b9ff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Sequence Display Section */
+.sequence-display {
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sequence header should also be more visible */
+.sequence-header {
+    background: rgba(248, 250, 252, 0.95); /* More opaque than the section background */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    position: relative; /* Establish stacking context */
+    z-index: 2; /* Above sequence content */
+}
+
+.sequence-controls {
+    display: flex;
+    gap: 8px;
+}
+
+/* Sequence Visualization */
+.sequence-viz {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: auto;
+    max-height: 400px;
+}
+
+.sequence-line {
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.sequence-position {
+    color: var(--text-secondary);
+    margin-right: 16px;
+    min-width: 80px;
+    text-align: right;
+}
+
+.sequence-bases {
+    letter-spacing: 1px;
+}
+
+/* Statistics Display */
+.statistics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-top: 16px;
+}
+
+.stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* Responsive Design for Genome Browser */
+@media (max-width: 1024px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .toolbar-section {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    
+    .track-controls {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolbar {
+        padding: 12px 16px;
+    }
+    
+    .toolbar-section {
+        gap: 6px;
+    }
+    
+    .toolbar-section label {
+        font-size: 13px;
+    }
+    
+    .track-controls {
+        gap: 8px;
+    }
+    
+    .track-controls label {
+        font-size: 13px;
+    }
+    
+    .sequence-viz {
+        font-size: 11px;
+        padding: 12px;
+    }
+    
+    .statistics {
+        padding: 12px;
+    }
+    
+    .btn-group {
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
+}
+
+/* Dark Theme Adaptations */
+@media (prefers-color-scheme: dark) {
+    .genome-browser-container {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+    }
+    
+    .genome-viewer {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+    }
+    
+    .toolbar {
+        background: linear-gradient(to bottom, var(--bg-tertiary), var(--bg-secondary));
+        border-bottom-color: var(--border-color);
+    }
+    
+    .toolbar-section label,
+    .toolbar-text {
+        color: var(--text-primary);
+    }
+    
+    .sequence-viz {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+    }
+    
+    .statistics {
+        background: var(--bg-tertiary);
+    }
+}

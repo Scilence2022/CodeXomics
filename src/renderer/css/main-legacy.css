@@ -1,0 +1,340 @@
+/* Legacy and Additional Styles */
+
+/* Sidebar Section Headers with Close Buttons */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.close-panel-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.close-panel-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Genome Navigation Buttons */
+.genome-navigation {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 20;
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-btn:hover {
+    background: rgba(37, 99, 235, 1);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.nav-btn-left {
+    left: 10px;
+}
+
+.nav-btn-right {
+    right: 10px;
+}
+
+/* Gene Filter Controls */
+.gene-filter-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    box-shadow: var(--shadow-md);
+    z-index: 15;
+    min-width: 200px;
+}
+
+.filter-header {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.filter-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.filter-option input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.filter-option:hover {
+    color: var(--text-primary);
+}
+
+/* Toggle Button Enhancements */
+.toggle-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.toggle-btn.active {
+    background: var(--primary-hover);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    transform: translateY(1px);
+}
+
+.toggle-btn.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid var(--primary-color);
+}
+
+/* Multi-select Enhancement */
+.toolbar-section select[multiple] {
+    min-height: 80px;
+    padding: 8px;
+}
+
+.toolbar-section select[multiple] option {
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+.toolbar-section select[multiple] option:checked {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Variant Track Styles */
+.variant-track {
+    border-bottom: 1px solid #dee2e6;
+    background: white;
+}
+
+.variant-element {
+    position: absolute;
+    height: 12px;
+    background: #e74c3c;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.variant-element:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    z-index: 10;
+    border-color: rgba(0,0,0,0.4);
+}
+
+/* No data messages */
+.no-variants-message {
+    background: rgba(255,255,255,0.9);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px dashed #ccc;
+}
+
+/* Focus enhancements for accessibility */
+.track-checkbox:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.track-checkbox input[type="checkbox"]:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Legacy mobile responsive adjustments */
+@media (max-width: 1200px) {
+    .track-checkboxes {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 10px 0;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        min-width: auto;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+    }
+    
+    .feature-filter-checkboxes {
+        grid-template-columns: 1fr;
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .genome-navigation {
+        display: none;
+    }
+    
+    .gene-filter-controls {
+        position: static;
+        margin: 10px 0;
+    }
+    
+    .horizontal-splitter {
+        display: none !important;
+    }
+}
+
+/* Dark theme adaptations for legacy components */
+@media (prefers-color-scheme: dark) {
+    .gene-filter-controls {
+        background: rgba(31, 41, 55, 0.95);
+        border-color: var(--border-color);
+    }
+    
+    .variant-track {
+        background: var(--bg-secondary);
+        border-bottom-color: var(--border-color);
+    }
+    
+    .no-variants-message {
+        background: rgba(31, 41, 55, 0.9);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar,
+    .toolbar,
+    .header,
+    .status-bar,
+    .modal,
+    .loading-overlay,
+    .notification {
+        display: none !important;
+    }
+    
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .genome-viewer {
+        height: auto !important;
+        min-height: 600px;
+    }
+    
+    .gene-element,
+    .variant-element {
+        box-shadow: none !important;
+        border-width: 1px !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: #000000;
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f0f0;
+    }
+    
+    .gene-element {
+        border-width: 3px !important;
+        font-weight: bold !important;
+    }
+    
+    .variant-element {
+        border-width: 2px !important;
+        border-color: #000000 !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .spinner {
+        animation: none !important;
+    }
+    
+    .gene-element:hover,
+    .variant-element:hover,
+    .nav-btn:hover {
+        transform: none !important;
+    }
+}
