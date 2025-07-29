@@ -2850,28 +2850,39 @@ class TrackRenderer {
                 this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
             }
             
+            // Create reference sequence visualization if enabled
+            const showReference = settings.showReference !== false; // Default to true
+            let referenceHeight = 0;
+            if (showReference) {
+                referenceHeight = parseInt(settings.referenceHeight) || 25;
+                this.createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings);
+            }
+            
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
             
             const readHeight = settings.readHeight || 14;
             const rowSpacing = settings.readSpacing || 2;
             // Reduce top padding when coverage is shown to minimize gap
-            const topPadding = showCoverage ? 2 : 10;
+            const topPadding = (showCoverage || showReference) ? 2 : 10;
             const bottomPadding = 10;
+            
+            // Total height above reads (coverage + reference + spacing)
+            const totalTopHeight = coverageHeight + referenceHeight;
             
             // Check if vertical scrolling is enabled and needed
             const enableVerticalScroll = settings.enableVerticalScroll !== false && readRows.length > (settings.maxVisibleRows || 10);
             
             if (enableVerticalScroll) {
                 // Create scrollable reads track with all rows
-                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
+                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + totalTopHeight, bottomPadding, settings);
             } else {
                 // Use traditional limited rows approach
                 const maxRows = settings.maxRows || 20;
                 const limitedReadRows = readRows.slice(0, maxRows);
             
-            // Calculate adaptive track height
-            let trackHeight = coverageHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+            // Calculate adaptive track height including reference sequence
+            let trackHeight = totalTopHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
             trackHeight = Math.max(trackHeight, settings.height || 150);
             trackContent.style.height = `${trackHeight}px`;
             
@@ -3041,17 +3052,27 @@ class TrackRenderer {
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
                 
+                // Create reference sequence visualization if enabled
+                const showReference = settings.showReference !== false; // Default to true
+                let referenceHeight = 0;
+                if (showReference) {
+                    referenceHeight = parseInt(settings.referenceHeight) || 25;
+                    this.createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings);
+                }
+                
                 // Arrange reads in rows
                 const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
                 
                 // Calculate track height and spacing
                 const readHeight = parseInt(settings.readHeight) || 8;
                 const rowSpacing = parseInt(settings.rowSpacing) || 2;
-                // Reduce top padding when coverage is shown to minimize gap
-                const topPadding = showCoverage ? 2 : (parseInt(settings.topPadding) || 10);
+                // Reduce top padding when coverage or reference is shown to minimize gap
+                const topPadding = (showCoverage || showReference) ? 2 : (parseInt(settings.topPadding) || 10);
                 const bottomPadding = parseInt(settings.bottomPadding) || 10;
                 
-                const trackHeight = coverageHeight + topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
+                // Total height above reads (coverage + reference)
+                const totalTopHeight = coverageHeight + referenceHeight;
+                const trackHeight = totalTopHeight + topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
                 trackContent.style.height = `${trackHeight}px`;
                 
                 // Check if vertical scrolling is needed
@@ -3059,7 +3080,7 @@ class TrackRenderer {
                 const enableVerticalScroll = settings.enableVerticalScroll !== false;
                 
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
-                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + totalTopHeight, bottomPadding, settings);
                 } else {
                     // Render all reads normally
                     // Pass just topPadding - reads SVG will be positioned after coverage automatically
@@ -3458,9 +3479,14 @@ class TrackRenderer {
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         
-        // Check if coverage visualization exists to calculate proper SVG positioning
+        // Check if coverage and reference visualizations exist to calculate proper SVG positioning
         const coverageElement = trackContent.querySelector('.coverage-visualization');
         const coverageHeight = coverageElement ? parseInt(coverageElement.style.height) || 0 : 0;
+        
+        const referenceElement = trackContent.querySelector('.reference-sequence-visualization');
+        const referenceHeight = referenceElement ? parseInt(referenceElement.style.height) || 0 : 0;
+        
+        const totalTopHeight = coverageHeight + referenceHeight;
         
         // Create SVG container that fills width but preserves text aspect ratio
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -3470,7 +3496,7 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container');
         svg.style.position = 'absolute';
-        svg.style.top = `${coverageHeight}px`;
+        svg.style.top = `${totalTopHeight}px`;
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
 
@@ -8345,6 +8371,21 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Reference Sequence</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="readsShowReference" ${settings.showReference !== false ? 'checked' : ''}>
+                        Show reference sequence
+                    </label>
+                    <div class="help-text">Display reference genome sequence between coverage and reads for comparison.</div>
+                </div>
+                <div class="form-group" id="referenceHeightGroup" style="display: ${settings.showReference !== false ? 'block' : 'none'}">
+                    <label for="referenceHeight">Reference sequence height (px):</label>
+                    <input type="number" id="referenceHeight" min="15" max="50" value="${settings.referenceHeight || 25}">
+                    <div class="help-text">Height of the reference sequence visualization.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Read Display</h4>
                 <div class="form-group">
                     <label for="readsHeight">Height of each read (px):</label>
@@ -8814,6 +8855,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.showCoverage = modal.querySelector('#readsShowCoverage').checked;
                 settings.coverageHeight = parseInt(modal.querySelector('#coverageHeight').value) || 50;
                 settings.coverageColor = modal.querySelector('#coverageColor').value || '#4a90e2';
+                
+                // Reference sequence settings
+                settings.showReference = modal.querySelector('#readsShowReference').checked;
+                settings.referenceHeight = parseInt(modal.querySelector('#referenceHeight').value) || 25;
                 
                 settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
                 settings.readSpacing = parseInt(modal.querySelector('#readsSpacing').value) || 2;
@@ -10137,6 +10182,262 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     /**
+     * Create reference sequence visualization between coverage and reads
+     */
+    createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings) {
+        // Get reference sequence for current viewport
+        const sequence = this.getReferenceSequence(viewport.start, viewport.end);
+        if (!sequence || sequence.length === 0) {
+            console.warn('No reference sequence available for viewport:', viewport);
+            return;
+        }
+
+        // Create reference container
+        const referenceContainer = document.createElement('div');
+        referenceContainer.className = 'reference-sequence-visualization';
+        referenceContainer.style.cssText = `
+            position: absolute;
+            top: ${coverageHeight}px;
+            left: 0;
+            right: 0;
+            height: ${referenceHeight}px;
+            background: linear-gradient(to bottom, #f0f8ff 0%, #e6f3ff 100%);
+            border-bottom: 1px solid #b3d9ff;
+            border-top: 1px solid #b3d9ff;
+            overflow: hidden;
+            z-index: 2;
+            font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+        `;
+
+        // Calculate how many bases can fit in the current view
+        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        const viewRange = viewport.end - viewport.start;
+        const basesPerPixel = viewRange / containerWidth;
+        
+        // Determine display mode based on zoom level
+        if (basesPerPixel <= 1) {
+            // High zoom - show individual bases
+            this.renderIndividualBases(referenceContainer, sequence, viewport, referenceHeight, containerWidth);
+        } else if (basesPerPixel <= 10) {
+            // Medium zoom - show bases with reduced detail
+            this.renderReducedBases(referenceContainer, sequence, viewport, referenceHeight, containerWidth);
+        } else {
+            // Low zoom - show summary information
+            this.renderSequenceSummary(referenceContainer, sequence, viewport, referenceHeight);
+        }
+
+        // Add position labels
+        this.addReferencePositionLabels(referenceContainer, viewport, referenceHeight);
+
+        trackContent.appendChild(referenceContainer);
+        
+        console.log(`🧬 Reference sequence visualization created: ${sequence.length} bases, zoom level: ${basesPerPixel.toFixed(2)} bp/px`);
+    }
+
+    /**
+     * Render individual bases for high zoom levels
+     */
+    renderIndividualBases(container, sequence, viewport, height, containerWidth) {
+        const basesContainer = document.createElement('div');
+        basesContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 2px;
+            box-sizing: border-box;
+        `;
+
+        const baseWidth = containerWidth / sequence.length;
+        const fontSize = Math.min(12, Math.max(8, baseWidth * 0.8));
+
+        for (let i = 0; i < sequence.length; i++) {
+            const base = sequence[i].toUpperCase();
+            const baseElement = document.createElement('div');
+            baseElement.textContent = base;
+            baseElement.style.cssText = `
+                width: ${baseWidth}px;
+                height: ${height - 4}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${fontSize}px;
+                font-weight: bold;
+                color: ${this.getBaseColor(base)};
+                background: ${this.getBaseBackground(base)};
+                border: 1px solid rgba(0,0,0,0.1);
+                box-sizing: border-box;
+                text-align: center;
+                line-height: 1;
+                flex-shrink: 0;
+            `;
+            basesContainer.appendChild(baseElement);
+        }
+
+        container.appendChild(basesContainer);
+    }
+
+    /**
+     * Render bases with reduced detail for medium zoom levels
+     */
+    renderReducedBases(container, sequence, viewport, height, containerWidth) {
+        const basesContainer = document.createElement('div');
+        basesContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 2px;
+            box-sizing: border-box;
+        `;
+
+        // Group bases into chunks for better visibility
+        const chunkSize = Math.max(1, Math.floor(sequence.length / 100));
+        const chunks = [];
+        
+        for (let i = 0; i < sequence.length; i += chunkSize) {
+            const chunk = sequence.substring(i, Math.min(i + chunkSize, sequence.length));
+            chunks.push(chunk);
+        }
+
+        const chunkWidth = containerWidth / chunks.length;
+        
+        chunks.forEach((chunk, index) => {
+            const chunkElement = document.createElement('div');
+            const dominantBase = this.getDominantBase(chunk);
+            chunkElement.textContent = dominantBase;
+            chunkElement.style.cssText = `
+                width: ${chunkWidth}px;
+                height: ${height - 4}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: bold;
+                color: ${this.getBaseColor(dominantBase)};
+                background: ${this.getBaseBackground(dominantBase)};
+                border: 1px solid rgba(0,0,0,0.1);
+                box-sizing: border-box;
+                flex-shrink: 0;
+            `;
+            basesContainer.appendChild(chunkElement);
+        });
+
+        container.appendChild(basesContainer);
+    }
+
+    /**
+     * Render sequence summary for low zoom levels
+     */
+    renderSequenceSummary(container, sequence, viewport, height) {
+        const summaryDiv = document.createElement('div');
+        const gcContent = this.calculateGCContent(sequence);
+        const length = sequence.length;
+        
+        summaryDiv.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #495057;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        `;
+        summaryDiv.textContent = `${length.toLocaleString()} bp | GC: ${gcContent.toFixed(1)}%`;
+        
+        container.appendChild(summaryDiv);
+    }
+
+    /**
+     * Add position labels to reference sequence
+     */
+    addReferencePositionLabels(container, viewport, height) {
+        const labelsDiv = document.createElement('div');
+        labelsDiv.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            font-size: 8px;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2px;
+            pointer-events: none;
+        `;
+
+        const startLabel = document.createElement('span');
+        startLabel.textContent = viewport.start.toLocaleString();
+        const endLabel = document.createElement('span');
+        endLabel.textContent = viewport.end.toLocaleString();
+
+        labelsDiv.appendChild(startLabel);
+        labelsDiv.appendChild(endLabel);
+        
+        container.appendChild(labelsDiv);
+    }
+
+    /**
+     * Get color for DNA base
+     */
+    getBaseColor(base) {
+        const colors = {
+            'A': '#e74c3c',
+            'T': '#3498db', 
+            'G': '#2ecc71',
+            'C': '#f39c12',
+            'N': '#95a5a6'
+        };
+        return colors[base] || '#95a5a6';
+    }
+
+    /**
+     * Get background color for DNA base
+     */
+    getBaseBackground(base) {
+        const backgrounds = {
+            'A': 'rgba(231, 76, 60, 0.1)',
+            'T': 'rgba(52, 152, 219, 0.1)',
+            'G': 'rgba(46, 204, 113, 0.1)',
+            'C': 'rgba(243, 156, 18, 0.1)',
+            'N': 'rgba(149, 165, 166, 0.1)'
+        };
+        return backgrounds[base] || 'rgba(149, 165, 166, 0.1)';
+    }
+
+    /**
+     * Get dominant base in a sequence chunk
+     */
+    getDominantBase(sequence) {
+        const counts = { A: 0, T: 0, G: 0, C: 0, N: 0 };
+        for (const base of sequence.toUpperCase()) {
+            if (counts[base] !== undefined) counts[base]++;
+        }
+        return Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+    }
+
+    /**
+     * Calculate GC content percentage
+     */
+    calculateGCContent(sequence) {
+        const gc = (sequence.match(/[GC]/gi) || []).length;
+        return (gc / sequence.length) * 100;
+    }
+
+    /**
      * Setup event listeners for reads settings
      */
     setupReadsSettingsEventListeners(bodyElement) {
@@ -10154,6 +10455,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             
             coverageCheckbox.addEventListener('change', toggleCoverageSettings);
             toggleCoverageSettings(); // Initial state
+        }
+        
+        // Reference sequence visualization toggle
+        const referenceCheckbox = bodyElement.querySelector('#readsShowReference');
+        const referenceHeightGroup = bodyElement.querySelector('#referenceHeightGroup');
+        
+        if (referenceCheckbox && referenceHeightGroup) {
+            const toggleReferenceSettings = () => {
+                const isChecked = referenceCheckbox.checked;
+                referenceHeightGroup.style.display = isChecked ? 'block' : 'none';
+            };
+            
+            referenceCheckbox.addEventListener('change', toggleReferenceSettings);
+            toggleReferenceSettings(); // Initial state
         }
         
         // Vertical scrolling toggle
