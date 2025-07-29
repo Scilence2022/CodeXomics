@@ -657,6 +657,7 @@ class GenomeBrowser {
         document.getElementById('trackWIG').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackProteins').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackSequence').addEventListener('change', () => this.updateVisibleTracks());
+        document.getElementById('trackSequenceLine').addEventListener('change', () => this.updateVisibleTracks());
         document.getElementById('trackActions').addEventListener('change', () => this.updateVisibleTracks());
 
         // Sidebar track controls
@@ -667,6 +668,7 @@ class GenomeBrowser {
         document.getElementById('sidebarTrackWIG').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackProteins').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackSequence').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
+        document.getElementById('sidebarTrackSequenceLine').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
         document.getElementById('sidebarTrackActions').addEventListener('change', () => this.updateVisibleTracksFromSidebar());
 
         // Panel close buttons
