@@ -4419,11 +4419,20 @@ class TrackRenderer {
             overflow: hidden;
         `;
         
+        // Calculate actual container width dynamically
+        const gcTrack = document.querySelector('.gc-track .track-content');
+        let containerWidth = 800; // Default fallback
+        if (gcTrack) {
+            // Force layout recalculation and get actual width
+            gcTrack.style.width = '100%';
+            containerWidth = gcTrack.getBoundingClientRect().width || gcTrack.offsetWidth || 800;
+        }
+        
         // Create SVG for crisp, scalable visualization
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
-        svg.setAttribute('viewBox', '0 0 800 100');
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} 100`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.style.cssText = `
             position: absolute;
@@ -4436,7 +4445,7 @@ class TrackRenderer {
         
         // Calculate dynamic window size based on sequence length and current zoom level
         const currentRange = viewEnd - viewStart;
-        const basePairsPerPixel = currentRange / 800; // Assuming 800px width
+        const basePairsPerPixel = currentRange / containerWidth; // Use actual container width
         
         // Adaptive window size: smaller for zoomed-in views, larger for zoomed-out views
         let windowSize;
@@ -4457,7 +4466,7 @@ class TrackRenderer {
         // Calculate step size for smooth visualization
         const stepSize = Math.max(1, Math.floor(windowSize / 4));
         
-        console.log(`Dynamic GC analysis: range=${currentRange}, bpPerPixel=${basePairsPerPixel.toFixed(2)}, windowSize=${windowSize}, stepSize=${stepSize}`);
+        console.log(`Dynamic GC analysis: containerWidth=${containerWidth}px, range=${currentRange}, bpPerPixel=${basePairsPerPixel.toFixed(2)}, windowSize=${windowSize}, stepSize=${stepSize}`);
         
         // Calculate GC content and skew data with dynamic parameters
         const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize);
@@ -4480,7 +4489,7 @@ class TrackRenderer {
         }
         
         // Create SVG visualization
-        this.renderSVGGCVisualization(svg, analysisData);
+        this.renderSVGGCVisualization(svg, analysisData, containerWidth);
         
         // Add interactive tooltip
         this.addSVGGCTooltip(container, svg, analysisData, viewStart, windowSize);
@@ -4592,14 +4601,14 @@ class TrackRenderer {
         };
     }
     
-    renderSVGGCVisualization(svg, data) {
+    renderSVGGCVisualization(svg, data, containerWidth = 800) {
         const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
         
         // Clear any existing content
         svg.innerHTML = '';
         
         // Define dimensions and layout with minimal padding
-        const viewWidth = 800;
+        const viewWidth = containerWidth; // Use dynamic container width
         const viewHeight = 100;
         const padding = 2; // Reduced from 20 to 2 for minimal padding
         const plotWidth = viewWidth - 2 * padding;
@@ -9419,18 +9428,18 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const trackContent = gcTrack.querySelector('.track-content');
         if (!trackContent) return;
         
-        const svgContainer = trackContent.querySelector('svg');
-        if (svgContainer) {
-            // Force layout recalculation
-            trackContent.style.width = '100%';
-            const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
-            
-            // Update SVG dimensions - get numeric height value
-            const svgHeight = svgContainer.getBoundingClientRect().height || svgContainer.offsetHeight || 100;
-            svgContainer.setAttribute('width', '100%');
-            svgContainer.setAttribute('viewBox', `0 0 ${containerWidth} ${svgHeight}`);
-            console.log('📈 GC track SVG updated with container width:', containerWidth);
-        }
+        // Clear existing content first
+        trackContent.innerHTML = '';
+        
+        // Regenerate GC visualization with current viewport and sequence
+        const viewport = this.getCurrentViewport();
+        const subsequence = sequence.substring(viewport.start, viewport.end);
+        
+        // Create new enhanced GC content and skew visualization
+        const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
+        trackContent.appendChild(gcDisplay);
+        
+        console.log('📈 GC track fully regenerated for window resize with viewport:', viewport);
     }
     
     /**
