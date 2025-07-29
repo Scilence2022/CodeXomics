@@ -2777,6 +2777,7 @@ class TrackRenderer {
             console.log(`🎯 [TrackRenderer] === READS TRACK CREATION DEBUG START ===`);
             console.log(`🎯 [TrackRenderer] Creating reads track for region ${chromosome}:${viewport.start}-${viewport.end}`);
             console.log(`🎯 [TrackRenderer] Track settings:`, settings);
+        console.log(`🔍 [DEBUG] showReference setting: ${settings.showReference}`);
             
             // Get reads for current region using ReadsManager with settings
             const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end, settings);
@@ -8722,9 +8723,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Get current settings for a track
      */
     getTrackSettings(trackType) {
+        console.log(`🔍 [getTrackSettings] Getting settings for ${trackType}`);
+        
         // First check if we have saved settings from applySettingsToTrack
         if (this.trackSettings && this.trackSettings[trackType]) {
-            console.log(`Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
+            console.log(`🔍 [getTrackSettings] Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
+            console.log(`🔍 [getTrackSettings] showReference from saved settings: ${this.trackSettings[trackType].showReference}`);
             return this.trackSettings[trackType];
         }
         
@@ -8898,6 +8902,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 
                 // Reference sequence settings
                 settings.showReference = modal.querySelector('#readsShowReference').checked;
+                console.log(`🔍 [collectSettingsFromModal] Collected showReference: ${settings.showReference} from checkbox checked: ${modal.querySelector('#readsShowReference').checked}`);
                 settings.referenceHeight = parseInt(modal.querySelector('#referenceHeight').value) || 25;
                 
                 settings.readHeight = parseInt(modal.querySelector('#readsHeight').value) || 4;
@@ -9171,6 +9176,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      */
     saveTrackSettings(trackType, settings) {
         console.log(`🔧 [TrackRenderer] Saving settings for ${trackType}:`, settings);
+        console.log(`🔍 [saveTrackSettings] showReference value being saved: ${settings.showReference}`);
         
         if (this.genomeBrowser.configManager) {
             this.genomeBrowser.configManager.set(`tracks.${trackType}.settings`, settings);
@@ -9216,6 +9222,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         // Store settings - the complete redraw will handle applying all settings including height
         console.log(`Settings stored for ${trackType}, will be applied during complete redraw`);
+        
+        // Notify TabManager about track settings change to preserve settings
+        if (this.genomeBrowser.tabManager) {
+            console.log('🔍 [applySettingsToTrack] Notifying TabManager about settings change');
+            this.genomeBrowser.tabManager.onTrackSettingsChanged();
+        }
         
         // Trigger the same complete redraw that drag-end uses for consistency
         console.log('Calling complete view redraw after applying settings (same as drag-end)...');
