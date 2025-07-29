@@ -1586,10 +1586,10 @@
 .gc-track .track-content,
 .reads-track .track-content,
 .variant-track .track-content,
-.protein-track .track-content {
+.protein-track .track-content,
+.actions-track {
   margin-left: 0;
-  padding-left: 0px;
-  padding-right: 0px;
+  padding: 2px 0; /* Reduced from default to minimize gap between header and content */
 }
 
 .genome-ruler {
