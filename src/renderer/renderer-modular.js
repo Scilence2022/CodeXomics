@@ -2234,7 +2234,7 @@ class GenomeBrowser {
                     currentTabOrder = domOrder;
                     console.log('[displayGenomeView] Using current DOM track order:', currentTabOrder);
                 } else {
-                    currentTabOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
+                    currentTabOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
                     console.log('[displayGenomeView] Using default track order:', currentTabOrder);
                 }
             }
@@ -2247,7 +2247,7 @@ class GenomeBrowser {
             }
             
             // Also create any visible tracks that aren't in the saved order (for backward compatibility)
-            const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'actions'];
+            const defaultOrder = ['genes', 'gc', 'variants', 'reads', 'wigTracks', 'proteins', 'sequenceLine', 'actions'];
             for (const trackType of defaultOrder) {
                 if (!currentTabOrder.includes(trackType)) {
                     await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
