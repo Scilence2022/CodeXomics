@@ -359,15 +359,29 @@ class ChatManager {
         try {
             console.log('🚢 Initializing CrewAI Multi-Agent System...');
             
+            // Check if all required CrewAI classes are available
+            console.log('🔍 Checking CrewAI class availability:');
+            console.log('- CrewAgent:', typeof CrewAgent !== 'undefined');
+            console.log('- Crew:', typeof Crew !== 'undefined');
+            console.log('- CrewAIMultiAgentSystem:', typeof CrewAIMultiAgentSystem !== 'undefined');
+            console.log('- GenomicsDataAnalyst:', typeof GenomicsDataAnalyst !== 'undefined');
+            console.log('- BioinformaticsResearcher:', typeof BioinformaticsResearcher !== 'undefined');
+            
             // CrewAI modules are already loaded via HTML script tags
             if (typeof CrewAIMultiAgentSystem !== 'undefined') {
+                console.log('✅ CrewAIMultiAgentSystem found, creating instance...');
                 this.crewAISystem = new CrewAIMultiAgentSystem(this, this.configManager);
+                
+                console.log('🔄 Initializing CrewAI system...');
                 await this.crewAISystem.initialize();
                 
                 // Set as primary multi-agent system
                 this.multiAgentSystem = this.crewAISystem;
                 
                 console.log('🚢 CrewAI Multi-Agent System initialized successfully');
+                console.log('- Agents:', this.crewAISystem.agents.size);
+                console.log('- Crews:', this.crewAISystem.crews.size);
+                
                 this.agentSystemEnabled = this.agentSystemSettings.enabled;
                 
                 // Emit initialization event
@@ -378,12 +392,13 @@ class ChatManager {
                 });
                 
             } else {
-                console.warn('CrewAIMultiAgentSystem not available, falling back to legacy system');
+                console.warn('❌ CrewAIMultiAgentSystem not available, falling back to legacy system');
                 await this.initializeLegacyMultiAgentSystem();
             }
             
         } catch (error) {
-            console.error('Failed to initialize CrewAI System, falling back to legacy:', error);
+            console.error('❌ Failed to initialize CrewAI System, falling back to legacy:', error);
+            console.error('Error stack:', error.stack);
             await this.initializeLegacyMultiAgentSystem();
         }
     }
@@ -12392,9 +12407,17 @@ ${this.getPluginSystemInfo()}`;
             
             // 显示智能体信息（如果启用）
             if (this.agentSystemEnabled && this.agentSystemSettings.showAgentInfo && this.multiAgentSystem) {
-                const agentInfo = this.multiAgentSystem.getAgentForTool(tool.tool_name);
-                if (agentInfo) {
-                    toolDisplay += ` <span class="agent-info" style="color: #4CAF50; font-size: 0.9em;"><i class="fas fa-robot"></i>[${agentInfo.name}]</span>`;
+                try {
+                    if (typeof this.multiAgentSystem.getAgentForTool === 'function') {
+                        const agentInfo = this.multiAgentSystem.getAgentForTool(tool.tool_name);
+                        if (agentInfo) {
+                            toolDisplay += ` <span class="agent-info" style="color: #4CAF50; font-size: 0.9em;"><i class="fas fa-robot"></i>[${agentInfo.name}]</span>`;
+                        }
+                    } else {
+                        console.warn('multiAgentSystem.getAgentForTool is not a function');
+                    }
+                } catch (error) {
+                    console.error('Error getting agent info for tool:', tool.tool_name, error);
                 }
             }
             
