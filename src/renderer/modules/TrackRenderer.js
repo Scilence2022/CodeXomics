@@ -10203,6 +10203,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             return;
         }
 
+        // Calculate how many bases can fit in the current view
+        // Use the viewport width calculation that matches the main tracks
+        const containerWidth = this.getCurrentViewport().pixelWidth || trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+
         // Create reference container
         const referenceContainer = document.createElement('div');
         referenceContainer.className = 'reference-sequence-visualization';
@@ -10219,10 +10223,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             z-index: 2;
             font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
         `;
-
-        // Calculate how many bases can fit in the current view
-        // Use the viewport width calculation that matches the main tracks
-        const containerWidth = this.getCurrentViewport().pixelWidth || trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         const viewRange = viewport.end - viewport.start;
         const basesPerPixel = viewRange / containerWidth;
         
