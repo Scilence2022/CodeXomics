@@ -583,7 +583,13 @@ class NavigationManager {
         element.classList.remove('dragging');
         document.body.style.userSelect = '';
         
-        this.resetVisualDragUpdates(element);
+        if (this.globalDraggingEnabled) {
+            // Reset all tracks when global dragging is enabled
+            this.resetGlobalVisualDragUpdates();
+        } else {
+            // Only reset the dragged element (default behavior)
+            this.resetVisualDragUpdates(element);
+        }
         
         // Clean up global drag update timeout if it exists
         if (this.globalDragUpdateTimeout) {
@@ -786,7 +792,13 @@ class NavigationManager {
             element.style.cursor = 'grabbing';
             element.classList.add('dragging');
             
-            this.cacheOriginalTransforms(element);
+            if (this.globalDraggingEnabled) {
+                // Cache transforms for all tracks when global dragging is enabled
+                this.cacheAllTrackTransforms();
+            } else {
+                // Only cache the dragged element (default behavior)
+                this.cacheOriginalTransforms(element);
+            }
             
             document.body.style.userSelect = 'none';
             
@@ -983,33 +995,232 @@ class NavigationManager {
         element.classList.add('visual-dragging');
     }
 
-    // Perform global drag update - updates all tracks, not just the dragged element
+    // Perform global drag update - applies visual transforms to all tracks (no redraw during drag)
     performGlobalDragUpdate(deltaX, chromosome) {
-        console.log('🌍 [GLOBAL-DRAG] Updating all tracks with deltaX:', deltaX, 'px');
+        console.log('🌍 [GLOBAL-DRAG] Applying visual transforms to all tracks with deltaX:', deltaX, 'px');
         
-        // Update all tracks by refreshing the entire genome view
-        if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
-            // Use a debounced update to avoid performance issues
-            if (this.globalDragUpdateTimeout) {
-                clearTimeout(this.globalDragUpdateTimeout);
+        // Handle genes & features track specially to match single-track behavior
+        const unifiedContainer = document.querySelector('.unified-gene-container');
+        let tracksUpdated = 0;
+        
+        if (unifiedContainer) {
+            // For genes & features, use the same logic as performVisualDragUpdate
+            this.cacheTrackTransform(unifiedContainer);
+            const baseTransform = unifiedContainer.dataset.baseTransform || '';
+            
+            if (baseTransform) {
+                unifiedContainer.style.transform = `${baseTransform} translateX(${deltaX}px)`;
+            } else {
+                unifiedContainer.style.transform = `translateX(${deltaX}px)`;
             }
             
-            this.globalDragUpdateTimeout = setTimeout(() => {
-                console.log('🌍 [GLOBAL-DRAG] Executing debounced view refresh');
-                this.genomeBrowser.displayGenomeView(chromosome, this.genomeBrowser.currentSequence[chromosome]);
-            }, 50); // 50ms debounce for smooth performance
+            unifiedContainer.classList.add('visual-dragging');
+            tracksUpdated++;
+            console.log('🌍 [GLOBAL-DRAG] Applied unified container transform for genes & features');
+        } else {
+            // Fallback: handle genes & features elements individually
+            const geneElements = document.querySelectorAll('[data-base-transform]');
+            geneElements.forEach(el => {
+                const baseTransform = el.dataset.baseTransform || '';
+                const isHTMLElement = el.classList.contains('gene-element');
+                const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
+                
+                if (isHTMLElement) {
+                    // HTML elements: use style.transform
+                    if (baseTransform) {
+                        el.style.transform = `${baseTransform} translateX(${deltaX}px)`;
+                    } else {
+                        el.style.transform = `translateX(${deltaX}px)`;
+                    }
+                    el.classList.add('visual-dragging');
+                    tracksUpdated++;
+                } else if (isSVGElement) {
+                    // SVG elements: use SVG transform attribute (same as single-track mode)
+                    if (baseTransform) {
+                        el.setAttribute('transform', `${baseTransform} translate(${deltaX}, 0)`);
+                    } else {
+                        el.setAttribute('transform', `translate(${deltaX}, 0)`);
+                    }
+                    el.classList.add('visual-dragging');
+                    tracksUpdated++;
+                }
+            });
+            console.log('🌍 [GLOBAL-DRAG] Applied individual transforms for genes & features elements');
         }
         
-        // Still apply visual transform to the dragged element for immediate feedback
-        const draggedElement = this.dragState.element;
-        if (draggedElement) {
-            draggedElement.classList.add('visual-dragging');
-            // Apply a lighter visual update to show drag state
-            const trackContent = draggedElement.querySelector('.track-content');
-            if (trackContent) {
-                trackContent.style.opacity = '0.8';
+        // Handle all other tracks (non-genes) with regular track-content approach
+        const allTrackContents = document.querySelectorAll('.track-content');
+        allTrackContents.forEach(trackContent => {
+            const track = trackContent.closest('[class*="-track"]');
+            if (!track) return;
+            
+            // Skip genes & features track since we handled it above
+            if (track.classList.contains('genes-track') || 
+                trackContent.querySelector('.unified-gene-container') ||
+                trackContent.querySelector('.genes-svg-container')) {
+                return;
             }
+            
+            // Cache the original transform if not already cached
+            this.cacheTrackTransform(trackContent);
+            
+            // Apply visual transform to the track content
+            const baseTransform = trackContent.dataset.baseTransform || '';
+            if (baseTransform) {
+                trackContent.style.transform = `${baseTransform} translateX(${deltaX}px)`;
+            } else {
+                trackContent.style.transform = `translateX(${deltaX}px)`;
+            }
+            
+            // Add visual feedback class
+            trackContent.classList.add('visual-dragging');
+            tracksUpdated++;
+        });
+        
+        // Handle other specialized SVG containers (but not genes-svg-container)
+        const otherSvgContainers = document.querySelectorAll('.gc-svg-container, .variant-svg-container');
+        otherSvgContainers.forEach(svgContainer => {
+            this.cacheTrackTransform(svgContainer);
+            
+            const baseTransform = svgContainer.dataset.baseTransform || '';
+            if (baseTransform) {
+                svgContainer.style.transform = `${baseTransform} translateX(${deltaX}px)`;
+            } else {
+                svgContainer.style.transform = `translateX(${deltaX}px)`;
+            }
+            
+            svgContainer.classList.add('visual-dragging');
+            tracksUpdated++;
+        });
+        
+        console.log('🌍 [GLOBAL-DRAG] Visual transforms applied to', tracksUpdated, 'track elements');
+    }
+
+    // Cache transform for a single track element
+    cacheTrackTransform(element) {
+        if (!element.dataset.baseTransform) {
+            const originalTransform = element.style.transform || '';
+            element.dataset.baseTransform = originalTransform;
+            console.log('🔧 [CACHE] Cached transform for element:', element.className, 'Transform:', originalTransform);
         }
+    }
+
+    // Reset visual transforms for all tracks (global dragging)
+    resetGlobalVisualDragUpdates() {
+        console.log('🌍 [GLOBAL-RESET] Resetting visual transforms for all tracks');
+        
+        // Reset genes & features track specially to match single-track behavior
+        const unifiedContainer = document.querySelector('.unified-gene-container');
+        let tracksReset = 0;
+        
+        if (unifiedContainer) {
+            // For genes & features, use the same reset logic as resetVisualDragUpdates
+            const baseTransform = unifiedContainer.dataset.baseTransform || '';
+            unifiedContainer.style.transform = baseTransform;
+            unifiedContainer.classList.remove('visual-dragging');
+            tracksReset++;
+            console.log('🌍 [GLOBAL-RESET] Reset unified container transform for genes & features');
+        } else {
+            // Fallback: reset genes & features elements individually
+            const geneElements = document.querySelectorAll('[data-base-transform]');
+            geneElements.forEach(el => {
+                const baseTransform = el.dataset.baseTransform || '';
+                const isHTMLElement = el.classList.contains('gene-element');
+                const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
+                
+                if (isHTMLElement) {
+                    // HTML elements: reset style.transform
+                    el.style.transform = baseTransform;
+                    el.classList.remove('visual-dragging');
+                    tracksReset++;
+                } else if (isSVGElement) {
+                    // SVG elements: reset transform attribute
+                    if (baseTransform) {
+                        el.setAttribute('transform', baseTransform);
+                    } else {
+                        el.removeAttribute('transform');
+                    }
+                    el.classList.remove('visual-dragging');
+                    tracksReset++;
+                }
+            });
+            console.log('🌍 [GLOBAL-RESET] Reset individual transforms for genes & features elements');
+        }
+        
+        // Reset all other tracks (non-genes) with regular track-content approach
+        const allTrackContents = document.querySelectorAll('.track-content');
+        allTrackContents.forEach(trackContent => {
+            const track = trackContent.closest('[class*="-track"]');
+            if (!track) return;
+            
+            // Skip genes & features track since we handled it above
+            if (track.classList.contains('genes-track') || 
+                trackContent.querySelector('.unified-gene-container') ||
+                trackContent.querySelector('.genes-svg-container')) {
+                return;
+            }
+            
+            const baseTransform = trackContent.dataset.baseTransform || '';
+            trackContent.style.transform = baseTransform;
+            trackContent.classList.remove('visual-dragging');
+            tracksReset++;
+        });
+        
+        // Reset other specialized SVG containers (but not genes-svg-container)
+        const otherSvgContainers = document.querySelectorAll('.gc-svg-container, .variant-svg-container');
+        otherSvgContainers.forEach(svgContainer => {
+            const baseTransform = svgContainer.dataset.baseTransform || '';
+            svgContainer.style.transform = baseTransform;
+            svgContainer.classList.remove('visual-dragging');
+            tracksReset++;
+        });
+        
+        console.log('🌍 [GLOBAL-RESET] Reset transforms for', tracksReset, 'track elements');
+    }
+
+    // Cache transforms for all tracks (global dragging)
+    cacheAllTrackTransforms() {
+        console.log('🌍 [GLOBAL-CACHE] Caching transforms for all tracks');
+        
+        // Cache genes & features track specially to match single-track behavior
+        const unifiedContainer = document.querySelector('.unified-gene-container');
+        
+        if (unifiedContainer) {
+            // For genes & features, use the same caching logic as cacheOriginalTransforms
+            this.cacheTrackTransform(unifiedContainer);
+            console.log('🌍 [GLOBAL-CACHE] Cached unified container transform for genes & features');
+        } else {
+            // Fallback: cache genes & features elements individually
+            const geneElements = document.querySelectorAll('[data-base-transform]');
+            geneElements.forEach(el => {
+                this.cacheTrackTransform(el);
+            });
+            console.log('🌍 [GLOBAL-CACHE] Cached individual transforms for genes & features elements');
+        }
+        
+        // Cache all other tracks (non-genes) with regular track-content approach
+        const allTrackContents = document.querySelectorAll('.track-content');
+        allTrackContents.forEach(trackContent => {
+            const track = trackContent.closest('[class*="-track"]');
+            if (!track) return;
+            
+            // Skip genes & features track since we handled it above
+            if (track.classList.contains('genes-track') || 
+                trackContent.querySelector('.unified-gene-container') ||
+                trackContent.querySelector('.genes-svg-container')) {
+                return;
+            }
+            
+            this.cacheTrackTransform(trackContent);
+        });
+        
+        // Cache other specialized SVG containers (but not genes-svg-container)
+        const otherSvgContainers = document.querySelectorAll('.gc-svg-container, .variant-svg-container');
+        otherSvgContainers.forEach(svgContainer => {
+            this.cacheTrackTransform(svgContainer);
+        });
+        
+        console.log('🌍 [GLOBAL-CACHE] Cached transforms for all track elements');
     }
 
         /**
