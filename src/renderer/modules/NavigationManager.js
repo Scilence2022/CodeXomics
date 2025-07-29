@@ -27,6 +27,9 @@ class NavigationManager {
             updateInterval: 16, // 60fps (1000ms/60 ≈ 16ms)
             pendingUpdate: false
         };
+        
+        // Global dragging setting - when enabled, all tracks update during drag
+        this.globalDraggingEnabled = false;
 
         // Bind methods and add global listeners once
         this.handleDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
@@ -544,7 +547,14 @@ class NavigationManager {
 
         // Update the visual representation
         this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-        this.performVisualDragUpdate(deltaX, element);
+        
+        if (this.globalDraggingEnabled) {
+            // Update all tracks during drag when global dragging is enabled
+            this.performGlobalDragUpdate(deltaX, chromosome);
+        } else {
+            // Only update the current track (default behavior)
+            this.performVisualDragUpdate(deltaX, element);
+        }
         
         if (this.genomeBrowser.genomeNavigationBar) {
             this.genomeBrowser.genomeNavigationBar.update();
@@ -574,6 +584,12 @@ class NavigationManager {
         document.body.style.userSelect = '';
         
         this.resetVisualDragUpdates(element);
+        
+        // Clean up global drag update timeout if it exists
+        if (this.globalDragUpdateTimeout) {
+            clearTimeout(this.globalDragUpdateTimeout);
+            this.globalDragUpdateTimeout = null;
+        }
 
         // Dispatch custom drag end event immediately after resetting state
         document.dispatchEvent(new CustomEvent('genomeViewDragEnd', {
@@ -967,6 +983,35 @@ class NavigationManager {
         element.classList.add('visual-dragging');
     }
 
+    // Perform global drag update - updates all tracks, not just the dragged element
+    performGlobalDragUpdate(deltaX, chromosome) {
+        console.log('🌍 [GLOBAL-DRAG] Updating all tracks with deltaX:', deltaX, 'px');
+        
+        // Update all tracks by refreshing the entire genome view
+        if (this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[chromosome]) {
+            // Use a debounced update to avoid performance issues
+            if (this.globalDragUpdateTimeout) {
+                clearTimeout(this.globalDragUpdateTimeout);
+            }
+            
+            this.globalDragUpdateTimeout = setTimeout(() => {
+                console.log('🌍 [GLOBAL-DRAG] Executing debounced view refresh');
+                this.genomeBrowser.displayGenomeView(chromosome, this.genomeBrowser.currentSequence[chromosome]);
+            }, 50); // 50ms debounce for smooth performance
+        }
+        
+        // Still apply visual transform to the dragged element for immediate feedback
+        const draggedElement = this.dragState.element;
+        if (draggedElement) {
+            draggedElement.classList.add('visual-dragging');
+            // Apply a lighter visual update to show drag state
+            const trackContent = draggedElement.querySelector('.track-content');
+            if (trackContent) {
+                trackContent.style.opacity = '0.8';
+            }
+        }
+    }
+
         /**
      * Cache original transforms before dragging starts
      */
@@ -1124,6 +1169,12 @@ class NavigationManager {
         // Clear search results array
         this.searchResults = [];
         this.currentSearchIndex = 0;
+    }
+
+    // Set global dragging behavior
+    setGlobalDragging(enabled) {
+        this.globalDraggingEnabled = enabled;
+        console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
     }
 }
 

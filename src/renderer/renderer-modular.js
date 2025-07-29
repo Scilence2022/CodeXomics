@@ -325,8 +325,12 @@ class GenomeBrowser {
             this.generalSettingsManager.init();
             window.generalSettingsManager = this.generalSettingsManager; // Make globally available
             console.log('✅ GeneralSettingsManager initialized successfully');
+            
+            // Initialize global dragging setting
+            this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging || false;
         } catch (error) {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
+            this.globalDraggingEnabled = false;
         }
         
         // Step 5.7: Initialize Visualization Tools Manager
@@ -1588,6 +1592,17 @@ class GenomeBrowser {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Set global dragging behavior for all tracks
+    setGlobalDragging(enabled) {
+        this.globalDraggingEnabled = enabled;
+        console.log(`🎯 Global track dragging ${enabled ? 'enabled' : 'disabled'}`);
+        
+        // Notify NavigationManager about the setting change
+        if (this.navigationManager) {
+            this.navigationManager.setGlobalDragging(enabled);
+        }
     }
 
     setupFeatureFilterListeners() {
