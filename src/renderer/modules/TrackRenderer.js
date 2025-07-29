@@ -10558,16 +10558,16 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             updateAutoFontSettings(); // Initial state
         }
         
-        // Reference sequence toggle
-        const referenceCheckbox = bodyElement.querySelector('#readsShowReference');
-        if (referenceCheckbox && referenceFontGroup) {
-            const toggleReferenceSettings = () => {
-                const isChecked = referenceCheckbox.checked;
+        // Reference sequence font toggle
+        const referenceFontCheckbox = bodyElement.querySelector('#readsShowReference');
+        if (referenceFontCheckbox && referenceFontGroup) {
+            const toggleReferenceFontSettings = () => {
+                const isChecked = referenceFontCheckbox.checked;
                 referenceFontGroup.style.display = isChecked ? 'block' : 'none';
             };
             
-            referenceCheckbox.addEventListener('change', toggleReferenceSettings);
-            toggleReferenceSettings(); // Initial state
+            referenceFontCheckbox.addEventListener('change', toggleReferenceFontSettings);
+            toggleReferenceFontSettings(); // Initial state
         }
     }
     
