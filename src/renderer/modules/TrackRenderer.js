@@ -2857,13 +2857,8 @@ class TrackRenderer {
                 this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
             }
             
-            // Create reference sequence visualization if enabled
-            const showReference = settings.showReference !== false; // Default to true
+            // Reference sequence is now handled in SVG for better alignment
             let referenceHeight = 0;
-            if (showReference) {
-                referenceHeight = parseInt(settings.referenceHeight) || 25;
-                this.createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings);
-            }
             
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
@@ -3059,13 +3054,8 @@ class TrackRenderer {
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
                 
-                // Create reference sequence visualization if enabled
-                const showReference = settings.showReference !== false; // Default to true
+                // Reference sequence is now handled in SVG for better alignment
                 let referenceHeight = 0;
-                if (showReference) {
-                    referenceHeight = parseInt(settings.referenceHeight) || 25;
-                    this.createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings);
-                }
                 
                 // Arrange reads in rows
                 const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
@@ -3376,8 +3366,8 @@ class TrackRenderer {
         
         console.log(`🎯 [ScrollableReads] Final sequence display decision: ${showSequences}`);
         
-        // Add reference sequence track if enabled and showing sequences
-        if (showSequences && settings.showReference) {
+        // Add reference sequence track if enabled (independent of sequence display)
+        if (settings.showReference !== false) {
             const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
@@ -3526,8 +3516,8 @@ class TrackRenderer {
         
         console.log(`🎯 [TrackRenderer] Final sequence display decision: ${showSequences}`);
         
-        // Add reference sequence track if enabled and showing sequences
-        if (showSequences && settings.showReference) {
+        // Add reference sequence track if enabled (independent of sequence display)
+        if (settings.showReference !== false) {
             const referenceGroup = this.createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings);
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
@@ -3862,30 +3852,21 @@ class TrackRenderer {
         bg.setAttribute('stroke-width', '1');
         referenceGroup.appendChild(bg);
 
-        // Add reference sequence text based on display mode
+        // Always show reference sequence text when reference is enabled
         const basesPerPixel = range / containerWidth;
-        let shouldRenderRefText = false;
         let effectiveRefSettings = { ...settings };
         
-        if (settings.forceSequences) {
-            // Force mode - calculate optimal font size for reference
-            shouldRenderRefText = true;
-            if (settings.autoFontSize !== false) {
-                const optimalFontSize = this.calculateOptimalFontSize(range, containerWidth, readHeight, settings);
-                effectiveRefSettings.referenceFontSize = Math.min(optimalFontSize + 1, 14); // Slightly larger for reference
-                console.log(`🎯 [TrackRenderer] Auto font size for reference: ${effectiveRefSettings.referenceFontSize}px`);
-            }
-        } else {
-            // Standard mode - check pixel threshold
-            const minPixelsPerBase = 10;
-            shouldRenderRefText = basesPerPixel * minPixelsPerBase <= 1;
+        // Calculate optimal font size if auto sizing is enabled
+        if (settings.autoFontSize !== false) {
+            const optimalFontSize = this.calculateOptimalFontSize(range, containerWidth, readHeight, settings);
+            effectiveRefSettings.referenceFontSize = Math.min(optimalFontSize, 14);
+            console.log(`🎯 [TrackRenderer] Auto font size for reference: ${effectiveRefSettings.referenceFontSize}px`);
         }
         
-        if (shouldRenderRefText) {
-            const sequenceText = this.createSVGReferenceText(referenceSequence, containerWidth, readHeight, effectiveRefSettings);
-            if (sequenceText) {
-                referenceGroup.appendChild(sequenceText);
-            }
+        // Always create reference text when reference sequence is available
+        const sequenceText = this.createSVGReferenceText(referenceSequence, containerWidth, readHeight, effectiveRefSettings);
+        if (sequenceText) {
+            referenceGroup.appendChild(sequenceText);
         }
 
         // Add label
@@ -3956,10 +3937,9 @@ class TrackRenderer {
         const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         textGroup.setAttribute('class', 'reference-text-group');
         
-        // Calculate spacing for individual bases
-        const availableWidth = width - 30; // Account for "REF" label space
-        const charWidth = availableWidth / sequence.length;
-        const startX = 30;
+        // Calculate spacing for individual bases to match full width
+        const charWidth = width / sequence.length;
+        const startX = 0;
         
         // Create individual text elements for each base with specific colors
         sequence.split('').forEach((base, index) => {
@@ -8560,13 +8540,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     </label>
                     <div class="help-text">Automatically calculate optimal font size based on available space and sequence density.</div>
                 </div>
-                <div class="form-group" id="readsShowReferenceGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
-                    <label>
-                        <input type="checkbox" id="readsShowReference" ${settings.showReference !== false ? 'checked' : ''}>
-                        Show reference sequence
-                    </label>
-                    <div class="help-text">Display the reference sequence above read sequences for comparison.</div>
-                </div>
                 <div class="form-group" id="readsSequenceThresholdGroup" style="display: ${settings.showSequences && !settings.forceSequences ? 'block' : 'none'}">
                     <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
                     <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
@@ -8949,7 +8922,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.showSequences = modal.querySelector('#readsShowSequences').checked;
                 settings.forceSequences = modal.querySelector('#readsForceSequences').checked;
                 settings.autoFontSize = modal.querySelector('#readsAutoFontSize').checked;
-                settings.showReference = modal.querySelector('#readsShowReference').checked;
                 settings.sequenceThreshold = parseFloat(modal.querySelector('#readsSequenceThreshold').value) || 1.0;
                 settings.sequenceFontSize = parseInt(modal.querySelector('#readsSequenceFontSize').value) || 10;
                 settings.sequenceHeight = parseInt(modal.querySelector('#readsSequenceHeight').value) || 14;
@@ -10547,7 +10519,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const referenceFontGroup = bodyElement.querySelector('#readsReferenceFontGroup');
         const sequenceFontGroup = bodyElement.querySelector('#readsSequenceFontGroup');
         const mismatchColorGroup = bodyElement.querySelector('#readsMismatchColorGroup');
-        const showReferenceGroup = bodyElement.querySelector('#readsShowReferenceGroup');
         
         // Force sequences toggle - define first so it can be used by main toggle
         const forceSequenceCheckbox = bodyElement.querySelector('#readsForceSequences');
@@ -10581,7 +10552,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             const toggleSequenceSettings = () => {
                 const isChecked = sequenceCheckbox.checked;
                 if (forceSequencesGroup) forceSequencesGroup.style.display = isChecked ? 'block' : 'none';
-                if (showReferenceGroup) showReferenceGroup.style.display = isChecked ? 'block' : 'none';
                 if (sequenceFontGroup) sequenceFontGroup.style.display = isChecked ? 'block' : 'none';
                 if (mismatchColorGroup) mismatchColorGroup.style.display = isChecked ? 'block' : 'none';
                 
