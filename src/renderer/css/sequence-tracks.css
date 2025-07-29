@@ -11,6 +11,7 @@
 .sequence-single-line {
     position: relative; /* Changed from default to establish stacking context */
     height: 30px;
+    width: 100%; /* FIX: Ensure full width usage */
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -18,6 +19,7 @@
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 4px;
     z-index: 1; /* Base layer for sequence line */
+    box-sizing: border-box; /* FIX: Include borders in width calculation */
 }
 
 /* Inline Sequence Bases */

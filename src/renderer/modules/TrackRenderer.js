@@ -2167,13 +2167,14 @@ class TrackRenderer {
         
         // Use measured width or fallback
         const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
-        const effectiveCharWidth = charWidth + 1; // Account for letter-spacing
+        // FIX: Don't add extra spacing - letter-spacing is already in CSS
+        const effectiveCharWidth = charWidth; // Remove +1 extra spacing
         
         // Calculate optimal font size and character width
         const maxFontSize = 16;
         const minFontSize = 4;
         const containerWidth = 800; // Initial estimation, will be updated in adjustSequenceDisplay
-        const availableWidth = containerWidth * 0.95; // Leave 5% margin
+        const availableWidth = containerWidth; // FIX: Use 100% of container width
         const maxCharWidth = availableWidth / sequenceLength;
         
         // Calculate optimal font size
@@ -2259,12 +2260,13 @@ class TrackRenderer {
         
         // Use measured width or fallback
         const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
-        const effectiveCharWidth = charWidth + 1; // Account for letter-spacing
+        // FIX: Don't add extra spacing - letter-spacing is already included in measurement
+        const effectiveCharWidth = charWidth; // Remove +1 extra spacing
         
         // Recalculate with actual dimensions and measured character width
         const maxFontSize = 16;
         const minFontSize = 4;
-        const availableWidth = containerWidth * 0.95;
+        const availableWidth = containerWidth; // FIX: Use 100% of container width
         const maxCharWidth = availableWidth / sequenceLength;
         
         let fontSize = maxFontSize;
@@ -2290,13 +2292,17 @@ class TrackRenderer {
             selectedWidth: measuredCharWidth.toFixed(3)
         });
         
-        // Update all base elements with precise positioning
+        // FIX: Update all base elements with percentage-based positioning for exact fit
         const baseElements = seqDisplay.querySelectorAll('.sequence-base-inline');
+        const totalSequenceLength = baseElements.length;
+        const exactCharWidth = 100 / totalSequenceLength; // Use percentage
+        
         baseElements.forEach((element, index) => {
-            const leftPosition = index * finalCharWidth;
-            element.style.left = `${leftPosition}px`;
-            element.style.width = `${finalCharWidth}px`;
+            const leftPosition = index * exactCharWidth;
+            element.style.left = `${leftPosition}%`;
+            element.style.width = `${exactCharWidth}%`;
             element.style.fontSize = `${finalFontSize}px`;
+            element.style.boxSizing = 'border-box';
         });
     }
     
@@ -2308,13 +2314,16 @@ class TrackRenderer {
         baseElement.className = `base-${base.toLowerCase()} sequence-base-inline`;
         baseElement.textContent = base;
         
-        // Calculate precise positioning
-        const leftPosition = index * charWidth;
+        // FIX: Calculate exact positioning to fill entire container
+        const totalSequenceLength = viewport.range;
+        // Each character should take exactly its portion of the available space
+        const exactCharWidth = 100 / totalSequenceLength; // Use percentage-based width
+        const leftPosition = index * exactCharWidth;
         
         baseElement.style.cssText = `
             position: absolute;
-            left: ${leftPosition}px;
-            width: ${charWidth}px;
+            left: ${leftPosition}%;
+            width: ${exactCharWidth}%;
             font-size: ${fontSize}px;
             font-family: 'Courier New', Consolas, Monaco, monospace;
             font-weight: bold;
@@ -2322,6 +2331,7 @@ class TrackRenderer {
             line-height: 30px;
             overflow: hidden;
             white-space: nowrap;
+            box-sizing: border-box;
         `;
         
         // Add tooltip with position info

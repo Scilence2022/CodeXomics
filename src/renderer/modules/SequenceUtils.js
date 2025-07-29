@@ -1143,8 +1143,8 @@ class SequenceUtils {
         const availableWidth = containerWidth - positionWidth - marginRight - padding;
         
         // Calculate optimal line length with better precision
-        // Account for letter spacing and ensure we don't exceed container width
-        const effectiveCharWidth = charWidth + 1; // Add letter-spacing
+        // FIX: Letter-spacing is already included in character width measurement
+        const effectiveCharWidth = charWidth; // Remove +1 extra spacing
         const optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
         
         // Calculate actual width that will be used
@@ -1654,7 +1654,7 @@ class SequenceUtils {
             lineElement.style.top = `${lineIndex * lineHeight}px`; // FIXED: Use correct line height
             lineElement.style.left = '0';
             // Calculate actual width needed instead of using right: 0
-            const effectiveCharWidth = charWidth + 1; // Include letter-spacing
+            const effectiveCharWidth = charWidth; // FIX: Remove +1 extra spacing
             const positionWidth = 100;
             const marginRight = 15;
             const padding = 30;
