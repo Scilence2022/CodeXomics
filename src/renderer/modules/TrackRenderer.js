@@ -2086,8 +2086,8 @@ class TrackRenderer {
         this.updateOperonsPanel(operons, visibleOperons);
     }
 
-    createSequenceTrack(chromosome, sequence) {
-        const { track, trackContent } = this.createTrackBase('sequence', chromosome);
+    createSequenceLineTrack(chromosome, sequence) {
+        const { track, trackContent } = this.createTrackBase('sequenceLine', chromosome);
         const viewport = this.getCurrentViewport();
         
         // Get subsequence for current viewport
@@ -10210,7 +10210,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             position: absolute;
             top: ${coverageHeight}px;
             left: 0;
-            right: 0;
+            width: ${containerWidth}px;
             height: ${referenceHeight}px;
             background: linear-gradient(to bottom, #f0f8ff 0%, #e6f3ff 100%);
             border-bottom: 1px solid #b3d9ff;
@@ -10221,7 +10221,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         `;
 
         // Calculate how many bases can fit in the current view
-        const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        // Use the viewport width calculation that matches the main tracks
+        const containerWidth = this.getCurrentViewport().pixelWidth || trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
         const viewRange = viewport.end - viewport.start;
         const basesPerPixel = viewRange / containerWidth;
         

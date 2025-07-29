@@ -247,7 +247,7 @@ class GenomeBrowser {
         this.currentSequenceSelection = null; // Track current sequence selection
         
         // Initialize track visibility
-        this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks
+        this.visibleTracks = new Set(['genes', 'gc', 'sequence']); // Default visible tracks (sequence = bottom panel, sequenceLine = single-line track)
         
         // Initialize gene filters (corresponds to featureVisibility)
         this.geneFilters = {
@@ -2130,9 +2130,9 @@ class GenomeBrowser {
                 trackElement = this.trackRenderer.createActionsTrack(chromosome);
                 break;
                 
-            case 'sequence':
-                // Sequence track
-                trackElement = this.trackRenderer.createSequenceTrack(chromosome, sequence);
+            case 'sequenceLine':
+                // Single-line sequence track
+                trackElement = this.trackRenderer.createSequenceLineTrack(chromosome, sequence);
                 break;
                 
             default:
