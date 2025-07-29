@@ -28,6 +28,7 @@ class GeneralSettingsManager {
             enableAnimations: true,
             enableFileCache: true,
             cacheSize: 500,
+            enableGlobalDragging: false, // Enable dynamic viewport updates for all tracks during dragging
             
             // Features
             enableGCContent: true,
@@ -366,7 +367,8 @@ class GeneralSettingsManager {
         const featureCheckboxes = [
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
-            'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache'
+            'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
+            'enableGlobalDragging'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -586,6 +588,16 @@ class GeneralSettingsManager {
      * Apply feature setting
      */
     applyFeatureSetting(feature, enabled) {
+        // Handle specific feature settings
+        switch (feature) {
+            case 'enableGlobalDragging':
+                // Notify the genome browser about the global dragging setting change
+                if (window.genomeBrowser) {
+                    window.genomeBrowser.setGlobalDragging(enabled);
+                }
+                break;
+        }
+        
         // Emit event for other components to listen to
         window.dispatchEvent(new CustomEvent('settingChanged', {
             detail: { feature, enabled }

@@ -17,8 +17,15 @@ class TrackRenderer {
             },
             sequence: {
                 defaultHeight: '30px',
-                header: 'Sequence',
+                header: 'Bottom Sequence Panel',
                 className: 'sequence-track',
+                requiresData: true,
+                dataSource: 'currentSequence'
+            },
+            sequenceLine: {
+                defaultHeight: '30px',
+                header: 'Single-line Sequence',
+                className: 'sequence-line-track',
                 requiresData: true,
                 dataSource: 'currentSequence'
             },
