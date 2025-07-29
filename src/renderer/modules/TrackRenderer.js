@@ -3367,7 +3367,9 @@ class TrackRenderer {
         console.log(`🎯 [ScrollableReads] Final sequence display decision: ${showSequences}`);
         
         // Add reference sequence track if enabled (independent of sequence display)
+        console.log(`🔍 [ScrollableReads] Reference sequence check: showReference=${settings.showReference}, enabled=${settings.showReference !== false}`);
         if (settings.showReference !== false) {
+            console.log(`🔍 [ScrollableReads] Creating reference sequence for viewport ${viewport.start}-${viewport.end}`);
             const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
@@ -3517,7 +3519,9 @@ class TrackRenderer {
         console.log(`🎯 [TrackRenderer] Final sequence display decision: ${showSequences}`);
         
         // Add reference sequence track if enabled (independent of sequence display)
+        console.log(`🔍 [TrackRenderer] Reference sequence check: showReference=${settings.showReference}, enabled=${settings.showReference !== false}`);
         if (settings.showReference !== false) {
+            console.log(`🔍 [TrackRenderer] Creating reference sequence for region ${start}-${end}`);
             const referenceGroup = this.createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings);
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
@@ -3650,7 +3654,7 @@ class TrackRenderer {
         const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         
         // Calculate Y position, adding space for reference sequence if shown
-        const referenceSpacing = (settings.showReference && settings.showSequences) ? readHeight + 5 : 0;
+        const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
         const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the read
@@ -3697,7 +3701,7 @@ class TrackRenderer {
         const elementWidth = Math.max((width / 100) * containerWidth, 2);
         
         // Calculate Y position, adding space for reference sequence if shown
-        const referenceSpacing = (settings.showReference && settings.showSequences) ? readHeight + 5 : 0;
+        const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
         const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the sequence
@@ -3829,9 +3833,16 @@ class TrackRenderer {
      * Create SVG reference sequence element
      */
     createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings = {}) {
+        console.log(`🔍 [createSVGReferenceSequence] Called with start=${start}, end=${end}, containerWidth=${containerWidth}`);
+        
         // Get reference sequence from genome browser
         const referenceSequence = this.getReferenceSequence(start, end);
-        if (!referenceSequence) return null;
+        console.log(`🔍 [createSVGReferenceSequence] Got reference sequence:`, referenceSequence ? `length=${referenceSequence.length}, preview="${referenceSequence.substring(0, 20)}..."` : 'null/empty');
+        
+        if (!referenceSequence) {
+            console.warn(`🔍 [createSVGReferenceSequence] No reference sequence available for ${start}-${end}`);
+            return null;
+        }
 
         // Create SVG group for the reference sequence
         const referenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -3888,10 +3899,15 @@ class TrackRenderer {
      * Get reference sequence for the specified region
      */
     getReferenceSequence(start, end, chromosome = null) {
+        console.log(`🔍 [getReferenceSequence] Called with start=${start}, end=${end}, chromosome=${chromosome}`);
+        
         // Try to get reference sequence from the genome browser
         if (this.genomeBrowser && this.genomeBrowser.currentSequence) {
+            console.log(`🔍 [getReferenceSequence] genomeBrowser.currentSequence available`);
+            
             // Get the current chromosome if not provided
             const currentChr = chromosome || document.getElementById('chromosomeSelect')?.value || this.genomeBrowser.currentChromosome;
+            console.log(`🔍 [getReferenceSequence] Using chromosome: ${currentChr}`);
             
             // Get sequence for the specific chromosome
             let sequence = this.genomeBrowser.currentSequence;
@@ -8761,7 +8777,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 showSequences: false,
                 forceSequences: false,
                 autoFontSize: true,
-                showReference: false,
+                showReference: true,
                 sequenceThreshold: 1.0,
                 sequenceFontSize: 10,
                 sequenceHeight: 14,
