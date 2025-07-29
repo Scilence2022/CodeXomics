@@ -3899,14 +3899,25 @@ class TrackRenderer {
     /**
      * Get reference sequence for the specified region
      */
-    getReferenceSequence(start, end) {
+    getReferenceSequence(start, end, chromosome = null) {
         // Try to get reference sequence from the genome browser
         if (this.genomeBrowser && this.genomeBrowser.currentSequence) {
-            const sequence = this.genomeBrowser.currentSequence;
-            // Convert 1-based coordinates to 0-based for string slicing
-            const startIndex = Math.max(0, start - 1);
-            const endIndex = Math.min(sequence.length, end);
-            return sequence.substring(startIndex, endIndex);
+            // Get the current chromosome if not provided
+            const currentChr = chromosome || document.getElementById('chromosomeSelect')?.value || this.genomeBrowser.currentChromosome;
+            
+            // Get sequence for the specific chromosome
+            let sequence = this.genomeBrowser.currentSequence;
+            if (typeof sequence === 'object' && currentChr) {
+                sequence = sequence[currentChr];
+            }
+            
+            // Check if we have a valid string sequence
+            if (typeof sequence === 'string' && sequence.length > 0) {
+                // Convert 1-based coordinates to 0-based for string slicing
+                const startIndex = Math.max(0, start - 1);
+                const endIndex = Math.min(sequence.length, end);
+                return sequence.substring(startIndex, endIndex);
+            }
         }
         return null;
     }
@@ -10186,7 +10197,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      */
     createReferenceSequenceVisualization(trackContent, chromosome, viewport, referenceHeight, coverageHeight, settings) {
         // Get reference sequence for current viewport
-        const sequence = this.getReferenceSequence(viewport.start, viewport.end);
+        const sequence = this.getReferenceSequence(viewport.start, viewport.end, chromosome);
         if (!sequence || sequence.length === 0) {
             console.warn('No reference sequence available for viewport:', viewport);
             return;
