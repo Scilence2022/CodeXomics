@@ -322,12 +322,21 @@ class GenomeBrowser {
         console.log('⚙️ About to initialize GeneralSettingsManager...');
         try {
             this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
-            this.generalSettingsManager.init();
-            window.generalSettingsManager = this.generalSettingsManager; // Make globally available
-            console.log('✅ GeneralSettingsManager initialized successfully');
+            // Initialize asynchronously and then apply global dragging setting
+            this.generalSettingsManager.init().then(() => {
+                console.log('✅ GeneralSettingsManager initialized successfully');
+                
+                // Initialize global dragging setting after settings are loaded
+                this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging || false;
+                
+                // Apply the setting immediately
+                this.setGlobalDragging(this.globalDraggingEnabled);
+            }).catch((error) => {
+                console.error('❌ Error initializing GeneralSettingsManager:', error);
+                this.globalDraggingEnabled = false;
+            });
             
-            // Initialize global dragging setting
-            this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging || false;
+            window.generalSettingsManager = this.generalSettingsManager; // Make globally available
         } catch (error) {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
             this.globalDraggingEnabled = false;

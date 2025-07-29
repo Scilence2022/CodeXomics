@@ -200,7 +200,8 @@ class GeneralSettingsManager {
         const featureCheckboxes = [
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
-            'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache'
+            'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
+            'enableGlobalDragging'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -439,6 +440,9 @@ class GeneralSettingsManager {
         this.applyTrackHeight(this.settings.trackHeight);
         this.applyAnimations(this.settings.enableAnimations);
         this.applyMinLineSpacing(this.settings.minLineSpacing);
+        
+        // Apply feature settings
+        this.applyFeatureSetting('enableGlobalDragging', this.settings.enableGlobalDragging);
     }
 
     /**
