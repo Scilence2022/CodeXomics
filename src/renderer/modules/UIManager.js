@@ -5,6 +5,16 @@ class UIManager {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
         this.initializeDropdownHandlers();
+        
+        // Initialize the sidebar splitter when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeSidebarSplitter();
+            });
+        } else {
+            // DOM is already loaded
+            setTimeout(() => this.initializeSidebarSplitter(), 100);
+        }
     }
 
     // Initialize dropdown event handlers
@@ -1113,6 +1123,158 @@ class UIManager {
             
             trackContent.appendChild(svg);
             console.log('📊 WIG track', trackName, 'SVG refreshed');
+        }
+    }
+
+    // Initialize sidebar splitter functionality - inspired by track splitter
+    initializeSidebarSplitter() {
+        console.log('🔧 Initializing sidebar splitter...');
+        
+        const splitter = document.getElementById('sidebarSplitter');
+        const sidebar = document.getElementById('sidebar');
+        const viewerContainer = document.getElementById('viewerContainer');
+        
+        console.log('Splitter elements found:', {
+            splitter: !!splitter,
+            sidebar: !!sidebar,
+            viewerContainer: !!viewerContainer
+        });
+        
+        if (!splitter || !sidebar || !viewerContainer) {
+            console.warn('Sidebar splitter elements not found');
+            return;
+        }
+        
+        console.log('✅ Sidebar splitter initialized successfully');
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const startResize = (e) => {
+            isResizing = true;
+            startX = e.clientX || (e.touches && e.touches[0].clientX);
+            startWidth = sidebar.offsetWidth;
+            
+            // Add visual feedback (like track splitter)
+            splitter.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            e.preventDefault();
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+            
+            const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+            const deltaX = currentX - startX;
+            const newWidth = Math.max(200, Math.min(600, startWidth + deltaX));
+            
+            // Update sidebar width
+            sidebar.style.width = `${newWidth}px`;
+            
+            e.preventDefault();
+        };
+
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            
+            // Remove visual feedback
+            splitter.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            // Save the new width to localStorage
+            localStorage.setItem('sidebarWidth', sidebar.style.width);
+            
+            // Trigger resize event for any dependent components
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        // Auto-reset to default width on double-click
+        const autoResetWidth = () => {
+            // Add visual feedback
+            splitter.classList.add('auto-resetting');
+            
+            // Reset to default width with smooth transition
+            sidebar.style.transition = 'width 0.3s ease';
+            sidebar.style.width = '280px';
+            
+            // Save the reset width
+            localStorage.setItem('sidebarWidth', '280px');
+            
+            // Trigger resize event
+            window.dispatchEvent(new Event('resize'));
+            
+            // Remove transition and animation classes after animation completes
+            setTimeout(() => {
+                sidebar.style.transition = '';
+                splitter.classList.remove('auto-resetting');
+            }, 300);
+        };
+
+        // Mouse events
+        splitter.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+
+        // Touch events for mobile
+        splitter.addEventListener('touchstart', startResize, { passive: false });
+        document.addEventListener('touchmove', doResize, { passive: false });
+        document.addEventListener('touchend', stopResize);
+
+        // Double-click for auto-reset
+        splitter.addEventListener('dblclick', autoResetWidth);
+
+        // Make splitter focusable for keyboard navigation
+        splitter.setAttribute('tabindex', '0');
+        splitter.addEventListener('keydown', (e) => {
+            const step = 10; // pixels to move per keypress
+            let deltaX = 0;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    deltaX = -step;
+                    break;
+                case 'ArrowRight':
+                    deltaX = step;
+                    break;
+                case 'Home':
+                    autoResetWidth();
+                    e.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+            
+            e.preventDefault();
+            
+            // Apply keyboard movement
+            const currentWidth = sidebar.offsetWidth;
+            const newWidth = Math.max(200, Math.min(600, currentWidth + deltaX));
+            
+            sidebar.style.width = `${newWidth}px`;
+            localStorage.setItem('sidebarWidth', sidebar.style.width);
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        // Restore saved width on initialization
+        this.restoreSidebarWidth();
+    }
+
+    // Restore sidebar width from localStorage
+    restoreSidebarWidth() {
+        const savedWidth = localStorage.getItem('sidebarWidth');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (savedWidth && sidebar) {
+            const width = parseInt(savedWidth);
+            if (width >= 200 && width <= 600) {
+                sidebar.style.width = savedWidth;
+            }
         }
     }
 }

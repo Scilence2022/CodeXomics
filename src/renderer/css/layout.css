@@ -63,15 +63,19 @@
     flex: 1;
     display: flex;
     overflow: hidden;
+    position: relative;
 }
 
 /* Sidebar Layout */
 .sidebar {
-    width: 280px;
+    width: var(--sidebar-width, 280px);
+    min-width: 200px;
+    max-width: 600px;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
     overflow-y: auto;
     flex-shrink: 0;
+    transition: width 0.2s ease;
 }
 
 .sidebar.collapsed {
@@ -230,6 +234,111 @@
     height: 4px;
     cursor: row-resize;
 }
+
+/* Sidebar Splitter - Inspired by track splitter design */
+.sidebar-splitter {
+    width: 8px;
+    background: linear-gradient(to right, #e9ecef, #dee2e6, #e9ecef);
+    cursor: col-resize;
+    position: relative;
+    border-left: 1px solid #ced4da;
+    border-right: 1px solid #ced4da;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.sidebar-splitter:hover {
+    background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+    width: 10px;
+    margin: 0 -1px;
+}
+
+.sidebar-splitter.resizing {
+    background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+    width: 10px;
+    margin: 0 -1px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    transition: none !important;
+}
+
+.sidebar-splitter-handle {
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    position: relative;
+}
+
+.sidebar-splitter:hover .sidebar-splitter-handle {
+    opacity: 1;
+    color: #495057;
+    font-size: 14px;
+}
+
+.sidebar-splitter.resizing .sidebar-splitter-handle {
+    opacity: 1;
+    color: #343a40;
+    font-size: 14px;
+}
+
+.sidebar-splitter:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    background: linear-gradient(to right, #dee2e6, #ced4da, #dee2e6);
+}
+
+.sidebar-splitter:focus .sidebar-splitter-handle {
+    color: var(--primary-color);
+    opacity: 1;
+}
+
+.sidebar-splitter::after {
+    content: 'Double-click to reset width';
+    position: absolute;
+    top: 50%;
+    left: -75px;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.sidebar-splitter:hover::after {
+    opacity: 1;
+}
+
+.sidebar-splitter.auto-resetting {
+    background: linear-gradient(to right, #28a745, #20c997, #28a745);
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.sidebar-splitter.auto-resetting .sidebar-splitter-handle {
+    color: white;
+    opacity: 1;
+    animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Remove the old vertical-splitter styles */
 
 /* MCP Server Controls in Header */
 .mcp-server-controls {
