@@ -3658,7 +3658,10 @@ class TrackRenderer {
         const x = (left / 100) * containerWidth;
         const minWidth = settings.minWidth || 2;
         const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
-        const y = topPadding + rowIndex * (readHeight + rowSpacing);
+        
+        // Calculate Y position, adding space for reference sequence if shown
+        const referenceSpacing = (settings.showReference && settings.showSequences) ? readHeight + 5 : 0;
+        const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -3702,7 +3705,10 @@ class TrackRenderer {
         // Calculate pixel positions
         const x = (left / 100) * containerWidth;
         const elementWidth = Math.max((width / 100) * containerWidth, 2);
-        const y = topPadding + rowIndex * (readHeight + rowSpacing);
+        
+        // Calculate Y position, adding space for reference sequence if shown
+        const referenceSpacing = (settings.showReference && settings.showSequences) ? readHeight + 5 : 0;
+        const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the sequence
         const sequenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -3770,66 +3776,60 @@ class TrackRenderer {
         const fontSize = settings.sequenceFontSize || 10;
         const fontFamily = settings.sequenceFontFamily || 'monospace';
         const mismatchColor = settings.mismatchColor || '#dc3545';
+        const baseColors = this.getDNABaseColors(settings);
         
-        // Create group for the sequence
+        // Create group for the sequence (no background like reference)
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        
-        // Add white background for better readability
-        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        bg.setAttribute('x', '-1');
-        bg.setAttribute('y', '0');
-        bg.setAttribute('width', width + 2);
-        bg.setAttribute('height', height);
-        bg.setAttribute('fill', 'rgba(255, 255, 255, 0.8)');
-        bg.setAttribute('stroke', 'none');
-        group.appendChild(bg);
+        group.setAttribute('class', 'svg-sequence-text');
         
         if (referenceSequence && settings.showMismatches && referenceSequence.length === sequence.length) {
             // Create individual character elements with mismatch highlighting
-            const charWidth = (width - 2) / sequence.length;
+            const charWidth = width / sequence.length;
             
             for (let i = 0; i < sequence.length; i++) {
                 const char = sequence[i];
                 const refChar = referenceSequence[i];
                 const isMismatch = char.toUpperCase() !== refChar.toUpperCase();
                 
-                // Create background for mismatch
+                // Create subtle mismatch background (circle instead of rectangle)
                 if (isMismatch) {
-                    const mismatchBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    mismatchBg.setAttribute('x', i * charWidth);
-                    mismatchBg.setAttribute('y', '0');
-                    mismatchBg.setAttribute('width', charWidth);
-                    mismatchBg.setAttribute('height', height);
-                    mismatchBg.setAttribute('fill', mismatchColor);
-                    mismatchBg.setAttribute('opacity', '0.3');
+                    const mismatchBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    mismatchBg.setAttribute('cx', i * charWidth + charWidth / 2);
+                    mismatchBg.setAttribute('cy', height / 2);
+                    mismatchBg.setAttribute('r', Math.min(charWidth, height) / 3);
+                    mismatchBg.setAttribute('fill', 'rgba(220, 53, 69, 0.2)');
                     group.appendChild(mismatchBg);
                 }
                 
-                // Create character text
+                // Create character text with base colors or mismatch color
                 const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 charText.setAttribute('x', i * charWidth + charWidth / 2);
                 charText.setAttribute('y', height / 2 + fontSize / 3);
                 charText.setAttribute('font-family', fontFamily);
                 charText.setAttribute('font-size', fontSize);
-                charText.setAttribute('fill', isMismatch ? mismatchColor : '#333');
+                charText.setAttribute('fill', isMismatch ? mismatchColor : (baseColors[char.toUpperCase()] || baseColors.default));
                 charText.setAttribute('font-weight', isMismatch ? 'bold' : 'normal');
                 charText.setAttribute('text-anchor', 'middle');
                 charText.setAttribute('dominant-baseline', 'middle');
-                charText.textContent = char;
+                charText.textContent = char.toUpperCase();
                 group.appendChild(charText);
             }
         } else {
-            // Create simple text element without mismatch highlighting
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', '0');
-            text.setAttribute('y', height / 2 + fontSize / 3);
-            text.setAttribute('font-family', fontFamily);
-            text.setAttribute('font-size', fontSize);
-            text.setAttribute('fill', '#333');
-            text.setAttribute('text-anchor', 'start');
-            text.setAttribute('dominant-baseline', 'middle');
-            text.textContent = sequence;
-            group.appendChild(text);
+            // Create individual colored bases for consistent appearance with reference
+            const charWidth = width / sequence.length;
+            
+            sequence.split('').forEach((char, index) => {
+                const charText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                charText.setAttribute('x', index * charWidth + charWidth / 2);
+                charText.setAttribute('y', height / 2 + fontSize / 3);
+                charText.setAttribute('font-family', fontFamily);
+                charText.setAttribute('font-size', fontSize);
+                charText.setAttribute('fill', baseColors[char.toUpperCase()] || baseColors.default);
+                charText.setAttribute('text-anchor', 'middle');
+                charText.setAttribute('dominant-baseline', 'middle');
+                charText.textContent = char.toUpperCase();
+                group.appendChild(charText);
+            });
         }
         
         return group;
@@ -3847,8 +3847,8 @@ class TrackRenderer {
         const referenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         referenceGroup.setAttribute('class', 'svg-reference-sequence');
         
-        // Position at the top of the track
-        const y = topPadding - readHeight - 5;
+        // Position at the top of the reads area (after coverage, before reads)
+        const y = topPadding;
         referenceGroup.setAttribute('transform', `translate(0, ${y})`);
 
         // Add background for reference sequence
@@ -3930,25 +3930,51 @@ class TrackRenderer {
     }
 
     /**
+     * Get consistent DNA base colors
+     */
+    getDNABaseColors(settings = {}) {
+        return {
+            'A': '#FF4136', // Red
+            'T': '#0074D9', // Blue  
+            'G': '#2ECC40', // Green
+            'C': '#FF851B', // Orange
+            'U': '#0074D9', // Blue (same as T)
+            'N': '#AAAAAA', // Gray
+            'default': '#495057' // Dark gray
+        };
+    }
+
+    /**
      * Create SVG text element for reference sequence
      */
     createSVGReferenceText(sequence, width, height, settings = {}) {
         const fontSize = settings.referenceFontSize || 12;
         const fontFamily = settings.referenceFontFamily || 'monospace';
+        const baseColors = this.getDNABaseColors(settings);
         
-        // Create text element
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', '25'); // Offset for "REF" label
-        text.setAttribute('y', height / 2 + fontSize / 3);
-        text.setAttribute('font-family', fontFamily);
-        text.setAttribute('font-size', fontSize);
-        text.setAttribute('fill', '#495057');
-        text.setAttribute('font-weight', 'bold');
-        text.setAttribute('text-anchor', 'start');
-        text.setAttribute('dominant-baseline', 'middle');
-        text.textContent = sequence.toUpperCase();
+        // Create group for reference sequence bases
+        const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        textGroup.setAttribute('class', 'reference-text-group');
         
-        return text;
+        // Calculate spacing for individual bases
+        const availableWidth = width - 30; // Account for "REF" label space
+        const charWidth = availableWidth / sequence.length;
+        const startX = 30;
+        
+        // Create individual text elements for each base with specific colors
+        sequence.split('').forEach((base, index) => {
+            const charElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            charElement.setAttribute('x', startX + (index * charWidth));
+            charElement.setAttribute('y', height / 2 + fontSize / 3);
+            charElement.setAttribute('font-family', fontFamily);
+            charElement.setAttribute('font-size', fontSize);
+            charElement.setAttribute('fill', baseColors[base.toUpperCase()] || baseColors.default);
+            charElement.setAttribute('text-anchor', 'middle');
+            charElement.textContent = base.toUpperCase();
+            textGroup.appendChild(charElement);
+        });
+        
+        return textGroup;
     }
 
     /**
@@ -8545,6 +8571,13 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     <label for="readsSequenceThreshold">Sequence display threshold (bp/px):</label>
                     <input type="number" id="readsSequenceThreshold" min="0.1" max="10" step="0.1" value="${settings.sequenceThreshold || 1.0}">
                     <div class="help-text">Maximum bases per pixel to trigger sequence display. Lower values require more zoom. Default: 1.0 bp/px.</div>
+                </div>
+                <div class="form-group" id="readsAutoFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
+                    <label>
+                        <input type="checkbox" id="readsAutoFontSize" ${settings.autoFontSize !== false ? 'checked' : ''}>
+                        Auto-adjust font size for optimal display
+                    </label>
+                    <div class="help-text">Automatically calculate the best font size for sequence display based on zoom level and available space. Default: enabled.</div>
                 </div>
                 <div class="form-group" id="readsSequenceFontSizeGroup" style="display: ${settings.showSequences ? 'block' : 'none'}">
                     <label for="readsSequenceFontSize">Sequence font size (px):</label>
