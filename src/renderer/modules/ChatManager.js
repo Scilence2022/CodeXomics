@@ -58,16 +58,19 @@ class ChatManager {
         // Initialize Plugin Function Calls Integrator
         this.pluginFunctionCallsIntegrator = null;
         
-        // Initialize Multi-Agent System
+        // Initialize Multi-Agent System (CrewAI)
         this.multiAgentSystem = null;
+        this.crewAISystem = null;
         this.memorySystem = null;
         this.agentSystemEnabled = false;
+        this.useCrewAI = true; // Feature flag for CrewAI system
         this.agentSystemSettings = {
             enabled: false,
             autoOptimize: true,
             showAgentInfo: true,
             memoryEnabled: true,
-            cacheEnabled: true
+            cacheEnabled: true,
+            useCrewAI: true
         };
         this.initializePluginFunctionCallsIntegrator();
         
@@ -321,10 +324,77 @@ class ChatManager {
     }
     
     /**
-     * Initialize Multi-Agent System
+     * Initialize Multi-Agent System (Legacy + CrewAI)
      */
     async initializeMultiAgentSystem() {
         try {
+            // Load settings first
+            this.loadAgentSystemSettings();
+            
+            console.log('🔧 Agent System Settings:', {
+                useCrewAI: this.useCrewAI,
+                settingsUseCrewAI: this.agentSystemSettings.useCrewAI,
+                allSettings: this.agentSystemSettings
+            });
+            
+            if (this.useCrewAI && this.agentSystemSettings.useCrewAI) {
+                console.log('🚢 Initializing CrewAI System...');
+                // Initialize CrewAI System
+                await this.initializeCrewAISystem();
+            } else {
+                console.log('🤖 Initializing Legacy System...');
+                // Initialize Legacy Multi-Agent System
+                await this.initializeLegacyMultiAgentSystem();
+            }
+            
+        } catch (error) {
+            console.error('Failed to initialize Multi-Agent System:', error);
+        }
+    }
+    
+    /**
+     * Initialize CrewAI Multi-Agent System
+     */
+    async initializeCrewAISystem() {
+        try {
+            console.log('🚢 Initializing CrewAI Multi-Agent System...');
+            
+            // CrewAI modules are already loaded via HTML script tags
+            if (typeof CrewAIMultiAgentSystem !== 'undefined') {
+                this.crewAISystem = new CrewAIMultiAgentSystem(this, this.configManager);
+                await this.crewAISystem.initialize();
+                
+                // Set as primary multi-agent system
+                this.multiAgentSystem = this.crewAISystem;
+                
+                console.log('🚢 CrewAI Multi-Agent System initialized successfully');
+                this.agentSystemEnabled = this.agentSystemSettings.enabled;
+                
+                // Emit initialization event
+                this.emit('crew-system-initialized', {
+                    enabled: this.agentSystemEnabled,
+                    agentCount: this.crewAISystem.agents.size,
+                    crewCount: this.crewAISystem.crews.size
+                });
+                
+            } else {
+                console.warn('CrewAIMultiAgentSystem not available, falling back to legacy system');
+                await this.initializeLegacyMultiAgentSystem();
+            }
+            
+        } catch (error) {
+            console.error('Failed to initialize CrewAI System, falling back to legacy:', error);
+            await this.initializeLegacyMultiAgentSystem();
+        }
+    }
+    
+    /**
+     * Initialize Legacy Multi-Agent System
+     */
+    async initializeLegacyMultiAgentSystem() {
+        try {
+            console.log('🤖 Initializing Legacy Multi-Agent System...');
+            
             // Load required modules
             await this.loadScript('modules/MultiAgentSystem.js');
             
@@ -352,10 +422,7 @@ class ChatManager {
                     await this.memorySystem.initialize();
                 }
                 
-                // Load settings from config
-                this.loadAgentSystemSettings();
-                
-                console.log('🤖 Multi-Agent System initialized successfully');
+                console.log('🤖 Legacy Multi-Agent System initialized successfully');
                 this.agentSystemEnabled = this.agentSystemSettings.enabled;
                 
                 // Emit initialization event
@@ -369,7 +436,7 @@ class ChatManager {
             }
             
         } catch (error) {
-            console.error('Failed to initialize Multi-Agent System:', error);
+            console.error('Failed to initialize Legacy Multi-Agent System:', error);
         }
     }
     
@@ -383,6 +450,11 @@ class ChatManager {
                 ...this.agentSystemSettings,
                 ...savedSettings
             };
+            
+            // Ensure CrewAI is enabled by default if not explicitly set
+            if (this.agentSystemSettings.useCrewAI === undefined) {
+                this.agentSystemSettings.useCrewAI = true;
+            }
         } catch (error) {
             console.warn('Failed to load agent system settings:', error);
         }
@@ -465,13 +537,26 @@ class ChatManager {
      * Get agent system status
      */
     getAgentSystemStatus() {
-        return {
+        const status = {
             enabled: this.agentSystemEnabled,
             initialized: this.multiAgentSystem !== null,
             settings: this.agentSystemSettings,
             stats: this.multiAgentSystem ? this.multiAgentSystem.getSystemStats() : null,
-            memoryStats: this.memorySystem ? this.memorySystem.getMemoryStats() : null
+            memoryStats: this.memorySystem ? this.memorySystem.getMemoryStats() : null,
+            systemType: 'legacy'
         };
+        
+        // Add CrewAI-specific information if using CrewAI
+        if (this.crewAISystem && this.useCrewAI) {
+            status.systemType = 'crewai';
+            status.crewStats = {
+                agentCount: this.crewAISystem.agents.size,
+                crewCount: this.crewAISystem.crews.size,
+                activeTasks: this.crewAISystem.activeTasks.size
+            };
+        }
+        
+        return status;
     }
 
     /**

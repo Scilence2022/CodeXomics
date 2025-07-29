@@ -1148,9 +1148,7 @@
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed {
-    /* When sidebar is collapsed, viewer takes full width */
-}
+
 
 .main-content.sidebar-collapsed .viewer-container {
     flex: 1;
@@ -2842,7 +2840,7 @@
         display: none !important;
     }
     
-}
+
 
 /* Genome Browser Styles */
 .genome-browser-container {
@@ -3482,9 +3480,7 @@
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed {
-    /* When sidebar is collapsed, viewer takes full width */
-}
+
 
 .main-content.sidebar-collapsed .viewer-container {
     flex: 1;
@@ -6313,11 +6309,7 @@ path.svg-gene-element.selected {
 
 /* Viewer Container */
 
-/* When welcome screen is hidden, it shouldn't take space */
-    text-align: center;
-    max-width: 500px;
-    padding: 40px;
-}
+
 
 .welcome-icon {
     font-size: 64px;
@@ -6663,7 +6655,7 @@ path.svg-gene-element.selected {
         display: none !important;
     }
     
-}
+
 
 /* Genome Browser Styles */
 .genome-browser-container {
@@ -7136,11 +7128,7 @@ path.svg-gene-element.selected {
 
 /* Welcome Screen Enhancement */
 
-/* When welcome screen is hidden, it shouldn't take space */
-    text-align: center;
-    max-width: 500px;
-    padding: 40px;
-}
+
 
 .welcome-icon {
     font-size: 4rem;
@@ -7636,9 +7624,7 @@ path.svg-gene-element.selected {
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed {
-    /* When sidebar is collapsed, viewer takes full width */
-}
+
 
 .main-content.sidebar-collapsed .viewer-container {
     flex: 1;
@@ -8429,12 +8415,7 @@ path.svg-gene-element.selected {
     margin: 2px 0;
 }
 
-    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
-    height: 10px;
-    margin: 1px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: none !important; /* Disable transitions during resizing */
-}
+
 
 .track-splitter-handle {
     color: #6c757d;
@@ -8901,7 +8882,7 @@ path.svg-gene-element.selected {
         display: none !important;
     }
     
-}
+
 
 /* Genome Browser Styles */
 .genome-browser-container {
@@ -9143,11 +9124,7 @@ path.svg-gene-element.selected {
 
 /* Welcome Screen Enhancement */
 
-/* When welcome screen is hidden, it shouldn't take space */
-    text-align: center;
-    max-width: 500px;
-    padding: 40px;
-}
+
 
 .welcome-icon {
     font-size: 4rem;
@@ -9643,9 +9620,7 @@ path.svg-gene-element.selected {
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed {
-    /* When sidebar is collapsed, viewer takes full width */
-}
+
 
 .main-content.sidebar-collapsed .viewer-container {
     flex: 1;
@@ -10436,12 +10411,6 @@ path.svg-gene-element.selected {
     margin: 2px 0;
 }
 
-    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
-    height: 10px;
-    margin: 1px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: none !important; /* Disable transitions during resizing */
-}
 
 .track-splitter-handle {
     color: #6c757d;
@@ -12183,11 +12152,7 @@ path.svg-gene-element.selected {
 
 /* Viewer Container */
 
-/* When welcome screen is hidden, it shouldn't take space */
-    text-align: center;
-    max-width: 500px;
-    padding: 40px;
-}
+
 
 .welcome-icon {
     font-size: 64px;
@@ -12533,7 +12498,7 @@ path.svg-gene-element.selected {
         display: none !important;
     }
     
-}
+
 
 /* Genome Browser Styles */
 .genome-browser-container {
@@ -12664,51 +12629,6 @@ path.svg-gene-element.selected {
     font-size: var(--arrow-size, 8px);
 }
 
-/* Operon Legend - DEPRECATED: Moved to sidebar panel */
-/*
-.operon-legend {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 11px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index: 5;
-    max-width: 200px;
-}
-
-.operon-legend-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: #333;
-}
-
-.operon-legend-item {
-    display: flex;
-    align-items: center;
-    margin: 2px 0;
-    font-size: 10px;
-}
-
-.operon-legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    margin-right: 6px;
-    border: 1px solid rgba(0,0,0,0.3);
-}
-
-.operon-legend-label {
-    color: #555;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-*/
 
 /* Track Controls */
 .track-controls {
@@ -12775,11 +12695,6 @@ path.svg-gene-element.selected {
 
 /* Welcome Screen Enhancement */
 
-/* When welcome screen is hidden, it shouldn't take space */
-    text-align: center;
-    max-width: 500px;
-    padding: 40px;
-}
 
 .welcome-icon {
     font-size: 4rem;
@@ -13275,9 +13190,7 @@ path.svg-gene-element.selected {
     transition: all 0.2s ease;
 }
 
-.main-content.sidebar-collapsed {
-    /* When sidebar is collapsed, viewer takes full width */
-}
+
 
 .main-content.sidebar-collapsed .viewer-container {
     flex: 1;
@@ -14068,11 +13981,7 @@ path.svg-gene-element.selected {
     margin: 2px 0;
 }
 
-    background: linear-gradient(to bottom, #ced4da, #adb5bd, #ced4da);
-    height: 10px;
-    margin: 1px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
+
 
 /* Feature highlighting for ruler-based selection */
 .feature-highlighted {
@@ -19987,9 +19896,7 @@ input:checked + .slider:before {
     color: #4b5563;
 }
 
-.genes-list {
-    space-y: 12px;
-}
+
 
 .gene-item {
     background: white;

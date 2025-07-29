@@ -1,0 +1,144 @@
+
+
+.header-left {
+    flex: 0 0 auto;
+}
+
+.app-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-title i {
+    color: #ecf0f1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.version-tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: #74b9ff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    max-width: 600px;
+    margin: 0 20px;
+}
+
+.search-container,
+.position-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.search-input,
+.position-input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    width: 200px;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus,
+.position-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.header-right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative; /* Added for dropdown positioning */
+}
+
+.toolbar-section label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.toolbar-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.mcp-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.status-dot.status-stopped {
+    background-color: #dc3545;
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+}
+
+.status-dot.status-starting {
+    background-color: #ffc107;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.3);
+    animation: pulse 1.5s infinite;
+}
+
+.status-dot.status-running {
+    background-color: #28a745;
+    box-shadow: 0 0 4px rgba(40, 167, 69, 0.3);
+}
+
+.status-dot.status-stopping {
+    background-color: #fd7e14;
+    box-shadow: 0 0 4px rgba(253, 126, 20, 0.3);
+    animation: pulse 1.5s infinite;
+}
+
+.status-text {
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Responsive adjustments for header MCP controls */

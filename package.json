@@ -56,6 +56,7 @@
     "@gmod/bam": "^6.0.4",
     "@modelcontextprotocol/sdk": "^1.15.1",
     "cors": "^2.8.5",
+    "css-purge": "^3.1.8",
     "d3": "^7.8.5",
     "express": "^4.21.2",
     "file-saver": "^2.0.5",

@@ -13647,121 +13647,7 @@ svg {
     border-bottom-right-radius: 6px;
 }
 
-/* Enhanced Genome Viewer */
-.genome-viewer {
-    flex: 1;
-    background: white;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-    overflow: hidden;
-    min-height: 400px;
-}
 
-.genome-viewer:empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
-/* Welcome Screen Enhancement */
-.welcome-screen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px; /* Keep min-height as fallback */
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    text-align: center;
-    position: absolute; /* Position relative to .viewer-container (nearest positioned ancestor) */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 15; /* Higher z-index to appear above both genome viewer and sequence sections */
-}
-
-/* When welcome screen is hidden, it shouldn't take space */
-.welcome-screen[style*="display: none"] {
-    position: static;
-}
-
-.welcome-content {
-    max-width: 500px;
-    padding: 40px;
-}
-
-.welcome-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.9;
-}
-
-.welcome-content h2 {
-    font-size: 2.5rem;
-    margin-bottom: 15px;
-    font-weight: 300;
-}
-
-.welcome-content p {
-    font-size: 1.2rem;
-    margin-bottom: 30px;
-    opacity: 0.9;
-}
-
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.3);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-.btn-large:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
-    transform: translateY(-2px);
-}
-
-.supported-formats {
-    margin-top: 20px;
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-/* Enhanced Statistics */
-.statistics {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 15px;
-    border: 1px solid #dee2e6;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.stat-item:last-child {
-    border-bottom: none;
-}
-
-.stat-label {
-    font-weight: 600;
-    color: #495057;
-}
-
-.stat-value {
-    font-weight: 500;
-    color: #007bff;
-    font-family: 'Courier New', monospace;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -14331,18 +14217,7 @@ svg {
     color: var(--text-primary);
 }
 
-/* Enhanced Resizable split layout */
-.genome-viewer-section {
-    /* flex: 1; Remove or change this */
-    flex: 1; /* Allow flexible sizing while maintaining balance */
-    flex-shrink: 0; /* Prevent shrinking when bottom panel grows */
-    /* flex-basis: 50%;  Remove fixed basis to allow flex to work properly */
-    /* Or set a specific initial height: height: 300px; */
-    overflow-y: auto;
-    position: relative;
-    min-height: 200px; /* Increase minimum height for the top tracks panel */
-     /*max-height: 70%; Prevent taking more than 70% of available space */
-}
+
 
 /* Horizontal Splitter between sidebar and viewer */
 .horizontal-splitter {
@@ -17623,23 +17498,7 @@ svg {
     border-bottom-right-radius: 6px;
 }
 
-/* Enhanced Genome Viewer */
-.genome-viewer {
-    flex: 1;
-    background: white;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-    overflow: hidden;
-    min-height: 400px;
-}
 
-.genome-viewer:empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-style: italic;
-}
 
 /* Welcome Screen Enhancement */
 .welcome-screen {

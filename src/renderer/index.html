@@ -7,6 +7,7 @@
     <title>Genome AI Studio</title>
     <!-- Modular CSS Architecture -->
     <link rel="stylesheet" href="css/base.css">
+    <!-- <link rel="stylesheet" href="css/main-legacy.css"> -->
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/tabs.css">
     <link rel="stylesheet" href="css/actions.css">
@@ -20,9 +21,9 @@
     <link rel="stylesheet" href="css/sequence-tracks.css">
     <!-- <link rel="stylesheet" href="css/main-legacy.css"> -->
     <link rel="stylesheet" href="chatbox-enhancements.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-slim-py2.css">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -3365,6 +3366,23 @@
 <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/MCPServerManager.js"></script>
     <script src="modules/ChatManager.js"></script>
+    
+    <!-- CrewAI Multi-Agent System -->
+    <script src="modules/CrewAI/CrewAIFramework.js"></script>
+    <script src="modules/CrewAI/GenomicsCrewAgents.js"></script>
+    <script src="modules/CrewAI/CrewAIMultiAgentSystem.js"></script>
+    
+    <!-- Legacy Multi-Agent System (for compatibility) -->
+    <script src="modules/AgentBase.js"></script>
+    <script src="modules/Agents/AgentBase.js"></script>
+    <script src="modules/Agents/NavigationAgent.js"></script>
+    <script src="modules/Agents/AnalysisAgent.js"></script>
+    <script src="modules/Agents/DataAgent.js"></script>
+    <script src="modules/Agents/ExternalAgent.js"></script>
+    <script src="modules/Agents/PluginAgent.js"></script>
+    <script src="modules/Agents/CoordinatorAgent.js"></script>
+    <script src="modules/MultiAgentSystem.js"></script>
+    
     <script src="modules/ReadsManager.js"></script>
     <script src="modules/ProteinStructureViewer.js"></script>
     <script src="modules/BlastManager.js"></script>
