@@ -2130,6 +2130,11 @@ class GenomeBrowser {
                 trackElement = this.trackRenderer.createActionsTrack(chromosome);
                 break;
                 
+            case 'sequence':
+                // Sequence track
+                trackElement = this.trackRenderer.createSequenceTrack(chromosome, sequence);
+                break;
+                
             default:
                 console.warn(`Unknown track type: ${trackType}`);
                 return;
