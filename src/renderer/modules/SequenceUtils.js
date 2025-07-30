@@ -286,6 +286,14 @@ class SequenceUtils {
                 this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
             }, 100);
         }
+        
+        // Re-highlight manual text selection if there is one
+        if (this.genomeBrowser.currentSequenceSelection) {
+            // Use setTimeout to ensure the DOM is updated before highlighting
+            setTimeout(() => {
+                this.restoreManualSelection(this.genomeBrowser.currentSequenceSelection);
+            }, 100);
+        }
     }
     
     /**
@@ -1999,13 +2007,24 @@ class SequenceUtils {
         
         navigator.clipboard.writeText(textToCopy).then(() => {
             // Update status bar instead of showing alert
+            console.log('🔧 [SequenceUtils] Copy successful, updating status:', copyMessage);
+            console.log('🔧 [SequenceUtils] UIManager available:', !!(this.genomeBrowser && this.genomeBrowser.uiManager));
+            
             if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-                this.genomeBrowser.uiManager.updateStatus(copyMessage);
+                this.genomeBrowser.uiManager.updateStatus(copyMessage, { highlight: true });
             } else {
                 // Fallback to status bar update if uiManager is not available
+                console.log('🔧 [SequenceUtils] Using fallback status update');
                 const statusElement = document.getElementById('statusText');
                 if (statusElement) {
                     statusElement.textContent = copyMessage;
+                    // Add visual feedback for copy success
+                    statusElement.style.color = '#4CAF50';
+                    statusElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        statusElement.style.color = '';
+                        statusElement.style.fontWeight = '';
+                    }, 3000);
                 }
             }
         }).catch(err => {
@@ -3108,6 +3127,57 @@ class SequenceUtils {
         }
         
         return null;
+    }
+
+    /**
+     * Restore manual text selection visual highlighting after sequence re-render
+     */
+    restoreManualSelection(selectionInfo) {
+        if (!selectionInfo || !selectionInfo.active) {
+            console.log('🔧 [SequenceUtils] No active manual selection to restore');
+            return;
+        }
+        
+        console.log('🔧 [SequenceUtils] Restoring manual selection highlighting:', selectionInfo);
+        
+        const sequenceContainer = document.getElementById('sequenceContent');
+        if (!sequenceContainer) {
+            console.warn('🔧 [SequenceUtils] Sequence container not found for manual selection restore');
+            return;
+        }
+        
+        // Find the DOM nodes for the selection range
+        const startResult = this.findNodeAtGenomicPosition(selectionInfo.start, sequenceContainer);
+        const endResult = this.findNodeAtGenomicPosition(selectionInfo.end, sequenceContainer);
+        
+        if (!startResult || !endResult) {
+            console.warn('🔧 [SequenceUtils] Could not find DOM nodes for manual selection restore:', {
+                startPos: selectionInfo.start,
+                endPos: selectionInfo.end,
+                startResult: !!startResult,
+                endResult: !!endResult
+            });
+            return;
+        }
+        
+        // Create and apply the selection
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        try {
+            // Set range with calculated positions
+            range.setStart(startResult.node, startResult.offset);
+            range.setEnd(endResult.node, endResult.offset);
+            
+            // Apply selection
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            console.log('✅ [SequenceUtils] Manual selection highlighting restored successfully');
+            
+        } catch (error) {
+            console.warn('🔧 [SequenceUtils] Error restoring manual selection highlighting:', error);
+        }
     }
 
     /**
