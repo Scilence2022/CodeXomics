@@ -1,0 +1,148 @@
+/* Canvas Sequence Track Performance Optimizations */
+
+.sequence-canvas-container {
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style paint;
+    
+    /* Optimize for rendering performance */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    
+    /* Prevent unnecessary reflows */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.sequence-canvas {
+    /* Hardware acceleration for smooth dragging */
+    transform: translateZ(0);
+    will-change: transform;
+    
+    /* Optimize Canvas rendering */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    -webkit-image-rendering: crisp-edges;
+    -moz-image-rendering: crisp-edges;
+    
+    /* Prevent anti-aliasing for crisp text */
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: none;
+    
+    /* Optimize for performance during drag operations */
+    backface-visibility: hidden;
+    perspective: 1000px;
+    
+    /* Ensure proper layering */
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+/* Performance optimizations during drag operations */
+.sequence-canvas-container.dragging .sequence-canvas {
+    /* Maximum performance during drag */
+    pointer-events: none;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Fallback DOM rendering optimizations */
+.sequence-dom-fallback {
+    /* Optimize DOM fallback for better performance */
+    contain: layout style paint;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.sequence-dom-fallback .sequence-base-inline {
+    /* Optimize individual base elements */
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    contain: layout style;
+}
+
+/* High-DPI display optimizations */
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+       only screen and (min-device-pixel-ratio: 2),
+       only screen and (min-resolution: 192dpi),
+       only screen and (min-resolution: 2dppx) {
+    .sequence-canvas {
+        /* Ensure crisp rendering on high-DPI displays */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+    .sequence-canvas-container {
+        /* Optimize for dark backgrounds */
+        background-color: rgba(31, 41, 55, 0.1);
+    }
+}
+
+/* Mobile performance optimizations */
+@media (max-width: 768px) {
+    .sequence-canvas {
+        /* Reduce complexity on mobile devices */
+        image-rendering: optimizeSpeed;
+        text-rendering: optimizeSpeed;
+    }
+    
+    .sequence-canvas-container {
+        /* Simplify layout on mobile */
+        contain: layout paint;
+    }
+}
+
+/* Animation performance optimizations */
+.sequence-canvas-container,
+.sequence-canvas {
+    /* Optimize transitions for hardware acceleration */
+    transition: transform 0.1s ease-out;
+}
+
+/* Disable transitions during drag for maximum performance */
+.sequence-canvas-container.dragging,
+.sequence-canvas-container.dragging .sequence-canvas {
+    transition: none !important;
+}
+
+/* GPU memory optimization for large sequences */
+.sequence-canvas-container[data-sequence-length="large"] .sequence-canvas {
+    /* Optimize for sequences > 10kb */
+    image-rendering: optimizeSpeed;
+    text-rendering: optimizeSpeed;
+}
+
+/* Performance indicators for debugging */
+.sequence-canvas-container[data-performance-mode="debug"]::after {
+    content: "Canvas Mode";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 255, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.sequence-dom-fallback[data-performance-mode="debug"]::after {
+    content: "DOM Fallback";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 165, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    z-index: 1000;
+    pointer-events: none;
+}

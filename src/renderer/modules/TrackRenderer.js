@@ -6,6 +6,9 @@ class TrackRenderer {
     constructor(genomeBrowser) {
         this.genomeBrowser = genomeBrowser;
         
+        // Canvas renderers for high-performance tracks
+        this.canvasRenderers = new Map();
+        
         // Track configuration for consistent styling and behavior
         this.trackConfig = {
             genes: {
@@ -2117,11 +2120,74 @@ class TrackRenderer {
     }
     
     /**
-     * Create sequence display with improved organization
+     * Create high-performance Canvas-based sequence display
      */
     createSequenceDisplay(subsequence, viewport) {
+        // Create container for Canvas renderer
         const seqDisplay = document.createElement('div');
-        seqDisplay.className = 'sequence-single-line';
+        seqDisplay.className = 'sequence-single-line sequence-canvas-container';
+        seqDisplay.style.cssText = `
+            position: relative;
+            min-height: 20px;
+            height: auto;
+            max-height: 50px;
+            overflow: hidden;
+            width: 100%;
+        `;
+        
+        // Generate unique ID for this track instance
+        const trackId = `sequence-track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        seqDisplay.setAttribute('data-track-id', trackId);
+        
+        console.log('🎨 [TrackRenderer] Creating Canvas-based sequence display:', {
+            subsequenceLength: subsequence.length,
+            viewport: viewport,
+            trackId: trackId
+        });
+        
+        // Check if CanvasSequenceRenderer is available
+        if (typeof CanvasSequenceRenderer === 'undefined') {
+            console.warn('⚠️ [TrackRenderer] CanvasSequenceRenderer not available, falling back to DOM rendering');
+            return this.createSequenceDisplayFallback(subsequence, viewport);
+        }
+        
+        // Create Canvas renderer with optimized options
+        const canvasOptions = {
+            fontSize: 14,
+            fontFamily: 'Courier New, monospace',
+            fontWeight: 'bold',
+            backgroundColor: 'transparent',
+            adaptiveHeight: true,
+            minHeight: 20,
+            maxHeight: 50,
+            padding: 2
+        };
+        
+        try {
+            const canvasRenderer = new CanvasSequenceRenderer(seqDisplay, subsequence, viewport, canvasOptions);
+            
+            // Store renderer for cleanup and updates
+            this.canvasRenderers.set(trackId, canvasRenderer);
+            
+            console.log('✅ [TrackRenderer] Canvas sequence renderer created successfully');
+            
+            return seqDisplay;
+            
+        } catch (error) {
+            console.error('❌ [TrackRenderer] Failed to create Canvas renderer:', error);
+            // Fall back to DOM rendering if Canvas fails
+            return this.createSequenceDisplayFallback(subsequence, viewport);
+        }
+    }
+    
+    /**
+     * Fallback DOM-based sequence display for compatibility
+     */
+    createSequenceDisplayFallback(subsequence, viewport) {
+        console.log('🔄 [TrackRenderer] Using DOM fallback for sequence display');
+        
+        const seqDisplay = document.createElement('div');
+        seqDisplay.className = 'sequence-single-line sequence-dom-fallback';
         seqDisplay.style.cssText = `
             position: relative;
             min-height: 20px;
@@ -2132,102 +2198,18 @@ class TrackRenderer {
             white-space: nowrap;
         `;
         
-        // Get actual container dimensions for accurate calculation
+        // Simplified DOM rendering with basic adaptive sizing
         const sequenceLength = viewport.range;
-        
-        // Create a temporary measurement element to get actual container width
-        const tempContainer = document.createElement('div');
-        tempContainer.style.cssText = `
-            position: absolute;
-            visibility: hidden;
-            width: 100%;
-            height: 30px;
-        `;
-        document.body.appendChild(tempContainer);
-        
-        // Measure actual character width using the same method as SequenceUtils
-        const measurements = [];
-        const charCounts = [16, 32, 64]; // Use different character counts for validation
-        
-        charCounts.forEach(count => {
-            const testElement = document.createElement('span');
-            testElement.textContent = 'ATCG'.repeat(count / 4);
-            testElement.style.cssText = `
-                font-family: 'Courier New', monospace;
-                font-size: 14px;
-                font-weight: 600;
-                visibility: hidden;
-                position: absolute;
-                white-space: nowrap;
-                letter-spacing: 1px;
-            `;
-            tempContainer.appendChild(testElement);
-            const totalWidth = testElement.offsetWidth;
-            const charWidth = totalWidth / count;
-            tempContainer.removeChild(testElement);
-            
-            if (charWidth > 0) {
-                measurements.push(charWidth);
-            }
-        });
-        
-        // Calculate average and use most consistent measurement
-        const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-        const mostConsistent = measurements.reduce((prev, current) => 
-            Math.abs(current - average) < Math.abs(prev - average) ? current : prev
-        );
-        
-        const measuredCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
-        document.body.removeChild(tempContainer);
-        
-        // Use measured width or fallback
-        const charWidth = measuredCharWidth > 0 ? measuredCharWidth : 9.5;
-        // FIX: Don't add extra spacing - letter-spacing is already in CSS
-        const effectiveCharWidth = charWidth; // Remove +1 extra spacing
-        
-        // Calculate optimal font size and character width - ADAPTIVE APPROACH
-        const maxFontSize = 20; // Increased max for better visibility
-        const minFontSize = 6; // Increased min for readability
-        const containerWidth = 800; // Initial estimation, will be updated in adjustSequenceDisplay
-        const availableWidth = containerWidth; // FIX: Use 100% of container width
-        const maxCharWidth = availableWidth / sequenceLength;
-        
-        // Calculate optimal font size with better scaling
-        let fontSize = maxFontSize;
-        let estimatedCharWidth = fontSize * 0.6; // Monospace character width approximation
-        
-        // More sophisticated adaptive sizing
-        while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
-            fontSize -= 0.25; // Smaller increments for finer control
-            estimatedCharWidth = fontSize * 0.6;
-        }
-        
-        // Ensure minimum legibility
-        const finalFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
-        const finalCharWidth = availableWidth / sequenceLength;
-        
-        // Calculate adaptive height based on font size
-        const adaptiveHeight = Math.max(20, finalFontSize * 1.4); // Height scales with font size
+        const adaptiveHeight = Math.max(20, 14 * 1.4);
         seqDisplay.style.height = `${adaptiveHeight}px`;
         
-        console.log('🔧 [TrackRenderer] Sequence display calculation:', {
-            sequenceLength,
-            charWidth,
-            effectiveCharWidth,
-            finalFontSize,
-            finalCharWidth,
-            measurements: measurements.map(m => m.toFixed(3)),
-            average: average.toFixed(3),
-            selectedWidth: measuredCharWidth.toFixed(3)
-        });
-        
-        // Create sequence bases with initial positioning
+        // Create sequence bases with basic positioning
         for (let i = 0; i < subsequence.length; i++) {
-            const baseElement = this.createBaseElement(subsequence[i], i, viewport, finalFontSize, finalCharWidth);
+            const baseElement = this.createBaseElement(subsequence[i], i, viewport, 14, 9.5);
             seqDisplay.appendChild(baseElement);
         }
         
-        // Set up resize observer or defer precise calculation
+        // Apply basic adaptive sizing
         setTimeout(() => {
             this.adjustSequenceDisplay(seqDisplay, subsequence, viewport);
         }, 100);
@@ -10885,6 +10867,126 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 currentHandle = null;
             }
         });
+    }
+    
+    /**
+     * Canvas renderer management methods
+     */
+    
+    /**
+     * Apply drag transform to Canvas-based sequence tracks
+     */
+    applyCanvasDragTransform(deltaX, deltaY = 0) {
+        this.canvasRenderers.forEach((renderer, trackId) => {
+            try {
+                renderer.applyDragTransform(deltaX, deltaY);
+            } catch (error) {
+                console.error(`Failed to apply drag transform to Canvas renderer ${trackId}:`, error);
+            }
+        });
+    }
+    
+    /**
+     * Reset drag transforms for all Canvas renderers
+     */
+    resetCanvasDragTransforms() {
+        this.canvasRenderers.forEach((renderer, trackId) => {
+            try {
+                renderer.resetDragTransform();
+            } catch (error) {
+                console.error(`Failed to reset drag transform for Canvas renderer ${trackId}:`, error);
+            }
+        });
+    }
+    
+    /**
+     * Update Canvas renderers with new sequence data
+     */
+    updateCanvasSequence(newSequence, newViewport) {
+        this.canvasRenderers.forEach((renderer, trackId) => {
+            try {
+                renderer.updateSequence(newSequence, newViewport);
+            } catch (error) {
+                console.error(`Failed to update Canvas renderer ${trackId}:`, error);
+            }
+        });
+    }
+    
+    /**
+     * Get performance statistics from all Canvas renderers
+     */
+    getCanvasPerformanceStats() {
+        const stats = {};
+        this.canvasRenderers.forEach((renderer, trackId) => {
+            try {
+                stats[trackId] = renderer.getPerformanceStats();
+            } catch (error) {
+                console.error(`Failed to get performance stats from Canvas renderer ${trackId}:`, error);
+                stats[trackId] = { error: error.message };
+            }
+        });
+        return stats;
+    }
+    
+    /**
+     * Clean up Canvas renderers when tracks are removed
+     */
+    cleanupCanvasRenderer(trackId) {
+        const renderer = this.canvasRenderers.get(trackId);
+        if (renderer) {
+            try {
+                renderer.destroy();
+                this.canvasRenderers.delete(trackId);
+                console.log(`✅ [TrackRenderer] Canvas renderer ${trackId} cleaned up successfully`);
+            } catch (error) {
+                console.error(`❌ [TrackRenderer] Failed to cleanup Canvas renderer ${trackId}:`, error);
+            }
+        }
+    }
+    
+    /**
+     * Clean up all Canvas renderers
+     */
+    cleanupAllCanvasRenderers() {
+        console.log(`🧹 [TrackRenderer] Cleaning up ${this.canvasRenderers.size} Canvas renderers`);
+        
+        const trackIds = Array.from(this.canvasRenderers.keys());
+        trackIds.forEach(trackId => {
+            this.cleanupCanvasRenderer(trackId);
+        });
+        
+        console.log('✅ [TrackRenderer] All Canvas renderers cleaned up');
+    }
+    
+    /**
+     * Clean up Canvas renderers for removed tracks
+     */
+    cleanupRemovedCanvasRenderers() {
+        const existingTrackIds = new Set();
+        
+        // Check which Canvas containers still exist in DOM
+        document.querySelectorAll('[data-track-id]').forEach(element => {
+            const trackId = element.getAttribute('data-track-id');
+            if (trackId) {
+                existingTrackIds.add(trackId);
+            }
+        });
+        
+        // Clean up renderers for tracks that no longer exist
+        const renderersToCleanup = [];
+        this.canvasRenderers.forEach((renderer, trackId) => {
+            if (!existingTrackIds.has(trackId)) {
+                renderersToCleanup.push(trackId);
+            }
+        });
+        
+        renderersToCleanup.forEach(trackId => {
+            this.cleanupCanvasRenderer(trackId);
+        });
+        
+        if (renderersToCleanup.length > 0) {
+            console.log(`🧹 [TrackRenderer] Cleaned up ${renderersToCleanup.length} orphaned Canvas renderers`);
+        }
     }
 }
 

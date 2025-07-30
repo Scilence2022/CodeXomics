@@ -932,6 +932,12 @@ class NavigationManager {
      * Uses unified container approach for consistent movement
      */
     performVisualDragUpdate(deltaX, element) {
+        // Apply Canvas drag transforms for high-performance sequence tracks
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.applyCanvasDragTransform) {
+            this.genomeBrowser.trackRenderer.applyCanvasDragTransform(deltaX, 0);
+            console.log('🎨 [VISUAL-DRAG] Applied Canvas drag transforms');
+        }
+        
         // Try to find the unified gene container first
         const unifiedContainer = document.querySelector('.unified-gene-container');
         
@@ -998,6 +1004,12 @@ class NavigationManager {
     // Perform global drag update - applies visual transforms to all tracks (no redraw during drag)
     performGlobalDragUpdate(deltaX, chromosome) {
         console.log('🌍 [GLOBAL-DRAG] Applying visual transforms to all tracks with deltaX:', deltaX, 'px');
+        
+        // Apply Canvas drag transforms for high-performance sequence tracks
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.applyCanvasDragTransform) {
+            this.genomeBrowser.trackRenderer.applyCanvasDragTransform(deltaX, 0);
+            console.log('🎨 [GLOBAL-DRAG] Applied Canvas drag transforms');
+        }
         
         // Handle genes & features track specially to match single-track behavior
         const unifiedContainer = document.querySelector('.unified-gene-container');
@@ -1108,6 +1120,12 @@ class NavigationManager {
     // Reset visual transforms for all tracks (global dragging)
     resetGlobalVisualDragUpdates() {
         console.log('🌍 [GLOBAL-RESET] Resetting visual transforms for all tracks');
+        
+        // Reset Canvas drag transforms for high-performance sequence tracks
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.resetCanvasDragTransforms) {
+            this.genomeBrowser.trackRenderer.resetCanvasDragTransforms();
+            console.log('🎨 [GLOBAL-RESET] Reset Canvas drag transforms');
+        }
         
         // Reset genes & features track specially to match single-track behavior
         const unifiedContainer = document.querySelector('.unified-gene-container');
@@ -1265,6 +1283,12 @@ class NavigationManager {
      * Reset visual transforms after drag ends
      */
     resetVisualDragUpdates(element) {
+        // Reset Canvas drag transforms for high-performance sequence tracks
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.resetCanvasDragTransforms) {
+            this.genomeBrowser.trackRenderer.resetCanvasDragTransforms();
+            console.log('🎨 [DRAG-RESET] Reset Canvas drag transforms');
+        }
+        
         // Try to find the unified gene container first
         const unifiedContainer = document.querySelector('.unified-gene-container');
         
