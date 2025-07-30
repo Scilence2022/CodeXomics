@@ -1380,14 +1380,10 @@ class SequenceUtils {
         const actualLineSpacing = this.lineSpacing;
         const totalLineHeight = actualLineHeight + actualLineSpacing;
         
-        // FIXED: Calculate indicator position to be closer to current sequence line
-        // The indicator should be positioned just below the sequence text, not closer to next line
-        const sequenceTextHeight = actualLineHeight * 0.8; // Approximate text height within line
-        const textBottomOffset = (actualLineHeight - sequenceTextHeight) / 2; // Distance from text bottom to line bottom
-        
-        // Position indicator much closer to current line by reducing margins
-        const indicatorMarginTop = -textBottomOffset - 2; // Move indicator up closer to text
-        const indicatorMarginBottom = actualLineSpacing - textBottomOffset - 2; // Reduce gap to next line
+        // Position indicator directly below the sequence text with minimal gap
+        // Since sequenceLine has margin-bottom: 8px, we need to offset that and position closer
+        const indicatorMarginTop = -6; // Negative to move up closer to sequence text (compensate for part of sequenceLine's margin-bottom)
+        const indicatorMarginBottom = 4; // Small gap before next sequence line
         
         const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
         const correctedHeight = 12 * heightCorrection;
@@ -2222,10 +2218,10 @@ class SequenceUtils {
                                    ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
             }
             
-            // End marker (arrow) - for reverse genes, show arrow at gene START position (transcription direction)
+            // End marker (arrow) - for reverse genes, show arrow at the FIRST line where gene appears (gene start position)
             if (settings.showEndArrows !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
-                // For reverse genes, the transcription arrow should be at the RIGHT end (gene start position)
-                indicator += this.createGeneEndArrow(endX, correctedBarHeight, geneColor, isForward, gene, settings);
+                // For reverse genes, the transcription arrow should be at the LEFT end (first appearance in sequence display)
+                indicator += this.createGeneEndArrow(startX, correctedBarHeight, geneColor, isForward, gene, settings);
             }
         }
         
