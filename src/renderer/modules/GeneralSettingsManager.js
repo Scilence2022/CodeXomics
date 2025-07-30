@@ -28,7 +28,7 @@ class GeneralSettingsManager {
             enableAnimations: true,
             enableFileCache: true,
             cacheSize: 500,
-            enableGlobalDragging: false, // Enable dynamic viewport updates for all tracks during dragging
+            enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
             
             // Wheel Zoom
             enableWheelZoom: true,
