@@ -629,6 +629,11 @@ class GenomeBrowser {
             this.sequenceUtils.copySequence();
         });
         document.getElementById('exportBtn').addEventListener('click', () => this.sequenceUtils.exportSequence());
+        document.getElementById('copySequenceHeaderBtn').addEventListener('click', (e) => {
+            // Prevent ActionManager from also handling this event
+            e.stopImmediatePropagation();
+            this.sequenceUtils.copySequence();
+        });
         document.getElementById('sequenceSettingsBtn').addEventListener('click', () => {
             if (this.trackRenderer) {
                 this.trackRenderer.openTrackSettings('sequence');
