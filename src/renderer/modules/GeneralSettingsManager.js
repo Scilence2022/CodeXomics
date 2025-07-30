@@ -64,7 +64,9 @@ class GeneralSettingsManager {
         if (this.isInitialized) return;
 
         try {
-            this.setupEventListeners();
+            // Initialize UI elements and event handlers
+            this.initializeUI();
+            
             await this.loadSettings();
             this.applySettings();
             this.isInitialized = true;
@@ -72,6 +74,16 @@ class GeneralSettingsManager {
         } catch (error) {
             console.error('❌ [GeneralSettings] Failed to initialize GeneralSettingsManager:', error);
         }
+    }
+
+    /**
+     * Initialize UI elements and event handlers
+     */
+    initializeUI() {
+        // Setup event listeners
+        this.setupEventListeners();
+        
+        console.log('✅ [GeneralSettings] UI initialized');
     }
 
     /**
@@ -133,28 +145,9 @@ class GeneralSettingsManager {
      * Setup event listeners for the modal and form elements
      */
     setupEventListeners() {
-        // Tab switching and modal interaction - use event delegation
-        const modal = document.getElementById('generalSettingsModal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                // Handle clicking outside modal to close
-                if (e.target === modal) {
-                    modal.classList.remove('show');
-                    return;
-                }
-                
-                // Only handle clicks from tab buttons within the settings-tabs container
-                const tabButton = e.target.closest('.settings-tabs .tab-btn');
-                if (tabButton && tabButton.dataset.tab) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log(`🔄 [GeneralSettings] Tab button clicked: ${tabButton.dataset.tab}`);
-                    this.switchTab(tabButton.dataset.tab);
-                }
-            });
-        } else {
-            console.warn('❌ [GeneralSettings] General Settings Modal not found during initialization');
-        }
+        // Setup modal and tab handlers
+        this.setupModalHandlers();
+        this.setupTabHandlers();
 
         // Theme mode change
         const themeSelect = document.getElementById('themeMode');
@@ -367,14 +360,47 @@ class GeneralSettingsManager {
             }
         });
 
-        // Modal close handlers (combined with main modal event listener above)
-        if (modal) {
-            modal.querySelectorAll('.modal-close').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    modal.classList.remove('show');
-                });
-            });
+        // Modal close handlers and other form elements are handled in setupModalHandlers
+    }
+
+    /**
+     * Setup modal event handlers
+     */
+    setupModalHandlers() {
+        const modal = document.getElementById('generalSettingsModal');
+        if (!modal) {
+            console.warn('❌ [GeneralSettings] General Settings Modal not found during initialization');
+            return;
         }
+
+        // Modal close handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.classList.remove('show');
+            });
+        });
+
+        // Click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+    }
+
+    /**
+     * Setup tab switching handlers
+     */
+    setupTabHandlers() {
+        const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
+        
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                console.log(`🔄 [GeneralSettings] Tab button clicked: ${tabName}`);
+                this.switchTab(tabName);
+            });
+        });
     }
 
     /**
@@ -385,45 +411,16 @@ class GeneralSettingsManager {
             console.log(`🔄 [GeneralSettings] Switching to tab: ${tabName}`);
             
             // Update tab buttons
-            const tabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
-            console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons`);
-            
+            const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
             tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                console.log(`🔄 [GeneralSettings] Removed active from button: ${btn.dataset.tab}`);
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
             
-            const activeButton = document.querySelector(`#generalSettingsModal [data-tab="${tabName}"]`);
-            if (activeButton) {
-                activeButton.classList.add('active');
-                console.log(`✅ [GeneralSettings] Activated button for tab: ${tabName}`);
-            } else {
-                console.error(`❌ [GeneralSettings] Could not find button for tab: ${tabName}`);
-                return;
-            }
-
             // Update tab content
-            const tabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-            console.log(`🔍 [GeneralSettings] Found ${tabContents.length} tab contents`);
-            
+            const tabContents = document.querySelectorAll('.settings-tabs .tab-content');
             tabContents.forEach(content => {
-                content.classList.remove('active');
-                console.log(`🔄 [GeneralSettings] Removed active from content: ${content.id}`);
+                content.classList.toggle('active', content.id === `${tabName}-tab`);
             });
-            
-            const activeContent = document.getElementById(`${tabName}-tab`);
-            if (activeContent) {
-                activeContent.classList.add('active');
-                console.log(`✅ [GeneralSettings] Activated content for tab: ${tabName}`);
-            } else {
-                console.error(`❌ [GeneralSettings] Could not find content for tab: ${tabName}-tab`);
-                
-                // Debug: List all available tab content IDs
-                const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-                console.log(`🔍 [GeneralSettings] Available tab content IDs:`, 
-                    Array.from(allContents).map(c => c.id));
-                return;
-            }
 
             this.currentTab = tabName;
             console.log(`✅ [GeneralSettings] Successfully switched to tab: ${tabName}`);
