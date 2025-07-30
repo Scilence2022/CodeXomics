@@ -1385,9 +1385,9 @@ class SequenceUtils {
         const sequenceTextHeight = actualLineHeight * 0.8; // Approximate text height within line
         const textBottomOffset = (actualLineHeight - sequenceTextHeight) / 2; // Distance from text bottom to line bottom
         
-        // Position indicator closer to current line by reducing bottom margin
-        const indicatorMarginTop = -textBottomOffset; // Move indicator up to be closer to text
-        const indicatorMarginBottom = actualLineSpacing - textBottomOffset + 2; // Add small gap to next line
+        // Position indicator much closer to current line by reducing margins
+        const indicatorMarginTop = -textBottomOffset - 2; // Move indicator up closer to text
+        const indicatorMarginBottom = actualLineSpacing - textBottomOffset - 2; // Reduce gap to next line
         
         const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
         const correctedHeight = 12 * heightCorrection;
@@ -2222,10 +2222,10 @@ class SequenceUtils {
                                    ${settings.showTooltips !== false ? `title="Gene start: ${gene.qualifiers?.gene || gene.type}"` : ''}/>`;
             }
             
-            // End marker (arrow) - only if gene actually ends in this line and enabled
-            if (settings.showEndArrows !== false && geneEnd1Based >= lineStart1Based && geneEnd1Based <= lineEnd1Based) {
-                // For reverse genes, the end arrow should be at the LEFT end (transcription direction)
-                indicator += this.createGeneEndArrow(startX, correctedBarHeight, geneColor, isForward, gene, settings);
+            // End marker (arrow) - for reverse genes, show arrow at gene START position (transcription direction)
+            if (settings.showEndArrows !== false && geneStart1Based >= lineStart1Based && geneStart1Based <= lineEnd1Based) {
+                // For reverse genes, the transcription arrow should be at the RIGHT end (gene start position)
+                indicator += this.createGeneEndArrow(endX, correctedBarHeight, geneColor, isForward, gene, settings);
             }
         }
         
