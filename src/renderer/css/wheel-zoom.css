@@ -1,0 +1,247 @@
+/* Wheel Zoom Visual Feedback Styles */
+
+/* Zoom indicator that appears during wheel zoom operations */
+.wheel-zoom-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.wheel-zoom-indicator.active {
+    opacity: 1;
+}
+
+.wheel-zoom-indicator .zoom-direction {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.wheel-zoom-indicator .zoom-direction.zoom-in {
+    color: #4ade80; /* Green for zoom in */
+}
+
+.wheel-zoom-indicator .zoom-direction.zoom-out {
+    color: #f87171; /* Red for zoom out */
+}
+
+.wheel-zoom-indicator .zoom-range {
+    color: #94a3b8;
+    margin-left: 8px;
+}
+
+/* Genome browser cursor styles during wheel zoom */
+.genome-browser.wheel-zooming {
+    cursor: zoom-in;
+}
+
+.genome-browser.wheel-zooming.zoom-out {
+    cursor: zoom-out;
+}
+
+/* Track content wheel zoom hover effects */
+.sequence-track:hover,
+.gene-track:hover,
+.gc-track:hover,
+.tracks-container:hover {
+    position: relative;
+}
+
+.sequence-track:hover::after,
+.gene-track:hover::after,
+.gc-track:hover::after,
+.tracks-container:hover::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 1px dashed rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sequence-track:hover::after,
+.gene-track:hover::after,
+.gc-track:hover::after,
+.tracks-container:hover::after {
+    opacity: 1;
+}
+
+/* Wheel zoom settings in settings panel */
+.wheel-zoom-settings-section {
+    background: var(--bg-secondary, #f8f9fa);
+    border: 1px solid var(--border-color, #e9ecef);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.wheel-zoom-settings-section h4 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary, #333);
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wheel-zoom-settings-section h4::before {
+    content: "🔍";
+    font-size: 18px;
+}
+
+.wheel-zoom-setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 0;
+}
+
+.wheel-zoom-setting:last-child {
+    margin-bottom: 0;
+}
+
+.wheel-zoom-setting label {
+    flex: 1;
+    color: var(--text-secondary, #666);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.wheel-zoom-setting input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.wheel-zoom-setting input[type="range"] {
+    flex: 1;
+    max-width: 120px;
+    margin: 0 12px;
+}
+
+.wheel-zoom-setting input[type="number"] {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.wheel-zoom-setting .range-value {
+    min-width: 40px;
+    text-align: center;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted, #888);
+}
+
+/* Dark theme adaptations */
+@media (prefers-color-scheme: dark) {
+    .wheel-zoom-indicator {
+        background: rgba(255, 255, 255, 0.9);
+        color: #1f2937;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+    
+    .wheel-zoom-settings-section {
+        background: var(--bg-tertiary, #2d3748);
+        border-color: var(--border-color, #4a5568);
+    }
+    
+    .wheel-zoom-setting input[type="number"] {
+        background: var(--bg-primary, #1a202c);
+        color: var(--text-primary, #e2e8f0);
+        border-color: var(--border-color, #4a5568);
+    }
+}
+
+/* Animation for smooth zoom transitions */
+@keyframes zoomPulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.wheel-zoom-indicator.pulse {
+    animation: zoomPulse 0.3s ease-in-out;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .wheel-zoom-indicator {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+    
+    .wheel-zoom-setting {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .wheel-zoom-setting input[type="range"] {
+        max-width: 100%;
+        margin: 0;
+    }
+}
+
+/* Accessibility improvements */
+.wheel-zoom-indicator[aria-live="polite"] {
+    /* Screen reader friendly zoom feedback */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel-zoom-indicator {
+        transition: none;
+    }
+    
+    .wheel-zoom-indicator.pulse {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .wheel-zoom-indicator {
+        background: black;
+        color: white;
+        border: 2px solid white;
+    }
+    
+    .sequence-track:hover::after,
+    .gene-track:hover::after,
+    .gc-track:hover::after,
+    .tracks-container:hover::after {
+        border-color: currentColor;
+        border-width: 2px;
+    }
+}

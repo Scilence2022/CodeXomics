@@ -30,6 +30,13 @@ class GeneralSettingsManager {
             cacheSize: 500,
             enableGlobalDragging: false, // Enable dynamic viewport updates for all tracks during dragging
             
+            // Wheel Zoom
+            enableWheelZoom: true,
+            wheelZoomSensitivity: 0.1,
+            wheelZoomToCursor: true,
+            wheelZoomMinRange: 100,
+            wheelZoomMaxRange: 1000000
+            
             // Features
             enableGCContent: true,
             enableProteinTranslation: true,
@@ -196,12 +203,40 @@ class GeneralSettingsManager {
             });
         }
 
+        // Wheel zoom settings
+        const wheelZoomSensitivityInput = document.getElementById('wheelZoomSensitivity');
+        if (wheelZoomSensitivityInput) {
+            wheelZoomSensitivityInput.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.updateSetting('wheelZoomSensitivity', value);
+                this.applyFeatureSetting('wheelZoomSensitivity', value);
+            });
+        }
+        
+        const wheelZoomMinRangeInput = document.getElementById('wheelZoomMinRange');
+        if (wheelZoomMinRangeInput) {
+            wheelZoomMinRangeInput.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value);
+                this.updateSetting('wheelZoomMinRange', value);
+                this.applyFeatureSetting('wheelZoomMinRange', value);
+            });
+        }
+        
+        const wheelZoomMaxRangeInput = document.getElementById('wheelZoomMaxRange');
+        if (wheelZoomMaxRangeInput) {
+            wheelZoomMaxRangeInput.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value);
+                this.updateSetting('wheelZoomMaxRange', value);
+                this.applyFeatureSetting('wheelZoomMaxRange', value);
+            });
+        }
+
         // Feature toggles
         const featureCheckboxes = [
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
             'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
-            'enableGlobalDragging'
+            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -364,12 +399,22 @@ class GeneralSettingsManager {
         const cacheSizeInput = document.getElementById('cacheSize');
         if (cacheSizeInput) cacheSizeInput.value = this.settings.cacheSize;
 
+        // Wheel zoom settings
+        const wheelZoomSensitivityInput = document.getElementById('wheelZoomSensitivity');
+        if (wheelZoomSensitivityInput) wheelZoomSensitivityInput.value = this.settings.wheelZoomSensitivity;
+        
+        const wheelZoomMinRangeInput = document.getElementById('wheelZoomMinRange');
+        if (wheelZoomMinRangeInput) wheelZoomMinRangeInput.value = this.settings.wheelZoomMinRange;
+        
+        const wheelZoomMaxRangeInput = document.getElementById('wheelZoomMaxRange');
+        if (wheelZoomMaxRangeInput) wheelZoomMaxRangeInput.value = this.settings.wheelZoomMaxRange;
+
         // Feature toggles
         const featureCheckboxes = [
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
             'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
-            'enableGlobalDragging'
+            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -598,6 +643,26 @@ class GeneralSettingsManager {
                 // Notify the genome browser about the global dragging setting change
                 if (window.genomeBrowser) {
                     window.genomeBrowser.setGlobalDragging(enabled);
+                }
+                break;
+            case 'enableWheelZoom':
+                // Configure wheel zoom enabled/disabled
+                if (window.genomeBrowser && window.genomeBrowser.navigationManager) {
+                    window.genomeBrowser.navigationManager.setWheelZoomEnabled(enabled);
+                }
+                break;
+            case 'wheelZoomToCursor':
+            case 'wheelZoomSensitivity':
+            case 'wheelZoomMinRange':
+            case 'wheelZoomMaxRange':
+                // Update wheel zoom configuration
+                if (window.genomeBrowser && window.genomeBrowser.navigationManager) {
+                    const config = {};
+                    if (feature === 'wheelZoomToCursor') config.zoomToCursor = enabled;
+                    if (feature === 'wheelZoomSensitivity') config.sensitivity = enabled;
+                    if (feature === 'wheelZoomMinRange') config.minRange = enabled;
+                    if (feature === 'wheelZoomMaxRange') config.maxRange = enabled;
+                    window.genomeBrowser.navigationManager.configureWheelZoom(config);
                 }
                 break;
         }

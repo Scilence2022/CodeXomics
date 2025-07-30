@@ -32,11 +32,26 @@ class NavigationManager {
         // Global dragging setting - when enabled, all tracks update during drag
         this.globalDraggingEnabled = false;
 
+        // Wheel zoom configuration
+        this.wheelZoomConfig = {
+            enabled: true,
+            sensitivity: 0.1, // Zoom factor per wheel step
+            minRange: 100, // Minimum range in base pairs
+            maxRange: 1000000, // Maximum range in base pairs
+            smoothZoom: true, // Enable smooth zooming
+            zoomToCursor: true // Zoom towards cursor position
+        };
+
+        // Initialize wheel zoom settings from GeneralSettingsManager
+        this.initializeWheelZoomSettings();
+
         // Bind methods and add global listeners once
         this.handleDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
         this.handleDocumentMouseUp = this.handleDocumentMouseUp.bind(this);
+        this.handleWheelZoom = this.handleWheelZoom.bind(this);
         document.addEventListener('mousemove', this.handleDocumentMouseMove);
         document.addEventListener('mouseup', this.handleDocumentMouseUp);
+        document.addEventListener('wheel', this.handleWheelZoom, { passive: false });
     }
 
     // Navigation methods
@@ -141,6 +156,208 @@ class NavigationManager {
         this.genomeBrowser.displayGenomeView(currentChr, sequence);
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
+    }
+
+    /**
+     * Handle mouse wheel zoom functionality
+     */
+    handleWheelZoom(e) {
+        // Check if wheel zoom is enabled
+        if (!this.wheelZoomConfig.enabled) return;
+
+        // Only handle wheel events on genome browser areas
+        const genomeBrowserElement = e.target.closest('.genome-browser, .sequence-track, .gene-track, .gc-track, .tracks-container');
+        if (!genomeBrowserElement) return;
+
+        // Prevent default scrolling behavior
+        e.preventDefault();
+
+        const currentChr = document.getElementById('chromosomeSelect').value;
+        if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
+            return;
+        }
+
+        const sequence = this.genomeBrowser.currentSequence[currentChr];
+        const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
+        
+        // Determine zoom direction and factor
+        const zoomDirection = Math.sign(e.deltaY); // Positive = zoom out, negative = zoom in
+        const zoomFactor = 1 + (this.wheelZoomConfig.sensitivity * Math.abs(e.deltaY / 100));
+        
+        let newRange;
+        if (zoomDirection > 0) {
+            // Zoom out
+            newRange = Math.min(this.wheelZoomConfig.maxRange, Math.min(sequence.length, currentRange * zoomFactor));
+        } else {
+            // Zoom in
+            newRange = Math.max(this.wheelZoomConfig.minRange, currentRange / zoomFactor);
+        }
+
+        // If range hasn't changed significantly, skip update
+        if (Math.abs(newRange - currentRange) < 1) return;
+
+        let newStart, newEnd;
+        
+        if (this.wheelZoomConfig.zoomToCursor) {
+            // Calculate cursor position within the genome browser
+            const browserRect = genomeBrowserElement.getBoundingClientRect();
+            const relativeX = e.clientX - browserRect.left;
+            const cursorRatio = relativeX / browserRect.width;
+            
+            // Calculate focal point in genomic coordinates
+            const focalPoint = this.genomeBrowser.currentPosition.start + (currentRange * cursorRatio);
+            
+            // Calculate new range around focal point
+            const beforeFocal = (newRange * cursorRatio);
+            const afterFocal = newRange - beforeFocal;
+            
+            newStart = Math.max(0, Math.round(focalPoint - beforeFocal));
+            newEnd = Math.min(sequence.length, Math.round(focalPoint + afterFocal));
+            
+            // Adjust if we hit boundaries
+            if (newStart === 0) {
+                newEnd = Math.min(sequence.length, newRange);
+            } else if (newEnd === sequence.length) {
+                newStart = Math.max(0, sequence.length - newRange);
+            }
+        } else {
+            // Zoom to center
+            const center = Math.floor((this.genomeBrowser.currentPosition.start + this.genomeBrowser.currentPosition.end) / 2);
+            newStart = Math.max(0, Math.round(center - newRange / 2));
+            newEnd = Math.min(sequence.length, newStart + newRange);
+            
+            // Adjust if we hit boundaries
+            if (newEnd === sequence.length) {
+                newStart = Math.max(0, sequence.length - newRange);
+            }
+        }
+
+        // Update position
+        this.genomeBrowser.currentPosition = { start: Math.round(newStart), end: Math.round(newEnd) };
+        
+        // Update the view
+        this.genomeBrowser.updateStatistics(currentChr, sequence);
+        this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        
+        // Update navigation bar
+        if (this.genomeBrowser.genomeNavigationBar) {
+            this.genomeBrowser.genomeNavigationBar.update();
+        }
+        
+        // Update current tab title with new position
+        if (this.genomeBrowser.tabManager) {
+            this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd);
+        }
+
+        // Show visual feedback
+        this.showWheelZoomFeedback(zoomDirection, Math.round(newEnd - newStart));
+
+        // Log zoom action for debugging
+        console.log('🔍 [WHEEL-ZOOM]', {
+            direction: zoomDirection > 0 ? 'out' : 'in',
+            oldRange: currentRange.toLocaleString(),
+            newRange: Math.round(newEnd - newStart).toLocaleString(),
+            position: `${newStart.toLocaleString()}-${newEnd.toLocaleString()}`,
+            zoomToCursor: this.wheelZoomConfig.zoomToCursor
+        });
+    }
+
+    /**
+     * Configure wheel zoom settings
+     */
+    configureWheelZoom(config) {
+        this.wheelZoomConfig = { ...this.wheelZoomConfig, ...config };
+        console.log('🔍 [WHEEL-ZOOM] Configuration updated:', this.wheelZoomConfig);
+    }
+
+    /**
+     * Enable/disable wheel zoom
+     */
+    setWheelZoomEnabled(enabled) {
+        this.wheelZoomConfig.enabled = enabled;
+        console.log(`🔍 [WHEEL-ZOOM] ${enabled ? 'Enabled' : 'Disabled'}`);
+    }
+
+    /**
+     * Initialize wheel zoom settings from GeneralSettingsManager
+     */
+    initializeWheelZoomSettings() {
+        // Wait for GeneralSettingsManager to be available
+        setTimeout(() => {
+            if (window.generalSettingsManager && window.generalSettingsManager.settings) {
+                const settings = window.generalSettingsManager.settings;
+                this.configureWheelZoom({
+                    enabled: settings.enableWheelZoom,
+                    sensitivity: settings.wheelZoomSensitivity,
+                    zoomToCursor: settings.wheelZoomToCursor,
+                    minRange: settings.wheelZoomMinRange,
+                    maxRange: settings.wheelZoomMaxRange
+                });
+                console.log('🔍 [WHEEL-ZOOM] Settings initialized from GeneralSettingsManager');
+            }
+        }, 100);
+    }
+
+    /**
+     * Show visual feedback for wheel zoom operations
+     */
+    showWheelZoomFeedback(direction, newRange) {
+        // Create or get existing zoom indicator
+        let indicator = document.getElementById('wheelZoomIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'wheelZoomIndicator';
+            indicator.className = 'wheel-zoom-indicator';
+            indicator.setAttribute('aria-live', 'polite');
+            document.body.appendChild(indicator);
+        }
+
+        // Update indicator content
+        const directionIcon = direction > 0 ? '🔍-' : '🔍+';
+        const directionText = direction > 0 ? 'Zoom Out' : 'Zoom In';
+        const directionClass = direction > 0 ? 'zoom-out' : 'zoom-in';
+        
+        indicator.innerHTML = `
+            <span class="zoom-direction ${directionClass}">${directionIcon}</span>
+            <span class="zoom-action">${directionText}</span>
+            <span class="zoom-range">${this.formatRange(newRange)}</span>
+        `;
+
+        // Show indicator with animation
+        indicator.classList.add('active', 'pulse');
+        
+        // Update genome browser cursor
+        const genomeBrowser = document.querySelector('.genome-browser');
+        if (genomeBrowser) {
+            genomeBrowser.classList.add('wheel-zooming');
+            if (direction > 0) {
+                genomeBrowser.classList.add('zoom-out');
+            } else {
+                genomeBrowser.classList.remove('zoom-out');
+            }
+        }
+
+        // Hide indicator after delay
+        clearTimeout(this.zoomFeedbackTimeout);
+        this.zoomFeedbackTimeout = setTimeout(() => {
+            indicator.classList.remove('active', 'pulse');
+            if (genomeBrowser) {
+                genomeBrowser.classList.remove('wheel-zooming', 'zoom-out');
+            }
+        }, 1500);
+    }
+
+    /**
+     * Format range for display
+     */
+    formatRange(range) {
+        if (range >= 1000000) {
+            return `${(range / 1000000).toFixed(1)}M bp`;
+        } else if (range >= 1000) {
+            return `${(range / 1000).toFixed(1)}K bp`;
+        } else {
+            return `${range} bp`;
+        }
     }
 
     // Position navigation
