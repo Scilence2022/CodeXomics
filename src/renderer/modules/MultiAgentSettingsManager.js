@@ -63,6 +63,21 @@ class MultiAgentSettingsManager {
             siliconflow: {
                 name: 'SiliconFlow',
                 models: {
+                    // DeepSeek Models
+                    'Pro/deepseek-ai/DeepSeek-R1': 'DeepSeek-R1 (Pro)',
+                    'Pro/deepseek-ai/DeepSeek-V3': 'DeepSeek-V3 (Pro)',
+                    'deepseek-ai/DeepSeek-R1': 'DeepSeek-R1 (Latest)',
+                    'deepseek-ai/DeepSeek-V3': 'DeepSeek-V3 (Latest)',
+                    'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B': 'DeepSeek-R1-0528-Qwen3-8B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B': 'DeepSeek-R1-Distill-Qwen-32B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B': 'DeepSeek-R1-Distill-Qwen-14B',
+                    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': 'DeepSeek-R1-Distill-Qwen-7B',
+                    'Pro/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': 'DeepSeek-R1-Distill-Qwen-7B (Pro)',
+                    'deepseek-ai/DeepSeek-V2.5': 'DeepSeek-V2.5 (Legacy)',
+                    
+                    // Qwen Models
+                    'Qwen/Qwen3-235B-A22B-Thinking-2507': 'Qwen3-235B-A22B-Thinking-2507',
+                    'Qwen/Qwen3-235B-A22B-Instruct-2507': 'Qwen3-235B-A22B-Instruct-2507',
                     'Qwen/Qwen3-32B': 'Qwen3-32B (Latest)',
                     'Qwen/Qwen3-14B': 'Qwen3-14B (Balanced)',
                     'Qwen/Qwen3-8B': 'Qwen3-8B (Fast)',
@@ -75,14 +90,27 @@ class MultiAgentSettingsManager {
                     'Qwen/Qwen2.5-7B-Instruct': 'Qwen2.5-7B-Instruct (Very Fast)',
                     'Qwen/Qwen2.5-Coder-32B-Instruct': 'Qwen2.5-Coder-32B-Instruct (Code Focused)',
                     'Qwen/Qwen2.5-Coder-7B-Instruct': 'Qwen2.5-Coder-7B-Instruct (Code Fast)',
-                    'deepseek-ai/DeepSeek-R1': 'DeepSeek-R1 (Latest)',
-                    'deepseek-ai/DeepSeek-V3': 'DeepSeek-V3 (Latest)',
-                    'deepseek-ai/DeepSeek-V2.5': 'DeepSeek-V2.5 (Legacy)',
+                    'Qwen/Qwen2-7B-Instruct': 'Qwen2-7B-Instruct (Legacy)',
+                    'Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Legacy)',
+                    'Pro/Qwen/Qwen2.5-7B-Instruct': 'Qwen2.5-7B-Instruct (Pro)',
+                    'Pro/Qwen/Qwen2-7B-Instruct': 'Qwen2-7B-Instruct (Pro)',
+                    'Pro/Qwen/Qwen2-1.5B-Instruct': 'Qwen2-1.5B-Instruct (Pro)',
+                    'Vendor-A/Qwen/Qwen2.5-72B-Instruct': 'Qwen2.5-72B-Instruct (Vendor-A)',
+                    
+                    // GLM Models
                     'THUDM/GLM-Z1-32B-0414': 'GLM-Z1-32B-0414 (Latest)',
                     'THUDM/GLM-4-32B-0414': 'GLM-4-32B-0414 (Latest)',
                     'THUDM/GLM-Z1-Rumination-32B-0414': 'GLM-Z1-Rumination-32B-0414 (Rumination)',
                     'THUDM/GLM-4-9B-0414': 'GLM-4-9B-0414 (Fast)',
                     'THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Chat Optimized)',
+                    'Pro/THUDM/chatglm3-6b': 'ChatGLM3-6B (Pro)',
+                    'Pro/THUDM/glm-4-9b-chat': 'GLM-4-9B-Chat (Pro)',
+                    
+                    // Other Models
+                    'baidu/ERNIE-4.5-300B-A47B': 'ERNIE-4.5-300B-A47B',
+                    'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
+                    'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
+                    'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
                     'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
                     'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
                     'TeleAI/TeleChat2': 'TeleChat2 (Latest)',
