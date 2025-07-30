@@ -150,6 +150,8 @@
     align-items: center;
     padding: 20px;
     border-bottom: 1px solid var(--border-color);
+    /* Fix for scrollbar appearing in header */
+    overflow: hidden;
 }
 
 .modal-header h3 {

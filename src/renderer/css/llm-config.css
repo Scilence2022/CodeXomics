@@ -1,0 +1,45 @@
+/* LLM Configuration Modal Specific Styles */
+
+/* Fix for Custom tab scrollbar focus issue */
+#custom-config {
+    outline: none;
+}
+
+#custom-config .form-group {
+    margin-bottom: 16px;
+}
+
+#custom-config .input-full,
+#custom-config .select {
+    /* Ensure these elements don't cause scroll issues */
+    box-sizing: border-box;
+}
+
+#custom-config textarea {
+    /* Fix for textarea causing scrollbar to steal focus */
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Ensure tab buttons don't get focus outline */
+.llm-provider-tabs .tab-button {
+    outline: none;
+}
+
+.llm-provider-tabs .tab-button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Fix for modal body scrollbar */
+.llm-config-modal .modal-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Ensure custom headers textarea doesn't cause focus issues */
+#customHeaders {
+    font-family: monospace;
+    resize: vertical;
+    min-height: 100px;
+}

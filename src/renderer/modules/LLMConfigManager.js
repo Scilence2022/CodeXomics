@@ -290,6 +290,18 @@ class LLMConfigManager {
         this.hideOptionsDropdown();
         this.loadConfigurationToUI();
         document.getElementById('llmConfigModal').classList.add('show');
+        
+        // Ensure no element has initial focus to prevent blue scrollbar
+        document.activeElement.blur();
+        
+        // Specifically handle the custom config section
+        const customConfig = document.getElementById('custom-config');
+        if (customConfig) {
+            const customHeadersField = document.getElementById('customHeaders');
+            if (customHeadersField && customHeadersField.hasAttribute('data-focused')) {
+                customHeadersField.blur();
+            }
+        }
     }
 
     hideConfigModal() {
@@ -300,11 +312,30 @@ class LLMConfigManager {
         // Update tab buttons
         document.querySelectorAll('.tab-button').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.provider === provider);
+            // Remove focus from all buttons to prevent blue outline
+            btn.blur();
         });
 
         // Update provider config panels
         document.querySelectorAll('.provider-config').forEach(panel => {
             panel.classList.toggle('active', panel.id === `${provider}-config`);
+            // Ensure no element in the panel has focus
+            if (panel.id === `${provider}-config`) {
+                panel.focus();
+                // Special handling for custom tab to prevent focus issues
+                if (provider === 'custom') {
+                    // Blur any focused element in the custom config
+                    const activeElement = document.activeElement;
+                    if (activeElement && panel.contains(activeElement)) {
+                        activeElement.blur();
+                    }
+                    // Specifically handle the custom headers textarea
+                    const customHeadersField = document.getElementById('customHeaders');
+                    if (customHeadersField && customHeadersField.hasAttribute('data-focused')) {
+                        customHeadersField.blur();
+                    }
+                }
+            }
         });
     }
 
@@ -544,6 +575,13 @@ class LLMConfigManager {
                 if (customHeadersField) {
                     const headersText = provider.customHeaders ? JSON.stringify(provider.customHeaders, null, 2) : '';
                     customHeadersField.value = headersText;
+                    // Add blur event to prevent focus issues
+                    customHeadersField.addEventListener('focus', function() {
+                        this.setAttribute('data-focused', 'true');
+                    });
+                    customHeadersField.addEventListener('blur', function() {
+                        this.removeAttribute('data-focused');
+                    });
                 }
                 if (customMaxTokensField) customMaxTokensField.value = provider.maxTokens || 4096;
                 if (customTemperatureField) customTemperatureField.value = provider.temperature || 0.7;
