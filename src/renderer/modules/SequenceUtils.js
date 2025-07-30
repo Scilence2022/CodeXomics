@@ -1662,8 +1662,12 @@ class SequenceUtils {
             visibleContent.appendChild(lineElement);
         }
         
-        // FIXED: Restore selection state after content update
-        this.restoreSelectionState(savedSelection);
+        // FIXED: Restore selection state after content update - use setTimeout to ensure DOM is ready
+        if (savedSelection) {
+            setTimeout(() => {
+                this.restoreSelectionState(savedSelection);
+            }, 0);
+        }
         
         console.log(`🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px, lineHeight=${lineHeight}px`);
     }
@@ -2942,24 +2946,24 @@ class SequenceUtils {
         let startPos = null;
         let endPos = null;
         
-        // Try to extract genomic position from sequence spans
-        if (startNode.nodeType === Node.TEXT_NODE && startNode.parentElement) {
-            const startSpan = startNode.parentElement.closest('.sequence-bases span');
-            if (startSpan && startSpan.onclick) {
-                const match = startSpan.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
-                if (match) {
-                    startPos = parseInt(match[1]) + range.startOffset;
-                }
-            }
-        }
+        // Try to extract genomic position from sequence spans - improved method
+        startPos = this.extractGenomicPositionFromNode(startNode, range.startOffset);
+        endPos = this.extractGenomicPositionFromNode(endNode, range.endOffset);
         
-        if (endNode.nodeType === Node.TEXT_NODE && endNode.parentElement) {
-            const endSpan = endNode.parentElement.closest('.sequence-bases span');
-            if (endSpan && endSpan.onclick) {
-                const match = endSpan.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
-                if (match) {
-                    endPos = parseInt(match[1]) + range.endOffset;
-                }
+        // Fallback: try to find position from line context
+        if (startPos === null || endPos === null) {
+            const startLineElement = startNode.nodeType === Node.TEXT_NODE ? 
+                startNode.parentElement?.closest('.sequence-line-group') : 
+                startNode.closest?.('.sequence-line-group');
+            const endLineElement = endNode.nodeType === Node.TEXT_NODE ? 
+                endNode.parentElement?.closest('.sequence-line-group') : 
+                endNode.closest?.('.sequence-line-group');
+                
+            if (startLineElement && startPos === null) {
+                startPos = this.extractPositionFromLineElement(startLineElement, startNode, range.startOffset);
+            }
+            if (endLineElement && endPos === null) {
+                endPos = this.extractPositionFromLineElement(endLineElement, endNode, range.endOffset);
             }
         }
 
@@ -2976,24 +2980,163 @@ class SequenceUtils {
     }
 
     /**
+     * Extract genomic position from a DOM node
+     */
+    extractGenomicPositionFromNode(node, offset) {
+        if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            const span = node.parentElement.closest('.sequence-bases span');
+            if (span && span.onclick) {
+                const match = span.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
+                if (match) {
+                    return parseInt(match[1]) + offset;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract position from line element context
+     */
+    extractPositionFromLineElement(lineElement, node, offset) {
+        // Find the position span within the line
+        const positionSpan = lineElement.querySelector('.sequence-position');
+        if (!positionSpan) return null;
+        
+        // Extract the line start position from the position span
+        const positionText = positionSpan.textContent;
+        const lineStartMatch = positionText.match(/^(\d+)/);
+        if (!lineStartMatch) return null;
+        
+        const lineStartPos = parseInt(lineStartMatch[1]) - 1; // Convert to 0-based
+        
+        // Calculate character offset within the line
+        const sequenceBases = lineElement.querySelector('.sequence-bases');
+        if (!sequenceBases) return null;
+        
+        // Walk through text nodes to find offset
+        let charOffset = 0;
+        const walker = document.createTreeWalker(
+            sequenceBases,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        let currentNode;
+        while (currentNode = walker.nextNode()) {
+            if (currentNode === node) {
+                return lineStartPos + charOffset + offset;
+            }
+            charOffset += currentNode.textContent.length;
+        }
+        
+        return lineStartPos + charOffset;
+    }
+
+    /**
+     * Find DOM node and offset for a given genomic position
+     */
+    findNodeAtGenomicPosition(genomicPosition, sequenceContainer) {
+        if (!sequenceContainer) return null;
+        
+        // Find all sequence lines
+        const sequenceLines = sequenceContainer.querySelectorAll('.sequence-line-group');
+        
+        for (const lineElement of sequenceLines) {
+            // Get the position span to find the line start position
+            const positionSpan = lineElement.querySelector('.sequence-position');
+            if (!positionSpan) continue;
+            
+            // Extract the line start position
+            const positionText = positionSpan.textContent;
+            const lineStartMatch = positionText.match(/^(\d+)/);
+            if (!lineStartMatch) continue;
+            
+            const lineStartPos = parseInt(lineStartMatch[1]) - 1; // Convert to 0-based
+            
+            // Get the sequence bases container
+            const sequenceBases = lineElement.querySelector('.sequence-bases');
+            if (!sequenceBases) continue;
+            
+            // Calculate the total length of this line
+            let lineLength = 0;
+            const walker = document.createTreeWalker(
+                sequenceBases,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                lineLength += node.textContent.length;
+            }
+            
+            const lineEndPos = lineStartPos + lineLength;
+            
+            // Check if our genomic position falls within this line
+            if (genomicPosition >= lineStartPos && genomicPosition < lineEndPos) {
+                // Find the exact node and offset within this line
+                const targetOffset = genomicPosition - lineStartPos;
+                let currentOffset = 0;
+                
+                // Walk through text nodes again to find the exact position
+                const nodeWalker = document.createTreeWalker(
+                    sequenceBases,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                let textNode;
+                while (textNode = nodeWalker.nextNode()) {
+                    const nodeLength = textNode.textContent.length;
+                    
+                    if (currentOffset + nodeLength >= targetOffset) {
+                        // Found the node containing our position
+                        const offsetInNode = targetOffset - currentOffset;
+                        return {
+                            node: textNode,
+                            offset: offsetInNode
+                        };
+                    }
+                    
+                    currentOffset += nodeLength;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
      * Restore text selection state after virtual scrolling
      */
     restoreSelectionState(savedSelection) {
-        if (!savedSelection || !savedSelection.startPos || !savedSelection.endPos) {
+        if (!savedSelection || savedSelection.startPos === null || savedSelection.endPos === null) {
+            console.log('🔧 [SequenceUtils] No valid selection to restore');
             return;
         }
 
         // Find the sequence container
         const sequenceContainer = document.querySelector('.detailed-sequence-view');
         if (!sequenceContainer) {
+            console.warn('🔧 [SequenceUtils] Sequence container not found');
             return;
         }
 
-        // Find the sequence spans at the saved positions
-        const startSpan = this.findSequenceSpanAtPosition(savedSelection.startPos, sequenceContainer);
-        const endSpan = this.findSequenceSpanAtPosition(savedSelection.endPos, sequenceContainer);
+        // Use improved position finding
+        const startResult = this.findNodeAtGenomicPosition(savedSelection.startPos, sequenceContainer);
+        const endResult = this.findNodeAtGenomicPosition(savedSelection.endPos, sequenceContainer);
         
-        if (!startSpan || !endSpan) {
+        if (!startResult || !endResult) {
+            console.warn('🔧 [SequenceUtils] Could not find nodes for positions:', {
+                startPos: savedSelection.startPos,
+                endPos: savedSelection.endPos,
+                startResult: !!startResult,
+                endResult: !!endResult
+            });
             return;
         }
 
@@ -3002,22 +3145,25 @@ class SequenceUtils {
         const range = document.createRange();
         
         try {
-            // Set range start and end
-            if (startSpan === endSpan) {
-                // Same span, use offsets
-                range.setStart(startSpan.firstChild, Math.min(savedSelection.startOffset, startSpan.firstChild.length));
-                range.setEnd(startSpan.firstChild, Math.min(savedSelection.endOffset, startSpan.firstChild.length));
-            } else {
-                // Different spans
-                range.setStart(startSpan.firstChild, Math.min(savedSelection.startOffset, startSpan.firstChild.length));
-                range.setEnd(endSpan.firstChild, Math.min(savedSelection.endOffset, endSpan.firstChild.length));
-            }
+            // Set range with calculated offsets
+            range.setStart(startResult.node, startResult.offset);
+            range.setEnd(endResult.node, endResult.offset);
             
             // Apply selection
             selection.removeAllRanges();
             selection.addRange(range);
             
-            console.log(`🔧 [SequenceUtils] Selection restored: ${savedSelection.startPos}-${savedSelection.endPos}`);
+            // Update genome browser selection state if it exists
+            if (window.genomeBrowser && window.genomeBrowser.currentSequenceSelection) {
+                window.genomeBrowser.currentSequenceSelection = {
+                    start: savedSelection.startPos,
+                    end: savedSelection.endPos,
+                    active: true,
+                    length: savedSelection.endPos - savedSelection.startPos + 1
+                };
+            }
+            
+            console.log(`🔧 [SequenceUtils] Selection restored: ${savedSelection.startPos}-${savedSelection.endPos} (${savedSelection.endPos - savedSelection.startPos + 1} bp)`);
         } catch (error) {
             console.warn('🔧 [SequenceUtils] Failed to restore selection:', error);
         }
