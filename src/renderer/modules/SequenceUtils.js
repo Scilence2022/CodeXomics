@@ -1493,6 +1493,7 @@ class SequenceUtils {
             if (geneType === 'promoter' && settings.showPromoter === false) return false;
             if (geneType === 'terminator' && settings.showTerminator === false) return false;
             if (geneType === 'regulatory' && settings.showRegulatory === false) return false;
+            if (geneType === 'source' && settings.showSource === false) return false;
             
             return true;
         });
@@ -2126,6 +2127,7 @@ class SequenceUtils {
             if (geneType === 'promoter' && settings.showPromoter === false) return false;
             if (geneType === 'terminator' && settings.showTerminator === false) return false;
             if (geneType === 'regulatory' && settings.showRegulatory === false) return false;
+            if (geneType === 'source' && settings.showSource === false) return false;
             
             return true;
         });
@@ -2372,6 +2374,7 @@ class SequenceUtils {
             showPromoter: true,
             showTerminator: true,
             showRegulatory: true,
+            showSource: false,  // Default: don't show source features
             showTooltips: true,
             showHoverEffects: true,
             // Cursor settings

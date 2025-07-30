@@ -533,6 +533,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         console.log(`Final results: ${Object.keys(sequences).length} sequences, ${Object.keys(annotations).length} annotation sets`);
         console.log('Sequences:', Object.keys(sequences));
         
+        // Extract and store source feature information separately for metadata
+        this.extractSourceFeatures(annotations);
+        
         this.genomeBrowser.currentSequence = sequences;
         this.genomeBrowser.currentAnnotations = annotations;
         
@@ -579,6 +582,39 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         if (feature.qualifiers.note) {
             feature.note = feature.qualifiers.note;
         }
+    }
+
+    /**
+     * Extract source feature information for genome metadata
+     */
+    extractSourceFeatures(annotations) {
+        const sourceFeatures = {};
+        
+        for (const [chromosome, features] of Object.entries(annotations)) {
+            const sourceFeature = features.find(feature => feature.type.toLowerCase() === 'source');
+            if (sourceFeature) {
+                sourceFeatures[chromosome] = {
+                    organism: sourceFeature.qualifiers.organism || 'Unknown',
+                    strain: sourceFeature.qualifiers.strain || null,
+                    plasmid: sourceFeature.qualifiers.plasmid || null,
+                    note: sourceFeature.qualifiers.note || null,
+                    db_xref: sourceFeature.qualifiers.db_xref || null,
+                    mol_type: sourceFeature.qualifiers.mol_type || null,
+                    isolation_source: sourceFeature.qualifiers.isolation_source || null,
+                    country: sourceFeature.qualifiers.country || null,
+                    collection_date: sourceFeature.qualifiers.collection_date || null,
+                    collected_by: sourceFeature.qualifiers.collected_by || null,
+                    host: sourceFeature.qualifiers.host || null,
+                    serotype: sourceFeature.qualifiers.serotype || null,
+                    serovar: sourceFeature.qualifiers.serovar || null,
+                    qualifiers: sourceFeature.qualifiers
+                };
+            }
+        }
+        
+        // Store source features in genome browser for later access
+        this.genomeBrowser.sourceFeatures = sourceFeatures;
+        console.log('📋 Extracted source features:', sourceFeatures);
     }
 
     parseGenBankLocation(feature, location) {

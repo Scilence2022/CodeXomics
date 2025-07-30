@@ -11398,6 +11398,33 @@ ${this.getPluginSystemInfo()}`;
             genomeInfo.fileTypes.annotations = Object.keys(this.app.currentAnnotations);
         }
 
+        // Add source feature information if available
+        if (this.app.sourceFeatures && Object.keys(this.app.sourceFeatures).length > 0) {
+            genomeInfo.sourceInformation = {};
+            for (const [chromosome, sourceInfo] of Object.entries(this.app.sourceFeatures)) {
+                genomeInfo.sourceInformation[chromosome] = {
+                    organism: sourceInfo.organism,
+                    strain: sourceInfo.strain,
+                    plasmid: sourceInfo.plasmid,
+                    note: sourceInfo.note,
+                    moleculeType: sourceInfo.mol_type,
+                    isolationSource: sourceInfo.isolation_source,
+                    country: sourceInfo.country,
+                    collectionDate: sourceInfo.collection_date,
+                    collectedBy: sourceInfo.collected_by,
+                    host: sourceInfo.host,
+                    serotype: sourceInfo.serotype,
+                    serovar: sourceInfo.serovar,
+                    dbXref: sourceInfo.db_xref
+                };
+                
+                // Add to loaded genome info if it exists
+                if (genomeInfo.loadedGenomes[chromosome]) {
+                    genomeInfo.loadedGenomes[chromosome].sourceInfo = genomeInfo.sourceInformation[chromosome];
+                }
+            }
+        }
+
         // Get variants information
         if (this.app.currentVariants && Object.keys(this.app.currentVariants).length > 0) {
             for (const [chromosome, variants] of Object.entries(this.app.currentVariants)) {

@@ -220,6 +220,7 @@ class GenomeBrowser {
             promoter: true,
             terminator: true,
             regulatory: true,
+            source: false,  // Default: don't show source features
             other: true
         };
 
@@ -260,7 +261,8 @@ class GenomeBrowser {
             promoter: true,
             terminator: true,
             regulatory: true,
-            other: true
+            other: true,
+            source: false  // Default: don't show source features
         };
         
         this.init();
@@ -1618,18 +1620,18 @@ class GenomeBrowser {
         // Toolbar feature filter controls
         const toolbarFilters = [
             'showGenes', 'showCDS', 'showMRNA', 'showTRNA', 'showRRNA',
-            'showPromoter', 'showTerminator', 'showRegulatory', 'showOther'
+            'showPromoter', 'showTerminator', 'showRegulatory', 'showSource', 'showOther'
         ];
         
         const sidebarFilters = [
             'sidebarShowGenes', 'sidebarShowCDS', 'sidebarShowMRNA', 'sidebarShowTRNA', 'sidebarShowRRNA',
-            'sidebarShowPromoter', 'sidebarShowTerminator', 'sidebarShowRegulatory', 'sidebarShowOther'
+            'sidebarShowPromoter', 'sidebarShowTerminator', 'sidebarShowRegulatory', 'sidebarShowSource', 'sidebarShowOther'
         ];
 
         // Map filter IDs to gene filter keys
         const filterMap = {
             'showGenes': 'genes', 'showCDS': 'CDS', 'showMRNA': 'mRNA', 'showTRNA': 'tRNA', 'showRRNA': 'rRNA',
-            'showPromoter': 'promoter', 'showTerminator': 'terminator', 'showRegulatory': 'regulatory', 'showOther': 'other'
+            'showPromoter': 'promoter', 'showTerminator': 'terminator', 'showRegulatory': 'regulatory', 'showSource': 'source', 'showOther': 'other'
         };
 
         // Setup toolbar listeners
@@ -3107,6 +3109,7 @@ class GenomeBrowser {
             'promoter': 'promoter',
             'terminator': 'terminator',
             'regulatory': 'regulatory',
+            'source': 'source',  // Handle source features specially
             'comment': 'other',
             'note': 'other',
             'other': 'other',
