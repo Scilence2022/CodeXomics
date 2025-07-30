@@ -133,10 +133,16 @@ class GeneralSettingsManager {
      * Setup event listeners for the modal and form elements
      */
     setupEventListeners() {
-        // Tab switching - use event delegation to handle dynamically loaded content
+        // Tab switching and modal interaction - use event delegation
         const modal = document.getElementById('generalSettingsModal');
         if (modal) {
             modal.addEventListener('click', (e) => {
+                // Handle clicking outside modal to close
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                    return;
+                }
+                
                 // Only handle clicks from tab buttons within the settings-tabs container
                 const tabButton = e.target.closest('.settings-tabs .tab-btn');
                 if (tabButton && tabButton.dataset.tab) {
@@ -352,28 +358,21 @@ class GeneralSettingsManager {
             });
         }
 
-        // Save settings button
-        const saveSettingsBtn = document.getElementById('saveGeneralSettings');
-        if (saveSettingsBtn) {
-            saveSettingsBtn.addEventListener('click', () => {
+        // Save settings button - use event delegation since button might not exist during init
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'saveGeneralSettings') {
+                e.preventDefault();
+                console.log('🔄 [GeneralSettings] Save Settings button clicked');
                 this.saveAllSettings();
-            });
-        }
+            }
+        });
 
-        // Modal close handlers
-        const modal = document.getElementById('generalSettingsModal');
+        // Modal close handlers (combined with main modal event listener above)
         if (modal) {
             modal.querySelectorAll('.modal-close').forEach(btn => {
                 btn.addEventListener('click', () => {
                     modal.classList.remove('show');
                 });
-            });
-            
-            // Close modal when clicking outside
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('show');
-                }
             });
         }
     }
