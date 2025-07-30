@@ -111,6 +111,8 @@ class MultiAgentSettingsManager {
                     'moonshotai/Kimi-K2-Instruct': 'Kimi-K2-Instruct',
                     'ascend-tribe/pangu-pro-moe': 'pangu-pro-moe',
                     'tencent/Hunyuan-A13B-Instruct': 'Hunyuan-A13B-Instruct',
+                    'zai-org/GLM-4.5': 'GLM-4.5',
+                    'zai-org/GLM-4.5-Air': 'GLM-4.5-Air',
                     'MiniMaxAI/MiniMax-M1-80k': 'MiniMax-M1-80k (Long Context)',
                     'Tongyi-Zhiwen/QwenLong-L1-32B': 'QwenLong-L1-32B (Long Context)',
                     'TeleAI/TeleChat2': 'TeleChat2 (Latest)',
