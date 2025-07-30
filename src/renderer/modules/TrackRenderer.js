@@ -3335,10 +3335,49 @@ class TrackRenderer {
         
         // Mouse wheel scrolling on scroll container
         scrollContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-            const scrollDelta = e.deltaY * 2; // Adjust scroll speed
-            updateScrollPosition(currentScrollTop + scrollDelta);
+            // Check if wheel zoom is enabled in NavigationManager
+            const isWheelZoomEnabled = window.genomeBrowser?.navigationManager?.wheelZoomConfig?.enabled;
+            
+            // Calculate if this track needs vertical scrolling
+            const maxScrollTop = contentHeight - trackHeight;
+            const needsVerticalScrolling = maxScrollTop > 0;
+            
+            // If wheel zoom is enabled, we need to decide between zoom and scroll
+            if (isWheelZoomEnabled) {
+                // Priority 1: If Ctrl/Cmd is held, always zoom
+                if (e.ctrlKey || e.metaKey) {
+                    console.log('🔍 [TrackRenderer] Modifier key + wheel, delegating to NavigationManager for zoom');
+                    return; // Let NavigationManager handle zoom
+                }
+                
+                // Priority 2: If no vertical scrolling is needed, always zoom
+                if (!needsVerticalScrolling) {
+                    console.log('🔍 [TrackRenderer] No vertical scrolling needed, delegating to NavigationManager for zoom');
+                    return; // Let NavigationManager handle zoom
+                }
+                
+                // Priority 3: If vertical scrolling is at boundaries, allow zoom
+                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
+                const isAtTop = currentScrollTop <= 0;
+                const isAtBottom = currentScrollTop >= maxScrollTop;
+                
+                if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
+                    console.log('🔍 [TrackRenderer] At scroll boundary, delegating to NavigationManager for zoom');
+                    return; // Let NavigationManager handle zoom when at scroll boundaries
+                }
+            }
+            
+            // Handle vertical scrolling for reads track only if needed
+            if (needsVerticalScrolling) {
+                e.preventDefault();
+                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
+                const scrollDelta = e.deltaY * 2; // Adjust scroll speed
+                updateScrollPosition(currentScrollTop + scrollDelta);
+                console.log('🔍 [TrackRenderer] Handling vertical scroll in reads track');
+            } else if (!isWheelZoomEnabled) {
+                // If zoom is disabled and no scrolling needed, prevent default to avoid page scroll
+                e.preventDefault();
+            }
         });
         
         // Store update function for external use
@@ -8418,6 +8457,16 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Interactive Features</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesEnableGlobalDragging" ${settings.enableGlobalDragging !== false ? 'checked' : ''}>
+                        Enable Global Track Dragging
+                    </label>
+                    <div class="help-text">When enabled, this track will update dynamically during drag operations, providing real-time navigation feedback. Disable for better performance on slower devices.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Visual Settings</h4>
                 <div class="form-group">
                     <label for="genesTrackHeight">Track Height (px):</label>
@@ -8967,6 +9016,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const fontSizeElement = modal.querySelector('#genesFontSize');
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
                 const layoutModeElement = modal.querySelector('#genesLayoutMode');
+                const enableGlobalDraggingElement = modal.querySelector('#genesEnableGlobalDragging');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -8975,7 +9025,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     geneHeightElement: !!geneHeightElement,
                     fontSizeElement: !!fontSizeElement,
                     fontFamilyElement: !!fontFamilyElement,
-                    layoutModeElement: !!layoutModeElement
+                    layoutModeElement: !!layoutModeElement,
+                    enableGlobalDraggingElement: !!enableGlobalDraggingElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
@@ -8985,6 +9036,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.fontSize = parseInt(fontSizeElement?.value) || 11;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
                 settings.layoutMode = layoutModeElement?.value || 'compact';
+                settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
                 
                 console.log('Collected gene settings from form:', settings);
                 break;

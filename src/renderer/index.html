@@ -2272,6 +2272,40 @@
                         </div>
                         
                         <div class="settings-section">
+                            <h4><i class="fas fa-mouse"></i> Mouse & Navigation</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableWheelZoom" checked>
+                                    Enable Mouse Wheel Zoom
+                                </label>
+                                <small class="help-text">Use mouse wheel to zoom in/out on the genome browser</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="wheelZoomToCursor" checked>
+                                    Zoom to Cursor Position
+                                </label>
+                                <small class="help-text">Zoom centered on cursor position instead of viewport center</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="wheelZoomSensitivity">Zoom Sensitivity:</label>
+                                <input type="range" id="wheelZoomSensitivity" min="0.05" max="0.5" step="0.05" value="0.1" class="input-full">
+                                <small class="help-text">Adjust mouse wheel zoom sensitivity (0.05 = slow, 0.5 = fast)</small>
+                                <div class="range-display">Current: <span id="wheelZoomSensitivityValue">0.1</span></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="wheelZoomMinRange">Minimum Zoom Range (bp):</label>
+                                <input type="number" id="wheelZoomMinRange" value="100" min="10" max="10000" class="input-full">
+                                <small class="help-text">Minimum genomic range when fully zoomed in</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="wheelZoomMaxRange">Maximum Zoom Range (bp):</label>
+                                <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000" class="input-full">
+                                <small class="help-text">Maximum genomic range when fully zoomed out</small>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
                             <h4><i class="fas fa-robot"></i> AI Features</h4>
                             <div class="form-group">
                                 <label>

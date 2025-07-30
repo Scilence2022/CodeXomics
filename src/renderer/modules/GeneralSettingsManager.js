@@ -68,23 +68,87 @@ class GeneralSettingsManager {
             await this.loadSettings();
             this.applySettings();
             this.isInitialized = true;
-            console.log('GeneralSettingsManager initialized');
+            console.log('✅ [GeneralSettings] GeneralSettingsManager initialized');
         } catch (error) {
-            console.error('Failed to initialize GeneralSettingsManager:', error);
+            console.error('❌ [GeneralSettings] Failed to initialize GeneralSettingsManager:', error);
         }
+    }
+
+    /**
+     * Initialize tabs when modal is opened
+     */
+    initializeTabs() {
+        console.log('🔄 [GeneralSettings] Initializing tabs');
+        
+        // Wait for the DOM to be ready
+        setTimeout(() => {
+            // Ensure the first tab is active by default
+            const firstTab = document.querySelector('#generalSettingsModal .settings-tabs .tab-btn[data-tab="appearance"]');
+            const firstContent = document.getElementById('appearance-tab');
+            
+            console.log('🔍 [GeneralSettings] Found first tab:', !!firstTab);
+            console.log('🔍 [GeneralSettings] Found first content:', !!firstContent);
+            
+            if (firstTab && firstContent) {
+                // Remove active from all tabs first
+                const allTabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
+                const allTabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
+                
+                console.log(`🔍 [GeneralSettings] Found ${allTabButtons.length} tab buttons`);
+                console.log(`🔍 [GeneralSettings] Found ${allTabContents.length} tab contents`);
+                
+                allTabButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    console.log(`🔄 [GeneralSettings] Removed active from button: ${btn.dataset.tab}`);
+                });
+                
+                allTabContents.forEach(content => {
+                    content.classList.remove('active');
+                    console.log(`🔄 [GeneralSettings] Removed active from content: ${content.id}`);
+                });
+                
+                // Set first tab as active
+                firstTab.classList.add('active');
+                firstContent.classList.add('active');
+                this.currentTab = 'appearance';
+                
+                console.log('✅ [GeneralSettings] Default tab (appearance) activated');
+                console.log('🔍 [GeneralSettings] First tab classes:', firstTab.className);
+                console.log('🔍 [GeneralSettings] First content classes:', firstContent.className);
+            } else {
+                console.error('❌ [GeneralSettings] Could not find default tab elements');
+                
+                // Debug: List all available elements
+                const allTabs = document.querySelectorAll('#generalSettingsModal .tab-btn');
+                const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
+                console.log('🔍 [GeneralSettings] All tab buttons found:', 
+                    Array.from(allTabs).map(t => t.dataset.tab));
+                console.log('🔍 [GeneralSettings] All tab contents found:', 
+                    Array.from(allContents).map(c => c.id));
+            }
+        }, 100);
     }
 
     /**
      * Setup event listeners for the modal and form elements
      */
     setupEventListeners() {
-        // Tab switching
-        const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
+        // Tab switching - use event delegation to handle dynamically loaded content
+        const modal = document.getElementById('generalSettingsModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                // Only handle clicks from tab buttons within the settings-tabs container
+                const tabButton = e.target.closest('.settings-tabs .tab-btn');
+                if (tabButton && tabButton.dataset.tab) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`🔄 [GeneralSettings] Tab button clicked: ${tabButton.dataset.tab}`);
+                    this.switchTab(tabButton.dataset.tab);
+                }
             });
-        });
+        } else {
+            console.warn('❌ [GeneralSettings] General Settings Modal not found during initialization');
+        }
 
         // Theme mode change
         const themeSelect = document.getElementById('themeMode');
@@ -210,6 +274,12 @@ class GeneralSettingsManager {
                 const value = parseFloat(e.target.value);
                 this.updateSetting('wheelZoomSensitivity', value);
                 this.applyFeatureSetting('wheelZoomSensitivity', value);
+                
+                // Update display value
+                const displayElement = document.getElementById('wheelZoomSensitivityValue');
+                if (displayElement) {
+                    displayElement.textContent = value;
+                }
             });
         }
         
@@ -236,7 +306,8 @@ class GeneralSettingsManager {
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
             'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
-            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor'
+            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor',
+            'enableLLMIntegration', 'enableContextualSuggestions', 'enableFuzzySearch', 'enableAutoComplete'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -311,19 +382,56 @@ class GeneralSettingsManager {
      * Switch between settings tabs
      */
     switchTab(tabName) {
-        // Update tab buttons
-        document.querySelectorAll('.settings-tabs .tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        try {
+            console.log(`🔄 [GeneralSettings] Switching to tab: ${tabName}`);
+            
+            // Update tab buttons
+            const tabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
+            console.log(`🔍 [GeneralSettings] Found ${tabButtons.length} tab buttons`);
+            
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                console.log(`🔄 [GeneralSettings] Removed active from button: ${btn.dataset.tab}`);
+            });
+            
+            const activeButton = document.querySelector(`#generalSettingsModal [data-tab="${tabName}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+                console.log(`✅ [GeneralSettings] Activated button for tab: ${tabName}`);
+            } else {
+                console.error(`❌ [GeneralSettings] Could not find button for tab: ${tabName}`);
+                return;
+            }
 
-        // Update tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+            // Update tab content
+            const tabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
+            console.log(`🔍 [GeneralSettings] Found ${tabContents.length} tab contents`);
+            
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                console.log(`🔄 [GeneralSettings] Removed active from content: ${content.id}`);
+            });
+            
+            const activeContent = document.getElementById(`${tabName}-tab`);
+            if (activeContent) {
+                activeContent.classList.add('active');
+                console.log(`✅ [GeneralSettings] Activated content for tab: ${tabName}`);
+            } else {
+                console.error(`❌ [GeneralSettings] Could not find content for tab: ${tabName}-tab`);
+                
+                // Debug: List all available tab content IDs
+                const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
+                console.log(`🔍 [GeneralSettings] Available tab content IDs:`, 
+                    Array.from(allContents).map(c => c.id));
+                return;
+            }
 
-        this.currentTab = tabName;
+            this.currentTab = tabName;
+            console.log(`✅ [GeneralSettings] Successfully switched to tab: ${tabName}`);
+            
+        } catch (error) {
+            console.error(`❌ [GeneralSettings] Error switching tabs:`, error);
+        }
     }
 
     /**
@@ -401,7 +509,14 @@ class GeneralSettingsManager {
 
         // Wheel zoom settings
         const wheelZoomSensitivityInput = document.getElementById('wheelZoomSensitivity');
-        if (wheelZoomSensitivityInput) wheelZoomSensitivityInput.value = this.settings.wheelZoomSensitivity;
+        if (wheelZoomSensitivityInput) {
+            wheelZoomSensitivityInput.value = this.settings.wheelZoomSensitivity;
+            // Update display value
+            const displayElement = document.getElementById('wheelZoomSensitivityValue');
+            if (displayElement) {
+                displayElement.textContent = this.settings.wheelZoomSensitivity;
+            }
+        }
         
         const wheelZoomMinRangeInput = document.getElementById('wheelZoomMinRange');
         if (wheelZoomMinRangeInput) wheelZoomMinRangeInput.value = this.settings.wheelZoomMinRange;
@@ -414,7 +529,8 @@ class GeneralSettingsManager {
             'enableGCContent', 'enableProteinTranslation', 'enableOperonPrediction',
             'enableSyntaxHighlighting', 'enableAutoSave', 'enableNotifications',
             'enableKeyboardShortcuts', 'enableAnimations', 'enableFileCache',
-            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor'
+            'enableGlobalDragging', 'enableWheelZoom', 'wheelZoomToCursor',
+            'enableLLMIntegration', 'enableContextualSuggestions', 'enableFuzzySearch', 'enableAutoComplete'
         ];
 
         featureCheckboxes.forEach(id => {
@@ -944,6 +1060,30 @@ class GeneralSettingsManager {
      */
     getSetting(key, defaultValue = null) {
         return this.settings[key] !== undefined ? this.settings[key] : defaultValue;
+    }
+
+    /**
+     * Debug method to test tab switching manually
+     */
+    testTabSwitching() {
+        console.log('🧪 [GeneralSettings] Testing tab switching...');
+        
+        const tabs = ['appearance', 'performance', 'features', 'export', 'about'];
+        let currentIndex = 0;
+        
+        const testNext = () => {
+            if (currentIndex < tabs.length) {
+                const tabName = tabs[currentIndex];
+                console.log(`🧪 [GeneralSettings] Testing tab: ${tabName}`);
+                this.switchTab(tabName);
+                currentIndex++;
+                setTimeout(testNext, 1000);
+            } else {
+                console.log('🧪 [GeneralSettings] Tab switching test completed');
+            }
+        };
+        
+        testNext();
     }
 }
 

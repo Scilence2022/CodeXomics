@@ -777,16 +777,26 @@ class GenomeBrowser {
         if (modal) {
             // Initialize GeneralSettingsManager if not already done
             if (this.generalSettingsManager && this.generalSettingsManager.isInitialized) {
-                // Load current settings
-                this.generalSettingsManager.loadSettings();
+                console.log('🔄 [GeneralSettings] Loading settings and initializing tabs...');
+                
+                // Load current settings and update UI
+                this.generalSettingsManager.loadSettings().then(() => {
+                    // Initialize tabs properly after settings are loaded
+                    this.generalSettingsManager.initializeTabs();
+                }).catch(error => {
+                    console.error('❌ [GeneralSettings] Error loading settings:', error);
+                    // Still try to initialize tabs even if settings loading fails
+                    this.generalSettingsManager.initializeTabs();
+                });
             } else {
-                console.warn('GeneralSettingsManager not initialized');
+                console.warn('❌ [GeneralSettings] GeneralSettingsManager not initialized');
             }
             
             // Show modal
             modal.classList.add('show');
+            console.log('✅ [GeneralSettings] Modal shown');
         } else {
-            console.error('General Settings modal not found');
+            console.error('❌ [GeneralSettings] General Settings modal not found');
         }
     }
 

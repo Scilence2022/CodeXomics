@@ -12975,4 +12975,17 @@ to {
   grid-column: 1;
   margin-top: 4px;
 }
+
+/* Range display for sliders */
+.range-display {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  font-weight: 500;
+}
+
+.range-display span {
+  color: var(--primary-color, #007bff);
+  font-weight: 600;
+}
 }
