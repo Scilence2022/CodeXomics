@@ -776,20 +776,55 @@ class GenomeBrowser {
         const modal = document.getElementById('generalSettingsModal');
         if (modal) {
             // Initialize GeneralSettingsManager if not already done
-            if (this.generalSettingsManager && this.generalSettingsManager.isInitialized) {
+            if (this.generalSettingsManager) {
                 console.log('🔄 [GeneralSettings] Loading settings and initializing tabs...');
                 
-                // Load current settings and update UI
-                this.generalSettingsManager.loadSettings().then(() => {
-                    // Initialize tabs properly after settings are loaded
-                    this.generalSettingsManager.initializeTabs();
-                }).catch(error => {
-                    console.error('❌ [GeneralSettings] Error loading settings:', error);
-                    // Still try to initialize tabs even if settings loading fails
-                    this.generalSettingsManager.initializeTabs();
-                });
+                // Check if it's initialized, if not initialize it first
+                if (!this.generalSettingsManager.isInitialized) {
+                    console.log('🔄 [GeneralSettings] Initializing GeneralSettingsManager...');
+                    this.generalSettingsManager.init().then(() => {
+                        // Load current settings and update UI
+                        return this.generalSettingsManager.loadSettings();
+                    }).then(() => {
+                        // Initialize tabs properly after settings are loaded
+                        this.generalSettingsManager.initializeTabs();
+                    }).catch(error => {
+                        console.error('❌ [GeneralSettings] Error initializing or loading settings:', error);
+                        // Still try to initialize tabs even if settings loading fails
+                        this.generalSettingsManager.initializeTabs();
+                    });
+                } else {
+                    // Load current settings and update UI
+                    this.generalSettingsManager.loadSettings().then(() => {
+                        // Initialize tabs properly after settings are loaded
+                        this.generalSettingsManager.initializeTabs();
+                    }).catch(error => {
+                        console.error('❌ [GeneralSettings] Error loading settings:', error);
+                        // Still try to initialize tabs even if settings loading fails
+                        this.generalSettingsManager.initializeTabs();
+                    });
+                }
             } else {
-                console.warn('❌ [GeneralSettings] GeneralSettingsManager not initialized');
+                console.warn('❌ [GeneralSettings] GeneralSettingsManager not available');
+                // Try to create it on-demand
+                try {
+                    this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+                    window.generalSettingsManager = this.generalSettingsManager;
+                    this.generalSettingsManager.init().then(() => {
+                        console.log('✅ [GeneralSettings] GeneralSettingsManager initialized successfully');
+                        // Load current settings and update UI
+                        return this.generalSettingsManager.loadSettings();
+                    }).then(() => {
+                        // Initialize tabs properly after settings are loaded
+                        this.generalSettingsManager.initializeTabs();
+                    }).catch(error => {
+                        console.error('❌ [GeneralSettings] Error initializing or loading settings:', error);
+                        // Still try to initialize tabs even if settings loading fails
+                        this.generalSettingsManager.initializeTabs();
+                    });
+                } catch (error) {
+                    console.error('❌ [GeneralSettings] Failed to create GeneralSettingsManager:', error);
+                }
             }
             
             // Show modal
