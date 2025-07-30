@@ -413,11 +413,7 @@
   max-height: 400px;
 }
 
-.sequence-line {
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-}
+/* Removed duplicate .sequence-line definition - see line 1350 for the primary definition */
 
 .sequence-position {
   color: var(--text-secondary);
@@ -1349,7 +1345,7 @@
 
 .sequence-line {
   display: flex;
-  margin-bottom: 8px;
+  /* margin-bottom controlled by JavaScript for dynamic positioning */
   font-family: 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.8;
@@ -10927,16 +10923,9 @@ to {
   margin-bottom: 8px;
 }
 
-.sequence-line {
-  margin-bottom: 2px;
-}
+/* Removed another duplicate .sequence-line definition */
 
-.gene-indicator-line {
-  margin-left: 100px;
-  padding-left: 5px;
-  margin-top: 1px;
-  margin-bottom: 3px;
-}
+/* Removed conflicting .gene-indicator-line definition - handled by sequence-tracks.css and JavaScript */
 
 .gene-indicator-svg {
   display: block;

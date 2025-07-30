@@ -1334,6 +1334,23 @@ class SequenceUtils {
         
         this.performanceStats.cacheMisses++;
         
+        // Calculate indicator positioning first for dynamic sequence line spacing
+        const positionWidth = 100; // position span width
+        const marginRight = 15;    // margin-right of position span
+        const alignmentOffset = positionWidth + marginRight;
+        const horizontalAdjustment = charWidth * 0.8; // Add horizontal offset to compensate for character centering
+        
+        // Apply position and size corrections from settings
+        const horizontalOffset = sequenceSettings.horizontalOffset || 0;
+        const verticalOffset = sequenceSettings.verticalOffset || 0;
+        const heightCorrection = (sequenceSettings.heightCorrection || 100) / 100;
+        
+        // Position indicator directly below the sequence text with minimal gap
+        const indicatorMarginTop = -6; // Negative to move up closer to sequence text
+        const indicatorMarginBottom = 4; // Small gap before next sequence line
+        const correctedMarginTop = indicatorMarginTop + verticalOffset;
+        const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
+        
         const lineGroup = document.createElement('div');
         lineGroup.className = 'sequence-line-group';
         lineGroup.style.marginBottom = `${this.lineSpacing}px`;
@@ -1343,7 +1360,9 @@ class SequenceUtils {
         sequenceLine.className = 'sequence-line';
         // Use configurable line height with appropriate line-height ratio
         const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
-        sequenceLine.style.cssText = `display: flex; margin-bottom: 8px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
+        // Use dynamic margin-bottom that works with gene indicator positioning
+        const sequenceLineMarginBottom = Math.max(4, correctedMarginBottom + 6); // Ensure enough space for gene indicators
+        sequenceLine.style.cssText = `display: flex; margin-bottom: ${sequenceLineMarginBottom}px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
         
         // Position label
         const positionSpan = document.createElement('span');
@@ -1360,37 +1379,19 @@ class SequenceUtils {
         sequenceLine.appendChild(positionSpan);
         sequenceLine.appendChild(basesDiv);
         
-        // Gene indicator line - calculate precise alignment with corrections
+        // Gene indicator line - use pre-calculated values
         const indicatorLine = document.createElement('div');
         indicatorLine.className = 'gene-indicator-line';
-        // Calculate exact left margin to align with sequence bases
-        const positionWidth = 100; // position span width
-        const marginRight = 15;    // margin-right of position span
-        const alignmentOffset = positionWidth + marginRight;
-        // Add horizontal offset to compensate for character centering (~0.8 characters)
-        const horizontalAdjustment = charWidth * 0.8;
-        
-        // Apply position and size corrections from settings
-        const horizontalOffset = sequenceSettings.horizontalOffset || 0;
-        const verticalOffset = sequenceSettings.verticalOffset || 0;
-        const heightCorrection = (sequenceSettings.heightCorrection || 100) / 100;
-        
-        // FIXED: Calculate vertical position considering line height compression
-        const actualLineHeight = this.lineHeight;
-        const actualLineSpacing = this.lineSpacing;
-        const totalLineHeight = actualLineHeight + actualLineSpacing;
-        
-        // Position indicator directly below the sequence text with minimal gap
-        // Since sequenceLine has margin-bottom: 8px, we need to offset that and position closer
-        const indicatorMarginTop = -6; // Negative to move up closer to sequence text (compensate for part of sequenceLine's margin-bottom)
-        const indicatorMarginBottom = 4; // Small gap before next sequence line
         
         const finalLeftMargin = alignmentOffset - horizontalAdjustment + horizontalOffset;
         const correctedHeight = 12 * heightCorrection;
-        const correctedMarginTop = indicatorMarginTop + verticalOffset;
-        const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
         
+        // Use both inline styles and CSS variables to ensure our spacing takes effect
         indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
+        
+        // Also set CSS variables to override the !important styles in sequence-tracks.css
+        document.documentElement.style.setProperty('--sequence-line-spacing', `${Math.max(4, correctedMarginBottom)}px`);
+        document.documentElement.style.setProperty('--min-sequence-line-spacing', `${Math.max(4, correctedMarginBottom)}px`);
         indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(lineSubsequence, lineStartPos, annotations, operons, charWidth, false, sequenceSettings);
         
         lineGroup.appendChild(sequenceLine);
