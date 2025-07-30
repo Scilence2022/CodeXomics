@@ -1,0 +1,281 @@
+/* Canvas Reads Renderer Optimization Styles */
+
+.reads-canvas-container {
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style paint;
+    
+    /* Optimize for rendering performance */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    
+    /* Prevent unnecessary reflows */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.reads-canvas {
+    /* Hardware acceleration for smooth dragging */
+    transform: translateZ(0);
+    will-change: transform;
+    
+    /* Optimize Canvas rendering */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    -webkit-image-rendering: crisp-edges;
+    -moz-image-rendering: crisp-edges;
+    
+    /* Prevent anti-aliasing for crisp read visualization */
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: none;
+    
+    /* Optimize for performance during drag operations */
+    backface-visibility: hidden;
+    perspective: 1000px;
+    
+    /* Ensure proper layering */
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+/* Performance optimizations during drag operations */
+.reads-canvas-container.dragging .reads-canvas {
+    /* Maximum performance during drag */
+    pointer-events: none;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Settings UI for reads rendering mode */
+.reads-rendering-mode-setting {
+    background: var(--bg-secondary, #f8f9fa);
+    border: 1px solid var(--border-color, #e9ecef);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.reads-rendering-mode-setting h4 {
+    margin: 0 0 12px 0;
+    color: var(--text-primary, #333);
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reads-rendering-mode-setting h4::before {
+    content: "🎨";
+    font-size: 18px;
+}
+
+.rendering-mode-options {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.rendering-mode-option {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid var(--border-color, #e9ecef);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-primary, #fff);
+}
+
+.rendering-mode-option:hover {
+    border-color: var(--primary-color, #007bff);
+    background: var(--bg-hover, #f8f9fa);
+}
+
+.rendering-mode-option.selected {
+    border-color: var(--primary-color, #007bff);
+    background: var(--primary-light, #e3f2fd);
+}
+
+.rendering-mode-option .mode-title {
+    font-weight: 600;
+    color: var(--text-primary, #333);
+    margin-bottom: 4px;
+}
+
+.rendering-mode-option .mode-description {
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    line-height: 1.4;
+}
+
+.rendering-mode-option .mode-performance {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.rendering-mode-option[data-mode="canvas"] .mode-performance {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.rendering-mode-option[data-mode="svg"] .mode-performance {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+/* High-DPI display optimizations */
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+       only screen and (min-device-pixel-ratio: 2),
+       only screen and (min-resolution: 192dpi),
+       only screen and (min-resolution: 2dppx) {
+    .reads-canvas {
+        /* Ensure crisp rendering on high-DPI displays */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+    .reads-canvas-container {
+        /* Optimize for dark backgrounds */
+        background-color: rgba(31, 41, 55, 0.1);
+    }
+    
+    .reads-rendering-mode-setting {
+        background: var(--bg-tertiary, #2d3748);
+        border-color: var(--border-color, #4a5568);
+    }
+    
+    .rendering-mode-option {
+        background: var(--bg-secondary, #1a202c);
+        border-color: var(--border-color, #4a5568);
+    }
+    
+    .rendering-mode-option:hover {
+        background: var(--bg-hover, #2d3748);
+    }
+    
+    .rendering-mode-option.selected {
+        background: var(--primary-dark, #1565c0);
+    }
+}
+
+/* Mobile performance optimizations */
+@media (max-width: 768px) {
+    .reads-canvas {
+        /* Reduce complexity on mobile devices */
+        image-rendering: optimizeSpeed;
+        text-rendering: optimizeSpeed;
+    }
+    
+    .reads-canvas-container {
+        /* Simplify layout on mobile */
+        contain: layout paint;
+    }
+    
+    .rendering-mode-options {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Animation performance optimizations */
+.reads-canvas-container,
+.reads-canvas {
+    /* Optimize transitions for hardware acceleration */
+    transition: transform 0.1s ease-out;
+}
+
+/* Disable transitions during drag for maximum performance */
+.reads-canvas-container.dragging,
+.reads-canvas-container.dragging .reads-canvas {
+    transition: none !important;
+}
+
+/* GPU memory optimization for large read datasets */
+.reads-canvas-container[data-reads-count="large"] .reads-canvas {
+    /* Optimize for datasets > 10k reads */
+    image-rendering: optimizeSpeed;
+    text-rendering: optimizeSpeed;
+}
+
+/* Performance indicators for debugging */
+.reads-canvas-container[data-performance-mode="debug"]::after {
+    content: "Canvas Reads";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(76, 175, 80, 0.8);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.reads-svg-container[data-performance-mode="debug"]::after {
+    content: "SVG Reads";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 152, 0, 0.8);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Accessibility improvements */
+.reads-canvas-container[aria-label] {
+    /* Ensure Canvas content is accessible */
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .reads-canvas-container,
+    .reads-canvas {
+        transition: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .reads-canvas-container {
+        border: 1px solid currentColor;
+    }
+    
+    .rendering-mode-option {
+        border-width: 3px;
+    }
+}
+
+/* Loading state for Canvas renderer */
+.reads-canvas-container.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.reads-canvas-container.loading::before {
+    content: "Loading Canvas Renderer...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1000;
+}

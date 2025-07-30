@@ -5,13 +5,13 @@
  * across the application. All other files should import from this file.
  * 
  * @author Genome AI Studio Team
- * @version 0.3.0-beta
+ * @version 0.3.1-beta
  */
 
 // Core application version
 const VERSION_MAJOR = 0;
 const VERSION_MINOR = 3;
-const VERSION_PATCH = 0;
+const VERSION_PATCH = 1;
 const VERSION_PRERELEASE = 'beta';
 
 // Build version string

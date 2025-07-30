@@ -2894,9 +2894,17 @@ class TrackRenderer {
             trackHeight = Math.max(trackHeight, settings.height || 150);
             trackContent.style.height = `${trackHeight}px`;
             
-                // Create SVG-based read visualization
-                // Pass just topPadding - reads SVG will be positioned after coverage automatically  
-                this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                // Render reads using Canvas or SVG based on settings
+                const renderingMode = settings.renderingMode || 'canvas';
+                
+                if (renderingMode === 'canvas') {
+                    // Use Canvas rendering for high performance
+                    this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                } else {
+                    // Create SVG-based read visualization
+                    // Pass just topPadding - reads SVG will be positioned after coverage automatically  
+                    this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                }
             }
             
             // Add reads statistics with cache info and sampling info
@@ -3085,9 +3093,16 @@ class TrackRenderer {
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
                     this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + totalTopHeight, bottomPadding, settings);
                 } else {
-                    // Render all reads normally
-                    // Pass just topPadding - reads SVG will be positioned after coverage automatically
-                    this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    // Render all reads normally using Canvas or SVG based on settings
+                    const renderingMode = settings.renderingMode || 'canvas';
+                    
+                    if (renderingMode === 'canvas') {
+                        // Use Canvas rendering for high performance
+                        this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    } else {
+                        // Pass just topPadding - reads SVG will be positioned after coverage automatically
+                        this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    }
                 }
                 
                 // Add file-specific statistics
@@ -3570,6 +3585,78 @@ class TrackRenderer {
         // applied to the track-content container in createTrackContent()
 
         trackContent.appendChild(svg);
+    }
+
+    /**
+     * Render reads elements using Canvas for high performance
+     */
+    renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings = {}) {
+        console.log('🎨 [TrackRenderer] Rendering reads with Canvas for high performance');
+        
+        // Check if CanvasReadsRenderer is available
+        if (typeof CanvasReadsRenderer === 'undefined') {
+            console.warn('⚠️ [TrackRenderer] CanvasReadsRenderer not available, falling back to SVG rendering');
+            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+        }
+        
+        // Generate unique ID for this track instance
+        const trackId = `reads-track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Create Canvas container
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'reads-canvas-container';
+        canvasContainer.setAttribute('data-track-id', trackId);
+        canvasContainer.style.cssText = `
+            position: absolute;
+            top: ${topPadding}px;
+            left: 0;
+            width: 100%;
+            height: ${trackHeight - topPadding}px;
+            overflow: hidden;
+        `;
+        
+        // Prepare Canvas renderer options from settings
+        const canvasOptions = {
+            readHeight: readHeight,
+            rowSpacing: rowSpacing,
+            topPadding: 0, // Already positioned by container
+            bottomPadding: settings.bottomPadding || 10,
+            showSequences: settings.showSequences || false,
+            showReference: settings.showReference !== false,
+            autoFontSize: settings.autoFontSize !== false,
+            minFontSize: 8,
+            maxFontSize: 14,
+            qualityColoring: settings.showQualityColors || false,
+            strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
+            mismatchHighlight: settings.highlightMismatches !== false,
+            showCoverage: settings.showCoverage !== false,
+            backgroundColor: 'transparent'
+        };
+        
+        try {
+            // Create Canvas renderer
+            const canvasRenderer = new CanvasReadsRenderer(canvasContainer, readRows, viewport, canvasOptions);
+            
+            // Store renderer for cleanup and updates (extend the existing canvas renderers)
+            if (!this.canvasRenderers) {
+                this.canvasRenderers = new Map();
+            }
+            this.canvasRenderers.set(trackId, canvasRenderer);
+            
+            // Append canvas container to track content
+            trackContent.appendChild(canvasContainer);
+            
+            console.log('✅ [TrackRenderer] Canvas reads renderer created successfully', {
+                trackId: trackId,
+                readRows: readRows.length,
+                totalReads: readRows.reduce((sum, row) => sum + row.length, 0)
+            });
+            
+        } catch (error) {
+            console.error('❌ [TrackRenderer] Failed to create Canvas reads renderer:', error);
+            // Fall back to SVG rendering if Canvas fails
+            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+        }
     }
 
     /**
@@ -8432,6 +8519,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
+                <h4>Rendering Method</h4>
+                <div class="form-group">
+                    <label for="readsRenderingMode">Rendering method:</label>
+                    <select id="readsRenderingMode">
+                        <option value="canvas" ${(settings.renderingMode || 'canvas') === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
+                        <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
+                    </select>
+                    <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities.</div>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h4>Read Display</h4>
                 <div class="form-group">
                     <label for="readsHeight">Height of each read (px):</label>
@@ -10498,6 +10596,16 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Setup event listeners for reads settings
      */
     setupReadsSettingsEventListeners(bodyElement) {
+        // Rendering mode selection
+        const renderingModeSelect = bodyElement.querySelector('#readsRenderingMode');
+        if (renderingModeSelect) {
+            renderingModeSelect.addEventListener('change', () => {
+                this.updateTrackSetting('reads', 'renderingMode', renderingModeSelect.value);
+                // Force track refresh to apply new rendering mode
+                this.refreshTrack('reads');
+            });
+        }
+        
         // Coverage visualization toggle
         const coverageCheckbox = bodyElement.querySelector('#readsShowCoverage');
         const coverageHeightGroup = bodyElement.querySelector('#coverageHeightGroup');
@@ -10987,6 +11095,33 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         if (renderersToCleanup.length > 0) {
             console.log(`🧹 [TrackRenderer] Cleaned up ${renderersToCleanup.length} orphaned Canvas renderers`);
         }
+    }
+
+    /**
+     * Refresh a specific track to apply new settings
+     */
+    refreshTrack(trackType) {
+        console.log(`🔄 [TrackRenderer] Refreshing ${trackType} track`);
+        
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (!currentChr) {
+            console.warn('No chromosome selected for track refresh');
+            return;
+        }
+        
+        // Find and remove existing track
+        const existingTrack = document.querySelector(`[data-track-type="${trackType}"]`);
+        if (existingTrack) {
+            // Clean up any Canvas renderers for this track
+            const trackId = existingTrack.querySelector('[data-track-id]')?.getAttribute('data-track-id');
+            if (trackId) {
+                this.cleanupCanvasRenderer(trackId);
+            }
+            existingTrack.remove();
+        }
+        
+        // Recreate the track with new settings
+        this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
     }
 }
 

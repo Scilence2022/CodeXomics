@@ -1,6 +1,6 @@
 {
   "name": "genome-ai-studio",
-  "version": "0.3.0-beta",
+  "version": "0.3.1-beta",
   "description": "An AI-powered genome analysis studio built with Electron",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/GenomeAIStudio",
