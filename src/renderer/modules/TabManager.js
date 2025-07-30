@@ -62,6 +62,9 @@ class TabManager {
         this.initializeModalManagers();
         this.initializePersistence();
         
+        // Initialize drag-and-drop functionality for track reordering
+        this.initializeTrackDragAndDrop();
+        
         // Force visibility of position indicators after a short delay
         setTimeout(() => {
             this.forcePositionIndicatorVisibility();
@@ -1137,10 +1140,34 @@ class TabManager {
     }
     
     /**
-     * Get current track display order
+     * Get current track display order from sidebar track controls
      */
     getTrackOrder() {
-        // Get track order from current DOM structure
+        // Get track order from sidebar track controls for better consistency
+        const trackControlsContainer = document.querySelector('.track-controls');
+        if (!trackControlsContainer) {
+            // Fallback to genome viewer if sidebar is not available
+            return this.getTrackOrderFromGenomeViewer();
+        }
+        
+        const trackItems = trackControlsContainer.querySelectorAll('.track-control-item');
+        const trackOrder = [];
+        
+        trackItems.forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox && checkbox.value) {
+                trackOrder.push(checkbox.value);
+            }
+        });
+        
+        // Return sidebar order if found, otherwise fallback
+        return trackOrder.length > 0 ? trackOrder : this.getTrackOrderFromGenomeViewer();
+    }
+    
+    /**
+     * Get track order from genome viewer DOM (fallback method)
+     */
+    getTrackOrderFromGenomeViewer() {
         const genomeViewer = document.getElementById('genomeViewer');
         if (!genomeViewer) return ['genes', 'gc', 'variants', 'reads', 'proteins', 'sequence'];
         
@@ -1169,35 +1196,218 @@ class TabManager {
      */
     applyTrackOrder(trackOrder) {
         try {
-            const genomeViewer = document.getElementById('genomeViewer');
-            if (!genomeViewer) return;
+            // Apply order to sidebar first
+            this.applySidebarTrackOrder(trackOrder);
             
-            const tracks = {};
+            // Then apply order to genome viewer tracks
+            this.applyGenomeViewerTrackOrder(trackOrder);
             
-            // Collect all current tracks
-            genomeViewer.querySelectorAll('[class*="-track"]').forEach(track => {
-                for (const className of track.classList) {
-                    if (className.endsWith('-track') && !className.startsWith('track-')) {
-                        const trackType = className.replace('-track', '');
-                        tracks[trackType] = track;
-                        break;
-                    }
-                }
-            });
-            
-            // Reorder tracks according to the stored order
-            trackOrder.forEach(trackType => {
-                if (tracks[trackType]) {
-                    genomeViewer.appendChild(tracks[trackType]);
-                }
-            });
-            
-            console.log('Applied track order:', trackOrder);
+            console.log('Applied track order to both sidebar and genome viewer:', trackOrder);
         } catch (error) {
             console.error('Error applying track order:', error);
         }
     }
     
+    /**
+     * Apply track order to sidebar track controls
+     */
+    applySidebarTrackOrder(trackOrder) {
+        const trackControlsContainer = document.querySelector('.track-controls');
+        if (!trackControlsContainer) return;
+        
+        const trackItems = {};
+        
+        // Collect existing track control items
+        trackControlsContainer.querySelectorAll('.track-control-item').forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox && checkbox.value) {
+                trackItems[checkbox.value] = item;
+            }
+        });
+        
+        // Reorder track control items according to the specified order
+        trackOrder.forEach(trackType => {
+            if (trackItems[trackType]) {
+                trackControlsContainer.appendChild(trackItems[trackType]);
+            }
+        });
+        
+        console.log('Applied sidebar track order:', trackOrder);
+    }
+    
+    /**
+     * Apply track order to genome viewer tracks
+     */
+    applyGenomeViewerTrackOrder(trackOrder) {
+        const genomeViewer = document.getElementById('genomeViewer');
+        if (!genomeViewer) return;
+        
+        const tracks = {};
+        
+        // Collect all current tracks
+        genomeViewer.querySelectorAll('[class*="-track"]').forEach(track => {
+            for (const className of track.classList) {
+                if (className.endsWith('-track') && !className.startsWith('track-')) {
+                    const trackType = className.replace('-track', '');
+                    tracks[trackType] = track;
+                    break;
+                }
+            }
+        });
+        
+        // Reorder tracks according to the stored order
+        trackOrder.forEach(trackType => {
+            if (tracks[trackType]) {
+                genomeViewer.appendChild(tracks[trackType]);
+            }
+        });
+        
+        console.log('Applied genome viewer track order:', trackOrder);
+    }
+    
+    /**
+     * Initialize drag-and-drop functionality for track reordering
+     */
+    initializeTrackDragAndDrop() {
+        console.log('🔧 [TabManager] Initializing track drag-and-drop functionality');
+        
+        // Wait a short time for DOM to be ready
+        setTimeout(() => {
+            this.setupTrackDragAndDrop();
+        }, 100);
+    }
+    
+    /**
+     * Setup drag-and-drop for track control items
+     */
+    setupTrackDragAndDrop() {
+        const trackControlsContainer = document.querySelector('.track-controls');
+        if (!trackControlsContainer) {
+            console.warn('🔧 [TabManager] Track controls container not found for drag-and-drop setup');
+            return;
+        }
+        
+        let draggedElement = null;
+        let draggedElementIndex = -1;
+        
+        // Add drag functionality to all track control items
+        const trackItems = trackControlsContainer.querySelectorAll('.track-control-item');
+        trackItems.forEach((item, index) => {
+            // Make the item draggable
+            item.setAttribute('draggable', 'true');
+            item.dataset.originalIndex = index;
+            
+            // Add drag handles (visual indicator)
+            this.addDragHandle(item);
+            
+            // Drag start event
+            item.addEventListener('dragstart', (e) => {
+                draggedElement = item;
+                draggedElementIndex = Array.from(trackControlsContainer.children).indexOf(item);
+                
+                // Visual feedback
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.outerHTML);
+                
+                console.log('🔧 [TabManager] Started dragging track:', item.querySelector('span').textContent);
+            });
+            
+            // Drag end event
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('dragging');
+                
+                // Clean up drag handles highlighting
+                trackControlsContainer.querySelectorAll('.track-control-item').forEach(el => {
+                    el.classList.remove('drag-over');
+                });
+                
+                console.log('🔧 [TabManager] Finished dragging track');
+            });
+            
+            // Drag over event (for drop zones)
+            item.addEventListener('dragover', (e) => {
+                if (draggedElement && draggedElement !== item) {
+                    e.preventDefault();
+                    item.classList.add('drag-over');
+                }
+            });
+            
+            // Drag leave event
+            item.addEventListener('dragleave', (e) => {
+                item.classList.remove('drag-over');
+            });
+            
+            // Drop event
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                
+                if (draggedElement && draggedElement !== item) {
+                    const draggedIndex = Array.from(trackControlsContainer.children).indexOf(draggedElement);
+                    const targetIndex = Array.from(trackControlsContainer.children).indexOf(item);
+                    
+                    // Reorder the DOM elements
+                    if (draggedIndex < targetIndex) {
+                        // Moving down
+                        item.parentNode.insertBefore(draggedElement, item.nextSibling);
+                    } else {
+                        // Moving up
+                        item.parentNode.insertBefore(draggedElement, item);
+                    }
+                    
+                    // Update track order and apply changes
+                    const newTrackOrder = this.getTrackOrder();
+                    this.onTrackOrderChanged(newTrackOrder);
+                    
+                    // Force genome viewer to re-render tracks in new order
+                    this.genomeBrowser.refreshCurrentView();
+                }
+                
+                item.classList.remove('drag-over');
+            });
+        });
+        
+        console.log('✅ [TabManager] Track drag-and-drop functionality initialized for', trackItems.length, 'items');
+    }
+    
+    /**
+     * Add drag handle to track control item
+     */
+    addDragHandle(item) {
+        // Check if drag handle already exists
+        if (item.querySelector('.drag-handle')) return;
+        
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '⋮⋮';
+        dragHandle.title = 'Drag to reorder';
+        
+        // Style the drag handle
+        dragHandle.style.cssText = `
+            cursor: grab;
+            color: #999;
+            margin-right: 8px;
+            font-size: 16px;
+            line-height: 1;
+            user-select: none;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        `;
+        
+        // Add hover effect
+        dragHandle.addEventListener('mouseenter', () => {
+            dragHandle.style.opacity = '1';
+            dragHandle.style.cursor = 'grab';
+        });
+        
+        dragHandle.addEventListener('mouseleave', () => {
+            dragHandle.style.opacity = '0.6';
+        });
+        
+        // Insert at the beginning of the item
+        item.insertBefore(dragHandle, item.firstChild);
+    }
+
     /**
      * Persist current tab state to ConfigManager
      */
@@ -1250,6 +1460,26 @@ class TabManager {
                 }
             });
             
+            // Update sidebar track controls (ensure tab independence)
+            const sidebarTrackTypes = [
+                { type: 'genes', id: 'sidebarTrackGenes' },
+                { type: 'gc', id: 'sidebarTrackGC' },
+                { type: 'variants', id: 'sidebarTrackVariants' },
+                { type: 'reads', id: 'sidebarTrackReads' },
+                { type: 'wigTracks', id: 'sidebarTrackWIG' },
+                { type: 'proteins', id: 'sidebarTrackProteins' },
+                { type: 'sequence', id: 'sidebarTrackSequence' },
+                { type: 'sequenceLine', id: 'sidebarTrackSequenceLine' },
+                { type: 'actions', id: 'sidebarTrackActions' }
+            ];
+            
+            sidebarTrackTypes.forEach(({ type, id }) => {
+                const checkbox = document.getElementById(id);
+                if (checkbox && this.genomeBrowser.trackVisibility && this.genomeBrowser.trackVisibility.hasOwnProperty(type)) {
+                    checkbox.checked = this.genomeBrowser.trackVisibility[type];
+                }
+            });
+            
             // Update feature visibility controls
             if (this.genomeBrowser.featureVisibility) {
                 Object.keys(this.genomeBrowser.featureVisibility).forEach(featureType => {
@@ -1260,7 +1490,7 @@ class TabManager {
                 });
             }
             
-            console.log('Updated track visibility controls');
+            console.log('Updated track visibility controls including sidebar track controls');
         } catch (error) {
             console.error('Error updating track visibility controls:', error);
         }

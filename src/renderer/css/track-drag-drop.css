@@ -1,0 +1,88 @@
+/* Track Drag and Drop Styles */
+
+.track-control-item {
+    position: relative;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.track-control-item[draggable="true"] {
+    cursor: move;
+}
+
+.track-control-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.track-control-item.drag-over {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 2px dashed rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+.drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.drag-handle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.track-control-item:hover .drag-handle {
+    opacity: 1 !important;
+}
+
+/* Animation for smooth reordering */
+.track-controls {
+    transition: all 0.2s ease;
+}
+
+.track-control-item {
+    transition: transform 0.2s ease, background-color 0.2s ease, border 0.2s ease;
+}
+
+/* Visual feedback during drag operations */
+.track-control-item.dragging * {
+    pointer-events: none;
+}
+
+/* Ensure proper spacing with drag handles */
+.track-control-item .drag-handle + input[type="checkbox"] {
+    margin-left: 4px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .track-control-item.drag-over {
+        background-color: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.7);
+    }
+    
+    .drag-handle:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .drag-handle {
+        width: 24px;
+        height: 24px;
+        font-size: 18px;
+    }
+    
+    .track-control-item {
+        min-height: 52px;
+        padding: 12px;
+    }
+}
