@@ -10,16 +10,19 @@
 /* Sequence Single Line Display */
 .sequence-single-line {
     position: relative; /* Changed from default to establish stacking context */
-    height: 30px;
+    min-height: 20px; /* Minimum height for readability */
+    height: auto; /* Auto-adaptive height */
+    max-height: 50px; /* Maximum height to prevent overflow */
     width: 100%; /* FIX: Ensure full width usage */
     overflow: hidden;
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
+    background: none; /* Remove background for cleaner look */
+    border: none; /* Remove border for cleaner look */
+    border-radius: 0; /* Remove border radius for cleaner look */ 
     z-index: 1; /* Base layer for sequence line */
     box-sizing: border-box; /* FIX: Include borders in width calculation */
+    padding: 2px 0; /* Add some vertical padding for better appearance */
 }
 
 /* Inline Sequence Bases */
@@ -28,42 +31,65 @@
     font-family: 'Courier New', monospace;
     font-weight: bold;
     text-align: center;
-    line-height: 30px;
+    line-height: 1.2; /* Adaptive line height based on font size */
     user-select: none; /* Changed from text to none to prevent interference with dragging */
     cursor: inherit; /* Changed from text to inherit the cursor from parent */
-    transition: font-size 0.2s ease;
+    transition: font-size 0.2s ease, line-height 0.2s ease;
     z-index: 1; /* Base z-index for sequence bases */
     pointer-events: none; /* Prevent sequence bases from interfering with track dragging */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sequence-base-inline:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Base colors for inline sequence */
+/* Base colors for inline sequence - NO BACKGROUNDS for single-line track */
 .sequence-base-inline.base-a { 
     color: #e74c3c; 
     font-weight: bold;
+    background: none !important; /* Remove background for single-line track */
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
 
 .sequence-base-inline.base-t { 
     color: #3498db; 
     font-weight: bold;
+    background: none !important; /* Remove background for single-line track */
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
 
 .sequence-base-inline.base-g { 
     color: #2ecc71; 
     font-weight: bold;
+    background: none !important; /* Remove background for single-line track */
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
 
 .sequence-base-inline.base-c { 
     color: #f39c12; 
     font-weight: bold;
+    background: none !important; /* Remove background for single-line track */
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
 
 .sequence-base-inline.base-n { 
     color: #95a5a6; 
     font-weight: bold;
+    background: none !important; /* Remove background for single-line track */
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
 
 /* Enhanced Sequence Display */
@@ -377,11 +403,12 @@
 /* Responsive adjustments for sequence tracks */
 @media (max-width: 768px) {
     .sequence-single-line {
-        height: 25px;
+        min-height: 18px; /* Smaller minimum height on mobile */
+        max-height: 40px; /* Smaller maximum height on mobile */
     }
     
     .sequence-base-inline {
-        line-height: 25px;
+        line-height: 1.1; /* Tighter line height on mobile */
     }
     
     .sequence-line {

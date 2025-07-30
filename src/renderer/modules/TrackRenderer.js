@@ -400,7 +400,8 @@ class TrackRenderer {
                         const typeMapping = {
                             'gene': 'genes',
                             'variant': 'variants',
-                            'wig': 'wigTracks'
+                            'wig': 'wigTracks',
+                            'sequence-line': 'sequence-line' // Ensure consistency for sequence-line track
                         };
                         trackType = typeMapping[trackType] || trackType;
                         break;
@@ -425,9 +426,13 @@ class TrackRenderer {
             this.updateSamplingInputValue(trackElement);
         }
         
-        if (!this.headerStates.has(trackType)) return;
+        if (!this.headerStates.has(trackType)) {
+            console.log(`🔧 [TrackRenderer] No saved header state found for track type: ${trackType}`);
+            return;
+        }
         
         const shouldBeHidden = this.headerStates.get(trackType);
+        console.log(`🔧 [TrackRenderer] Restoring header state for ${trackType}: ${shouldBeHidden ? 'hidden' : 'visible'}`);
         if (!shouldBeHidden) return; // If not hidden, no need to restore
         
         const trackHeader = trackElement.querySelector('.track-header');
@@ -2105,7 +2110,8 @@ class TrackRenderer {
         trackContent.appendChild(seqDisplay);
         
         // Restore header state if it was previously hidden
-        this.restoreHeaderState(track, 'sequence');
+        console.log('🔧 [TrackRenderer] Restoring header state for sequence-line track');
+        this.restoreHeaderState(track, 'sequence-line');
         
         return track;
     }
@@ -2118,7 +2124,9 @@ class TrackRenderer {
         seqDisplay.className = 'sequence-single-line';
         seqDisplay.style.cssText = `
             position: relative;
-            height: 30px;
+            min-height: 20px;
+            height: auto;
+            max-height: 50px;
             overflow: hidden;
             width: 100%;
             white-space: nowrap;
@@ -2177,24 +2185,30 @@ class TrackRenderer {
         // FIX: Don't add extra spacing - letter-spacing is already in CSS
         const effectiveCharWidth = charWidth; // Remove +1 extra spacing
         
-        // Calculate optimal font size and character width
-        const maxFontSize = 16;
-        const minFontSize = 4;
+        // Calculate optimal font size and character width - ADAPTIVE APPROACH
+        const maxFontSize = 20; // Increased max for better visibility
+        const minFontSize = 6; // Increased min for readability
         const containerWidth = 800; // Initial estimation, will be updated in adjustSequenceDisplay
         const availableWidth = containerWidth; // FIX: Use 100% of container width
         const maxCharWidth = availableWidth / sequenceLength;
         
-        // Calculate optimal font size
+        // Calculate optimal font size with better scaling
         let fontSize = maxFontSize;
         let estimatedCharWidth = fontSize * 0.6; // Monospace character width approximation
         
+        // More sophisticated adaptive sizing
         while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
-            fontSize -= 0.5;
+            fontSize -= 0.25; // Smaller increments for finer control
             estimatedCharWidth = fontSize * 0.6;
         }
         
-        const finalFontSize = Math.max(minFontSize, fontSize);
+        // Ensure minimum legibility
+        const finalFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
         const finalCharWidth = availableWidth / sequenceLength;
+        
+        // Calculate adaptive height based on font size
+        const adaptiveHeight = Math.max(20, finalFontSize * 1.4); // Height scales with font size
+        seqDisplay.style.height = `${adaptiveHeight}px`;
         
         console.log('🔧 [TrackRenderer] Sequence display calculation:', {
             sequenceLength,
@@ -2270,22 +2284,27 @@ class TrackRenderer {
         // FIX: Don't add extra spacing - letter-spacing is already included in measurement
         const effectiveCharWidth = charWidth; // Remove +1 extra spacing
         
-        // Recalculate with actual dimensions and measured character width
-        const maxFontSize = 16;
-        const minFontSize = 4;
+        // Recalculate with actual dimensions and measured character width - ADAPTIVE
+        const maxFontSize = 20; // Increased max for better visibility
+        const minFontSize = 6; // Increased min for readability
         const availableWidth = containerWidth; // FIX: Use 100% of container width
         const maxCharWidth = availableWidth / sequenceLength;
         
         let fontSize = maxFontSize;
         let estimatedCharWidth = fontSize * 0.6;
         
+        // More sophisticated adaptive sizing with finer control
         while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
-            fontSize -= 0.5;
+            fontSize -= 0.25; // Smaller increments for finer control
             estimatedCharWidth = fontSize * 0.6;
         }
         
-        const finalFontSize = Math.max(minFontSize, fontSize);
+        const finalFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
         const finalCharWidth = availableWidth / sequenceLength;
+        
+        // Update container height based on final font size
+        const adaptiveHeight = Math.max(20, finalFontSize * 1.4);
+        seqDisplay.style.height = `${adaptiveHeight}px`;
         
         console.log('🔧 [TrackRenderer] Adjusted sequence display:', {
             containerWidth,
@@ -2331,14 +2350,18 @@ class TrackRenderer {
             position: absolute;
             left: ${leftPosition}%;
             width: ${exactCharWidth}%;
+            height: 100%;
             font-size: ${fontSize}px;
             font-family: 'Courier New', Consolas, Monaco, monospace;
             font-weight: bold;
             text-align: center;
-            line-height: 30px;
+            line-height: 1.2;
             overflow: hidden;
             white-space: nowrap;
             box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
         
         // Add tooltip with position info
