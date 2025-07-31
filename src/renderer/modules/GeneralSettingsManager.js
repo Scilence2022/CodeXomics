@@ -393,9 +393,21 @@ class GeneralSettingsManager {
             return;
         }
 
-        // Make modal draggable and resizable
-        this.makeModalDraggable(modal);
-        this.makeModalResizable(modal);
+        // Initialize draggable and resizable using centralized managers
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#generalSettingsModal');
+        }
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#generalSettingsModal');
+        }
+        
+        // Add reset to defaults button handler
+        const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+        if (resetDefaultsBtn) {
+            resetDefaultsBtn.addEventListener('click', () => {
+                this.resetToDefaults();
+            });
+        }
 
         // Modal close handlers
         modal.querySelectorAll('.modal-close').forEach(btn => {
@@ -1164,134 +1176,45 @@ class GeneralSettingsManager {
     }
 
     /**
-     * Make modal draggable
+     * Reset settings to default values
      */
-    makeModalDraggable(modal) {
-        const header = modal.querySelector('.draggable-header');
-        if (!header) return;
-
-        let isDragging = false;
-        let startX, startY, startLeft, startTop;
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('modal-close')) return;
+    resetToDefaults() {
+        if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
+            // Reset all settings to defaults
+            this.settings = {
+                theme: 'dark',
+                fontSize: 14,
+                showLineNumbers: true,
+                enableHighlighting: true,
+                autoSave: true,
+                trackVisibility: {
+                    sequence: true,
+                    genes: true,
+                    gc: true,
+                    reads: true
+                },
+                performance: {
+                    cacheSize: 100,
+                    maxConcurrentTracks: 5
+                },
+                features: {
+                    enableSearch: true,
+                    enableExport: true,
+                    enablePlugins: true
+                }
+            };
             
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            // Update the UI
+            this.loadSettingsIntoUI();
             
-            const rect = modal.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-            
-            modal.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            const newLeft = startLeft + deltaX;
-            const newTop = startTop + deltaY;
-            
-            // Keep modal within viewport
-            const maxLeft = window.innerWidth - modal.offsetWidth;
-            const maxTop = window.innerHeight - modal.offsetHeight;
-            
-            modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
-            modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                modal.classList.remove('dragging');
-            }
-        });
-    }
-
-    /**
-     * Make modal resizable
-     */
-    makeModalResizable(modal) {
-        const content = modal.querySelector('.resizable-modal-content');
-        if (!content) return;
-
-        const handles = modal.querySelectorAll('.resize-handle');
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startWidth, startHeight, startLeft, startTop;
-
-        handles.forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                currentHandle = handle;
-                startX = e.clientX;
-                startY = e.clientY;
-                
-                const rect = content.getBoundingClientRect();
-                startWidth = rect.width;
-                startHeight = rect.height;
-                startLeft = rect.left;
-                startTop = rect.top;
-                
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing || !currentHandle) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            const handleClass = currentHandle.className;
-            let newWidth = startWidth;
-            let newHeight = startHeight;
-            let newLeft = startLeft;
-            let newTop = startTop;
-            
-            if (handleClass.includes('resize-handle-e')) {
-                newWidth = Math.max(300, startWidth + deltaX);
-            }
-            if (handleClass.includes('resize-handle-w')) {
-                newWidth = Math.max(300, startWidth - deltaX);
-                newLeft = startLeft + deltaX;
-            }
-            if (handleClass.includes('resize-handle-s')) {
-                newHeight = Math.max(200, startHeight + deltaY);
-            }
-            if (handleClass.includes('resize-handle-n')) {
-                newHeight = Math.max(200, startHeight - deltaY);
-                newTop = startTop + deltaY;
+            // Save to config
+            if (this.configManager) {
+                this.configManager.set('generalSettings', this.settings);
+                this.configManager.saveConfig();
             }
             
-            // Apply constraints
-            newWidth = Math.min(newWidth, window.innerWidth - 20);
-            newHeight = Math.min(newHeight, window.innerHeight - 20);
-            
-            content.style.width = newWidth + 'px';
-            content.style.height = newHeight + 'px';
-            content.style.maxWidth = 'none';
-            content.style.maxHeight = 'none';
-            
-            // Update modal position for north/west resizing
-            if (handleClass.includes('resize-handle-w') || handleClass.includes('resize-handle-n')) {
-                modal.style.left = Math.max(0, newLeft) + 'px';
-                modal.style.top = Math.max(0, newTop) + 'px';
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                currentHandle = null;
-            }
-        });
+            this.showNotification('Settings reset to defaults successfully!', 'success');
+        }
     }
 }
 

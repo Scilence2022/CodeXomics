@@ -196,7 +196,13 @@ class ModalDragManager {
             '#blastResultsModal',
             '#searchModal',
             '#gotoModal',
-            '#addFeatureModal'
+            '#addFeatureModal',
+            '#generalSettingsModal',
+            '#actionListModal',
+            '#tabSettingsModal',
+            '#multiAgentSettingsModal',
+            '#chatboxSettingsModal',
+            '#trackSettingsModal'
         ];
 
         managementModals.forEach(selector => {

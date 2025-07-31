@@ -411,8 +411,16 @@ class MultiAgentSettingsManager {
         }
         
         // Initialize resize functionality using existing ResizableModalManager
-        if (window.ResizableModalManager) {
-            window.ResizableModalManager.makeResizable(modalContent);
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#multiAgentSettingsModal');
+        }
+        
+        // Add reset to defaults button handler
+        const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+        if (resetDefaultsBtn) {
+            resetDefaultsBtn.addEventListener('click', () => {
+                this.resetToDefaults();
+            });
         }
         
         // Fallback drag functionality if ModalDragManager is not available
@@ -847,6 +855,44 @@ class MultiAgentSettingsManager {
     updateSetting(key, value) {
         this.currentSettings[key] = value;
         this.saveSettings();
+    }
+    
+    // Reset settings to default values
+    resetToDefaults() {
+        if (confirm('Are you sure you want to reset all Multi-Agent System settings to their default values? This action cannot be undone.')) {
+            // Reset to default settings
+            this.currentSettings = {
+                enabled: false,
+                agentTeamLeader: 'auto',
+                maxAgents: 3,
+                communicationProtocol: 'hierarchical',
+                taskDistribution: 'balanced',
+                conflictResolution: 'vote',
+                performanceMonitoring: true,
+                memorySharing: true,
+                knowledgeCache: true,
+                adaptiveLearning: false,
+                llmProvider: 'auto',
+                llmModel: 'auto',
+                temperature: 0.7,
+                maxTokens: 4000,
+                timeout: 30000,
+                retryAttempts: 3,
+                useSystemPrompt: true,
+                enableFunctionCalling: true
+            };
+            
+            // Update the UI
+            this.populateForm();
+            
+            // Save settings
+            this.saveSettings();
+            
+            // Show notification
+            if (window.chatManager) {
+                window.chatManager.showNotification('Multi-Agent System settings reset to defaults successfully!', 'success');
+            }
+        }
     }
 }
 

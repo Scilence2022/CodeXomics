@@ -1740,6 +1740,14 @@ class TabManager {
             });
         }
         
+        // Reset defaults button functionality
+        const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+        if (resetDefaultsBtn) {
+            resetDefaultsBtn.addEventListener('click', () => {
+                this.resetTabSettingsToDefaults();
+            });
+        }
+        
         // Cache enabled toggle
         tabCacheEnabled.addEventListener('change', () => {
             const isEnabled = tabCacheEnabled.checked;
@@ -2493,6 +2501,45 @@ class TabManager {
         document.removeEventListener('keydown', this.handleKeydown);
         
         console.log('TabManager disposed');
+    }
+    
+    /**
+     * Reset tab settings to default values
+     */
+    resetTabSettingsToDefaults() {
+        if (confirm('Are you sure you want to reset tab settings to their default values? This action cannot be undone.')) {
+            // Reset tab cache settings to defaults
+            const defaults = {
+                tabCacheEnabled: true,
+                maxCacheSize: 50,
+                cacheTimeout: 300000, // 5 minutes
+                autoCleanup: true
+            };
+            
+            // Update form fields
+            const tabCacheEnabled = document.getElementById('tabCacheEnabled');
+            const maxCacheSize = document.getElementById('maxCacheSize');
+            const cacheTimeout = document.getElementById('cacheTimeout');
+            
+            if (tabCacheEnabled) tabCacheEnabled.checked = defaults.tabCacheEnabled;
+            if (maxCacheSize) maxCacheSize.value = defaults.maxCacheSize;
+            if (cacheTimeout) cacheTimeout.value = defaults.cacheTimeout / 1000; // Convert to seconds for display
+            
+            // Apply settings
+            this.cacheSettings = defaults;
+            this.tabCache.maxSize = defaults.maxCacheSize;
+            this.tabCache.timeout = defaults.cacheTimeout;
+            
+            // Save to storage
+            if (typeof(Storage) !== "undefined") {
+                localStorage.setItem('tabManagerSettings', JSON.stringify(defaults));
+            }
+            
+            // Show notification
+            if (this.genomeBrowser && this.genomeBrowser.showNotification) {
+                this.genomeBrowser.showNotification('Tab settings reset to defaults successfully!', 'success');
+            }
+        }
     }
 }
 

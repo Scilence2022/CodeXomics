@@ -1306,10 +1306,18 @@
 
     <!-- MCP Server Settings Modal -->
     <div id="mcpSettingsModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-content resizable" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>MCP Server Management</h3>
-                <button class="modal-close">&times;</button>
+                <h3><i class="fas fa-server"></i> MCP Server Management</h3>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="modal-close">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <!-- Server List Section -->
@@ -1430,6 +1438,15 @@
                 <button id="saveMCPSettingsBtn" class="btn btn-primary">Save Settings</button>
                 <button class="btn modal-close">Cancel</button>
             </div>
+            <!-- Resize handles -->
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
         </div>
     </div>
 
@@ -2042,11 +2059,19 @@
     </div>
 
     <!-- General Settings Modal -->
-    <div id="generalSettingsModal" class="modal draggable-modal">
-        <div class="modal-content resizable-modal-content" style="max-width: 700px;">
-            <div class="modal-header draggable-header">
+    <div id="generalSettingsModal" class="modal">
+        <div class="modal-content resizable" style="max-width: 700px;">
+            <div class="modal-header">
                 <h3><i class="fas fa-cog"></i> General Settings</h3>
-                <button class="modal-close">&times;</button>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="modal-close">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="settings-tabs">
@@ -2496,11 +2521,19 @@
     </div>
 
     <!-- Action List Management Modal -->
-    <div id="actionListModal" class="modal draggable-modal">
-        <div class="modal-content action-list-modal resizable-modal-content">
-            <div class="modal-header draggable-header">
+    <div id="actionListModal" class="modal">
+        <div class="modal-content action-list-modal resizable">
+            <div class="modal-header">
                 <h3><i class="fas fa-list"></i> Action List Manager</h3>
-                <button class="modal-close">&times;</button>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="modal-close">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="action-list-controls">
@@ -2760,6 +2793,9 @@
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
                     </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
                     <button class="modal-close">&times;</button>
                 </div>
             </div>
@@ -2987,7 +3023,15 @@
         <div class="modal-content multi-agent-settings-modal resizable">
             <div class="modal-header">
                 <h3><i class="fas fa-users-cog"></i> Multi-Agent System Settings</h3>
-                <button class="modal-close">&times;</button>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="reset-defaults-btn" title="Reset to Defaults">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="modal-close">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="multi-agent-tabs">

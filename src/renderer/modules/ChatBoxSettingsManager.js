@@ -243,6 +243,23 @@ class ChatBoxSettingsManager {
             document.body.appendChild(modal);
         }
         
+        // Initialize draggable and resizable using centralized managers
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#chatboxSettingsModal');
+        }
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#chatboxSettingsModal');
+        }
+        
+        // Add reset to defaults button handler
+        const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+        if (resetDefaultsBtn) {
+            resetDefaultsBtn.addEventListener('click', () => {
+                this.resetToDefaults();
+                this.populateSettingsForm(modal);
+            });
+        }
+        
         // Populate current settings
         this.populateSettingsForm(modal);
         
@@ -270,16 +287,24 @@ class ChatBoxSettingsManager {
     createSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'chatboxSettingsModal';
-        modal.className = 'modal draggable-modal';
+        modal.className = 'modal';
         
         modal.innerHTML = `
             
-            <div class="modal-content chatbox-settings-modal-content resizable-modal-content">
-                <div class="modal-header draggable-header" id="chatboxSettingsHeader">
+            <div class="modal-content chatbox-settings-modal-content resizable">
+                <div class="modal-header" id="chatboxSettingsHeader">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
-                        &times;
-                    </button>
+                    <div class="modal-controls">
+                        <button class="reset-position-btn" title="Reset Position">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                        <button class="reset-defaults-btn" title="Reset to Defaults">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="modal-close" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
+                            &times;
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="modal-body" >

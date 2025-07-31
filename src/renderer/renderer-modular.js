@@ -69,6 +69,27 @@ if (typeof window !== 'undefined') {
         });
     };
 
+    // Load ResizableModalManager
+    const loadResizableModalManager = () => {
+        return new Promise((resolve, reject) => {
+            if (typeof ResizableModalManager !== 'undefined') {
+                resolve();
+                return;
+            }
+            // Check if script is already loading
+            const existingScript = document.querySelector('script[src="modules/ResizableModalManager.js"]');
+            if (existingScript) {
+                existingScript.onload = resolve;
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'modules/ResizableModalManager.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
     // Load Plugin Function Calls Integrator
     const loadPluginFunctionCallsIntegrator = () => {
         return new Promise((resolve, reject) => {
@@ -137,17 +158,22 @@ if (typeof window !== 'undefined') {
         .then(() => loadPluginFunctionCallsIntegrator())
         .then(() => loadSmartExecutor())
         .then(() => loadModalDragManager())
+        .then(() => loadResizableModalManager())
         .then(() => loadGenomeStudioRPCHandler())
         .then(() => loadInternalMCPServer())
         .then(() => {
             console.log('✅ Smart Execution System modules loaded successfully');
-            // Initialize ModalDragManager
+            // Initialize ModalDragManager and ResizableModalManager
             if (typeof ModalDragManager !== 'undefined') {
                 window.modalDragManager = new ModalDragManager();
                 // Auto-initialize management modals after DOM is ready
                 setTimeout(() => {
                     window.modalDragManager.initializeAllModals();
                 }, 500);
+            }
+            
+            if (typeof ResizableModalManager !== 'undefined') {
+                window.resizableModalManager = new ResizableModalManager();
             }
         })
         .catch(error => {
