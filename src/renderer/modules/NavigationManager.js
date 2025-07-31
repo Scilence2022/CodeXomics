@@ -185,7 +185,19 @@ class NavigationManager {
         
         // Determine zoom direction and factor
         const zoomDirection = Math.sign(e.deltaY); // Positive = zoom out, negative = zoom in
-        const zoomFactor = 1 + (this.wheelZoomConfig.sensitivity * Math.abs(e.deltaY / 100));
+        
+        // Check if cursor is over genes track and if it has custom zoom sensitivity
+        let sensitivity = this.wheelZoomConfig.sensitivity;
+        const genesTrackElement = e.target.closest('.gene-track');
+        if (genesTrackElement && this.genomeBrowser.trackRenderer) {
+            const genesSettings = this.genomeBrowser.trackRenderer.getTrackSettings('genes');
+            if (genesSettings.overrideGlobalZoom && genesSettings.wheelZoomSensitivity !== undefined) {
+                sensitivity = genesSettings.wheelZoomSensitivity;
+                console.log('🎯 Using genes track custom zoom sensitivity:', sensitivity);
+            }
+        }
+        
+        const zoomFactor = 1 + (sensitivity * Math.abs(e.deltaY / 100));
         
         let newRange;
         if (zoomDirection > 0) {

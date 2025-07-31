@@ -8317,6 +8317,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             case 'genes':
                 titleElement.textContent = 'Genes & Features Track Settings';
                 bodyElement.innerHTML = this.createGenesSettingsContent(currentSettings);
+                
+                // Add event listeners for genes settings
+                setTimeout(() => {
+                    this.setupGenesSettingsEventListeners(bodyElement);
+                }, 100);
                 break;
                 
             case 'gc':
@@ -8527,6 +8532,19 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                         Enable Global Track Dragging
                     </label>
                     <div class="help-text">When enabled, this track will update dynamically during drag operations, providing real-time navigation feedback. Disable for better performance on slower devices.</div>
+                </div>
+                <div class="form-group">
+                    <label for="genesWheelZoomSensitivity">Wheel Zoom Sensitivity:</label>
+                    <input type="range" id="genesWheelZoomSensitivity" min="0.01" max="0.5" step="0.01" value="${settings.wheelZoomSensitivity || 0.1}">
+                    <div class="range-display">Current: <span id="genesWheelZoomSensitivityValue">${settings.wheelZoomSensitivity || 0.1}</span></div>
+                    <div class="help-text">Adjust mouse wheel zoom sensitivity when cursor is over the Genes track. Lower values = slower zoom, higher values = faster zoom. (0.01 = very slow, 0.5 = very fast)</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesOverrideGlobalZoom" ${settings.overrideGlobalZoom ? 'checked' : ''}>
+                        Override Global Zoom Settings
+                    </label>
+                    <div class="help-text">When enabled, the Genes track will use its own zoom sensitivity instead of the global wheel zoom settings when the cursor is over this track.</div>
                 </div>
             </div>
             <div class="settings-section">
@@ -9081,6 +9099,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const fontFamilyElement = modal.querySelector('#genesFontFamily');
                 const layoutModeElement = modal.querySelector('#genesLayoutMode');
                 const enableGlobalDraggingElement = modal.querySelector('#genesEnableGlobalDragging');
+                const wheelZoomSensitivityElement = modal.querySelector('#genesWheelZoomSensitivity');
+                const overrideGlobalZoomElement = modal.querySelector('#genesOverrideGlobalZoom');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -9090,7 +9110,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     fontSizeElement: !!fontSizeElement,
                     fontFamilyElement: !!fontFamilyElement,
                     layoutModeElement: !!layoutModeElement,
-                    enableGlobalDraggingElement: !!enableGlobalDraggingElement
+                    enableGlobalDraggingElement: !!enableGlobalDraggingElement,
+                    wheelZoomSensitivityElement: !!wheelZoomSensitivityElement,
+                    overrideGlobalZoomElement: !!overrideGlobalZoomElement
                 });
                 
                 settings.maxRows = parseInt(maxRowsElement?.value) || 6;
@@ -9101,6 +9123,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
                 settings.layoutMode = layoutModeElement?.value || 'compact';
                 settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
+                settings.wheelZoomSensitivity = parseFloat(wheelZoomSensitivityElement?.value) || 0.1;
+                settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
                 
                 console.log('Collected gene settings from form:', settings);
                 break;
@@ -10711,6 +10735,32 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     /**
      * Setup event listeners for reads settings
      */
+    setupGenesSettingsEventListeners(bodyElement) {
+        // Wheel zoom sensitivity slider
+        const zoomSensitivitySlider = bodyElement.querySelector('#genesWheelZoomSensitivity');
+        const zoomSensitivityValue = bodyElement.querySelector('#genesWheelZoomSensitivityValue');
+        
+        if (zoomSensitivitySlider && zoomSensitivityValue) {
+            // Update display value in real-time as user drags slider
+            zoomSensitivitySlider.addEventListener('input', (e) => {
+                zoomSensitivityValue.textContent = e.target.value;
+            });
+            
+            // Save setting when user releases slider
+            zoomSensitivitySlider.addEventListener('change', (e) => {
+                this.updateTrackSetting('genes', 'wheelZoomSensitivity', parseFloat(e.target.value));
+            });
+        }
+        
+        // Override global zoom checkbox
+        const overrideGlobalZoomCheckbox = bodyElement.querySelector('#genesOverrideGlobalZoom');
+        if (overrideGlobalZoomCheckbox) {
+            overrideGlobalZoomCheckbox.addEventListener('change', (e) => {
+                this.updateTrackSetting('genes', 'overrideGlobalZoom', e.target.checked);
+            });
+        }
+    }
+
     setupReadsSettingsEventListeners(bodyElement) {
         // Rendering mode selection
         const renderingModeSelect = bodyElement.querySelector('#readsRenderingMode');
@@ -11121,7 +11171,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     showLabels: true,
                     showArrows: true,
                     colorBy: 'type',
-                    fontSize: 10
+                    fontSize: 10,
+                    wheelZoomSensitivity: 0.1,
+                    overrideGlobalZoom: false
                 },
                 gc: {
                     visible: true,
