@@ -329,19 +329,19 @@ class GenomeBrowser {
                 console.log('✅ GeneralSettingsManager initialized successfully');
                 
                 // Initialize global dragging setting after settings are loaded
-                this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging || false;
+                this.globalDraggingEnabled = this.generalSettingsManager.getSettings().enableGlobalDragging !== false;
                 
                 // Apply the setting immediately
                 this.setGlobalDragging(this.globalDraggingEnabled);
             }).catch((error) => {
                 console.error('❌ Error initializing GeneralSettingsManager:', error);
-                this.globalDraggingEnabled = false;
+                this.globalDraggingEnabled = true; // Default to true when settings can't be loaded
             });
             
             window.generalSettingsManager = this.generalSettingsManager; // Make globally available
         } catch (error) {
             console.error('❌ Error initializing GeneralSettingsManager:', error);
-            this.globalDraggingEnabled = false;
+            this.globalDraggingEnabled = true; // Default to true when initialization fails
         }
         
         // Step 5.7: Initialize Visualization Tools Manager

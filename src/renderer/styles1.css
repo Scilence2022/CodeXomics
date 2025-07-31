@@ -1,5 +1,16 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
+
+@media (prefers-color-scheme: dark) {
+  .genome-browser-container {
+        background: #2d3748;
+  border-color: #4a5568;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg);
+}
+
 }
 
 
@@ -382,10 +393,6 @@
   margin: 0 auto 16px;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg);
-}
-
 100% {
   transform: rotate(360deg);
 }
@@ -412,8 +419,6 @@
   overflow: auto;
   max-height: 400px;
 }
-
-/* Removed duplicate .sequence-line definition - see line 1350 for the primary definition */
 
 .sequence-position {
   color: var(--text-secondary);
@@ -1345,7 +1350,6 @@
 
 .sequence-line {
   display: flex;
-  /* margin-bottom controlled by JavaScript for dynamic positioning */
   font-family: 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.8;
@@ -1585,7 +1589,7 @@
 .protein-track .track-content,
 .actions-track {
   margin-left: 0;
-  padding: 2px 0; /* Reduced from default to minimize gap between header and content */
+  padding: 2px 0;
 }
 
 .genome-ruler {
@@ -3646,10 +3650,6 @@ to {
   animation: none;
 }
 
-
-
-
-
 .chat-input-wrapper:focus-within {
   border-color: #667eea;
 }
@@ -4219,20 +4219,6 @@ to {
   text-transform: capitalize;
 }
 
-
-
-
-
-
-
-
-
-.welcome-icon {
-  font-size: 64px;
-  color: var(--primary-color);
-  margin-bottom: 24px;
-}
-
 .operon-legend {
   position: absolute;
   top: 10px;
@@ -4349,10 +4335,6 @@ to {
   font-size: var(--arrow-size, 8px);
 }
 
-.chat-input-wrapper:focus-within {
-  border-color: #667eea;
-}
-
 .llm-provider-config {
   padding: 20px;
   min-height: 300px;
@@ -4401,8 +4383,6 @@ to {
 .track-splitter.resizing * {
   transition: none !important;
 }
-
-
 
 .form-group .error-message {
   color: #ef4444;
@@ -10004,7 +9984,6 @@ to {
   display: block !important;
 }
 
-/* Ensure settings tabs work properly */
 .settings-tabs .tab-content {
   display: none;
   padding: 20px 0;
@@ -10014,7 +9993,6 @@ to {
   display: block !important;
 }
 
-/* Debug styles for troubleshooting */
 .settings-tabs .tab-btn {
   cursor: pointer;
   user-select: none;
@@ -10030,7 +10008,6 @@ to {
   font-weight: 600 !important;
 }
 
-/* Force display for debugging */
 .settings-tabs .tab-content[style*="display: none"] {
   display: none !important;
 }
@@ -10473,8 +10450,6 @@ to {
   opacity: 1;
   filter: drop-shadow(0 2px 4px rgba(124, 58, 237, 0.3));
 }
-
-
 
 @keyframes slideOutRight {
   from {
@@ -10958,10 +10933,6 @@ to {
   margin-bottom: 8px;
 }
 
-/* Removed another duplicate .sequence-line definition */
-
-/* Removed conflicting .gene-indicator-line definition - handled by sequence-tracks.css and JavaScript */
-
 .gene-indicator-svg {
   display: block;
 }
@@ -11066,8 +11037,6 @@ to {
   animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
   animation-fill-mode: forwards;
 }
-
-
 
 @keyframes fadeOut {
   to { opacity: 0;
@@ -12499,12 +12468,6 @@ to {
   border-bottom-right-radius: 6px !important;
 }
 
-.settings-tabs .tab-btn.active {
-  background: var(--bg-secondary) !important;
-  border-left: 4px solid var(--primary-color) !important;
-  font-weight: 600 !important;
-}
-
 .form-group {
   margin-bottom: 16px !important;
 }
@@ -13011,7 +12974,6 @@ to {
   margin-top: 4px;
 }
 
-/* Range display for sliders */
 .range-display {
   margin-top: 6px;
   font-size: 12px;
@@ -13023,4 +12985,4 @@ to {
   color: var(--primary-color, #007bff);
   font-weight: 600;
 }
-}
+

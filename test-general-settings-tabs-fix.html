@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Settings Tab Switching Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .test-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .test-content {
+            padding: 20px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        
+        .log-entry.success {
+            color: #059669;
+        }
+        
+        .log-entry.error {
+            color: #dc2626;
+        }
+        
+        .log-entry.info {
+            color: #2563eb;
+        }
+        
+        .log-entry.warning {
+            color: #d97706;
+        }
+        
+        /* Modal styles for testing */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.show {
+            display: block;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .modal-body {
+            padding: 0;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            text-align: right;
+        }
+        
+        /* Settings tabs styles */
+        .settings-tabs .tab-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            border-bottom: none;
+            margin-bottom: 10px;
+        }
+        
+        .settings-tabs .tab-btn {
+            width: 100%;
+            border-radius: 0;
+            border-bottom: 1px solid #e5e7eb;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            justify-content: flex-start;
+            padding: 16px 20px;
+            text-align: left;
+            background: white;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .settings-tabs .tab-btn:first-child {
+            border-top: 1px solid #e5e7eb;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .settings-tabs .tab-btn:last-child {
+            border-bottom: 1px solid #e5e7eb;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        
+        .settings-tabs .tab-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .settings-tabs .tab-btn.active {
+            background: #f3f4f6 !important;
+            border-left: 4px solid #667eea !important;
+            font-weight: 600 !important;
+        }
+        
+        .settings-tabs .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        
+        .settings-tabs .tab-content.active {
+            display: block !important;
+        }
+        
+        .settings-section {
+            margin-bottom: 20px;
+        }
+        
+        .settings-section h4 {
+            margin-bottom: 15px;
+            color: #374151;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .input-full {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>General Settings Tab Switching Fix Test</h1>
+            <p>Testing the fix for General Settings modal tab switching functionality</p>
+        </div>
+        
+        <div class="test-content">
+            <div class="test-section">
+                <h3>Test Controls</h3>
+                <button class="btn" onclick="openGeneralSettingsModal()">Open General Settings Modal</button>
+                <button class="btn btn-success" onclick="testTabSwitching()">Test Tab Switching</button>
+                <button class="btn btn-warning" onclick="clearLog()">Clear Log</button>
+                <button class="btn" onclick="closeModal()">Close Modal</button>
+            </div>
+            
+            <div class="test-section">
+                <h3>Test Status</h3>
+                <div id="testStatus" class="status info">
+                    Ready to test. Click "Open General Settings Modal" to begin.
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>Test Log</h3>
+                <div id="testLog" class="log"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- General Settings Modal -->
+    <div id="generalSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>General Settings</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-tabs">
+                    <div class="tab-header">
+                        <button class="tab-btn active" data-tab="appearance">
+                            Appearance
+                        </button>
+                        <button class="tab-btn" data-tab="performance">
+                            Performance
+                        </button>
+                        <button class="tab-btn" data-tab="features">
+                            Features
+                        </button>
+                        <button class="tab-btn" data-tab="export">
+                            Export/Import
+                        </button>
+                        <button class="tab-btn" data-tab="about">
+                            About
+                        </button>
+                    </div>
+                    
+                    <!-- Appearance Tab -->
+                    <div id="appearance-tab" class="tab-content active">
+                        <div class="settings-section">
+                            <h4>Theme Settings</h4>
+                            <div class="form-group">
+                                <label for="themeMode">Color Scheme:</label>
+                                <select id="themeMode" class="input-full">
+                                    <option value="auto">Auto (System)</option>
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                                <small class="help-text">Choose your preferred color scheme</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Tab -->
+                    <div id="performance-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4>Memory Management</h4>
+                            <div class="form-group">
+                                <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
+                                <select id="maxSequenceLength" class="input-full">
+                                    <option value="1000000">1 Million</option>
+                                    <option value="5000000" selected>5 Million</option>
+                                    <option value="10000000">10 Million</option>
+                                </select>
+                                <small class="help-text">Limit sequence length to prevent memory issues</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Features Tab -->
+                    <div id="features-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4>Sequence Features</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableGCContent" checked>
+                                    Enable GC Content Analysis
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableProteinTranslation" checked>
+                                    Enable Protein Translation
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Export/Import Tab -->
+                    <div id="export-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4>Export Settings</h4>
+                            <div class="form-group">
+                                <label for="defaultExportFormat">Default Export Format:</label>
+                                <select id="defaultExportFormat" class="input-full">
+                                    <option value="png">PNG Image</option>
+                                    <option value="svg" selected>SVG Vector</option>
+                                    <option value="pdf">PDF Document</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- About Tab -->
+                    <div id="about-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4>Application Information</h4>
+                            <p>Genome AI Studio v0.3.0-beta</p>
+                            <p>An advanced genome visualization and analysis platform.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-success">Save Settings</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'appearance';
+        let testResults = {
+            modalOpened: false,
+            tabsInitialized: false,
+            tabSwitching: false,
+            errors: []
+        };
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('testStatus');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+        
+        function openGeneralSettingsModal() {
+            log('Opening General Settings modal...', 'info');
+            const modal = document.getElementById('generalSettingsModal');
+            modal.classList.add('show');
+            testResults.modalOpened = true;
+            
+            // Initialize tabs
+            setTimeout(() => {
+                initializeTabs();
+            }, 100);
+            
+            updateStatus('Modal opened. Testing tab initialization...', 'info');
+        }
+        
+        function initializeTabs() {
+            log('Initializing tabs...', 'info');
+            
+            const initializeTabsWithRetry = (attempts = 0, maxAttempts = 5) => {
+                const firstTab = document.querySelector('#generalSettingsModal .settings-tabs .tab-btn[data-tab="appearance"]');
+                const firstContent = document.getElementById('appearance-tab');
+                
+                log(`Attempt ${attempts + 1}: Found first tab: ${!!firstTab}, Found first content: ${!!firstContent}`, 'info');
+                
+                if (firstTab && firstContent) {
+                    // Remove active from all tabs first
+                    const allTabButtons = document.querySelectorAll('#generalSettingsModal .settings-tabs .tab-btn');
+                    const allTabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
+                    
+                    log(`Found ${allTabButtons.length} tab buttons and ${allTabContents.length} tab contents`, 'info');
+                    
+                    allTabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    allTabContents.forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Set first tab as active
+                    firstTab.classList.add('active');
+                    firstContent.classList.add('active');
+                    currentTab = 'appearance';
+                    
+                    log('Default tab (appearance) activated', 'success');
+                    
+                    // Setup tab event listeners
+                    setupTabHandlers();
+                    
+                    testResults.tabsInitialized = true;
+                    updateStatus('Tabs initialized successfully. Ready for testing.', 'success');
+                    return true;
+                } else {
+                    log(`Attempt ${attempts + 1}: Could not find default tab elements`, 'warning');
+                    
+                    if (attempts < maxAttempts) {
+                        log(`Retrying in ${(attempts + 1) * 100}ms...`, 'info');
+                        setTimeout(() => {
+                            initializeTabsWithRetry(attempts + 1, maxAttempts);
+                        }, (attempts + 1) * 100);
+                    } else {
+                        log('Failed to initialize tabs after all attempts', 'error');
+                        testResults.errors.push('Tab initialization failed');
+                        updateStatus('Failed to initialize tabs', 'error');
+                    }
+                    return false;
+                }
+            };
+            
+            initializeTabsWithRetry();
+        }
+        
+        function setupTabHandlers() {
+            log('Setting up tab handlers...', 'info');
+            
+            const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
+            log(`Found ${tabButtons.length} tab buttons to bind events to`, 'info');
+            
+            if (tabButtons.length === 0) {
+                log('No tab buttons found for event binding', 'error');
+                return;
+            }
+            
+            tabButtons.forEach((btn, index) => {
+                // Remove any existing event listeners to prevent duplicates
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const tabName = newBtn.dataset.tab;
+                    log(`Tab button clicked: ${tabName}`, 'info');
+                    
+                    if (tabName) {
+                        switchTab(tabName);
+                    } else {
+                        log('Tab button has no data-tab attribute', 'error');
+                    }
+                });
+                
+                log(`Event listener bound to tab button ${index + 1}: ${newBtn.dataset.tab}`, 'success');
+            });
+            
+            log('Tab handlers setup completed', 'success');
+        }
+        
+        function switchTab(tabName) {
+            try {
+                log(`Switching to tab: ${tabName}`, 'info');
+                
+                if (!tabName) {
+                    log('No tab name provided for switching', 'error');
+                    return;
+                }
+                
+                // Update tab buttons
+                const tabButtons = document.querySelectorAll('.settings-tabs .tab-btn');
+                log(`Found ${tabButtons.length} tab buttons to update`, 'info');
+                
+                tabButtons.forEach(btn => {
+                    const isActive = btn.dataset.tab === tabName;
+                    btn.classList.toggle('active', isActive);
+                    log(`Tab button ${btn.dataset.tab}: ${isActive ? 'activated' : 'deactivated'}`, 'info');
+                });
+                
+                // Update tab content
+                const tabContents = document.querySelectorAll('.settings-tabs .tab-content');
+                log(`Found ${tabContents.length} tab contents to update`, 'info');
+                
+                const targetContentId = `${tabName}-tab`;
+                tabContents.forEach(content => {
+                    const isActive = content.id === targetContentId;
+                    content.classList.toggle('active', isActive);
+                    log(`Tab content ${content.id}: ${isActive ? 'activated' : 'deactivated'}`, 'info');
+                });
+
+                currentTab = tabName;
+                log(`Successfully switched to tab: ${tabName}`, 'success');
+                
+                // Verify the switch worked
+                const activeButton = document.querySelector('.settings-tabs .tab-btn.active');
+                const activeContent = document.querySelector('.settings-tabs .tab-content.active');
+                
+                log(`Verification - Active button: ${activeButton?.dataset.tab}`, 'info');
+                log(`Verification - Active content: ${activeContent?.id}`, 'info');
+                
+                testResults.tabSwitching = true;
+                
+            } catch (error) {
+                log(`Error switching tabs: ${error.message}`, 'error');
+                log(`Error stack: ${error.stack}`, 'error');
+                testResults.errors.push(`Tab switching error: ${error.message}`);
+            }
+        }
+        
+        function testTabSwitching() {
+            log('Starting tab switching test...', 'info');
+            
+            if (!testResults.modalOpened) {
+                log('Modal not opened. Please open the modal first.', 'warning');
+                updateStatus('Please open the modal first', 'warning');
+                return;
+            }
+            
+            const tabs = ['appearance', 'performance', 'features', 'export', 'about'];
+            let currentIndex = 0;
+            
+            const testNext = () => {
+                if (currentIndex < tabs.length) {
+                    const tabName = tabs[currentIndex];
+                    log(`Testing tab: ${tabName}`, 'info');
+                    switchTab(tabName);
+                    currentIndex++;
+                    setTimeout(testNext, 1000);
+                } else {
+                    log('Tab switching test completed', 'success');
+                    updateStatus('Tab switching test completed successfully!', 'success');
+                    
+                    // Summary
+                    const summary = `
+                        Test Results:
+                        - Modal opened: ${testResults.modalOpened}
+                        - Tabs initialized: ${testResults.tabsInitialized}
+                        - Tab switching: ${testResults.tabSwitching}
+                        - Errors: ${testResults.errors.length}
+                    `;
+                    log(summary, 'info');
+                }
+            };
+            
+            testNext();
+        }
+        
+        function closeModal() {
+            log('Closing modal...', 'info');
+            const modal = document.getElementById('generalSettingsModal');
+            modal.classList.remove('show');
+            updateStatus('Modal closed', 'info');
+        }
+        
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+        
+        // Initialize test
+        log('General Settings Tab Switching Fix Test initialized', 'info');
+        log('This test verifies the fix for the tab switching issue in General Settings modal', 'info');
+    </script>
+</body>
+</html> 

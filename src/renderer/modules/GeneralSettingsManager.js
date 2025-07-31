@@ -821,6 +821,17 @@ class GeneralSettingsManager {
                 // Notify the genome browser about the global dragging setting change
                 if (window.genomeBrowser) {
                     window.genomeBrowser.setGlobalDragging(enabled);
+                    
+                    // Also update individual track settings to inherit the global setting
+                    if (window.genomeBrowser.trackRenderer) {
+                        if (window.genomeBrowser.trackRenderer.trackSettings) {
+                            // Update existing track settings
+                            if (window.genomeBrowser.trackRenderer.trackSettings.genes) {
+                                window.genomeBrowser.trackRenderer.trackSettings.genes.enableGlobalDragging = enabled;
+                            }
+                        }
+                        console.log(`🎯 Updated individual track settings to inherit global dragging: ${enabled}`);
+                    }
                 }
                 break;
             case 'enableWheelZoom':
