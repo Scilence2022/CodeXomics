@@ -166,7 +166,7 @@ class NavigationManager {
         if (!this.wheelZoomConfig.enabled) return;
 
         // Only handle wheel events on genome browser areas
-        const genomeBrowserElement = e.target.closest('.genome-browser, .sequence-track, .gene-track, .gc-track, .tracks-container');
+        const genomeBrowserElement = e.target.closest('.genome-browser, .sequence-track, .gene-track, .gc-track, .reads-track, .tracks-container');
         if (!genomeBrowserElement) return;
 
         // Prevent default scrolling behavior

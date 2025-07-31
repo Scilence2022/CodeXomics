@@ -3377,9 +3377,12 @@ class TrackRenderer {
             const maxScrollTop = contentHeight - trackHeight;
             const needsVerticalScrolling = maxScrollTop > 0;
             
-            // If wheel zoom is enabled, we need to decide between zoom and scroll
+            // BUGFIX: Don't prevent zoom when wheel zoom is enabled
+            // The issue was that TrackRenderer was preventing zoom by intercepting wheel events
+            // Now we only handle scrolling when absolutely necessary and let NavigationManager handle zoom
+            
             if (isWheelZoomEnabled) {
-                // Priority 1: If Ctrl/Cmd is held, always zoom
+                // Priority 1: If Ctrl/Cmd is held, always zoom (never handle scrolling)
                 if (e.ctrlKey || e.metaKey) {
                     console.log('🔍 [TrackRenderer] Modifier key + wheel, delegating to NavigationManager for zoom');
                     return; // Let NavigationManager handle zoom
@@ -3391,24 +3394,29 @@ class TrackRenderer {
                     return; // Let NavigationManager handle zoom
                 }
                 
-                // Priority 3: If vertical scrolling is at boundaries, allow zoom
+                // Priority 3: Only handle scrolling when we're in the middle of the scroll range
+                // At boundaries, prefer zoom over scrolling
                 const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-                const isAtTop = currentScrollTop <= 0;
-                const isAtBottom = currentScrollTop >= maxScrollTop;
+                const isAtTop = currentScrollTop <= 5; // Small buffer for smoother zoom
+                const isAtBottom = currentScrollTop >= (maxScrollTop - 5); // Small buffer for smoother zoom
                 
-                if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
-                    console.log('🔍 [TrackRenderer] At scroll boundary, delegating to NavigationManager for zoom');
-                    return; // Let NavigationManager handle zoom when at scroll boundaries
+                if (isAtTop || isAtBottom) {
+                    console.log('🔍 [TrackRenderer] Near scroll boundary, delegating to NavigationManager for zoom');
+                    return; // Let NavigationManager handle zoom when near scroll boundaries
                 }
-            }
-            
-            // Handle vertical scrolling for reads track only if needed
-            if (needsVerticalScrolling) {
+                
+                // Priority 4: Only handle vertical scrolling in the middle of scroll range when zoom is enabled
+                console.log('🔍 [TrackRenderer] Handling vertical scroll in middle of range, zoom still available');
+                e.preventDefault(); // Only prevent default when actually handling scroll
+                const scrollDelta = e.deltaY * 2; // Adjust scroll speed
+                updateScrollPosition(currentScrollTop + scrollDelta);
+            } else if (needsVerticalScrolling) {
+                // Zoom is disabled, handle vertical scrolling normally
                 e.preventDefault();
                 const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
                 const scrollDelta = e.deltaY * 2; // Adjust scroll speed
                 updateScrollPosition(currentScrollTop + scrollDelta);
-                console.log('🔍 [TrackRenderer] Handling vertical scroll in reads track');
+                console.log('🔍 [TrackRenderer] Handling vertical scroll (zoom disabled)');
             } else if (!isWheelZoomEnabled) {
                 // If zoom is disabled and no scrolling needed, prevent default to avoid page scroll
                 e.preventDefault();
