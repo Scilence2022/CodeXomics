@@ -290,9 +290,8 @@ class ChatBoxSettingsManager {
         modal.className = 'modal';
         
         modal.innerHTML = `
-            
-            <div class="modal-content chatbox-settings-modal-content resizable">
-                <div class="modal-header" id="chatboxSettingsHeader">
+            <div class="modal-content resizable" style="max-width: 800px;">
+                <div class="modal-header">
                     <h3><i class="fas fa-comments"></i> ChatBox Settings</h3>
                     <div class="modal-controls">
                         <button class="reset-position-btn" title="Reset Position">
@@ -307,25 +306,25 @@ class ChatBoxSettingsManager {
                     </div>
                 </div>
                 
-                <div class="modal-body" >
-                    <div class="llm-provider-tabs">
-                        <button class="tab-button active" data-tab="display">
-                            <i class="fas fa-eye"></i> Display
-                        </button>
-                        <button class="tab-button" data-tab="behavior">
-                            <i class="fas fa-cogs"></i> Behavior
-                        </button>
-                        <button class="tab-button" data-tab="memory">
-                            <i class="fas fa-brain"></i> Memory
-                        </button>
-                        <button class="tab-button" data-tab="advanced">
-                            <i class="fas fa-tools"></i> Advanced
-                        </button>
-                    </div>
-                    
-                    <div class="llm-provider-config">
+                <div class="modal-body">
+                    <div class="chatbox-settings-tabs">
+                        <div class="tab-header">
+                            <button class="tab-btn active" data-tab="display">
+                                <i class="fas fa-eye"></i> Display
+                            </button>
+                            <button class="tab-btn" data-tab="behavior">
+                                <i class="fas fa-cogs"></i> Behavior
+                            </button>
+                            <button class="tab-btn" data-tab="memory">
+                                <i class="fas fa-brain"></i> Memory
+                            </button>
+                            <button class="tab-btn" data-tab="advanced">
+                                <i class="fas fa-tools"></i> Advanced
+                            </button>
+                        </div>
+                        
                         <!-- Display Tab -->
-                        <div class="provider-config active" data-panel="display">
+                        <div id="display-tab" class="tab-content active">
                             <div class="form-section">
                                 <h4>Thinking Process</h4>
                                 <div class="form-group">
@@ -408,7 +407,7 @@ class ChatBoxSettingsManager {
                         </div>
                         
                         <!-- Behavior Tab -->
-                        <div class="provider-config" data-panel="behavior">
+                        <div id="behavior-tab" class="tab-content">
                             <div class="form-section">
                                 <h4>Interaction</h4>
                                 <div class="form-group">
@@ -456,7 +455,7 @@ class ChatBoxSettingsManager {
                         </div>
                         
                         <!-- Memory Tab -->
-                        <div class="provider-config" data-panel="memory">
+                        <div id="memory-tab" class="tab-content">
                             <div class="form-section">
                                 <h4>🧠 Memory System</h4>
                                 <div class="form-group">
@@ -498,7 +497,7 @@ class ChatBoxSettingsManager {
                         </div>
                         
                         <!-- Advanced Tab -->
-                        <div class="provider-config" data-panel="advanced">
+                        <div id="advanced-tab" class="tab-content">
                             <div class="form-section">
                                 <h4>Animation & Effects</h4>
                                 <div class="form-group">
@@ -647,8 +646,8 @@ class ChatBoxSettingsManager {
         `;
         
         // Add event listeners for tabs
-        const tabButtons = modal.querySelectorAll('.tab-button');
-        const tabPanels = modal.querySelectorAll('.provider-config');
+        const tabButtons = modal.querySelectorAll('.tab-btn');
+        const tabPanels = modal.querySelectorAll('.tab-content');
         
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -661,7 +660,7 @@ class ChatBoxSettingsManager {
                 // Update active tab panel
                 tabPanels.forEach(panel => {
                     panel.classList.remove('active');
-                    if (panel.dataset.panel === targetTab) {
+                    if (panel.id === `${targetTab}-tab`) {
                         panel.classList.add('active');
                     }
                 });

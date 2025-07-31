@@ -8235,12 +8235,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     createTrackSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'trackSettingsModal';
-        modal.className = 'modal draggable-modal';
+        modal.className = 'modal';
         modal.innerHTML = `
-            <div class="modal-content resizable-modal-content">
-                <div class="modal-header draggable-header">
-                    <h3 id="trackSettingsTitle">Track Settings</h3>
-                    <button class="modal-close" id="closeTrackSettingsModal">&times;</button>
+            <div class="modal-content resizable" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3 id="trackSettingsTitle"><i class="fas fa-cog"></i> Track Settings</h3>
+                    <div class="modal-controls">
+                        <button class="reset-position-btn" title="Reset Position">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                        <button class="reset-defaults-btn" title="Reset to Defaults">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="modal-close" id="closeTrackSettingsModal">&times;</button>
+                    </div>
                 </div>
                 <div class="modal-body" id="trackSettingsBody">
                     <!-- Settings will be loaded here -->
@@ -8272,9 +8280,21 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             this.applyTrackSettings();
         });
         
-        // Make modal draggable and resizable
-        this.makeModalDraggable(modal);
-        this.makeModalResizable(modal);
+        // Initialize draggable and resizable using centralized managers
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#trackSettingsModal');
+        }
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#trackSettingsModal');
+        }
+        
+        // Add reset to defaults button handler
+        const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
+        if (resetDefaultsBtn) {
+            resetDefaultsBtn.addEventListener('click', () => {
+                this.resetTrackSettingsToDefaults();
+            });
+        }
         
         return modal;
     }
@@ -11071,6 +11091,73 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 currentHandle = null;
             }
         });
+    }
+    
+    /**
+     * Reset track settings to default values
+     */
+    resetTrackSettingsToDefaults() {
+        const modal = document.getElementById('trackSettingsModal');
+        const trackType = modal?.dataset.trackType;
+        
+        if (!trackType) {
+            console.warn('No track type specified for reset');
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to reset ${trackType} track settings to their default values? This action cannot be undone.`)) {
+            // Define default settings for different track types
+            const defaultSettings = {
+                sequence: {
+                    visible: true,
+                    height: 60,
+                    displayMode: 'letters',
+                    showCoordinates: true,
+                    fontSize: 12
+                },
+                genes: {
+                    visible: true,
+                    height: 120,
+                    showLabels: true,
+                    showArrows: true,
+                    colorBy: 'type',
+                    fontSize: 10
+                },
+                gc: {
+                    visible: true,
+                    height: 80,
+                    windowSize: 100,
+                    showAverage: true,
+                    color: '#4CAF50'
+                },
+                reads: {
+                    visible: true,
+                    height: 200,
+                    showSequences: false,
+                    maxReads: 1000,
+                    colorBy: 'base'
+                }
+            };
+            
+            const settings = defaultSettings[trackType] || {};
+            
+            // Apply default settings to form
+            Object.keys(settings).forEach(key => {
+                const element = modal.querySelector(`[name="${key}"], #${key}`);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = settings[key];
+                    } else {
+                        element.value = settings[key];
+                    }
+                }
+            });
+            
+            // Show notification
+            if (this.genomeBrowser && this.genomeBrowser.showNotification) {
+                this.genomeBrowser.showNotification(`${trackType} track settings reset to defaults successfully!`, 'success');
+            }
+        }
     }
     
     /**
