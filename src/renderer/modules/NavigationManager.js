@@ -44,6 +44,9 @@ class NavigationManager {
 
         // Initialize wheel zoom settings from GeneralSettingsManager
         this.initializeWheelZoomSettings();
+        
+        // Initialize aligned reads redraw timeout
+        this.alignedReadsRedrawTimeout = null;
 
         // Bind methods and add global listeners once
         this.handleDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
@@ -235,9 +238,11 @@ class NavigationManager {
         // Update position
         this.genomeBrowser.currentPosition = { start: Math.round(newStart), end: Math.round(newEnd) };
         
-        // Update the view
+        // Update statistics immediately
         this.genomeBrowser.updateStatistics(currentChr, sequence);
-        this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        
+        // Handle aligned reads track differently - use delayed redraw
+        this.handleAlignedReadsZoom(currentChr, sequence);
         
         // Update navigation bar
         if (this.genomeBrowser.genomeNavigationBar) {
@@ -260,6 +265,117 @@ class NavigationManager {
             position: `${newStart.toLocaleString()}-${newEnd.toLocaleString()}`,
             zoomToCursor: this.wheelZoomConfig.zoomToCursor
         });
+    }
+
+    /**
+     * Handle aligned reads track zoom with delayed redraw
+     */
+    handleAlignedReadsZoom(currentChr, sequence) {
+        // Clear any existing timeout for aligned reads redraw
+        if (this.alignedReadsRedrawTimeout) {
+            clearTimeout(this.alignedReadsRedrawTimeout);
+        }
+        
+        // Check if aligned reads track exists and is visible
+        const readsTrack = document.querySelector('.reads-track');
+        const hasAlignedReads = readsTrack && readsTrack.offsetParent !== null;
+        
+        if (hasAlignedReads) {
+            // For aligned reads track: update other tracks immediately, but delay reads redraw
+            console.log('🔍 [WHEEL-ZOOM] Aligned reads detected - using delayed redraw');
+            
+            // Immediately update non-reads tracks (sequence, genes, GC, etc.)
+            this.updateNonReadsTracksOnly(currentChr, sequence);
+            
+            // Delay aligned reads track redraw until scrolling stops
+            this.alignedReadsRedrawTimeout = setTimeout(() => {
+                console.log('🔍 [WHEEL-ZOOM] Redrawing aligned reads track after zoom delay');
+                this.updateAlignedReadsTrackOnly(currentChr, sequence);
+            }, 300); // 300ms delay after last wheel event
+        } else {
+            // No aligned reads track - use normal immediate redraw
+            this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        }
+    }
+    
+    /**
+     * Update only non-reads tracks for immediate zoom response
+     */
+    updateNonReadsTracksOnly(currentChr, sequence) {
+        // Get current viewport
+        const viewport = {
+            start: this.genomeBrowser.currentPosition.start,
+            end: this.genomeBrowser.currentPosition.end
+        };
+        
+        try {
+            // Update sequence track
+            const sequenceTrack = document.querySelector('.sequence-track .track-content');
+            if (sequenceTrack) {
+                const sequenceElement = this.genomeBrowser.trackRenderer.createSequenceTrack(currentChr, viewport);
+                if (sequenceElement) {
+                    sequenceTrack.innerHTML = '';
+                    sequenceTrack.appendChild(sequenceElement);
+                }
+            }
+            
+            // Update genes track
+            const genesTrack = document.querySelector('.gene-track .track-content');
+            if (genesTrack) {
+                const genesElement = this.genomeBrowser.trackRenderer.createGenesTrack(currentChr, viewport);
+                if (genesElement) {
+                    genesTrack.innerHTML = '';
+                    genesTrack.appendChild(genesElement);
+                }
+            }
+            
+            // Update GC track
+            const gcTrack = document.querySelector('.gc-track .track-content');
+            if (gcTrack) {
+                const gcElement = this.genomeBrowser.trackRenderer.createGCTrack(currentChr, viewport);
+                if (gcElement) {
+                    gcTrack.innerHTML = '';
+                    gcTrack.appendChild(gcElement);
+                }
+            }
+            
+            console.log('🔍 [WHEEL-ZOOM] Updated non-reads tracks immediately');
+        } catch (error) {
+            console.error('🔍 [WHEEL-ZOOM] Error updating non-reads tracks:', error);
+            // Fallback to full redraw if partial update fails
+            this.genomeBrowser.displayGenomeView(currentChr, sequence);
+        }
+    }
+    
+    /**
+     * Update only aligned reads track after zoom delay
+     */
+    updateAlignedReadsTrackOnly(currentChr, sequence) {
+        const viewport = {
+            start: this.genomeBrowser.currentPosition.start,
+            end: this.genomeBrowser.currentPosition.end
+        };
+        
+        try {
+            // Find all reads tracks and update them
+            const readsTracks = document.querySelectorAll('.reads-track .track-content');
+            readsTracks.forEach(async (readsTrackContent, index) => {
+                try {
+                    console.log(`🔍 [WHEEL-ZOOM] Updating reads track ${index + 1}/${readsTracks.length}`);
+                    const readsElement = await this.genomeBrowser.trackRenderer.createReadsTrack(currentChr, viewport);
+                    if (readsElement) {
+                        readsTrackContent.innerHTML = '';
+                        readsTrackContent.appendChild(readsElement);
+                    }
+                } catch (error) {
+                    console.error(`🔍 [WHEEL-ZOOM] Error updating reads track ${index + 1}:`, error);
+                }
+            });
+            
+            console.log('🔍 [WHEEL-ZOOM] Aligned reads track redraw completed');
+        } catch (error) {
+            console.error('🔍 [WHEEL-ZOOM] Error updating aligned reads track:', error);
+        }
     }
 
     /**
@@ -1635,6 +1751,24 @@ class NavigationManager {
     setGlobalDragging(enabled) {
         this.globalDraggingEnabled = enabled;
         console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    /**
+     * Clean up NavigationManager resources
+     */
+    destroy() {
+        // Clear any pending aligned reads redraw timeout
+        if (this.alignedReadsRedrawTimeout) {
+            clearTimeout(this.alignedReadsRedrawTimeout);
+            this.alignedReadsRedrawTimeout = null;
+        }
+        
+        // Remove event listeners
+        document.removeEventListener('mousemove', this.handleDocumentMouseMove);
+        document.removeEventListener('mouseup', this.handleDocumentMouseUp);
+        document.removeEventListener('wheel', this.handleWheelZoom);
+        
+        console.log('🧹 [NavigationManager] Cleaned up resources');
     }
 }
 
