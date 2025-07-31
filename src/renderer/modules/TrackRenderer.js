@@ -2776,12 +2776,30 @@ class TrackRenderer {
         trackContent.appendChild(loadingMsg);
         
         try {
-            // Get track settings first
-            const settings = this.getTrackSettings('reads');
+            // Get track settings first and create a deep copy to avoid modifying defaults
+            const rawSettings = this.getTrackSettings('reads');
+            const settings = JSON.parse(JSON.stringify(rawSettings));
+            
+            // BUGFIX: Ensure critical display settings are properly initialized
+            // The issue was that reads weren't showing initially due to incomplete settings
+            settings.opacity = settings.opacity ?? 0.9;
+            settings.readHeight = settings.readHeight ?? 4;
+            settings.readSpacing = settings.readSpacing ?? 2;
+            settings.minWidth = settings.minWidth ?? 2;
+            settings.forwardColor = settings.forwardColor ?? '#00b894';
+            settings.reverseColor = settings.reverseColor ?? '#f39c12';
+            settings.borderColor = settings.borderColor ?? '#ffffff';
+            settings.borderWidth = settings.borderWidth ?? 0;
+            settings.showCoverage = settings.showCoverage ?? true;
+            settings.showReference = settings.showReference ?? true;
+            
+            // Apply the corrected settings immediately to ensure proper rendering
+            this.trackSettings = this.trackSettings || {};
+            this.trackSettings['reads'] = settings;
             
             console.log(`🎯 [TrackRenderer] === READS TRACK CREATION DEBUG START ===`);
             console.log(`🎯 [TrackRenderer] Creating reads track for region ${chromosome}:${viewport.start}-${viewport.end}`);
-            console.log(`🎯 [TrackRenderer] Track settings:`, settings);
+            console.log(`🎯 [TrackRenderer] Track settings (with defaults):`, settings);
         console.log(`🔍 [DEBUG] showReference setting: ${settings.showReference}`);
             
             // Get reads for current region using ReadsManager with settings
@@ -3057,8 +3075,25 @@ class TrackRenderer {
                 );
                 trackContent.appendChild(noReadsMsg);
             } else {
-                // Get track settings
-                const settings = this.getTrackSettings('reads');
+                // Get track settings and create a deep copy to avoid modifying defaults
+                const rawSettings = this.getTrackSettings('reads');
+                const settings = JSON.parse(JSON.stringify(rawSettings));
+                
+                // BUGFIX: Ensure critical display settings are properly initialized
+                settings.opacity = settings.opacity ?? 0.9;
+                settings.readHeight = settings.readHeight ?? 4;
+                settings.readSpacing = settings.readSpacing ?? 2;
+                settings.minWidth = settings.minWidth ?? 2;
+                settings.forwardColor = settings.forwardColor ?? '#00b894';
+                settings.reverseColor = settings.reverseColor ?? '#f39c12';
+                settings.borderColor = settings.borderColor ?? '#ffffff';
+                settings.borderWidth = settings.borderWidth ?? 0;
+                settings.showCoverage = settings.showCoverage ?? true;
+                settings.showReference = settings.showReference ?? true;
+                
+                // Apply the corrected settings immediately
+                this.trackSettings = this.trackSettings || {};
+                this.trackSettings['reads'] = settings;
                 
                 // Create coverage visualization if enabled
                 const showCoverage = settings.showCoverage !== false; // Default to true
@@ -8893,7 +8928,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 geneHeight: 12,
             fontSize: 11,
                 fontFamily: 'Arial, sans-serif',
-                layoutMode: 'compact' // 'compact' or 'groupByType'
+                layoutMode: 'compact', // 'compact' or 'groupByType'
+                enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false // Inherit from global setting, default to true
             },
             gc: {
                 contentColor: '#3b82f6',
