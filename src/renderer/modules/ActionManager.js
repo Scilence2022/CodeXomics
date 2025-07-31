@@ -144,6 +144,10 @@ class ActionManager {
         // Action List modal close handlers
         const actionListModal = document.getElementById('actionListModal');
         if (actionListModal) {
+            // Make modal draggable and resizable
+            this.makeModalDraggable(actionListModal);
+            this.makeModalResizable(actionListModal);
+            
             actionListModal.querySelectorAll('.modal-close').forEach(btn => {
                 btn.addEventListener('click', () => this.closeActionList());
             });
@@ -4597,6 +4601,137 @@ class ActionManager {
             this.genomeBrowser.showNotification('Cannot undo action that is not completed', 'warning');
             return false;
         }
+    }
+
+    /**
+     * Make modal draggable
+     */
+    makeModalDraggable(modal) {
+        const header = modal.querySelector('.draggable-header');
+        if (!header) return;
+
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('modal-close')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = modal.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            modal.classList.add('dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newLeft = startLeft + deltaX;
+            const newTop = startTop + deltaY;
+            
+            // Keep modal within viewport
+            const maxLeft = window.innerWidth - modal.offsetWidth;
+            const maxTop = window.innerHeight - modal.offsetHeight;
+            
+            modal.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+            modal.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                modal.classList.remove('dragging');
+            }
+        });
+    }
+
+    /**
+     * Make modal resizable
+     */
+    makeModalResizable(modal) {
+        const content = modal.querySelector('.resizable-modal-content');
+        if (!content) return;
+
+        const handles = modal.querySelectorAll('.resize-handle');
+        let isResizing = false;
+        let currentHandle = null;
+        let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                currentHandle = handle;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = content.getBoundingClientRect();
+                startWidth = rect.width;
+                startHeight = rect.height;
+                startLeft = rect.left;
+                startTop = rect.top;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing || !currentHandle) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const handleClass = currentHandle.className;
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newLeft = startLeft;
+            let newTop = startTop;
+            
+            if (handleClass.includes('resize-handle-e')) {
+                newWidth = Math.max(400, startWidth + deltaX);
+            }
+            if (handleClass.includes('resize-handle-w')) {
+                newWidth = Math.max(400, startWidth - deltaX);
+                newLeft = startLeft + deltaX;
+            }
+            if (handleClass.includes('resize-handle-s')) {
+                newHeight = Math.max(300, startHeight + deltaY);
+            }
+            if (handleClass.includes('resize-handle-n')) {
+                newHeight = Math.max(300, startHeight - deltaY);
+                newTop = startTop + deltaY;
+            }
+            
+            // Apply constraints
+            newWidth = Math.min(newWidth, window.innerWidth - 20);
+            newHeight = Math.min(newHeight, window.innerHeight - 20);
+            
+            content.style.width = newWidth + 'px';
+            content.style.height = newHeight + 'px';
+            content.style.maxWidth = 'none';
+            content.style.maxHeight = 'none';
+            
+            // Update modal position for north/west resizing
+            if (handleClass.includes('resize-handle-w') || handleClass.includes('resize-handle-n')) {
+                modal.style.left = Math.max(0, newLeft) + 'px';
+                modal.style.top = Math.max(0, newTop) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                currentHandle = null;
+            }
+        });
     }
 }
 
