@@ -404,18 +404,17 @@ class NavigationManager {
                             }
                         }
                     } else {
-                        // Fallback to old method for tracks without fileId
-                        const readsElement = await this.genomeBrowser.trackRenderer.createReadsTrack(currentChr, viewport);
-                        if (readsElement) {
-                            // Extract only the track content, not the header
-                            const trackContentElement = readsElement.querySelector('.track-content');
-                            if (trackContentElement) {
-                                readsTrackContent.innerHTML = '';
-                                readsTrackContent.appendChild(trackContentElement.firstChild);
-                            } else {
-                                readsTrackContent.innerHTML = '';
-                                readsTrackContent.appendChild(readsElement);
+                        // Fallback for tracks without fileId (legacy reads tracks)
+                        console.log(`🔍 [WHEEL-ZOOM] No fileId found, using legacy reads track content method`);
+                        const newTrackContent = await this.genomeBrowser.trackRenderer.createLegacyReadsTrackContent(currentChr, viewport);
+                        if (newTrackContent) {
+                            // Copy the inner content from the new track content to the existing track content
+                            readsTrackContent.innerHTML = '';
+                            while (newTrackContent.firstChild) {
+                                readsTrackContent.appendChild(newTrackContent.firstChild);
                             }
+                            // Copy styles
+                            readsTrackContent.style.height = newTrackContent.style.height;
                         }
                     }
                 } catch (error) {

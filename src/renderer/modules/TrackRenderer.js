@@ -2729,6 +2729,61 @@ class TrackRenderer {
         }
     }
 
+    /**
+     * Create legacy reads track content without header (for zoom updates)
+     */
+    async createLegacyReadsTrackContent(chromosome, viewport = null) {
+        viewport = viewport || this.getCurrentViewport();
+        const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
+        
+        // Check if ReadsManager has data loaded (either in-memory, streaming, or BAM mode)
+        const hasReadsData = this.genomeBrowser.readsManager.rawReadsData || 
+                           this.genomeBrowser.readsManager.isStreaming ||
+                           this.genomeBrowser.readsManager.isBamMode ||
+                           this.genomeBrowser.readsManager.currentFile;
+        
+        if (!hasReadsData) {
+            const noDataMsg = document.createElement('div');
+            noDataMsg.className = 'no-reads-message';
+            noDataMsg.textContent = 'No SAM/BAM file loaded. Load a SAM/BAM file to see aligned reads.';
+            noDataMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-style: italic;
+                font-size: 14px;
+                text-align: center;
+            `;
+            trackContent.appendChild(noDataMsg);
+            trackContent.style.height = '100px'; // Default height for empty track
+        } else {
+            // Existing logic for when reads data is available
+            // This will be similar to the original createLegacyReadsTrack logic
+            // but only returning trackContent
+            
+            // For now, show a message indicating reads are available but need to be rendered
+            const processingMsg = document.createElement('div');
+            processingMsg.className = 'reads-processing-message';
+            processingMsg.textContent = 'Reads data available - processing...';
+            processingMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #4a90e2;
+                font-style: italic;
+                font-size: 14px;
+                text-align: center;
+            `;
+            trackContent.appendChild(processingMsg);
+            trackContent.style.height = '100px';
+        }
+        
+        return trackContent;
+    }
+
     async createLegacyReadsTrack(chromosome) {
         const { track, trackContent } = this.createTrackBase('reads', chromosome);
         const viewport = this.getCurrentViewport();
