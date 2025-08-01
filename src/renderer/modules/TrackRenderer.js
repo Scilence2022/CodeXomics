@@ -372,14 +372,24 @@ class TrackRenderer {
      */
     getCurrentViewport() {
         if (this.genomeBrowser && this.genomeBrowser.currentPosition) {
+            const start = this.genomeBrowser.currentPosition.start || 0;
+            const end = this.genomeBrowser.currentPosition.end || 1000;
+            
+            // Ensure start and end are valid numbers
+            const validStart = typeof start === 'number' && !isNaN(start) ? start : 0;
+            const validEnd = typeof end === 'number' && !isNaN(end) ? end : 1000;
+            
+            // Ensure end is greater than start
+            const finalEnd = validEnd > validStart ? validEnd : validStart + 1000;
+            
             return {
-                start: this.genomeBrowser.currentPosition.start,
-                end: this.genomeBrowser.currentPosition.end,
-                range: this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start
+                start: validStart,
+                end: finalEnd,
+                range: finalEnd - validStart
             };
         }
         // Fallback if genome browser is not available
-        return { start: 1, end: 1000, range: 999 };
+        return { start: 0, end: 1000, range: 1000 };
     }
     
     /**
