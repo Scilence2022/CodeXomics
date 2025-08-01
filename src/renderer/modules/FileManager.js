@@ -800,6 +800,36 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             
             this.genomeBrowser.updateStatus(statusMessage);
             
+            // Auto-enable reads track when BAM file is loaded
+            console.log('🔧 [FileManager] Auto-enabling reads track after BAM file load');
+            if (!this.genomeBrowser.visibleTracks.has('reads')) {
+                this.genomeBrowser.visibleTracks.add('reads');
+                
+                // Update UI checkboxes to reflect this change
+                const trackReadsCheckbox = document.getElementById('trackReads');
+                const sidebarTrackReadsCheckbox = document.getElementById('sidebarTrackReads');
+                
+                if (trackReadsCheckbox) {
+                    trackReadsCheckbox.checked = true;
+                    console.log('🔧 [FileManager] Updated toolbar reads checkbox');
+                }
+                if (sidebarTrackReadsCheckbox) {
+                    sidebarTrackReadsCheckbox.checked = true;
+                    console.log('🔧 [FileManager] Updated sidebar reads checkbox');
+                }
+                
+                // Trigger view refresh to show the reads track
+                if (this.genomeBrowser.currentChromosome && this.genomeBrowser.currentSequence) {
+                    console.log('🔧 [FileManager] Refreshing view to show reads track');
+                    setTimeout(() => {
+                        this.genomeBrowser.displayGenomeView(
+                            this.genomeBrowser.currentChromosome,
+                            this.genomeBrowser.currentSequence[this.genomeBrowser.currentChromosome]
+                        );
+                    }, 100); // Small delay to ensure everything is properly initialized
+                }
+            }
+            
             // Update all tabs with new BAM data
             if (this.genomeBrowser.tabManager) {
                 this.genomeBrowser.tabManager.onAdditionalFileLoaded('bam', null, this.currentFile?.path);
@@ -809,15 +839,6 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
             if (!stats.hasIndex) {
                 console.warn('💡 Recommendation: Create an index for faster queries:');
                 console.warn('   samtools index your_file.bam');
-            }
-            
-            // Auto-enable reads track
-            this.autoEnableTracksForFileType('.bam');
-            
-            // If we already have sequence data, refresh the view
-            const currentChr = document.getElementById('chromosomeSelect').value;
-            if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-                this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
             }
             
         } catch (error) {
