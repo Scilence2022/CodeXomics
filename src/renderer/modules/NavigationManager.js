@@ -172,6 +172,17 @@ class NavigationManager {
         const genomeBrowserElement = e.target.closest('.genome-browser, .sequence-track, .gene-track, .gc-track, .reads-track, .tracks-container');
         if (!genomeBrowserElement) return;
 
+        // Check if the event target is within a scrollable reads container
+        const scrollableReadsContainer = e.target.closest('.reads-scroll-container');
+        if (scrollableReadsContainer) {
+            // Let the reads track handle its own scrolling unless modifier keys are pressed
+            if (!e.ctrlKey && !e.metaKey) {
+                console.log('🔍 [NavigationManager] Event in scrollable reads container, delegating to TrackRenderer');
+                return; // Don't handle zoom, let TrackRenderer handle scrolling
+            }
+            console.log('🔍 [NavigationManager] Modifier key pressed in reads container, handling zoom');
+        }
+
         // Prevent default scrolling behavior
         e.preventDefault();
 
@@ -324,7 +335,7 @@ class NavigationManager {
             // Update sequence track
             const sequenceTrack = document.querySelector('.sequence-track .track-content');
             if (sequenceTrack) {
-                const sequenceElement = this.genomeBrowser.trackRenderer.createSequenceTrack(currentChr, viewport);
+                const sequenceElement = this.genomeBrowser.trackRenderer.createSequenceLineTrack(currentChr, sequence);
                 if (sequenceElement) {
                     sequenceTrack.innerHTML = '';
                     sequenceTrack.appendChild(sequenceElement);
@@ -334,7 +345,7 @@ class NavigationManager {
             // Update genes track
             const genesTrack = document.querySelector('.gene-track .track-content');
             if (genesTrack) {
-                const genesElement = this.genomeBrowser.trackRenderer.createGenesTrack(currentChr, viewport);
+                const genesElement = this.genomeBrowser.trackRenderer.createGeneTrack(currentChr);
                 if (genesElement) {
                     genesTrack.innerHTML = '';
                     genesTrack.appendChild(genesElement);
@@ -344,7 +355,7 @@ class NavigationManager {
             // Update GC track
             const gcTrack = document.querySelector('.gc-track .track-content');
             if (gcTrack) {
-                const gcElement = this.genomeBrowser.trackRenderer.createGCTrack(currentChr, viewport);
+                const gcElement = this.genomeBrowser.trackRenderer.createGCTrack(currentChr, sequence);
                 if (gcElement) {
                     gcTrack.innerHTML = '';
                     gcTrack.appendChild(gcElement);

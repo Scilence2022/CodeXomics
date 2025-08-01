@@ -3061,6 +3061,15 @@ class TrackRenderer {
             const bamStart = Math.max(0, viewport.start - 1);
             const bamEnd = Math.max(bamStart + 1, viewport.end - 1);
             
+            console.log(`🔍 [TrackRenderer] Querying BAM for reads:`, {
+                chromosome,
+                bamStart,
+                bamEnd,
+                fileName: bamFile.metadata.name,
+                hasReferences: bamFile.reader.references?.length || 0,
+                availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || []
+            });
+            
             const reads = await bamFile.reader.getRecordsForRange(
                 chromosome, 
                 bamStart, 
@@ -3068,9 +3077,29 @@ class TrackRenderer {
                 { ignoreChromosome: false }
             );
             
+            console.log(`📊 [TrackRenderer] BAM query result:`, {
+                readsFound: reads.length,
+                region: `${chromosome}:${bamStart}-${bamEnd}`,
+                fileName: bamFile.metadata.name
+            });
+            
             if (reads.length === 0) {
+                // Try to provide helpful diagnostic information
+                let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
+                
+                if (bamFile.reader.references?.length === 0) {
+                    diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
+                } else if (bamFile.reader.references?.length > 0) {
+                    const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
+                    diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
+                    
+                    if (!availableRefs.includes(chromosome)) {
+                        diagnosticMessage += `\n❓ Current chromosome "${chromosome}" not found in BAM references`;
+                    }
+                }
+                
                 const noReadsMsg = this.createNoDataMessage(
-                    `No reads found in this region for ${bamFile.metadata.name}`,
+                    diagnosticMessage,
                     'no-reads-message'
                 );
                 trackContent.appendChild(noReadsMsg);
@@ -3147,9 +3176,23 @@ class TrackRenderer {
             }
             
         } catch (error) {
-            console.error(`Error loading reads for ${bamFile.metadata.name}:`, error);
+            console.error(`❌ Error loading reads for ${bamFile.metadata.name}:`, error);
+            console.error(`   Region: ${chromosome}:${viewport.start}-${viewport.end}`);
+            console.error(`   BAM file has ${bamFile.reader.references?.length || 0} references`);
+            
+            let errorMessage = `Error loading reads: ${error.message}`;
+            
+            // Add helpful context based on error type
+            if (error.message.includes('not found') || error.message.includes('chromosome')) {
+                errorMessage += `\n💡 This might be a chromosome naming issue (e.g., "chr1" vs "1")`;
+            } else if (error.message.includes('index') || error.message.includes('bai')) {
+                errorMessage += `\n💡 BAM index file (.bai) might be missing or corrupted`;
+            } else if (bamFile.reader.references?.length === 0) {
+                errorMessage += `\n⚠️ BAM file appears to have no reference sequences`;
+            }
+            
             const errorMsg = this.createNoDataMessage(
-                `Error loading reads: ${error.message}`,
+                errorMessage,
                 'reads-error-message'
             );
             trackContent.appendChild(errorMsg);
@@ -3377,50 +3420,58 @@ class TrackRenderer {
             const maxScrollTop = contentHeight - trackHeight;
             const needsVerticalScrolling = maxScrollTop > 0;
             
-            // BUGFIX: Don't prevent zoom when wheel zoom is enabled
-            // The issue was that TrackRenderer was preventing zoom by intercepting wheel events
-            // Now we only handle scrolling when absolutely necessary and let NavigationManager handle zoom
+            console.log('🔍 [TrackRenderer] Wheel event in scrollable reads track:', {
+                zoomEnabled: isWheelZoomEnabled,
+                needsScrolling: needsVerticalScrolling,
+                hasModifier: e.ctrlKey || e.metaKey,
+                deltaY: e.deltaY
+            });
             
-            if (isWheelZoomEnabled) {
-                // Priority 1: If Ctrl/Cmd is held, always zoom (never handle scrolling)
-                if (e.ctrlKey || e.metaKey) {
-                    console.log('🔍 [TrackRenderer] Modifier key + wheel, delegating to NavigationManager for zoom');
-                    return; // Let NavigationManager handle zoom
-                }
-                
-                // Priority 2: If no vertical scrolling is needed, always zoom
-                if (!needsVerticalScrolling) {
-                    console.log('🔍 [TrackRenderer] No vertical scrolling needed, delegating to NavigationManager for zoom');
-                    return; // Let NavigationManager handle zoom
-                }
-                
-                // Priority 3: Only handle scrolling when we're in the middle of the scroll range
-                // At boundaries, prefer zoom over scrolling
-                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-                const isAtTop = currentScrollTop <= 5; // Small buffer for smoother zoom
-                const isAtBottom = currentScrollTop >= (maxScrollTop - 5); // Small buffer for smoother zoom
-                
-                if (isAtTop || isAtBottom) {
-                    console.log('🔍 [TrackRenderer] Near scroll boundary, delegating to NavigationManager for zoom');
-                    return; // Let NavigationManager handle zoom when near scroll boundaries
-                }
-                
-                // Priority 4: Only handle vertical scrolling in the middle of scroll range when zoom is enabled
-                console.log('🔍 [TrackRenderer] Handling vertical scroll in middle of range, zoom still available');
-                e.preventDefault(); // Only prevent default when actually handling scroll
-                const scrollDelta = e.deltaY * 2; // Adjust scroll speed
-                updateScrollPosition(currentScrollTop + scrollDelta);
-            } else if (needsVerticalScrolling) {
-                // Zoom is disabled, handle vertical scrolling normally
-                e.preventDefault();
-                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
-                const scrollDelta = e.deltaY * 2; // Adjust scroll speed
-                updateScrollPosition(currentScrollTop + scrollDelta);
-                console.log('🔍 [TrackRenderer] Handling vertical scroll (zoom disabled)');
-            } else if (!isWheelZoomEnabled) {
-                // If zoom is disabled and no scrolling needed, prevent default to avoid page scroll
-                e.preventDefault();
+            // Priority 1: Modifier keys (Ctrl/Cmd) always trigger zoom, never scroll
+            if (e.ctrlKey || e.metaKey) {
+                console.log('🔍 [TrackRenderer] Modifier key detected, delegating to NavigationManager for zoom');
+                return; // Let NavigationManager handle zoom (it will preventDefault)
             }
+            
+            // Priority 2: If no vertical scrolling is needed, delegate to zoom
+            if (!needsVerticalScrolling) {
+                console.log('🔍 [TrackRenderer] No scrolling needed, delegating to NavigationManager for zoom');
+                return; // Let NavigationManager handle zoom
+            }
+            
+            // Priority 3: If zoom is disabled, always handle scrolling when needed
+            if (!isWheelZoomEnabled && needsVerticalScrolling) {
+                e.preventDefault();
+                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
+                const scrollDelta = e.deltaY * 2;
+                updateScrollPosition(currentScrollTop + scrollDelta);
+                console.log('🔍 [TrackRenderer] Zoom disabled, handling vertical scroll');
+                return;
+            }
+            
+            // Priority 4: Both zoom and scroll are available - use smart boundary detection
+            if (isWheelZoomEnabled && needsVerticalScrolling) {
+                const currentScrollTop = scrollContainer._scrollState?.currentScrollTop() || 0;
+                const scrollBuffer = Math.max(20, trackHeight * 0.1); // Dynamic buffer based on track height
+                const isNearTop = currentScrollTop <= scrollBuffer;
+                const isNearBottom = currentScrollTop >= (maxScrollTop - scrollBuffer);
+                
+                // At boundaries, prefer zoom. In middle, prefer scroll.
+                if (isNearTop || isNearBottom) {
+                    console.log('🔍 [TrackRenderer] Near scroll boundary, delegating to NavigationManager for zoom');
+                    return; // Let NavigationManager handle zoom
+                } else {
+                    // Handle scrolling in the middle range
+                    e.preventDefault();
+                    const scrollDelta = e.deltaY * 2;
+                    updateScrollPosition(currentScrollTop + scrollDelta);
+                    console.log('🔍 [TrackRenderer] Handling vertical scroll in middle range');
+                    return;
+                }
+            }
+            
+            // Default: Let NavigationManager handle zoom
+            console.log('🔍 [TrackRenderer] Default case, delegating to NavigationManager');
         });
         
         // Store update function for external use

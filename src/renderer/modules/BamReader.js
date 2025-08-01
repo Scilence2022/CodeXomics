@@ -137,10 +137,15 @@ class BamReader {
                         fs.closeSync(fd);
                         
                         const magic = buffer.toString('ascii');
-                        console.error(`File magic: "${magic}" (should be "BAM\\1" for BAM files)`);
+                        const magicHex = buffer.toString('hex');
+                        console.error(`File magic: "${magic}" (hex: ${magicHex}) (should be "BAM\\1" for BAM files)`);
                         
-                        if (magic !== 'BAM\u0001') {
+                        // BAM files can be compressed, so check for gzip magic too
+                        if (magic !== 'BAM\u0001' && magicHex !== '1f8b0800') {
                             console.error('❌ File does not appear to be a valid BAM file!');
+                            console.error('Note: BAM files should start with "BAM\\1" or be gzip compressed (1f8b)');
+                        } else if (magicHex === '1f8b0800') {
+                            console.error('ℹ️ File appears to be gzip compressed (normal for BAM files)');
                         }
                     } catch (fileCheckError) {
                         console.error('Could not perform file validation:', fileCheckError.message);
@@ -185,6 +190,11 @@ class BamReader {
             // Final validation
             if (this.references.length === 0) {
                 console.warn('⚠️ WARNING: BAM file initialized but has no references. This may cause issues with read queries.');
+                console.warn('   This could mean:');
+                console.warn('   - BAM file has corrupted/missing header');
+                console.warn('   - File might actually be SAM format (text) instead of BAM (binary)');
+                console.warn('   - Reference sequences were not included during BAM creation');
+                console.warn('   💡 Try: samtools view -H yourfile.bam to check header manually');
             }
 
             return {
