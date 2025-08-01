@@ -3032,6 +3032,156 @@ class TrackRenderer {
     }
 
     /**
+     * Create single reads track content without header (for zoom updates)
+     */
+    async createSingleReadsTrackContent(chromosome, bamFile, viewport = null) {
+        viewport = viewport || this.getCurrentViewport();
+        
+        // Create track content
+        const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
+        
+        try {
+            // Load reads using the specific BAM reader
+            // Ensure start position is never negative (BAM coordinates are 0-based)
+            const bamStart = Math.max(0, viewport.start - 1);
+            const bamEnd = Math.max(bamStart + 1, viewport.end - 1);
+            
+            console.log(`🔍 [TrackRenderer] Querying BAM for reads (content only):`, {
+                chromosome,
+                bamStart,
+                bamEnd,
+                fileName: bamFile.metadata.name,
+                hasReferences: bamFile.reader.references?.length || 0,
+                availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || []
+            });
+            
+            const reads = await bamFile.reader.getRecordsForRange(
+                chromosome, 
+                bamStart, 
+                bamEnd, 
+                { ignoreChromosome: false }
+            );
+            
+            console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
+                readsFound: reads.length,
+                region: `${chromosome}:${bamStart}-${bamEnd}`,
+                fileName: bamFile.metadata.name
+            });
+            
+            if (reads.length === 0) {
+                // Try to provide helpful diagnostic information
+                let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
+                
+                if (bamFile.reader.references?.length === 0) {
+                    diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
+                } else if (bamFile.reader.references?.length > 0) {
+                    const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
+                    diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
+                    
+                    if (!availableRefs.includes(chromosome)) {
+                        diagnosticMessage += `\n❓ Current chromosome "${chromosome}" not found in BAM references`;
+                    }
+                }
+                
+                const noReadsMsg = this.createNoDataMessage(
+                    diagnosticMessage,
+                    'no-reads-message'
+                );
+                trackContent.appendChild(noReadsMsg);
+            } else {
+                // Get track settings and create a deep copy to avoid modifying defaults
+                const rawSettings = this.getTrackSettings('reads');
+                const settings = JSON.parse(JSON.stringify(rawSettings));
+                
+                // BUGFIX: Ensure critical display settings are properly initialized
+                settings.opacity = settings.opacity ?? 0.9;
+                settings.readHeight = settings.readHeight ?? 4;
+                settings.readSpacing = settings.readSpacing ?? 2;
+                settings.minWidth = settings.minWidth ?? 2;
+                settings.forwardColor = settings.forwardColor ?? '#00b894';
+                settings.reverseColor = settings.reverseColor ?? '#f39c12';
+                settings.borderColor = settings.borderColor ?? '#ffffff';
+                settings.borderWidth = settings.borderWidth ?? 0;
+                settings.showCoverage = settings.showCoverage ?? true;
+                settings.showReference = settings.showReference ?? true;
+                
+                // Apply the corrected settings immediately
+                this.trackSettings = this.trackSettings || {};
+                this.trackSettings['reads'] = settings;
+                
+                // Create coverage visualization if enabled
+                const showCoverage = settings.showCoverage !== false; // Default to true
+                let coverageHeight = 0;
+                if (showCoverage) {
+                    coverageHeight = parseInt(settings.coverageHeight) || 50;
+                    this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
+                }
+                
+                // Arrange reads into rows
+                const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
+                
+                // Calculate rendering parameters
+                const readHeight = settings.readHeight || 4;
+                const rowSpacing = settings.readSpacing || 2;
+                const topPadding = 0;
+                const bottomPadding = 0;
+                
+                // Force scrollable mode for multiple rows
+                const forceScrollable = settings.forceScrollable !== false && readRows.length > (settings.maxRows || 20);
+                
+                if (forceScrollable) {
+                    // Use new scrollable track system for performance
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
+                } else {
+                    // Use traditional limited rows approach
+                    const maxRows = settings.maxRows || 20;
+                    const limitedReadRows = readRows.slice(0, maxRows);
+                
+                // Calculate adaptive track height including reference sequence
+                let trackHeight = coverageHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
+                trackHeight = Math.max(trackHeight, settings.height || 150);
+                trackContent.style.height = `${trackHeight}px`;
+                
+                    // Render reads using Canvas or SVG based on settings
+                    const renderingMode = settings.renderingMode || 'canvas';
+                    
+                    if (renderingMode === 'canvas') {
+                        // Use Canvas rendering for high performance
+                        this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    } else {
+                        // Pass just topPadding - reads SVG will be positioned after coverage automatically
+                        this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    }
+                }
+                
+                // Add file-specific statistics
+                const statsText = `${bamFile.metadata.name}: ${reads.length} reads, ${readRows.length} rows`;
+                console.log(`📊 [TrackRenderer] ${statsText}`);
+            }
+        } catch (error) {
+            console.error('🔍 [TrackRenderer] Error creating reads track content:', error);
+            
+            // Show error message
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'reads-error';
+            errorMsg.textContent = `Error loading reads: ${error.message}`;
+            errorMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #d32f2f;
+                font-style: italic;
+                font-size: 12px;
+            `;
+            trackContent.appendChild(errorMsg);
+            trackContent.style.height = '80px'; // Default height for error track
+        }
+        
+        return trackContent;
+    }
+
+    /**
      * Create single reads track with file-specific header
      */
     async createSingleReadsTrack(chromosome, bamFile) {

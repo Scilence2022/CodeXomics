@@ -385,10 +385,38 @@ class NavigationManager {
             readsTracks.forEach(async (readsTrackContent, index) => {
                 try {
                     console.log(`🔍 [WHEEL-ZOOM] Updating reads track ${index + 1}/${readsTracks.length}`);
-                    const readsElement = await this.genomeBrowser.trackRenderer.createReadsTrack(currentChr, viewport);
-                    if (readsElement) {
-                        readsTrackContent.innerHTML = '';
-                        readsTrackContent.appendChild(readsElement);
+                    
+                    // Get the parent reads track to identify which BAM file this belongs to
+                    const readsTrack = readsTrackContent.closest('.reads-track');
+                    const fileId = readsTrack?.dataset?.fileId;
+                    
+                    if (fileId) {
+                        // Find the specific BAM file
+                        const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
+                        const bamFile = bamFiles.find(f => f.metadata.id === fileId);
+                        
+                        if (bamFile) {
+                            // Create only the track content (without header)
+                            const newTrackContent = await this.genomeBrowser.trackRenderer.createSingleReadsTrackContent(currentChr, bamFile, viewport);
+                            if (newTrackContent) {
+                                readsTrackContent.innerHTML = '';
+                                readsTrackContent.appendChild(newTrackContent);
+                            }
+                        }
+                    } else {
+                        // Fallback to old method for tracks without fileId
+                        const readsElement = await this.genomeBrowser.trackRenderer.createReadsTrack(currentChr, viewport);
+                        if (readsElement) {
+                            // Extract only the track content, not the header
+                            const trackContentElement = readsElement.querySelector('.track-content');
+                            if (trackContentElement) {
+                                readsTrackContent.innerHTML = '';
+                                readsTrackContent.appendChild(trackContentElement.firstChild);
+                            } else {
+                                readsTrackContent.innerHTML = '';
+                                readsTrackContent.appendChild(readsElement);
+                            }
+                        }
                     }
                 } catch (error) {
                     console.error(`🔍 [WHEEL-ZOOM] Error updating reads track ${index + 1}:`, error);
