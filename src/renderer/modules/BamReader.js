@@ -110,18 +110,103 @@ class BamReader {
                     hasReferences: !!this.header.references,
                     referencesCount: this.header.references ? this.header.references.length : 0,
                     headerKeys: Object.keys(this.header || {}),
-                    firstFewRefs: this.header.references ? this.header.references.slice(0, 3).map(r => ({ name: r.name, length: r.length })) : []
+                    firstFewRefs: this.header.references ? this.header.references.slice(0, 3).map(r => ({ name: r.name, length: r.length })) : [],
+                    fullHeaderStructure: this.header
                 });
                 
-            this.references = this.header.references || [];
+                // Debug: Check if references are stored elsewhere in the header
+                console.log('🔍 Detailed header analysis:');
+                if (this.header) {
+                    for (const [key, value] of Object.entries(this.header)) {
+                        console.log(`  ${key}:`, typeof value, Array.isArray(value) ? `Array(${value.length})` : value);
+                        if (Array.isArray(value) && value.length > 0) {
+                            console.log(`    First item:`, value[0]);
+                        }
+                    }
+                }
                 
-                if (this.references.length === 0) {
-                    console.error('❌ CRITICAL ISSUE: BAM file has no references in header!');
+            // Try multiple ways to get references
+            this.references = this.header.references || [];
+            
+            // Alternative: Try to get references directly from bamFile
+            if (this.references.length === 0) {
+                console.log('🔍 Attempting alternative methods to get references...');
+                try {
+                    // Method 1: Check if bamFile has references directly
+                    if (this.bamFile.references) {
+                        console.log('🔍 Found references directly on bamFile object');
+                        this.references = this.bamFile.references;
+                    }
+                    
+                    // Method 2: Try getHeader with different parameters
+                    if (this.references.length === 0) {
+                        console.log('🔍 Trying alternative header access...');
+                        const altHeader = await this.bamFile.getHeader(0);
+                        if (altHeader && altHeader.references) {
+                            console.log('🔍 Found references in alternative header');
+                            this.references = altHeader.references;
+                        }
+                    }
+                    
+                    // Method 3: Check for indexed references
+                    if (this.references.length === 0 && this.hasIndex) {
+                        console.log('🔍 Trying to get references from index...');
+                        // Some BAM readers can get references from the index
+                        try {
+                            const indexStats = await this.bamFile.getIndex();
+                            if (indexStats && indexStats.refStats) {
+                                console.log('🔍 Found reference stats in index');
+                                this.references = Object.entries(indexStats.refStats).map(([name, stats]) => ({
+                                    name: name,
+                                    length: stats.end || stats.length || 0
+                                }));
+                            }
+                        } catch (indexError) {
+                            console.log('Could not get references from index:', indexError.message);
+                        }
+                    }
+                } catch (altError) {
+                    console.log('Alternative reference methods failed:', altError.message);
+                }
+            }
+                
+            // Final attempt: Try to get references through the reader API differently
+            if (this.references.length === 0) {
+                console.log('🔍 Final attempt: Probing BAM file structure...');
+                try {
+                    // Try to read one record to see if we can infer references
+                    const firstRecords = await this.bamFile.getRecordsForRange('*', 0, 1);
+                    if (firstRecords && firstRecords.length > 0) {
+                        const firstRecord = firstRecords[0];
+                        console.log('🔍 Found first record, attempting to infer references...');
+                        console.log('First record info:', {
+                            refName: firstRecord.refName,
+                            start: firstRecord.start,
+                            end: firstRecord.end
+                        });
+                        
+                        // If we found a record with a reference name, we can at least create a minimal reference
+                        if (firstRecord.refName && firstRecord.refName !== '*') {
+                            console.log('🔍 Creating minimal reference from first record');
+                            this.references = [{
+                                name: firstRecord.refName,
+                                length: Math.max(firstRecord.end || 0, 1000000) // Estimate length
+                            }];
+                        }
+                    }
+                } catch (probeError) {
+                    console.log('Could not probe BAM records:', probeError.message);
+                }
+            }
+            
+            if (this.references.length === 0) {
+                    console.error('❌ CRITICAL ISSUE: BAM file has no accessible references!');
                     console.error('This could indicate:');
                     console.error('  1. Corrupted BAM file');
                     console.error('  2. Incomplete BAM file');
                     console.error('  3. BAM file created without proper header');
-                    console.error('  4. Issue with @gmod/bam library');
+                    console.error('  4. Incompatible @gmod/bam library version');
+                    console.error('  5. Unsupported BAM file format variant');
                     console.error('Raw header object:', this.header);
                     
                     // Try to get more information about the file
@@ -150,6 +235,11 @@ class BamReader {
                     } catch (fileCheckError) {
                         console.error('Could not perform file validation:', fileCheckError.message);
                     }
+                    
+                    // Despite no references found, continue initialization
+                    // The BAM file might still be usable for some operations
+                    console.warn('⚠️ Continuing initialization despite missing references...');
+                    console.warn('⚠️ Some functionality may be limited');
                 }
                 
             } catch (headerError) {
