@@ -632,8 +632,8 @@ class TrackRenderer {
         // Calculate position and dimensions
         const geneStart = Math.max(gene.start, viewport.start);
         const geneEnd = Math.min(gene.end, viewport.end);
-        const left = ((geneStart - viewport.start) / viewport.range) * 100;
-        const width = ((geneEnd - geneStart) / viewport.range) * 100;
+        const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
+        const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
         
         if (width <= 0) return null;
 
@@ -1980,8 +1980,8 @@ class TrackRenderer {
     setGeneElementPosition(geneElement, gene, viewport, rowIndex, layout, settings) {
         const geneStart = Math.max(gene.start, viewport.start);
         const geneEnd = Math.min(gene.end, viewport.end);
-        const left = ((geneStart - viewport.start) / viewport.range) * 100;
-        const width = ((geneEnd - geneStart) / viewport.range) * 100;
+        const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
+        const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
         
         geneElement.style.left = `${left}%`;
         geneElement.style.width = `${Math.max(width, 0.3)}%`;
@@ -2209,7 +2209,7 @@ class TrackRenderer {
         `;
         
         // Simplified DOM rendering with basic adaptive sizing
-        const sequenceLength = viewport.range;
+        const sequenceLength = (viewport.end - viewport.start);
         const adaptiveHeight = Math.max(20, 14 * 1.4);
         seqDisplay.style.height = `${adaptiveHeight}px`;
         
@@ -2235,7 +2235,7 @@ class TrackRenderer {
         
         // Get actual container width
         const containerWidth = seqDisplay.parentElement.getBoundingClientRect().width || 800;
-        const sequenceLength = viewport.range;
+        const sequenceLength = (viewport.end - viewport.start);
         
         // Measure actual character width for accurate calculation
         const measurements = [];
@@ -2333,7 +2333,7 @@ class TrackRenderer {
         baseElement.textContent = base;
         
         // FIX: Calculate exact positioning to fill entire container
-        const totalSequenceLength = viewport.range;
+        const totalSequenceLength = (viewport.end - viewport.start);
         // Each character should take exactly its portion of the available space
         const exactCharWidth = 100 / totalSequenceLength; // Use percentage-based width
         const leftPosition = index * exactCharWidth;
@@ -2452,8 +2452,8 @@ class TrackRenderer {
         // Calculate position and dimensions
         const variantStart = Math.max(variant.start, viewport.start);
         const variantEnd = Math.min(variant.end, viewport.end);
-        const left = ((variantStart - viewport.start) / viewport.range) * 100;
-        const width = Math.max(((variantEnd - variantStart) / viewport.range) * 100, 0.2);
+        const left = ((variantStart - viewport.start) / (viewport.end - viewport.start)) * 100;
+        const width = Math.max(((variantEnd - variantStart) / (viewport.end - viewport.start)) * 100, 0.2);
         
         variantElement.style.cssText = `
             left: ${left}%;
@@ -2746,6 +2746,25 @@ class TrackRenderer {
         viewport = viewport || this.getCurrentViewport();
         const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
         
+        // CRITICAL FIX: Get and apply track settings for reads track content updates during zoom
+        const rawSettings = this.getTrackSettings('reads');
+        const settings = JSON.parse(JSON.stringify(rawSettings));
+        
+        // BUGFIX: Ensure critical display settings are properly initialized
+        settings.opacity = settings.opacity ?? 0.9;
+        settings.readHeight = settings.readHeight ?? 4;
+        settings.readSpacing = settings.readSpacing ?? 2;
+        settings.minWidth = settings.minWidth ?? 2;
+        settings.forwardColor = settings.forwardColor ?? '#00b894';
+        settings.reverseColor = settings.reverseColor ?? '#f39c12';
+        settings.borderColor = settings.borderColor ?? '#ffffff';
+        settings.borderWidth = settings.borderWidth ?? 0;
+        settings.showCoverage = settings.showCoverage ?? true;
+        // CRITICAL FIX: Force showReference to true if undefined/null to prevent reads not showing
+        settings.showReference = (settings.showReference !== false) ? true : false;
+        
+        console.log(`🔍 [createLegacyReadsTrackContent] Applied settings during zoom:`, settings);
+        
         // Check if ReadsManager has data loaded (either in-memory, streaming, or BAM mode)
         const hasReadsData = this.genomeBrowser.readsManager.rawReadsData || 
                            this.genomeBrowser.readsManager.isStreaming ||
@@ -2769,25 +2788,30 @@ class TrackRenderer {
             trackContent.appendChild(noDataMsg);
             trackContent.style.height = '100px'; // Default height for empty track
         } else {
-            // Existing logic for when reads data is available
-            // This will be similar to the original createLegacyReadsTrack logic
-            // but only returning trackContent
+            // Get reads for current region using ReadsManager with settings
+            const visibleReads = await this.genomeBrowser.readsManager.getReadsForRegion(chromosome, viewport.start, viewport.end, settings);
             
-            // For now, show a message indicating reads are available but need to be rendered
-            const processingMsg = document.createElement('div');
-            processingMsg.className = 'reads-processing-message';
-            processingMsg.textContent = 'Reads data available - processing...';
-            processingMsg.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #4a90e2;
-                font-style: italic;
-                font-size: 14px;
-                text-align: center;
-            `;
-            trackContent.appendChild(processingMsg);
+            if (visibleReads.length === 0) {
+                const noReadsMsg = this.createNoDataMessage(
+                    'No reads in this region or all filtered out',
+                    'no-reads-message'
+                );
+                trackContent.appendChild(noReadsMsg);
+            } else {
+                // Render the reads using the same logic as the main track
+                const readsContainer = this.createReadsVisualization(
+                    visibleReads,
+                    viewport.start,
+                    viewport.end,
+                    settings
+                );
+                trackContent.appendChild(readsContainer);
+                
+                // Update track height based on reads content
+                if (readsContainer.style.height) {
+                    trackContent.style.height = readsContainer.style.height;
+                }
+            }
             trackContent.style.height = '100px';
         }
         
@@ -2856,7 +2880,8 @@ class TrackRenderer {
             settings.borderColor = settings.borderColor ?? '#ffffff';
             settings.borderWidth = settings.borderWidth ?? 0;
             settings.showCoverage = settings.showCoverage ?? true;
-            settings.showReference = settings.showReference ?? true;
+            // CRITICAL FIX: Force showReference to true if undefined/null to prevent reads not showing
+            settings.showReference = (settings.showReference !== false) ? true : false;
             
             // Apply the corrected settings immediately to ensure proper rendering
             this.trackSettings = this.trackSettings || {};
@@ -2986,7 +3011,7 @@ class TrackRenderer {
                 } else {
                     // Create SVG-based read visualization
                     // Pass just topPadding - reads SVG will be positioned after coverage automatically  
-                    this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                    this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
                 }
             }
             
@@ -3105,6 +3130,25 @@ class TrackRenderer {
         // Create track content
         const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
         
+        // CRITICAL FIX: Get and apply track settings for reads track content updates during zoom
+        const rawSettings = this.getTrackSettings('reads');
+        const settings = JSON.parse(JSON.stringify(rawSettings));
+        
+        // BUGFIX: Ensure critical display settings are properly initialized
+        settings.opacity = settings.opacity ?? 0.9;
+        settings.readHeight = settings.readHeight ?? 4;
+        settings.readSpacing = settings.readSpacing ?? 2;
+        settings.minWidth = settings.minWidth ?? 2;
+        settings.forwardColor = settings.forwardColor ?? '#00b894';
+        settings.reverseColor = settings.reverseColor ?? '#f39c12';
+        settings.borderColor = settings.borderColor ?? '#ffffff';
+        settings.borderWidth = settings.borderWidth ?? 0;
+        settings.showCoverage = settings.showCoverage ?? true;
+        // CRITICAL FIX: Force showReference to true if undefined/null to prevent reads not showing
+        settings.showReference = (settings.showReference !== false) ? true : false;
+        
+        console.log(`🔍 [createSingleReadsTrackContent] Applied settings during zoom for ${bamFile.metadata.filename}:`, settings);
+        
         try {
             // Load reads using the specific BAM reader
             // Ensure start position is never negative (BAM coordinates are 0-based)
@@ -3124,7 +3168,7 @@ class TrackRenderer {
                 chromosome, 
                 bamStart, 
                 bamEnd, 
-                { ignoreChromosome: false }
+                settings  // CRITICAL FIX: Pass settings to BAM reader
             );
             
             console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
@@ -3154,21 +3198,7 @@ class TrackRenderer {
                 );
                 trackContent.appendChild(noReadsMsg);
             } else {
-                // Get track settings and create a deep copy to avoid modifying defaults
-                const rawSettings = this.getTrackSettings('reads');
-                const settings = JSON.parse(JSON.stringify(rawSettings));
-                
-                // BUGFIX: Ensure critical display settings are properly initialized
-                settings.opacity = settings.opacity ?? 0.9;
-                settings.readHeight = settings.readHeight ?? 4;
-                settings.readSpacing = settings.readSpacing ?? 2;
-                settings.minWidth = settings.minWidth ?? 2;
-                settings.forwardColor = settings.forwardColor ?? '#00b894';
-                settings.reverseColor = settings.reverseColor ?? '#f39c12';
-                settings.borderColor = settings.borderColor ?? '#ffffff';
-                settings.borderWidth = settings.borderWidth ?? 0;
-                settings.showCoverage = settings.showCoverage ?? true;
-                settings.showReference = settings.showReference ?? true;
+                // Use the settings already configured at the method start
                 
                 // Apply the corrected settings immediately
                 this.trackSettings = this.trackSettings || {};
@@ -3215,7 +3245,7 @@ class TrackRenderer {
                         this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
                     } else {
                         // Pass just topPadding - reads SVG will be positioned after coverage automatically
-                        this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        this.renderReadsElementsSVG(trackContent, limitedReadRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
                     }
                 }
                 
@@ -3251,6 +3281,25 @@ class TrackRenderer {
      */
     async createSingleReadsTrack(chromosome, bamFile) {
         const viewport = this.getCurrentViewport();
+        
+        // CRITICAL FIX: Get and apply track settings for single reads track
+        const rawSettings = this.getTrackSettings('reads');
+        const settings = JSON.parse(JSON.stringify(rawSettings));
+        
+        // BUGFIX: Ensure critical display settings are properly initialized
+        settings.opacity = settings.opacity ?? 0.9;
+        settings.readHeight = settings.readHeight ?? 4;
+        settings.readSpacing = settings.readSpacing ?? 2;
+        settings.minWidth = settings.minWidth ?? 2;
+        settings.forwardColor = settings.forwardColor ?? '#00b894';
+        settings.reverseColor = settings.reverseColor ?? '#f39c12';
+        settings.borderColor = settings.borderColor ?? '#ffffff';
+        settings.borderWidth = settings.borderWidth ?? 0;
+        settings.showCoverage = settings.showCoverage ?? true;
+        // CRITICAL FIX: Force showReference to true if undefined/null to prevent reads not showing
+        settings.showReference = (settings.showReference !== false) ? true : false;
+        
+        console.log(`🔍 [createSingleReadsTrack] Applied settings for ${bamFile.metadata.filename}:`, settings);
         
         // Create track base
         const track = document.createElement('div');
@@ -3302,7 +3351,7 @@ class TrackRenderer {
                 chromosome, 
                 bamStart, 
                 bamEnd, 
-                { ignoreChromosome: false }
+                settings  // CRITICAL FIX: Pass settings to BAM reader
             );
             
             console.log(`📊 [TrackRenderer] BAM query result:`, {
@@ -3332,21 +3381,7 @@ class TrackRenderer {
                 );
                 trackContent.appendChild(noReadsMsg);
             } else {
-                // Get track settings and create a deep copy to avoid modifying defaults
-                const rawSettings = this.getTrackSettings('reads');
-                const settings = JSON.parse(JSON.stringify(rawSettings));
-                
-                // BUGFIX: Ensure critical display settings are properly initialized
-                settings.opacity = settings.opacity ?? 0.9;
-                settings.readHeight = settings.readHeight ?? 4;
-                settings.readSpacing = settings.readSpacing ?? 2;
-                settings.minWidth = settings.minWidth ?? 2;
-                settings.forwardColor = settings.forwardColor ?? '#00b894';
-                settings.reverseColor = settings.reverseColor ?? '#f39c12';
-                settings.borderColor = settings.borderColor ?? '#ffffff';
-                settings.borderWidth = settings.borderWidth ?? 0;
-                settings.showCoverage = settings.showCoverage ?? true;
-                settings.showReference = settings.showReference ?? true;
+                // Use the settings already configured at the method start
                 
                 // Apply the corrected settings immediately
                 this.trackSettings = this.trackSettings || {};
@@ -3393,7 +3428,7 @@ class TrackRenderer {
                         this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
                     } else {
                         // Pass just topPadding - reads SVG will be positioned after coverage automatically
-                        this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
                     }
                 }
                 
@@ -3755,7 +3790,8 @@ class TrackRenderer {
         console.log(`🔍 [ScrollableReads] Reference sequence check: showReference=${settings.showReference}, enabled=${settings.showReference !== false}`);
         if (settings.showReference !== false) {
             console.log(`🔍 [ScrollableReads] Creating reference sequence for viewport ${viewport.start}-${viewport.end}`);
-            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, viewport.range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
+            const range = viewport.end - viewport.start; // Calculate range from viewport
+            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
             if (referenceGroup) {
                 svg.appendChild(referenceGroup);
             }
@@ -3773,7 +3809,7 @@ class TrackRenderer {
                     read, 
                     viewport.start, 
                     viewport.end, 
-                    viewport.range, 
+                    (viewport.end - viewport.start), 
                     readHeight, 
                     relativeRowIndex, 
                     rowSpacing, 
@@ -3791,7 +3827,7 @@ class TrackRenderer {
                             sequence: read.sequence ? read.sequence.substring(0, 20) + '...' : 'NO_SEQUENCE',
                             sequenceLength: read.sequence ? read.sequence.length : 0
                         });
-                        const sequenceGroup = this.createSVGSequenceElement(read, viewport.start, viewport.end, viewport.range, readHeight, relativeRowIndex, rowSpacing, 0, containerWidth, settings); // Use 0 padding in scrollable mode
+                        const sequenceGroup = this.createSVGSequenceElement(read, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, relativeRowIndex, rowSpacing, 0, containerWidth, settings); // Use 0 padding in scrollable mode
                         if (sequenceGroup) {
                             svg.appendChild(sequenceGroup);
                             console.log(`✅ [ScrollableReads] Sequence element added for read: ${read.id}`);
@@ -3965,7 +4001,7 @@ class TrackRenderer {
         // Check if CanvasReadsRenderer is available
         if (typeof CanvasReadsRenderer === 'undefined') {
             console.warn('⚠️ [TrackRenderer] CanvasReadsRenderer not available, falling back to SVG rendering');
-            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
         }
         
         // Generate unique ID for this track instance
@@ -4034,7 +4070,7 @@ class TrackRenderer {
         } catch (error) {
             console.error('❌ [TrackRenderer] Failed to create Canvas reads renderer:', error);
             // Fall back to SVG rendering if Canvas fails
-            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, viewport.range, readHeight, rowSpacing, topPadding, trackHeight, settings);
+            return this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
         }
     }
 
@@ -4896,8 +4932,8 @@ class TrackRenderer {
         // Calculate position and dimensions
         const proteinStart = Math.max(protein.start, viewport.start);
         const proteinEnd = Math.min(protein.end, viewport.end);
-        const left = ((proteinStart - viewport.start) / viewport.range) * 100;
-        const width = Math.max(((proteinEnd - proteinStart) / viewport.range) * 100, 0.3);
+        const left = ((proteinStart - viewport.start) / (viewport.end - viewport.start)) * 100;
+        const width = Math.max(((proteinEnd - proteinStart) / (viewport.end - viewport.start)) * 100, 0.3);
         
         proteinElement.style.left = `${left}%`;
         proteinElement.style.width = `${Math.max(width, 0.3)}%`;
@@ -6739,8 +6775,8 @@ class TrackRenderer {
         const actionEnd = parseInt(positionMatch[3]);
         
         // Calculate position and dimensions
-        const left = ((actionStart - viewport.start) / viewport.range) * 100;
-        const width = ((actionEnd - actionStart) / viewport.range) * 100;
+        const left = ((actionStart - viewport.start) / (viewport.end - viewport.start)) * 100;
+        const width = ((actionEnd - actionStart) / (viewport.end - viewport.start)) * 100;
         
         if (width <= 0) return null;
 
@@ -7476,7 +7512,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         let pathData = `M 0,${svgHeight - padding}`;
         
         data.forEach((point, index) => {
-            const x = ((point.start - viewport.start) / viewport.range) * svgWidth;
+            const x = ((point.start - viewport.start) / (viewport.end - viewport.start)) * svgWidth;
             const normalizedValue = (point.value - minValue) / (maxValue - minValue);
             const y = svgHeight - padding - (normalizedValue * (svgHeight - 2 * padding));
             
@@ -7508,8 +7544,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         svg.setAttribute('preserveAspectRatio', 'none');
         
         data.forEach(point => {
-            const x = ((point.start - viewport.start) / viewport.range) * svgWidth;
-            const width = Math.max(1, ((point.end - point.start) / viewport.range) * svgWidth);
+            const x = ((point.start - viewport.start) / (viewport.end - viewport.start)) * svgWidth;
+            const width = Math.max(1, ((point.end - point.start) / (viewport.end - viewport.start)) * svgWidth);
             const normalizedValue = (point.value - minValue) / (maxValue - minValue);
             const height = normalizedValue * (svgHeight - 2 * padding);
             const y = svgHeight - padding - height;
@@ -7551,7 +7587,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             const relativeX = x / rect.width;
             
             const viewport = this.getCurrentViewport();
-            const genomicPosition = viewport.start + (relativeX * viewport.range);
+            const genomicPosition = viewport.start + (relativeX * (viewport.end - viewport.start));
             
             // Find closest data point
             const closestPoint = visibleData.reduce((closest, point) => {

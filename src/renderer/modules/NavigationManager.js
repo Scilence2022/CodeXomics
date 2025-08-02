@@ -337,8 +337,15 @@ class NavigationManager {
             if (sequenceTrack) {
                 const sequenceElement = this.genomeBrowser.trackRenderer.createSequenceLineTrack(currentChr, sequence);
                 if (sequenceElement) {
-                    sequenceTrack.innerHTML = '';
-                    sequenceTrack.appendChild(sequenceElement);
+                    // Extract only the track content, not the entire track with header
+                    const sequenceContent = sequenceElement.querySelector('.track-content');
+                    if (sequenceContent) {
+                        sequenceTrack.innerHTML = '';
+                        // Copy child nodes one by one to avoid spread operator issues
+                        while (sequenceContent.firstChild) {
+                            sequenceTrack.appendChild(sequenceContent.firstChild);
+                        }
+                    }
                 }
             }
             
@@ -347,8 +354,15 @@ class NavigationManager {
             if (genesTrack) {
                 const genesElement = this.genomeBrowser.trackRenderer.createGeneTrack(currentChr);
                 if (genesElement) {
-                    genesTrack.innerHTML = '';
-                    genesTrack.appendChild(genesElement);
+                    // Extract only the track content, not the entire track with header
+                    const genesContent = genesElement.querySelector('.track-content');
+                    if (genesContent) {
+                        genesTrack.innerHTML = '';
+                        // Copy child nodes one by one to avoid spread operator issues
+                        while (genesContent.firstChild) {
+                            genesTrack.appendChild(genesContent.firstChild);
+                        }
+                    }
                 }
             }
             
@@ -357,8 +371,15 @@ class NavigationManager {
             if (gcTrack) {
                 const gcElement = this.genomeBrowser.trackRenderer.createGCTrack(currentChr, sequence);
                 if (gcElement) {
-                    gcTrack.innerHTML = '';
-                    gcTrack.appendChild(gcElement);
+                    // Extract only the track content, not the entire track with header
+                    const gcContent = gcElement.querySelector('.track-content');
+                    if (gcContent) {
+                        gcTrack.innerHTML = '';
+                        // Copy child nodes one by one to avoid spread operator issues
+                        while (gcContent.firstChild) {
+                            gcTrack.appendChild(gcContent.firstChild);
+                        }
+                    }
                 }
             }
             
