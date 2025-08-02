@@ -9343,19 +9343,26 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 samplingPercentage: 20,
                 samplingCount: 5000,
                 showSamplingInfo: true,
+                // Coverage visualization settings
+                showCoverage: true,
+                coverageHeight: 50,
+                coverageColor: '#4a90e2',
+                coverageStrokeColor: '#2c5aa0',
+                // Reference sequence settings  
+                showReference: true,
+                referenceHeight: 25,
+                referenceFontSize: 12,
+                referenceFontFamily: 'monospace',
                 // Sequence display settings
                 showSequences: false,
                 forceSequences: false,
                 autoFontSize: true,
-                showReference: true,
                 sequenceThreshold: 1.0,
                 sequenceFontSize: 10,
                 sequenceHeight: 14,
                 highlightMismatches: true,
                 showMismatches: true,
                 mismatchColor: '#ff6b6b',
-                referenceFontSize: 12,
-                referenceFontFamily: 'monospace',
                 sequenceFontFamily: 'monospace'
             },
             actions: {
