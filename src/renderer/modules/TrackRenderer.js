@@ -11800,6 +11800,31 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     /**
      * Refresh a specific track to apply new settings
      */
+    /**
+     * Update a specific setting for a track and optionally refresh it
+     */
+    updateTrackSetting(trackType, settingKey, settingValue) {
+        console.log(`🔧 [updateTrackSetting] Updating ${trackType}.${settingKey} = ${settingValue}`);
+        
+        // Ensure trackSettings exists
+        if (!this.trackSettings) {
+            this.trackSettings = {};
+        }
+        
+        // Ensure track settings exist
+        if (!this.trackSettings[trackType]) {
+            this.trackSettings[trackType] = this.getTrackSettings(trackType);
+        }
+        
+        // Update the specific setting
+        this.trackSettings[trackType][settingKey] = settingValue;
+        
+        console.log(`🔧 [updateTrackSetting] Updated ${trackType} settings:`, this.trackSettings[trackType]);
+        
+        // Save the updated settings
+        this.saveTrackSettings(trackType, this.trackSettings[trackType]);
+    }
+
     refreshTrack(trackType) {
         console.log(`🔄 [TrackRenderer] Refreshing ${trackType} track`);
         
