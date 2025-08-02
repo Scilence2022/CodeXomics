@@ -9988,13 +9988,21 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      */
     refreshViewAfterSettingsChange(forceFullRedraw = false) {
         const currentChr = document.getElementById('chromosomeSelect').value;
-        console.log('refreshViewAfterSettingsChange called for chromosome:', currentChr, 'forceFullRedraw:', forceFullRedraw);
+        console.log('🔄 [refreshViewAfterSettingsChange] Called for chromosome:', currentChr, 'forceFullRedraw:', forceFullRedraw);
+        
+        // CRITICAL: Preserve trackSettings before redraw
+        const preservedTrackSettings = this.trackSettings ? JSON.parse(JSON.stringify(this.trackSettings)) : {};
+        console.log('🔄 [refreshViewAfterSettingsChange] Preserving trackSettings:', preservedTrackSettings);
         
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             if (forceFullRedraw) {
-                console.log('Performing full view redraw...');
+                console.log('🔄 [refreshViewAfterSettingsChange] Performing full view redraw...');
                 // Perform complete redraw of all tracks
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+                
+                // CRITICAL: Restore trackSettings after redraw
+                this.trackSettings = preservedTrackSettings;
+                console.log('🔄 [refreshViewAfterSettingsChange] Restored trackSettings after redraw:', this.trackSettings);
             } else {
                 console.log('Triggering optimized view refresh...');
                 
