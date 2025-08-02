@@ -9285,8 +9285,11 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         // First check if we have saved settings from applySettingsToTrack
         if (this.trackSettings && this.trackSettings[trackType]) {
             console.log(`🔍 [getTrackSettings] Using saved ${trackType} track settings:`, this.trackSettings[trackType]);
+            console.log(`🔍 [getTrackSettings] Saved renderingMode: ${this.trackSettings[trackType].renderingMode}`);
             console.log(`🔍 [getTrackSettings] showReference from saved settings: ${this.trackSettings[trackType].showReference}`);
             return this.trackSettings[trackType];
+        } else {
+            console.log(`🔍 [getTrackSettings] No saved settings found for ${trackType}, using defaults`);
         }
         
         // Get settings from ConfigManager or default values
@@ -9389,7 +9392,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         }
         
         const finalSettings = { ...defaultSettings[trackType] || {}, ...savedSettings };
-        console.log(`Using fallback merged settings for ${trackType}:`, finalSettings);
+        console.log(`🔍 [getTrackSettings] Using fallback merged settings for ${trackType}:`, finalSettings);
+        console.log(`🔍 [getTrackSettings] Final renderingMode: ${finalSettings.renderingMode}`);
         return finalSettings;
     }
     
@@ -9776,13 +9780,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Apply settings to track immediately
      */
     applySettingsToTrack(trackType, settings) {
-        console.log(`applySettingsToTrack called for ${trackType} with settings:`, settings);
+        console.log(`🔧 [applySettingsToTrack] Called for ${trackType} with settings:`, settings);
+        console.log(`🔧 [applySettingsToTrack] Settings renderingMode: ${settings.renderingMode}`);
         
         // Store settings for use during rendering
         if (!this.trackSettings) {
             this.trackSettings = {};
         }
         this.trackSettings[trackType] = settings;
+        
+        console.log(`🔧 [applySettingsToTrack] Stored settings for ${trackType}:`, this.trackSettings[trackType]);
+        console.log(`🔧 [applySettingsToTrack] Stored renderingMode: ${this.trackSettings[trackType].renderingMode}`);
         
         // Special handling for sequence track settings
         if (trackType === 'sequence' && this.genomeBrowser.sequenceUtils) {
