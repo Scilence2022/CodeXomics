@@ -25,12 +25,12 @@ class CanvasReadsRenderer {
             ...options
         };
         
-        // Read rendering colors
+        // Read rendering colors (use options if provided, otherwise defaults)
         this.readColors = {
-            forward: '#4285F4',      // Blue for forward reads
-            reverse: '#EA4335',      // Red for reverse reads
-            forwardPaired: '#34A853', // Green for forward paired
-            reversePaired: '#FBBC05', // Yellow for reverse paired
+            forward: this.options.forwardColor || '#4285F4',      // Blue for forward reads
+            reverse: this.options.reverseColor || '#EA4335',      // Red for reverse reads
+            forwardPaired: this.options.pairedColor || '#34A853', // Green for forward paired
+            reversePaired: this.options.pairedColor || '#FBBC05', // Yellow for reverse paired
             unpaired: '#9AA0A6',     // Gray for unpaired
             lowQuality: '#F4B400',   // Orange for low quality
             duplicate: '#9C27B0',    // Purple for duplicates
@@ -45,7 +45,7 @@ class CanvasReadsRenderer {
         };
         
         // Mismatch highlighting
-        this.mismatchColor = '#ff6b6b';
+        this.mismatchColor = this.options.mismatchColor || '#ff6b6b';
         
         // Canvas and rendering context
         this.canvas = null;
@@ -103,11 +103,10 @@ class CanvasReadsRenderer {
             this.calculateTextMetrics();
         }
         
-        // Render reads
-        this.render();
-        
         // Setup resize observer for responsive updates
         this.setupResizeObserver();
+        
+        // Note: Don't render immediately in constructor - wait for explicit render() call
         
         console.log('✅ [CanvasReadsRenderer] Canvas reads renderer initialized successfully');
     }

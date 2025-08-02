@@ -3282,8 +3282,21 @@ class TrackRenderer {
                 bamEnd,
                 fileName: bamFile.metadata.name,
                 hasReferences: bamFile.reader.references?.length || 0,
-                availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || []
+                availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || [],
+                isInitialized: bamFile.reader.isInitialized,
+                readerType: bamFile.reader.constructor.name
             });
+            
+            // Check if reader is properly initialized
+            if (!bamFile.reader.isInitialized) {
+                throw new Error('BAM reader is not properly initialized');
+            }
+            
+            // Check if we have references for this chromosome
+            const hasReferences = bamFile.reader.references && bamFile.reader.references.length > 0;
+            if (!hasReferences) {
+                console.warn(`⚠️ [TrackRenderer] No references found in BAM file - attempting query anyway`);
+            }
             
             const reads = await bamFile.reader.getRecordsForRange(
                 chromosome, 
@@ -3692,6 +3705,9 @@ class TrackRenderer {
         // Store update function for external use
         scrollbar._updateScrollPosition = updateScrollPosition;
         
+        // Initialize scrollbar position to top (scrollTop = 0)
+        updateScrollPosition(0);
+        
         scrollbar.appendChild(thumb);
         return scrollbar;
     }
@@ -3714,7 +3730,7 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container scrollable');
         svg.style.position = 'absolute';
-        svg.style.top = `${startRow * (readHeight + rowSpacing)}px`;
+        svg.style.top = `${topPadding + (startRow * (readHeight + rowSpacing))}px`;
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
         
@@ -3751,6 +3767,8 @@ class TrackRenderer {
             const relativeRowIndex = rowIndex - startRow;
             
             rowReads.forEach((read) => {
+                // In scrollable mode, calculate reference spacing separately
+                const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
                 const readGroup = this.createSVGReadElement(
                     read, 
                     viewport.start, 
@@ -3759,7 +3777,7 @@ class TrackRenderer {
                     readHeight, 
                     relativeRowIndex, 
                     rowSpacing, 
-                    0, // Use 0 padding in scrollable mode for relative positioning
+                    referenceSpacing, // Pass reference spacing as topPadding in scrollable mode
                     containerWidth, 
                     settings
                 );
@@ -3900,7 +3918,10 @@ class TrackRenderer {
         // Create read elements as SVG rectangles
         readRows.forEach((rowReads, rowIndex) => {
             rowReads.forEach((read) => {
-                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings);
+                // Calculate reference spacing for non-scrollable mode
+                const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
+                const adjustedTopPadding = topPadding + referenceSpacing;
+                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, adjustedTopPadding, containerWidth, settings);
                 if (readGroup) {
                     svg.appendChild(readGroup);
                     
@@ -3978,7 +3999,13 @@ class TrackRenderer {
             strandColoring: !settings.showQualityColors, // Use strand coloring when not using quality
             mismatchHighlight: settings.highlightMismatches !== false,
             showCoverage: settings.showCoverage !== false,
-            backgroundColor: 'transparent'
+            backgroundColor: 'transparent',
+            // Color settings from track settings
+            forwardColor: settings.forwardColor || '#00b894',
+            reverseColor: settings.reverseColor || '#f39c12',
+            pairedColor: settings.pairedColor || '#6c5ce7',
+            mismatchColor: settings.mismatchColor || '#ff6b6b',
+            opacity: settings.opacity || 0.9
         };
         
         try {
@@ -3993,6 +4020,10 @@ class TrackRenderer {
             
             // Append canvas container to track content
             trackContent.appendChild(canvasContainer);
+            
+            // Now render with proper settings
+            console.log('🎨 [TrackRenderer] Rendering Canvas with settings:', canvasOptions);
+            canvasRenderer.render();
             
             console.log('✅ [TrackRenderer] Canvas reads renderer created successfully', {
                 trackId: trackId,
@@ -4094,9 +4125,8 @@ class TrackRenderer {
         const minWidth = settings.minWidth || 2;
         const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         
-        // Calculate Y position, adding space for reference sequence if shown
-        const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
-        const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
+        // Calculate Y position - topPadding already includes reference spacing in scrollable mode
+        const y = topPadding + rowIndex * (readHeight + rowSpacing);
 
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');

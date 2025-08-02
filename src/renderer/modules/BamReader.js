@@ -153,13 +153,26 @@ class BamReader {
                         console.log('🔍 Trying to get references from index...');
                         // Some BAM readers can get references from the index
                         try {
-                            const indexStats = await this.bamFile.getIndex();
-                            if (indexStats && indexStats.refStats) {
-                                console.log('🔍 Found reference stats in index');
-                                this.references = Object.entries(indexStats.refStats).map(([name, stats]) => ({
-                                    name: name,
-                                    length: stats.end || stats.length || 0
-                                }));
+                            // Check if getIndex method exists before calling it
+                            if (typeof this.bamFile.getIndex === 'function') {
+                                const indexStats = await this.bamFile.getIndex();
+                                if (indexStats && indexStats.refStats) {
+                                    console.log('🔍 Found reference stats in index');
+                                    this.references = Object.entries(indexStats.refStats).map(([name, stats]) => ({
+                                        name: name,
+                                        length: stats.end || stats.length || 0
+                                    }));
+                                }
+                            } else {
+                                console.log('🔍 getIndex method not available on this bamFile instance');
+                                // Try alternative index access methods
+                                if (this.bamFile.index) {
+                                    console.log('🔍 Trying direct index property access');
+                                    const indexObj = this.bamFile.index;
+                                    if (indexObj.references) {
+                                        this.references = indexObj.references;
+                                    }
+                                }
                             }
                         } catch (indexError) {
                             console.log('Could not get references from index:', indexError.message);
@@ -174,15 +187,59 @@ class BamReader {
             if (this.references.length === 0) {
                 console.log('🔍 Final attempt: Probing BAM file structure...');
                 try {
-                    // Try to read one record to see if we can infer references
-                    const firstRecords = await this.bamFile.getRecordsForRange('*', 0, 1);
-                    if (firstRecords && firstRecords.length > 0) {
-                        const firstRecord = firstRecords[0];
+                    // Try multiple approaches to find records and infer references
+                    console.log('🔍 Trying to find any readable records...');
+                    
+                    let firstRecord = null;
+                    
+                    // Method 1: Try reading with wildcard
+                    try {
+                        const wildcardRecords = await this.bamFile.getRecordsForRange('*', 0, 1);
+                        if (wildcardRecords && wildcardRecords.length > 0) {
+                            firstRecord = wildcardRecords[0];
+                            console.log('🔍 Found record via wildcard query');
+                        }
+                    } catch (wildcardError) {
+                        console.log('Wildcard query failed:', wildcardError.message);
+                    }
+                    
+                    // Method 2: Try reading without specifying chromosome
+                    if (!firstRecord) {
+                        try {
+                            const anyRecords = await this.bamFile.getRecordsForRange();
+                            if (anyRecords && anyRecords.length > 0) {
+                                firstRecord = anyRecords[0];
+                                console.log('🔍 Found record via unspecified query');
+                            }
+                        } catch (anyError) {
+                            console.log('Unspecified query failed:', anyError.message);
+                        }
+                    }
+                    
+                    // Method 3: Try common chromosome names
+                    if (!firstRecord) {
+                        const commonChrNames = ['1', 'chr1', 'I', 'chrI', 'chromosome1', 'scaffold1', 'contig1'];
+                        for (const chrName of commonChrNames) {
+                            try {
+                                const chrRecords = await this.bamFile.getRecordsForRange(chrName, 0, 1000);
+                                if (chrRecords && chrRecords.length > 0) {
+                                    firstRecord = chrRecords[0];
+                                    console.log(`🔍 Found record via common name query: ${chrName}`);
+                                    break;
+                                }
+                            } catch (chrError) {
+                                // Continue to next chromosome name
+                            }
+                        }
+                    }
+                    
+                    if (firstRecord) {
                         console.log('🔍 Found first record, attempting to infer references...');
                         console.log('First record info:', {
                             refName: firstRecord.refName,
                             start: firstRecord.start,
-                            end: firstRecord.end
+                            end: firstRecord.end,
+                            refId: firstRecord.refId
                         });
                         
                         // If we found a record with a reference name, we can at least create a minimal reference
@@ -193,6 +250,8 @@ class BamReader {
                                 length: Math.max(firstRecord.end || 0, 1000000) // Estimate length
                             }];
                         }
+                    } else {
+                        console.warn('🔍 Could not find any readable records in BAM file');
                     }
                 } catch (probeError) {
                     console.log('Could not probe BAM records:', probeError.message);
@@ -263,6 +322,8 @@ class BamReader {
             console.log(`  📊 References: ${this.references.length}`);
             if (this.references.length > 0) {
                 console.log(`  📋 Sample references:`, this.references.slice(0, 5).map(ref => `${ref.name} (${ref.length}bp)`));
+            } else {
+                console.warn(`  ⚠️ WARNING: No references found - this may cause issues with reads display`);
             }
             console.log(`  📈 Total reads: ${this.totalReads > 0 ? this.totalReads.toLocaleString() : 'Will be counted on-demand'}`);
             console.log(`  💾 File size: ${this.getFormattedFileSize()}`);
