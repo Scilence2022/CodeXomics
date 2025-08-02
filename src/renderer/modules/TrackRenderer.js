@@ -10886,32 +10886,33 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         console.log(`🔍 [renderReferenceSequenceInSVG] Rendering ${referenceSequence.length} bases for range ${range}, viewport: ${viewport.start}-${viewport.end}`);
         
-        // Calculate optimal font size based on available space
-        const basesPerPixel = range / 100; // Using viewBox width of 100
-        const shouldShowText = basesPerPixel <= 10; // More lenient - show text when not extremely dense
+        // Simple adaptive approach: show individual bases for sequences <= 200bp, or sample for longer sequences
+        const maxBasesToShow = 200;
+        const shouldShowText = referenceSequence.length <= maxBasesToShow;
+        const shouldShowSample = !shouldShowText && referenceSequence.length <= 2000; // Show sampled bases for medium sequences
         
-        console.log(`🔍 [renderReferenceSequenceInSVG] basesPerPixel: ${basesPerPixel}, shouldShowText: ${shouldShowText}`);
+        console.log(`🔍 [renderReferenceSequenceInSVG] sequenceLength: ${referenceSequence.length}, shouldShowText: ${shouldShowText}, shouldShowSample: ${shouldShowSample}`);
         
         if (shouldShowText) {
-            // Create text elements for each base
-            const stepSize = Math.max(1, Math.floor(basesPerPixel));
-            console.log(`🔍 [renderReferenceSequenceInSVG] Using stepSize: ${stepSize}`);
+            // Show all bases for short sequences
+            console.log(`🔍 [renderReferenceSequenceInSVG] Showing all bases`);
             
-            for (let i = 0; i < referenceSequence.length; i += stepSize) {
+            for (let i = 0; i < referenceSequence.length; i++) {
                 const base = referenceSequence[i];
-                const x = (i / referenceSequence.length) * 100; // Fix: use referenceSequence.length instead of range
+                const x = (i / referenceSequence.length) * 100;
                 
-                const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                textElement.setAttribute('x', x);
-                textElement.setAttribute('y', height / 2);
-                textElement.setAttribute('font-size', fontSize);
-                textElement.setAttribute('font-family', settings.referenceFontFamily || 'monospace');
-                textElement.setAttribute('text-anchor', 'middle');
-                textElement.setAttribute('dominant-baseline', 'middle');
-                textElement.setAttribute('fill', '#495057');
-                textElement.textContent = base;
+                this.createBaseElement(svg, base, x, height, fontSize, settings);
+            }
+        } else if (shouldShowSample) {
+            // Show sampled bases for medium sequences
+            const sampleStep = Math.ceil(referenceSequence.length / 50); // Sample ~50 bases
+            console.log(`🔍 [renderReferenceSequenceInSVG] Showing sampled bases with step: ${sampleStep}`);
+            
+            for (let i = 0; i < referenceSequence.length; i += sampleStep) {
+                const base = referenceSequence[i];
+                const x = (i / referenceSequence.length) * 100;
                 
-                svg.appendChild(textElement);
+                this.createBaseElement(svg, base, x, height, fontSize, settings);
             }
         } else {
             console.log(`🔍 [renderReferenceSequenceInSVG] Too dense to show individual bases, showing simplified view`);
@@ -10938,6 +10939,38 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             indicatorText.textContent = `Reference (${referenceSequence.length} bp)`;
             svg.appendChild(indicatorText);
         }
+    }
+    
+    /**
+     * Create a single base element for reference sequence display
+     */
+    createBaseElement(svg, base, x, y, fontSize, settings) {
+        const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textElement.setAttribute('x', x);
+        textElement.setAttribute('y', y);
+        textElement.setAttribute('font-size', fontSize);
+        textElement.setAttribute('font-family', settings.referenceFontFamily || 'monospace');
+        textElement.setAttribute('text-anchor', 'middle');
+        textElement.setAttribute('dominant-baseline', 'middle');
+        textElement.setAttribute('fill', this.getBaseColor(base));
+        textElement.textContent = base;
+        
+        svg.appendChild(textElement);
+    }
+    
+    /**
+     * Get color for DNA base
+     */
+    getBaseColor(base) {
+        const colors = {
+            'A': '#FF4136', // Red
+            'T': '#0074D9', // Blue  
+            'G': '#2ECC40', // Green
+            'C': '#FF851B', // Orange
+            'U': '#0074D9', // Blue (same as T)
+            'N': '#AAAAAA', // Gray
+        };
+        return colors[base.toUpperCase()] || '#495057';
     }
     
     /**
