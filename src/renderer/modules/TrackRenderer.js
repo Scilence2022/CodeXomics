@@ -8980,7 +8980,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                         <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
                         <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
                     </select>
-                    <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities.</div>
+                    <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities. <strong>Click Apply to apply changes.</strong></div>
                 </div>
             </div>
             <div class="settings-section">
@@ -11211,30 +11211,28 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 zoomSensitivityValue.textContent = e.target.value;
             });
             
-            // Save setting when user releases slider
+            // Note: Setting will be applied when Apply button is clicked
             zoomSensitivitySlider.addEventListener('change', (e) => {
-                this.updateTrackSetting('genes', 'wheelZoomSensitivity', parseFloat(e.target.value));
+                console.log(`🔧 [setupGenesSettingsEventListeners] Zoom sensitivity changed to: ${e.target.value} (will apply on Apply button)`);
             });
         }
         
-        // Override global zoom checkbox
+        // Override global zoom checkbox - setting will be applied when Apply button is clicked
         const overrideGlobalZoomCheckbox = bodyElement.querySelector('#genesOverrideGlobalZoom');
         if (overrideGlobalZoomCheckbox) {
             overrideGlobalZoomCheckbox.addEventListener('change', (e) => {
-                this.updateTrackSetting('genes', 'overrideGlobalZoom', e.target.checked);
+                console.log(`🔧 [setupGenesSettingsEventListeners] Override global zoom changed to: ${e.target.checked} (will apply on Apply button)`);
             });
         }
     }
 
     setupReadsSettingsEventListeners(bodyElement) {
-        // Rendering mode selection
+        // Rendering mode selection - no immediate application, only on Apply button
         const renderingModeSelect = bodyElement.querySelector('#readsRenderingMode');
         if (renderingModeSelect) {
+            // Only add visual feedback, actual application happens on Apply button
             renderingModeSelect.addEventListener('change', () => {
-                console.log(`🔧 [setupReadsSettingsEventListeners] Rendering mode changed to: ${renderingModeSelect.value}`);
-                this.updateTrackSetting('reads', 'renderingMode', renderingModeSelect.value, true);
-                // Force track refresh to apply new rendering mode
-                this.refreshTrack('reads');
+                console.log(`🔧 [setupReadsSettingsEventListeners] Rendering mode selection changed to: ${renderingModeSelect.value} (will apply on Apply button)`);
             });
         }
         
