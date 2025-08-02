@@ -9343,6 +9343,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 samplingPercentage: 20,
                 samplingCount: 5000,
                 showSamplingInfo: true,
+                // Rendering method (use SVG by default to avoid Canvas loading issues)
+                renderingMode: 'svg',
                 // Coverage visualization settings
                 showCoverage: true,
                 coverageHeight: 50,
@@ -9477,6 +9479,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 break;
                 
             case 'reads':
+                // Rendering method settings
+                const renderingModeSelect = modal.querySelector('#readsRenderingMode');
+                settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'svg';
+                
                 // Coverage settings
                 settings.showCoverage = modal.querySelector('#readsShowCoverage').checked;
                 settings.coverageHeight = parseInt(modal.querySelector('#coverageHeight').value) || 50;
