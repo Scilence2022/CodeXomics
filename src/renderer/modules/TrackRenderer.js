@@ -10812,6 +10812,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     createReferenceVisualization(trackContent, viewport, referenceHeight, settings) {
         if (settings.showReference === false) return 0;
         
+        console.log(`🔍 [createReferenceVisualization] Creating reference for viewport: ${viewport.start}-${viewport.end}, height: ${referenceHeight}`);
+        
         // Get reference sequence from genome browser
         const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
         console.log(`🔍 [createReferenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`);
@@ -10848,7 +10850,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         svg.setAttribute('viewBox', `0 0 100 ${referenceHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reference-svg');
-        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid #ddd;';
+        
+        console.log(`🔍 [createReferenceVisualization] Created SVG with viewBox: 0 0 100 ${referenceHeight}`);
         
         // Create reference sequence display
         if (referenceSequence) {
