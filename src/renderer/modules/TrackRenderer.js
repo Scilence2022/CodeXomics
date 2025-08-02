@@ -4419,7 +4419,11 @@ class TrackRenderer {
                 // Convert 1-based coordinates to 0-based for string slicing
                 const startIndex = Math.max(0, start - 1);
                 const endIndex = Math.min(sequence.length, end);
-                return sequence.substring(startIndex, endIndex);
+                const result = sequence.substring(startIndex, endIndex);
+                console.log(`🔍 [getReferenceSequence] Extracted sequence: ${result.length} bases, preview: "${result.substring(0, 20)}..."`);
+                return result;
+            } else {
+                console.log(`🔍 [getReferenceSequence] Invalid sequence type or empty: ${typeof sequence}, length: ${sequence?.length}`);
             }
         }
         return null;
@@ -10876,16 +10880,22 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const range = viewport.end - viewport.start;
         const fontSize = Math.min(12, Math.max(8, height * 0.7));
         
+        console.log(`🔍 [renderReferenceSequenceInSVG] Rendering ${referenceSequence.length} bases for range ${range}, viewport: ${viewport.start}-${viewport.end}`);
+        
         // Calculate optimal font size based on available space
         const basesPerPixel = range / 100; // Using viewBox width of 100
-        const shouldShowText = basesPerPixel <= 1; // Show text only when not too dense
+        const shouldShowText = basesPerPixel <= 10; // More lenient - show text when not extremely dense
+        
+        console.log(`🔍 [renderReferenceSequenceInSVG] basesPerPixel: ${basesPerPixel}, shouldShowText: ${shouldShowText}`);
         
         if (shouldShowText) {
             // Create text elements for each base
             const stepSize = Math.max(1, Math.floor(basesPerPixel));
+            console.log(`🔍 [renderReferenceSequenceInSVG] Using stepSize: ${stepSize}`);
+            
             for (let i = 0; i < referenceSequence.length; i += stepSize) {
                 const base = referenceSequence[i];
-                const x = (i / range) * 100;
+                const x = (i / referenceSequence.length) * 100; // Fix: use referenceSequence.length instead of range
                 
                 const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 textElement.setAttribute('x', x);
@@ -10900,6 +10910,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 svg.appendChild(textElement);
             }
         } else {
+            console.log(`🔍 [renderReferenceSequenceInSVG] Too dense to show individual bases, showing simplified view`);
             // Create a simplified representation for dense regions
             const backgroundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             backgroundRect.setAttribute('x', '0');
@@ -10909,8 +10920,19 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             backgroundRect.setAttribute('fill', '#f8f9fa');
             backgroundRect.setAttribute('stroke', '#dee2e6');
             backgroundRect.setAttribute('stroke-width', '1');
-            
             svg.appendChild(backgroundRect);
+            
+            // Add indicator text
+            const indicatorText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            indicatorText.setAttribute('x', '50');
+            indicatorText.setAttribute('y', height / 2);
+            indicatorText.setAttribute('font-size', Math.min(10, height * 0.6));
+            indicatorText.setAttribute('font-family', 'Arial, sans-serif');
+            indicatorText.setAttribute('text-anchor', 'middle');
+            indicatorText.setAttribute('dominant-baseline', 'middle');
+            indicatorText.setAttribute('fill', '#666');
+            indicatorText.textContent = `Reference (${referenceSequence.length} bp)`;
+            svg.appendChild(indicatorText);
         }
     }
     
