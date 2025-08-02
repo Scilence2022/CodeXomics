@@ -2971,16 +2971,20 @@ class TrackRenderer {
                 this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
             }
             
-            // Reference sequence is now handled in SVG for better alignment
+            // Create fixed reference visualization above reads (like coverage)
             let referenceHeight = 0;
+            if (settings.showReference !== false) {
+                referenceHeight = parseInt(settings.referenceHeight) || 25;
+                this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
+            }
             
             // Arrange reads into non-overlapping rows
             const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
             
             const readHeight = settings.readHeight || 14;
             const rowSpacing = settings.readSpacing || 2;
-            // Reduce top padding when coverage is shown to minimize gap
-            const topPadding = (showCoverage || showReference) ? 2 : 10;
+            // Adjust top padding based on fixed elements above (coverage + reference)
+            const topPadding = (showCoverage || referenceHeight > 0) ? (coverageHeight + referenceHeight + 2) : 10;
             const bottomPadding = 10;
             
             // Total height above reads (coverage + reference + spacing)
@@ -2991,7 +2995,7 @@ class TrackRenderer {
             
             if (enableVerticalScroll) {
                 // Create scrollable reads track with all rows
-                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + totalTopHeight, bottomPadding, settings);
+                this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
             } else {
                 // Use traditional limited rows approach
                 const maxRows = settings.maxRows || 20;
@@ -3395,8 +3399,12 @@ class TrackRenderer {
                     this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
                 }
                 
-                // Reference sequence is now handled in SVG for better alignment
+                // Create fixed reference visualization above reads (like coverage)
                 let referenceHeight = 0;
+                if (settings.showReference !== false) {
+                    referenceHeight = parseInt(settings.referenceHeight) || 25;
+                    this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
+                }
                 
                 // Arrange reads in rows
                 const readRows = this.arrangeReadsInRows(reads, viewport.start, viewport.end);
@@ -3404,8 +3412,8 @@ class TrackRenderer {
                 // Calculate track height and spacing
                 const readHeight = parseInt(settings.readHeight) || 8;
                 const rowSpacing = parseInt(settings.rowSpacing) || 2;
-                // Reduce top padding when coverage or reference is shown to minimize gap
-                const topPadding = (showCoverage || showReference) ? 2 : (parseInt(settings.topPadding) || 10);
+                // Adjust top padding based on fixed elements above (coverage + reference)
+                const topPadding = (showCoverage || referenceHeight > 0) ? (coverageHeight + referenceHeight + 2) : (parseInt(settings.topPadding) || 10);
                 const bottomPadding = parseInt(settings.bottomPadding) || 10;
                 
                 // Total height above reads (coverage + reference)
@@ -3418,7 +3426,7 @@ class TrackRenderer {
                 const enableVerticalScroll = settings.enableVerticalScroll !== false;
                 
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
-                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + totalTopHeight, bottomPadding, settings);
+                    this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
                 } else {
                     // Render all reads normally using Canvas or SVG based on settings
                     const renderingMode = settings.renderingMode || 'canvas';
@@ -3786,16 +3794,7 @@ class TrackRenderer {
         
         console.log(`🎯 [ScrollableReads] Final sequence display decision: ${showSequences}`);
         
-        // Add reference sequence track if enabled (independent of sequence display)
-        console.log(`🔍 [ScrollableReads] Reference sequence check: showReference=${settings.showReference}, enabled=${settings.showReference !== false}`);
-        if (settings.showReference !== false) {
-            console.log(`🔍 [ScrollableReads] Creating reference sequence for viewport ${viewport.start}-${viewport.end}`);
-            const range = viewport.end - viewport.start; // Calculate range from viewport
-            const referenceGroup = this.createSVGReferenceSequence(viewport.start, viewport.end, range, readHeight, 0, containerWidth, settings); // Use 0 padding in scrollable mode
-            if (referenceGroup) {
-                svg.appendChild(referenceGroup);
-            }
-        }
+        // Reference sequence is now handled as fixed element above the scrollable area
         
         // Render visible rows
         for (let rowIndex = startRow; rowIndex < endRow && rowIndex < readRows.length; rowIndex++) {
@@ -3941,23 +3940,13 @@ class TrackRenderer {
         
         console.log(`🎯 [TrackRenderer] Final sequence display decision: ${showSequences}`);
         
-        // Add reference sequence track if enabled (independent of sequence display)
-        console.log(`🔍 [TrackRenderer] Reference sequence check: showReference=${settings.showReference}, enabled=${settings.showReference !== false}`);
-        if (settings.showReference !== false) {
-            console.log(`🔍 [TrackRenderer] Creating reference sequence for region ${start}-${end}`);
-            const referenceGroup = this.createSVGReferenceSequence(start, end, range, readHeight, topPadding, containerWidth, settings);
-            if (referenceGroup) {
-                svg.appendChild(referenceGroup);
-            }
-        }
+        // Reference sequence is now handled as fixed element above the SVG area
         
         // Create read elements as SVG rectangles
         readRows.forEach((rowReads, rowIndex) => {
             rowReads.forEach((read) => {
-                // Calculate reference spacing for non-scrollable mode
-                const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
-                const adjustedTopPadding = topPadding + referenceSpacing;
-                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, adjustedTopPadding, containerWidth, settings);
+                // Reference is now handled separately, so use original topPadding
+                const readGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, settings);
                 if (readGroup) {
                     svg.appendChild(readGroup);
                     
@@ -4396,8 +4385,8 @@ class TrackRenderer {
         label.setAttribute('font-weight', 'bold');
         label.setAttribute('fill', '#6c757d');
         label.setAttribute('dominant-baseline', 'middle');
-        label.textContent = 'REF';
-        referenceGroup.appendChild(label);
+        // REF label removed as requested
+        // referenceGroup.appendChild(label);
 
         return referenceGroup;
     }
@@ -10792,6 +10781,99 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         coverageContainer.appendChild(statsDiv);
         
         trackContent.appendChild(coverageContainer);
+    }
+
+    /**
+     * Create reference sequence visualization above reads (fixed position like coverage)
+     */
+    createReferenceVisualization(trackContent, viewport, referenceHeight, settings) {
+        if (settings.showReference === false) return 0;
+        
+        // Get reference sequence from genome browser
+        const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
+        if (!referenceSequence) return 0;
+        
+        // Check if coverage exists to position reference below it
+        const coverageElement = trackContent.querySelector('.coverage-visualization');
+        const coverageHeight = coverageElement ? parseInt(coverageElement.style.height) || 0 : 0;
+        
+        // Create reference container (fixed position like coverage)
+        const referenceContainer = document.createElement('div');
+        referenceContainer.className = 'reference-sequence-visualization';
+        referenceContainer.style.cssText = `
+            position: absolute;
+            top: ${coverageHeight}px;
+            left: 0;
+            right: 0;
+            height: ${referenceHeight}px;
+            background: linear-gradient(to bottom, #f1f3f4 0%, #e8eaed 100%);
+            border-bottom: 1px solid #dadce0;
+            margin-bottom: 0;
+            z-index: 2;
+            overflow: hidden;
+        `;
+        
+        // Create SVG for reference sequence visualization
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', referenceHeight);
+        svg.setAttribute('viewBox', `0 0 100 ${referenceHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('class', 'reference-svg');
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
+        
+        // Create reference sequence display
+        this.renderReferenceSequenceInSVG(svg, referenceSequence, viewport, referenceHeight, settings);
+        
+        referenceContainer.appendChild(svg);
+        trackContent.appendChild(referenceContainer);
+        
+        return referenceHeight;
+    }
+
+    /**
+     * Render reference sequence text in SVG
+     */
+    renderReferenceSequenceInSVG(svg, referenceSequence, viewport, height, settings) {
+        const range = viewport.end - viewport.start;
+        const fontSize = Math.min(12, Math.max(8, height * 0.7));
+        
+        // Calculate optimal font size based on available space
+        const basesPerPixel = range / 100; // Using viewBox width of 100
+        const shouldShowText = basesPerPixel <= 1; // Show text only when not too dense
+        
+        if (shouldShowText) {
+            // Create text elements for each base
+            const stepSize = Math.max(1, Math.floor(basesPerPixel));
+            for (let i = 0; i < referenceSequence.length; i += stepSize) {
+                const base = referenceSequence[i];
+                const x = (i / range) * 100;
+                
+                const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textElement.setAttribute('x', x);
+                textElement.setAttribute('y', height / 2);
+                textElement.setAttribute('font-size', fontSize);
+                textElement.setAttribute('font-family', settings.referenceFontFamily || 'monospace');
+                textElement.setAttribute('text-anchor', 'middle');
+                textElement.setAttribute('dominant-baseline', 'middle');
+                textElement.setAttribute('fill', '#495057');
+                textElement.textContent = base;
+                
+                svg.appendChild(textElement);
+            }
+        } else {
+            // Create a simplified representation for dense regions
+            const backgroundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            backgroundRect.setAttribute('x', '0');
+            backgroundRect.setAttribute('y', '0');
+            backgroundRect.setAttribute('width', '100');
+            backgroundRect.setAttribute('height', height);
+            backgroundRect.setAttribute('fill', '#f8f9fa');
+            backgroundRect.setAttribute('stroke', '#dee2e6');
+            backgroundRect.setAttribute('stroke-width', '1');
+            
+            svg.appendChild(backgroundRect);
+        }
     }
     
     /**
