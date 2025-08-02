@@ -210,13 +210,6 @@ class CanvasReadsRenderer {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
         
-        // Draw a test rectangle to verify Canvas is working
-        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        this.ctx.fillRect(0, 0, 100, 20);
-        this.ctx.fillStyle = '#000';
-        this.ctx.font = '12px Arial';
-        this.ctx.fillText('Canvas Test', 5, 15);
-        
         // Render reference sequence if enabled
         if (this.options.showReference) {
             this.renderReferenceSequence();
