@@ -3008,6 +3008,7 @@ class TrackRenderer {
             
                 // Render reads using Canvas or SVG based on settings
                 const renderingMode = settings.renderingMode || 'canvas';
+                console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
                 
                 if (renderingMode === 'canvas') {
                     // Use Canvas rendering for high performance
@@ -3243,6 +3244,7 @@ class TrackRenderer {
                 
                     // Render reads using Canvas or SVG based on settings
                     const renderingMode = settings.renderingMode || 'canvas';
+                    console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
                     
                     if (renderingMode === 'canvas') {
                         // Use Canvas rendering for high performance
@@ -3430,6 +3432,7 @@ class TrackRenderer {
                 } else {
                     // Render all reads normally using Canvas or SVG based on settings
                     const renderingMode = settings.renderingMode || 'canvas';
+                    console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
                     
                     if (renderingMode === 'canvas') {
                         // Use Canvas rendering for high performance
@@ -8974,7 +8977,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 <div class="form-group">
                     <label for="readsRenderingMode">Rendering method:</label>
                     <select id="readsRenderingMode">
-                        <option value="canvas" ${(settings.renderingMode || 'canvas') === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
+                        <option value="canvas" ${settings.renderingMode === 'canvas' ? 'selected' : ''}>Canvas (High Performance)</option>
                         <option value="svg" ${settings.renderingMode === 'svg' ? 'selected' : ''}>SVG (Legacy)</option>
                     </select>
                     <div class="help-text">Choose rendering method. Canvas provides better performance for large datasets, while SVG maintains DOM interaction capabilities.</div>
@@ -9332,8 +9335,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 samplingPercentage: 20,
                 samplingCount: 5000,
                 showSamplingInfo: true,
-                // Rendering method (use SVG by default to avoid Canvas loading issues)
-                renderingMode: 'svg',
+                // Rendering method (use Canvas by default for better performance)
+                renderingMode: 'canvas',
                 // Coverage visualization settings
                 showCoverage: true,
                 coverageHeight: 50,
@@ -9470,7 +9473,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             case 'reads':
                 // Rendering method settings
                 const renderingModeSelect = modal.querySelector('#readsRenderingMode');
-                settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'svg';
+                settings.renderingMode = renderingModeSelect ? renderingModeSelect.value : 'canvas';
                 
                 // Coverage settings
                 settings.showCoverage = modal.querySelector('#readsShowCoverage').checked;
