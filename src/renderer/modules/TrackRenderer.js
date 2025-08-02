@@ -11231,7 +11231,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const renderingModeSelect = bodyElement.querySelector('#readsRenderingMode');
         if (renderingModeSelect) {
             renderingModeSelect.addEventListener('change', () => {
-                this.updateTrackSetting('reads', 'renderingMode', renderingModeSelect.value);
+                console.log(`🔧 [setupReadsSettingsEventListeners] Rendering mode changed to: ${renderingModeSelect.value}`);
+                this.updateTrackSetting('reads', 'renderingMode', renderingModeSelect.value, true);
                 // Force track refresh to apply new rendering mode
                 this.refreshTrack('reads');
             });
@@ -11803,7 +11804,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     /**
      * Update a specific setting for a track and optionally refresh it
      */
-    updateTrackSetting(trackType, settingKey, settingValue) {
+    updateTrackSetting(trackType, settingKey, settingValue, applyImmediately = false) {
         console.log(`🔧 [updateTrackSetting] Updating ${trackType}.${settingKey} = ${settingValue}`);
         
         // Ensure trackSettings exists
@@ -11823,6 +11824,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         // Save the updated settings
         this.saveTrackSettings(trackType, this.trackSettings[trackType]);
+        
+        // Apply settings immediately if requested
+        if (applyImmediately) {
+            console.log(`🔧 [updateTrackSetting] Applying settings immediately for ${trackType}`);
+            this.applySettingsToTrack(trackType, this.trackSettings[trackType]);
+        }
     }
 
     refreshTrack(trackType) {
