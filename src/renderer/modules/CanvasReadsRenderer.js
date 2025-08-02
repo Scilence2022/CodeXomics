@@ -198,6 +198,13 @@ class CanvasReadsRenderer {
         const startTime = performance.now();
         this.renderCount++;
         
+        console.log('🎨 [CanvasReadsRenderer] Starting render:', {
+            readRows: this.readRows.length,
+            totalReads: this.readRows.reduce((sum, row) => sum + row.length, 0),
+            canvasSize: `${this.canvasWidth}x${this.canvasHeight}`,
+            viewport: `${this.viewport.start}-${this.viewport.end}`
+        });
+        
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
         
@@ -213,6 +220,7 @@ class CanvasReadsRenderer {
         
         // Render read rows
         this.readRows.forEach((rowReads, rowIndex) => {
+            console.log(`🎨 [CanvasReadsRenderer] Rendering row ${rowIndex} with ${rowReads.length} reads`);
             this.renderReadRow(rowReads, rowIndex);
         });
         

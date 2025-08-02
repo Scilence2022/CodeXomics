@@ -4016,7 +4016,7 @@ class TrackRenderer {
         const canvasOptions = {
             readHeight: readHeight,
             rowSpacing: rowSpacing,
-            topPadding: 0, // Already positioned by container
+            topPadding: 10, // Small padding inside canvas for reads
             bottomPadding: settings.bottomPadding || 10,
             showSequences: settings.showSequences || false,
             showReference: settings.showReference !== false,
@@ -10794,7 +10794,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         // Get reference sequence from genome browser
         const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
-        if (!referenceSequence) return 0;
+        console.log(`🔍 [createReferenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`);
+        
+        if (!referenceSequence) {
+            console.warn(`🔍 [createReferenceVisualization] No reference sequence available, creating placeholder`);
+            // Create a placeholder reference section instead of returning 0
+        }
         
         // Check if coverage exists to position reference below it
         const coverageElement = trackContent.querySelector('.coverage-visualization');
@@ -10826,7 +10831,21 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
         
         // Create reference sequence display
-        this.renderReferenceSequenceInSVG(svg, referenceSequence, viewport, referenceHeight, settings);
+        if (referenceSequence) {
+            this.renderReferenceSequenceInSVG(svg, referenceSequence, viewport, referenceHeight, settings);
+        } else {
+            // Create placeholder text when no reference sequence is available
+            const placeholderText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            placeholderText.setAttribute('x', '50');
+            placeholderText.setAttribute('y', referenceHeight / 2);
+            placeholderText.setAttribute('font-size', '10');
+            placeholderText.setAttribute('font-family', 'Arial, sans-serif');
+            placeholderText.setAttribute('text-anchor', 'middle');
+            placeholderText.setAttribute('dominant-baseline', 'middle');
+            placeholderText.setAttribute('fill', '#666');
+            placeholderText.textContent = 'Reference sequence not available';
+            svg.appendChild(placeholderText);
+        }
         
         referenceContainer.appendChild(svg);
         trackContent.appendChild(referenceContainer);
