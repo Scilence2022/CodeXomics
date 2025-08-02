@@ -87,6 +87,8 @@ class CanvasReadsRenderer {
             display: block;
             image-rendering: crisp-edges;
             image-rendering: pixelated;
+            z-index: 10;
+            background: transparent;
         `;
         
         // Get 2D context with alpha for transparency
@@ -207,6 +209,13 @@ class CanvasReadsRenderer {
         
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Draw a test rectangle to verify Canvas is working
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        this.ctx.fillRect(0, 0, 100, 20);
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = '12px Arial';
+        this.ctx.fillText('Canvas Test', 5, 15);
         
         // Render reference sequence if enabled
         if (this.options.showReference) {
