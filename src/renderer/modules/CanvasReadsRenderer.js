@@ -272,8 +272,8 @@ class CanvasReadsRenderer {
     
     renderRead(read, y) {
         // Calculate read position and dimensions
-        const readStart = Math.max(read.pos, this.viewport.start);
-        const readEnd = Math.min(read.pos + read.sequence.length, this.viewport.end);
+        const readStart = Math.max(read.start, this.viewport.start);
+        const readEnd = Math.min(read.end || (read.start + read.sequence.length), this.viewport.end);
         
         if (readEnd <= readStart) return; // Read not visible
         
@@ -374,7 +374,7 @@ class CanvasReadsRenderer {
         
         // Highlight mismatch positions
         read.mismatches.forEach(mismatch => {
-            const mismatchPos = mismatch.pos - read.pos;
+            const mismatchPos = mismatch.pos - read.start;
             if (mismatchPos >= 0 && mismatchPos < read.sequence.length) {
                 const mismatchX = x + (mismatchPos / read.sequence.length) * width;
                 const mismatchWidth = Math.max(2, width / read.sequence.length);
