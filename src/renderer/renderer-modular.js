@@ -2193,6 +2193,11 @@ class GenomeBrowser {
             return;
         }
         
+        // Skip 'sequence' as it's handled by the bottom sequence panel, not as a regular track
+        if (trackType === 'sequence') {
+            return;
+        }
+        
         let trackElement = null;
         
         switch (trackType) {
