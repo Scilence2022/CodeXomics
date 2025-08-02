@@ -10850,7 +10850,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         svg.setAttribute('viewBox', `0 0 100 ${referenceHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reference-svg');
-        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid #ddd;';
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
         
         console.log(`🔍 [createReferenceVisualization] Created SVG with viewBox: 0 0 100 ${referenceHeight}`);
         
