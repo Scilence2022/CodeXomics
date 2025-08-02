@@ -218,9 +218,21 @@ class CanvasSequenceRenderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         
-        // Calculate positioning
-        const effectiveCharWidth = Math.min(this.charWidth, maxCharWidth);
-        const startX = this.options.padding;
+        // Calculate positioning with intelligent stretching for short sequences
+        let effectiveCharWidth;
+        let startX;
+        
+        if (this.sequence.length * this.charWidth < availableWidth) {
+            // Short sequence: stretch to fill available width
+            effectiveCharWidth = availableWidth / this.sequence.length;
+            startX = this.options.padding;
+            console.log(`🔍 [CanvasSequenceRenderer] Short sequence detected, stretching: ${effectiveCharWidth.toFixed(2)}px per char`);
+        } else {
+            // Long sequence: use normal spacing with possible compression
+            effectiveCharWidth = Math.min(this.charWidth, maxCharWidth);
+            startX = this.options.padding;
+        }
+        
         const centerY = this.canvasHeight / 2;
         
         // Render each base
