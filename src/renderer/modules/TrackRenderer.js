@@ -10808,6 +10808,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     /**
      * Create reference sequence visualization above reads (fixed position like coverage)
+     * Using Single-line sequence track renderer for better performance and display quality
      */
     createReferenceVisualization(trackContent, viewport, referenceHeight, settings) {
         if (settings.showReference === false) return 0;
@@ -10817,11 +10818,6 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         // Get reference sequence from genome browser
         const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
         console.log(`🔍 [createReferenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`);
-        
-        if (!referenceSequence) {
-            console.warn(`🔍 [createReferenceVisualization] No reference sequence available, creating placeholder`);
-            // Create a placeholder reference section instead of returning 0
-        }
         
         // Check if coverage exists to position reference below it
         const coverageElement = trackContent.querySelector('.coverage-visualization');
@@ -10843,38 +10839,218 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             overflow: hidden;
         `;
         
-        // Create SVG for reference sequence visualization
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', referenceHeight);
-        svg.setAttribute('viewBox', `0 0 100 ${referenceHeight}`);
-        svg.setAttribute('preserveAspectRatio', 'none');
-        svg.setAttribute('class', 'reference-svg');
-        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
-        
-        console.log(`🔍 [createReferenceVisualization] Created SVG with viewBox: 0 0 100 ${referenceHeight}`);
-        
-        // Create reference sequence display
-        if (referenceSequence) {
-            this.renderReferenceSequenceInSVG(svg, referenceSequence, viewport, referenceHeight, settings);
-        } else {
+        if (!referenceSequence) {
+            console.warn(`🔍 [createReferenceVisualization] No reference sequence available, creating placeholder`);
+            
             // Create placeholder text when no reference sequence is available
-            const placeholderText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            placeholderText.setAttribute('x', '50');
-            placeholderText.setAttribute('y', referenceHeight / 2);
-            placeholderText.setAttribute('font-size', '10');
-            placeholderText.setAttribute('font-family', 'Arial, sans-serif');
-            placeholderText.setAttribute('text-anchor', 'middle');
-            placeholderText.setAttribute('dominant-baseline', 'middle');
-            placeholderText.setAttribute('fill', '#666');
-            placeholderText.textContent = 'Reference sequence not available';
-            svg.appendChild(placeholderText);
+            const placeholderDiv = document.createElement('div');
+            placeholderDiv.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                font-family: Arial, sans-serif;
+                font-size: 10px;
+                color: #666;
+            `;
+            placeholderDiv.textContent = 'Reference sequence not available';
+            referenceContainer.appendChild(placeholderDiv);
+        } else {
+            // Use the same high-quality renderer as Single-line sequence track
+            const referenceDisplay = this.createReferenceSequenceDisplay(referenceSequence, viewport, referenceHeight, settings);
+            referenceContainer.appendChild(referenceDisplay);
         }
         
-        referenceContainer.appendChild(svg);
         trackContent.appendChild(referenceContainer);
         
         return referenceHeight;
+    }
+
+    /**
+     * Create reference sequence display using Single-line sequence track renderer
+     */
+    createReferenceSequenceDisplay(subsequence, viewport, referenceHeight, settings) {
+        console.log(`🔍 [createReferenceSequenceDisplay] Creating high-quality reference display for ${subsequence.length} bases`);
+        
+        // Create container for the reference sequence display
+        const seqDisplay = document.createElement('div');
+        seqDisplay.className = 'reference-sequence-display reference-canvas-container';
+        seqDisplay.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        `;
+        
+        // Generate unique ID for this reference display instance
+        const displayId = `reference-display-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        seqDisplay.setAttribute('data-display-id', displayId);
+        
+        // Check if CanvasSequenceRenderer is available
+        if (typeof CanvasSequenceRenderer === 'undefined') {
+            console.warn('⚠️ [createReferenceSequenceDisplay] CanvasSequenceRenderer not available, falling back to DOM rendering');
+            return this.createReferenceSequenceDisplayFallback(subsequence, viewport, referenceHeight);
+        }
+        
+        // Create Canvas renderer with optimized options for reference display
+        const canvasOptions = {
+            fontSize: 12, // Slightly smaller for reference
+            fontFamily: 'Courier New, monospace',
+            fontWeight: 'bold',
+            backgroundColor: 'transparent',
+            adaptiveHeight: true,
+            minHeight: referenceHeight,
+            maxHeight: referenceHeight,
+            padding: 1 // Minimal padding for reference
+        };
+        
+        try {
+            const canvasRenderer = new CanvasSequenceRenderer(seqDisplay, subsequence, viewport, canvasOptions);
+            
+            // Store renderer for cleanup and updates (use WeakMap to avoid circular references)
+            if (!this.referenceCanvasRenderers) {
+                this.referenceCanvasRenderers = new Map();
+            }
+            this.referenceCanvasRenderers.set(displayId, canvasRenderer);
+            
+            console.log('✅ [createReferenceSequenceDisplay] Canvas reference renderer created successfully');
+            
+            return seqDisplay;
+            
+        } catch (error) {
+            console.error('❌ [createReferenceSequenceDisplay] Failed to create Canvas renderer:', error);
+            // Fall back to DOM rendering if Canvas fails
+            return this.createReferenceSequenceDisplayFallback(subsequence, viewport, referenceHeight);
+        }
+    }
+    
+    /**
+     * Fallback DOM-based reference sequence display for compatibility
+     */
+    createReferenceSequenceDisplayFallback(subsequence, viewport, referenceHeight) {
+        console.log('🔄 [createReferenceSequenceDisplayFallback] Using DOM fallback for reference display');
+        
+        const seqDisplay = document.createElement('div');
+        seqDisplay.className = 'reference-sequence-display reference-dom-fallback';
+        seqDisplay.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        `;
+        
+        // Use simplified DOM rendering with adaptive sizing
+        const sequenceLength = subsequence.length;
+        
+        // Create sequence bases with positioning
+        for (let i = 0; i < subsequence.length; i++) {
+            const baseElement = this.createReferenceBaseElement(subsequence[i], i, viewport, sequenceLength, referenceHeight);
+            seqDisplay.appendChild(baseElement);
+        }
+        
+        // Apply adaptive sizing after DOM is rendered
+        setTimeout(() => {
+            this.adjustReferenceSequenceDisplay(seqDisplay, subsequence, viewport, referenceHeight);
+        }, 50);
+        
+        return seqDisplay;
+    }
+    
+    /**
+     * Create individual base element for reference sequence
+     */
+    createReferenceBaseElement(base, index, viewport, sequenceLength, height) {
+        const baseElement = document.createElement('span');
+        baseElement.className = `base-${base.toLowerCase()} reference-base-inline`;
+        baseElement.textContent = base;
+        
+        // Calculate exact positioning to fill entire container
+        const exactCharWidth = 100 / sequenceLength; // Use percentage-based width
+        const leftPosition = index * exactCharWidth;
+        
+        baseElement.style.cssText = `
+            position: absolute;
+            left: ${leftPosition}%;
+            width: ${exactCharWidth}%;
+            height: 100%;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: ${this.getBaseColor(base)};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        `;
+        
+        // Add tooltip with position info
+        const position = viewport.start + index + 1;
+        baseElement.title = `Position: ${position}, Base: ${base}`;
+        
+        return baseElement;
+    }
+    
+    /**
+     * Adjust reference sequence display after DOM is rendered
+     */
+    adjustReferenceSequenceDisplay(seqDisplay, subsequence, viewport, height) {
+        if (!seqDisplay.parentElement) return;
+        
+        // Get actual container width
+        const containerWidth = seqDisplay.parentElement.getBoundingClientRect().width || 800;
+        const sequenceLength = subsequence.length;
+        
+        // Calculate optimal font size for reference display
+        const availableWidth = containerWidth;
+        const maxCharWidth = availableWidth / sequenceLength;
+        
+        // Reference sequence should be slightly smaller than main sequence
+        const maxFontSize = Math.min(height * 0.7, 14); // 70% of height, max 14px
+        const minFontSize = 6;
+        
+        let fontSize = maxFontSize;
+        let estimatedCharWidth = fontSize * 0.6;
+        
+        // Adjust font size to fit
+        while (estimatedCharWidth > maxCharWidth && fontSize > minFontSize) {
+            fontSize -= 0.25;
+            estimatedCharWidth = fontSize * 0.6;
+        }
+        
+        const finalFontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+        
+        console.log('🔧 [adjustReferenceSequenceDisplay] Adjusted reference display:', {
+            containerWidth,
+            sequenceLength,
+            finalFontSize,
+            maxCharWidth: maxCharWidth.toFixed(2)
+        });
+        
+        // Update all base elements with new font size
+        const baseElements = seqDisplay.querySelectorAll('.reference-base-inline');
+        const exactCharWidth = 100 / baseElements.length;
+        
+        baseElements.forEach((element, index) => {
+            const leftPosition = index * exactCharWidth;
+            element.style.left = `${leftPosition}%`;
+            element.style.width = `${exactCharWidth}%`;
+            element.style.fontSize = `${finalFontSize}px`;
+        });
+    }
+    
+    /**
+     * Get base color for reference sequence display
+     */
+    getBaseColor(base) {
+        const baseColors = {
+            'A': '#e74c3c', 'T': '#3498db', 'G': '#2ecc71', 'C': '#f39c12',
+            'a': '#e74c3c', 't': '#3498db', 'g': '#2ecc71', 'c': '#f39c12',
+            'N': '#95a5a6', 'n': '#95a5a6'
+        };
+        return baseColors[base] || baseColors['N'];
     }
 
     /**
