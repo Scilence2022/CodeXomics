@@ -4098,7 +4098,8 @@ class TrackRenderer {
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('class', 'reads-svg-container');
         svg.style.position = 'absolute';
-        svg.style.top = `${totalTopHeight}px`;
+        // Position SVG right after coverage and reference elements with minimal spacing
+        svg.style.top = `${totalTopHeight + 2}px`;  // Only 2px spacing instead of topPadding
         svg.style.left = '0';
         svg.style.pointerEvents = 'all';
 
@@ -4334,8 +4335,8 @@ class TrackRenderer {
         const minWidth = settings.minWidth || 2;
         const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
         
-        // Calculate Y position - topPadding already includes reference spacing in scrollable mode
-        const y = topPadding + rowIndex * (readHeight + rowSpacing);
+        // Calculate Y position - SVG container is already positioned after coverage/reference, so minimal padding
+        const y = 5 + rowIndex * (readHeight + rowSpacing);  // Just 5px internal padding
 
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -4380,9 +4381,9 @@ class TrackRenderer {
         const x = (left / 100) * containerWidth;
         const elementWidth = Math.max((width / 100) * containerWidth, 2);
         
-        // Calculate Y position, adding space for reference sequence if shown
+        // Calculate Y position - SVG container is already positioned after coverage/reference
         const referenceSpacing = (settings.showReference !== false) ? readHeight + 5 : 0;
-        const y = topPadding + referenceSpacing + rowIndex * (readHeight + rowSpacing);
+        const y = 5 + referenceSpacing + rowIndex * (readHeight + rowSpacing);  // Just 5px internal padding
 
         // Create SVG group for the sequence
         const sequenceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
