@@ -3477,8 +3477,15 @@ class TrackRenderer {
                         // Use Canvas rendering for high performance
                         this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
                     } else {
+                        console.log(`🔧 [DEBUG] [createMultiReadsTrack] Calling renderReadsElementsSVG with:`, {
+                            readRowsCount: readRows.length,
+                            totalReads: readRows.reduce((sum, row) => sum + row.length, 0),
+                            viewportStart: viewport.start,
+                            viewportEnd: viewport.end
+                        });
                         // Pass just topPadding - reads SVG will be positioned after coverage automatically
                         this.renderReadsElementsSVG(trackContent, readRows, viewport.start, viewport.end, (viewport.end - viewport.start), readHeight, rowSpacing, topPadding, trackHeight, settings);
+                        console.log(`🔧 [DEBUG] [createMultiReadsTrack] renderReadsElementsSVG call completed`);
                     }
                 }
                 
@@ -3996,9 +4003,22 @@ class TrackRenderer {
 
     // New method to arrange reads into non-overlapping rows
     arrangeReadsInRows(reads, viewStart, viewEnd) {
+        console.log('🔧 [DEBUG] [arrangeReadsInRows] Input:', {
+            readsCount: reads.length,
+            viewStart, viewEnd,
+            firstReadStart: reads[0]?.start,
+            lastReadStart: reads[reads.length - 1]?.start
+        });
+        
         // Sort reads by start position
         const sortedReads = [...reads].sort((a, b) => a.start - b.start);
         const rows = [];
+        
+        console.log('🔧 [DEBUG] [arrangeReadsInRows] After sorting:', {
+            sortedReadsCount: sortedReads.length,
+            firstSortedStart: sortedReads[0]?.start,
+            lastSortedStart: sortedReads[sortedReads.length - 1]?.start
+        });
         
         sortedReads.forEach(read => {
             let placed = false;
@@ -4029,6 +4049,13 @@ class TrackRenderer {
             }
         });
         
+        console.log('🔧 [DEBUG] [arrangeReadsInRows] Result:', {
+            rowsCount: rows.length,
+            totalReadsArranged: rows.reduce((sum, row) => sum + row.length, 0),
+            firstRowLength: rows[0]?.length || 0,
+            lastRowLength: rows[rows.length - 1]?.length || 0
+        });
+        
         return rows;
     }
 
@@ -4041,9 +4068,18 @@ class TrackRenderer {
      * Create SVG-based reads visualization
      */
     renderReadsElementsSVG(trackContent, readRows, start, end, range, readHeight, rowSpacing, topPadding, trackHeight, settings = {}) {
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] Entry point called');
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] Parameters:', {
+            readRowsCount: readRows.length,
+            totalReads: readRows.reduce((sum, row) => sum + row.length, 0),
+            start, end, range,
+            renderingMode: settings.renderingMode
+        });
+        
         // Force layout calculation to get accurate width
         trackContent.style.width = '100%';
         const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] Container width:', containerWidth);
         
         // Check if coverage and reference visualizations exist to calculate proper SVG positioning
         const coverageElement = trackContent.querySelector('.coverage-visualization');
@@ -4124,6 +4160,9 @@ class TrackRenderer {
         // applied to the track-content container in createTrackContent()
 
         trackContent.appendChild(svg);
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] SVG appended to trackContent');
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] SVG element:', svg);
+        console.log('🔧 [DEBUG] [renderReadsElementsSVG] Track content children count:', trackContent.children.length);
     }
 
     /**
