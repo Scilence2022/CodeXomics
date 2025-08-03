@@ -4181,16 +4181,25 @@ class TrackRenderer {
         // Generate unique ID for this track instance
         const trackId = `reads-track-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
-        // Create Canvas container
+        // Create Canvas container  
+        // Check if coverage and reference visualizations exist to calculate proper positioning
+        const coverageElement = trackContent.querySelector('.coverage-visualization');
+        const coverageHeight = coverageElement ? parseInt(coverageElement.style.height) || 0 : 0;
+        
+        const referenceElement = trackContent.querySelector('.reference-sequence-visualization');
+        const referenceHeight = referenceElement ? parseInt(referenceElement.style.height) || 0 : 0;
+        
+        const totalTopHeight = coverageHeight + referenceHeight;
+        
         const canvasContainer = document.createElement('div');
         canvasContainer.className = 'reads-canvas-container';
         canvasContainer.setAttribute('data-track-id', trackId);
         canvasContainer.style.cssText = `
             position: absolute;
-            top: ${topPadding}px;
+            top: ${totalTopHeight + 2}px;
             left: 0;
             width: 100%;
-            height: ${trackHeight - topPadding}px;
+            height: ${trackHeight - totalTopHeight - 2}px;
             overflow: hidden;
         `;
         
@@ -4198,7 +4207,7 @@ class TrackRenderer {
         const canvasOptions = {
             readHeight: readHeight,
             rowSpacing: rowSpacing,
-            topPadding: 10, // Small padding inside canvas for reads
+            topPadding: 5, // Minimal padding inside canvas - container is already positioned correctly
             bottomPadding: settings.bottomPadding || 10,
             showSequences: settings.showSequences || false,
             showReference: settings.showReference !== false,
