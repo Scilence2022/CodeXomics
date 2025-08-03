@@ -380,9 +380,19 @@ class CanvasReadsRenderer {
         const showRectangles = !showSequence;
         
         if (showSequence && read.sequence) {
-            // When showing sequences, don't draw read rectangles to avoid interference
-            // Pass visible portion info for proper sequence offset handling
-            this.renderReadSequence(read, x, y, width, readStart, readEnd);
+            // Try to render sequence first
+            const sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
+            
+            // If sequence rendering failed, fall back to showing rectangle
+            if (!sequenceRendered) {
+                this.ctx.fillStyle = readColor;
+                this.ctx.fillRect(x, y, width, this.options.readHeight);
+                
+                // Draw read border for better visibility
+                this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+                this.ctx.lineWidth = 0.5;
+                this.ctx.strokeRect(x, y, width, this.options.readHeight);
+            }
         } else {
             // Show read rectangles when not showing sequences OR when read has no sequence data
             this.ctx.fillStyle = readColor;
@@ -435,7 +445,7 @@ class CanvasReadsRenderer {
     }
     
     renderReadSequence(read, x, y, width, visibleStart, visibleEnd) {
-        if (!read.sequence) return;
+        if (!read.sequence) return false;
         
         // Calculate which part of the sequence is visible in the current viewport
         const readLength = read.end - read.start;
@@ -451,7 +461,7 @@ class CanvasReadsRenderer {
         
         // Get the visible portion of the sequence
         const visibleSequence = read.sequence.substring(startIndex, endIndex);
-        if (!visibleSequence || visibleSequence.length === 0) return;
+        if (!visibleSequence || visibleSequence.length === 0) return false;
         
         const charSpacing = width / visibleSequence.length;
         
@@ -462,13 +472,13 @@ class CanvasReadsRenderer {
             fontSize = this.calculateOptimalSequenceFontSize(visibleSequence.length, width, this.options.readHeight);
             
             // Only render if font size is viable
-            if (fontSize < this.options.minFontSize) return;
+            if (fontSize < this.options.minFontSize) return false;
         } else {
             // Manual mode: use user-specified font size settings
             fontSize = this.options.sequenceFontSize || 6;
             
             // Check if font will be readable with current spacing
-            if (charSpacing < fontSize * 0.6) return; // Character too cramped for readability
+            if (charSpacing < fontSize * 0.6) return false; // Character too cramped for readability
         }
         
         // Set font with chosen size
@@ -495,6 +505,8 @@ class CanvasReadsRenderer {
                 this.ctx.fillText(base, baseX, textY);
             }
         }
+        
+        return true; // Successfully rendered sequence
     }
     
     /**

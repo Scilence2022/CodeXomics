@@ -4144,7 +4144,12 @@ class TrackRenderer {
                             svg.appendChild(sequenceGroup);
                             console.log(`✅ [TrackRenderer] Sequence element added for read: ${read.id}`);
                         } else {
-                            console.log(`❌ [TrackRenderer] No sequence element created for read: ${read.id}`);
+                            console.log(`❌ [TrackRenderer] Sequence rendering failed, creating fallback read shape for: ${read.id}`);
+                            // Sequence rendering failed, create a fallback read shape
+                            const fallbackReadGroup = this.createSVGReadElement(read, start, end, range, readHeight, rowIndex, rowSpacing, topPadding, containerWidth, { ...settings, showSequences: false });
+                            if (fallbackReadGroup) {
+                                svg.appendChild(fallbackReadGroup);
+                            }
                         }
                     } else if (showSequences && !read.sequence) {
                         console.log(`⚠️ [TrackRenderer] Sequence display enabled but read has no sequence:`, {
@@ -4361,9 +4366,13 @@ class TrackRenderer {
         const opacity = settings.opacity || 0.9;
         readGroup.setAttribute('opacity', opacity);
 
-        // Only create read shape if NOT showing sequences to avoid interference
-        if (!showSequences) {
-            // Create read shape
+        // Always show SOMETHING - either sequences or read shapes, never nothing
+        // Only skip read shape if we're supposed to show sequences AND the read has sequence data
+        // The actual sequence rendering success/failure will be handled in the main rendering loop
+        const shouldShowReadShape = !showSequences || !read.sequence;
+        
+        if (shouldShowReadShape) {
+            // Create read shape when not showing sequences OR when read lacks sequence data
             const readShape = this.createSVGReadShape(read, elementWidth, readHeight, settings);
             readGroup.appendChild(readShape);
 
@@ -4434,13 +4443,17 @@ class TrackRenderer {
             const sequenceText = this.createSVGSequenceText(visibleSequence, elementWidth, readHeight, effectiveSettings, referenceSequence);
             if (sequenceText) {
                 sequenceGroup.appendChild(sequenceText);
+                
+                // Add interaction handlers to sequence elements for click functionality
+                this.addSVGReadInteraction(sequenceGroup, read, rowIndex);
+                
+                return sequenceGroup;
             }
         }
 
-        // Add interaction handlers to sequence elements for click functionality
-        this.addSVGReadInteraction(sequenceGroup, read, rowIndex);
-
-        return sequenceGroup;
+        // If sequence rendering failed or was skipped, return null
+        // This signals that a fallback read shape should be used instead
+        return null;
     }
 
     /**
