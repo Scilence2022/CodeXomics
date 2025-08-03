@@ -295,19 +295,20 @@ class CanvasReadsRenderer {
     }
     
     renderRead(read, y) {
-        // Calculate read position and dimensions
+        // Calculate read position and dimensions - match SVG logic for consistency
         const readStart = Math.max(read.start, this.viewport.start);
-        const readEnd = Math.min(read.end || (read.start + read.sequence.length), this.viewport.end);
+        const readEnd = Math.min(read.end, this.viewport.end); // Use read.end directly like SVG
         
         if (readEnd <= readStart) return; // Read not visible
         
         // Calculate screen coordinates
         const viewportRange = this.viewport.end - this.viewport.start;
         const x = ((readStart - this.viewport.start) / viewportRange) * this.canvasWidth;
-        const width = ((readEnd - readStart) / viewportRange) * this.canvasWidth;
+        let width = ((readEnd - readStart) / viewportRange) * this.canvasWidth;
         
-        // Skip reads that are too narrow to see
-        if (width < 1) return;
+        // Ensure minimum width like SVG - don't filter out narrow reads, just make them visible
+        const minWidth = this.options.minWidth || 2;
+        width = Math.max(width, minWidth);
         
         // Determine read color based on properties
         const readColor = this.getReadColor(read);
@@ -326,31 +327,37 @@ class CanvasReadsRenderer {
         const trackRenderer = window.genomeBrowser && window.genomeBrowser.trackRenderer;
         let showSequence = false;
         
-        if (this.options.showSequences && trackRenderer && trackRenderer.shouldShowSequences) {
-            // Use unified threshold logic from TrackRenderer
-            showSequence = trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options);
-        } else {
-            // Fallback to local method if TrackRenderer not available
-            showSequence = this.options.showSequences && this.shouldShowSequenceDetails(width);
+        if (this.options.showSequences) {
+            if (trackRenderer && trackRenderer.shouldShowSequences) {
+                // Use unified threshold logic from TrackRenderer
+                showSequence = trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options);
+            } else {
+                // Fallback to local method if TrackRenderer not available
+                showSequence = this.shouldShowSequenceDetails(width);
+            }
         }
         
-        console.log(`🔍 [CanvasReadsRenderer] Sequence display check for read ${read.id}:`, {
+        // Always show SOMETHING - either sequences or rectangles, never nothing
+        const showRectangles = !showSequence;
+        
+        console.log(`🔍 [CanvasReadsRenderer] Display decision for read ${read.id}:`, {
             showSequencesSetting: this.options.showSequences,
             readWidth: width.toFixed(2),
             viewportRange: `${this.viewport.start}-${this.viewport.end}`,
-            canvasWidth: this.canvasWidth,
             unifiedThreshold: trackRenderer ? trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options) : 'N/A',
             localThreshold: this.shouldShowSequenceDetails(width),
             finalShowSequence: showSequence,
+            finalShowRectangles: showRectangles,
             hasSequence: !!read.sequence
         });
         
-        if (showSequence) {
+        if (showSequence && read.sequence) {
             console.log(`🧬 [CanvasReadsRenderer] Rendering sequence for read ${read.id}`);
             // When showing sequences, don't draw read rectangles to avoid interference
             this.renderReadSequence(read, x, y, width);
         } else {
-            // Only draw read rectangles when not showing sequences
+            console.log(`📦 [CanvasReadsRenderer] Rendering rectangle for read ${read.id}`);
+            // Show read rectangles when not showing sequences OR when read has no sequence data
             this.ctx.fillStyle = readColor;
             this.ctx.fillRect(x, y, width, this.options.readHeight);
             
@@ -401,30 +408,66 @@ class CanvasReadsRenderer {
     }
     
     renderReadSequence(read, x, y, width) {
-        if (!read.sequence || !this.charWidth) return;
+        if (!read.sequence) return;
         
         const sequence = read.sequence;
         const charSpacing = width / sequence.length;
         
-        // Only render if characters won't be too cramped
-        if (charSpacing < this.charWidth * 0.5) return;
+        // Calculate optimal font size for this read width - match SVG logic
+        const optimalFontSize = this.calculateOptimalSequenceFontSize(sequence.length, width, this.options.readHeight);
         
-        this.ctx.font = `${this.actualFontSize}px 'Courier New', monospace`;
+        // Only render if font size is viable
+        if (optimalFontSize < this.options.minFontSize) return;
+        
+        // Set font with calculated optimal size
+        this.ctx.font = `${optimalFontSize}px 'Courier New', monospace`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         
         const textY = y + this.options.readHeight / 2;
         
+        // Calculate character width for proper positioning
+        const actualCharWidth = this.ctx.measureText('M').width;
+        
         for (let i = 0; i < sequence.length; i++) {
-            const base = sequence[i];
+            const base = sequence[i].toUpperCase();
             const baseX = x + (i * charSpacing) + (charSpacing / 2);
             
-            // Set base color
-            this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
-            
-            // Render character
-            this.ctx.fillText(base, baseX, textY);
+            // Ensure character fits within its allocated space
+            if (actualCharWidth <= charSpacing * 1.2) { // Allow slight overlap for readability
+                // Set base color
+                this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
+                
+                // Render character
+                this.ctx.fillText(base, baseX, textY);
+            }
         }
+    }
+    
+    /**
+     * Calculate optimal font size for sequence display - matches SVG logic
+     */
+    calculateOptimalSequenceFontSize(sequenceLength, availableWidth, readHeight) {
+        // Calculate pixels per base
+        const pixelsPerBase = availableWidth / sequenceLength;
+        
+        // Calculate font size constraints
+        const minFontSize = this.options.minFontSize || 4;
+        const maxFontSize = this.options.maxFontSize || 14;
+        
+        // Font size based on available width per character (leave padding)
+        let widthBasedFontSize = Math.floor(pixelsPerBase * 0.8);
+        
+        // Font size based on read height (leave some vertical padding)
+        let heightBasedFontSize = Math.floor(readHeight * 0.7);
+        
+        // Use the smaller of the two constraints
+        let optimalFontSize = Math.min(widthBasedFontSize, heightBasedFontSize);
+        
+        // Apply min/max constraints
+        optimalFontSize = Math.max(minFontSize, Math.min(maxFontSize, optimalFontSize));
+        
+        return optimalFontSize;
     }
     
     renderMismatches(read, x, y, width) {
