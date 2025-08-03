@@ -102,7 +102,7 @@ class CanvasReadsRenderer {
             display: block;
             image-rendering: crisp-edges;
             image-rendering: pixelated;
-            z-index: 10;
+            z-index: 50;
             background: transparent;
         `;
         

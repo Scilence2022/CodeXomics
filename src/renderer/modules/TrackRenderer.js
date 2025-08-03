@@ -4201,6 +4201,7 @@ class TrackRenderer {
             width: 100%;
             height: ${trackHeight - totalTopHeight - 2}px;
             overflow: hidden;
+            z-index: 49;
         `;
         
         // Prepare Canvas renderer options from settings
