@@ -4350,13 +4350,6 @@ class TrackRenderer {
         // Check if we should show sequences using unified threshold logic
         const showSequences = settings.showSequences && this.shouldShowSequences(start, end, containerWidth, settings);
         
-        console.log(`🔍 [TrackRenderer] SVG sequence display check for read ${read.id}:`, {
-            showSequencesSetting: settings.showSequences,
-            shouldShowThreshold: this.shouldShowSequences(start, end, containerWidth, settings),
-            finalShowSequences: showSequences,
-            containerWidth: containerWidth,
-            viewport: `${start}-${end}`
-        });
 
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');

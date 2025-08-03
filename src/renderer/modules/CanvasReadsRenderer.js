@@ -340,23 +340,10 @@ class CanvasReadsRenderer {
         // Always show SOMETHING - either sequences or rectangles, never nothing
         const showRectangles = !showSequence;
         
-        console.log(`🔍 [CanvasReadsRenderer] Display decision for read ${read.id}:`, {
-            showSequencesSetting: this.options.showSequences,
-            readWidth: width.toFixed(2),
-            viewportRange: `${this.viewport.start}-${this.viewport.end}`,
-            unifiedThreshold: trackRenderer ? trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options) : 'N/A',
-            localThreshold: this.shouldShowSequenceDetails(width),
-            finalShowSequence: showSequence,
-            finalShowRectangles: showRectangles,
-            hasSequence: !!read.sequence
-        });
-        
         if (showSequence && read.sequence) {
-            console.log(`🧬 [CanvasReadsRenderer] Rendering sequence for read ${read.id}`);
             // When showing sequences, don't draw read rectangles to avoid interference
             this.renderReadSequence(read, x, y, width);
         } else {
-            console.log(`📦 [CanvasReadsRenderer] Rendering rectangle for read ${read.id}`);
             // Show read rectangles when not showing sequences OR when read has no sequence data
             this.ctx.fillStyle = readColor;
             this.ctx.fillRect(x, y, width, this.options.readHeight);
