@@ -63,6 +63,9 @@ class CanvasReadsRenderer {
         this.renderCount = 0;
         this.lastRenderTime = 0;
         
+        // Click detection data
+        this.readPositions = []; // Store rendered read positions for click detection
+        
         this.initialize();
     }
     
@@ -125,6 +128,9 @@ class CanvasReadsRenderer {
         
         // Append canvas to container
         this.container.appendChild(this.canvas);
+        
+        // Setup click event listener for read selection
+        this.setupClickHandlers();
     }
     
     setupCanvas() {
@@ -158,6 +164,21 @@ class CanvasReadsRenderer {
             devicePixelRatio: this.devicePixelRatio,
             totalRows: this.readRows.length
         });
+    }
+    
+    setupClickHandlers() {
+        console.log('🖱️ [CanvasReadsRenderer] Setting up click handlers');
+        
+        // Bind event handlers to preserve 'this' context
+        this.clickHandler = (event) => this.handleCanvasClick(event);
+        this.mouseMoveHandler = (event) => {
+            const read = this.getReadAtPosition(event);
+            this.canvas.style.cursor = read ? 'pointer' : 'default';
+        };
+        
+        // Add event listeners to canvas
+        this.canvas.addEventListener('click', this.clickHandler);
+        this.canvas.addEventListener('mousemove', this.mouseMoveHandler);
     }
     
     calculateTextMetrics() {
@@ -209,6 +230,9 @@ class CanvasReadsRenderer {
         
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Clear read positions for click detection
+        this.readPositions = [];
         
         // Render reference sequence if enabled
         if (this.options.showReference) {
@@ -287,6 +311,15 @@ class CanvasReadsRenderer {
         
         // Determine read color based on properties
         const readColor = this.getReadColor(read);
+        
+        // Store read position for click detection
+        this.readPositions.push({
+            read: read,
+            x: x,
+            y: y,
+            width: width,
+            height: this.options.readHeight
+        });
         
         // Draw read rectangle
         this.ctx.fillStyle = readColor;
@@ -397,6 +430,57 @@ class CanvasReadsRenderer {
         return color;
     }
     
+    handleCanvasClick(event) {
+        console.log('🖱️ [CanvasReadsRenderer] Canvas clicked');
+        
+        const clickedRead = this.getReadAtPosition(event);
+        if (clickedRead) {
+            console.log('🖱️ [CanvasReadsRenderer] Read clicked:', clickedRead.id);
+            this.showReadDetails(clickedRead);
+        }
+    }
+    
+    getReadAtPosition(event) {
+        // Get canvas coordinates
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = event.clientX - rect.left;
+        const canvasY = event.clientY - rect.top;
+        
+        // Check if click is within any read
+        for (const readPos of this.readPositions) {
+            if (canvasX >= readPos.x && 
+                canvasX <= readPos.x + readPos.width &&
+                canvasY >= readPos.y && 
+                canvasY <= readPos.y + readPos.height) {
+                return readPos.read;
+            }
+        }
+        
+        return null;
+    }
+    
+    showReadDetails(read) {
+        // Get file info if available - same logic as SVG mode
+        let fileInfo = null;
+        if (window.genomeBrowser && window.genomeBrowser.multiFileManager && window.genomeBrowser.multiFileManager.files) {
+            // Try to find the file info for this read
+            const files = window.genomeBrowser.multiFileManager.files.reads || [];
+            if (files.length > 0) {
+                // For now, use the first file or try to match by read properties
+                fileInfo = files[0];
+            }
+        }
+        
+        // Call the same selectRead method used in SVG mode
+        if (window.genomeBrowser && window.genomeBrowser.selectRead) {
+            window.genomeBrowser.selectRead(read, fileInfo);
+        } else {
+            console.warn('🖱️ [CanvasReadsRenderer] genomeBrowser.selectRead method not available');
+            // Fallback: show simple alert with read info
+            alert(`Read: ${read.id}\nPosition: ${read.start}-${read.end}\nStrand: ${read.strand}\nMapping Quality: ${read.mappingQuality}`);
+        }
+    }
+    
     setupResizeObserver() {
         if (typeof ResizeObserver !== 'undefined') {
             this.resizeObserver = new ResizeObserver((entries) => {
@@ -492,6 +576,12 @@ class CanvasReadsRenderer {
     destroy() {
         console.log('🧹 [CanvasReadsRenderer] Cleaning up Canvas reads renderer');
         
+        // Remove click event listeners
+        if (this.canvas) {
+            this.canvas.removeEventListener('click', this.clickHandler);
+            this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
+        
         // Remove resize observer/handler
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
@@ -513,6 +603,9 @@ class CanvasReadsRenderer {
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
         }
+        
+        // Clear read positions array
+        this.readPositions = [];
         
         // Reset references
         this.canvas = null;
