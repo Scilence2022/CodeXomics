@@ -321,18 +321,21 @@ class CanvasReadsRenderer {
             height: this.options.readHeight
         });
         
-        // Draw read rectangle
-        this.ctx.fillStyle = readColor;
-        this.ctx.fillRect(x, y, width, this.options.readHeight);
-        
-        // Draw read border for better visibility
-        this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-        this.ctx.lineWidth = 0.5;
-        this.ctx.strokeRect(x, y, width, this.options.readHeight);
-        
         // Draw sequence if enabled and zoom level allows
-        if (this.options.showSequences && this.shouldShowSequenceDetails(width)) {
+        const showSequence = this.options.showSequences && this.shouldShowSequenceDetails(width);
+        
+        if (showSequence) {
+            // When showing sequences, don't draw read rectangles to avoid interference
             this.renderReadSequence(read, x, y, width);
+        } else {
+            // Only draw read rectangles when not showing sequences
+            this.ctx.fillStyle = readColor;
+            this.ctx.fillRect(x, y, width, this.options.readHeight);
+            
+            // Draw read border for better visibility
+            this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+            this.ctx.lineWidth = 0.5;
+            this.ctx.strokeRect(x, y, width, this.options.readHeight);
         }
         
         // Highlight mismatches if enabled

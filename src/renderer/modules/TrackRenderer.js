@@ -4857,43 +4857,31 @@ class TrackRenderer {
      * Calculate if sequences should be displayed based on zoom level
      */
     shouldShowSequences(start, end, containerWidth, settings = {}) {
+        // Use Canvas-style simple logic: check if reads will be wide enough to display sequences clearly
         const range = end - start;
         const basesPerPixel = range / containerWidth;
         
         // Check for force mode first
         if (settings.forceSequences) {
-            const readHeight = settings.readHeight || 4;
-            const canRender = this.canRenderSequencesInForceMode(range, containerWidth, readHeight);
-            
-            console.log(`🔍 [TrackRenderer] Force sequence display check:`, {
-                range: range,
-                containerWidth: containerWidth,
-                basesPerPixel: basesPerPixel.toFixed(3),
-                readHeight: readHeight,
-                forceMode: true,
-                canRender: canRender
-            });
-            
-            return canRender;
+            console.log(`🔍 [TrackRenderer] Force sequence display - always show`);
+            return true;
         }
         
-        // Calculate adaptive threshold based on window size and sequence length
-        const baseThreshold = settings.sequenceThreshold || 1.0;
-        const adaptiveThreshold = this.calculateAdaptiveSequenceThreshold(range, containerWidth, settings);
+        // Use Canvas-style threshold: calculate average read width
+        // Assume average read length of 150bp (typical Illumina read)
+        const averageReadLength = 150;
+        const averageReadWidthPixels = (averageReadLength / range) * containerWidth;
         
-        // Use the more restrictive threshold
-        const finalThreshold = Math.min(baseThreshold, adaptiveThreshold);
+        // Show sequences if average read width > 50px (same as Canvas logic)
+        const shouldShow = averageReadWidthPixels > 50;
         
-        const shouldShow = basesPerPixel <= finalThreshold;
-        
-        console.log(`🔍 [TrackRenderer] Standard sequence display check:`, {
+        console.log(`🔍 [TrackRenderer] Canvas-style sequence display check:`, {
             range: range,
             containerWidth: containerWidth,
             basesPerPixel: basesPerPixel.toFixed(3),
-            baseThreshold: baseThreshold,
-            adaptiveThreshold: adaptiveThreshold.toFixed(3),
-            finalThreshold: finalThreshold.toFixed(3),
-            forceMode: false,
+            averageReadLength: averageReadLength,
+            averageReadWidthPixels: averageReadWidthPixels.toFixed(1),
+            threshold: 50,
             shouldShow: shouldShow
         });
         
