@@ -996,8 +996,7 @@ class NavigationManager {
             this.resetVisualDragUpdates(element);
         }
         
-        // Reset Canvas transform tracking flag after drag operations are complete
-        this.dragState.canvasTransformsApplied = false;
+        // No Canvas-specific tracking needed with unified container approach
         
         // Clean up global drag update timeout if it exists
         if (this.globalDragUpdateTimeout) {
@@ -1195,7 +1194,7 @@ class NavigationManager {
                 startX: e.clientX,
                 startPosition: this.genomeBrowser.currentPosition.start,
                 lastCalculatedStart: this.genomeBrowser.currentPosition.start,
-                canvasTransformsApplied: false, // Reset Canvas transform tracking for new drag
+                // No Canvas-specific tracking needed with unified container approach
             });
             
             element.style.cursor = 'grabbing';
@@ -1341,15 +1340,36 @@ class NavigationManager {
      * Uses unified container approach for consistent movement
      */
     performVisualDragUpdate(deltaX, element) {
-        // Only apply Canvas drag transforms when global dragging is enabled
-        // Single-line sequence tracks should follow global dragging setting
-        if (this.globalDraggingEnabled && this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.applyCanvasDragTransform) {
-            this.genomeBrowser.trackRenderer.applyCanvasDragTransform(deltaX, 0);
-            this.dragState.canvasTransformsApplied = true;
-            console.log('🎨 [VISUAL-DRAG] Applied Canvas drag transforms (global dragging enabled)');
+        // Use unified container approach for all rendering modes
+        // No special Canvas transforms needed - let Canvas follow container movement
+        console.log('🔧 [VISUAL-DRAG] Using unified container movement for all rendering modes');
+        
+        // Check if this is a reads track and handle it directly
+        const readsTrackElement = element.closest('.reads-track');
+        if (readsTrackElement) {
+            const trackContent = readsTrackElement.querySelector('.track-content');
+            if (trackContent) {
+                // Cache original transform if not already cached
+                if (!trackContent.dataset.baseTransform) {
+                    trackContent.dataset.baseTransform = trackContent.style.transform || '';
+                }
+                
+                const baseTransform = trackContent.dataset.baseTransform || '';
+                if (baseTransform) {
+                    trackContent.style.transform = `${baseTransform} translateX(${deltaX}px)`;
+                } else {
+                    trackContent.style.transform = `translateX(${deltaX}px)`;
+                }
+                
+                console.log('🔧 [DRAG-VISUAL] Reads track container update:');
+                console.log('  - deltaX applied:', deltaX, 'px');
+                console.log('  - Base transform:', baseTransform || 'none');
+                console.log('  - Final transform:', trackContent.style.transform);
+                return; // Early return for reads track
+            }
         }
         
-        // Try to find the unified gene container first
+        // Try to find the unified gene container for genes track
         const unifiedContainer = document.querySelector('.unified-gene-container');
         
         if (unifiedContainer) {
@@ -1380,6 +1400,7 @@ class NavigationManager {
             let svgElementsUpdated = 0;
             
             allElements.forEach(el => {
+                
                 const baseTransform = el.dataset.baseTransform || '';
                 const isHTMLElement = el.classList.contains('gene-element');
                 const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
@@ -1416,12 +1437,9 @@ class NavigationManager {
     performGlobalDragUpdate(deltaX, chromosome) {
         console.log('🌍 [GLOBAL-DRAG] Applying visual transforms to all tracks with deltaX:', deltaX, 'px');
         
-        // Apply Canvas drag transforms for high-performance sequence tracks
-        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.applyCanvasDragTransform) {
-            this.genomeBrowser.trackRenderer.applyCanvasDragTransform(deltaX, 0);
-            this.dragState.canvasTransformsApplied = true;
-            console.log('🎨 [GLOBAL-DRAG] Applied Canvas drag transforms');
-        }
+        // Use unified container approach for all rendering modes
+        // No special Canvas transforms needed - let Canvas follow container movement
+        console.log('🔧 [GLOBAL-DRAG] Using unified container movement for all rendering modes');
         
         // Handle genes & features track specially to match single-track behavior
         const unifiedContainer = document.querySelector('.unified-gene-container');
@@ -1533,11 +1551,7 @@ class NavigationManager {
     resetGlobalVisualDragUpdates() {
         console.log('🌍 [GLOBAL-RESET] Resetting visual transforms for all tracks');
         
-        // Only reset Canvas drag transforms if they were actually applied during this drag
-        if (this.dragState.canvasTransformsApplied && this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.resetCanvasDragTransforms) {
-            this.genomeBrowser.trackRenderer.resetCanvasDragTransforms();
-            console.log('🎨 [GLOBAL-RESET] Reset Canvas drag transforms');
-        }
+        // No Canvas-specific transforms to reset - using unified container approach
         
         // Reset genes & features track specially to match single-track behavior
         const unifiedContainer = document.querySelector('.unified-gene-container');
@@ -1695,13 +1709,26 @@ class NavigationManager {
      * Reset visual transforms after drag ends
      */
     resetVisualDragUpdates(element) {
-        // Only reset Canvas drag transforms if they were actually applied during this drag
-        if (this.dragState.canvasTransformsApplied && this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.resetCanvasDragTransforms) {
-            this.genomeBrowser.trackRenderer.resetCanvasDragTransforms();
-            console.log('🎨 [DRAG-RESET] Reset Canvas drag transforms');
+        // No Canvas-specific transforms to reset - using unified container approach
+        
+        // Check if this is a reads track and reset it directly
+        const readsTrackElement = element.closest('.reads-track');
+        if (readsTrackElement) {
+            const trackContent = readsTrackElement.querySelector('.track-content');
+            if (trackContent) {
+                const baseTransform = trackContent.dataset.baseTransform || '';
+                trackContent.style.transform = baseTransform;
+                
+                // Clean up cache
+                delete trackContent.dataset.baseTransform;
+                
+                console.log('🔧 [DRAG-RESET] Reads track container reset:');
+                console.log('  - Restored transform:', baseTransform || 'none');
+                return; // Early return for reads track
+            }
         }
         
-        // Try to find the unified gene container first
+        // Try to find the unified gene container for genes track
         const unifiedContainer = document.querySelector('.unified-gene-container');
         
         if (unifiedContainer) {

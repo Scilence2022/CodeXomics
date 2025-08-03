@@ -2187,11 +2187,15 @@ class GenomeBrowser {
 
     // Helper method to create tracks by type
     async createTrackByType(trackType, chromosome, sequence, tracksToShow) {
+        console.log(`🔧 [DEBUG] [createTrackByType] Called for trackType: ${trackType}`);
         // Skip if track is not visible
         const visibleTrackName = trackType === 'wigTracks' ? 'wigTracks' : trackType;
+        console.log(`🔧 [DEBUG] [createTrackByType] Checking if ${visibleTrackName} is in visibleTracks:`, Array.from(this.visibleTracks));
         if (!this.visibleTracks.has(visibleTrackName)) {
+            console.log(`🔧 [DEBUG] [createTrackByType] Skipping ${trackType} - not visible`);
             return;
         }
+        console.log(`🔧 [DEBUG] [createTrackByType] Creating ${trackType} track`);
         
         // Skip 'sequence' as it's handled by the bottom sequence panel, not as a regular track
         if (trackType === 'sequence') {

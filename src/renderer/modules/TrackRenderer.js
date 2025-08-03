@@ -2733,8 +2733,10 @@ class TrackRenderer {
     }
 
     async createReadsTrack(chromosome) {
+        console.log('🔧 [DEBUG] [createReadsTrack] Entry point called for chromosome:', chromosome);
         // Check if we have multiple BAM files
         const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
+        console.log('🔧 [DEBUG] [createReadsTrack] Found BAM files:', bamFiles.length);
         
         if (bamFiles.length > 1) {
             // Create multiple reads tracks
@@ -2999,8 +3001,8 @@ class TrackRenderer {
             // Total height above reads (coverage + reference + spacing)
             const totalTopHeight = coverageHeight + referenceHeight;
             
-            // Check if vertical scrolling is enabled and needed
-            const enableVerticalScroll = settings.enableVerticalScroll !== false && readRows.length > (settings.maxVisibleRows || 10);
+            // Check if vertical scrolling is enabled and needed (disabled by default to match original Canvas behavior)
+            const enableVerticalScroll = settings.enableVerticalScroll === true && readRows.length > (settings.maxVisibleRows || 10);
             
             if (enableVerticalScroll) {
                 // Create scrollable reads track with all rows
@@ -3017,7 +3019,14 @@ class TrackRenderer {
             
                 // Render reads using Canvas or SVG based on settings
                 const renderingMode = settings.renderingMode || 'canvas';
-                console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                console.log(`🔧 [DEBUG] [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                console.log(`🔧 [DEBUG] [TrackRenderer] Full settings object:`, settings);
+                
+                if (renderingMode === 'canvas') {
+                    console.log(`🎨 [DEBUG] [TrackRenderer] Switching to Canvas rendering mode`);
+                } else {
+                    console.log(`🖼️ [DEBUG] [TrackRenderer] Switching to SVG rendering mode`);
+                }
                 
                 if (renderingMode === 'canvas') {
                     // Use Canvas rendering for high performance
@@ -3235,16 +3244,24 @@ class TrackRenderer {
                 const topPadding = 0;
                 const bottomPadding = 0;
                 
-                // Force scrollable mode for multiple rows
-                const forceScrollable = settings.forceScrollable !== false && readRows.length > (settings.maxRows || 20);
+                // Check if we should use scrollable mode (disabled by default to match original Canvas behavior)
+                const forceScrollable = settings.forceScrollable === true && readRows.length > (settings.maxRows || 20);
+                console.log('🔧 [DEBUG] [createSingleReadsTrack] Scrollable check:', {
+                    forceScrollable: settings.forceScrollable,
+                    readRowsLength: readRows.length,
+                    maxRows: settings.maxRows || 20,
+                    result: forceScrollable
+                });
                 
                 if (forceScrollable) {
                     // Use new scrollable track system for performance
                     this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding + coverageHeight, bottomPadding, settings);
                 } else {
                     // Use traditional limited rows approach
+                    console.log('🔧 [DEBUG] [createSingleReadsTrack] Using traditional limited rows approach');
                     const maxRows = settings.maxRows || 20;
                     const limitedReadRows = readRows.slice(0, maxRows);
+                    console.log('🔧 [DEBUG] [createSingleReadsTrack] Limited rows created, count:', limitedReadRows.length);
                 
                 // Calculate adaptive track height including reference sequence
                 let trackHeight = coverageHeight + topPadding + (limitedReadRows.length * (readHeight + rowSpacing)) - rowSpacing + bottomPadding;
@@ -3253,9 +3270,11 @@ class TrackRenderer {
                 
                     // Render reads using Canvas or SVG based on settings
                     const renderingMode = settings.renderingMode || 'canvas';
-                    console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                    console.log(`🔧 [DEBUG] [createSingleReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                    console.log(`🔧 [DEBUG] [createSingleReadsTrack] Full settings object:`, settings);
                     
                     if (renderingMode === 'canvas') {
+                        console.log(`🎨 [DEBUG] [createSingleReadsTrack] Switching to Canvas rendering mode`);
                         // Use Canvas rendering for high performance
                         this.renderReadsElementsCanvas(trackContent, limitedReadRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
                     } else {
@@ -3362,12 +3381,21 @@ class TrackRenderer {
                 console.warn(`⚠️ [TrackRenderer] No references found in BAM file - attempting query anyway`);
             }
             
+            console.log('🔧 [DEBUG] [createSingleReadsTrack] About to call BAM getRecordsForRange...');
             const reads = await bamFile.reader.getRecordsForRange(
                 chromosome, 
                 bamStart, 
                 bamEnd, 
                 settings  // CRITICAL FIX: Pass settings to BAM reader
             );
+            console.log('🔧 [DEBUG] [createSingleReadsTrack] BAM getRecordsForRange completed, reads count:', reads.length);
+            
+            // Check the path we'll take based on reads count
+            if (reads.length === 0) {
+                console.log('🔧 [DEBUG] [createSingleReadsTrack] No reads found - will show no data message');
+            } else {
+                console.log('🔧 [DEBUG] [createSingleReadsTrack] Reads found - will proceed to rendering logic');
+            }
             
             console.log(`📊 [TrackRenderer] BAM query result:`, {
                 readsFound: reads.length,
@@ -3432,18 +3460,20 @@ class TrackRenderer {
                 const trackHeight = totalTopHeight + topPadding + (readRows.length * (readHeight + rowSpacing)) + bottomPadding;
                 trackContent.style.height = `${trackHeight}px`;
                 
-                // Check if vertical scrolling is needed
+                // Check if vertical scrolling is needed (disabled by default to match original Canvas behavior)
                 const maxVisibleRows = parseInt(settings.maxVisibleRows) || 50;
-                const enableVerticalScroll = settings.enableVerticalScroll !== false;
+                const enableVerticalScroll = settings.enableVerticalScroll === true;
                 
                 if (enableVerticalScroll && readRows.length > maxVisibleRows) {
                     this.createScrollableReadsTrack(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, bottomPadding, settings);
                 } else {
                     // Render all reads normally using Canvas or SVG based on settings
                     const renderingMode = settings.renderingMode || 'canvas';
-                    console.log(`🔧 [TrackRenderer] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                    console.log(`🔧 [DEBUG] [createMultiReadsTrack] Selected rendering mode: ${renderingMode} (from settings: ${settings.renderingMode})`);
+                    console.log(`🔧 [DEBUG] [createMultiReadsTrack] Full settings object:`, settings);
                     
                     if (renderingMode === 'canvas') {
+                        console.log(`🎨 [DEBUG] [createMultiReadsTrack] Switching to Canvas rendering mode`);
                         // Use Canvas rendering for high performance
                         this.renderReadsElementsCanvas(trackContent, readRows, viewport, readHeight, rowSpacing, topPadding, trackHeight, settings);
                     } else {
@@ -3774,7 +3804,17 @@ class TrackRenderer {
         // Force layout calculation to get accurate width
         const containerWidth = container.parentElement?.getBoundingClientRect().width || 800;
         
-        // Create SVG for visible rows
+        // Check rendering mode - support Canvas in scrollable reads
+        const renderingMode = settings.renderingMode || 'canvas';
+        console.log(`🔧 [DEBUG] [renderVisibleRows] Using rendering mode: ${renderingMode}`);
+        
+        if (renderingMode === 'canvas') {
+            // Use Canvas rendering for scrollable reads
+            this.renderVisibleRowsCanvas(container, readRows, viewport, readHeight, rowSpacing, topPadding, startRow, endRow, settings, containerWidth);
+            return;
+        }
+        
+        // Create SVG for visible rows (default behavior)
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         const visibleRowCount = endRow - startRow;
         const svgHeight = visibleRowCount * (readHeight + rowSpacing);
@@ -3859,6 +3899,99 @@ class TrackRenderer {
         container.appendChild(svg);
         
         console.log(`📜 [ScrollableReads] Rendered rows ${startRow}-${endRow-1} (${visibleRowCount} rows) in SVG`);
+    }
+
+    /**
+     * Render visible rows using Canvas for high performance
+     */
+    renderVisibleRowsCanvas(container, readRows, viewport, readHeight, rowSpacing, topPadding, startRow, endRow, settings, containerWidth) {
+        console.log(`🎨 [ScrollableReads] Rendering rows ${startRow}-${endRow-1} with Canvas`);
+        
+        const visibleRowCount = endRow - startRow;
+        const canvasHeight = visibleRowCount * (readHeight + rowSpacing);
+        
+        // Create canvas element
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = `
+            width: 100%;
+            height: ${canvasHeight}px;
+            display: block;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        `;
+        
+        // Set up canvas with device pixel ratio
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        canvas.width = containerWidth * devicePixelRatio;
+        canvas.height = canvasHeight * devicePixelRatio;
+        
+        const ctx = canvas.getContext('2d', { alpha: true });
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, containerWidth, canvasHeight);
+        
+        // Get visible rows to render
+        const visibleRows = readRows.slice(startRow, endRow);
+        
+        // Render each visible row
+        visibleRows.forEach((rowReads, rowIndex) => {
+            const actualRowIndex = startRow + rowIndex;
+            const y = rowIndex * (readHeight + rowSpacing);
+            
+            this.renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth);
+        });
+        
+        // Add canvas to container
+        container.appendChild(canvas);
+        
+        console.log(`🎨 [ScrollableReads] Rendered rows ${startRow}-${endRow-1} (${endRow-startRow} rows) in Canvas`);
+    }
+
+    /**
+     * Render a single row of reads on Canvas
+     */
+    renderReadRowCanvas(ctx, rowReads, viewport, y, readHeight, settings, containerWidth) {
+        const viewportRange = viewport.end - viewport.start;
+        
+        // Base colors for reads
+        const baseColors = {
+            forward: settings.forwardColor || '#00b894',
+            reverse: settings.reverseColor || '#f39c12',
+            paired: settings.pairedColor || '#6c5ce7'
+        };
+        
+        rowReads.forEach(read => {
+            // Calculate read position and dimensions
+            const readStart = Math.max(read.start, viewport.start);
+            const readEnd = Math.min(read.end || (read.start + read.sequence.length), viewport.end);
+            
+            if (readEnd <= readStart) return; // Read not visible
+            
+            // Calculate screen coordinates
+            const x = ((readStart - viewport.start) / viewportRange) * containerWidth;
+            const width = ((readEnd - readStart) / viewportRange) * containerWidth;
+            
+            // Skip reads that are too narrow to see
+            if (width < 1) return;
+            
+            // Determine read color
+            let readColor = baseColors.forward;
+            if (read.strand === '-') {
+                readColor = baseColors.reverse;
+            } else if (read.isPaired) {
+                readColor = baseColors.paired;
+            }
+            
+            // Draw read rectangle
+            ctx.fillStyle = readColor;
+            ctx.fillRect(x, y, width, readHeight);
+            
+            // Draw read border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(x, y, width, readHeight);
+        });
     }
 
     // New method to arrange reads into non-overlapping rows
@@ -8613,9 +8746,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             }
         });
         
-        modal.querySelector('#applyTrackSettings').addEventListener('click', () => {
-            this.applyTrackSettings();
-        });
+        const applyButton = modal.querySelector('#applyTrackSettings');
+        if (applyButton) {
+            applyButton.addEventListener('click', (e) => {
+                console.log('🔧 [DEBUG] Apply button clicked!');
+                console.log('🔧 [DEBUG] Event target:', e.target);
+                console.log('🔧 [DEBUG] Modal dataset:', modal.dataset);
+                e.preventDefault();
+                e.stopPropagation();
+                this.applyTrackSettings();
+            });
+            console.log('🔧 [DEBUG] Apply button event listener attached');
+        } else {
+            console.error('🔧 [DEBUG] Apply button not found in modal!');
+        }
         
         // Initialize draggable and resizable using centralized managers
         if (window.modalDragManager) {
@@ -9022,17 +9166,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll !== false ? 'checked' : ''}>
+                        <input type="checkbox" id="readsEnableVerticalScroll" ${settings.enableVerticalScroll === true ? 'checked' : ''}>
                         Enable vertical scrolling
                     </label>
                     <div class="help-text">Enable vertical scrolling when reads exceed the maximum visible rows. When disabled, excess reads are simply hidden.</div>
                 </div>
-                <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll !== false ? 'block' : 'none'}">
+                <div class="form-group" id="readsMaxVisibleRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'block' : 'none'}">
                     <label for="readsMaxVisibleRows">Maximum visible rows (scrollable):</label>
                     <input type="number" id="readsMaxVisibleRows" min="5" max="30" value="${settings.maxVisibleRows || 10}">
                     <div class="help-text">Maximum number of read rows visible at once when scrolling is enabled. Additional rows can be accessed by scrolling.</div>
                 </div>
-                <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll !== false ? 'none' : 'block'}">
+                <div class="form-group" id="readsMaxRowsGroup" style="display: ${settings.enableVerticalScroll === true ? 'none' : 'block'}">
                     <label for="readsMaxRows">Maximum visible rows:</label>
                     <input type="number" id="readsMaxRows" min="5" max="50" value="${settings.maxRows || 20}">
                     <div class="help-text">Maximum number of read rows to display. Additional reads will be hidden to improve performance.</div>
@@ -9426,15 +9570,19 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
      * Apply track settings
      */
     applyTrackSettings() {
-        console.log('applyTrackSettings called');
+        console.log('🔧 [DEBUG] applyTrackSettings called');
         const modal = document.getElementById('trackSettingsModal');
         const trackType = modal.dataset.trackType;
         
-        console.log('Track type:', trackType);
-        if (!trackType) return;
+        console.log('🔧 [DEBUG] Track type:', trackType);
+        if (!trackType) {
+            console.error('🔧 [DEBUG] No track type found!');
+            return;
+        }
         
         const settings = this.collectSettingsFromModal(trackType, modal);
-        console.log('Collected settings:', settings);
+        console.log('🔧 [DEBUG] Collected settings:', settings);
+        console.log('🔧 [DEBUG] renderingMode in settings:', settings.renderingMode);
         
         this.saveTrackSettings(trackType, settings);
         
@@ -10023,15 +10171,23 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const preservedTrackSettings = this.trackSettings ? JSON.parse(JSON.stringify(this.trackSettings)) : {};
         console.log('🔄 [refreshViewAfterSettingsChange] Preserving trackSettings:', preservedTrackSettings);
         
+        // Clean up all Canvas renderers before redraw to ensure proper switching between rendering modes
+        if (forceFullRedraw) {
+            console.log('🧹 [refreshViewAfterSettingsChange] Cleaning up Canvas renderers before full redraw');
+            this.cleanupAllCanvasRenderers();
+        }
+        
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             if (forceFullRedraw) {
                 console.log('🔄 [refreshViewAfterSettingsChange] Performing full view redraw...');
+                
+                // CRITICAL FIX: Apply preserved settings BEFORE redraw, not after
+                this.trackSettings = preservedTrackSettings;
+                console.log('🔄 [refreshViewAfterSettingsChange] Applied trackSettings BEFORE redraw:', this.trackSettings);
+                console.log('🔧 [DEBUG] [refreshViewAfterSettingsChange] Reads renderingMode BEFORE redraw:', this.trackSettings?.reads?.renderingMode);
+                
                 // Perform complete redraw of all tracks
                 this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-                
-                // CRITICAL: Restore trackSettings after redraw
-                this.trackSettings = preservedTrackSettings;
-                console.log('🔄 [refreshViewAfterSettingsChange] Restored trackSettings after redraw:', this.trackSettings);
             } else {
                 console.log('Triggering optimized view refresh...');
                 
@@ -12054,9 +12210,20 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     /**
      * Apply drag transform to Canvas-based sequence tracks
      */
-    applyCanvasDragTransform(deltaX, deltaY = 0) {
+    applyCanvasDragTransform(deltaX, deltaY = 0, targetTrackType = null) {
         this.canvasRenderers.forEach((renderer, trackId) => {
             try {
+                // If targetTrackType is specified, only apply to that track type
+                if (targetTrackType) {
+                    const trackElement = document.querySelector(`[data-track-id="${trackId}"]`);
+                    const trackContainer = trackElement ? trackElement.closest(`[data-track-type]`) : null;
+                    const trackType = trackContainer ? trackContainer.getAttribute('data-track-type') : null;
+                    
+                    if (trackType !== targetTrackType) {
+                        return; // Skip this renderer
+                    }
+                }
+                
                 renderer.applyDragTransform(deltaX, deltaY);
             } catch (error) {
                 console.error(`Failed to apply drag transform to Canvas renderer ${trackId}:`, error);

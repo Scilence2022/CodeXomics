@@ -516,7 +516,9 @@ class CanvasReadsRenderer {
     
     // High-performance drag transform
     applyDragTransform(deltaX, deltaY = 0) {
+        // Apply the transform directly without any scaling to match SVG behavior
         this.canvas.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        console.log(`🎨 [CanvasReadsRenderer] Applied drag transform: translateX(${deltaX}px)`);
     }
     
     resetDragTransform() {
