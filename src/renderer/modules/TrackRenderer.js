@@ -567,8 +567,11 @@ class TrackRenderer {
         const geneRows = this.arrangeGenesInRows(visibleGenes, viewport.start, viewport.end, operons, settings);
         const layout = this.calculateGeneTrackLayout(geneRows, settings);
         
-        // Set calculated height
-        trackContent.style.height = `${Math.max(layout.totalHeight, 120)}px`;
+        // Calculate offset for gene elements if sequence is shown
+        const sequenceOffset = settings.showSequence ? (settings.sequenceHeight || 25) : 0;
+        
+        // Set calculated height including sequence space
+        trackContent.style.height = `${Math.max(layout.totalHeight + sequenceOffset, 120)}px`;
         
         // Create unified draggable container for all gene track elements
         const unifiedContainer = document.createElement('div');
@@ -577,7 +580,7 @@ class TrackRenderer {
             position: relative;
             width: 100%;
             height: 100%;
-            top: 0;
+            top: ${sequenceOffset}px;
             left: 0;
         `;
         
@@ -11087,10 +11090,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         console.log(`🧬 [createGenesSequenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`);
         
         // Check if detailed ruler exists to position sequence below it
-        const detailedRulerElement = trackContent.querySelector('.detailed-ruler');
+        const detailedRulerElement = trackContent.querySelector('.detailed-ruler-container');
         let topOffset = 0;
         if (detailedRulerElement) {
-            const rulerHeight = parseInt(getComputedStyle(detailedRulerElement).height) || 30;
+            const rulerHeight = parseInt(getComputedStyle(detailedRulerElement).height) || 35;
             topOffset = rulerHeight;
         }
         
@@ -11106,7 +11109,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
             border-bottom: 1px solid #ced4da;
             margin-bottom: 2px;
-            z-index: 1;
+            z-index: 5;
             overflow: hidden;
         `;
         
