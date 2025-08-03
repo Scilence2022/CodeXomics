@@ -9117,10 +9117,10 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 </div>
             </div>
             <div class="settings-section">
-                <h4>Sequence Display</h4>
+                <h4>Read Sequence Display</h4>
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" id="readsShowSequences" ${settings.showSequences || false ? 'checked' : ''}>
+                        <input type="checkbox" id="readsShowSequences" ${settings.showSequences !== false ? 'checked' : ''}>
                         Show read sequences when zoomed in
                     </label>
                     <div class="help-text">Display individual read sequences and reference sequence when the zoom level is sufficient.</div>
@@ -9376,12 +9376,12 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 referenceFontSize: 12,
                 referenceFontFamily: 'monospace',
                 // Sequence display settings
-                showSequences: false,
+                showSequences: true,
                 forceSequences: false,
                 autoFontSize: true,
                 sequenceThreshold: 1.0,
-                sequenceFontSize: 10,
-                sequenceHeight: 14,
+                sequenceFontSize: 6,
+                sequenceHeight: 6,
                 highlightMismatches: true,
                 showMismatches: true,
                 mismatchColor: '#ff6b6b',
