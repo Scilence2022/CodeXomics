@@ -381,7 +381,8 @@ class CanvasReadsRenderer {
         
         if (showSequence && read.sequence) {
             // When showing sequences, don't draw read rectangles to avoid interference
-            this.renderReadSequence(read, x, y, width);
+            // Pass visible portion info for proper sequence offset handling
+            this.renderReadSequence(read, x, y, width, readStart, readEnd);
         } else {
             // Show read rectangles when not showing sequences OR when read has no sequence data
             this.ctx.fillStyle = readColor;
@@ -433,20 +434,45 @@ class CanvasReadsRenderer {
         return readWidth > 50 && this.actualFontSize >= this.options.minFontSize;
     }
     
-    renderReadSequence(read, x, y, width) {
+    renderReadSequence(read, x, y, width, visibleStart, visibleEnd) {
         if (!read.sequence) return;
         
-        const sequence = read.sequence;
-        const charSpacing = width / sequence.length;
+        // Calculate which part of the sequence is visible in the current viewport
+        const readLength = read.end - read.start;
+        const sequenceLength = read.sequence.length;
         
-        // Calculate optimal font size for this read width - match SVG logic
-        const optimalFontSize = this.calculateOptimalSequenceFontSize(sequence.length, width, this.options.readHeight);
+        // Calculate offset within the read for the visible portion
+        const startOffset = Math.max(0, visibleStart - read.start);
+        const endOffset = Math.min(readLength, visibleEnd - read.start);
         
-        // Only render if font size is viable
-        if (optimalFontSize < this.options.minFontSize) return;
+        // Map to sequence indices (handle potential coordinate mismatches)
+        const startIndex = Math.floor((startOffset / readLength) * sequenceLength);
+        const endIndex = Math.ceil((endOffset / readLength) * sequenceLength);
         
-        // Set font with calculated optimal size
-        this.ctx.font = `${optimalFontSize}px 'Courier New', monospace`;
+        // Get the visible portion of the sequence
+        const visibleSequence = read.sequence.substring(startIndex, endIndex);
+        if (!visibleSequence || visibleSequence.length === 0) return;
+        
+        const charSpacing = width / visibleSequence.length;
+        
+        // Choose font size based on auto-calculate setting - match SVG logic
+        let fontSize;
+        if (this.options.autoFontSize !== false) {
+            // Auto-calculate mode: calculate optimal font size for this visible sequence portion
+            fontSize = this.calculateOptimalSequenceFontSize(visibleSequence.length, width, this.options.readHeight);
+            
+            // Only render if font size is viable
+            if (fontSize < this.options.minFontSize) return;
+        } else {
+            // Manual mode: use user-specified font size settings
+            fontSize = this.options.sequenceFontSize || 6;
+            
+            // Check if font will be readable with current spacing
+            if (charSpacing < fontSize * 0.6) return; // Character too cramped for readability
+        }
+        
+        // Set font with chosen size
+        this.ctx.font = `${fontSize}px 'Courier New', monospace`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         
@@ -455,8 +481,9 @@ class CanvasReadsRenderer {
         // Calculate character width for proper positioning
         const actualCharWidth = this.ctx.measureText('M').width;
         
-        for (let i = 0; i < sequence.length; i++) {
-            const base = sequence[i].toUpperCase();
+        // Render only the visible portion of the sequence
+        for (let i = 0; i < visibleSequence.length; i++) {
+            const base = visibleSequence[i].toUpperCase();
             const baseX = x + (i * charSpacing) + (charSpacing / 2);
             
             // Ensure character fits within its allocated space
