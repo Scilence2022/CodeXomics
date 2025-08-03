@@ -321,10 +321,32 @@ class CanvasReadsRenderer {
             height: this.options.readHeight
         });
         
-        // Draw sequence if enabled and zoom level allows
-        const showSequence = this.options.showSequences && this.shouldShowSequenceDetails(width);
+        // Draw sequence if enabled and zoom level allows - use unified threshold logic
+        // Get TrackRenderer instance to use unified shouldShowSequences method
+        const trackRenderer = window.genomeBrowser && window.genomeBrowser.trackRenderer;
+        let showSequence = false;
+        
+        if (this.options.showSequences && trackRenderer && trackRenderer.shouldShowSequences) {
+            // Use unified threshold logic from TrackRenderer
+            showSequence = trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options);
+        } else {
+            // Fallback to local method if TrackRenderer not available
+            showSequence = this.options.showSequences && this.shouldShowSequenceDetails(width);
+        }
+        
+        console.log(`🔍 [CanvasReadsRenderer] Sequence display check for read ${read.id}:`, {
+            showSequencesSetting: this.options.showSequences,
+            readWidth: width.toFixed(2),
+            viewportRange: `${this.viewport.start}-${this.viewport.end}`,
+            canvasWidth: this.canvasWidth,
+            unifiedThreshold: trackRenderer ? trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options) : 'N/A',
+            localThreshold: this.shouldShowSequenceDetails(width),
+            finalShowSequence: showSequence,
+            hasSequence: !!read.sequence
+        });
         
         if (showSequence) {
+            console.log(`🧬 [CanvasReadsRenderer] Rendering sequence for read ${read.id}`);
             // When showing sequences, don't draw read rectangles to avoid interference
             this.renderReadSequence(read, x, y, width);
         } else {
