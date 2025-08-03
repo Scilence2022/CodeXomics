@@ -3785,7 +3785,7 @@ class GenomeBrowser {
                         </div>
                         <div class="read-sequence-full" id="dna-${readName}-full">
                             <div class="read-sequence-formatted">
-                                ${this.colorizeSequenceBases(sequenceFormatted)}
+                                ${sequenceFormatted}
                             </div>
                         </div>
                     </div>
