@@ -4347,6 +4347,9 @@ class TrackRenderer {
         // Calculate Y position - SVG container is already positioned after coverage/reference, so minimal padding
         const y = 5 + rowIndex * (readHeight + rowSpacing);  // Just 5px internal padding
 
+        // Check if we should show sequences using unified threshold logic
+        const showSequences = settings.showSequences && this.shouldShowSequences(start, end, containerWidth, settings);
+
         // Create SVG group for the read
         const readGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         readGroup.setAttribute('class', 'svg-read-element');
@@ -4356,19 +4359,22 @@ class TrackRenderer {
         const opacity = settings.opacity || 0.9;
         readGroup.setAttribute('opacity', opacity);
 
-        // Create read shape
-        const readShape = this.createSVGReadShape(read, elementWidth, readHeight, settings);
-        readGroup.appendChild(readShape);
+        // Only create read shape if NOT showing sequences to avoid interference
+        if (!showSequences) {
+            // Create read shape
+            const readShape = this.createSVGReadShape(read, elementWidth, readHeight, settings);
+            readGroup.appendChild(readShape);
 
-        // Add mutation visualization if enabled
-        if (settings.showMutations && read.mutations && read.mutations.length > 0) {
-            const mutationElements = this.createSVGMutations(read, elementWidth, readHeight, start, end, range, containerWidth, settings);
-            mutationElements.forEach(mutationElement => {
-                readGroup.appendChild(mutationElement);
-            });
+            // Add mutation visualization if enabled
+            if (settings.showMutations && read.mutations && read.mutations.length > 0) {
+                const mutationElements = this.createSVGMutations(read, elementWidth, readHeight, start, end, range, containerWidth, settings);
+                mutationElements.forEach(mutationElement => {
+                    readGroup.appendChild(mutationElement);
+                });
+            }
         }
 
-        // Add interaction handlers
+        // Add interaction handlers (work for both shapes and sequences)
         this.addSVGReadInteraction(readGroup, read, rowIndex);
 
         return readGroup;
@@ -4428,6 +4434,9 @@ class TrackRenderer {
                 sequenceGroup.appendChild(sequenceText);
             }
         }
+
+        // Add interaction handlers to sequence elements for click functionality
+        this.addSVGReadInteraction(sequenceGroup, read, rowIndex);
 
         return sequenceGroup;
     }
