@@ -513,6 +513,12 @@ class TrackRenderer {
         const detailedRuler = this.createDetailedRuler(chromosome);
         trackContent.appendChild(detailedRuler);
         
+        // Add sequence display if enabled
+        if (settings.showSequence) {
+            const sequenceHeight = settings.sequenceHeight || 25;
+            this.createGenesSequenceVisualization(trackContent, viewport, sequenceHeight, settings);
+        }
+        
         // Get and validate data
         const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
         const operons = this.genomeBrowser.detectOperons(annotations);
@@ -8851,6 +8857,18 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                     </label>
                     <div class="help-text">When enabled, genes belonging to the same operon will be grouped together in the same row when possible (in Compact mode).</div>
                 </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="genesShowSequence" ${settings.showSequence ? 'checked' : ''}>
+                        Show reference sequence
+                    </label>
+                    <div class="help-text">When enabled, displays the reference sequence between the secondary ruler and gene elements for better context.</div>
+                </div>
+                <div class="form-group">
+                    <label for="genesSequenceHeight">Reference Sequence Height (px):</label>
+                    <input type="number" id="genesSequenceHeight" min="15" max="50" value="${settings.sequenceHeight || 25}" ${settings.showSequence ? '' : 'disabled'}>
+                    <div class="help-text">Height of the reference sequence display area.</div>
+                </div>
             </div>
             <div class="settings-section">
                 <h4>Interactive Features</h4>
@@ -9442,6 +9460,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const enableGlobalDraggingElement = modal.querySelector('#genesEnableGlobalDragging');
                 const wheelZoomSensitivityElement = modal.querySelector('#genesWheelZoomSensitivity');
                 const overrideGlobalZoomElement = modal.querySelector('#genesOverrideGlobalZoom');
+                const showSequenceElement = modal.querySelector('#genesShowSequence');
+                const sequenceHeightElement = modal.querySelector('#genesSequenceHeight');
                 
                 console.log('Form elements found:', {
                     maxRowsElement: !!maxRowsElement,
@@ -9466,6 +9486,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
                 settings.wheelZoomSensitivity = parseFloat(wheelZoomSensitivityElement?.value) || 0.1;
                 settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
+                settings.showSequence = showSequenceElement?.checked || false; // Default to false (hidden)
+                settings.sequenceHeight = parseInt(sequenceHeightElement?.value) || 25;
                 
                 console.log('Collected gene settings from form:', settings);
                 break;
@@ -11054,6 +11076,71 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     /**
+     * Create sequence visualization for Genes & Features track
+     * Positioned between secondary ruler and gene elements
+     */
+    createGenesSequenceVisualization(trackContent, viewport, sequenceHeight, settings) {
+        console.log(`🧬 [createGenesSequenceVisualization] Creating sequence display for genes track: ${viewport.start}-${viewport.end}, height: ${sequenceHeight}`);
+        
+        // Get reference sequence from genome browser
+        const referenceSequence = this.getReferenceSequence(viewport.start, viewport.end);
+        console.log(`🧬 [createGenesSequenceVisualization] Got reference sequence: ${referenceSequence ? referenceSequence.length + ' bases' : 'null'}`);
+        
+        // Check if detailed ruler exists to position sequence below it
+        const detailedRulerElement = trackContent.querySelector('.detailed-ruler');
+        let topOffset = 0;
+        if (detailedRulerElement) {
+            const rulerHeight = parseInt(getComputedStyle(detailedRulerElement).height) || 30;
+            topOffset = rulerHeight;
+        }
+        
+        // Create sequence container
+        const sequenceContainer = document.createElement('div');
+        sequenceContainer.className = 'genes-sequence-visualization';
+        sequenceContainer.style.cssText = `
+            position: absolute;
+            top: ${topOffset}px;
+            left: 0;
+            right: 0;
+            height: ${sequenceHeight}px;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #ced4da;
+            margin-bottom: 2px;
+            z-index: 1;
+            overflow: hidden;
+        `;
+        
+        if (!referenceSequence) {
+            console.warn(`🧬 [createGenesSequenceVisualization] No reference sequence available, creating placeholder`);
+            
+            // Create placeholder text when no reference sequence is available
+            const placeholderDiv = document.createElement('div');
+            placeholderDiv.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                font-family: Arial, sans-serif;
+                font-size: 11px;
+                color: #6c757d;
+                font-style: italic;
+            `;
+            placeholderDiv.textContent = 'Reference sequence not available';
+            sequenceContainer.appendChild(placeholderDiv);
+        } else {
+            // Use the same high-quality renderer as Single-line sequence track
+            const sequenceDisplay = this.createReferenceSequenceDisplay(referenceSequence, viewport, sequenceHeight, settings);
+            sequenceContainer.appendChild(sequenceDisplay);
+        }
+        
+        trackContent.appendChild(sequenceContainer);
+        
+        console.log(`✅ [createGenesSequenceVisualization] Genes sequence visualization created with height: ${sequenceHeight}px`);
+        
+        return sequenceHeight;
+    }
+
+    /**
      * Render reference sequence text in SVG
      */
     renderReferenceSequenceInSVG(svg, referenceSequence, viewport, height, settings) {
@@ -11492,6 +11579,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         if (overrideGlobalZoomCheckbox) {
             overrideGlobalZoomCheckbox.addEventListener('change', (e) => {
                 console.log(`🔧 [setupGenesSettingsEventListeners] Override global zoom changed to: ${e.target.checked} (will apply on Apply button)`);
+            });
+        }
+        
+        // Sequence display checkbox - enables/disables sequence height input
+        const showSequenceCheckbox = bodyElement.querySelector('#genesShowSequence');
+        const sequenceHeightInput = bodyElement.querySelector('#genesSequenceHeight');
+        
+        if (showSequenceCheckbox && sequenceHeightInput) {
+            showSequenceCheckbox.addEventListener('change', (e) => {
+                sequenceHeightInput.disabled = !e.target.checked;
+                console.log(`🔧 [setupGenesSettingsEventListeners] Show sequence changed to: ${e.target.checked} (will apply on Apply button)`);
             });
         }
     }
