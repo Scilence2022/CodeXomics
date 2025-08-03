@@ -72,11 +72,23 @@ class CanvasReadsRenderer {
     initialize() {
         console.log('🎨 [CanvasReadsRenderer] Initializing Canvas reads renderer');
         
-        // Calculate total height needed
+        // Calculate total height needed including reference and coverage space
         const totalRows = this.readRows.length;
-        const totalHeight = this.options.topPadding + 
-                           (totalRows * (this.options.readHeight + this.options.rowSpacing)) + 
-                           this.options.bottomPadding;
+        let totalHeight = this.options.topPadding;
+        
+        // Add space for reference sequence if enabled
+        if (this.options.showReference) {
+            totalHeight += 20; // Reference sequence height + spacing
+        }
+        
+        // Add space for coverage if enabled
+        if (this.options.showCoverage) {
+            totalHeight += 35; // Coverage height + spacing
+        }
+        
+        // Add space for reads
+        totalHeight += (totalRows * (this.options.readHeight + this.options.rowSpacing)) + 
+                      this.options.bottomPadding;
         
         // Create canvas element
         this.canvas = document.createElement('canvas');
@@ -138,11 +150,25 @@ class CanvasReadsRenderer {
         const containerRect = this.container.getBoundingClientRect();
         this.canvasWidth = Math.max(containerRect.width, 800);
         
-        // Calculate canvas height based on read rows
+        // Calculate canvas height based on read rows plus reference/coverage space
         const totalRows = this.readRows.length;
-        this.canvasHeight = this.options.topPadding + 
-                           (totalRows * (this.options.readHeight + this.options.rowSpacing)) + 
-                           this.options.bottomPadding;
+        let totalHeight = this.options.topPadding;
+        
+        // Add space for reference sequence if enabled
+        if (this.options.showReference) {
+            totalHeight += 20; // Reference sequence height + spacing
+        }
+        
+        // Add space for coverage if enabled
+        if (this.options.showCoverage) {
+            totalHeight += 35; // Coverage height + spacing
+        }
+        
+        // Add space for reads
+        totalHeight += (totalRows * (this.options.readHeight + this.options.rowSpacing)) + 
+                      this.options.bottomPadding;
+                      
+        this.canvasHeight = totalHeight;
         
         // Set canvas size accounting for device pixel ratio
         this.canvas.width = this.canvasWidth * this.devicePixelRatio;
@@ -287,7 +313,20 @@ class CanvasReadsRenderer {
     }
     
     renderReadRow(rowReads, rowIndex) {
-        const y = this.options.topPadding + (rowIndex * (this.options.readHeight + this.options.rowSpacing));
+        // Calculate Y position accounting for reference sequence and coverage
+        let yOffset = this.options.topPadding;
+        
+        // Add space for reference sequence if enabled
+        if (this.options.showReference) {
+            yOffset += 20; // Reference sequence height + spacing
+        }
+        
+        // Add space for coverage if enabled  
+        if (this.options.showCoverage) {
+            yOffset += 35; // Coverage height + spacing
+        }
+        
+        const y = yOffset + (rowIndex * (this.options.readHeight + this.options.rowSpacing));
         
         rowReads.forEach(read => {
             this.renderRead(read, y);
