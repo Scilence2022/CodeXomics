@@ -361,47 +361,48 @@ class CanvasReadsRenderer {
             height: this.options.readHeight
         });
         
-        // Draw sequence if enabled and zoom level allows - use unified threshold logic
-        // Get TrackRenderer instance to use unified shouldShowSequences method
-        const trackRenderer = window.genomeBrowser && window.genomeBrowser.trackRenderer;
-        let showSequence = false;
+        // SIMPLIFIED APPROACH: Always show rectangle first, then try sequence overlay
+        // This ensures we NEVER have empty space
         
-        if (this.options.showSequences) {
+        // Always draw the read rectangle first
+        this.ctx.fillStyle = readColor;
+        this.ctx.fillRect(x, y, width, this.options.readHeight);
+        
+        // Draw read border for better visibility
+        this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+        this.ctx.lineWidth = 0.5;
+        this.ctx.strokeRect(x, y, width, this.options.readHeight);
+        
+        // Then try to overlay sequences if conditions are right
+        if (this.options.showSequences && read.sequence) {
+            // Get TrackRenderer instance to use unified shouldShowSequences method
+            const trackRenderer = window.genomeBrowser && window.genomeBrowser.trackRenderer;
+            let shouldTrySequence = false;
+            
             if (trackRenderer && trackRenderer.shouldShowSequences) {
                 // Use unified threshold logic from TrackRenderer
-                showSequence = trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options);
+                shouldTrySequence = trackRenderer.shouldShowSequences(this.viewport.start, this.viewport.end, this.canvasWidth, this.options);
             } else {
                 // Fallback to local method if TrackRenderer not available
-                showSequence = this.shouldShowSequenceDetails(width);
+                shouldTrySequence = this.shouldShowSequenceDetails(width);
             }
-        }
-        
-        // Always show SOMETHING - either sequences or rectangles, never nothing
-        const showRectangles = !showSequence;
-        
-        if (showSequence && read.sequence) {
-            // Try to render sequence first
-            const sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
             
-            // If sequence rendering failed, fall back to showing rectangle
-            if (!sequenceRendered) {
-                this.ctx.fillStyle = readColor;
-                this.ctx.fillRect(x, y, width, this.options.readHeight);
+            if (shouldTrySequence) {
+                // Clear the rectangle area and try to render sequence
+                this.ctx.clearRect(x, y, width, this.options.readHeight);
+                const sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
                 
-                // Draw read border for better visibility
-                this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-                this.ctx.lineWidth = 0.5;
-                this.ctx.strokeRect(x, y, width, this.options.readHeight);
+                // If sequence rendering failed, redraw the rectangle
+                if (!sequenceRendered) {
+                    this.ctx.fillStyle = readColor;
+                    this.ctx.fillRect(x, y, width, this.options.readHeight);
+                    
+                    // Draw read border for better visibility
+                    this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+                    this.ctx.lineWidth = 0.5;
+                    this.ctx.strokeRect(x, y, width, this.options.readHeight);
+                }
             }
-        } else {
-            // Show read rectangles when not showing sequences OR when read has no sequence data
-            this.ctx.fillStyle = readColor;
-            this.ctx.fillRect(x, y, width, this.options.readHeight);
-            
-            // Draw read border for better visibility
-            this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-            this.ctx.lineWidth = 0.5;
-            this.ctx.strokeRect(x, y, width, this.options.readHeight);
         }
         
         // Highlight mismatches if enabled
