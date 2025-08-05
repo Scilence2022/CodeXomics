@@ -434,6 +434,10 @@ class ConfigManager {
         try {
             await this.loadConfig();
             this.setupAutoSave();
+            
+            // Clean up any oversized data from previous sessions
+            this.cleanupOversizedData();
+            
             console.log('Configuration system initialized');
         } catch (error) {
             console.error('Failed to initialize configuration:', error);
@@ -644,6 +648,123 @@ class ConfigManager {
         } catch (error) {
             console.error('Error saving configuration:', error);
             console.error('=== saveConfig Debug End (ERROR) ===');
+            
+            // Try fallback to localStorage if file saving fails
+            try {
+                console.warn('Attempting fallback save to localStorage...');
+                this.saveToLocalStorage();
+                console.log('Fallback save to localStorage successful');
+            } catch (fallbackError) {
+                console.error('Fallback save also failed:', fallbackError);
+                // Don't throw error to prevent app crashes
+                console.warn('Configuration save failed completely, but continuing execution');
+            }
+        }
+    }
+
+    /**
+     * Validate and clean data before saving to prevent JSON.stringify errors
+     */
+    validateAndCleanData(data, maxSize = 10 * 1024 * 1024) { // 10MB default limit
+        try {
+            // Create a deep copy to avoid modifying original data
+            const cleanData = JSON.parse(JSON.stringify(data));
+            
+            // Check if data has historyData that might be too large
+            if (cleanData.historyData) {
+                console.log('Validating historyData size...');
+                
+                // Truncate large arrays in historyData
+                const maxArrayLength = 1000; // Limit arrays to 1000 items
+                
+                if (cleanData.historyData.conversations && Array.isArray(cleanData.historyData.conversations)) {
+                    if (cleanData.historyData.conversations.length > maxArrayLength) {
+                        console.warn(`Truncating conversations array from ${cleanData.historyData.conversations.length} to ${maxArrayLength} items`);
+                        cleanData.historyData.conversations = cleanData.historyData.conversations.slice(-maxArrayLength);
+                    }
+                }
+                
+                if (cleanData.historyData.analysisRecords && Array.isArray(cleanData.historyData.analysisRecords)) {
+                    if (cleanData.historyData.analysisRecords.length > maxArrayLength) {
+                        console.warn(`Truncating analysisRecords array from ${cleanData.historyData.analysisRecords.length} to ${maxArrayLength} items`);
+                        cleanData.historyData.analysisRecords = cleanData.historyData.analysisRecords.slice(-maxArrayLength);
+                    }
+                }
+                
+                if (cleanData.historyData.pluginGenerationHistory && Array.isArray(cleanData.historyData.pluginGenerationHistory)) {
+                    if (cleanData.historyData.pluginGenerationHistory.length > maxArrayLength) {
+                        console.warn(`Truncating pluginGenerationHistory array from ${cleanData.historyData.pluginGenerationHistory.length} to ${maxArrayLength} items`);
+                        cleanData.historyData.pluginGenerationHistory = cleanData.historyData.pluginGenerationHistory.slice(-maxArrayLength);
+                    }
+                }
+                
+                if (cleanData.historyData.evolutionTimeline && Array.isArray(cleanData.historyData.evolutionTimeline)) {
+                    if (cleanData.historyData.evolutionTimeline.length > maxArrayLength) {
+                        console.warn(`Truncating evolutionTimeline array from ${cleanData.historyData.evolutionTimeline.length} to ${maxArrayLength} items`);
+                        cleanData.historyData.evolutionTimeline = cleanData.historyData.evolutionTimeline.slice(-maxArrayLength);
+                    }
+                }
+            }
+            
+            // Check if chat history is too large
+            if (cleanData.history && Array.isArray(cleanData.history)) {
+                const maxChatHistory = cleanData.maxHistoryLength || 1000;
+                if (cleanData.history.length > maxChatHistory) {
+                    console.warn(`Truncating chat history from ${cleanData.history.length} to ${maxChatHistory} items`);
+                    cleanData.history = cleanData.history.slice(-maxChatHistory);
+                }
+            }
+            
+            // Test if the cleaned data can be stringified
+            const testString = JSON.stringify(cleanData);
+            const dataSizeBytes = new Blob([testString]).size;
+            
+            console.log(`Data size after cleaning: ${(dataSizeBytes / 1024 / 1024).toFixed(2)} MB`);
+            
+            if (dataSizeBytes > maxSize) {
+                console.warn(`Data size ${(dataSizeBytes / 1024 / 1024).toFixed(2)} MB exceeds limit ${(maxSize / 1024 / 1024).toFixed(2)} MB`);
+                throw new Error(`Data too large: ${(dataSizeBytes / 1024 / 1024).toFixed(2)} MB exceeds ${(maxSize / 1024 / 1024).toFixed(2)} MB limit`);
+            }
+            
+            return cleanData;
+        } catch (error) {
+            console.error('Error validating/cleaning data:', error);
+            
+            // If cleaning fails, return a minimal safe version
+            if (data.historyData) {
+                console.warn('Returning minimal evolution config due to data size issues');
+                return this.getDefaultEvolutionConfig();
+            } else if (data.history) {
+                console.warn('Returning minimal chat config due to data size issues');
+                return {
+                    ...data,
+                    history: data.history ? data.history.slice(-100) : [] // Keep only last 100 messages
+                };
+            }
+            
+            return data; // Return original if we can't clean it
+        }
+    }
+
+    /**
+     * Safe JSON stringify with size validation
+     */
+    safeStringify(data, indent = 2) {
+        try {
+            const result = JSON.stringify(data, null, indent);
+            const sizeBytes = new Blob([result]).size;
+            const sizeMB = sizeBytes / 1024 / 1024;
+            
+            console.log(`JSON string size: ${sizeMB.toFixed(2)} MB`);
+            
+            // JavaScript string length limit is approximately 1GB, but we'll be more conservative
+            if (sizeBytes > 100 * 1024 * 1024) { // 100MB limit
+                throw new Error(`JSON string too large: ${sizeMB.toFixed(2)} MB`);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Error in safeStringify:', error);
             throw error;
         }
     }
@@ -677,10 +798,10 @@ class ConfigManager {
             };
             console.log('Saving main config to:', this.configPath.main);
             console.log('Main config data:', mainConfigData);
-            await fs.writeFile(this.configPath.main, JSON.stringify(mainConfigData, null, 2));
+            await fs.writeFile(this.configPath.main, this.safeStringify(mainConfigData));
             console.log('Main config saved successfully');
 
-            // Save specific config files
+            // Save specific config files with validation
             const configFiles = {
                 [this.configPath.llm]: this.config.llm,
                 [this.configPath.ui]: this.config.ui,
@@ -691,10 +812,36 @@ class ConfigManager {
             };
 
             for (const [filePath, data] of Object.entries(configFiles)) {
-                console.log('Saving config to:', filePath);
-                console.log('Data keys:', Object.keys(data));
-                await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-                console.log('Config file saved successfully:', filePath);
+                try {
+                    console.log('Saving config to:', filePath);
+                    console.log('Data keys:', Object.keys(data));
+                    
+                    // Validate and clean data before saving
+                    const cleanData = this.validateAndCleanData(data);
+                    const jsonString = this.safeStringify(cleanData);
+                    
+                    await fs.writeFile(filePath, jsonString);
+                    console.log('Config file saved successfully:', filePath);
+                } catch (fileError) {
+                    console.error(`Error saving individual config file ${filePath}:`, fileError);
+                    
+                    // Try to save a minimal version for critical files
+                    if (filePath.includes('evolution')) {
+                        console.warn('Saving minimal evolution config due to error');
+                        const minimalEvolution = this.getDefaultEvolutionConfig();
+                        await fs.writeFile(filePath, this.safeStringify(minimalEvolution));
+                    } else if (filePath.includes('chat')) {
+                        console.warn('Saving minimal chat config due to error');
+                        const minimalChat = {
+                            ...data,
+                            history: [] // Clear history if it's causing issues
+                        };
+                        await fs.writeFile(filePath, this.safeStringify(minimalChat));
+                    } else {
+                        // For other files, re-throw the error
+                        throw fileError;
+                    }
+                }
             }
             
             console.log('All configuration files saved successfully');
@@ -702,7 +849,9 @@ class ConfigManager {
         } catch (error) {
             console.error('Error saving configuration to files:', error);
             console.error('=== saveToFiles Debug End (ERROR) ===');
-            throw error;
+            
+            // Don't throw the error, just log it to prevent app crashes
+            console.warn('Configuration save failed, but continuing execution to prevent app crash');
         }
     }
 
@@ -711,18 +860,94 @@ class ConfigManager {
      */
     saveToLocalStorage() {
         try {
-            // Backward compatibility with existing LLM config
-            localStorage.setItem('llmConfiguration', JSON.stringify({
+            // Save LLM config with validation
+            const llmConfig = {
                 providers: this.config.llm.providers,
                 currentProvider: this.config.llm.currentProvider
-            }));
-
-            localStorage.setItem('uiPreferences', JSON.stringify(this.config.ui));
-            localStorage.setItem('chatHistory', JSON.stringify(this.config.chat.history));
-            localStorage.setItem('appSettings', JSON.stringify(this.config.app));
+            };
+            localStorage.setItem('llmConfiguration', this.safeStringify(llmConfig));
+            
+            // Save UI preferences with validation
+            localStorage.setItem('uiPreferences', this.safeStringify(this.config.ui));
+            
+            // Save chat history with size validation
+            const cleanChatHistory = this.validateAndCleanData(this.config.chat).history;
+            localStorage.setItem('chatHistory', this.safeStringify(cleanChatHistory));
+            
+            // Save app settings with validation
+            localStorage.setItem('appSettings', this.safeStringify(this.config.app));
+            
+            console.log('Configuration saved to localStorage with size validation');
         } catch (error) {
             console.error('Error saving configuration to localStorage:', error);
-            throw error;
+            
+            // Try to save minimal data if full save fails
+            try {
+                console.warn('Attempting to save minimal configuration to localStorage...');
+                localStorage.setItem('llmConfiguration', JSON.stringify({
+                    providers: this.config.llm.providers || {},
+                    currentProvider: this.config.llm.currentProvider || 'openai'
+                }));
+                localStorage.setItem('uiPreferences', JSON.stringify(this.config.ui || {}));
+                localStorage.setItem('chatHistory', JSON.stringify([])); // Clear chat history
+                localStorage.setItem('appSettings', JSON.stringify(this.config.app || {}));
+                console.log('Minimal configuration saved to localStorage');
+            } catch (minimalError) {
+                console.error('Even minimal localStorage save failed:', minimalError);
+                throw error; // Re-throw original error
+            }
+        }
+    }
+
+    /**
+     * Clean up oversized data proactively to prevent save errors
+     */
+    cleanupOversizedData() {
+        console.log('🧹 Starting data cleanup to prevent save errors...');
+        
+        try {
+            let cleaned = false;
+            
+            // Clean up chat history if too large
+            if (this.config.chat && this.config.chat.history && Array.isArray(this.config.chat.history)) {
+                const maxChatHistory = this.config.chat.maxHistoryLength || 1000;
+                if (this.config.chat.history.length > maxChatHistory) {
+                    const oldLength = this.config.chat.history.length;
+                    this.config.chat.history = this.config.chat.history.slice(-maxChatHistory);
+                    console.log(`🧹 Cleaned chat history: ${oldLength} → ${this.config.chat.history.length} messages`);
+                    cleaned = true;
+                }
+            }
+            
+            // Clean up evolution data if it exists and is too large
+            if (this.config.evolution && this.config.evolution.historyData) {
+                const maxArrayLength = 1000;
+                const historyData = this.config.evolution.historyData;
+                
+                ['conversations', 'analysisRecords', 'pluginGenerationHistory', 'evolutionTimeline'].forEach(arrayName => {
+                    if (historyData[arrayName] && Array.isArray(historyData[arrayName])) {
+                        if (historyData[arrayName].length > maxArrayLength) {
+                            const oldLength = historyData[arrayName].length;
+                            historyData[arrayName] = historyData[arrayName].slice(-maxArrayLength);
+                            console.log(`🧹 Cleaned ${arrayName}: ${oldLength} → ${historyData[arrayName].length} items`);
+                            cleaned = true;
+                        }
+                    }
+                });
+            }
+            
+            if (cleaned) {
+                console.log('🧹 Data cleanup completed, attempting to save cleaned configuration...');
+                // Don't await this to avoid recursive calls
+                this.debouncedSave();
+            } else {
+                console.log('🧹 No cleanup needed - data sizes are within limits');
+            }
+            
+            return cleaned;
+        } catch (error) {
+            console.error('🧹 Error during data cleanup:', error);
+            return false;
         }
     }
 
