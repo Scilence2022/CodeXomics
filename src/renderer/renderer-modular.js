@@ -3531,6 +3531,9 @@ class GenomeBrowser {
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
             }
+            
+            // Scroll sidebar to bring gene details section into view
+            this.scrollSidebarToSection(geneDetailsSection);
         }
     }
 
@@ -3544,6 +3547,9 @@ class GenomeBrowser {
             if (this.tabManager) {
                 this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, readDetailsSection.innerHTML);
             }
+            
+            // Scroll sidebar to bring read details section into view
+            this.scrollSidebarToSection(readDetailsSection);
         }
     }
 
@@ -5574,6 +5580,44 @@ class GenomeBrowser {
             
             this.uiManager.checkAndHideSidebarIfAllPanelsClosed();
         }
+    }
+
+    /**
+     * Scroll sidebar to bring the specified section into view
+     * @param {HTMLElement} sectionElement - The sidebar section element to scroll to
+     */
+    scrollSidebarToSection(sectionElement) {
+        if (!sectionElement) return;
+        
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        
+        // Add a small delay to ensure the section is fully displayed and rendered
+        setTimeout(() => {
+            // Check if section is already visible in the sidebar viewport
+            const sidebarRect = sidebar.getBoundingClientRect();
+            const sectionRect = sectionElement.getBoundingClientRect();
+            
+            // Calculate if section is already visible
+            const isVisible = (
+                sectionRect.top >= sidebarRect.top &&
+                sectionRect.bottom <= sidebarRect.bottom
+            );
+            
+            // Only scroll if section is not fully visible
+            if (!isVisible) {
+                // Use scrollIntoView for smooth scrolling
+                sectionElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
+                
+                console.log('🔄 [Sidebar] Scrolled to section:', sectionElement.id);
+            } else {
+                console.log('🔄 [Sidebar] Section already visible:', sectionElement.id);
+            }
+        }, 100); // Small delay to ensure UI updates are complete
     }
 
     // Action methods for read details buttons
