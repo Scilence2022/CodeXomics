@@ -1289,6 +1289,51 @@ class TabManager {
         
         let draggedElement = null;
         let draggedElementIndex = -1;
+        let dropIndicator = null;
+        
+        // Create drop indicator element
+        const createDropIndicator = () => {
+            if (!dropIndicator) {
+                dropIndicator = document.createElement('div');
+                dropIndicator.className = 'track-drop-indicator';
+                dropIndicator.style.cssText = `
+                    height: 3px;
+                    background: #1a73e8;
+                    border-radius: 2px;
+                    margin: 2px 0;
+                    opacity: 0.8;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 0 4px rgba(26, 115, 232, 0.5);
+                `;
+            }
+            return dropIndicator;
+        };
+        
+        // Remove drop indicator
+        const removeDropIndicator = () => {
+            if (dropIndicator && dropIndicator.parentNode) {
+                dropIndicator.parentNode.removeChild(dropIndicator);
+            }
+        };
+        
+        // Get drop position (above, below, or swap)
+        const getDropPosition = (targetElement, clientY) => {
+            const rect = targetElement.getBoundingClientRect();
+            const elementHeight = rect.height;
+            const relativeY = clientY - rect.top;
+            
+            // Define zones: top 25%, middle 50%, bottom 25%
+            const topZone = elementHeight * 0.25;
+            const bottomZone = elementHeight * 0.75;
+            
+            if (relativeY < topZone) {
+                return 'above';
+            } else if (relativeY > bottomZone) {
+                return 'below';
+            } else {
+                return 'swap';
+            }
+        };
         
         // Add drag functionality to all track control items
         const trackItems = trackControlsContainer.querySelectorAll('.track-control-item');
@@ -1317,10 +1362,13 @@ class TabManager {
             item.addEventListener('dragend', (e) => {
                 item.classList.remove('dragging');
                 
-                // Clean up drag handles highlighting
+                // Clean up visual feedback
                 trackControlsContainer.querySelectorAll('.track-control-item').forEach(el => {
-                    el.classList.remove('drag-over');
+                    el.classList.remove('drag-over', 'drag-above', 'drag-below', 'drag-swap');
                 });
+                
+                // Remove drop indicator
+                removeDropIndicator();
                 
                 console.log('🔧 [TabManager] Finished dragging track');
             });
@@ -1329,13 +1377,42 @@ class TabManager {
             item.addEventListener('dragover', (e) => {
                 if (draggedElement && draggedElement !== item) {
                     e.preventDefault();
-                    item.classList.add('drag-over');
+                    
+                    const dropPosition = getDropPosition(item, e.clientY);
+                    
+                    // Remove existing classes
+                    item.classList.remove('drag-above', 'drag-below', 'drag-swap');
+                    
+                    // Add appropriate class based on position
+                    if (dropPosition === 'above') {
+                        item.classList.add('drag-above');
+                        // Show drop indicator above
+                        removeDropIndicator();
+                        const indicator = createDropIndicator();
+                        item.parentNode.insertBefore(indicator, item);
+                    } else if (dropPosition === 'below') {
+                        item.classList.add('drag-below');
+                        // Show drop indicator below
+                        removeDropIndicator();
+                        const indicator = createDropIndicator();
+                        item.parentNode.insertBefore(indicator, item.nextSibling);
+                    } else {
+                        item.classList.add('drag-swap');
+                        removeDropIndicator();
+                    }
                 }
             });
             
             // Drag leave event
             item.addEventListener('dragleave', (e) => {
-                item.classList.remove('drag-over');
+                // Only remove classes if mouse leaves the element completely
+                const rect = item.getBoundingClientRect();
+                const { clientX, clientY } = e;
+                
+                if (clientX < rect.left || clientX > rect.right || 
+                    clientY < rect.top || clientY > rect.bottom) {
+                    item.classList.remove('drag-above', 'drag-below', 'drag-swap');
+                }
             });
             
             // Drop event
@@ -1343,16 +1420,32 @@ class TabManager {
                 e.preventDefault();
                 
                 if (draggedElement && draggedElement !== item) {
+                    const dropPosition = getDropPosition(item, e.clientY);
                     const draggedIndex = Array.from(trackControlsContainer.children).indexOf(draggedElement);
                     const targetIndex = Array.from(trackControlsContainer.children).indexOf(item);
                     
-                    // Reorder the DOM elements
-                    if (draggedIndex < targetIndex) {
-                        // Moving down
+                    console.log(`🔧 [TabManager] Drop operation: ${dropPosition}, draggedIndex: ${draggedIndex}, targetIndex: ${targetIndex}`);
+                    
+                    if (dropPosition === 'above') {
+                        // Insert above target element
+                        item.parentNode.insertBefore(draggedElement, item);
+                    } else if (dropPosition === 'below') {
+                        // Insert below target element
                         item.parentNode.insertBefore(draggedElement, item.nextSibling);
                     } else {
-                        // Moving up
-                        item.parentNode.insertBefore(draggedElement, item);
+                        // Swap positions
+                        const nextSibling = draggedElement.nextSibling;
+                        const parent = draggedElement.parentNode;
+                        
+                        // Move target to dragged element's position
+                        parent.insertBefore(item, draggedElement);
+                        
+                        // Move dragged element to target's original position
+                        if (nextSibling) {
+                            parent.insertBefore(draggedElement, nextSibling);
+                        } else {
+                            parent.appendChild(draggedElement);
+                        }
                     }
                     
                     // Update track order and apply changes
@@ -1363,11 +1456,13 @@ class TabManager {
                     this.genomeBrowser.refreshCurrentView();
                 }
                 
-                item.classList.remove('drag-over');
+                // Clean up visual feedback
+                item.classList.remove('drag-above', 'drag-below', 'drag-swap');
+                removeDropIndicator();
             });
         });
         
-        console.log('✅ [TabManager] Track drag-and-drop functionality initialized for', trackItems.length, 'items');
+        console.log('✅ [TabManager] Enhanced track drag-and-drop functionality initialized for', trackItems.length, 'items');
     }
     
     /**

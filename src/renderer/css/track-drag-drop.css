@@ -23,6 +23,46 @@
     transform: translateY(-2px);
 }
 
+/* Enhanced drag feedback for different drop zones */
+.track-control-item.drag-above {
+    border-top: 3px solid #1a73e8;
+    background-color: rgba(26, 115, 232, 0.05);
+}
+
+.track-control-item.drag-below {
+    border-bottom: 3px solid #1a73e8;
+    background-color: rgba(26, 115, 232, 0.05);
+}
+
+.track-control-item.drag-swap {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 2px dashed rgba(255, 193, 7, 0.6);
+    transform: scale(1.02);
+}
+
+/* Drop indicator styling */
+.track-drop-indicator {
+    height: 3px;
+    background: linear-gradient(90deg, #1a73e8, #4285f4);
+    border-radius: 2px;
+    margin: 2px 0;
+    opacity: 0.9;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 6px rgba(26, 115, 232, 0.4);
+    animation: pulse-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 6px rgba(26, 115, 232, 0.4);
+        opacity: 0.9;
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(26, 115, 232, 0.8);
+        opacity: 1;
+    }
+}
+
 .drag-handle {
     display: inline-flex;
     align-items: center;
@@ -66,6 +106,26 @@
     .track-control-item.drag-over {
         background-color: rgba(59, 130, 246, 0.2);
         border-color: rgba(59, 130, 246, 0.7);
+    }
+    
+    .track-control-item.drag-above {
+        border-top-color: #4285f4;
+        background-color: rgba(66, 133, 244, 0.1);
+    }
+    
+    .track-control-item.drag-below {
+        border-bottom-color: #4285f4;
+        background-color: rgba(66, 133, 244, 0.1);
+    }
+    
+    .track-control-item.drag-swap {
+        background-color: rgba(255, 193, 7, 0.15);
+        border-color: rgba(255, 193, 7, 0.8);
+    }
+    
+    .track-drop-indicator {
+        background: linear-gradient(90deg, #4285f4, #6fa8f5);
+        box-shadow: 0 0 6px rgba(66, 133, 244, 0.6);
     }
     
     .drag-handle:hover {
