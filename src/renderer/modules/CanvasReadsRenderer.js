@@ -361,19 +361,12 @@ class CanvasReadsRenderer {
             height: this.options.readHeight
         });
         
-        // SIMPLIFIED APPROACH: Always show rectangle first, then try sequence overlay
-        // This ensures we NEVER have empty space
+        // GUARANTEED VISIBILITY APPROACH: Always ensure something is rendered
+        // This eliminates any possibility of reads disappearing during zoom transitions
         
-        // Always draw the read rectangle first
-        this.ctx.fillStyle = readColor;
-        this.ctx.fillRect(x, y, width, this.options.readHeight);
+        let sequenceRendered = false;
         
-        // Draw read border for better visibility
-        this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-        this.ctx.lineWidth = 0.5;
-        this.ctx.strokeRect(x, y, width, this.options.readHeight);
-        
-        // Then try to overlay sequences if conditions are right
+        // First, try to render sequence if conditions are met
         if (this.options.showSequences && read.sequence) {
             // Get TrackRenderer instance to use unified shouldShowSequences method
             const trackRenderer = window.genomeBrowser && window.genomeBrowser.trackRenderer;
@@ -388,21 +381,26 @@ class CanvasReadsRenderer {
             }
             
             if (shouldTrySequence) {
-                // Clear the rectangle area and try to render sequence
-                this.ctx.clearRect(x, y, width, this.options.readHeight);
-                const sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
+                // Try to render sequence directly
+                sequenceRendered = this.renderReadSequence(read, x, y, width, readStart, readEnd);
                 
-                // If sequence rendering failed, redraw the rectangle
+                // Debug logging for sequence rendering failures
                 if (!sequenceRendered) {
-                    this.ctx.fillStyle = readColor;
-                    this.ctx.fillRect(x, y, width, this.options.readHeight);
-                    
-                    // Draw read border for better visibility
-                    this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
-                    this.ctx.lineWidth = 0.5;
-                    this.ctx.strokeRect(x, y, width, this.options.readHeight);
+                    console.log('🔍 [CanvasReadsRenderer] Sequence rendering failed for read:', read.id, 'width:', width);
                 }
             }
+        }
+        
+        // GUARANTEE: Always draw visual rectangle representation if sequence was not rendered
+        // This ensures reads are NEVER invisible during zoom transitions
+        if (!sequenceRendered) {
+            this.ctx.fillStyle = readColor;
+            this.ctx.fillRect(x, y, width, this.options.readHeight);
+            
+            // Draw read border for better visibility
+            this.ctx.strokeStyle = this.darkenColor(readColor, 0.2);
+            this.ctx.lineWidth = 0.5;
+            this.ctx.strokeRect(x, y, width, this.options.readHeight);
         }
         
         // Highlight mismatches if enabled
@@ -441,8 +439,8 @@ class CanvasReadsRenderer {
     }
     
     shouldShowSequenceDetails(readWidth) {
-        // Show sequence details if read is wide enough and font size is reasonable
-        return readWidth > 50 && this.actualFontSize >= this.options.minFontSize;
+        // More lenient threshold for sequence display - show sequences for narrower reads
+        return readWidth > 15; // Reduced from 30 to 15 pixels to show sequences earlier in zoom
     }
     
     renderReadSequence(read, x, y, width, visibleStart, visibleEnd) {
@@ -472,14 +470,18 @@ class CanvasReadsRenderer {
             // Auto-calculate mode: calculate optimal font size for this visible sequence portion
             fontSize = this.calculateOptimalSequenceFontSize(visibleSequence.length, width, this.options.readHeight);
             
-            // Only render if font size is viable
-            if (fontSize < this.options.minFontSize) return false;
+            // Be more lenient with font size - use minimum font size as absolute floor
+            if (fontSize < (this.options.minFontSize || 4)) {
+                fontSize = this.options.minFontSize || 4; // Use minimum viable font size
+            }
         } else {
             // Manual mode: use user-specified font size settings
             fontSize = this.options.sequenceFontSize || 6;
             
-            // Check if font will be readable with current spacing
-            if (charSpacing < fontSize * 0.6) return false; // Character too cramped for readability
+            // Be more lenient with character spacing - allow tighter packing at high zoom
+            if (charSpacing < fontSize * 0.4) { // More lenient threshold
+                fontSize = Math.max(charSpacing / 0.4, this.options.minFontSize || 4); // Scale down font if needed
+            }
         }
         
         // Set font with chosen size
@@ -493,21 +495,24 @@ class CanvasReadsRenderer {
         const actualCharWidth = this.ctx.measureText('M').width;
         
         // Render only the visible portion of the sequence
+        let charactersRendered = 0;
         for (let i = 0; i < visibleSequence.length; i++) {
             const base = visibleSequence[i].toUpperCase();
             const baseX = x + (i * charSpacing) + (charSpacing / 2);
             
-            // Ensure character fits within its allocated space
-            if (actualCharWidth <= charSpacing * 1.2) { // Allow slight overlap for readability
+            // More lenient character spacing - allow tighter packing at high zoom levels
+            if (actualCharWidth <= charSpacing * 1.5) { // Even more lenient overlap allowance
                 // Set base color
                 this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
                 
                 // Render character
                 this.ctx.fillText(base, baseX, textY);
+                charactersRendered++;
             }
         }
         
-        return true; // Successfully rendered sequence
+        // Return true if at least some characters were rendered
+        return charactersRendered > 0;
     }
     
     /**
