@@ -13,12 +13,18 @@ OpenRouter has been successfully integrated into GenomeExplorer's LLM configurat
 - **Cost Optimization**: Pay-per-use pricing with transparent model costs
 
 ### **Supported Model Categories**
-- **OpenAI Models**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
-- **Anthropic Models**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
-- **Google Models**: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash
-- **Meta Models**: Llama 3.1 70B/8B/405B Instruct
-- **Mistral Models**: Mistral 7B, Mixtral 8x7B, Mistral Large
-- **Other Models**: WizardLM 2, Nous Hermes 2, Perplexity Llama variants
+- **OpenAI Models**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo (including 16K context)
+- **Anthropic Models**: Claude 3.5 Sonnet/Haiku, Claude 3 Opus/Sonnet/Haiku (including vision models)
+- **Google Models**: Gemini 2.0 Flash, Gemini 1.5 Pro/Flash (latest and legacy versions)
+- **Meta Models**: Llama 3.1 405B/70B/8B/1B Instruct (full range)
+- **Mistral Models**: Mistral Large, Mixtral 8x7B, Mistral 7B, Mistral Small
+- **DeepSeek Models**: DeepSeek Chat, DeepSeek Coder, V2.5/V2 (legacy)
+- **Qwen Models**: Qwen 2.5 72B/32B/14B/7B Instruct, Coder variants
+- **Microsoft Models**: WizardLM 2 8x22B/7B, Phi-3 Medium/Small/Mini
+- **Perplexity Models**: Llama 3.1 70B/8B/1B Instruct variants
+- **Nous Research Models**: Hermes 2 Mixtral, Yi 34B/6B variants
+- **Other Models**: Yi Chat, Cohere Command R+/R/Light, DBRX, Snowflake Arctic
+- **Multimodal Models**: FireLLaVA 3, Claude Vision, GPT-4o Vision variants
 
 ## Technical Implementation
 
@@ -101,9 +107,12 @@ headers: {
 ### **Model Selection Guidelines**
 - **General Use**: `openai/gpt-4o` (latest, most capable)
 - **Fast Responses**: `openai/gpt-4o-mini` (efficient, fast)
-- **Cost Effective**: `anthropic/claude-3-haiku-20240307` (fast, affordable)
-- **Code Focused**: `meta-llama/llama-3.1-8b-instruct` (good for coding)
+- **Cost Effective**: `anthropic/claude-3-5-haiku-20241022` (latest fast model)
+- **Code Focused**: `qwen/qwen2.5-coder-7b-instruct` (optimized for coding)
 - **Long Context**: `anthropic/claude-3-5-sonnet-20241022` (200K context)
+- **Multimodal**: `anthropic/claude-3-5-sonnet-20241022-vision` (image + text)
+- **Ultra Fast**: `microsoft/phi-3-mini-4k-instruct` (lightning fast responses)
+- **Most Capable**: `meta-llama/llama-3.1-405b-instruct` (largest model)
 
 ## Benefits
 

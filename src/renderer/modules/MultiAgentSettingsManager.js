@@ -63,39 +63,88 @@ class MultiAgentSettingsManager {
             openrouter: {
                 name: 'OpenRouter',
                 models: {
-                    // OpenAI Models
-                    'openai/gpt-4o': 'GPT-4o (Latest)',
-                    'openai/gpt-4o-mini': 'GPT-4o Mini (Fast)',
-                    'openai/gpt-4-turbo': 'GPT-4 Turbo',
+                    // OpenAI Models (Latest)
+                    'openai/gpt-4o': 'GPT-4o (Latest - Most Capable)',
+                    'openai/gpt-4o-mini': 'GPT-4o Mini (Fast & Efficient)',
+                    'openai/gpt-4-turbo': 'GPT-4 Turbo (Latest)',
                     'openai/gpt-4': 'GPT-4 (Legacy)',
-                    'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
+                    'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo (Fast)',
+                    'openai/gpt-3.5-turbo-16k': 'GPT-3.5 Turbo 16K (Long Context)',
                     
-                    // Anthropic Models
-                    'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
-                    'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
-                    'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet',
-                    'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
+                    // Anthropic Models (Latest)
+                    'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest - Most Capable)',
+                    'anthropic/claude-3-5-haiku-20241022': 'Claude 3.5 Haiku (Latest - Fast)',
+                    'anthropic/claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
+                    'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
+                    'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
                     
-                    // Google Models
-                    'google/gemini-2.0-flash': 'Gemini 2.0 Flash',
-                    'google/gemini-1.5-pro-latest': 'Gemini 1.5 Pro',
-                    'google/gemini-1.5-flash-latest': 'Gemini 1.5 Flash',
+                    // Google Models (Latest)
+                    'google/gemini-2.0-flash': 'Gemini 2.0 Flash (Latest)',
+                    'google/gemini-2.0-flash-exp': 'Gemini 2.0 Flash Experimental',
+                    'google/gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
+                    'google/gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
+                    'google/gemini-1.5-pro': 'Gemini 1.5 Pro (Legacy)',
+                    'google/gemini-1.5-flash': 'Gemini 1.5 Flash (Legacy)',
+                    'google/gemini-pro': 'Gemini 1.0 Pro (Legacy)',
                     
-                    // Meta Models
-                    'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B Instruct',
-                    'meta-llama/llama-3.1-8b-instruct': 'Llama 3.1 8B Instruct',
-                    'meta-llama/llama-3.1-405b-instruct': 'Llama 3.1 405B Instruct',
+                    // Meta Models (Latest)
+                    'meta-llama/llama-3.1-405b-instruct': 'Llama 3.1 405B Instruct (Most Capable)',
+                    'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B Instruct (Balanced)',
+                    'meta-llama/llama-3.1-8b-instruct': 'Llama 3.1 8B Instruct (Fast)',
+                    'meta-llama/llama-3.1-1b-instruct': 'Llama 3.1 1B Instruct (Very Fast)',
                     
-                    // Mistral Models
-                    'mistralai/mistral-7b-instruct': 'Mistral 7B Instruct',
-                    'mistralai/mixtral-8x7b-instruct': 'Mixtral 8x7B Instruct',
-                    'mistralai/mistral-large-latest': 'Mistral Large',
+                    // Mistral Models (Latest)
+                    'mistralai/mistral-large-latest': 'Mistral Large (Latest)',
+                    'mistralai/mixtral-8x7b-instruct': 'Mixtral 8x7B Instruct (Balanced)',
+                    'mistralai/mistral-7b-instruct': 'Mistral 7B Instruct (Fast)',
+                    'mistralai/mistral-small-latest': 'Mistral Small (Latest)',
+                    
+                    // DeepSeek Models (Latest)
+                    'deepseek-ai/deepseek-chat': 'DeepSeek Chat (Latest)',
+                    'deepseek-ai/deepseek-coder': 'DeepSeek Coder (Code Focused)',
+                    'deepseek-ai/deepseek-v2.5': 'DeepSeek V2.5 (Legacy)',
+                    'deepseek-ai/deepseek-v2': 'DeepSeek V2 (Legacy)',
+                    
+                    // Qwen Models (Latest)
+                    'qwen/qwen2.5-72b-instruct': 'Qwen 2.5 72B Instruct (Most Capable)',
+                    'qwen/qwen2.5-32b-instruct': 'Qwen 2.5 32B Instruct (Balanced)',
+                    'qwen/qwen2.5-14b-instruct': 'Qwen 2.5 14B Instruct (Fast)',
+                    'qwen/qwen2.5-7b-instruct': 'Qwen 2.5 7B Instruct (Very Fast)',
+                    'qwen/qwen2.5-coder-32b-instruct': 'Qwen 2.5 Coder 32B (Code Focused)',
+                    'qwen/qwen2.5-coder-7b-instruct': 'Qwen 2.5 Coder 7B (Code Fast)',
+                    
+                    // Microsoft Models
+                    'microsoft/wizardlm-2-8x22b': 'WizardLM 2 8x22B (Most Capable)',
+                    'microsoft/wizardlm-2-7b': 'WizardLM 2 7B (Fast)',
+                    
+                    // Perplexity Models
+                    'perplexity/llama-3.1-70b-instruct': 'Perplexity Llama 3.1 70B (Most Capable)',
+                    'perplexity/llama-3.1-8b-instruct': 'Perplexity Llama 3.1 8B (Fast)',
+                    'perplexity/llama-3.1-1b-instruct': 'Perplexity Llama 3.1 1B (Very Fast)',
+                    
+                    // Nous Research Models
+                    'nousresearch/nous-hermes-2-mixtral-8x7b-dpo': 'Nous Hermes 2 Mixtral (Balanced)',
+                    'nousresearch/nous-hermes-2-yi-34b': 'Nous Hermes 2 Yi 34B (Capable)',
+                    'nousresearch/nous-hermes-2-yi-6b': 'Nous Hermes 2 Yi 6B (Fast)',
                     
                     // Other Popular Models
-                    'microsoft/wizardlm-2-8x22b': 'WizardLM 2 8x22B',
-                    'nousresearch/nous-hermes-2-mixtral-8x7b-dpo': 'Nous Hermes 2 Mixtral',
-                    'perplexity/llama-3.1-70b-instruct': 'Perplexity Llama 3.1 70B',
-                    'perplexity/llama-3.1-8b-instruct': 'Perplexity Llama 3.1 8B'
+                    '01-ai/yi-34b-chat': 'Yi 34B Chat (Capable)',
+                    '01-ai/yi-6b-chat': 'Yi 6B Chat (Fast)',
+                    'microsoft/phi-3-medium-4k-instruct': 'Phi-3 Medium 4K (Fast)',
+                    'microsoft/phi-3-small-8k-instruct': 'Phi-3 Small 8K (Very Fast)',
+                    'microsoft/phi-3-mini-4k-instruct': 'Phi-3 Mini 4K (Ultra Fast)',
+                    'cohere/command-r-plus': 'Command R+ (Most Capable)',
+                    'cohere/command-r': 'Command R (Balanced)',
+                    'cohere/command-light': 'Command Light (Fast)',
+                    'databricks/dbrx-instruct': 'DBRX Instruct (Most Capable)',
+                    'databricks/dbrx-base': 'DBRX Base (Balanced)',
+                    'snowflake/arctic-instruct': 'Snowflake Arctic Instruct (Capable)',
+                    'snowflake/arctic-base': 'Snowflake Arctic Base (Balanced)',
+                    'fireworks/firellava-3-8b': 'FireLLaVA 3 8B (Multimodal)',
+                    'fireworks/firellava-3-1b': 'FireLLaVA 3 1B (Multimodal Fast)',
+                    'anthropic/claude-3-5-sonnet-20241022-vision': 'Claude 3.5 Sonnet Vision (Multimodal)',
+                    'openai/gpt-4o-mini-vision': 'GPT-4o Mini Vision (Multimodal)',
+                    'openai/gpt-4o-vision': 'GPT-4o Vision (Multimodal)'
                 },
                 baseUrl: 'https://openrouter.ai/api/v1',
                 apiKeyPrefix: 'sk-or-'

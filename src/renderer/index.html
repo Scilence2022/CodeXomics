@@ -1121,50 +1121,113 @@
                         <div class="form-group">
                             <label for="openrouterModel">Model:</label>
                             <select id="openrouterModel" class="select">
-                                <!-- OpenAI Models -->
-                                <optgroup label="OpenAI Models">
-                                    <option value="openai/gpt-4o" selected>GPT-4o (Latest)</option>
-                                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast)</option>
-                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                                <!-- OpenAI Models (Latest) -->
+                                <optgroup label="OpenAI Models (Latest)">
+                                    <option value="openai/gpt-4o" selected>GPT-4o (Latest - Most Capable)</option>
+                                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo (Latest)</option>
                                     <option value="openai/gpt-4">GPT-4 (Legacy)</option>
-                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
+                                    <option value="openai/gpt-3.5-turbo-16k">GPT-3.5 Turbo 16K (Long Context)</option>
                                 </optgroup>
                                 
-                                <!-- Anthropic Models -->
-                                <optgroup label="Anthropic Models">
-                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</option>
-                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus</option>
-                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-                                    <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                <!-- Anthropic Models (Latest) -->
+                                <optgroup label="Anthropic Models (Latest)">
+                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest - Most Capable)</option>
+                                    <option value="anthropic/claude-3-5-haiku-20241022">Claude 3.5 Haiku (Latest - Fast)</option>
+                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus (Most Capable)</option>
+                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
+                                    <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku (Fast)</option>
                                 </optgroup>
                                 
-                                <!-- Google Models -->
-                                <optgroup label="Google Models">
-                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash</option>
-                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
-                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash</option>
+                                <!-- Google Models (Latest) -->
+                                <optgroup label="Google Models (Latest)">
+                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash (Latest)</option>
+                                    <option value="google/gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
+                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro (Latest)</option>
+                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</option>
+                                    <option value="google/gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
+                                    <option value="google/gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                                    <option value="google/gemini-pro">Gemini 1.0 Pro (Legacy)</option>
                                 </optgroup>
                                 
-                                <!-- Meta Models -->
-                                <optgroup label="Meta Models">
-                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct</option>
-                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
-                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
+                                <!-- Meta Models (Latest) -->
+                                <optgroup label="Meta Models (Latest)">
+                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct (Most Capable)</option>
+                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct (Balanced)</option>
+                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct (Fast)</option>
+                                    <option value="meta-llama/llama-3.1-1b-instruct">Llama 3.1 1B Instruct (Very Fast)</option>
                                 </optgroup>
                                 
-                                <!-- Mistral Models -->
-                                <optgroup label="Mistral Models">
-                                    <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct</option>
-                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct</option>
-                                    <option value="mistralai/mistral-large-latest">Mistral Large</option>
+                                <!-- Mistral Models (Latest) -->
+                                <optgroup label="Mistral Models (Latest)">
+                                    <option value="mistralai/mistral-large-latest">Mistral Large (Latest)</option>
+                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct (Balanced)</option>
+                                    <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct (Fast)</option>
+                                    <option value="mistralai/mistral-small-latest">Mistral Small (Latest)</option>
+                                </optgroup>
+                                
+                                <!-- DeepSeek Models (Latest) -->
+                                <optgroup label="DeepSeek Models (Latest)">
+                                    <option value="deepseek-ai/deepseek-chat">DeepSeek Chat (Latest)</option>
+                                    <option value="deepseek-ai/deepseek-coder">DeepSeek Coder (Code Focused)</option>
+                                    <option value="deepseek-ai/deepseek-v2.5">DeepSeek V2.5 (Legacy)</option>
+                                    <option value="deepseek-ai/deepseek-v2">DeepSeek V2 (Legacy)</option>
+                                </optgroup>
+                                
+                                <!-- Qwen Models (Latest) -->
+                                <optgroup label="Qwen Models (Latest)">
+                                    <option value="qwen/qwen2.5-72b-instruct">Qwen 2.5 72B Instruct (Most Capable)</option>
+                                    <option value="qwen/qwen2.5-32b-instruct">Qwen 2.5 32B Instruct (Balanced)</option>
+                                    <option value="qwen/qwen2.5-14b-instruct">Qwen 2.5 14B Instruct (Fast)</option>
+                                    <option value="qwen/qwen2.5-7b-instruct">Qwen 2.5 7B Instruct (Very Fast)</option>
+                                    <option value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B (Code Focused)</option>
+                                    <option value="qwen/qwen2.5-coder-7b-instruct">Qwen 2.5 Coder 7B (Code Fast)</option>
+                                </optgroup>
+                                
+                                <!-- Microsoft Models -->
+                                <optgroup label="Microsoft Models">
+                                    <option value="microsoft/wizardlm-2-8x22b">WizardLM 2 8x22B (Most Capable)</option>
+                                    <option value="microsoft/wizardlm-2-7b">WizardLM 2 7B (Fast)</option>
+                                    <option value="microsoft/phi-3-medium-4k-instruct">Phi-3 Medium 4K (Fast)</option>
+                                    <option value="microsoft/phi-3-small-8k-instruct">Phi-3 Small 8K (Very Fast)</option>
+                                    <option value="microsoft/phi-3-mini-4k-instruct">Phi-3 Mini 4K (Ultra Fast)</option>
+                                </optgroup>
+                                
+                                <!-- Perplexity Models -->
+                                <optgroup label="Perplexity Models">
+                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B (Most Capable)</option>
+                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B (Fast)</option>
+                                    <option value="perplexity/llama-3.1-1b-instruct">Perplexity Llama 3.1 1B (Very Fast)</option>
+                                </optgroup>
+                                
+                                <!-- Nous Research Models -->
+                                <optgroup label="Nous Research Models">
+                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral (Balanced)</option>
+                                    <option value="nousresearch/nous-hermes-2-yi-34b">Nous Hermes 2 Yi 34B (Capable)</option>
+                                    <option value="nousresearch/nous-hermes-2-yi-6b">Nous Hermes 2 Yi 6B (Fast)</option>
                                 </optgroup>
                                 
                                 <!-- Other Popular Models -->
                                 <optgroup label="Other Popular Models">
-                                    <option value="microsoft/wizardlm-2-8x22b">WizardLM 2 8x22B</option>
-                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral</option>
-                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B</option>
-                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B</option>
+                                    <option value="01-ai/yi-34b-chat">Yi 34B Chat (Capable)</option>
+                                    <option value="01-ai/yi-6b-chat">Yi 6B Chat (Fast)</option>
+                                    <option value="cohere/command-r-plus">Command R+ (Most Capable)</option>
+                                    <option value="cohere/command-r">Command R (Balanced)</option>
+                                    <option value="cohere/command-light">Command Light (Fast)</option>
+                                    <option value="databricks/dbrx-instruct">DBRX Instruct (Most Capable)</option>
+                                    <option value="databricks/dbrx-base">DBRX Base (Balanced)</option>
+                                    <option value="snowflake/arctic-instruct">Snowflake Arctic Instruct (Capable)</option>
+                                    <option value="snowflake/arctic-base">Snowflake Arctic Base (Balanced)</option>
+                                </optgroup>
+                                
+                                <!-- Multimodal Models -->
+                                <optgroup label="Multimodal Models">
+                                    <option value="fireworks/firellava-3-8b">FireLLaVA 3 8B (Multimodal)</option>
+                                    <option value="fireworks/firellava-3-1b">FireLLaVA 3 1B (Multimodal Fast)</option>
+                                    <option value="anthropic/claude-3-5-sonnet-20241022-vision">Claude 3.5 Sonnet Vision (Multimodal)</option>
+                                    <option value="openai/gpt-4o-mini-vision">GPT-4o Mini Vision (Multimodal)</option>
+                                    <option value="openai/gpt-4o-vision">GPT-4o Vision (Multimodal)</option>
                                 </optgroup>
                             </select>
                         </div>
