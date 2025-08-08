@@ -214,6 +214,15 @@ class ConfigManager {
                         maxTokens: 4096,
                         temperature: 0.7
                     },
+                    openrouter: {
+                        name: 'OpenRouter',
+                        apiKey: '',
+                        model: 'openai/gpt-4o',
+                        baseUrl: 'https://openrouter.ai/api/v1',
+                        enabled: false,
+                        maxTokens: 4096,
+                        temperature: 0.7
+                    },
                     local: {
                         name: 'Local LLM',
                         apiKey: '',

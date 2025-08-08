@@ -41,6 +41,13 @@ class LLMConfigManager {
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false
             },
+            openrouter: {
+                name: 'OpenRouter',
+                apiKey: '',
+                model: 'openai/gpt-4o',
+                baseUrl: 'https://openrouter.ai/api/v1',
+                enabled: false
+            },
             local: {
                 name: 'Local LLM',
                 apiKey: '',
@@ -212,6 +219,7 @@ class LLMConfigManager {
             { btnId: 'pasteGoogleApiKeyBtn', inputId: 'googleApiKey' },
             { btnId: 'pasteDeepseekApiKeyBtn', inputId: 'deepseekApiKey' },
             { btnId: 'pasteSiliconflowApiKeyBtn', inputId: 'siliconflowApiKey' },
+            { btnId: 'pasteOpenrouterApiKeyBtn', inputId: 'openrouterApiKey' },
             { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' },
             { btnId: 'pasteCustomApiKeyBtn', inputId: 'customApiKey' }
         ];
@@ -709,10 +717,12 @@ class LLMConfigManager {
                     return await this.testAnthropic(config);
                 case 'google':
                     return await this.testGoogle(config);
-                            case 'deepseek':
-                return await this.testDeepSeek(config);
-                            case 'siliconflow':
+                case 'deepseek':
+                    return await this.testDeepSeek(config);
+                case 'siliconflow':
                     return await this.testSiliconFlow(config);
+                case 'openrouter':
+                    return await this.testOpenRouter(config);
                 case 'local':
                     return await this.testLocal(config);
                 case 'custom':
@@ -799,6 +809,29 @@ class LLMConfigManager {
             headers: {
                 'Authorization': `Bearer ${config.apiKey}`,
                 'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: config.model,
+                messages: [{ role: 'user', content: 'Hello, can you confirm you are working?' }],
+                max_tokens: 10
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return { success: true };
+    }
+
+    async testOpenRouter(config) {
+        const response = await fetch(`${config.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'GenomeExplorer'
             },
             body: JSON.stringify({
                 model: config.model,
@@ -904,6 +937,8 @@ class LLMConfigManager {
                     return await this.sendDeepSeekMessage(provider, message, context);
                 case 'siliconflow':
                     return await this.sendSiliconFlowMessage(provider, message, context);
+                case 'openrouter':
+                    return await this.sendOpenRouterMessage(provider, message, context);
                 case 'local':
                     return await this.sendLocalMessage(provider, message, context);
                 case 'custom':
@@ -936,6 +971,8 @@ class LLMConfigManager {
                     return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context);
                 case 'siliconflow':
                     return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context);
+                case 'openrouter':
+                    return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context);
                 case 'local':
                     return await this.sendLocalMessageWithHistory(provider, conversationHistory, context);
                 case 'custom':
@@ -1316,6 +1353,71 @@ class LLMConfigManager {
         }
         
         return content;
+    }
+
+    async sendOpenRouterMessage(provider, message, context) {
+        const messages = this.buildMessages(message, context);
+        console.log('Sending to OpenRouter - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: messages,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'GenomeExplorer'
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: messages,
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    async sendOpenRouterMessageWithHistory(provider, conversationHistory, context) {
+        console.log('Sending to OpenRouter - Request Payload:', JSON.stringify({
+            model: provider.model,
+            messages: conversationHistory,
+            max_tokens: 2000,
+            temperature: 0.7
+        }, null, 2));
+        
+        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'GenomeExplorer'
+            },
+            body: JSON.stringify({
+                model: provider.model,
+                messages: conversationHistory,
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
     }
 
     async sendLocalMessage(provider, message, context) {

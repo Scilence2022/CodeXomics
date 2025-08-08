@@ -907,6 +907,7 @@
                     <button class="tab-button" data-provider="google">Google</button>
                     <button class="tab-button" data-provider="deepseek">DeepSeek</button>
                     <button class="tab-button" data-provider="siliconflow">SiliconFlow</button>
+                    <button class="tab-button" data-provider="openrouter">OpenRouter</button>
                     <button class="tab-button" data-provider="local">Local LLM</button>
                     <button class="tab-button" data-provider="custom">Custom</button>
                 </div>
@@ -1102,6 +1103,75 @@
                             <label for="siliconflowBaseUrl">Base URL:</label>
                             <input type="text" id="siliconflowBaseUrl" value="https://api.siliconflow.cn/v1" class="input-full" readonly>
                             <small class="help-text">SiliconFlow API endpoint (read-only)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- OpenRouter Configuration -->
+                    <div id="openrouter-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="openrouterApiKey">API Key:</label>
+                            <div class="input-with-button">
+                                <input type="password" id="openrouterApiKey" placeholder="sk-or-..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteOpenrouterApiKeyBtn" title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="help-text">Get your API key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="openrouterModel">Model:</label>
+                            <select id="openrouterModel" class="select">
+                                <!-- OpenAI Models -->
+                                <optgroup label="OpenAI Models">
+                                    <option value="openai/gpt-4o" selected>GPT-4o (Latest)</option>
+                                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast)</option>
+                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="openai/gpt-4">GPT-4 (Legacy)</option>
+                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                </optgroup>
+                                
+                                <!-- Anthropic Models -->
+                                <optgroup label="Anthropic Models">
+                                    <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</option>
+                                    <option value="anthropic/claude-3-opus-20240229">Claude 3 Opus</option>
+                                    <option value="anthropic/claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                                    <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                </optgroup>
+                                
+                                <!-- Google Models -->
+                                <optgroup label="Google Models">
+                                    <option value="google/gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                    <option value="google/gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
+                                    <option value="google/gemini-1.5-flash-latest">Gemini 1.5 Flash</option>
+                                </optgroup>
+                                
+                                <!-- Meta Models -->
+                                <optgroup label="Meta Models">
+                                    <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B Instruct</option>
+                                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
+                                    <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
+                                </optgroup>
+                                
+                                <!-- Mistral Models -->
+                                <optgroup label="Mistral Models">
+                                    <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct</option>
+                                    <option value="mistralai/mixtral-8x7b-instruct">Mixtral 8x7B Instruct</option>
+                                    <option value="mistralai/mistral-large-latest">Mistral Large</option>
+                                </optgroup>
+                                
+                                <!-- Other Popular Models -->
+                                <optgroup label="Other Popular Models">
+                                    <option value="microsoft/wizardlm-2-8x22b">WizardLM 2 8x22B</option>
+                                    <option value="nousresearch/nous-hermes-2-mixtral-8x7b-dpo">Nous Hermes 2 Mixtral</option>
+                                    <option value="perplexity/llama-3.1-70b-instruct">Perplexity Llama 3.1 70B</option>
+                                    <option value="perplexity/llama-3.1-8b-instruct">Perplexity Llama 3.1 8B</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="openrouterBaseUrl">Base URL:</label>
+                            <input type="text" id="openrouterBaseUrl" value="https://openrouter.ai/api/v1" class="input-full" readonly>
+                            <small class="help-text">OpenRouter API endpoint (read-only)</small>
                         </div>
                     </div>
                     

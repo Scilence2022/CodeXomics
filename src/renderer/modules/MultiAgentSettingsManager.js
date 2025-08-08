@@ -60,6 +60,46 @@ class MultiAgentSettingsManager {
                 baseUrl: 'https://api.deepseek.com/v1',
                 apiKeyPrefix: 'sk-'
             },
+            openrouter: {
+                name: 'OpenRouter',
+                models: {
+                    // OpenAI Models
+                    'openai/gpt-4o': 'GPT-4o (Latest)',
+                    'openai/gpt-4o-mini': 'GPT-4o Mini (Fast)',
+                    'openai/gpt-4-turbo': 'GPT-4 Turbo',
+                    'openai/gpt-4': 'GPT-4 (Legacy)',
+                    'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
+                    
+                    // Anthropic Models
+                    'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+                    'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
+                    'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet',
+                    'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
+                    
+                    // Google Models
+                    'google/gemini-2.0-flash': 'Gemini 2.0 Flash',
+                    'google/gemini-1.5-pro-latest': 'Gemini 1.5 Pro',
+                    'google/gemini-1.5-flash-latest': 'Gemini 1.5 Flash',
+                    
+                    // Meta Models
+                    'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B Instruct',
+                    'meta-llama/llama-3.1-8b-instruct': 'Llama 3.1 8B Instruct',
+                    'meta-llama/llama-3.1-405b-instruct': 'Llama 3.1 405B Instruct',
+                    
+                    // Mistral Models
+                    'mistralai/mistral-7b-instruct': 'Mistral 7B Instruct',
+                    'mistralai/mixtral-8x7b-instruct': 'Mixtral 8x7B Instruct',
+                    'mistralai/mistral-large-latest': 'Mistral Large',
+                    
+                    // Other Popular Models
+                    'microsoft/wizardlm-2-8x22b': 'WizardLM 2 8x22B',
+                    'nousresearch/nous-hermes-2-mixtral-8x7b-dpo': 'Nous Hermes 2 Mixtral',
+                    'perplexity/llama-3.1-70b-instruct': 'Perplexity Llama 3.1 70B',
+                    'perplexity/llama-3.1-8b-instruct': 'Perplexity Llama 3.1 8B'
+                },
+                baseUrl: 'https://openrouter.ai/api/v1',
+                apiKeyPrefix: 'sk-or-'
+            },
             siliconflow: {
                 name: 'SiliconFlow',
                 models: {
