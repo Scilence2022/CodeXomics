@@ -64,7 +64,10 @@ class MultiAgentSettingsManager {
                 name: 'OpenRouter',
                 models: {
                     // OpenAI Models (Latest)
-                    'openai/gpt-4o': 'GPT-4o (Latest - Most Capable)',
+                    'openai/gpt-5': 'GPT-5 (Latest - Most Advanced)',
+                    'openai/gpt-5o': 'GPT-5o (Latest - Most Capable)',
+                    'openai/gpt-5o-mini': 'GPT-5o Mini (Fast & Efficient)',
+                    'openai/gpt-4o': 'GPT-4o (Previous - Most Capable)',
                     'openai/gpt-4o-mini': 'GPT-4o Mini (Fast & Efficient)',
                     'openai/gpt-4-turbo': 'GPT-4 Turbo (Latest)',
                     'openai/gpt-4': 'GPT-4 (Legacy)',
@@ -77,6 +80,9 @@ class MultiAgentSettingsManager {
                     'anthropic/claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
                     'anthropic/claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
                     'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
+                    // Claude Sonnet 4 Series (Latest)
+                    'anthropic/claude-3-5-sonnet-4': 'Claude Sonnet 4 (Latest - Most Advanced)',
+                    'anthropic/claude-3-5-sonnet-4-mini': 'Claude Sonnet 4 Mini (Fast & Efficient)',
                     
                     // Google Models (Latest)
                     'google/gemini-2.0-flash': 'Gemini 2.0 Flash (Latest)',

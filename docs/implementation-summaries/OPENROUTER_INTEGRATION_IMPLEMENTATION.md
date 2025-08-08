@@ -13,8 +13,8 @@ OpenRouter has been successfully integrated into GenomeExplorer's LLM configurat
 - **Cost Optimization**: Pay-per-use pricing with transparent model costs
 
 ### **Supported Model Categories**
-- **OpenAI Models**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo (including 16K context)
-- **Anthropic Models**: Claude 3.5 Sonnet/Haiku, Claude 3 Opus/Sonnet/Haiku (including vision models)
+- **OpenAI Models**: GPT-5, GPT-5o, GPT-5o Mini, GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo (including 16K context)
+- **Anthropic Models**: Claude Sonnet 4, Claude Sonnet 4 Mini, Claude 3.5 Sonnet/Haiku, Claude 3 Opus/Sonnet/Haiku (including vision models)
 - **Google Models**: Gemini 2.0 Flash, Gemini 1.5 Pro/Flash (latest and legacy versions)
 - **Meta Models**: Llama 3.1 405B/70B/8B/1B Instruct (full range)
 - **Mistral Models**: Mistral Large, Mixtral 8x7B, Mistral 7B, Mistral Small
@@ -105,14 +105,15 @@ headers: {
 7. **Save Configuration**: Click "Save" to apply settings
 
 ### **Model Selection Guidelines**
-- **General Use**: `openai/gpt-4o` (latest, most capable)
-- **Fast Responses**: `openai/gpt-4o-mini` (efficient, fast)
-- **Cost Effective**: `anthropic/claude-3-5-haiku-20241022` (latest fast model)
+- **General Use**: `openai/gpt-5` (latest, most advanced)
+- **Fast Responses**: `openai/gpt-5o-mini` (efficient, fast)
+- **Cost Effective**: `anthropic/claude-3-5-sonnet-4-mini` (latest fast model)
 - **Code Focused**: `qwen/qwen2.5-coder-7b-instruct` (optimized for coding)
 - **Long Context**: `anthropic/claude-3-5-sonnet-20241022` (200K context)
 - **Multimodal**: `anthropic/claude-3-5-sonnet-20241022-vision` (image + text)
 - **Ultra Fast**: `microsoft/phi-3-mini-4k-instruct` (lightning fast responses)
-- **Most Capable**: `meta-llama/llama-3.1-405b-instruct` (largest model)
+- **Most Capable**: `openai/gpt-5` (most advanced model)
+- **Most Advanced**: `anthropic/claude-3-5-sonnet-4` (latest Claude model)
 
 ## Benefits
 
