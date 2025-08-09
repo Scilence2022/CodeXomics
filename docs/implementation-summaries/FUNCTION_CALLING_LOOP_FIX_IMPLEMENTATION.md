@@ -138,7 +138,7 @@ conversationHistory.push({
 ## 🧪 Testing and Validation
 
 ### **Created Comprehensive Test Suite**
-**File**: `test-function-calling-loop-fix.html`
+**File**: `test/fix-validation-tests/test-function-calling-loop-fix.html`
 
 **Test Categories**:
 1. **Environment Check**: Verifies ChatManager and required DOM elements
@@ -224,7 +224,7 @@ executedTools.add(toolKey);
 
 ## 🔍 Verification Steps
 
-1. **Open the test file**: `test-function-calling-loop-fix.html`
+1. **Open the test file**: `test/fix-validation-tests/test-function-calling-loop-fix.html`
 2. **Run all test sections**: Environment, Function Calling, Tool Tracking, etc.
 3. **Test specific functions**: Toggle track, Open new tab, Get current state
 4. **Verify loop prevention**: Check that duplicate tools are properly skipped

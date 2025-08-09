@@ -112,13 +112,13 @@ TabManager.createNewTab() or newTabButton.click()
 
 ### Test Files Created
 
-1. **`test-open-new-tab-quick-fix.html`** - Quick test to verify the fix (NEW):
+1. **`test/fix-validation-tests/test-open-new-tab-quick-fix.html`** - Quick test to verify the fix (NEW):
    - Tests the corrected function call routing
    - Verifies ChatManager.openNewTab() is called directly
    - Checks tab creation success
    - Provides immediate feedback on the fix
 
-2. **`test-open-new-tab-function-call-fix.html`** - Comprehensive debugging tool that tests:
+2. **`test/fix-validation-tests/test-open-new-tab-function-call-fix.html`** - Comprehensive debugging tool that tests:
    - Environment Check: Verifies browser environment and global objects
    - Component Availability: Confirms required components exist
    - Function Registration: Validates function registration in ActionManager
@@ -129,9 +129,9 @@ TabManager.createNewTab() or newTabButton.click()
    - Manual Tab Creation: Tests manual tab creation
    - Complete Integration: Runs all tests in sequence
 
-3. **`test-open-new-tab-simple.html`** - Simple test for quick verification
+3. **`test/integration-tests/test-open-new-tab-simple.html`** - Simple test for quick verification
 
-4. **`test-open-new-tab-debug.html`** - Enhanced debug test with detailed diagnostics:
+4. **`test/fix-validation-tests/test-open-new-tab-debug.html`** - Enhanced debug test with detailed diagnostics:
    - Real-time tab information monitoring
    - Comprehensive environment checks
    - Component availability verification
@@ -181,7 +181,7 @@ TabManager.createNewTab() or newTabButton.click()
 #### Option 3: Simple Test
 1. **Open the simple test file** in Genome AI Studio:
    ```
-   File → Open File → test-open-new-tab-simple.html
+   File → Open File → test/integration-tests/test-open-new-tab-simple.html
    ```
 
 2. **Click "Test Open New Tab"** to run a quick verification
@@ -189,7 +189,7 @@ TabManager.createNewTab() or newTabButton.click()
 #### Option 4: Comprehensive Test
 1. **Open the comprehensive test file** in Genome AI Studio:
    ```
-   File → Open File → test-open-new-tab-function-call-fix.html
+   File → Open File → test/fix-validation-tests/test-open-new-tab-function-call-fix.html
    ```
 
 2. **Run individual tests** by clicking the buttons in each section
@@ -317,10 +317,10 @@ The fix resolves the original issue where AI function calls were not executing, 
 
 1. `src/renderer/modules/ChatManager.js` - Fixed open_new_tab routing to call this.openNewTab() directly instead of through executeActionFunction, enhanced with debug logging
 2. `src/renderer/modules/ActionManager.js` - Enhanced functionOpenNewTab method with comprehensive debug logging
-3. `test-open-new-tab-quick-fix.html` - Created quick test to verify the fix (NEW)
-4. `test-open-new-tab-function-call-fix.html` - Created comprehensive test suite
-5. `test-open-new-tab-simple.html` - Created simple test for quick verification
-6. `test-open-new-tab-debug.html` - Created enhanced debug test with detailed diagnostics
+3. `test/fix-validation-tests/test-open-new-tab-quick-fix.html` - Created quick test to verify the fix (NEW)
+4. `test/fix-validation-tests/test-open-new-tab-function-call-fix.html` - Created comprehensive test suite
+5. `test/integration-tests/test-open-new-tab-simple.html` - Created simple test for quick verification
+6. `test/fix-validation-tests/test-open-new-tab-debug.html` - Created enhanced debug test with detailed diagnostics
 7. `debug-open-new-tab.js` - Created console script for quick debugging
 8. `src/main.js` - Added "Open Test File" menu under Tools with keyboard shortcut Ctrl+Shift+T
 9. `docs/implementation-summaries/OPEN_NEW_TAB_FUNCTION_CALL_FIX_IMPLEMENTATION.md` - This documentation
@@ -339,7 +339,7 @@ The fix resolves the original issue where AI function calls were not executing, 
 
 ### If the new tab window doesn't appear:
 
-1. **Run the debug test page** (`test-open-new-tab-debug.html`) to get comprehensive diagnostics
+1. **Run the debug test page** (`test/fix-validation-tests/test-open-new-tab-debug.html`) to get comprehensive diagnostics
 2. **Check the console logs** for detailed error messages and function call flow
 3. **Verify component availability** - ensure all required managers are loaded
 4. **Test manual button functionality** - confirm the "+" button works

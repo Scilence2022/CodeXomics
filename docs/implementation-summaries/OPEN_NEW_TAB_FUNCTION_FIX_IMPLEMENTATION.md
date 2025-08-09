@@ -156,7 +156,7 @@ async searchGeneByName(geneName) {
 ## Testing
 
 ### Test File Created
-`test-open-new-tab-fix.html` - Comprehensive debugging tool that tests:
+`test/fix-validation-tests/test-open-new-tab-fix.html` - Comprehensive debugging tool that tests:
 
 1. **Environment Check**: Verifies browser environment and global objects
 2. **DOM Elements Check**: Confirms required HTML elements exist
@@ -216,12 +216,12 @@ The fix resolves the original issue where AI function calls were not executing, 
 ## Files Modified
 
 1. `src/renderer/modules/ActionManager.js` - Added openNewTab function and implementation
-2. `test-open-new-tab-fix.html` - Created comprehensive test suite
+2. `test/fix-validation-tests/test-open-new-tab-fix.html` - Created comprehensive test suite
 3. `docs/implementation-summaries/OPEN_NEW_TAB_FUNCTION_FIX_IMPLEMENTATION.md` - This documentation
 
 ## Testing Instructions
 
-1. Open `test-open-new-tab-fix.html` in Genome AI Studio
+1. Open `test/fix-validation-tests/test-open-new-tab-fix.html` in Genome AI Studio
 2. Run each test section sequentially
 3. Verify all tests pass
 4. Test AI function calls: `{"tool_name": "openNewTab", "parameters": {}}`

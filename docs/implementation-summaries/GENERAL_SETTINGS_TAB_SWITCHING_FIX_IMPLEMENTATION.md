@@ -207,7 +207,7 @@ switchTab(tabName) {
 
 ### 5. **Comprehensive Test Suite**
 
-**File: `test-general-settings-tabs-fix.html`**
+**File: `test/fix-validation-tests/test-general-settings-tabs-fix.html`**
 
 Created a complete test suite that includes:
 - Modal opening/closing functionality
@@ -286,7 +286,7 @@ The fix is compatible with:
    - Enhanced display rules with `!important`
    - Added debug and troubleshooting styles
 
-3. **`test-general-settings-tabs-fix.html`**
+3. **`test/fix-validation-tests/test-general-settings-tabs-fix.html`**
    - Comprehensive test suite
    - Real-time validation
    - Error detection and reporting
