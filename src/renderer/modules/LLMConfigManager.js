@@ -1364,28 +1364,50 @@ class LLMConfigManager {
             temperature: 0.7
         }, null, 2));
         
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${provider.apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'GenomeExplorer'
-            },
-            body: JSON.stringify({
-                model: provider.model,
-                messages: messages,
-                max_tokens: 2000,
-                temperature: 0.7
-            })
-        });
+        const doRequest = async (modelToUse) => {
+            const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${provider.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'GenomeExplorer'
+                },
+                body: JSON.stringify({
+                    model: modelToUse,
+                    messages: messages,
+                    max_tokens: 2000,
+                    temperature: 0.7
+                })
+            });
+            return resp;
+        };
+
+        let response = await doRequest(provider.model);
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const status = response.status;
+            const errorText = await response.text().catch(() => '');
+            // Handle unavailable/forbidden model with single-attempt fallback
+            if (status === 403 || status === 404) {
+                const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
+                if (fallbackModel && fallbackModel !== provider.model) {
+                    console.warn(`OpenRouter model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
+                    this.showNotification(`OpenRouter model not available (${provider.model}). Retrying with ${fallbackModel}...`, 'error');
+                    response = await doRequest(fallbackModel);
+                    if (!response.ok) {
+                        const fbText = await response.text().catch(() => '');
+                        throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
+                    }
+                    const fbData = await response.json();
+                    return fbData.choices[0]?.message?.content ?? '';
+                }
+            }
+            throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
         }
 
         const data = await response.json();
-        return data.choices[0].message.content;
+        return data.choices[0]?.message?.content ?? '';
     }
 
     async sendOpenRouterMessageWithHistory(provider, conversationHistory, context) {
@@ -1396,28 +1418,66 @@ class LLMConfigManager {
             temperature: 0.7
         }, null, 2));
         
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${provider.apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'GenomeExplorer'
-            },
-            body: JSON.stringify({
-                model: provider.model,
-                messages: conversationHistory,
-                max_tokens: 2000,
-                temperature: 0.7
-            })
-        });
+        const doRequest = async (modelToUse) => {
+            const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${provider.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'GenomeExplorer'
+                },
+                body: JSON.stringify({
+                    model: modelToUse,
+                    messages: conversationHistory,
+                    max_tokens: 2000,
+                    temperature: 0.7
+                })
+            });
+            return resp;
+        };
+
+        let response = await doRequest(provider.model);
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const status = response.status;
+            const errorText = await response.text().catch(() => '');
+            if (status === 403 || status === 404) {
+                const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
+                if (fallbackModel && fallbackModel !== provider.model) {
+                    console.warn(`OpenRouter model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
+                    this.showNotification(`OpenRouter model not available (${provider.model}). Retrying with ${fallbackModel}...`, 'error');
+                    response = await doRequest(fallbackModel);
+                    if (!response.ok) {
+                        const fbText = await response.text().catch(() => '');
+                        throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
+                    }
+                    const fbData = await response.json();
+                    return fbData.choices[0]?.message?.content ?? '';
+                }
+            }
+            throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
         }
 
         const data = await response.json();
-        return data.choices[0].message.content;
+        return data.choices[0]?.message?.content ?? '';
+    }
+
+    getOpenRouterFallbackModel(originalModel) {
+        if (!originalModel) return null;
+        const model = String(originalModel).toLowerCase();
+        // OpenAI fallbacks
+        if (model.startsWith('openai/')) {
+            if (model.includes('gpt-5')) return 'openai/gpt-4o';
+            if (model.includes('gpt-4o')) return 'openai/gpt-4-turbo';
+        }
+        // Anthropic fallbacks
+        if (model.startsWith('anthropic/')) {
+            if (model.includes('sonnet-4')) return 'anthropic/claude-3-5-sonnet-20241022';
+            if (model.includes('opus')) return 'anthropic/claude-3-5-sonnet-20241022';
+        }
+        // Generic safe default
+        return 'openai/gpt-4o';
     }
 
     async sendLocalMessage(provider, message, context) {
