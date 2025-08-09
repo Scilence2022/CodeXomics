@@ -346,7 +346,14 @@ class NavigationAgent extends AgentBase {
      * Execute zoom in
      */
     async executeZoomIn(parameters, app) {
-        const { factor } = parameters;
+        // Support magnification strings like "1.5X", "2x", or numeric values
+        let { factor } = parameters;
+        if (typeof factor === 'string') {
+            const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
+            const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
+            const numeric = parseFloat(stripped);
+            factor = (isFinite(numeric) && numeric > 0) ? numeric : 2;
+        }
         return await app.genomeBrowser.zoomIn(factor);
     }
     
@@ -354,7 +361,14 @@ class NavigationAgent extends AgentBase {
      * Execute zoom out
      */
     async executeZoomOut(parameters, app) {
-        const { factor } = parameters;
+        // Support magnification strings like "1.5X", "2x", or numeric values
+        let { factor } = parameters;
+        if (typeof factor === 'string') {
+            const normalized = factor.trim().toLowerCase().replace(/×/g, 'x');
+            const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
+            const numeric = parseFloat(stripped);
+            factor = (isFinite(numeric) && numeric > 0) ? numeric : 2;
+        }
         return await app.genomeBrowser.zoomOut(factor);
     }
     

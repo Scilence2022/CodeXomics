@@ -33,6 +33,27 @@ class MicrobeGenomicsFunctions {
     /* --------------------------------------------------------- */
 
     /**
+     * Parse a zoom factor value which may be a number or a string like "1.5X", "2x", "10"
+     * Returns a positive numeric factor, defaulting to 2 on invalid input
+     */
+    static parseZoomFactor(value) {
+        if (typeof value === 'number' && isFinite(value) && value > 0) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase().replace(/×/g, 'x');
+            // Accept forms like "1.5x", "2x", or plain number strings "1.5", "10"
+            const stripped = normalized.endsWith('x') ? normalized.slice(0, -1) : normalized;
+            const numeric = parseFloat(stripped);
+            if (isFinite(numeric) && numeric > 0) {
+                return numeric;
+            }
+        }
+        // Fallback default
+        return 2;
+    }
+
+    /**
      * Navigate to a specific genomic region
      * @param {string} chromosome - Target chromosome/contig
      * @param {number} start - Start position (1-based)
@@ -113,9 +134,10 @@ class MicrobeGenomicsFunctions {
      * @param {number} factor - Zoom factor (default: 2)
      */
     static zoomIn(factor = 2) {
+        const parsedFactor = this.parseZoomFactor(factor);
         const region = this.getCurrentRegion();
         const center = Math.floor((region.start + region.end) / 2);
-        const width = Math.floor((region.end - region.start) / factor);
+        const width = Math.floor((region.end - region.start) / parsedFactor);
         const newStart = Math.max(1, center - Math.floor(width / 2));
         const newEnd = newStart + width;
         this.navigateTo(region.chromosome, newStart, newEnd);
@@ -126,9 +148,10 @@ class MicrobeGenomicsFunctions {
      * @param {number} factor - Zoom factor (default: 2)
      */
     static zoomOut(factor = 2) {
+        const parsedFactor = this.parseZoomFactor(factor);
         const region = this.getCurrentRegion();
         const center = Math.floor((region.start + region.end) / 2);
-        const width = Math.floor((region.end - region.start) * factor);
+        const width = Math.floor((region.end - region.start) * parsedFactor);
         const newStart = Math.max(1, center - Math.floor(width / 2));
         const newEnd = newStart + width;
         this.navigateTo(region.chromosome, newStart, newEnd);
