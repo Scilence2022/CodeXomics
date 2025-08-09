@@ -2817,17 +2817,17 @@ class SequenceUtils {
              lineRect = sequenceLine.getBoundingClientRect();
          }
          
-         // Calculate horizontal position (relative to container)
-         const left = elementRect.left - containerRect.left;
+        // Calculate horizontal position (relative to container) accounting for scroll
+        const left = (elementRect.left - containerRect.left) + (container.scrollLeft || 0);
          
          // Calculate vertical position with improved accuracy
-         let top;
+        let top;
          if (lineRect) {
              // Use the line's top position for better vertical alignment
-             top = lineRect.top - containerRect.top;
+            top = (lineRect.top - containerRect.top) + (container.scrollTop || 0);
          } else {
              // Fallback to element's top position
-             top = elementRect.top - containerRect.top;
+            top = (elementRect.top - containerRect.top) + (container.scrollTop || 0);
          }
          
          // Set cursor height to match the sequence line height

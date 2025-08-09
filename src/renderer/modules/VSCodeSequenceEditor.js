@@ -229,7 +229,7 @@ class VSCodeSequenceEditor {
             
             .sequence-base {
                 display: inline-block;
-                width: 9px;
+                width: ${this.charWidth}px;
                 text-align: center;
                 position: relative;
                 font-family: inherit;
@@ -527,8 +527,9 @@ class VSCodeSequenceEditor {
             this.sequence = 'N'.repeat(100); // Fallback sequence
         }
         
-        // Measure character width with actual font
-        this.measureCharacterWidth();
+        // Measure character width with actual font and update styles
+        this.charWidth = this.measureCharacterWidth();
+        this.updateEditorStyles();
         this.updateDimensions();
         this.render();
         
@@ -540,28 +541,28 @@ class VSCodeSequenceEditor {
     }
     
     measureCharacterWidth() {
-        // Create a test element to measure character width
+        // Create a test element to measure character width using current settings
         const testElement = document.createElement('span');
-        testElement.textContent = 'ATCG'; // Use 4 characters for consistent measurement
+        testElement.textContent = 'ATCG';
         testElement.style.cssText = `
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: 600;
+            font-family: ${this.settings.fontFamily};
+            font-size: ${this.settings.fontSize}px;
+            font-weight: 400;
             visibility: hidden;
             position: absolute;
             white-space: nowrap;
-            letter-spacing: 1px;
+            letter-spacing: 0px;
         `;
-        
-        // Use document.body if sequenceContent is not available yet
+
         const container = this.sequenceContent || document.body;
         container.appendChild(testElement);
-        const width = testElement.offsetWidth / 4; // Divide by 4 characters
+        const width = testElement.getBoundingClientRect().width / 4;
         container.removeChild(testElement);
-        
-        const measuredWidth = width > 0 ? width : 9.5;
+
+        const measuredWidth = width > 0 ? width : 9.0;
+        this.charWidth = measuredWidth;
         console.log('🔧 [VSCodeSequenceEditor] Measured character width:', measuredWidth);
-        return Math.ceil(measuredWidth); // Round up for safety
+        return measuredWidth;
     }
     
     updateDimensions() {
@@ -604,7 +605,7 @@ class VSCodeSequenceEditor {
         
         // Calculate bases per line based on available width with better precision
         // Account for letter spacing and ensure we don't exceed container width
-        const effectiveCharWidth = this.charWidth + 1; // Add letter-spacing
+        const effectiveCharWidth = this.charWidth; // Use measured character width directly
         this.basesPerLine = Math.max(40, Math.floor(this.contentWidth / effectiveCharWidth)); // Ensure minimum bases per line
         this.visibleLines = Math.max(10, Math.floor(this.contentHeight / this.lineHeight)); // Ensure minimum visible lines
         
@@ -743,8 +744,8 @@ class VSCodeSequenceEditor {
         if (this.cursorPosition >= 0 && this.cursorPosition <= this.sequence.length) {
             const { line, column } = this.getLineColumnFromPosition(this.cursorPosition);
             
-            // Account for line numbers padding (10px) when positioning cursor
-            const x = column * this.charWidth + 10; // Add padding offset
+            // Account for line left offset in CSS (left: 10px)
+            const x = column * this.charWidth + 10;
             const y = line * this.lineHeight - this.scrollTop;
             
             // Ensure cursor is visible within the current view
@@ -799,7 +800,7 @@ class VSCodeSequenceEditor {
                 if (selStart < selEnd) {
                     const rect = document.createElement('div');
                     rect.style.position = 'absolute';
-                    rect.style.left = ((selStart - lineStart) * this.charWidth) + 'px';
+                    rect.style.left = ((selStart - lineStart) * this.charWidth + 10) + 'px';
                     rect.style.top = (line * this.lineHeight - this.scrollTop) + 'px';
                     rect.style.width = ((selEnd - selStart) * this.charWidth) + 'px';
                     rect.style.height = this.lineHeight + 'px';
@@ -1415,9 +1416,10 @@ class VSCodeSequenceEditor {
         // Update CSS variables and styles
         this.updateEditorStyles();
         
-        // Re-measure character width if font changed
+        // Re-measure character width if font changed and refresh styles
         if (this.sequence) {
-            this.measureCharacterWidth();
+            this.charWidth = this.measureCharacterWidth();
+            this.updateEditorStyles();
             this.updateDimensions();
         }
     }
