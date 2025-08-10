@@ -10877,7 +10877,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                         <input type="checkbox" id="editorShowCursorPosition" ${settings.editorShowCursorPosition !== false ? 'checked' : ''}>
                         Show cursor position
                     </label>
-                    <div class="help-text">Display genomic position of cursor in status bar.</div>
+                    <div class="help-text">[DEPRECATED] Display genomic position of cursor in status bar.</div>
                 </div>
                 <div class="form-group">
                     <label>

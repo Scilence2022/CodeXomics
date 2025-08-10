@@ -32,6 +32,7 @@ class ModernSequenceUtils {
         });
         
         console.log('🧬 [ModernSequenceUtils] Initialized with modern patterns');
+        // DEPRECATION NOTICE: Cursor-specific behaviors are scheduled for removal.
     }
     
     /**

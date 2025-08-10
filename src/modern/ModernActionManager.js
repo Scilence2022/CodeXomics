@@ -43,6 +43,7 @@ class ModernActionManager {
             timestamp: Date.now()
         });
         
+        // DEPRECATED: actions:cursorPosition is scheduled for removal
         this.context.setState('actions:cursorPosition', 0, {
             source: 'ModernActionManager',
             timestamp: Date.now()

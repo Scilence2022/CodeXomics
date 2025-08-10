@@ -39,7 +39,7 @@ class NavigationManager {
             minRange: 100, // Minimum range in base pairs
             maxRange: 1000000, // Maximum range in base pairs
             smoothZoom: true, // Enable smooth zooming
-            zoomToCursor: true // Zoom towards cursor position
+            zoomToCursor: true // DEPRECATED: Zoom towards cursor position (cursor system scheduled for removal)
         };
 
         // Initialize wheel zoom settings from GeneralSettingsManager

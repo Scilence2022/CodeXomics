@@ -9,7 +9,7 @@ class ActionManager {
         this.nextActionId = 1;
         this.isExecuting = false;
         this.clipboard = null; // Stores copied/cut sequence data
-        this.cursorPosition = 0; // Track cursor position for paste operations
+        this.cursorPosition = 0; // DEPRECATED: Cursor position for paste operations (scheduled for removal)
         this.sequenceModifications = new Map(); // Track sequence modifications by chromosome
         this.originalAnnotations = null; // Backup of original annotations before any modifications
         
@@ -477,7 +477,7 @@ class ActionManager {
     }
     
     /**
-     * Set cursor position for paste operations
+     * DEPRECATED: Set cursor position for paste operations (scheduled for removal)
      */
     setCursorPosition(position) {
         this.cursorPosition = position;

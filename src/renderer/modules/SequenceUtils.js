@@ -1,5 +1,9 @@
 /**
  * SequenceUtils - Handles sequence processing, display, and biological utilities
+ *
+ * DEPRECATION NOTICE: View-mode cursor system (styles, status updates, and positioning)
+ * is scheduled for removal. Do not introduce new dependencies on cursor behavior.
+ * Code paths remain for validation only until final removal.
  */
 class SequenceUtils {
     constructor(genomeBrowser) {
@@ -48,7 +52,7 @@ class SequenceUtils {
             lastRenderStart: 0
         };
         
-        // Cursor management for View Mode
+        // DEPRECATED: Cursor management for View Mode (scheduled for removal)
         this.cursor = {
             position: -1,        // Absolute genome position
             element: null,       // DOM element for cursor
@@ -71,12 +75,9 @@ class SequenceUtils {
         // Load minimum line spacing from settings
         this.loadMinLineSpacingFromSettings();
         
-        // Initialize cursor styles with setting
-        this.loadCursorSettings();
-        this.initializeCursorStyles();
+        // Cursor system removed
         
-        // Add window resize listener to handle cursor repositioning
-        this.setupWindowResizeHandler();
+        // Cursor system removed
     }
 
     /**
@@ -1460,8 +1461,8 @@ class SequenceUtils {
             
             const className = `base-${base.toLowerCase()}`;
             const titleAttr = featureTitle ? ` title="${featureTitle}"` : '';
-            const clickHandler = ` onclick="window.sequenceUtils?.handleSequenceClick(event, ${absPos})"`;
-            fragments.push(`<span class="${className}" style="${style}"${titleAttr}${clickHandler}>${base}</span>`);
+            // Removed click handler for cursor positioning
+            fragments.push(`<span class="${className}" style="${style}"${titleAttr}>${base}</span>`);
         }
         
         return fragments.join('');
@@ -2634,7 +2635,8 @@ class SequenceUtils {
      /**
       * Initialize cursor styles for View Mode
       */
-     initializeCursorStyles() {
+    // REMOVED: initializeCursorStyles (cursor system deleted)
+    initializeCursorStyles() {
          const style = document.createElement('style');
          style.id = 'view-mode-cursor-styles';
          style.textContent = `
@@ -2686,7 +2688,8 @@ class SequenceUtils {
      /**
       * Update cursor color and refresh styles
       */
-     setCursorColor(color) {
+    // REMOVED: setCursorColor (cursor system deleted)
+    setCursorColor(color) {
          this.cursor.color = color;
          
          // Remove existing styles and recreate with new color
@@ -2708,7 +2711,8 @@ class SequenceUtils {
      /**
       * Handle click on sequence base
       */
-     handleSequenceClick(event, genomicPosition) {
+    // REMOVED: handleSequenceClick (cursor system deleted)
+    handleSequenceClick(event, genomicPosition) {
          event.preventDefault();
          event.stopPropagation();
          
@@ -2722,7 +2726,8 @@ class SequenceUtils {
      /**
       * Position cursor at specific genome position
       */
-     setCursorPosition(genomicPosition) {
+    // REMOVED: setCursorPosition (cursor system deleted)
+    setCursorPosition(genomicPosition) {
          console.log('🎯 [SequenceUtils] Setting cursor position to:', genomicPosition);
          
          this.cursor.position = genomicPosition;
@@ -2742,7 +2747,8 @@ class SequenceUtils {
      /**
       * Force cursor repositioning (useful after layout changes)
       */
-     repositionCursor() {
+    // REMOVED: repositionCursor (cursor system deleted)
+    repositionCursor() {
          if (this.cursor.position >= 0) {
              console.log('🔄 [SequenceUtils] Force repositioning cursor at position:', this.cursor.position);
              this.positionCursorInView();
@@ -2752,7 +2758,8 @@ class SequenceUtils {
      /**
       * Create and position cursor in the view
       */
-     createAndPositionCursor() {
+    // REMOVED: createAndPositionCursor (cursor system deleted)
+    createAndPositionCursor() {
          const container = document.getElementById('sequenceContent');
          if (!container) return;
          
@@ -2777,7 +2784,8 @@ class SequenceUtils {
      /**
       * Position cursor element in the current view
       */
-     positionCursorInView() {
+    // REMOVED: positionCursorInView (cursor system deleted)
+    positionCursorInView() {
          if (!this.cursor.element || this.cursor.position < 0) return;
          
          const container = document.getElementById('sequenceContent');
@@ -2803,7 +2811,8 @@ class SequenceUtils {
      /**
       * Position cursor at a specific DOM element with improved accuracy
       */
-     positionCursorAtElement(element, container) {
+    // REMOVED: positionCursorAtElement (cursor system deleted)
+    positionCursorAtElement(element, container) {
          if (!element || !container || !this.cursor.element) return;
          
          // Get position coordinates with proper viewport consideration
@@ -2881,7 +2890,8 @@ class SequenceUtils {
      /**
       * Setup window resize handler for cursor repositioning
       */
-     setupWindowResizeHandler() {
+    // REMOVED: setupWindowResizeHandler (cursor system deleted)
+    setupWindowResizeHandler() {
          let resizeTimeout;
          
          const handleResize = () => {
@@ -2925,7 +2935,8 @@ class SequenceUtils {
      /**
       * Update cursor status in status bar
       */
-     updateCursorStatus(position) {
+    // REMOVED: updateCursorStatus (cursor system deleted)
+    updateCursorStatus(position) {
          const cursorStatusElement = document.getElementById('cursorStatus');
          if (cursorStatusElement && position >= 0) {
              cursorStatusElement.textContent = `Cursor: ${position + 1}`;

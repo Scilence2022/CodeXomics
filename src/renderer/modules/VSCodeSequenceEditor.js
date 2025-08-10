@@ -1,6 +1,11 @@
 /**
  * VS Code-like Sequence Editor
  * Provides smooth text visualization and operations similar to VS Code
+ *
+ * DEPRECATION NOTICE: The cursor system (caret rendering, cursor status/ruler indicators,
+ * and cursor-position dependent APIs) is scheduled for removal. Do not add new dependencies
+ * on cursor behavior. This file currently retains cursor functionality for backward
+ * compatibility and validation only.
  */
 class VSCodeSequenceEditor {
     constructor(container, genomeBrowser) {
@@ -92,9 +97,8 @@ class VSCodeSequenceEditor {
         this.setupEventListeners();
         this.setupKeyboardShortcuts();
         
-        // Initialize cursor as focused and visible
-        this.cursor.classList.add('focused');
-        this.cursor.style.display = 'block';
+        // Cursor system removed; keep element inert for backward DOM stability
+        this.cursor.style.display = 'none';
     }
     
     createEditorStructure() {
@@ -120,7 +124,7 @@ class VSCodeSequenceEditor {
         this.sequenceContent.tabIndex = 0; // Make focusable
         this.sequenceContent.style.cursor = 'text'; // Show text cursor on hover
         
-        // Create cursor
+        // REMOVED: Editor caret (cursor system deleted)
         this.cursor = document.createElement('div');
         this.cursor.className = 'editor-cursor';
         
@@ -260,43 +264,9 @@ class VSCodeSequenceEditor {
                 display: none;
             }
             
-            .editor-cursor {
-                position: absolute;
-                width: 2px;
-                height: ${this.lineHeight}px;
-                background: ${this.settings.cursorColor};
-                animation: cursor-blink 1.2s infinite;
-                z-index: 15;
-                pointer-events: none;
-                border-radius: 1px;
-                box-shadow: 0 0 2px rgba(255, 255, 255, 0.3);
-                opacity: 1;
-                transition: none;
-            }
+            /* REMOVED: .editor-cursor styles (cursor system deleted) */
             
-            .editor-cursor.focused {
-                animation: cursor-blink 1.2s infinite;
-            }
-            
-            .editor-cursor.unfocused {
-                animation: none;
-                opacity: 0.6;
-            }
-            
-            @keyframes cursor-blink {
-                0%, 45% { 
-                    opacity: 1; 
-                    background: ${this.settings.cursorColor};
-                }
-                46%, 54% { 
-                    opacity: 0.8; 
-                    background: ${this.settings.cursorColor};
-                }
-                55%, 100% { 
-                    opacity: 0; 
-                    background: transparent;
-                }
-            }
+            /* REMOVED: cursor-blink animation (cursor system deleted) */
             
             .editor-selection {
                 position: absolute;
@@ -389,15 +359,7 @@ class VSCodeSequenceEditor {
             }
             
             /* Cursor position indicator in ruler */
-            .cursor-position-indicator {
-                position: absolute;
-                top: 0;
-                width: 2px;
-                height: 20px;
-                background: #ffff00;
-                z-index: 10;
-                pointer-events: none;
-            }
+            /* REMOVED: .cursor-position-indicator (cursor system deleted) */
             
             .cursor-position-label {
                 position: absolute;
@@ -533,11 +495,7 @@ class VSCodeSequenceEditor {
         this.updateDimensions();
         this.render();
         
-        // Ensure cursor is visible after sequence update
-        if (this.cursorPosition >= 0) {
-            this.cursor.classList.add('focused');
-            this.renderCursor();
-        }
+        // Cursor system removed
     }
     
     measureCharacterWidth() {
@@ -628,7 +586,7 @@ class VSCodeSequenceEditor {
         this.renderLineNumbers();
         this.renderSequence();
         this.renderLineHighlight();
-        this.renderCursor();
+        // Cursor system removed
         this.renderSelection();
         this.renderRuler();
     }
@@ -721,11 +679,11 @@ class VSCodeSequenceEditor {
     
     renderLineHighlight() {
         if (!this.settings.showLineHighlight) {
-            this.lineHighlight.style.display = 'none';
-            return;
+        this.lineHighlight.style.display = 'none';
+        return;
         }
         
-        const { line } = this.getLineColumnFromPosition(this.cursorPosition);
+            const { line } = this.getLineColumnFromPosition(this.cursorPosition || 0);
         const y = line * this.lineHeight - this.scrollTop;
         
         // Only show highlight if line is visible
@@ -740,6 +698,9 @@ class VSCodeSequenceEditor {
         }
     }
     
+    /**
+     * DEPRECATED: Editor caret rendering is scheduled for removal. Avoid using.
+     */
     renderCursor() {
         if (this.cursorPosition >= 0 && this.cursorPosition <= this.sequence.length) {
             const { line, column } = this.getLineColumnFromPosition(this.cursorPosition);
@@ -845,7 +806,7 @@ class VSCodeSequenceEditor {
         ruler.style.color = this.settings.rulerColor;
         
         // Get cursor line for dynamic ruler positioning
-        const { line: cursorLine, column: cursorColumn } = this.getLineColumnFromPosition(this.cursorPosition);
+        const { line: cursorLine, column: cursorColumn } = this.getLineColumnFromPosition(this.cursorPosition || 0);
         const currentScrollLine = Math.floor(this.scrollTop / this.lineHeight);
         
         // Determine which line to show in ruler (cursor line if visible, otherwise current scroll position)
@@ -1107,6 +1068,9 @@ class VSCodeSequenceEditor {
         return this.settings.geneColors[colorKey] || this.settings.geneColors.intergenic;
     }
     
+    /**
+     * DEPRECATED: setCursorPosition is scheduled for removal. Use explicit selection APIs instead.
+     */
     setCursorPosition(position) {
         this.cursorPosition = Math.max(0, Math.min(position, this.sequence.length));
         this.ensureCursorVisible();
@@ -1122,7 +1086,7 @@ class VSCodeSequenceEditor {
         // Force cursor to be visible and render it
         this.cursor.classList.add('focused');
         this.cursor.classList.remove('unfocused');
-        this.renderCursor();
+        // Cursor system removed
         
         console.log('🎯 [VSCode Editor] Cursor position set to:', {
             position: this.cursorPosition,
@@ -1130,8 +1094,11 @@ class VSCodeSequenceEditor {
         });
     }
     
+    /**
+     * DEPRECATED: ensureCursorVisible is scheduled for removal.
+     */
     ensureCursorVisible() {
-        const { line } = this.getLineColumnFromPosition(this.cursorPosition);
+        const { line } = this.getLineColumnFromPosition(this.cursorPosition || 0);
         const y = line * this.lineHeight;
         const maxScrollTop = Math.max(0, (this.totalLines - this.visibleLines) * this.lineHeight);
         
@@ -1329,18 +1296,12 @@ class VSCodeSequenceEditor {
     
     handleFocus() {
         console.log('🎯 [VSCode Editor] Editor focused');
-        this.cursor.classList.add('focused');
-        this.cursor.classList.remove('unfocused');
-        this.cursor.style.display = 'block';
-        this.renderCursor(); // Re-render cursor when focused
+        // Cursor system removed
     }
     
     handleBlur() {
         console.log('🎯 [VSCode Editor] Editor blurred');
-        this.cursor.classList.remove('focused');
-        this.cursor.classList.add('unfocused');
-        // Don't hide cursor completely on blur, just make it less prominent
-        this.renderCursor();
+        // Cursor system removed
     }
     
     handleScrollbarMouseDown(e) {
@@ -1641,6 +1602,9 @@ class VSCodeSequenceEditor {
     /**
      * Update cursor position in status bar
      */
+    /**
+     * DEPRECATED: Status bar cursor indicator is scheduled for removal.
+     */
     updateCursorStatus() {
         const cursorStatusElement = document.getElementById('cursorStatus');
         if (cursorStatusElement) {
@@ -1652,6 +1616,9 @@ class VSCodeSequenceEditor {
     
     /**
      * Get current cursor position for external use (like paste operations)
+     */
+    /**
+     * DEPRECATED: getCursorPosition is scheduled for removal.
      */
     getCursorPosition() {
         return this.viewStart + this.cursorPosition;
