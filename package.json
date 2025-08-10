@@ -96,8 +96,8 @@
     ],
     "extraResources": [
       {
-        "from": "sample_data",
-        "to": "sample_data",
+        "from": "test_data",
+        "to": "test_data",
         "filter": [
           "**/*"
         ]
@@ -191,12 +191,6 @@
         },
         {
           "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "rpm",
           "arch": [
             "x64"
           ]
