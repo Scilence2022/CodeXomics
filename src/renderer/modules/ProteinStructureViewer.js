@@ -39,7 +39,7 @@ class ProteinStructureViewer {
         const unifiedBtn = document.createElement('button');
         unifiedBtn.id = 'unified-protein-search-btn';
         unifiedBtn.className = 'btn';
-        unifiedBtn.innerHTML = '<i class="fas fa-cubes"></i> Protein Search';
+        unifiedBtn.innerHTML = '<i class="fas fa-cubes"></i> Protein Structure';
         unifiedBtn.title = 'Search Protein Structures (PDB & AlphaFold)';
         unifiedBtn.onclick = () => this.showUnifiedProteinSearchDialog();
         
