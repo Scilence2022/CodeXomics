@@ -702,10 +702,10 @@ class ChatBoxSettingsManager {
                         <i class="fas fa-undo"></i> Reset to Defaults
                     </button>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="window.chatBoxSettingsManager.saveSettingsFromForm(this.closest('.modal'))">
+                        <button class="btn btn-primary" id="chatboxSaveSettingsBtn">
                             <i class="fas fa-save"></i> Save Settings
                         </button>
                     </div>
@@ -748,6 +748,15 @@ class ChatBoxSettingsManager {
         
         // Setup tool priority functionality
         this.setupToolPriorityHandlers(modal);
+        
+        // Setup save button handler
+        const saveBtn = modal.querySelector('#chatboxSaveSettingsBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                console.log('💾 ChatBox Settings save button clicked');
+                this.saveSettingsFromForm(modal);
+            });
+        }
         
         return modal;
     }
@@ -997,12 +1006,14 @@ class ChatBoxSettingsManager {
             
             // Close modal
             modal.style.display = 'none';
+            modal.classList.remove('show');
         } else {
             // Show no changes message
             this.showNotification('No changes detected. Settings are already up to date.', 'info');
             
             // Close modal
             modal.style.display = 'none';
+            modal.classList.remove('show');
         }
     }
     
