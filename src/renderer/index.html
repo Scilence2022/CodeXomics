@@ -910,7 +910,6 @@
                     <button class="tab-button" data-provider="siliconflow">SiliconFlow</button>
                     <button class="tab-button" data-provider="openrouter">OpenRouter</button>
                     <button class="tab-button" data-provider="local">Local LLM</button>
-                    <button class="tab-button" data-provider="custom">Custom</button>
                 </div>
                 
                 <div class="llm-provider-config">
@@ -1314,69 +1313,6 @@
                         </div>
                     </div>
                     
-                    <!-- Custom LLM Configuration -->
-                    <div id="custom-config" class="provider-config">
-                        <div class="form-group">
-                            <label for="customProviderName">Provider Name:</label>
-                            <input type="text" id="customProviderName" placeholder="My Custom Provider" class="input-full">
-                            <small class="help-text">A friendly name for your custom LLM provider</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customApiKey">API Key:</label>
-                            <div class="input-with-button">
-                                <input type="password" id="customApiKey" placeholder="Enter your API key" class="input-full">
-                                <button type="button" class="btn btn-sm btn-paste" id="pasteCustomApiKeyBtn" title="Paste API Key">
-                                    <i class="fas fa-paste"></i>
-                                </button>
-                            </div>
-                            <small class="help-text">API key for your custom provider</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customModel">Model Name:</label>
-                            <input type="text" id="customModel" placeholder="gpt-4" class="input-full">
-                            <small class="help-text">Model identifier for your custom provider</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customBaseUrl">Base URL:</label>
-                            <input type="text" id="customBaseUrl" placeholder="https://api.example.com/v1" class="input-full">
-                            <small class="help-text">Base URL for your custom provider's API</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customApiFormat">API Format:</label>
-                            <select id="customApiFormat" class="select">
-                                <option value="openai">OpenAI Compatible</option>
-                                <option value="anthropic">Anthropic Compatible</option>
-                                <option value="google">Google Compatible</option>
-                                <option value="custom">Custom Format</option>
-                            </select>
-                            <small class="help-text">Choose the API format your custom provider uses</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customHeaders">Custom Headers (JSON):</label>
-                            <textarea id="customHeaders" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}' class="input-full" rows="3"></textarea>
-                            <small class="help-text">Optional: Custom HTTP headers as JSON object</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customMaxTokens">Max Tokens:</label>
-                            <input type="number" id="customMaxTokens" placeholder="4096" min="1" max="200000" class="input-full">
-                            <small class="help-text">Maximum number of tokens for responses</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="customTemperature">Temperature:</label>
-                            <input type="range" id="customTemperature" min="0" max="2" step="0.1" value="0.7" class="slider">
-                            <div class="slider-value">
-                                <span id="customTemperatureValue">0.7</span>
-                                <small>(0.0 = Deterministic, 2.0 = Very creative)</small>
-                            </div>
-                            <small class="help-text">Controls randomness in responses</small>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="customStreamingSupport"> Streaming Support
-                            </label>
-                            <small class="help-text">Enable if your provider supports streaming responses</small>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- System Prompt Configuration -->
@@ -1403,31 +1339,6 @@
                     </div>
                 </div>
 
-                <!-- Function Call Settings -->
-                <div class="function-call-settings">
-                    <h4><i class="fas fa-cogs"></i> Function Call Settings</h4>
-                    <div class="form-group">
-                        <label for="functionCallRounds">Maximum Function Call Rounds:</label>
-                        <input type="number" id="functionCallRounds" min="1" max="10" value="3" class="input-full">
-                        <small class="help-text">Maximum number of consecutive function calls the AI can make (1-10). Higher values allow more complex multi-step operations but may take longer.</small>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="enableEarlyCompletion" checked>
-                            Enable Early Task Completion
-                        </label>
-                        <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="completionThreshold">Task Completion Confidence Threshold:</label>
-                        <input type="range" id="completionThreshold" min="0.5" max="1.0" step="0.05" value="0.7" class="slider">
-                        <div class="slider-value">
-                            <span id="completionThresholdValue">0.7</span>
-                            <small>(50% = Low confidence, 100% = High confidence)</small>
-                        </div>
-                        <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
-                    </div>
-                </div>
                 
                 <div class="llm-config-status">
                     <div class="status-info">
