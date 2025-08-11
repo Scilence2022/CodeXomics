@@ -2920,8 +2920,9 @@ class ChatManager {
             // Get maximum function call rounds from configuration
             const maxRounds = this.configManager.get('llm.functionCallRounds', 3);
             const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
-            console.log('Maximum function call rounds:', maxRounds);
-            console.log('Early completion enabled:', enableEarlyCompletion);
+            console.log('🔧 Maximum function call rounds from config:', maxRounds);
+            console.log('🔧 Early completion enabled:', enableEarlyCompletion);
+            console.log('🔧 LLM config raw value:', this.configManager.get('llm.functionCallRounds'));
             
             // 显示思考过程
             this.showThinkingProcess && this.addThinkingMessage(`🔄 Starting request processing (max rounds: ${maxRounds})`);

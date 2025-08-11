@@ -2,15 +2,8 @@
 
 /* ChatBox Settings Modal - Independent styles (not inheriting from ChatBox) */
 #chatboxSettingsModal {
-    /* Override the default modal positioning for draggable behavior */
-    position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: auto !important;
-    height: auto !important;
-    background: transparent !important;
-    z-index: 10000 !important;
+    /* Remove positioning overrides to allow ModalDragManager to work */
+    z-index: 10000;
     display: none;
 }
 
@@ -123,16 +116,10 @@
     display: block;
 }
 
-/* Draggable modal styles */
-.draggable-modal {
-    position: fixed !important;
-    transition: transform 0.2s ease;
-}
-
+/* Draggable modal styles - removed position fixed override to allow ModalDragManager to work */
 .draggable-modal.dragging {
     z-index: 10001 !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    transform: scale(1.02);
 }
 
 .draggable-header {

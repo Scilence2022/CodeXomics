@@ -68,7 +68,12 @@ class ChatBoxSettingsManager {
             agentLLMTimeout: 30000,
             agentLLMRetryAttempts: 3,
             agentLLMUseSystemPrompt: true,
-            agentLLMEnableFunctionCalling: true
+            agentLLMEnableFunctionCalling: true,
+            
+            // Function Call Settings
+            functionCallRounds: 5,
+            enableEarlyCompletion: true,
+            completionThreshold: 0.7
         };
         
         this.loadSettings();
@@ -81,7 +86,24 @@ class ChatBoxSettingsManager {
     loadSettings() {
         const savedSettings = this.configManager.get('chatboxSettings', {});
         this.settings = { ...this.settings, ...savedSettings };
+        
+        // Sync Function Call Settings from the main LLM configuration
+        const llmFunctionCallRounds = this.configManager.get('llm.functionCallRounds');
+        const llmEnableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion');
+        const llmCompletionThreshold = this.configManager.get('llm.completionThreshold');
+        
+        if (llmFunctionCallRounds !== undefined) {
+            this.settings.functionCallRounds = llmFunctionCallRounds;
+        }
+        if (llmEnableEarlyCompletion !== undefined) {
+            this.settings.enableEarlyCompletion = llmEnableEarlyCompletion;
+        }
+        if (llmCompletionThreshold !== undefined) {
+            this.settings.completionThreshold = llmCompletionThreshold;
+        }
+        
         console.log('🔧 ChatBox settings loaded:', this.settings);
+        console.log('🔄 Synced Function Call Settings from LLM config');
     }
 
     /**
@@ -89,7 +111,21 @@ class ChatBoxSettingsManager {
      */
     saveSettings() {
         this.configManager.set('chatboxSettings', this.settings);
+        
+        // Sync Function Call Settings to the main LLM configuration
+        if (this.settings.hasOwnProperty('functionCallRounds')) {
+            this.configManager.set('llm.functionCallRounds', this.settings.functionCallRounds);
+        }
+        if (this.settings.hasOwnProperty('enableEarlyCompletion')) {
+            this.configManager.set('llm.enableEarlyCompletion', this.settings.enableEarlyCompletion);
+        }
+        if (this.settings.hasOwnProperty('completionThreshold')) {
+            this.configManager.set('llm.completionThreshold', this.settings.completionThreshold);
+        }
+        
         console.log('💾 ChatBox settings saved:', this.settings);
+        console.log('🔄 Synced Function Call Settings to LLM config');
+        console.log('📊 Current LLM functionCallRounds:', this.configManager.get('llm.functionCallRounds'));
         
         // Emit settings changed event
         this.emit('settingsChanged', this.settings);
@@ -162,7 +198,12 @@ class ChatBoxSettingsManager {
             toolPriority: ['local', 'genomics', 'plugins', 'mcp'],
             rememberPosition: true,
             rememberSize: true,
-            startMinimized: false
+            startMinimized: false,
+            
+            // Function Call Settings (duplicated in defaultSettings)
+            functionCallRounds: 5,
+            enableEarlyCompletion: true,
+            completionThreshold: 0.7
         };
         
         this.settings = { ...defaultSettings };
@@ -243,13 +284,6 @@ class ChatBoxSettingsManager {
             document.body.appendChild(modal);
         }
         
-        // Initialize draggable and resizable using centralized managers
-        if (window.modalDragManager) {
-            window.modalDragManager.makeDraggable('#chatboxSettingsModal');
-        }
-        if (window.resizableModalManager) {
-            window.resizableModalManager.makeResizable('#chatboxSettingsModal');
-        }
         
         // Add reset to defaults button handler
         const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
@@ -260,6 +294,21 @@ class ChatBoxSettingsManager {
             });
         }
         
+        // Add reset position button handler
+        const resetPositionBtn = modal.querySelector('.reset-position-btn');
+        if (resetPositionBtn) {
+            resetPositionBtn.addEventListener('click', () => {
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.position = 'fixed';
+                    modalContent.style.transform = 'translate(-50%, -50%)';
+                    modalContent.style.top = '50%';
+                    modalContent.style.left = '50%';
+                    modalContent.style.margin = '0';
+                }
+            });
+        }
+        
         // Populate current settings
         this.populateSettingsForm(modal);
         
@@ -267,11 +316,12 @@ class ChatBoxSettingsManager {
         modal.style.display = 'block';
         modal.classList.add('show');
         
-        // Reset to center position if not already positioned
-        if (!modal.style.left && !modal.style.top) {
-            modal.style.transform = 'translate(-50%, -50%)';
-            modal.style.top = '50%';
-            modal.style.left = '50%';
+        // Initialize draggable and resizable using centralized managers
+        if (window.modalDragManager) {
+            window.modalDragManager.makeDraggable('#chatboxSettingsModal');
+        }
+        if (window.resizableModalManager) {
+            window.resizableModalManager.makeResizable('#chatboxSettingsModal');
         }
         
         // Focus first input
@@ -307,7 +357,7 @@ class ChatBoxSettingsManager {
                 </div>
                 
                 <div class="modal-body">
-                    <div class="chatbox-settings-tabs">
+                    <div class="settings-tabs">
                         <div class="tab-header">
                             <button class="tab-btn active" data-tab="display">
                                 <i class="fas fa-eye"></i> Display
@@ -450,6 +500,34 @@ class ChatBoxSettingsManager {
                                     <label for="responseTimeout">Response timeout (seconds):</label>
                                     <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
                                     <small class="help-text">How long to wait for LLM responses</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>Function Call Settings</h4>
+                                <div class="form-group">
+                                    <label for="functionCallRounds">Maximum Function Call Rounds:</label>
+                                    <input type="number" id="functionCallRounds" class="input-full" min="1" max="10" step="1">
+                                    <small class="help-text">Maximum number of consecutive function calls the AI can make (1-10). Higher values allow more complex multi-step operations but may take longer.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableEarlyCompletion" class="setting-checkbox">
+                                        Enable Early Task Completion
+                                    </label>
+                                    <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="completionThreshold">Task Completion Confidence Threshold:</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="completionThreshold" class="range-slider" min="0.5" max="1.0" step="0.05" value="0.7">
+                                        <div class="slider-labels">
+                                            <span class="slider-label-left">50% (Low)</span>
+                                            <span class="slider-value" id="completionThresholdValue">70%</span>
+                                            <span class="slider-label-right">100% (High)</span>
+                                        </div>
+                                    </div>
+                                    <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
                                 </div>
                             </div>
                         </div>
@@ -667,11 +745,6 @@ class ChatBoxSettingsManager {
             });
         });
         
-        // Setup dragging functionality
-        this.setupModalDragging(modal);
-        
-        // Setup resizing functionality
-        this.setupModalResizing(modal);
         
         // Setup tool priority functionality
         this.setupToolPriorityHandlers(modal);
@@ -679,148 +752,7 @@ class ChatBoxSettingsManager {
         return modal;
     }
 
-    /**
-     * Setup dragging functionality for the settings modal
-     */
-    setupModalDragging(modal) {
-        const header = modal.querySelector('.draggable-header');
-        if (!header) return;
 
-        let isDragging = false;
-        let startX, startY, startLeft, startTop;
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('modal-close')) return;
-            
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Get current modal position
-            const rect = modal.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-            
-            // Remove the default centered positioning
-            modal.style.transform = 'none';
-            modal.style.top = startTop + 'px';
-            modal.style.left = startLeft + 'px';
-            
-            modal.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            const newLeft = startLeft + deltaX;
-            const newTop = startTop + deltaY;
-            
-            // Keep modal within viewport bounds
-            const modalRect = modal.getBoundingClientRect();
-            const maxLeft = window.innerWidth - modalRect.width;
-            const maxTop = window.innerHeight - modalRect.height;
-            
-            const clampedLeft = Math.max(0, Math.min(newLeft, maxLeft));
-            const clampedTop = Math.max(0, Math.min(newTop, maxTop));
-            
-            modal.style.left = clampedLeft + 'px';
-            modal.style.top = clampedTop + 'px';
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                modal.classList.remove('dragging');
-            }
-        });
-    }
-
-    /**
-     * Setup resizing functionality for the settings modal
-     */
-    setupModalResizing(modal) {
-        const content = modal.querySelector('.resizable-modal-content');
-        if (!content) return;
-
-        const handles = modal.querySelectorAll('.resize-handle');
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startWidth, startHeight, startLeft, startTop;
-
-        handles.forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                currentHandle = handle;
-                startX = e.clientX;
-                startY = e.clientY;
-                
-                const rect = content.getBoundingClientRect();
-                startWidth = rect.width;
-                startHeight = rect.height;
-                startLeft = rect.left;
-                startTop = rect.top;
-                
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing || !currentHandle) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            const handleClass = currentHandle.className;
-            let newWidth = startWidth;
-            let newHeight = startHeight;
-            let newLeft = startLeft;
-            let newTop = startTop;
-            
-            // Handle different resize directions
-            if (handleClass.includes('e')) {
-                newWidth = Math.max(400, startWidth + deltaX);
-            }
-            if (handleClass.includes('w')) {
-                const widthChange = Math.min(deltaX, startWidth - 400);
-                newWidth = startWidth - widthChange;
-                newLeft = startLeft + widthChange;
-            }
-            if (handleClass.includes('s')) {
-                newHeight = Math.max(300, startHeight + deltaY);
-            }
-            if (handleClass.includes('n')) {
-                const heightChange = Math.min(deltaY, startHeight - 300);
-                newHeight = startHeight - heightChange;
-                newTop = startTop + heightChange;
-            }
-            
-            // Apply new dimensions
-            content.style.width = newWidth + 'px';
-            content.style.height = newHeight + 'px';
-            
-            // Update modal dimensions to match content
-            modal.style.width = newWidth + 'px';
-            modal.style.height = newHeight + 'px';
-            
-            // Adjust position if resizing from left or top
-            if (handleClass.includes('w') || handleClass.includes('n')) {
-                modal.style.left = newLeft + 'px';
-                modal.style.top = newTop + 'px';
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                currentHandle = null;
-            }
-        });
-    }
 
     /**
      * Setup tool priority handlers
@@ -975,7 +907,11 @@ class ChatBoxSettingsManager {
                     // Update range value display
                     const valueDisplay = modal.querySelector(`#${key}Value`);
                     if (valueDisplay) {
-                        valueDisplay.textContent = value;
+                        if (key === 'completionThreshold') {
+                            valueDisplay.textContent = Math.round(value * 100) + '%';
+                        } else {
+                            valueDisplay.textContent = value;
+                        }
                     }
                 } else {
                     element.value = value;
@@ -996,7 +932,11 @@ class ChatBoxSettingsManager {
             const valueDisplay = modal.querySelector(`#${slider.id}Value`);
             if (valueDisplay) {
                 slider.addEventListener('input', () => {
-                    valueDisplay.textContent = slider.value;
+                    if (slider.id === 'completionThreshold') {
+                        valueDisplay.textContent = Math.round(slider.value * 100) + '%';
+                    } else {
+                        valueDisplay.textContent = slider.value;
+                    }
                 });
             }
         });
@@ -1119,6 +1059,9 @@ class ChatBoxSettingsManager {
             'agentLLMRetryAttempts': 'Agent LLM Retry Attempts',
             'agentLLMUseSystemPrompt': 'Agent LLM System Prompt',
             'agentLLMEnableFunctionCalling': 'Agent LLM Function Calling',
+            'functionCallRounds': 'Maximum Function Call Rounds',
+            'enableEarlyCompletion': 'Enable Early Task Completion',
+            'completionThreshold': 'Task Completion Confidence Threshold',
             'memorySystemEnabled': 'Memory System',
             'memoryCacheEnabled': 'Memory Caching',
             'memoryOptimizationEnabled': 'Memory Optimization',
