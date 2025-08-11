@@ -2127,8 +2127,12 @@ class TrackRenderer {
         // Get subsequence for current viewport
         const subsequence = sequence.substring(viewport.start, viewport.end);
         
-        // Create single-line sequence display with dynamic sizing
-        const seqDisplay = this.createSequenceDisplay(subsequence, viewport);
+        // Get track settings for sequence line track
+        const settings = this.getTrackSettings('sequenceLine');
+        console.log('🔧 [createSequenceLineTrack] Using settings:', settings);
+        
+        // Create single-line sequence display with settings
+        const seqDisplay = this.createSequenceDisplay(subsequence, viewport, settings);
         trackContent.appendChild(seqDisplay);
         
         // Restore header state if it was previously hidden
@@ -2141,7 +2145,7 @@ class TrackRenderer {
     /**
      * Create high-performance Canvas-based sequence display
      */
-    createSequenceDisplay(subsequence, viewport) {
+    createSequenceDisplay(subsequence, viewport, settings = {}) {
         // Create container for Canvas renderer
         const seqDisplay = document.createElement('div');
         seqDisplay.className = 'sequence-single-line sequence-canvas-container';
@@ -2149,7 +2153,7 @@ class TrackRenderer {
             position: relative;
             min-height: 20px;
             height: auto;
-            max-height: 50px;
+            max-height: ${settings.maxHeight || 50}px;
             overflow: hidden;
             width: 100%;
         `;
@@ -2170,23 +2174,33 @@ class TrackRenderer {
             return this.createSequenceDisplayFallback(subsequence, viewport);
         }
         
-        // Create Canvas renderer with optimized options
+        // Create Canvas renderer with settings-based options
         const canvasOptions = {
-            fontSize: 14,
-            fontFamily: 'Courier New, monospace',
+            fontSize: settings.fontSize || 14,
+            fontFamily: settings.fontFamily || 'Courier New, monospace',
             fontWeight: 'bold',
             backgroundColor: 'transparent',
-            adaptiveHeight: true,
+            adaptiveHeight: settings.adaptiveHeight !== false,
             minHeight: 20,
-            maxHeight: 50,
-            padding: 2
+            maxHeight: settings.maxHeight || 50,
+            padding: 2,
+            // Protein translation options
+            showProteinTranslation: settings.showProteinTranslation || false,
+            proteinTranslationMode: settings.proteinTranslationMode || 'all_frames',
+            proteinFramesToShow: settings.proteinFramesToShow || [1, 2, 3],
+            proteinFontSize: settings.proteinFontSize || 12
         };
         
         try {
-            const canvasRenderer = new CanvasSequenceRenderer(seqDisplay, subsequence, viewport, canvasOptions);
+            const canvasRenderer = new CanvasSequenceRenderer(seqDisplay, subsequence, viewport, canvasOptions, this.genomeBrowser);
             
             // Store renderer for cleanup and updates
             this.canvasRenderers.set(trackId, canvasRenderer);
+            
+            // Update parent track content height after renderer is ready
+            setTimeout(() => {
+                this.updateSequenceTrackHeight(seqDisplay, canvasRenderer.canvasHeight);
+            }, 100);
             
             console.log('✅ [TrackRenderer] Canvas sequence renderer created successfully');
             
@@ -9028,6 +9042,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 }, 100);
                 break;
                 
+            case 'sequenceLine':
+                console.log('⚙️ Loading sequence line track settings...');
+                titleElement.textContent = 'Single-line Sequence Track Settings';
+                bodyElement.innerHTML = this.createSequenceLineSettingsContent(currentSettings);
+                
+                // Setup event listeners for sequence line settings
+                setTimeout(() => {
+                    this.setupSequenceLineSettingsEventListeners(bodyElement);
+                }, 100);
+                break;
+                
             default:
                 titleElement.textContent = `${trackType} Track Settings`;
                 bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -9534,6 +9559,16 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 layoutMode: 'compact', // 'compact' or 'groupByType'
                 enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false // Inherit from global setting, default to true
             },
+            sequenceLine: {
+                fontSize: 14,
+                fontFamily: 'Courier New, monospace',
+                maxHeight: 50,
+                adaptiveHeight: true,
+                showProteinTranslation: false,
+                proteinTranslationMode: 'all_frames',
+                proteinFramesToShow: [1, 2, 3],
+                proteinFontSize: 12
+            },
             gc: {
                 contentColor: '#3b82f6',
                 skewPositiveColor: '#10b981',
@@ -9985,12 +10020,157 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 
                 break;
                 
+            case 'sequenceLine':
+                // Basic display settings
+                settings.fontSize = parseInt(modal.querySelector('#sequenceLineFontSize').value) || 14;
+                settings.fontFamily = modal.querySelector('#sequenceLineFontFamily').value || 'Courier New, monospace';
+                
+                // Protein translation settings
+                settings.showProteinTranslation = modal.querySelector('#sequenceLineShowProteinTranslation').checked;
+                settings.proteinTranslationMode = modal.querySelector('#sequenceLineProteinTranslationMode').value || 'all_frames';
+                
+                // Reading frames selection
+                const frame1 = modal.querySelector('#sequenceLineFrame1').checked;
+                const frame2 = modal.querySelector('#sequenceLineFrame2').checked;
+                const frame3 = modal.querySelector('#sequenceLineFrame3').checked;
+                settings.proteinFramesToShow = [];
+                if (frame1) settings.proteinFramesToShow.push(1);
+                if (frame2) settings.proteinFramesToShow.push(2);
+                if (frame3) settings.proteinFramesToShow.push(3);
+                
+                settings.proteinFontSize = parseInt(modal.querySelector('#sequenceLineProteinFontSize').value) || 12;
+                
+                // Height settings
+                settings.maxHeight = parseInt(modal.querySelector('#sequenceLineMaxHeight').value) || 50;
+                settings.adaptiveHeight = modal.querySelector('#sequenceLineAdaptiveHeight').checked;
+                break;
+                
             default:
                 settings.height = parseInt(modal.querySelector('#defaultTrackHeight').value) || 80;
                 break;
         }
         
         return settings;
+    }
+    
+    /**
+     * Create settings content for sequence line track
+     */
+    createSequenceLineSettingsContent(settings) {
+        return `
+            <div class="settings-section">
+                <h4>Display Settings</h4>
+                <div class="form-group">
+                    <label for="sequenceLineFontSize">Font size (px):</label>
+                    <input type="number" id="sequenceLineFontSize" min="10" max="20" value="${settings.fontSize || 14}">
+                    <div class="help-text">Size of the DNA sequence text.</div>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceLineFontFamily">Font family:</label>
+                    <select id="sequenceLineFontFamily">
+                        <option value="Courier New, monospace" ${(settings.fontFamily || 'Courier New, monospace') === 'Courier New, monospace' ? 'selected' : ''}>Courier New</option>
+                        <option value="Monaco, monospace" ${settings.fontFamily === 'Monaco, monospace' ? 'selected' : ''}>Monaco</option>
+                        <option value="Consolas, monospace" ${settings.fontFamily === 'Consolas, monospace' ? 'selected' : ''}>Consolas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sequenceLineMaxHeight">Maximum height (px):</label>
+                    <input type="number" id="sequenceLineMaxHeight" min="30" max="200" value="${settings.maxHeight || 50}">
+                    <div class="help-text">Maximum height of the sequence track.</div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceLineAdaptiveHeight" ${settings.adaptiveHeight !== false ? 'checked' : ''}>
+                        Adaptive height based on content
+                    </label>
+                    <div class="help-text">Automatically adjust height based on displayed content.</div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h4>Protein Translation Settings</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sequenceLineShowProteinTranslation" ${settings.showProteinTranslation ? 'checked' : ''}>
+                        Show protein translation sequences
+                    </label>
+                    <div class="help-text">Display amino acid translations below the DNA sequence.</div>
+                </div>
+                
+                <div class="form-group" id="sequenceLineTranslationModeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                    <label for="sequenceLineProteinTranslationMode">Translation mode:</label>
+                    <select id="sequenceLineProteinTranslationMode">
+                        <option value="all_frames" ${(settings.proteinTranslationMode || 'all_frames') === 'all_frames' ? 'selected' : ''}>All frames (ignore CDS)</option>
+                        <option value="cds_only" ${settings.proteinTranslationMode === 'cds_only' ? 'selected' : ''}>CDS regions only</option>
+                    </select>
+                    <div class="help-text">Choose whether to show translation for all DNA or only CDS regions.</div>
+                </div>
+                
+                <div class="form-group" id="sequenceLineFramesGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                    <label>Reading frames to display:</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="sequenceLineFrame1" ${(!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(1)) ? 'checked' : ''}>
+                            Frame 1
+                        </label>
+                        <label>
+                            <input type="checkbox" id="sequenceLineFrame2" ${(!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(2)) ? 'checked' : ''}>
+                            Frame 2
+                        </label>
+                        <label>
+                            <input type="checkbox" id="sequenceLineFrame3" ${(!settings.proteinFramesToShow || settings.proteinFramesToShow.includes(3)) ? 'checked' : ''}>
+                            Frame 3
+                        </label>
+                    </div>
+                    <div class="help-text">Select which reading frames to display. Each frame shows translation starting from a different position.</div>
+                </div>
+                
+                <div class="form-group" id="sequenceLineProteinFontSizeGroup" style="display: ${settings.showProteinTranslation ? 'block' : 'none'}">
+                    <label for="sequenceLineProteinFontSize">Protein font size (px):</label>
+                    <input type="number" id="sequenceLineProteinFontSize" min="8" max="16" value="${settings.proteinFontSize || 12}">
+                    <div class="help-text">Size of the amino acid text.</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Update the sequence track container height to match the canvas height
+     */
+    updateSequenceTrackHeight(seqDisplay, canvasHeight) {
+        const trackElement = seqDisplay.closest('.sequence-line-track');
+        if (trackElement) {
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+                const newHeight = Math.max(canvasHeight, 20); // Ensure minimum height
+                trackContent.style.height = newHeight + 'px';
+                console.log('🔧 [updateSequenceTrackHeight] Updated track content height to:', newHeight + 'px');
+            }
+        }
+    }
+    
+    /**
+     * Setup event listeners for sequence line settings
+     */
+    setupSequenceLineSettingsEventListeners(bodyElement) {
+        const showProteinTranslationCheckbox = bodyElement.querySelector('#sequenceLineShowProteinTranslation');
+        const translationModeGroup = bodyElement.querySelector('#sequenceLineTranslationModeGroup');
+        const framesGroup = bodyElement.querySelector('#sequenceLineFramesGroup');
+        const proteinFontSizeGroup = bodyElement.querySelector('#sequenceLineProteinFontSizeGroup');
+        
+        if (showProteinTranslationCheckbox && translationModeGroup && framesGroup && proteinFontSizeGroup) {
+            const toggleProteinSettings = () => {
+                const isVisible = showProteinTranslationCheckbox.checked;
+                translationModeGroup.style.display = isVisible ? 'block' : 'none';
+                framesGroup.style.display = isVisible ? 'block' : 'none';
+                proteinFontSizeGroup.style.display = isVisible ? 'block' : 'none';
+            };
+            
+            showProteinTranslationCheckbox.addEventListener('change', toggleProteinSettings);
+            
+            // Initialize visibility
+            toggleProteinSettings();
+        }
     }
     
     /**
@@ -10044,6 +10224,47 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
             if (this.genomeBrowser.sequenceUtils.vscodeEditor) {
                 this.applySequenceSettingsToVSCodeEditor(settings);
             }
+        }
+        
+        // Special handling for sequence line track settings
+        if (trackType === 'sequenceLine') {
+            console.log('🔧 [TrackRenderer] Applying sequence line settings...');
+            console.log('🔧 [TrackRenderer] Settings to apply:', settings);
+            
+            // Update existing canvas renderers with new settings
+            this.canvasRenderers.forEach((renderer, trackId) => {
+                if (renderer.container && renderer.container.classList.contains('sequence-canvas-container')) {
+                    console.log('🔧 [TrackRenderer] Updating canvas renderer with new settings:', trackId);
+                    
+                    // Update renderer options
+                    renderer.options = {
+                        ...renderer.options,
+                        fontSize: settings.fontSize || 14,
+                        fontFamily: settings.fontFamily || 'Courier New, monospace',
+                        maxHeight: settings.maxHeight || 50,
+                        adaptiveHeight: settings.adaptiveHeight !== false,
+                        showProteinTranslation: settings.showProteinTranslation || false,
+                        proteinTranslationMode: settings.proteinTranslationMode || 'all_frames',
+                        proteinFramesToShow: settings.proteinFramesToShow || [1, 2, 3],
+                        proteinFontSize: settings.proteinFontSize || 12
+                    };
+                    
+                    // Force recalculation and re-render
+                    renderer.calculateMetrics();
+                    renderer.setupCanvas();
+                    renderer.render();
+                    
+                    // Update the track container height to match the new canvas height
+                    const trackElement = renderer.container.closest('.sequence-line-track');
+                    if (trackElement) {
+                        const trackContent = trackElement.querySelector('.track-content');
+                        if (trackContent) {
+                            trackContent.style.height = renderer.canvasHeight + 'px';
+                            console.log('🔧 [TrackRenderer] Updated track content height to:', renderer.canvasHeight + 'px');
+                        }
+                    }
+                }
+            });
         }
         
         // Store settings - the complete redraw will handle applying all settings including height

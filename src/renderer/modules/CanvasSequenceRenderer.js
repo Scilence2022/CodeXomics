@@ -3,10 +3,11 @@
  * Replaces DOM-based rendering for 90%+ performance improvement in drag operations
  */
 class CanvasSequenceRenderer {
-    constructor(container, sequence, viewport, options = {}) {
+    constructor(container, sequence, viewport, options = {}, genomeBrowser = null) {
         this.container = container;
         this.sequence = sequence;
         this.viewport = viewport;
+        this.genomeBrowser = genomeBrowser;
         this.options = {
             fontSize: 14,
             fontFamily: 'Courier New, monospace',
@@ -16,6 +17,11 @@ class CanvasSequenceRenderer {
             minHeight: 20,
             maxHeight: 50,
             padding: 2,
+            // Protein translation options
+            showProteinTranslation: false,
+            proteinTranslationMode: 'all_frames', // 'all_frames', 'cds_only'
+            proteinFramesToShow: [1, 2, 3], // Which reading frames to display
+            proteinFontSize: 12,
             ...options
         };
         
@@ -31,6 +37,42 @@ class CanvasSequenceRenderer {
             'g': '#2ecc71', 
             'c': '#f39c12',
             'n': '#95a5a6'
+        };
+        
+        // Amino acid color scheme for protein translations - more opaque and clear
+        this.aminoAcidColors = {
+            // Nonpolar (hydrophobic) - darker green tones
+            'A': '#4CAF50', 'V': '#66BB6A', 'I': '#388E3C', 'L': '#4CAF50', 'M': '#2E7D32',
+            'F': '#558B2F', 'Y': '#689F38', 'W': '#33691E', 'P': '#7CB342',
+            // Polar (hydrophilic) - darker blue tones  
+            'S': '#2196F3', 'T': '#1976D2', 'C': '#1565C0', 'N': '#0D47A1', 'Q': '#42A5F5',
+            // Basic (positively charged) - darker red tones
+            'K': '#F44336', 'R': '#D32F2F', 'H': '#C62828',
+            // Acidic (negatively charged) - darker orange tones
+            'D': '#FF9800', 'E': '#F57C00',
+            // Special
+            'G': '#9E9E9E', // Glycine - neutral gray
+            '*': '#E91E63'  // Stop codon - magenta for visibility
+        };
+        
+        // Standard genetic code table
+        this.geneticCode = {
+            'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+            'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+            'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+            'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+            'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+            'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+            'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+            'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+            'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+            'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+            'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+            'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+            'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+            'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+            'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+            'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
         };
         
         // Canvas and rendering context
@@ -50,6 +92,51 @@ class CanvasSequenceRenderer {
         this.lastRenderTime = 0;
         
         this.initialize();
+    }
+    
+    /**
+     * Translate DNA sequence to protein in all three reading frames
+     */
+    translateDNAToProtein(sequence, frame = 0) {
+        if (!sequence || sequence.length < 3) return '';
+        
+        // Adjust for frame offset
+        const startIndex = frame;
+        let protein = '';
+        
+        // Translate codon by codon
+        for (let i = startIndex; i < sequence.length - 2; i += 3) {
+            const codon = sequence.substring(i, i + 3).toUpperCase();
+            if (codon.length === 3) {
+                protein += this.geneticCode[codon] || 'X';
+            }
+        }
+        
+        return protein;
+    }
+    
+    /**
+     * Get CDS regions from annotations for the current viewport
+     */
+    getCDSRegions() {
+        if (!this.viewport || !this.genomeBrowser?.currentAnnotations) return [];
+        
+        const chromosome = this.viewport.chromosome || 'chromosome1';
+        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
+        
+        return annotations.filter(annotation => 
+            annotation.type === 'CDS' &&
+            annotation.start < this.viewport.end &&
+            annotation.end > this.viewport.start
+        );
+    }
+    
+    /**
+     * Check if a position is within any CDS region
+     */
+    isPositionInCDS(position) {
+        const cdsRegions = this.getCDSRegions();
+        return cdsRegions.some(cds => position >= cds.start && position <= cds.end);
     }
     
     initialize() {
@@ -159,9 +246,19 @@ class CanvasSequenceRenderer {
         
         // Calculate adaptive height
         if (this.options.adaptiveHeight) {
+            let baseHeight = this.charHeight + (this.options.padding * 2);
+            
+            // Add space for protein translations if enabled
+            if (this.options.showProteinTranslation) {
+                const framesToShow = this.options.proteinFramesToShow.length;
+                const proteinLineHeight = this.options.proteinFontSize * 1.2; // Reduced from 1.4 to 1.2 for tighter spacing
+                // Add extra padding at bottom to prevent clipping of the last frame
+                baseHeight += framesToShow * proteinLineHeight + (this.options.padding * 3);
+            }
+            
             this.canvasHeight = Math.max(
                 this.options.minHeight,
-                Math.min(this.options.maxHeight, this.charHeight + (this.options.padding * 2))
+                Math.min(this.options.maxHeight * 2, baseHeight) // Allow double max height for protein display
             );
         } else {
             this.canvasHeight = this.options.maxHeight;
@@ -233,9 +330,18 @@ class CanvasSequenceRenderer {
             startX = this.options.padding;
         }
         
-        const centerY = this.canvasHeight / 2;
+        // Calculate layout positions
+        let dnaY, proteinStartY;
+        if (this.options.showProteinTranslation) {
+            // DNA sequence at top, proteins below
+            dnaY = this.options.padding + this.charHeight / 2;
+            proteinStartY = dnaY + this.charHeight + this.options.padding;
+        } else {
+            // DNA sequence centered
+            dnaY = this.canvasHeight / 2;
+        }
         
-        // Render each base
+        // Render DNA sequence
         for (let i = 0; i < this.sequence.length; i++) {
             const base = this.sequence[i];
             const x = startX + (i * effectiveCharWidth) + (effectiveCharWidth / 2);
@@ -248,7 +354,12 @@ class CanvasSequenceRenderer {
             this.ctx.fillStyle = this.baseColors[base] || this.baseColors['N'];
             
             // Render character
-            this.ctx.fillText(base, x, centerY);
+            this.ctx.fillText(base, x, dnaY);
+        }
+        
+        // Render protein translations if enabled
+        if (this.options.showProteinTranslation) {
+            this.renderProteinTranslations(startX, effectiveCharWidth, proteinStartY);
         }
         
         // Performance tracking
@@ -262,6 +373,60 @@ class CanvasSequenceRenderer {
                 avgRenderTime: (this.lastRenderTime / this.sequence.length * 1000).toFixed(3) + 'μs per base'
             });
         }
+    }
+    
+    /**
+     * Render protein translations for the specified reading frames
+     */
+    renderProteinTranslations(startX, effectiveCharWidth, startY) {
+        const proteinLineHeight = this.options.proteinFontSize * 1.2; // Reduced from 1.4 to 1.2 for tighter spacing
+        
+        // Set font for protein rendering
+        this.ctx.font = `${this.options.fontWeight} ${this.options.proteinFontSize}px ${this.options.fontFamily}`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        // Render each requested reading frame
+        this.options.proteinFramesToShow.forEach((frame, index) => {
+            const frameIndex = frame - 1; // Convert to 0-based index
+            const yPosition = startY + (index * proteinLineHeight);
+            
+            // Translate sequence for this frame
+            const proteinSequence = this.translateDNAToProtein(this.sequence, frameIndex);
+            
+            // Render each amino acid
+            for (let i = 0; i < proteinSequence.length; i++) {
+                const aminoAcid = proteinSequence[i];
+                
+                // Calculate position - each amino acid represents 3 DNA bases
+                const dnaBaseIndex = frameIndex + (i * 3);
+                const x = startX + (dnaBaseIndex * effectiveCharWidth) + (effectiveCharWidth * 1.5); // Center over the 3 bases
+                
+                // Skip if outside visible area
+                if (x > this.canvasWidth + 10) break;
+                if (x < -10) continue;
+                
+                // Apply filtering based on translation mode
+                if (this.options.proteinTranslationMode === 'cds_only') {
+                    // Only show if this position is within a CDS region
+                    const genomicPosition = this.viewport ? this.viewport.start + dnaBaseIndex : dnaBaseIndex;
+                    if (!this.isPositionInCDS(genomicPosition)) {
+                        continue; // Skip this amino acid
+                    }
+                }
+                
+                // Set color for amino acid
+                this.ctx.fillStyle = this.aminoAcidColors[aminoAcid] || this.aminoAcidColors['G'];
+                
+                // Add subtle white outline for better contrast
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.lineWidth = 0.5;
+                this.ctx.strokeText(aminoAcid, x, yPosition);
+                
+                // Render amino acid character
+                this.ctx.fillText(aminoAcid, x, yPosition);
+            }
+        });
     }
     
     updateFontMetrics() {
