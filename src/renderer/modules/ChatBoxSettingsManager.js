@@ -634,44 +634,68 @@ class ChatBoxSettingsManager {
                             </div>
                             
                             <div class="form-section">
-                                <h4>Tool Priority</h4>
+                                <h4>Tool Selection Priority</h4>
                                 <div class="form-group">
-                                    <label>Tool selection priority order:</label>
+                                    <label>Configure tool selection priority order:</label>
                                     <div id="toolPriorityContainer" class="priority-container">
-                                        <div class="priority-item" data-type="local">
+                                        <div class="priority-item" data-type="local" draggable="true">
+                                            <div class="priority-drag-handle">⋮⋮</div>
                                             <span class="priority-number">1</span>
-                                            <span class="priority-label">Local Tools</span>
+                                            <div class="priority-info">
+                                                <span class="priority-label">Local Tools</span>
+                                                <span class="priority-description">Built-in genome browser tools</span>
+                                            </div>
                                             <div class="priority-controls">
-                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
-                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                                <button type="button" class="priority-btn up" title="Move up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" title="Move down" onclick="movePriorityDown(this)">↓</button>
                                             </div>
                                         </div>
-                                        <div class="priority-item" data-type="genomics">
+                                        <div class="priority-item" data-type="genomics" draggable="true">
+                                            <div class="priority-drag-handle">⋮⋮</div>
                                             <span class="priority-number">2</span>
-                                            <span class="priority-label">Genomics Tools</span>
+                                            <div class="priority-info">
+                                                <span class="priority-label">Genomics Tools</span>
+                                                <span class="priority-description">Specialized analysis tools</span>
+                                            </div>
                                             <div class="priority-controls">
-                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
-                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                                <button type="button" class="priority-btn up" title="Move up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" title="Move down" onclick="movePriorityDown(this)">↓</button>
                                             </div>
                                         </div>
-                                        <div class="priority-item" data-type="plugins">
+                                        <div class="priority-item" data-type="plugins" draggable="true">
+                                            <div class="priority-drag-handle">⋮⋮</div>
                                             <span class="priority-number">3</span>
-                                            <span class="priority-label">Plugin Tools</span>
+                                            <div class="priority-info">
+                                                <span class="priority-label">Plugin Tools</span>
+                                                <span class="priority-description">Third-party extensions</span>
+                                            </div>
                                             <div class="priority-controls">
-                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
-                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                                <button type="button" class="priority-btn up" title="Move up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" title="Move down" onclick="movePriorityDown(this)">↓</button>
                                             </div>
                                         </div>
-                                        <div class="priority-item" data-type="mcp">
+                                        <div class="priority-item" data-type="mcp" draggable="true">
+                                            <div class="priority-drag-handle">⋮⋮</div>
                                             <span class="priority-number">4</span>
-                                            <span class="priority-label">MCP Tools</span>
+                                            <div class="priority-info">
+                                                <span class="priority-label">MCP Server Tools</span>
+                                                <span class="priority-description">External server tools</span>
+                                            </div>
                                             <div class="priority-controls">
-                                                <button type="button" class="priority-btn up" onclick="movePriorityUp(this)">↑</button>
-                                                <button type="button" class="priority-btn down" onclick="movePriorityDown(this)">↓</button>
+                                                <button type="button" class="priority-btn up" title="Move up" onclick="movePriorityUp(this)">↑</button>
+                                                <button type="button" class="priority-btn down" title="Move down" onclick="movePriorityDown(this)">↓</button>
                                             </div>
                                         </div>
                                     </div>
-                                    <small class="help-text">Drag or use arrows to reorder tool selection priority</small>
+                                    <div class="priority-help">
+                                        <small class="help-text">
+                                            <strong>How it works:</strong> When the AI assistant needs to use tools, it will prefer tools from higher priority categories first. 
+                                            You can drag items or use the arrow buttons to reorder the priority.
+                                        </small>
+                                        <div class="priority-status" id="priorityStatus">
+                                            <small>Current order will be applied to conversations</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -777,6 +801,7 @@ class ChatBoxSettingsManager {
             if (prevItem) {
                 container.insertBefore(item, prevItem);
                 this.updatePriorityNumbers(container);
+                this.updatePriorityStatus(container);
             }
         };
 
@@ -786,6 +811,7 @@ class ChatBoxSettingsManager {
             if (nextItem) {
                 container.insertBefore(nextItem, item);
                 this.updatePriorityNumbers(container);
+                this.updatePriorityStatus(container);
             }
         };
 
@@ -802,6 +828,7 @@ class ChatBoxSettingsManager {
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 this.updatePriorityNumbers(container);
+                this.updatePriorityStatus(container);
             });
             
             item.addEventListener('dragover', (e) => {
@@ -846,6 +873,26 @@ class ChatBoxSettingsManager {
     }
 
     /**
+     * Update priority status display
+     */
+    updatePriorityStatus(container) {
+        const statusElement = document.querySelector('#priorityStatus');
+        if (!statusElement) return;
+        
+        const items = container.querySelectorAll('.priority-item');
+        const priorityList = Array.from(items).map((item, index) => {
+            const label = item.querySelector('.priority-label').textContent;
+            return `${index + 1}. ${label}`;
+        });
+        
+        statusElement.innerHTML = `
+            <small>
+                <strong>Current Order:</strong> ${priorityList.join(' → ')}
+            </small>
+        `;
+    }
+
+    /**
      * Get current tool priority order from UI
      */
     getToolPriorityFromUI(modal) {
@@ -884,6 +931,7 @@ class ChatBoxSettingsManager {
         orderedItems.forEach(item => container.appendChild(item));
         
         this.updatePriorityNumbers(container);
+        this.updatePriorityStatus(container);
     }
 
     /**

@@ -1380,6 +1380,22 @@ class ChatManager {
         try {
             let result;
             
+            // Use new priority-based tool execution system
+            result = await this.executeToolWithPriority(toolName, parameters);
+            
+            if (result !== undefined) {
+                // Tool found and executed
+                this.sendMessage({
+                    type: 'tool-response',
+                    requestId,
+                    success: true,
+                    result: result
+                });
+                return;
+            }
+            
+            // Fallback to legacy system if tool not found in priority system
+            
             switch (toolName) {
                 case 'navigate_to_position':
                     result = await this.navigateToPosition(parameters);
@@ -4119,6 +4135,236 @@ ${coreTools}
     }
 
     /**
+     * Execute tool with priority-based selection
+     */
+    async executeToolWithPriority(toolName, parameters) {
+        // Get tool priority from settings
+        const toolPriority = this.configManager.get('chatboxSettings.toolPriority', 
+            ['local', 'genomics', 'plugins', 'mcp']);
+        
+        console.log(`🔧 Executing tool '${toolName}' with priority order:`, toolPriority);
+        
+        // Try to execute tool based on priority order
+        for (const category of toolPriority) {
+            const result = await this.tryExecuteToolInCategory(toolName, parameters, category);
+            if (result !== undefined) {
+                console.log(`✅ Tool '${toolName}' executed in category '${category}'`);
+                return result;
+            }
+        }
+        
+        console.log(`❌ Tool '${toolName}' not found in any priority category`);
+        return undefined; // Tool not found
+    }
+
+    /**
+     * Try to execute tool in specific category
+     */
+    async tryExecuteToolInCategory(toolName, parameters, category) {
+        console.log(`🔍 Trying to execute '${toolName}' in category '${category}'`);
+        
+        switch (category) {
+            case 'local':
+                return await this.executeLocalTool(toolName, parameters);
+                
+            case 'genomics':
+                return await this.executeGenomicsTool(toolName, parameters);
+                
+            case 'plugins':
+                return await this.executePluginTool(toolName, parameters);
+                
+            case 'mcp':
+                return await this.executeMCPTool(toolName, parameters);
+                
+            default:
+                console.warn(`Unknown tool category: ${category}`);
+                return undefined;
+        }
+    }
+
+    /**
+     * Execute local tools (built-in browser functions)
+     */
+    async executeLocalTool(toolName, parameters) {
+        const localTools = {
+            // Navigation and state tools
+            'navigate_to_position': () => this.navigateToPosition(parameters),
+            'open_new_tab': () => this.openNewTab(parameters),
+            'search_features': () => this.searchFeatures(parameters),
+            'get_current_state': () => this.getCurrentState(),
+            
+            // Sequence tools
+            'get_sequence': () => this.getSequence(parameters),
+            'translate_sequence': () => this.translateSequence(parameters),
+            'calculate_gc_content': () => this.calculateGCContent(parameters),
+            'find_orfs': () => this.findOpenReadingFrames(parameters),
+            
+            // Track and display tools
+            'toggle_track': () => this.toggleTrack(parameters),
+            'toggle_annotation_track': () => this.toggleAnnotationTrack(parameters),
+            'get_track_status': () => this.getTrackStatus(),
+            
+            // Annotation tools
+            'create_annotation': () => this.createAnnotation(parameters),
+            'analyze_region': () => this.analyzeRegion(parameters),
+            'get_gene_details': () => this.getGeneDetails(parameters),
+            'get_operons': () => this.getOperons(parameters),
+            'zoom_to_gene': () => this.zoomToGene(parameters),
+            'get_nearby_features': () => this.getNearbyFeatures(parameters),
+            'find_intergenic_regions': () => this.findIntergenicRegions(parameters),
+            
+            // Search and analysis tools
+            'search_motif': () => this.searchMotif(parameters),
+            'search_pattern': () => this.searchPattern(parameters),
+            'find_restriction_sites': () => this.findRestrictionSites(parameters),
+            'virtual_digest': () => this.virtualDigest(parameters),
+            
+            // System tools
+            'get_chromosome_list': () => this.getChromosomeList(),
+            'export_data': () => this.exportData(parameters),
+            
+            // Action system tools (if available)
+            'copy_sequence': () => this.executeActionTool('copy_sequence', parameters),
+            'cut_sequence': () => this.executeActionTool('cut_sequence', parameters),
+            'paste_sequence': () => this.executeActionTool('paste_sequence', parameters),
+            'delete_sequence': () => this.executeActionTool('delete_sequence', parameters),
+            'insert_sequence': () => this.executeActionTool('insert_sequence', parameters),
+            'replace_sequence': () => this.executeActionTool('replace_sequence', parameters),
+            'execute_actions': () => this.executeActionTool('execute_actions', parameters),
+            'get_action_list': () => this.executeActionTool('get_action_list', parameters),
+            'clear_actions': () => this.executeActionTool('clear_actions', parameters),
+            'get_clipboard_content': () => this.executeActionTool('get_clipboard_content', parameters),
+            'undo_last_action': () => this.executeActionTool('undo_last_action', parameters)
+        };
+        
+        if (localTools[toolName]) {
+            try {
+                const result = await localTools[toolName]();
+                console.log(`✅ Local tool '${toolName}' executed successfully`);
+                return result;
+            } catch (error) {
+                console.error(`❌ Local tool '${toolName}' execution failed:`, error);
+                throw error;
+            }
+        }
+        
+        return undefined; // Tool not found in local tools
+    }
+
+    /**
+     * Execute genomics tools (specialized analysis functions)
+     */
+    async executeGenomicsTool(toolName, parameters) {
+        // Check if MicrobeGenomicsFunctions is available
+        if (typeof window.MicrobeGenomicsFunctions === 'undefined') {
+            console.log(`📦 MicrobeGenomicsFunctions not available for '${toolName}'`);
+            return undefined;
+        }
+        
+        const genomicsTools = {
+            'search_gene_by_name': () => window.MicrobeGenomicsFunctions.searchGeneByName(parameters),
+            'get_coding_sequence': () => window.MicrobeGenomicsFunctions.getCodingSequence(parameters),
+            'jump_to_gene': () => window.MicrobeGenomicsFunctions.jumpToGene(parameters),
+            'delete_gene': () => window.MicrobeGenomicsFunctions.deleteGene(parameters),
+            'search_gene_by_locus_tag': () => window.MicrobeGenomicsFunctions.searchGeneByLocusTag(parameters)
+        };
+        
+        if (genomicsTools[toolName]) {
+            try {
+                const result = await genomicsTools[toolName]();
+                console.log(`✅ Genomics tool '${toolName}' executed successfully`);
+                return result;
+            } catch (error) {
+                console.error(`❌ Genomics tool '${toolName}' execution failed:`, error);
+                throw error;
+            }
+        }
+        
+        return undefined; // Tool not found in genomics tools
+    }
+
+    /**
+     * Execute plugin tools
+     */
+    async executePluginTool(toolName, parameters) {
+        // Plugin tools would be implemented here
+        // For now, return undefined as no plugin system is implemented
+        console.log(`🔌 Plugin tools not implemented for '${toolName}'`);
+        return undefined;
+    }
+
+    /**
+     * Execute MCP server tools
+     */
+    async executeMCPTool(toolName, parameters) {
+        if (!this.mcpServerManager) {
+            console.log(`📡 MCP Server Manager not available for '${toolName}'`);
+            return undefined;
+        }
+        
+        try {
+            // Get all available MCP tools
+            const mcpTools = this.mcpServerManager.getAllAvailableTools();
+            const tool = mcpTools.find(t => t.name === toolName);
+            
+            if (tool) {
+                console.log(`🎯 Found MCP tool '${toolName}' on server '${tool.serverId}'`);
+                const result = await this.mcpServerManager.executeToolOnServer(tool.serverId, toolName, parameters);
+                console.log(`✅ MCP tool '${toolName}' executed successfully`);
+                return result;
+            }
+        } catch (error) {
+            console.error(`❌ MCP tool '${toolName}' execution failed:`, error);
+            throw error;
+        }
+        
+        return undefined; // Tool not found in MCP tools
+    }
+
+    /**
+     * Execute action system tools
+     */
+    async executeActionTool(toolName, parameters) {
+        if (!window.actionManager) {
+            console.log(`⚡ Action Manager not available for '${toolName}'`);
+            return { error: 'Action system not available' };
+        }
+        
+        try {
+            switch (toolName) {
+                case 'copy_sequence':
+                    return await window.actionManager.copySequence(parameters);
+                case 'cut_sequence':
+                    return await window.actionManager.cutSequence(parameters);
+                case 'paste_sequence':
+                    return await window.actionManager.pasteSequence(parameters);
+                case 'delete_sequence':
+                    return await window.actionManager.deleteSequence(parameters);
+                case 'insert_sequence':
+                    return await window.actionManager.insertSequence(parameters);
+                case 'replace_sequence':
+                    return await window.actionManager.replaceSequence(parameters);
+                case 'execute_actions':
+                    return await window.actionManager.executeAllActions(parameters);
+                case 'get_action_list':
+                    return await window.actionManager.getActionList(parameters);
+                case 'clear_actions':
+                    return await window.actionManager.clearAllActions(parameters);
+                case 'get_clipboard_content':
+                    return await window.actionManager.getClipboardContent(parameters);
+                case 'undo_last_action':
+                    return await window.actionManager.undoLastAction(parameters);
+                default:
+                    console.warn(`Unknown action tool: ${toolName}`);
+                    return { error: `Unknown action tool: ${toolName}` };
+            }
+        } catch (error) {
+            console.error(`❌ Action tool '${toolName}' execution failed:`, error);
+            return { error: error.message };
+        }
+    }
+
+    /**
      * Get optimized system message for better LLM performance
      */
     getOptimizedSystemMessage() {
@@ -4136,6 +4382,8 @@ CRITICAL: Always respond with ONLY a JSON object when using tools. No explanator
 Format: {"tool_name": "tool_name", "parameters": {"param": "value"}}
 
 ${toolPriority}
+
+CRITICAL: The system will automatically route tool requests based on the priority order above. You should use tool names without worrying about which category they belong to - the system will find and execute them in the correct priority order. The priority order ensures that local tools are tried first (fastest), followed by specialized genomics tools, then plugins, and finally MCP server tools.
 
 ===PROTEIN STRUCTURE SEARCH DISAMBIGUATION===
 CRITICAL: Choose the correct protein structure function based on user intent:
