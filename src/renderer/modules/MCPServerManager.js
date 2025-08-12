@@ -243,15 +243,22 @@ class MCPServerManager {
             this.emit('serverConnected', { serverId, server });
             
             // Send identification message for Claude MCP
-            ws.send(JSON.stringify({
+            const handshake = {
                 type: 'claude-mcp-client',
                 clientId: this.generateClientId(),
                 protocol: 'claude-mcp',
                 capabilities: ['tool-execution', 'state-sync']
-            }));
+            };
+            console.log(`📤 Sending handshake to ${serverId}:`, handshake);
+            ws.send(JSON.stringify(handshake));
 
             // Request available tools
             this.requestClaudeMCPTools(serverId);
+            
+            // Also request tools after a delay to handle any timing issues
+            setTimeout(() => {
+                this.requestClaudeMCPTools(serverId);
+            }, 1000);
         };
 
         ws.onmessage = (event) => {
@@ -359,9 +366,11 @@ class MCPServerManager {
     handleClaudeMCPMessage(serverId, event) {
         try {
             const data = JSON.parse(event.data);
+            console.log(`📨 Received message from Claude MCP server ${serverId}:`, data);
             
             if (data.type === 'tools-list') {
                 // Handle tools list from Claude MCP server
+                console.log(`🔧 Received tools-list from Claude MCP server ${serverId}:`, data.tools?.length || 0, 'tools');
                 this.serverTools.set(serverId, data.tools || []);
                 this.emit('toolsUpdated', { serverId, tools: data.tools });
             } else if (data.type === 'tool-response') {
@@ -380,17 +389,56 @@ class MCPServerManager {
     handleServerMessage(serverId, event) {
         try {
             const data = JSON.parse(event.data);
+            console.log(`📨 Received message from legacy server ${serverId}:`, data);
             
-            if (data.type === 'tools') {
+            // Handle JSON-RPC responses
+            if (data.jsonrpc === '2.0') {
+                if (data.result && data.result.tools) {
+                    // Handle tools list from JSON-RPC response
+                    console.log(`🔧 Received JSON-RPC tools from server ${serverId}:`, data.result.tools.length, 'tools');
+                    this.serverTools.set(serverId, data.result.tools || []);
+                    this.emit('toolsUpdated', { serverId, tools: data.result.tools });
+                } else if (data.result && data.result.content) {
+                    // Handle tool execution response from JSON-RPC
+                    this.emit('toolResponse', { 
+                        serverId, 
+                        data: { 
+                            requestId: data.id, 
+                            success: true, 
+                            result: data.result 
+                        } 
+                    });
+                } else if (data.error) {
+                    console.error(`JSON-RPC error from server ${serverId}:`, data.error);
+                    this.emit('serverError', { serverId, error: data.error });
+                    // Also emit as tool response error if it has an ID (could be tool execution error)
+                    if (data.id) {
+                        this.emit('toolResponse', { 
+                            serverId, 
+                            data: { 
+                                requestId: data.id, 
+                                success: false, 
+                                error: data.error.message 
+                            } 
+                        });
+                    }
+                }
+            }
+            // Handle legacy message format
+            else if (data.type === 'tools') {
                 // Handle tools list from legacy server
-                    this.serverTools.set(serverId, data.tools || []);
-                    this.emit('toolsUpdated', { serverId, tools: data.tools });
+                console.log(`🔧 Received legacy tools from server ${serverId}:`, data.tools?.length || 0, 'tools');
+                this.serverTools.set(serverId, data.tools || []);
+                this.emit('toolsUpdated', { serverId, tools: data.tools });
             } else if (data.type === 'tool-response') {
                 // Handle tool execution response
                 this.emit('toolResponse', { serverId, data });
             } else if (data.type === 'error') {
-                console.error(`Server error (${serverId}):`, data.error);
+                console.error(`Legacy server error (${serverId}):`, data.error);
                 this.emit('serverError', { serverId, error: data.error });
+            } else if (data.type === 'connection') {
+                // Handle connection confirmation
+                console.log(`📡 Connection confirmed from server ${serverId}:`, data.status);
             }
         } catch (error) {
             console.error(`Error parsing message from ${serverId}:`, error);
@@ -401,10 +449,13 @@ class MCPServerManager {
     requestClaudeMCPTools(serverId) {
         const ws = this.claudeMCPConnections.get(serverId);
         if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log(`🔍 Requesting tools from Claude MCP server ${serverId}`);
             ws.send(JSON.stringify({
                 type: 'list-tools',
                 requestId: this.generateRequestId()
             }));
+        } else {
+            console.warn(`❌ Cannot request tools from Claude MCP server ${serverId}: connection not ready`);
         }
     }
 
@@ -412,10 +463,19 @@ class MCPServerManager {
     requestServerTools(serverId) {
         const ws = this.connections.get(serverId);
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'get-tools',
-                requestId: this.generateRequestId()
-            }));
+            console.log(`🔍 Requesting tools from legacy server ${serverId}`);
+            const requestId = this.generateRequestId();
+            
+            // Use JSON-RPC format for MCP protocol compatibility
+            const request = {
+                jsonrpc: '2.0',
+                method: 'tools/list',
+                id: requestId
+            };
+            console.log(`📤 Sending JSON-RPC request:`, request);
+            ws.send(JSON.stringify(request));
+        } else {
+            console.warn(`❌ Cannot request tools from legacy server ${serverId}: connection not ready`);
         }
     }
 
@@ -499,12 +559,15 @@ class MCPServerManager {
 
             this.on('toolResponse', handler);
 
-            // Send legacy tool execution request
+            // Send JSON-RPC tool execution request
             ws.send(JSON.stringify({
-                type: 'execute-tool',
-                requestId: requestId,
-                toolName: toolName,
-                parameters: parameters
+                jsonrpc: '2.0',
+                method: 'tools/call',
+                params: {
+                    name: toolName,
+                    arguments: parameters
+                },
+                id: requestId
             }));
         });
     }
@@ -513,8 +576,18 @@ class MCPServerManager {
     getAllAvailableTools() {
         const allTools = [];
         
+        // Debug logging
+        console.log('🔍 getAllAvailableTools debug:');
+        console.log('📊 serverTools size:', this.serverTools.size);
+        console.log('📊 activeServers size:', this.activeServers.size);
+        console.log('📊 servers size:', this.servers.size);
+        
         for (const [serverId, tools] of this.serverTools) {
+            console.log(`🔧 Server ${serverId}: ${tools.length} tools`);
             const server = this.servers.get(serverId);
+            const isActive = this.activeServers.has(serverId);
+            console.log(`📡 Server ${serverId} - exists: ${!!server}, active: ${isActive}`);
+            
             if (server && this.activeServers.has(serverId)) {
                 tools.forEach(tool => {
                     allTools.push({
@@ -525,9 +598,11 @@ class MCPServerManager {
                         protocol: server.protocol || 'websocket'
                     });
                 });
+                console.log(`✅ Added ${tools.length} tools from server ${serverId}`);
             }
         }
         
+        console.log(`🎯 Total tools found: ${allTools.length}`);
         return allTools;
     }
 
