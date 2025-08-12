@@ -744,6 +744,12 @@ class ChatManager {
 
         this.mcpServerManager.on('toolsUpdated', (data) => {
             console.log(`Tools updated for server ${data.serverId}:`, data.tools.map(t => t.name));
+            // Refresh the MCP tools list in the UI
+            if (window.genomeBrowser && window.genomeBrowser.populateMCPToolsList) {
+                setTimeout(() => {
+                    window.genomeBrowser.populateMCPToolsList();
+                }, 100);
+            }
         });
     }
 
