@@ -47,6 +47,7 @@ class SequenceUtils {
         // Search highlighting
         this.searchHighlights = [];
         this.highlightColor = 'rgba(255, 215, 0, 0.7)'; // Gold highlighting
+        this.lastHighlightedMatches = [];
         
         // Performance monitoring
         this.performanceStats = {
@@ -3270,6 +3271,7 @@ class SequenceUtils {
      */
     clearSearchHighlights() {
         this.searchHighlights = [];
+        this.lastHighlightedMatches = [];
         this.refreshSequenceDisplay();
     }
 
@@ -3287,6 +3289,9 @@ class SequenceUtils {
             }
         });
         this.refreshSequenceDisplay();
+        
+        // Store matches for potential scrolling after render
+        this.lastHighlightedMatches = matches;
     }
 
     /**
@@ -3411,6 +3416,16 @@ class SequenceUtils {
         const currentChr = document.getElementById('chromosomeSelect')?.value;
         if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
             this.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+            
+            // Trigger scroll after render completes if we have highlighted matches
+            if (this.lastHighlightedMatches && this.lastHighlightedMatches.length > 0) {
+                setTimeout(() => {
+                    // Notify NavigationManager to handle scrolling
+                    if (this.genomeBrowser.navigationManager) {
+                        this.genomeBrowser.navigationManager.scrollToMatchPosition(this.lastHighlightedMatches[0]);
+                    }
+                }, 100); // Small delay to ensure rendering is complete
+            }
         }
     }
 }

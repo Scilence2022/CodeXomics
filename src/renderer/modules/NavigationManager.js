@@ -860,11 +860,8 @@ class NavigationManager {
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
         
-        // Highlight search matches in sequence tracks
+        // Highlight search matches in sequence tracks (scrolling will be triggered automatically after highlighting)
         this.highlightSearchMatches([result]);
-        
-        // Auto-scroll to match position in sequence tracks
-        this.scrollToMatchPosition(result);
         
         // Update current tab title with new position
         if (this.genomeBrowser.tabManager) {
@@ -911,23 +908,55 @@ class NavigationManager {
     // Auto-scroll to match position in sequence tracks
     scrollToMatchPosition(match) {
         // Scroll bottom sequence panel to show the match
-        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
-        if (sequenceDisplaySection) {
-            const sequenceContainer = sequenceDisplaySection.querySelector('.sequence-container');
-            if (sequenceContainer) {
-                // Calculate the line number where the match is located
-                const currentPos = this.genomeBrowser.currentPosition;
-                const basesPerLine = 100; // Typical bases per line in sequence display
-                const lineNumber = Math.floor((match.position - currentPos.start) / basesPerLine);
-                const lineHeight = 40; // Approximate line height including spacing
-                
-                // Scroll to the line containing the match
-                const scrollPosition = lineNumber * lineHeight;
-                sequenceContainer.scrollTo({
-                    top: scrollPosition,
-                    behavior: 'smooth'
-                });
+        const sequenceContent = document.getElementById('sequenceContent');
+        if (sequenceContent) {
+            // Calculate the line number where the match is located
+            const currentPos = this.genomeBrowser.currentPosition;
+            
+            // Get actual bases per line from the first sequence line
+            const firstSequenceLine = sequenceContent.querySelector('.sequence-line .sequence-bases');
+            let basesPerLine = 100; // Default fallback
+            
+            if (firstSequenceLine) {
+                // Count actual characters in the first line
+                const textContent = firstSequenceLine.textContent || '';
+                // Remove any whitespace and count actual bases
+                const bases = textContent.replace(/\s/g, '');
+                if (bases.length > 0) {
+                    basesPerLine = bases.length;
+                }
             }
+            
+            // Get actual line height from rendered elements
+            const firstLineGroup = sequenceContent.querySelector('.sequence-line-group');
+            let lineHeight = 40; // Default fallback
+            
+            if (firstLineGroup) {
+                const rect = firstLineGroup.getBoundingClientRect();
+                const style = window.getComputedStyle(firstLineGroup);
+                const marginBottom = parseInt(style.marginBottom) || 0;
+                lineHeight = rect.height + marginBottom;
+            }
+            
+            const relativePosition = match.position - currentPos.start;
+            const lineNumber = Math.floor(relativePosition / basesPerLine);
+            const scrollPosition = lineNumber * lineHeight;
+            
+            console.log('🔍 Scrolling to match:', {
+                matchPosition: match.position,
+                currentStart: currentPos.start,
+                relativePosition,
+                basesPerLine,
+                lineNumber,
+                lineHeight,
+                scrollPosition
+            });
+            
+            // Scroll to the line containing the match
+            sequenceContent.scrollTo({
+                top: scrollPosition,
+                behavior: 'smooth'
+            });
         }
         
         // Also scroll sequence track containers
