@@ -648,6 +648,7 @@ class NavigationManager {
         
         // Clear previous search results before starting new search
         this.clearSearchResults();
+        this.clearSearchHighlights();
         
         const sequence = this.genomeBrowser.currentSequence[currentChr];
         const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
@@ -743,6 +744,9 @@ class NavigationManager {
         if (results.length > 0) {
             // Navigate to first result automatically
             this.navigateToSearchResult(0);
+            
+            // Highlight all search matches in the current view
+            this.highlightSearchMatches(results);
             
             // Show brief success message
             const searchTerms = this.parseSearchQuery(searchQuery);
@@ -856,6 +860,12 @@ class NavigationManager {
         // Update navigation bar
         this.genomeBrowser.genomeNavigationBar.update();
         
+        // Highlight search matches in sequence tracks
+        this.highlightSearchMatches([result]);
+        
+        // Auto-scroll to match position in sequence tracks
+        this.scrollToMatchPosition(result);
+        
         // Update current tab title with new position
         if (this.genomeBrowser.tabManager) {
             this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end);
@@ -865,6 +875,99 @@ class NavigationManager {
         
         // Update status
         this.genomeBrowser.updateStatus(`Showing result ${index + 1} of ${this.searchResults.length}: ${result.name}`);
+    }
+
+    // Highlight search matches in sequence tracks
+    highlightSearchMatches(matches) {
+        // Highlight in bottom sequence panel (SequenceUtils)
+        if (this.genomeBrowser.sequenceUtils && typeof this.genomeBrowser.sequenceUtils.highlightSearchMatches === 'function') {
+            this.genomeBrowser.sequenceUtils.highlightSearchMatches(matches);
+        }
+        
+        // Also highlight in canvas sequence renderers for single-line tracks
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.canvasRenderers) {
+            this.genomeBrowser.trackRenderer.canvasRenderers.forEach((renderer, trackId) => {
+                if (renderer && typeof renderer.highlightSearchMatches === 'function') {
+                    // Only highlight matches that are within the current viewport
+                    const currentPos = this.genomeBrowser.currentPosition;
+                    const viewportMatches = matches.filter(match => {
+                        return match.position >= currentPos.start && match.position <= currentPos.end;
+                    });
+                    
+                    if (viewportMatches.length > 0) {
+                        // Convert absolute positions to relative positions within the current view
+                        const relativeMatches = viewportMatches.map(match => ({
+                            ...match,
+                            position: match.position - currentPos.start,
+                            end: match.end - currentPos.start
+                        }));
+                        renderer.highlightSearchMatches(relativeMatches);
+                    }
+                }
+            });
+        }
+    }
+
+    // Auto-scroll to match position in sequence tracks
+    scrollToMatchPosition(match) {
+        // Scroll bottom sequence panel to show the match
+        const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
+        if (sequenceDisplaySection) {
+            const sequenceContainer = sequenceDisplaySection.querySelector('.sequence-container');
+            if (sequenceContainer) {
+                // Calculate the line number where the match is located
+                const currentPos = this.genomeBrowser.currentPosition;
+                const basesPerLine = 100; // Typical bases per line in sequence display
+                const lineNumber = Math.floor((match.position - currentPos.start) / basesPerLine);
+                const lineHeight = 40; // Approximate line height including spacing
+                
+                // Scroll to the line containing the match
+                const scrollPosition = lineNumber * lineHeight;
+                sequenceContainer.scrollTo({
+                    top: scrollPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }
+        
+        // Also scroll sequence track containers
+        const sequenceTracks = document.querySelectorAll('.sequence-track, .sequence-line-track');
+        
+        sequenceTracks.forEach(track => {
+            const trackContent = track.querySelector('.track-content');
+            if (trackContent) {
+                // Calculate the relative position of the match within the current viewport
+                const currentPos = this.genomeBrowser.currentPosition;
+                const viewportWidth = currentPos.end - currentPos.start;
+                const matchRelativePos = (match.position - currentPos.start) / viewportWidth;
+                
+                // Scroll to center the match in the viewport
+                const trackWidth = trackContent.scrollWidth;
+                const scrollPosition = Math.max(0, (matchRelativePos * trackWidth) - (trackContent.clientWidth / 2));
+                
+                trackContent.scrollTo({
+                    left: scrollPosition,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    }
+
+    // Clear search highlights from all sequence tracks
+    clearSearchHighlights() {
+        // Clear highlights from bottom sequence panel (SequenceUtils)
+        if (this.genomeBrowser.sequenceUtils && typeof this.genomeBrowser.sequenceUtils.clearSearchHighlights === 'function') {
+            this.genomeBrowser.sequenceUtils.clearSearchHighlights();
+        }
+        
+        // Clear highlights from canvas sequence renderers
+        if (this.genomeBrowser.trackRenderer && this.genomeBrowser.trackRenderer.canvasRenderers) {
+            this.genomeBrowser.trackRenderer.canvasRenderers.forEach((renderer, trackId) => {
+                if (renderer && typeof renderer.clearHighlights === 'function') {
+                    renderer.clearHighlights();
+                }
+            });
+        }
     }
 
     // Helper method to parse search query - supports OR operator

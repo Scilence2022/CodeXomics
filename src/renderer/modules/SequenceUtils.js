@@ -44,6 +44,10 @@ class SequenceUtils {
             scrollTop: 0
         };
         
+        // Search highlighting
+        this.searchHighlights = [];
+        this.highlightColor = 'rgba(255, 215, 0, 0.7)'; // Gold highlighting
+        
         // Performance monitoring
         this.performanceStats = {
             renderTime: 0,
@@ -1384,6 +1388,9 @@ class SequenceUtils {
         basesDiv.className = 'sequence-bases';
         basesDiv.style.cssText = 'flex: 1; white-space: nowrap; font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6; letter-spacing: 1px; overflow: hidden;';
         basesDiv.innerHTML = this.colorizeSequenceWithFeaturesOptimized(lineSubsequence, lineStartPos, featureLookup, operons);
+        
+        // Apply search highlighting if any highlights overlap with this line
+        this.applySearchHighlightToLine(basesDiv, lineStartPos, lineSubsequence.length);
         
         sequenceLine.appendChild(positionSpan);
         sequenceLine.appendChild(basesDiv);
@@ -3247,6 +3254,163 @@ class SequenceUtils {
             console.log(`🔧 [SequenceUtils] Selection restored: ${savedSelection.startPos}-${savedSelection.endPos} (${savedSelection.endPos - savedSelection.startPos + 1} bp)`);
         } catch (error) {
             console.warn('🔧 [SequenceUtils] Failed to restore selection:', error);
+        }
+    }
+
+    /**
+     * Add search highlight range
+     */
+    addSearchHighlight(start, end) {
+        this.searchHighlights.push({ start, end });
+        this.refreshSequenceDisplay();
+    }
+
+    /**
+     * Clear all search highlights
+     */
+    clearSearchHighlights() {
+        this.searchHighlights = [];
+        this.refreshSequenceDisplay();
+    }
+
+    /**
+     * Highlight search matches in the sequence display
+     */
+    highlightSearchMatches(matches) {
+        this.clearSearchHighlights();
+        matches.forEach(match => {
+            if (match.type === 'sequence') {
+                this.searchHighlights.push({
+                    start: match.position,
+                    end: match.end - 1
+                });
+            }
+        });
+        this.refreshSequenceDisplay();
+    }
+
+    /**
+     * Apply search highlighting to a specific sequence line
+     */
+    applySearchHighlightToLine(basesDiv, lineStartPos, lineLength) {
+        if (this.searchHighlights.length === 0) return;
+
+        const lineEndPos = lineStartPos + lineLength - 1;
+        
+        // Find highlights that overlap with this line
+        const overlappingHighlights = this.searchHighlights.filter(highlight => {
+            return highlight.start <= lineEndPos && highlight.end >= lineStartPos;
+        });
+
+        if (overlappingHighlights.length === 0) return;
+
+        // Apply highlighting by wrapping the highlighted text in spans
+        let innerHTML = basesDiv.innerHTML;
+        
+        // Sort highlights by start position to avoid conflicts
+        overlappingHighlights.sort((a, b) => a.start - b.start);
+        
+        // Apply highlights in reverse order to maintain character positions
+        for (let i = overlappingHighlights.length - 1; i >= 0; i--) {
+            const highlight = overlappingHighlights[i];
+            const highlightStart = Math.max(highlight.start, lineStartPos);
+            const highlightEnd = Math.min(highlight.end, lineEndPos);
+            
+            // Calculate positions relative to the line
+            const relativeStart = highlightStart - lineStartPos;
+            const relativeEnd = highlightEnd - lineStartPos;
+            
+            // Apply highlighting by adding background style to existing spans
+            innerHTML = this.addHighlightToHTML(innerHTML, relativeStart, relativeEnd);
+        }
+        
+        basesDiv.innerHTML = innerHTML;
+    }
+
+    /**
+     * Add highlighting to HTML content at specified positions
+     */
+    addHighlightToHTML(html, start, end) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        let charCount = 0;
+        const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const nodesToHighlight = [];
+        let node;
+        
+        while (node = walker.nextNode()) {
+            const nodeStart = charCount;
+            const nodeEnd = charCount + node.textContent.length - 1;
+            
+            if (nodeEnd >= start && nodeStart <= end) {
+                // This text node overlaps with the highlight range
+                const highlightStartInNode = Math.max(0, start - nodeStart);
+                const highlightEndInNode = Math.min(node.textContent.length - 1, end - nodeStart);
+                
+                nodesToHighlight.push({
+                    node: node,
+                    startOffset: highlightStartInNode,
+                    endOffset: highlightEndInNode
+                });
+            }
+            
+            charCount += node.textContent.length;
+        }
+        
+        // Apply highlighting to identified nodes
+        nodesToHighlight.forEach(({ node, startOffset, endOffset }) => {
+            const parent = node.parentNode;
+            const text = node.textContent;
+            
+            // Split the text node into three parts if needed
+            const beforeText = text.substring(0, startOffset);
+            const highlightText = text.substring(startOffset, endOffset + 1);
+            const afterText = text.substring(endOffset + 1);
+            
+            // Create new nodes
+            const fragment = document.createDocumentFragment();
+            
+            if (beforeText) {
+                fragment.appendChild(document.createTextNode(beforeText));
+            }
+            
+            if (highlightText) {
+                const highlightSpan = document.createElement('span');
+                highlightSpan.style.backgroundColor = this.highlightColor;
+                highlightSpan.style.borderRadius = '2px';
+                highlightSpan.textContent = highlightText;
+                fragment.appendChild(highlightSpan);
+            }
+            
+            if (afterText) {
+                fragment.appendChild(document.createTextNode(afterText));
+            }
+            
+            // Replace the original text node
+            parent.replaceChild(fragment, node);
+        });
+        
+        return tempDiv.innerHTML;
+    }
+
+    /**
+     * Refresh the sequence display to apply highlighting
+     */
+    refreshSequenceDisplay() {
+        // Clear the render cache to force re-rendering with highlights
+        this.renderCache.clear();
+        
+        // Re-render the current sequence
+        const currentChr = document.getElementById('chromosomeSelect')?.value;
+        if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
+            this.displayEnhancedSequence(currentChr, this.genomeBrowser.currentSequence[currentChr]);
         }
     }
 }
