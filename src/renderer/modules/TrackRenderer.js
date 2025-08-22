@@ -3188,9 +3188,9 @@ class TrackRenderer {
         
         try {
             // Load reads using the specific BAM reader
-            // Ensure start position is never negative (BAM coordinates are 0-based)
-            const bamStart = Math.max(0, viewport.start - 1);
-            const bamEnd = Math.max(bamStart + 1, viewport.end - 1);
+            // Both viewport and BAM coordinates are 0-based - no conversion needed
+            const bamStart = Math.max(0, viewport.start);
+            const bamEnd = Math.max(bamStart + 1, viewport.end);
             
             console.log(`🔍 [TrackRenderer] Querying BAM for reads (content only):`, {
                 chromosome,
@@ -3369,9 +3369,9 @@ class TrackRenderer {
         
         try {
             // Load reads using the specific BAM reader
-            // Ensure start position is never negative (BAM coordinates are 0-based)
-            const bamStart = Math.max(0, viewport.start - 1);
-            const bamEnd = Math.max(bamStart + 1, viewport.end - 1);
+            // Both viewport and BAM coordinates are 0-based - no conversion needed
+            const bamStart = Math.max(0, viewport.start);
+            const bamEnd = Math.max(bamStart + 1, viewport.end);
             
             console.log(`🔍 [TrackRenderer] Querying BAM for reads:`, {
                 chromosome,
@@ -4693,11 +4693,21 @@ class TrackRenderer {
             
             // Check if we have a valid string sequence
             if (typeof sequence === 'string' && sequence.length > 0) {
-                // Convert 1-based coordinates to 0-based for string slicing
-                const startIndex = Math.max(0, start - 1);
+                // The start and end parameters are already 0-based coordinates from viewport
+                // No coordinate conversion needed - they can be used directly with substring()
+                const startIndex = Math.max(0, start);
                 const endIndex = Math.min(sequence.length, end);
                 const result = sequence.substring(startIndex, endIndex);
-                console.log(`🔍 [getReferenceSequence] Extracted sequence: ${result.length} bases, preview: "${result.substring(0, 20)}..."`);
+                
+                console.log(`🔍 [getReferenceSequence] Fixed coordinate mapping:`, {
+                    inputStart: start,
+                    inputEnd: end,
+                    startIndex: startIndex,
+                    endIndex: endIndex,
+                    resultLength: result.length,
+                    preview: result.substring(0, 20) + '...'
+                });
+                
                 return result;
             } else {
                 console.log(`🔍 [getReferenceSequence] Invalid sequence type or empty: ${typeof sequence}, length: ${sequence?.length}`);
@@ -5818,8 +5828,16 @@ class TrackRenderer {
 
     showProteinDetails(protein, chromosome) {
         const sequence = this.genomeBrowser.currentSequence[chromosome];
-        const dnaSequence = sequence.substring(protein.start - 1, protein.end);
+        // protein.start and protein.end are already 0-based coordinates, consistent with viewport coordinates
+        const dnaSequence = sequence.substring(protein.start, protein.end);
         const proteinSequence = this.genomeBrowser.translateDNA(dnaSequence, protein.strand);
+        
+        console.log(`🔍 [showProteinDetails] Fixed protein coordinate mapping:`, {
+            proteinStart: protein.start,
+            proteinEnd: protein.end,
+            dnaSequenceLength: dnaSequence.length,
+            expectedLength: protein.end - protein.start
+        });
         
         const details = [];
         details.push(`Type: Protein (CDS)`);
