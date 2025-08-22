@@ -1135,8 +1135,9 @@ class SequenceUtils {
         container.style.removeProperty('font-family');
         container.style.removeProperty('background');
         container.style.removeProperty('color');
-        // Keep overflow styles to maintain scrollbar behavior
-        // container.style.removeProperty('overflow');
+        // Reset overflow and height - they will be set properly in render methods
+        container.style.removeProperty('overflow');
+        container.style.removeProperty('height');
         container.className = '';
         
         const subsequence = fullSequence.substring(viewStart, viewEnd);
@@ -1208,9 +1209,12 @@ class SequenceUtils {
         // Pre-compute feature lookups for better performance
         const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd);
         
-        // Enable virtual scrolling for large sequences
+        // Enable virtual scrolling for sequences that actually need it
         const totalLines = Math.ceil(subsequence.length / optimalLineLength);
-        const enableVirtualScrolling = totalLines > 50;
+        // Estimate if the content will overflow the container
+        const estimatedContentHeight = totalLines * (this.lineHeight + this.lineSpacing);
+        const estimatedContainerHeight = container.getBoundingClientRect().height || 400;
+        const enableVirtualScrolling = totalLines > 50 && estimatedContentHeight > estimatedContainerHeight * 1.5;
         
         if (enableVirtualScrolling) {
             this.renderVirtualizedSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup);
@@ -1228,6 +1232,8 @@ class SequenceUtils {
             cacheHits: this.performanceStats.cacheHits,
             cacheMisses: this.performanceStats.cacheMisses,
             totalLines: totalLines,
+            estimatedContentHeight: estimatedContentHeight,
+            estimatedContainerHeight: estimatedContainerHeight,
             virtualScrolling: enableVirtualScrolling
         });
     }
@@ -1274,6 +1280,10 @@ class SequenceUtils {
      * Render full sequence (for smaller sequences)
      */
     renderFullSequence(container, chromosome, subsequence, viewStart, annotations, operons, charWidth, optimalLineLength, sequenceSettings, featureLookup) {
+        // Ensure parent container has proper scrolling enabled
+        container.style.overflow = 'auto';
+        container.style.height = '100%';
+        
         // Use document fragment for better performance
         const fragment = document.createDocumentFragment();
         const tempDiv = document.createElement('div');
@@ -1300,6 +1310,15 @@ class SequenceUtils {
         this.addProteinTranslationsConditional(tempDiv, chromosome, subsequence, viewStart, viewEnd, annotations);
         
         container.appendChild(tempDiv);
+        
+        // Log container info for debugging
+        const totalLines = Math.ceil(subsequence.length / optimalLineLength);
+        console.log('🔧 [SequenceUtils] Full sequence render:', {
+            totalLines,
+            containerHeight: container.getBoundingClientRect().height,
+            scrollHeight: container.scrollHeight,
+            needsScrolling: container.scrollHeight > container.clientHeight
+        });
     }
     
     /**
@@ -1547,47 +1566,67 @@ class SequenceUtils {
         // FIXED: Use actual line height + spacing for virtual scrolling
         const actualLineHeight = this.lineHeight + this.lineSpacing;
         
-        // Calculate actual available height instead of using fixed 600px
+        // Calculate actual available height from the parent container
         const parentContainer = document.getElementById('sequenceContent');
         const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
         let availableHeight = 400; // Default fallback
         
-        if (sequenceDisplaySection) {
+        if (parentContainer) {
+            // Get the actual available height from the parent container
+            const parentRect = parentContainer.getBoundingClientRect();
+            const parentStyles = window.getComputedStyle(parentContainer);
+            const paddingTop = parseInt(parentStyles.paddingTop) || 0;
+            const paddingBottom = parseInt(parentStyles.paddingBottom) || 0;
+            availableHeight = Math.max(200, parentRect.height - paddingTop - paddingBottom);
+            
+            console.log('🔧 [SequenceUtils] Parent container height calculation:', {
+                parentHeight: parentRect.height,
+                paddingTop,
+                paddingBottom,
+                availableHeight
+            });
+        } else if (sequenceDisplaySection) {
             const sectionRect = sequenceDisplaySection.getBoundingClientRect();
             const sequenceHeader = document.querySelector('.sequence-header');
             const headerHeight = sequenceHeader ? sequenceHeader.offsetHeight : 60;
-            availableHeight = Math.max(200, sectionRect.height - headerHeight - 40); // Reserve space for padding
+            availableHeight = Math.max(200, sectionRect.height - headerHeight - 40);
         }
         
-        // Calculate optimal container height using actual line height
+        // Calculate total content height
         const maxPossibleHeight = totalLines * actualLineHeight;
-        const containerHeight = Math.min(availableHeight, maxPossibleHeight);
         
-        // Update virtual scrolling parameters based on actual container size
-        const dynamicVisibleLines = Math.floor(containerHeight / actualLineHeight);
-        const needsScrolling = totalLines > dynamicVisibleLines;
+        // Determine if we need scrolling based on content exceeding available space
+        const needsScrolling = maxPossibleHeight > availableHeight;
+        const containerHeight = needsScrolling ? availableHeight : maxPossibleHeight;
+        
+        // Calculate how many lines can fit in the available height
+        const dynamicVisibleLines = Math.floor(availableHeight / actualLineHeight);
         
         console.log(`🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}, actualLineHeight=${actualLineHeight}px`);
         
-        // Create virtualized container
+        // Disable parent container scrolling to avoid conflicts
+        container.style.overflow = 'hidden';
+        container.style.height = '100%';
+        
+        // Create virtualized container that takes full parent space
         const virtualContainer = document.createElement('div');
         virtualContainer.className = 'detailed-sequence-view virtualized';
         virtualContainer.style.cssText = `
-            height: ${containerHeight}px;
-            max-height: ${availableHeight}px;
-            overflow-y: scroll;
+            height: 100%;
+            width: 100%;
+            overflow-y: ${needsScrolling ? 'auto' : 'hidden'};
             overflow-x: hidden;
             position: relative;
             box-sizing: border-box;
         `;
         
-        // Viewport for visible lines
+        // Viewport for visible lines - set proper height for scrolling
         const viewport = document.createElement('div');
         viewport.className = 'virtual-viewport';
         viewport.style.cssText = `
             height: ${maxPossibleHeight}px;
             position: relative;
-            min-height: ${containerHeight}px;
+            width: 100%;
         `;
         
         // Visible content container
