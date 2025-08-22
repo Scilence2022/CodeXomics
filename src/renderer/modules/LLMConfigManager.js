@@ -21,12 +21,25 @@ class LLMConfigManager {
                 baseUrl: 'https://api.anthropic.com',
                 enabled: false
             },
+            // Google - Direct API access to Gemini models
             google: {
                 name: 'Google',
                 apiKey: '',
-                model: 'gemini-2.0-flash',
+                model: 'gemini-2.0-flash', // Latest Gemini 2.0 Flash model
                 baseUrl: 'https://generativelanguage.googleapis.com',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // Gemini 2.0 Series (Latest)
+                    'gemini-2.0-flash',     // Latest multimodal model
+                    'gemini-2.0-flash-exp', // Experimental version
+                    // Gemini 1.5 Series
+                    'gemini-1.5-pro-latest',    // Large context, most capable
+                    'gemini-1.5-flash-latest',  // Fast, efficient
+                    'gemini-1.5-pro',      // Legacy 1.5 Pro
+                    'gemini-1.5-flash',    // Legacy 1.5 Flash
+                    // Gemini 1.0 Series
+                    'gemini-pro'           // Legacy 1.0 Pro
+                ]
             },
             deepseek: {
                 name: 'DeepSeek',
@@ -54,6 +67,10 @@ class LLMConfigManager {
                     'openai/gpt-5',         // Full model: $1.25/$10 per M tokens, advanced reasoning
                     'openai/gpt-5-mini',    // Compact: $0.25/$2 per M tokens, lighter reasoning
                     'openai/gpt-5-nano',    // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
+                    // Google Gemini Series
+                    'google/gemini-2.0-flash',    // Latest multimodal, competitive pricing
+                    'google/gemini-1.5-pro-latest',   // Large context, most capable
+                    'google/gemini-1.5-flash-latest', // Fast, efficient
                     // Fallback models
                     'openai/gpt-4o',        
                     'openai/gpt-4-turbo',   
@@ -1268,6 +1285,7 @@ class LLMConfigManager {
     getOpenRouterFallbackModel(originalModel) {
         if (!originalModel) return null;
         const model = String(originalModel).toLowerCase();
+        
         // OpenAI GPT-5 series fallbacks
         if (model.startsWith('openai/')) {
             if (model.includes('gpt-5-nano')) return 'openai/gpt-5-mini';  // Nano → Mini
@@ -1275,11 +1293,22 @@ class LLMConfigManager {
             if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 'openai/gpt-4o';  // Full GPT-5 → GPT-4o
             if (model.includes('gpt-4o')) return 'openai/gpt-4-turbo';
         }
+        
+        // Google Gemini series fallbacks
+        if (model.startsWith('google/')) {
+            if (model.includes('gemini-2.0-flash-exp')) return 'google/gemini-2.0-flash';     // Experimental → Stable
+            if (model.includes('gemini-2.0-flash')) return 'google/gemini-1.5-pro-latest';   // 2.0 Flash → 1.5 Pro
+            if (model.includes('gemini-1.5-pro-latest')) return 'google/gemini-1.5-flash-latest'; // Pro → Flash
+            if (model.includes('gemini-1.5-flash-latest')) return 'google/gemini-1.5-pro';   // Flash Latest → Pro Legacy
+            if (model.includes('gemini-1.5')) return 'google/gemini-pro';                    // 1.5 → 1.0 Pro
+        }
+        
         // Anthropic fallbacks
         if (model.startsWith('anthropic/')) {
             if (model.includes('sonnet-4')) return 'anthropic/claude-3-5-sonnet-20241022';
             if (model.includes('opus')) return 'anthropic/claude-3-5-sonnet-20241022';
         }
+        
         // Generic safe default - prefer GPT-5 if available, fallback to GPT-4o
         return 'openai/gpt-5';
     }
