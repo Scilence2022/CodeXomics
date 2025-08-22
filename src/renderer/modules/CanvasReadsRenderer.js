@@ -517,7 +517,7 @@ class CanvasReadsRenderer {
             startIndex, endIndex,
             visibleLength: visibleSequence.length,
             originalLength: read.sequence.length,
-            isCompleteReadInViewport: isCompleteReadInViewport
+            shouldExtractFullRead: shouldExtractFullRead
         });
         
         if (!visibleSequence || visibleSequence.length === 0) return false;

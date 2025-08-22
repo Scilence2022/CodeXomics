@@ -4557,7 +4557,7 @@ class TrackRenderer {
             startIndex, endIndex,
             resultLength: result.length,
             originalSequenceLength: read.sequence.length,
-            isCompleteReadInViewport: isCompleteReadInViewport
+            shouldExtractFullRead: shouldExtractFullRead
         });
         
         return result;
