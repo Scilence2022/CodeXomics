@@ -461,20 +461,22 @@ class CanvasReadsRenderer {
             });
         }
         
-        // Calculate offset within the read for the visible portion
-        const startOffset = Math.max(0, visibleStart - read.start);
-        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start);
+        // Check if we're displaying the complete read within the viewport (like SVG mode)
+        const isCompleteReadInViewport = (visibleStart === read.start) && (visibleEnd === read.end);
         
-        // For complete read display, return entire sequence
-        if (startOffset === 0 && endOffset === genomicReadLength - 1) {
+        if (isCompleteReadInViewport) {
             const visibleSequence = read.sequence;
-            console.log(`🔧 [Canvas] Complete read display:`, { readId: read.id, sequenceLength: visibleSequence.length });
+            console.log(`🔧 [Canvas] Complete read in viewport:`, { readId: read.id, sequenceLength: visibleSequence.length });
             
             if (!visibleSequence || visibleSequence.length === 0) return false;
             
             // Continue with rendering logic using complete sequence
             return this.renderCompleteSequence(read, x, y, width, visibleSequence);
         }
+        
+        // Calculate offset within the read for the visible portion
+        const startOffset = Math.max(0, visibleStart - read.start);
+        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start);
         
         // Map to sequence indices for partial display
         let startIndex, endIndex;
@@ -491,10 +493,14 @@ class CanvasReadsRenderer {
         
         console.log(`🔧 [Canvas] Partial sequence display:`, {
             readId: read.id,
+            readStart: read.start,
+            readEnd: read.end,
+            visibleStart, visibleEnd,
             startOffset, endOffset,
             startIndex, endIndex,
             visibleLength: visibleSequence.length,
-            originalLength: read.sequence.length
+            originalLength: read.sequence.length,
+            isCompleteReadInViewport: isCompleteReadInViewport
         });
         
         if (!visibleSequence || visibleSequence.length === 0) return false;
