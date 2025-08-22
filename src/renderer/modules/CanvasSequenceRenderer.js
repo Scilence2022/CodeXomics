@@ -39,6 +39,10 @@ class CanvasSequenceRenderer {
             'n': '#95a5a6'
         };
         
+        // Highlighting configuration
+        this.highlightedRanges = [];
+        this.highlightColor = 'rgba(255, 255, 0, 0.6)'; // Yellow highlight background
+        
         // Amino acid color scheme for protein translations - more opaque and clear
         this.aminoAcidColors = {
             // Nonpolar (hydrophobic) - darker green tones
@@ -341,6 +345,9 @@ class CanvasSequenceRenderer {
             dnaY = this.canvasHeight / 2;
         }
         
+        // Render highlighted backgrounds first
+        this.renderHighlights(startX, effectiveCharWidth, dnaY, this.charHeight);
+        
         // Render DNA sequence
         for (let i = 0; i < this.sequence.length; i++) {
             const base = this.sequence[i];
@@ -439,6 +446,60 @@ class CanvasSequenceRenderer {
         // Fallback calculations
         if (this.charWidth <= 0) this.charWidth = this.actualFontSize * 0.6;
         if (this.charHeight <= 0) this.charHeight = this.actualFontSize * 1.2;
+    }
+    
+    /**
+     * Render highlight backgrounds for specified ranges
+     */
+    renderHighlights(startX, effectiveCharWidth, dnaY, charHeight) {
+        if (this.highlightedRanges.length === 0) return;
+        
+        this.ctx.save();
+        this.ctx.fillStyle = this.highlightColor;
+        
+        this.highlightedRanges.forEach(range => {
+            const startPos = Math.max(0, range.start);
+            const endPos = Math.min(this.sequence.length - 1, range.end);
+            
+            if (startPos <= endPos) {
+                const x = startX + (startPos * effectiveCharWidth);
+                const width = (endPos - startPos + 1) * effectiveCharWidth;
+                const y = dnaY - charHeight / 2;
+                
+                this.ctx.fillRect(x, y, width, charHeight);
+            }
+        });
+        
+        this.ctx.restore();
+    }
+    
+    /**
+     * Add a highlight range to the sequence
+     */
+    addHighlight(start, end, color = null) {
+        const highlightColor = color || this.highlightColor;
+        this.highlightedRanges.push({ start, end, color: highlightColor });
+        this.render(); // Re-render to show highlight
+    }
+    
+    /**
+     * Clear all highlights
+     */
+    clearHighlights() {
+        this.highlightedRanges = [];
+        this.render(); // Re-render to remove highlights
+    }
+    
+    /**
+     * Highlight search matches in the sequence
+     */
+    highlightSearchMatches(matches) {
+        this.clearHighlights();
+        matches.forEach(match => {
+            if (match.type === 'sequence') {
+                this.addHighlight(match.position, match.end - 1, 'rgba(255, 215, 0, 0.7)'); // Gold for sequence matches
+            }
+        });
     }
     
     setupResizeObserver() {
