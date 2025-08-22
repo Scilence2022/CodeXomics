@@ -4476,19 +4476,62 @@ class TrackRenderer {
     getVisibleSequencePortion(read, visibleStart, visibleEnd) {
         if (!read.sequence) return '';
         
-        // Calculate the offset within the read sequence
-        const readLength = read.end - read.start;
+        // Calculate the actual read length based on genomic coordinates
+        // IMPORTANT: Genomic coordinates are typically 1-based inclusive, but sequence arrays are 0-based
+        const genomicReadLength = read.end - read.start + 1; // +1 for inclusive coordinates
         const sequenceLength = read.sequence.length;
+        
+        // Debug log to identify coordinate mismatches
+        if (genomicReadLength !== sequenceLength) {
+            console.log(`🔧 [DEBUG] Read coordinate/sequence length mismatch:`, {
+                readId: read.id,
+                genomicStart: read.start,
+                genomicEnd: read.end,
+                genomicLength: genomicReadLength,
+                sequenceLength: sequenceLength,
+                difference: genomicReadLength - sequenceLength
+            });
+        }
+        
+        // Use the actual sequence length as the authoritative source
+        const readLength = sequenceLength;
         
         // Calculate start and end positions within the sequence
         const startOffset = Math.max(0, visibleStart - read.start);
-        const endOffset = Math.min(readLength, visibleEnd - read.start);
+        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start); // -1 because end is inclusive
         
-        // Map to sequence indices (handle potential coordinate mismatches)
-        const startIndex = Math.floor((startOffset / readLength) * sequenceLength);
-        const endIndex = Math.ceil((endOffset / readLength) * sequenceLength);
+        // Map to sequence indices - handle edge cases carefully
+        let startIndex, endIndex;
         
-        return read.sequence.substring(startIndex, endIndex);
+        if (genomicReadLength <= 1 || sequenceLength <= 1) {
+            // Handle single base reads
+            startIndex = 0;
+            endIndex = sequenceLength - 1;
+        } else {
+            // Calculate indices for multi-base reads
+            startIndex = Math.max(0, Math.floor((startOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+            endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+        }
+        
+        // For complete read display (most common case), return entire sequence
+        if (startOffset === 0 && endOffset === genomicReadLength - 1) {
+            return read.sequence; // Return complete sequence to avoid any truncation
+        }
+        
+        // Ensure we include the end base by using endIndex + 1 for substring
+        const result = read.sequence.substring(startIndex, endIndex + 1);
+        
+        console.log(`🔧 [DEBUG] Sequence portion calculation:`, {
+            readId: read.id,
+            visibleStart, visibleEnd,
+            startOffset, endOffset,
+            startIndex, endIndex,
+            resultLength: result.length,
+            originalSequenceLength: read.sequence.length,
+            isCompleteRead: startOffset === 0 && endOffset === genomicReadLength - 1
+        });
+        
+        return result;
     }
 
     /**
