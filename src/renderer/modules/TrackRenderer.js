@@ -4476,41 +4476,46 @@ class TrackRenderer {
     getVisibleSequencePortion(read, visibleStart, visibleEnd) {
         if (!read.sequence) return '';
         
-        // Calculate the actual read length based on genomic coordinates
-        // IMPORTANT: Genomic coordinates are typically 1-based inclusive, but sequence arrays are 0-based
-        const genomicReadLength = read.end - read.start + 1; // +1 for inclusive coordinates
-        const sequenceLength = read.sequence.length;
+        // CRITICAL FIX: Use sequence length as source of truth (matching Canvas renderer fix)
+        // The issue was that genomic coordinates vs sequence length mismatch indicates a fundamental
+        // coordinate system inconsistency somewhere in the BAM parsing chain
+        const genomicReadLength = read.end - read.start + 1; // Theoretical length based on 1-based inclusive coordinates
+        const sequenceLength = read.sequence.length; // Actual sequence length
         
-        // Debug log to identify coordinate mismatches
+        // Use sequence length as source of truth for all calculations
+        const actualReadLength = sequenceLength;
+        
+        // Debug log coordinate mismatches but proceed with sequence-based calculations
         if (genomicReadLength !== sequenceLength) {
-            console.log(`🔧 [DEBUG] Read coordinate/sequence length mismatch:`, {
+            console.log(`🔧 [SVG] Read coordinate/sequence length mismatch - using sequence length as source of truth:`, {
                 readId: read.id,
                 genomicStart: read.start,
                 genomicEnd: read.end,
-                genomicLength: genomicReadLength,
-                sequenceLength: sequenceLength,
-                difference: genomicReadLength - sequenceLength
+                theoreticalGenomicLength: genomicReadLength,
+                actualSequenceLength: sequenceLength,
+                fixApplied: 'using sequenceLength for all calculations'
             });
         }
         
-        // Use the actual sequence length as the authoritative source
-        const readLength = sequenceLength;
+        // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
+        // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
+        const genomicStart = read.start;
+        const genomicEnd = read.start + actualReadLength - 1; // Use actual sequence length to determine genomic end
         
-        // Calculate start and end positions within the sequence
-        const startOffset = Math.max(0, visibleStart - read.start);
-        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start); // -1 because end is inclusive
+        const startOffset = Math.max(0, visibleStart - genomicStart);
+        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart);
         
-        // Map to sequence indices - handle edge cases carefully
+        // Map to sequence indices using actual sequence length
         let startIndex, endIndex;
         
-        if (genomicReadLength <= 1 || sequenceLength <= 1) {
+        if (actualReadLength <= 1) {
             // Handle single base reads
             startIndex = 0;
-            endIndex = sequenceLength - 1;
+            endIndex = actualReadLength - 1;
         } else {
-            // Calculate indices for multi-base reads
-            startIndex = Math.max(0, Math.floor((startOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
-            endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+            // Calculate indices for multi-base reads using actual sequence length
+            startIndex = Math.max(0, Math.floor((startOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
+            endIndex = Math.min(actualReadLength - 1, Math.ceil((endOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
         }
         
         // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries
@@ -4892,9 +4897,9 @@ class TrackRenderer {
         });
         
         visibleMutations.forEach(mutation => {
-            // Calculate position within the read
+            // CRITICAL FIX: Calculate position within the read using actual sequence length
             const mutationPosInRead = mutation.position - read.start;
-            const readLength = read.end - read.start;
+            const readLength = read.sequence ? read.sequence.length : (read.end - read.start + 1);
             
             // Skip if mutation is outside the read bounds
             if (mutationPosInRead < 0 || mutationPosInRead > readLength) {

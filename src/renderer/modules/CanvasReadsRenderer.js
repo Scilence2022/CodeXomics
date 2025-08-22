@@ -446,18 +446,24 @@ class CanvasReadsRenderer {
     renderReadSequence(read, x, y, width, visibleStart, visibleEnd) {
         if (!read.sequence) return false;
         
-        // Calculate the actual read length based on genomic coordinates (inclusive)
-        const genomicReadLength = read.end - read.start + 1;
-        const sequenceLength = read.sequence.length;
+        // CRITICAL FIX: Use sequence length as source of truth instead of coordinate calculation
+        // The issue is that genomic coordinates vs sequence length mismatch indicates a fundamental
+        // coordinate system inconsistency somewhere in the BAM parsing chain
+        const genomicReadLength = read.end - read.start + 1; // Theoretical length based on 1-based inclusive coordinates
+        const sequenceLength = read.sequence.length; // Actual sequence length
         
-        // Debug log coordinate mismatches
+        // Use sequence length as source of truth for all calculations
+        const actualReadLength = sequenceLength;
+        
+        // Debug log coordinate mismatches but proceed with sequence-based calculations
         if (genomicReadLength !== sequenceLength) {
-            console.log(`🔧 [Canvas] Read coordinate/sequence length mismatch:`, {
+            console.log(`🔧 [Canvas] Read coordinate/sequence length mismatch - using sequence length as source of truth:`, {
                 readId: read.id,
                 genomicStart: read.start,
                 genomicEnd: read.end,
-                genomicLength: genomicReadLength,
-                sequenceLength: sequenceLength
+                theoreticalGenomicLength: genomicReadLength,
+                actualSequenceLength: sequenceLength,
+                fixApplied: 'using sequenceLength for all calculations'
             });
         }
         
@@ -491,33 +497,39 @@ class CanvasReadsRenderer {
             extractingRange: `${visibleStart}-${visibleEnd}`
         });
         
-        // Calculate offset within the read for the visible portion
-        const startOffset = Math.max(0, visibleStart - read.start);
-        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start);
+        // CRITICAL FIX: Calculate offset using actual sequence length, not theoretical genomic length
+        // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
+        const genomicStart = read.start;
+        const genomicEnd = read.start + actualReadLength - 1; // Use actual sequence length to determine genomic end
         
-        // Map to sequence indices for partial display
+        const startOffset = Math.max(0, visibleStart - genomicStart);
+        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart);
+        
+        // Map to sequence indices for partial display using actual sequence length
         let startIndex, endIndex;
-        if (genomicReadLength <= 1) {
+        if (actualReadLength <= 1) {
             startIndex = 0;
-            endIndex = sequenceLength - 1;
+            endIndex = actualReadLength - 1;
         } else {
-            startIndex = Math.max(0, Math.floor((startOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
-            endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+            startIndex = Math.max(0, Math.floor((startOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
+            endIndex = Math.min(actualReadLength - 1, Math.ceil((endOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
         }
         
         // Get the visible portion of the sequence
         const visibleSequence = read.sequence.substring(startIndex, endIndex + 1);
         
-        console.log(`🔧 [Canvas] Partial sequence display:`, {
+        console.log(`🔧 [Canvas] Partial sequence display (FIXED coordinate system):`, {
             readId: read.id,
-            readStart: read.start,
-            readEnd: read.end,
+            originalGenomicStart: read.start,
+            originalGenomicEnd: read.end,
+            correctedGenomicStart: genomicStart,
+            correctedGenomicEnd: genomicEnd,
             visibleStart, visibleEnd,
             startOffset, endOffset,
             startIndex, endIndex,
             visibleLength: visibleSequence.length,
-            originalLength: read.sequence.length,
-            shouldExtractFullRead: shouldExtractFullRead
+            actualSequenceLength: actualReadLength,
+            coordinateSystemFix: 'using sequence length as source of truth'
         });
         
         if (!visibleSequence || visibleSequence.length === 0) return false;
