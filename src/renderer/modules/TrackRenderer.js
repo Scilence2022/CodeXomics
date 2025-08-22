@@ -4513,13 +4513,37 @@ class TrackRenderer {
             endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
         }
         
-        // Check if we're displaying the complete read within the viewport
-        const isCompleteReadInViewport = (visibleStart === read.start) && (visibleEnd === read.end);
+        // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries
+        // The key insight is that we should extract sequence that corresponds to the exact 
+        // visibleStart-visibleEnd coordinate range, not the full read sequence
         
-        if (isCompleteReadInViewport) {
-            console.log(`🔧 [SVG] Complete read in viewport:`, { readId: read.id, sequenceLength: read.sequence.length });
+        // When visibleStart equals read.start, we should start from the beginning of sequence
+        // When visibleEnd equals read.end, we should end at the end of sequence  
+        // But when they don't match, we need precise coordinate mapping
+        
+        const shouldExtractFullRead = (visibleStart === read.start) && (visibleEnd === read.end);
+        
+        if (shouldExtractFullRead) {
+            console.log(`🔧 [SVG] Full read matches viewport bounds exactly:`, { 
+                readId: read.id, 
+                readStart: read.start,
+                readEnd: read.end,
+                visibleStart,
+                visibleEnd,
+                sequenceLength: read.sequence.length 
+            });
             return read.sequence; // Return complete sequence
         }
+        
+        // For partial reads, we need to extract the portion that corresponds to visibleStart-visibleEnd
+        console.log(`🔧 [SVG] Extracting partial read sequence:`, { 
+            readId: read.id, 
+            readStart: read.start,
+            readEnd: read.end,
+            visibleStart,
+            visibleEnd,
+            extractingRange: `${visibleStart}-${visibleEnd}`
+        });
         
         // Ensure we include the end base by using endIndex + 1 for substring
         const result = read.sequence.substring(startIndex, endIndex + 1);

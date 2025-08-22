@@ -461,18 +461,35 @@ class CanvasReadsRenderer {
             });
         }
         
-        // Check if we're displaying the complete read within the viewport (like SVG mode)
-        const isCompleteReadInViewport = (visibleStart === read.start) && (visibleEnd === read.end);
+        // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries (match SVG logic)
+        const shouldExtractFullRead = (visibleStart === read.start) && (visibleEnd === read.end);
         
-        if (isCompleteReadInViewport) {
+        if (shouldExtractFullRead) {
             const visibleSequence = read.sequence;
-            console.log(`🔧 [Canvas] Complete read in viewport:`, { readId: read.id, sequenceLength: visibleSequence.length });
+            console.log(`🔧 [Canvas] Full read matches viewport bounds exactly:`, { 
+                readId: read.id, 
+                readStart: read.start,
+                readEnd: read.end,
+                visibleStart,
+                visibleEnd,
+                sequenceLength: visibleSequence.length 
+            });
             
             if (!visibleSequence || visibleSequence.length === 0) return false;
             
             // Continue with rendering logic using complete sequence
             return this.renderCompleteSequence(read, x, y, width, visibleSequence);
         }
+        
+        // For partial reads, extract the portion that corresponds to visibleStart-visibleEnd
+        console.log(`🔧 [Canvas] Extracting partial read sequence:`, { 
+            readId: read.id, 
+            readStart: read.start,
+            readEnd: read.end,
+            visibleStart,
+            visibleEnd,
+            extractingRange: `${visibleStart}-${visibleEnd}`
+        });
         
         // Calculate offset within the read for the visible portion
         const startOffset = Math.max(0, visibleStart - read.start);
