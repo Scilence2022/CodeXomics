@@ -4513,22 +4513,27 @@ class TrackRenderer {
             endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
         }
         
-        // For complete read display (most common case), return entire sequence
-        if (startOffset === 0 && endOffset === genomicReadLength - 1) {
-            return read.sequence; // Return complete sequence to avoid any truncation
+        // Check if we're displaying the complete read within the viewport
+        const isCompleteReadInViewport = (visibleStart === read.start) && (visibleEnd === read.end);
+        
+        if (isCompleteReadInViewport) {
+            console.log(`🔧 [SVG] Complete read in viewport:`, { readId: read.id, sequenceLength: read.sequence.length });
+            return read.sequence; // Return complete sequence
         }
         
         // Ensure we include the end base by using endIndex + 1 for substring
         const result = read.sequence.substring(startIndex, endIndex + 1);
         
-        console.log(`🔧 [DEBUG] Sequence portion calculation:`, {
+        console.log(`🔧 [SVG] Partial sequence calculation:`, {
             readId: read.id,
+            readStart: read.start,
+            readEnd: read.end,
             visibleStart, visibleEnd,
             startOffset, endOffset,
             startIndex, endIndex,
             resultLength: result.length,
             originalSequenceLength: read.sequence.length,
-            isCompleteRead: startOffset === 0 && endOffset === genomicReadLength - 1
+            isCompleteReadInViewport: isCompleteReadInViewport
         });
         
         return result;

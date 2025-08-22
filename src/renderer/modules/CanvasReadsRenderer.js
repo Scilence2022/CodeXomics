@@ -446,22 +446,74 @@ class CanvasReadsRenderer {
     renderReadSequence(read, x, y, width, visibleStart, visibleEnd) {
         if (!read.sequence) return false;
         
-        // Calculate which part of the sequence is visible in the current viewport
-        const readLength = read.end - read.start;
+        // Calculate the actual read length based on genomic coordinates (inclusive)
+        const genomicReadLength = read.end - read.start + 1;
         const sequenceLength = read.sequence.length;
+        
+        // Debug log coordinate mismatches
+        if (genomicReadLength !== sequenceLength) {
+            console.log(`🔧 [Canvas] Read coordinate/sequence length mismatch:`, {
+                readId: read.id,
+                genomicStart: read.start,
+                genomicEnd: read.end,
+                genomicLength: genomicReadLength,
+                sequenceLength: sequenceLength
+            });
+        }
         
         // Calculate offset within the read for the visible portion
         const startOffset = Math.max(0, visibleStart - read.start);
-        const endOffset = Math.min(readLength, visibleEnd - read.start);
+        const endOffset = Math.min(genomicReadLength - 1, visibleEnd - read.start);
         
-        // Map to sequence indices (handle potential coordinate mismatches)
-        const startIndex = Math.floor((startOffset / readLength) * sequenceLength);
-        const endIndex = Math.ceil((endOffset / readLength) * sequenceLength);
+        // For complete read display, return entire sequence
+        if (startOffset === 0 && endOffset === genomicReadLength - 1) {
+            const visibleSequence = read.sequence;
+            console.log(`🔧 [Canvas] Complete read display:`, { readId: read.id, sequenceLength: visibleSequence.length });
+            
+            if (!visibleSequence || visibleSequence.length === 0) return false;
+            
+            // Continue with rendering logic using complete sequence
+            return this.renderCompleteSequence(read, x, y, width, visibleSequence);
+        }
+        
+        // Map to sequence indices for partial display
+        let startIndex, endIndex;
+        if (genomicReadLength <= 1) {
+            startIndex = 0;
+            endIndex = sequenceLength - 1;
+        } else {
+            startIndex = Math.max(0, Math.floor((startOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+            endIndex = Math.min(sequenceLength - 1, Math.ceil((endOffset / (genomicReadLength - 1)) * (sequenceLength - 1)));
+        }
         
         // Get the visible portion of the sequence
-        const visibleSequence = read.sequence.substring(startIndex, endIndex);
+        const visibleSequence = read.sequence.substring(startIndex, endIndex + 1);
+        
+        console.log(`🔧 [Canvas] Partial sequence display:`, {
+            readId: read.id,
+            startOffset, endOffset,
+            startIndex, endIndex,
+            visibleLength: visibleSequence.length,
+            originalLength: read.sequence.length
+        });
+        
         if (!visibleSequence || visibleSequence.length === 0) return false;
         
+        // Continue with partial sequence rendering
+        return this.renderSequenceText(visibleSequence, x, y, width);
+    }
+    
+    /**
+     * Render complete sequence (most common case)
+     */
+    renderCompleteSequence(read, x, y, width, sequence) {
+        return this.renderSequenceText(sequence, x, y, width);
+    }
+    
+    /**
+     * Common sequence text rendering logic
+     */
+    renderSequenceText(visibleSequence, x, y, width) {
         const charSpacing = width / visibleSequence.length;
         
         // Choose font size based on auto-calculate setting - match SVG logic
