@@ -928,7 +928,8 @@
                         <div class="form-group">
                             <label for="openaiModel">Model:</label>
                             <select id="openaiModel" class="select">
-                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-5">GPT-5 (Latest - requires BYOK)</option>
+                                <option value="gpt-4o" selected>GPT-4o</option>
                                 <option value="gpt-4o-mini">GPT-4o Mini</option>
                                 <option value="gpt-4">GPT-4</option>
                                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -1121,17 +1122,19 @@
                         <div class="form-group">
                             <label for="openrouterModel">Model:</label>
                             <select id="openrouterModel" class="select">
-                                <!-- OpenAI Models (Latest) -->
-                                <optgroup label="OpenAI Models (Latest)">
-                                    <option value="openai/gpt-5" selected>GPT-5 (Latest - Most Advanced)</option>
-                                    <option value="openai/gpt-5o">GPT-5o (Latest - Most Capable)</option>
-                                    <option value="openai/gpt-5o-mini">GPT-5o Mini (Fast & Efficient)</option>
-                                    <option value="openai/gpt-4o">GPT-4o (Previous - Most Capable)</option>
-                                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
-                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo (Latest)</option>
+                                <!-- OpenAI GPT-5 Series (Latest - Aug 2025) -->
+                                <optgroup label="OpenAI GPT-5 Series (Latest - Aug 2025)">
+                                    <option value="openai/gpt-5" selected>GPT-5 ($1.25/$10 per M, 400K ctx)</option>
+                                    <option value="openai/gpt-5-mini">GPT-5 Mini ($0.25/$2 per M, 400K ctx)</option>
+                                    <option value="openai/gpt-5-nano">GPT-5 Nano ($0.05/$0.40 per M, 400K ctx)</option>
+                                </optgroup>
+                                <!-- OpenAI GPT-4 Series -->
+                                <optgroup label="OpenAI GPT-4 Series">
+                                    <option value="openai/gpt-4o">GPT-4o (Previous Gen)</option>
+                                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
                                     <option value="openai/gpt-4">GPT-4 (Legacy)</option>
-                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
-                                    <option value="openai/gpt-3.5-turbo-16k">GPT-3.5 Turbo 16K (Long Context)</option>
+                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
                                 </optgroup>
                                 
                                 <!-- Anthropic Models (Latest) -->

@@ -6,10 +6,11 @@ class LLMConfigManager {
         this.configManager = configManager;
         this.currentProvider = null;
         this.providers = {
+            // OpenAI Direct API - GPT-5 requires bringing your own API key (BYOK)
             openai: {
                 name: 'OpenAI',
                 apiKey: '',
-                model: 'gpt-4o',
+                model: 'gpt-4o', // Default to GPT-4o since GPT-5 requires BYOK
                 baseUrl: 'https://api.openai.com/v1',
                 enabled: false
             },
@@ -41,12 +42,23 @@ class LLMConfigManager {
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 enabled: false
             },
+            // OpenRouter - Access to GPT-5 series via OpenRouter API
             openrouter: {
                 name: 'OpenRouter',
                 apiKey: '',
-                model: 'openai/gpt-4o',
+                model: 'openai/gpt-5',
                 baseUrl: 'https://openrouter.ai/api/v1',
-                enabled: false
+                enabled: false,
+                availableModels: [
+                    // GPT-5 Series (Released Aug 7, 2025) - 400K context window
+                    'openai/gpt-5',         // Full model: $1.25/$10 per M tokens, advanced reasoning
+                    'openai/gpt-5-mini',    // Compact: $0.25/$2 per M tokens, lighter reasoning
+                    'openai/gpt-5-nano',    // Smallest: $0.05/$0.40 per M tokens, ultra-low latency
+                    // Fallback models
+                    'openai/gpt-4o',        
+                    'openai/gpt-4-turbo',   
+                    'anthropic/claude-3-5-sonnet-20241022'
+                ]
             },
             local: {
                 name: 'Local LLM',
@@ -1256,9 +1268,11 @@ class LLMConfigManager {
     getOpenRouterFallbackModel(originalModel) {
         if (!originalModel) return null;
         const model = String(originalModel).toLowerCase();
-        // OpenAI fallbacks
+        // OpenAI GPT-5 series fallbacks
         if (model.startsWith('openai/')) {
-            if (model.includes('gpt-5')) return 'openai/gpt-4o';
+            if (model.includes('gpt-5-nano')) return 'openai/gpt-5-mini';  // Nano → Mini
+            if (model.includes('gpt-5-mini')) return 'openai/gpt-5';       // Mini → Full GPT-5
+            if (model.includes('gpt-5') && !model.includes('mini') && !model.includes('nano')) return 'openai/gpt-4o';  // Full GPT-5 → GPT-4o
             if (model.includes('gpt-4o')) return 'openai/gpt-4-turbo';
         }
         // Anthropic fallbacks
@@ -1266,8 +1280,8 @@ class LLMConfigManager {
             if (model.includes('sonnet-4')) return 'anthropic/claude-3-5-sonnet-20241022';
             if (model.includes('opus')) return 'anthropic/claude-3-5-sonnet-20241022';
         }
-        // Generic safe default
-        return 'openai/gpt-4o';
+        // Generic safe default - prefer GPT-5 if available, fallback to GPT-4o
+        return 'openai/gpt-5';
     }
 
     async sendLocalMessage(provider, message, context) {
