@@ -4498,10 +4498,10 @@ class TrackRenderer {
         // CRITICAL FIX: Calculate offset using actual sequence length (matching Canvas renderer fix)
         // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
         const genomicStart = read.start;
-        const genomicEnd = read.start + actualReadLength - 1; // Use actual sequence length to determine genomic end
+        const genomicEnd = read.end; // Use BAM end coordinate directly (0-based exclusive)
         
         const startOffset = Math.max(0, visibleStart - genomicStart);
-        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart);
+        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
         
         // Map to sequence indices using actual sequence length
         let startIndex, endIndex;

@@ -335,11 +335,11 @@ class CanvasReadsRenderer {
     
     renderRead(read, y) {
         // Calculate read position and dimensions - match SVG logic for consistency
-        // CRITICAL FIX: Convert read coordinates from 1-based to 0-based for comparison with viewport
+        // CRITICAL FIX: Convert read coordinates for comparison with viewport
         const readStart0Based = read.start - 1; // Convert 1-based to 0-based
-        const readEnd0Based = read.end - 1;     // Convert 1-based to 0-based
+        const readEnd0Based = read.end;         // read.end is already 0-based exclusive
         const readStart = Math.max(readStart0Based, this.viewport.start);
-        const readEnd = Math.min(readEnd0Based, this.viewport.end);
+        const readEnd = Math.min(readEnd0Based, this.viewport.end + 1); // Convert viewport.end to 0-based exclusive
         
         if (readEnd <= readStart) return; // Read not visible
         
@@ -471,9 +471,9 @@ class CanvasReadsRenderer {
         }
         
         // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries (match SVG logic)
-        // Fix coordinate system mismatch: read.start/end are 1-based, visibleStart/visibleEnd are 0-based
+        // Fix coordinate system mismatch: read.start is 1-based, read.end is 0-based exclusive, visibleStart/visibleEnd are 0-based
         const readStart0Based = read.start - 1; // Convert 1-based to 0-based
-        const readEnd0Based = read.end - 1;     // Convert 1-based to 0-based
+        const readEnd0Based = read.end;         // read.end is already 0-based exclusive
         const shouldExtractFullRead = (visibleStart === readStart0Based) && (visibleEnd === readEnd0Based);
         
         if (shouldExtractFullRead) {
@@ -507,10 +507,10 @@ class CanvasReadsRenderer {
         // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
         // Use 0-based coordinates for consistent calculation
         const genomicStart = readStart0Based; // Use 0-based coordinate
-        const genomicEnd = readStart0Based + actualReadLength - 1; // Use actual sequence length to determine genomic end
+        const genomicEnd = readEnd0Based;     // Use 0-based exclusive end coordinate
         
         const startOffset = Math.max(0, visibleStart - genomicStart);
-        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart);
+        const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart - 1); // Convert visibleEnd from 0-based exclusive to 0-based inclusive
         
         // FIX: Simplify index calculation to match SVG mode logic
         // Direct mapping from genomic offset to sequence index

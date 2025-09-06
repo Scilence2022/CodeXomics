@@ -900,7 +900,7 @@ class BamReader {
                     id: record.name || record.qname || `read_${offset + i}`,
                     chromosome: record.refName || chromosome,
                     start: record.start + 1,  // Convert from 0-based to 1-based coordinates
-                    end: record.end + 1,      // Convert from 0-based to 1-based coordinates
+                    end: record.end,          // BAM end is 0-based exclusive, keep as 0-based for now
                     strand: (record.strand === 1 || record.strand === '+') ? '+' : '-',
                     mappingQuality: mappingQuality,
                     cigar: record.CIGAR || record.cigar || '',
