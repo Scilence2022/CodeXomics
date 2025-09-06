@@ -335,8 +335,11 @@ class CanvasReadsRenderer {
     
     renderRead(read, y) {
         // Calculate read position and dimensions - match SVG logic for consistency
-        const readStart = Math.max(read.start, this.viewport.start);
-        const readEnd = Math.min(read.end, this.viewport.end); // Use read.end directly like SVG
+        // CRITICAL FIX: Convert read coordinates from 1-based to 0-based for comparison with viewport
+        const readStart0Based = read.start - 1; // Convert 1-based to 0-based
+        const readEnd0Based = read.end - 1;     // Convert 1-based to 0-based
+        const readStart = Math.max(readStart0Based, this.viewport.start);
+        const readEnd = Math.min(readEnd0Based, this.viewport.end);
         
         if (readEnd <= readStart) return; // Read not visible
         
@@ -468,7 +471,10 @@ class CanvasReadsRenderer {
         }
         
         // CRITICAL FIX: Ensure reads sequence aligns with reference sequence boundaries (match SVG logic)
-        const shouldExtractFullRead = (visibleStart === read.start) && (visibleEnd === read.end);
+        // Fix coordinate system mismatch: read.start/end are 1-based, visibleStart/visibleEnd are 0-based
+        const readStart0Based = read.start - 1; // Convert 1-based to 0-based
+        const readEnd0Based = read.end - 1;     // Convert 1-based to 0-based
+        const shouldExtractFullRead = (visibleStart === readStart0Based) && (visibleEnd === readEnd0Based);
         
         if (shouldExtractFullRead) {
             const visibleSequence = read.sequence;
@@ -499,20 +505,23 @@ class CanvasReadsRenderer {
         
         // CRITICAL FIX: Calculate offset using actual sequence length, not theoretical genomic length
         // This fixes the coordinate mismatch that was causing the "left端多一个碱基" issue
-        const genomicStart = read.start;
-        const genomicEnd = read.start + actualReadLength - 1; // Use actual sequence length to determine genomic end
+        // Use 0-based coordinates for consistent calculation
+        const genomicStart = readStart0Based; // Use 0-based coordinate
+        const genomicEnd = readStart0Based + actualReadLength - 1; // Use actual sequence length to determine genomic end
         
         const startOffset = Math.max(0, visibleStart - genomicStart);
         const endOffset = Math.min(actualReadLength - 1, visibleEnd - genomicStart);
         
-        // Map to sequence indices for partial display using actual sequence length
+        // FIX: Simplify index calculation to match SVG mode logic
+        // Direct mapping from genomic offset to sequence index
         let startIndex, endIndex;
         if (actualReadLength <= 1) {
             startIndex = 0;
             endIndex = actualReadLength - 1;
         } else {
-            startIndex = Math.max(0, Math.floor((startOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
-            endIndex = Math.min(actualReadLength - 1, Math.ceil((endOffset / (actualReadLength - 1)) * (actualReadLength - 1)));
+            // Simple direct mapping: genomic offset = sequence index
+            startIndex = Math.max(0, startOffset);
+            endIndex = Math.min(actualReadLength - 1, endOffset);
         }
         
         // Get the visible portion of the sequence

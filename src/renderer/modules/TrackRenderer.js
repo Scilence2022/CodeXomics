@@ -2380,7 +2380,8 @@ class TrackRenderer {
         `;
         
         // Add tooltip with position info
-        const position = viewport.start + index + 1;
+        // FIX: Remove +1 offset - index is already 0-based within the subsequence
+        const position = viewport.start + index;
         baseElement.title = `Position: ${position}, Base: ${base}`;
         
         return baseElement;
@@ -11542,7 +11543,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         `;
         
         // Add tooltip with position info
-        const position = viewport.start + index + 1;
+        // FIX: Remove +1 offset - index is already 0-based within the subsequence
+        const position = viewport.start + index;
         baseElement.title = `Position: ${position}, Base: ${base}`;
         
         return baseElement;
