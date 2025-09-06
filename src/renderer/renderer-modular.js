@@ -3553,6 +3553,22 @@ class GenomeBrowser {
         }
     }
 
+    showVariantDetailsPanel() {
+        const variantDetailsSection = document.getElementById('variantDetailsSection');
+        if (variantDetailsSection) {
+            variantDetailsSection.style.display = 'block';
+            this.uiManager.showSidebarIfHidden();
+            
+            // Update tab manager about sidebar panel state change
+            if (this.tabManager) {
+                this.tabManager.updateCurrentTabSidebarPanel('variantDetailsSection', true, variantDetailsSection.innerHTML);
+            }
+            
+            // Scroll sidebar to bring variant details section into view
+            this.scrollSidebarToSection(variantDetailsSection);
+        }
+    }
+
     populateGeneDetails(gene, operonInfo = null) {
         const geneDetailsContent = document.getElementById('geneDetailsContent');
         if (!geneDetailsContent) return;

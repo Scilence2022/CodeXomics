@@ -2549,7 +2549,6 @@ class TrackRenderer {
      * Show loading state for variant analysis
      */
     showVariantAnalysisLoading() {
-        const sidebar = document.getElementById('sidebar');
         const variantSection = document.getElementById('variantDetailsSection');
         const variantContent = document.getElementById('variantDetailsContent');
 
@@ -2557,9 +2556,6 @@ class TrackRenderer {
             console.error('Variant details section not found in sidebar');
             return;
         }
-
-        // Show the section
-        variantSection.style.display = 'block';
 
         // Show loading content
         variantContent.innerHTML = `
@@ -2577,10 +2573,8 @@ class TrackRenderer {
             </div>
         `;
 
-        // Ensure sidebar is visible
-        if (sidebar) {
-            sidebar.style.display = 'block';
-        }
+        // Show variant details panel and scroll sidebar to it
+        this.genomeBrowser.showVariantDetailsPanel();
     }
 
     /**
@@ -2621,6 +2615,9 @@ class TrackRenderer {
         
         // Scroll to top of analysis
         variantContent.scrollTop = 0;
+
+        // Show variant details panel and scroll sidebar to it
+        this.genomeBrowser.showVariantDetailsPanel();
 
         console.log('Variant analysis displayed:', analysis);
     }

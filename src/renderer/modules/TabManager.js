@@ -2411,6 +2411,7 @@ class TabManager {
             tabState.sidebarPanels = {
                 geneDetailsSection: { visible: false, content: null },
                 readDetailsSection: { visible: false, content: null },
+                variantDetailsSection: { visible: false, content: null },
                 searchResultsSection: { visible: false, content: null }
             };
         }
@@ -2430,6 +2431,15 @@ class TabManager {
             tabState.sidebarPanels.readDetailsSection.visible = readPanel.style.display !== 'none';
             if (tabState.sidebarPanels.readDetailsSection.visible) {
                 tabState.sidebarPanels.readDetailsSection.content = readPanel.innerHTML;
+            }
+        }
+
+        // Save variant details panel state
+        const variantPanel = document.getElementById('variantDetailsSection');
+        if (variantPanel) {
+            tabState.sidebarPanels.variantDetailsSection.visible = variantPanel.style.display !== 'none';
+            if (tabState.sidebarPanels.variantDetailsSection.visible) {
+                tabState.sidebarPanels.variantDetailsSection.content = variantPanel.innerHTML;
             }
         }
 
@@ -2454,6 +2464,7 @@ class TabManager {
             tabState.sidebarPanels = {
                 geneDetailsSection: { visible: false, content: null },
                 readDetailsSection: { visible: false, content: null },
+                variantDetailsSection: { visible: false, content: null },
                 searchResultsSection: { visible: false, content: null }
             };
         }
@@ -2477,6 +2488,17 @@ class TabManager {
                 readPanel.style.display = 'block';
             } else {
                 readPanel.style.display = 'none';
+            }
+        }
+
+        // Restore variant details panel
+        const variantPanel = document.getElementById('variantDetailsSection');
+        if (variantPanel && tabState.sidebarPanels.variantDetailsSection) {
+            if (tabState.sidebarPanels.variantDetailsSection.visible && tabState.sidebarPanels.variantDetailsSection.content) {
+                variantPanel.innerHTML = tabState.sidebarPanels.variantDetailsSection.content;
+                variantPanel.style.display = 'block';
+            } else {
+                variantPanel.style.display = 'none';
             }
         }
 
