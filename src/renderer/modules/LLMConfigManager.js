@@ -1587,9 +1587,9 @@ If the user is asking a general question that doesn't require a tool, respond no
             btn.addEventListener('click', closeModal);
         });
 
-        // Close on backdrop click
+        // Close only on close button click, not background
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target.classList.contains('modal-close')) {
                 closeModal();
             }
         });

@@ -12,11 +12,9 @@ class SequenceUtils {
         // Make this instance globally accessible for click handlers
         window.sequenceUtils = this;
         this._cachedCharWidth = null; // Cache for character width measurement
-        this.vscodeEditor = null;
-        this.sequenceEditor = null; // Advanced editing capabilities
+        // VSCode editor and SequenceEditor removed - only using view mode
         
-        // Sequence display mode: 'view' for traditional display, 'edit' for VS Code editor
-        this.displayMode = 'view';
+        // Only using view mode - edit mode functionality removed
         
         // Sequence content display mode for View Mode
         this.sequenceContentMode = 'dna-only'; // 'auto', 'dna-only', 'protein-only', 'both'
@@ -260,30 +258,16 @@ class SequenceUtils {
         }
         document.getElementById('sequenceDisplay').style.display = 'flex'; // Ensure content area is visible
         
-        // Add mode toggle button if not already present
-        this.addModeToggleButton();
+        // Only using view mode - no edit mode functionality
         
-        // Add sequence content mode selector if in view mode
-        if (this.displayMode === 'view') {
+        // Add sequence content mode selector for view mode
             this.addSequenceContentModeSelector();
-        } else {
-            // Ensure View Mode UI elements are removed in Edit Mode
-            this.removeSequenceContentModeSelector();
-        }
         
         // Update CSS variables for line height
         this.updateSequenceLineHeightCSS();
         
-        // Display sequence based on current mode
-        if (this.displayMode === 'edit') {
-            // For edit mode, we need to get the full sequence and pass current view positions
-            const editStart = this.genomeBrowser.currentPosition?.start || 0;
-            const editEnd = this.genomeBrowser.currentPosition?.end || Math.min(sequence.length, editStart + 10000);
-            this.displayVSCodeSequence(chromosome, sequence, editStart, editEnd);
-        } else {
-            // Use traditional detailed sequence display as default
+        // Display sequence using traditional detailed sequence display
             this.displayDetailedSequence(chromosome, sequence, start, end);
-        }
         
         // Re-highlight selected gene sequence if there is one
         if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
@@ -592,183 +576,15 @@ class SequenceUtils {
         return sequenceControls;
     }
 
-    /**
-     * Add mode toggle button to sequence display header
-     */
-    addModeToggleButton() {
-        const sequenceTitle = document.getElementById('sequenceTitle');
-        if (!sequenceTitle) return;
-        
-        // Check if button already exists
-        if (document.getElementById('sequenceModeToggle')) return;
-        
-        const toggleButton = document.createElement('button');
-        toggleButton.id = 'sequenceModeToggle';
-        toggleButton.className = 'btn btn-sm'; // Use same style as Settings, Copy, Export buttons
-        toggleButton.innerHTML = this.displayMode === 'edit' ? 
-            '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
-        toggleButton.title = this.displayMode === 'edit' ? 
-            'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
-        
-        toggleButton.onclick = () => {
-            this.toggleDisplayMode();
-        };
-        
-        // Store reference to toggle button for later updates
-        this.modeToggleButton = toggleButton;
-        
-        // Find the sequence controls container and insert before Settings button
-        const sequenceControls = document.querySelector('.sequence-controls');
-        const settingsBtn = document.getElementById('sequenceSettingsBtn');
-        
-        if (sequenceControls && settingsBtn) {
-            // Insert before Settings button
-            sequenceControls.insertBefore(toggleButton, settingsBtn);
-        } else {
-            // Fallback: Add after the title if controls not found
-            sequenceTitle.parentNode.insertBefore(toggleButton, sequenceTitle.nextSibling);
-        }
-    }
+    // Mode toggle button method removed - only using view mode
     
 
     
-    /**
-     * Toggle between view and edit modes
-     */
-    toggleDisplayMode() {
-        const previousMode = this.displayMode;
-        this.displayMode = this.displayMode === 'edit' ? 'view' : 'edit';
-        
-        console.log(`🔧 [SequenceUtils] Toggling display mode: ${previousMode} → ${this.displayMode}`);
-        
-        // Update button text
-        const toggleButton = document.getElementById('sequenceModeToggle');
-        if (toggleButton) {
-            toggleButton.innerHTML = this.displayMode === 'edit' ? 
-                '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
-            toggleButton.title = this.displayMode === 'edit' ? 
-                'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
-        }
-        
-        // Handle sequence content mode selector (only remove it in edit mode)
-        if (this.displayMode === 'edit') {
-            this.removeSequenceContentModeSelector();
-        } else {
-            this.addSequenceContentModeSelector();
-        }
-        
-        // Clean up the container to avoid style conflicts
-        try {
-            this.cleanupContainer();
-        } catch (error) {
-            console.error('❌ [SequenceUtils] Error during container cleanup:', error);
-            // Try to recover by forcing a hard reset
-            const container = document.getElementById('sequenceContent');
-            if (container) {
-                container.innerHTML = '';
-                container.className = this.displayMode === 'view' ? 'sequence-content' : '';
-            }
-        }
-        
-        // Clear any pending drag operations to prevent conflicts
-        if (this.dragOptimization.pendingRender) {
-            console.log('🔧 [SequenceUtils] Clearing pending render due to mode switch');
-            this.dragOptimization.pendingRender = null;
-        }
-        this.dragOptimization.isDragging = false;
-        
-        // Re-display sequence with new mode
-        const chromosome = this.genomeBrowser.currentChromosome;
-        const sequenceData = this.genomeBrowser.currentSequence;
-        
-        if (chromosome && sequenceData && sequenceData[chromosome]) {
-            // Extract the actual sequence string from the sequence data object
-            const sequence = sequenceData[chromosome];
-            
-            console.log(`🔧 [SequenceUtils] Re-rendering sequence in ${this.displayMode} mode`);
-            
-            try {
-                // Force re-render by calling displayEnhancedSequence
-                this.displayEnhancedSequence(chromosome, sequence);
-                
-                // If switching to edit mode, automatically enable editing after rendering
-                if (this.displayMode === 'edit') {
-                    // Use setTimeout to ensure VS Code editor is fully initialized
-                    setTimeout(() => {
-                        this.enableEditingModeDirectly();
-                    }, 100);
-                }
-                
-                console.log(`✅ [SequenceUtils] Successfully switched to ${this.displayMode} mode`);
-            } catch (error) {
-                console.error(`❌ [SequenceUtils] Error switching to ${this.displayMode} mode:`, error);
-                
-                // Try to recover by reverting to previous mode
-                console.warn(`⚠️ [SequenceUtils] Attempting to revert to ${previousMode} mode`);
-                this.displayMode = previousMode;
-                
-                // Update button to reflect reverted state
-                if (toggleButton) {
-                    toggleButton.innerHTML = this.displayMode === 'edit' ? 
-                        '<i class="fas fa-eye"></i> View Mode' : '<i class="fas fa-edit"></i> Edit Mode';
-                    toggleButton.title = this.displayMode === 'edit' ? 
-                        'Switch to traditional sequence view' : 'Switch to sequence editor with editing capabilities';
-                }
-                
-                // Try to render in the original mode
-                try {
-                    this.displayEnhancedSequence(chromosome, sequence);
-                    console.log(`✅ [SequenceUtils] Successfully reverted to ${previousMode} mode`);
-                } catch (revertError) {
-                    console.error('❌ [SequenceUtils] Error reverting to previous mode:', revertError);
-                    // Force a complete reset as last resort
-                    this.forceSequenceRerender();
-                }
-            }
-        } else {
-            console.warn('⚠️ [SequenceUtils] No sequence data available for mode switch');
-        }
-    }
+    // Toggle display mode method removed - only using view mode
     
-    /**
-     * Enable editing mode directly without showing intermediate UI
-     */
-    enableEditingModeDirectly() {
-        if (this.displayMode !== 'edit') {
-            console.warn('⚠️ [SequenceUtils] Cannot enable editing mode outside of edit display mode');
-            return;
-        }
-        
-        if (!this.sequenceEditor) {
-            console.warn('⚠️ [SequenceUtils] SequenceEditor not available, cannot enable editing');
-            this.genomeBrowser.showNotification('Editing functionality not available', 'warning');
-            return;
-        }
-        
-        console.log('🔧 [SequenceUtils] Enabling editing mode directly');
-        
-        try {
-            // Enable editing mode directly
-            this.sequenceEditor.enableEditMode();
-            console.log('✅ [SequenceUtils] Editing mode enabled successfully');
-            
-            // Show notification
-            this.genomeBrowser.showNotification('Edit mode enabled. You can now edit the sequence directly.', 'success');
-        } catch (error) {
-            console.error('❌ [SequenceUtils] Error enabling editing mode:', error);
-            this.genomeBrowser.showNotification('Failed to enable editing mode', 'error');
-        }
-    }
+    // Enable editing mode method removed - only using view mode
     
-    /**
-     * Remove editing button when not in Edit Mode
-     */
-    removeEditingButton() {
-        const editingButton = document.getElementById('sequenceEditingToggle');
-        if (editingButton) {
-            editingButton.remove();
-        }
-    }
+    // Remove editing button method removed - only using view mode
     
     /**
      * Remove sequence content mode selector when in Edit Mode
@@ -795,7 +611,7 @@ class SequenceUtils {
         const container = document.getElementById('sequenceContent');
         if (!container) return;
         
-        console.log('🔧 [SequenceUtils] Cleaning up container for mode:', this.displayMode);
+        console.log('🔧 [SequenceUtils] Cleaning up container for view mode');
         
         // Store current CSS variables before cleanup to preserve View Mode settings
         const preservedVars = {
@@ -804,36 +620,12 @@ class SequenceUtils {
             lineSpacing: getComputedStyle(document.documentElement).getPropertyValue('--sequence-line-spacing')
         };
         
-        // If switching from edit mode, destroy VS Code editor and SequenceEditor instances first
-        if (this.displayMode === 'view' && this.vscodeEditor) {
-            try {
-                // Destroy SequenceEditor first
-                if (this.sequenceEditor) {
-                    if (this.sequenceEditor.destroy) {
-                        this.sequenceEditor.destroy();
-                    }
-                    this.sequenceEditor = null;
-                }
-                
-                // Then destroy VSCode editor
-                if (this.vscodeEditor.destroy) {
-                    this.vscodeEditor.destroy();
-                }
-                this.vscodeEditor = null;
-                console.log('✅ [SequenceUtils] VSCode editor and SequenceEditor destroyed');
-            } catch (error) {
-                console.warn('⚠️ [SequenceUtils] Error destroying editors:', error);
-                this.vscodeEditor = null;
-                this.sequenceEditor = null;
-            }
-        }
+        // VSCode editor and SequenceEditor removed - only using view mode
         
         // Clear container content
         container.innerHTML = '';
         
-        // Mode-specific cleanup with better style preservation
-        if (this.displayMode === 'view') {
-            // For Edit Mode -> View Mode: Remove only Edit Mode specific styles
+        // Only using view mode - clean up any remaining edit mode styles
             const editModeStyles = [
                 'font-family', 'font-size', 'background', 'color', 
                 'overflow', 'position', 'min-height', 'height'
@@ -865,21 +657,6 @@ class SequenceUtils {
                     actual: currentVars
                 });
             }, 10);
-            
-        } else if (this.displayMode === 'edit') {
-            // For View Mode -> Edit Mode: Clean all styles to prepare for VS Code editor
-            const allModeStyles = [
-                'font-family', 'font-size', 'line-height', 'background', 
-                'color', 'overflow', 'position', 'min-height', 'height'
-            ];
-            
-            allModeStyles.forEach(prop => {
-                container.style.removeProperty(prop);
-            });
-            
-            // Reset container to neutral state for VS Code editor
-            container.className = '';
-        }
         
         // Clear any problematic inline styles from child elements
         const inlineStyles = container.querySelectorAll('[style]');
@@ -896,161 +673,10 @@ class SequenceUtils {
         // Clear render cache to ensure fresh rendering
         this.clearRenderCache();
         
-        console.log('✅ [SequenceUtils] Container cleanup completed for', this.displayMode, 'mode');
+        console.log('✅ [SequenceUtils] Container cleanup completed for view mode');
     }
     
-    /**
-     * Display sequence using VS Code-style editor
-     */
-    displayVSCodeSequence(chromosome, sequence, start, end) {
-        const container = document.getElementById('sequenceContent');
-        const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
-        
-        // Enhanced debug logging
-        console.log('🔧 [SequenceUtils] displayVSCodeSequence called with:', {
-            chromosome,
-            sequenceType: typeof sequence,
-            sequenceLength: sequence?.length,
-            start,
-            end,
-            currentPosition: this.genomeBrowser.currentPosition,
-            annotationsCount: annotations.length,
-            existingEditor: !!this.vscodeEditor,
-            containerHasVSCodeEditor: !!container.querySelector('.vscode-sequence-editor')
-        });
-        
-        // Ensure we have valid parameters
-        if (!sequence || typeof sequence !== 'string') {
-            console.error('❌ [SequenceUtils] Invalid sequence provided to VS Code editor:', sequence);
-            console.error('Expected string, got:', typeof sequence);
-            return;
-        }
-        
-        // Get current position from genomeBrowser if start/end not provided
-        if (start === undefined || end === undefined) {
-            start = this.genomeBrowser.currentPosition?.start || 0;
-            end = this.genomeBrowser.currentPosition?.end || Math.min(sequence.length, start + 10000);
-            console.log('🔧 [SequenceUtils] Using fallback positions:', { start, end });
-        }
-        
-        // Validate the range
-        if (start >= end || start < 0 || end > sequence.length) {
-            console.warn('⚠️ [SequenceUtils] Invalid range detected:', {
-                start,
-                end,
-                sequenceLength: sequence.length,
-                rangeSize: end - start
-            });
-            
-            // Fix the range
-            start = Math.max(0, start);
-            end = Math.min(sequence.length, Math.max(start + 1000, end));
-            console.log('🔧 [SequenceUtils] Corrected range:', { start, end });
-        }
-        
-        // Check if we have a valid existing editor that's properly initialized
-        const hasValidEditor = this.vscodeEditor && 
-                              this.vscodeEditor.container === container &&
-                              container.querySelector('.vscode-sequence-editor');
-        
-        if (hasValidEditor) {
-            // Editor exists and is properly attached, just update the sequence
-            console.log('🔧 [SequenceUtils] Updating existing VSCode editor with new sequence data');
-            
-            // Use setTimeout to ensure any ongoing operations complete
-            setTimeout(() => {
-                if (this.vscodeEditor) {
-                    this.vscodeEditor.updateDimensions();
-                    this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
-                    
-                    // Ensure editing mode is maintained if SequenceEditor exists
-                    if (this.sequenceEditor && this.sequenceEditor.isEditMode) {
-                        console.log('🔧 [SequenceUtils] Maintaining editing mode after sequence update');
-                        // Re-enable editing mode to ensure proper state
-                        this.sequenceEditor.enableEditMode();
-                    }
-                }
-            }, 10); // Shorter delay for updates
-            
-            return; // Exit early to avoid recreating editor
-        }
-        
-        // Need to create or recreate the editor
-        console.log('🔧 [SequenceUtils] Creating/recreating VSCode editor');
-        
-        // Clean up any existing editor first
-        if (this.vscodeEditor) {
-            try {
-                if (this.vscodeEditor.destroy) {
-                    this.vscodeEditor.destroy();
-                }
-            } catch (error) {
-                console.warn('⚠️ [SequenceUtils] Error destroying existing editor:', error);
-            }
-            this.vscodeEditor = null;
-        }
-        
-        // Save existing UI elements before cleaning container
-        const existingToolbar = document.getElementById('sequenceEditingToolbar');
-        const existingStatusBar = document.getElementById('sequenceEditingStatusBar');
-        const existingTextArea = document.getElementById('sequenceEditingTextArea');
-        
-        // Clean container
-        container.innerHTML = '';
-        
-        // Restore UI elements if they existed
-        if (existingToolbar) {
-            container.parentNode.insertBefore(existingToolbar, container);
-        }
-        if (existingStatusBar) {
-            container.parentNode.insertBefore(existingStatusBar, container.nextSibling);
-        }
-        if (existingTextArea) {
-            const editingContainer = document.getElementById('sequenceEditingContainer');
-            if (editingContainer) {
-                editingContainer.appendChild(existingTextArea);
-            }
-        }
-        
-        // Set minimum height to ensure proper sizing
-        container.style.minHeight = '400px';
-        container.style.height = '100%';
-        
-        // Create new editor instance
-        console.log('🔧 [SequenceUtils] Creating new VSCode editor instance');
-        this.vscodeEditor = new VSCodeSequenceEditor(container, this.genomeBrowser);
-        
-        // Initialize SequenceEditor for advanced editing capabilities
-        if (typeof SequenceEditor !== 'undefined') {
-            console.log('🔧 [SequenceUtils] Initializing SequenceEditor for advanced editing...');
-            this.sequenceEditor = new SequenceEditor(this.vscodeEditor, this.genomeBrowser);
-        } else {
-            console.warn('⚠️ [SequenceUtils] SequenceEditor class not available');
-        }
-        
-        // Use setTimeout to ensure container dimensions are properly calculated
-        setTimeout(() => {
-            // Double-check editor still exists after timeout
-            if (this.vscodeEditor && this.vscodeEditor.container === container) {
-                console.log('🔧 [SequenceUtils] Initializing new VSCode editor with sequence data');
-                this.vscodeEditor.updateDimensions();
-                this.vscodeEditor.updateSequence(chromosome, sequence, start, end, annotations);
-                
-                // Add editing capabilities
-                if (this.sequenceEditor) {
-                    console.log('🔧 [SequenceUtils] SequenceEditor ready for editing');
-                    
-                    // If we were in edit mode before, automatically enable editing
-                    if (this.displayMode === 'edit') {
-                        console.log('🔧 [SequenceUtils] Auto-enabling editing mode for new editor');
-                        this.sequenceEditor.enableEditMode();
-                    }
-                }
-            } else {
-                console.error('❌ [SequenceUtils] VSCode editor instance lost after timeout');
-            }
-        }, 50); // Small delay to ensure container is properly sized
-    }
+    // VSCode sequence editor method removed - only using view mode
 
     measureCharacterWidth(container) {
         // Return cached value if available

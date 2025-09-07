@@ -1922,9 +1922,9 @@ class TabManager {
             this.resetTabSettings();
         });
         
-        // Close modal on backdrop click
+        // Close modal only on close button click, not background
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target.classList.contains('modal-close')) {
                 this.closeTabSettingsModal();
             }
         });

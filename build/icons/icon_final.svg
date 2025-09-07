@@ -1,0 +1,146 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <!-- macOS系统蓝色渐变 -->
+  <linearGradient id="systemBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#007AFF"/>
+    <stop offset="100%" stop-color="#5856D6"/>
+  </linearGradient>
+  
+  <!-- DNA链渐变 -->
+  <linearGradient id="dnaPrimary" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#FFFFFF"/>
+    <stop offset="100%" stop-color="#F2F2F7"/>
+  </linearGradient>
+  
+  <linearGradient id="dnaSecondary" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#E5E5EA"/>
+    <stop offset="100%" stop-color="#D1D1D6"/>
+  </linearGradient>
+  
+  <!-- 现代阴影 -->
+  <filter id="modernDropShadow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="18"/>
+    <feOffset dx="0" dy="14" result="offset"/>
+    <feComponentTransfer>
+      <feFuncA type="linear" slope="0.22"/>
+    </feComponentTransfer>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  
+  <!-- 内发光 -->
+  <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="12"/>
+    <feOffset dx="0" dy="6" result="offset"/>
+    <feComponentTransfer>
+      <feFuncA type="linear" slope="0.12"/>
+    </feComponentTransfer>
+    <feMerge>
+      <feMergeNode in="offset"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  
+  <!-- 顶部高光 -->
+  <radialGradient id="topHighlight" cx="0.25" cy="0.25" r="0.7">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+    <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+  
+  <!-- 底部反射 -->
+  <radialGradient id="bottomReflection" cx="0.5" cy="0.85" r="0.3">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+<!-- 主背景圆形 -->
+<circle cx="512" cy="512" r="480" fill="url(#systemBlue)" filter="url(#modernDropShadow)"/>
+
+<!-- 内圆高光 -->
+<circle cx="512" cy="512" r="480" fill="url(#topHighlight)"/>
+
+<!-- 底部反射 -->
+<circle cx="512" cy="512" r="480" fill="url(#bottomReflection)"/>
+
+<!-- DNA双螺旋结构 -->
+<g transform="translate(512, 512) scale(0.65)">
+  <!-- 左螺旋链 -->
+  <path d="M -100 -180 
+           C -160 -100, -160 20, -100 100 
+           C -40 180, -40 240, 0 260" 
+        stroke="url(#dnaPrimary)" 
+        stroke-width="42" 
+        fill="none" 
+        stroke-linecap="round"/>
+  
+  <!-- 右螺旋链 -->
+  <path d="M 100 -180 
+           C 160 -100, 160 20, 100 100 
+           C 40 180, 40 240, 0 260" 
+        stroke="url(#dnaSecondary)" 
+        stroke-width="42" 
+        fill="none" 
+        stroke-linecap="round"/>
+  
+  <!-- 连接横杆 -->
+  <line x1="-80" y1="-120" x2="80" y2="-120" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        opacity="0.9"/>
+  
+  <line x1="-100" y1="-40" x2="100" y2="-40" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        opacity="0.9"/>
+  
+  <line x1="-80" y1="40" x2="80" y2="40" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        opacity="0.9"/>
+  
+  <line x1="-60" y1="120" x2="60" y2="120" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        opacity="0.9"/>
+  
+  <line x1="-30" y1="200" x2="30" y2="200" 
+        stroke="#FFFFFF" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        opacity="0.9"/>
+</g>
+
+<!-- AI神经网络元素 -->
+<g transform="translate(512, 512) scale(0.4)">
+  <!-- 中心节点 -->
+  <circle cx="0" cy="0" r="22" fill="#FFFFFF" opacity="0.95"/>
+  
+  <!-- 周围节点 -->
+  <circle cx="-70" cy="-50" r="14" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="70" cy="-50" r="14" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="-50" cy="50" r="14" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="50" cy="50" r="14" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="0" cy="-90" r="11" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="0" cy="90" r="11" fill="#FFFFFF" opacity="0.7"/>
+  
+  <!-- 连接线 -->
+  <line x1="-70" y1="-50" x2="0" y2="0" stroke="#FFFFFF" stroke-width="4" opacity="0.7"/>
+  <line x1="70" y1="-50" x2="0" y2="0" stroke="#FFFFFF" stroke-width="4" opacity="0.7"/>
+  <line x1="-50" y1="50" x2="0" y2="0" stroke="#FFFFFF" stroke-width="4" opacity="0.7"/>
+  <line x1="50" y1="50" x2="0" y2="0" stroke="#FFFFFF" stroke-width="4" opacity="0.7"/>
+  <line x1="0" y1="-90" x2="0" y2="0" stroke="#FFFFFF" stroke-width="3" opacity="0.6"/>
+  <line x1="0" y1="90" x2="0" y2="0" stroke="#FFFFFF" stroke-width="3" opacity="0.6"/>
+</g>
+
+<!-- 中心高光点 -->
+<circle cx="512" cy="512" r="6" fill="#FFFFFF" opacity="0.9"/>
+
+</svg>

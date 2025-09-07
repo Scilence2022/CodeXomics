@@ -416,9 +416,9 @@ class GeneralSettingsManager {
             });
         });
 
-        // Click outside to close
+        // Close only on close button click, not background
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target.classList.contains('modal-close')) {
                 modal.classList.remove('show');
             }
         });

@@ -428,10 +428,10 @@ class UIManager {
             this.genomeBrowser.navigationManager.performGoto();
         });
 
-        // Close modals on outside click
+        // Close modals only on close button click, not background
         [searchModal, gotoModal].forEach(modal => {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
+                if (e.target.classList.contains('modal-close')) {
                     modal.classList.remove('show');
                 }
             });

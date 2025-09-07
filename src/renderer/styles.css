@@ -114,10 +114,10 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 10000;
   align-items: center;
   justify-content: center;
 }
@@ -11904,13 +11904,11 @@ to {
   padding: 20px !important;
 }
 
-#trackSettingsModal {
-  width: 900px !important;
-  max-width: 90vw !important;
-}
+/* Track settings modal - width constraints removed to allow full background coverage */
 
 #trackSettingsModal .modal-content {
-  width: 100% !important;
+  width: 900px !important;
+  max-width: 90vw !important;
   height: auto !important;
   min-height: 500px !important;
 }

@@ -8909,7 +8909,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         
         // Add event listeners
         modal.addEventListener('click', (e) => {
-            if (e.target === modal || e.target.classList.contains('modal-close')) {
+            // Only close when clicking the close button, not the background
+            if (e.target.classList.contains('modal-close')) {
                 modal.classList.remove('show');
             }
         });
@@ -9995,121 +9996,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 const colorNEl = modal.querySelector('#sequenceColorN');
                 if (colorNEl) settings.colorN = colorNEl.value;
                 
-                // Edit Mode settings (VS Code editor)
-                // Editor Layout
-                const editorFontSizeEl = modal.querySelector('#editorFontSize');
-                if (editorFontSizeEl) settings.editorFontSize = parseInt(editorFontSizeEl.value) || 14;
-                
-                const editorFontFamilyEl = modal.querySelector('#editorFontFamily');
-                if (editorFontFamilyEl) settings.editorFontFamily = editorFontFamilyEl.value;
-                
-                const editorLineHeightEl = modal.querySelector('#editorLineHeight');
-                if (editorLineHeightEl) settings.editorLineHeight = parseInt(editorLineHeightEl.value) || 20;
-                
-                const editorBasesPerLineEl = modal.querySelector('#editorBasesPerLine');
-                if (editorBasesPerLineEl) settings.editorBasesPerLine = parseInt(editorBasesPerLineEl.value) || 80;
-                
-                const editorTabSizeEl = modal.querySelector('#editorTabSize');
-                if (editorTabSizeEl) settings.editorTabSize = parseInt(editorTabSizeEl.value) || 4;
-                
-                // Editor Colors
-                const editorBackgroundColorEl = modal.querySelector('#editorBackgroundColor');
-                if (editorBackgroundColorEl) settings.editorBackgroundColor = editorBackgroundColorEl.value;
-                
-                const editorTextColorEl = modal.querySelector('#editorTextColor');
-                if (editorTextColorEl) settings.editorTextColor = editorTextColorEl.value;
-                
-                const editorLineHighlightColorEl = modal.querySelector('#editorLineHighlightColor');
-                if (editorLineHighlightColorEl) settings.editorLineHighlightColor = editorLineHighlightColorEl.value;
-                
-                const editorSelectionColorEl = modal.querySelector('#editorSelectionColor');
-                if (editorSelectionColorEl) settings.editorSelectionColor = editorSelectionColorEl.value;
-                
-                const editorLineNumberColorEl = modal.querySelector('#editorLineNumberColor');
-                if (editorLineNumberColorEl) settings.editorLineNumberColor = editorLineNumberColorEl.value;
-                
-                // DNA Base Colors
-                const editorBaseColorAEl = modal.querySelector('#editorBaseColorA');
-                if (editorBaseColorAEl) settings.editorBaseColorA = editorBaseColorAEl.value;
-                
-                const editorBaseColorTEl = modal.querySelector('#editorBaseColorT');
-                if (editorBaseColorTEl) settings.editorBaseColorT = editorBaseColorTEl.value;
-                
-                const editorBaseColorGEl = modal.querySelector('#editorBaseColorG');
-                if (editorBaseColorGEl) settings.editorBaseColorG = editorBaseColorGEl.value;
-                
-                const editorBaseColorCEl = modal.querySelector('#editorBaseColorC');
-                if (editorBaseColorCEl) settings.editorBaseColorC = editorBaseColorCEl.value;
-                
-                const editorBaseColorNEl = modal.querySelector('#editorBaseColorN');
-                if (editorBaseColorNEl) settings.editorBaseColorN = editorBaseColorNEl.value;
-                
-                // Gene-Based Coloring
-                const editorUseGeneColorsEl = modal.querySelector('#editorUseGeneColors');
-                if (editorUseGeneColorsEl) settings.editorUseGeneColors = editorUseGeneColorsEl.checked;
-                
-                const editorGeneColorCDSEl = modal.querySelector('#editorGeneColorCDS');
-                if (editorGeneColorCDSEl) settings.editorGeneColorCDS = editorGeneColorCDSEl.value;
-                
-                const editorGeneColorRNAEl = modal.querySelector('#editorGeneColorRNA');
-                if (editorGeneColorRNAEl) settings.editorGeneColorRNA = editorGeneColorRNAEl.value;
-                
-                const editorGeneColorPromoterEl = modal.querySelector('#editorGeneColorPromoter');
-                if (editorGeneColorPromoterEl) settings.editorGeneColorPromoter = editorGeneColorPromoterEl.value;
-                
-                const editorGeneColorTerminatorEl = modal.querySelector('#editorGeneColorTerminator');
-                if (editorGeneColorTerminatorEl) settings.editorGeneColorTerminator = editorGeneColorTerminatorEl.value;
-                
-                const editorGeneColorIntergenicEl = modal.querySelector('#editorGeneColorIntergenic');
-                if (editorGeneColorIntergenicEl) settings.editorGeneColorIntergenic = editorGeneColorIntergenicEl.value;
-                
-                // Editing Features
-                const editorEnableEditingEl = modal.querySelector('#editorEnableEditing');
-                if (editorEnableEditingEl) settings.editorEnableEditing = editorEnableEditingEl.checked;
-                
-                const editorAutoValidateEl = modal.querySelector('#editorAutoValidate');
-                if (editorAutoValidateEl) settings.editorAutoValidate = editorAutoValidateEl.checked;
-                
-                const editorShowModificationsEl = modal.querySelector('#editorShowModifications');
-                if (editorShowModificationsEl) settings.editorShowModifications = editorShowModificationsEl.checked;
-                
-                const editorModificationColorEl = modal.querySelector('#editorModificationColor');
-                if (editorModificationColorEl) settings.editorModificationColor = editorModificationColorEl.value;
-                
-                const editorEnableUndoEl = modal.querySelector('#editorEnableUndo');
-                if (editorEnableUndoEl) settings.editorEnableUndo = editorEnableUndoEl.checked;
-                
-                // Display Features
-                const editorShowLineNumbersEl = modal.querySelector('#editorShowLineNumbers');
-                if (editorShowLineNumbersEl) settings.editorShowLineNumbers = editorShowLineNumbersEl.checked;
-                
-                const editorShowRulerEl = modal.querySelector('#editorShowRuler');
-                if (editorShowRulerEl) settings.editorShowRuler = editorShowRulerEl.checked;
-                
-                const editorShowLineHighlightEl = modal.querySelector('#editorShowLineHighlight');
-                if (editorShowLineHighlightEl) settings.editorShowLineHighlight = editorShowLineHighlightEl.checked;
-                
-                const editorShowCursorPositionEl = modal.querySelector('#editorShowCursorPosition');
-                if (editorShowCursorPositionEl) settings.editorShowCursorPosition = editorShowCursorPositionEl.checked;
-                
-                const editorShowFeatureBackgroundsEl = modal.querySelector('#editorShowFeatureBackgrounds');
-                if (editorShowFeatureBackgroundsEl) settings.editorShowFeatureBackgrounds = editorShowFeatureBackgroundsEl.checked;
-                
-                const editorShowMinimapEl = modal.querySelector('#editorShowMinimap');
-                if (editorShowMinimapEl) settings.editorShowMinimap = editorShowMinimapEl.checked;
-                
-                // Analysis Tools
-                const editorShowGCContentEl = modal.querySelector('#editorShowGCContent');
-                if (editorShowGCContentEl) settings.editorShowGCContent = editorShowGCContentEl.checked;
-                
-                const editorHighlightPalindromeEl = modal.querySelector('#editorHighlightPalindrome');
-                if (editorHighlightPalindromeEl) settings.editorHighlightPalindrome = editorHighlightPalindromeEl.checked;
-                
-                const editorMinPalindromeLengthEl = modal.querySelector('#editorMinPalindromeLength');
-                if (editorMinPalindromeLengthEl) settings.editorMinPalindromeLength = parseInt(editorMinPalindromeLengthEl.value) || 6;
-                
-                const editorShowFramesEl = modal.querySelector('#editorShowFrames');
-                if (editorShowFramesEl) settings.editorShowFrames = editorShowFramesEl.checked;
+                // Edit Mode settings removed - only using view mode
                 
                 break;
                 
@@ -10313,10 +10200,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
                 this.genomeBrowser.sequenceUtils.setCursorColor(settings.cursorColor);
             }
             
-            // Apply to VSCodeSequenceEditor if available (Edit Mode)
-            if (this.genomeBrowser.sequenceUtils.vscodeEditor) {
-                this.applySequenceSettingsToVSCodeEditor(settings);
-            }
+            // VSCodeSequenceEditor settings removed - only using view mode
         }
         
         // Special handling for sequence line track settings
@@ -10374,81 +10258,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         this.refreshViewAfterSettingsChange(true); // Force full redraw for consistency
     }
     
-    /**
-     * Apply sequence track settings to VSCodeSequenceEditor
-     */
-    applySequenceSettingsToVSCodeEditor(settings) {
-        const vscodeEditor = this.genomeBrowser.sequenceUtils.vscodeEditor;
-        if (!vscodeEditor) {
-            console.warn('⚠️ [TrackRenderer] VSCodeSequenceEditor not available for settings application');
-            return;
-        }
-        
-        console.log('🔧 [TrackRenderer] Mapping settings for VSCodeSequenceEditor...');
-        console.log('🔧 [TrackRenderer] editorUseGeneColors from settings:', settings.editorUseGeneColors);
-        
-        // Map TrackRenderer settings to VSCodeSequenceEditor settings
-        const editorSettings = {
-            // Editor Layout
-            fontSize: settings.editorFontSize || 14,
-            fontFamily: settings.editorFontFamily || "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
-            basesPerLine: settings.editorBasesPerLine || 80,
-            
-            // Gene-based coloring
-            useGeneColors: settings.editorUseGeneColors || false,
-            geneColors: {
-                cds: settings.editorGeneColorCDS || '#4CAF50',
-                rna: settings.editorGeneColorRNA || '#2196F3',
-                promoter: settings.editorGeneColorPromoter || '#FF9800',
-                terminator: settings.editorGeneColorTerminator || '#F44336',
-                regulatory: settings.editorGeneColorRegulatory || '#9C27B0',
-                intergenic: settings.editorGeneColorIntergenic || '#9E9E9E'
-            },
-            
-            // DNA Base Colors
-            baseColors: {
-                a: settings.editorBaseColorA || '#f92672',
-                t: settings.editorBaseColorT || '#66d9ef',
-                g: settings.editorBaseColorG || '#a6e22e',
-                c: settings.editorBaseColorC || '#fd971f',
-                n: settings.editorBaseColorN || '#75715e'
-            },
-            
-            // Editor Colors
-            backgroundColor: settings.editorBackgroundColor || '#1e1e1e',
-            textColor: settings.editorTextColor || '#d4d4d4',
-            lineHighlightColor: settings.editorLineHighlightColor || 'rgba(255, 255, 255, 0.05)',
-            selectionColor: settings.editorSelectionColor || 'rgba(38, 79, 120, 0.4)',
-            
-            // Editing Features
-            enableEditing: settings.editorEnableEditing !== false,
-            autoValidate: settings.editorAutoValidate !== false,
-            showModifications: settings.editorShowModifications !== false,
-            modificationColor: settings.editorModificationColor || '#FFC107',
-            enableUndo: settings.editorEnableUndo !== false,
-            
-            // Display Features
-            showLineHighlight: settings.editorShowLineHighlight !== false,
-            showCursorPosition: settings.editorShowCursorPosition !== false,
-            showFeatureBackgrounds: settings.editorShowFeatureBackgrounds === true,
-            showMinimap: settings.editorShowMinimap === true,
-            
-            // Analysis Tools
-            showGCContent: settings.editorShowGCContent === true,
-            highlightPalindrome: settings.editorHighlightPalindrome === true,
-            minPalindromeLength: settings.editorMinPalindromeLength || 6,
-            showFrames: settings.editorShowFrames === true
-        };
-        
-        console.log('📤 [TrackRenderer] Applying VSCodeSequenceEditor settings:', editorSettings);
-        console.log('📤 [TrackRenderer] Key setting - useGeneColors:', editorSettings.useGeneColors);
-        vscodeEditor.updateSettings(editorSettings);
-        
-        // Verify settings were applied
-        setTimeout(() => {
-            console.log('✅ [TrackRenderer] VSCodeSequenceEditor settings after update:', vscodeEditor.settings.useGeneColors);
-        }, 100);
-    }
+    // VSCodeSequenceEditor settings method removed - only using view mode
 
     /**
      * Update sampling percentage for reads track
@@ -10985,264 +10795,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         return content;
     }
 
-    /**
-     * Create Edit Mode specific settings content (VS Code-style sequence editor)
-     */
-    createEditModeSettingsContent(settings) {
-        console.log('✏️ createEditModeSettingsContent called with settings:', settings);
-        
-        const content = `
-            <div class="mode-indicator">
-                <i class="fas fa-edit"></i>
-                VS Code-style editor for advanced sequence editing and analysis with local modification support.
-            </div>
-            
-            <div class="settings-section">
-                <h4>Editor Layout</h4>
-                <div class="form-group">
-                    <label for="editorFontSize">Font size (px):</label>
-                    <input type="number" id="editorFontSize" min="10" max="24" value="${settings.editorFontSize || 14}">
-                    <div class="help-text">Size of the text in the sequence editor.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorFontFamily">Font family:</label>
-                    <select id="editorFontFamily" class="select">
-                        <option value="'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace" ${(settings.editorFontFamily || '').includes('SF Mono') ? 'selected' : ''}>SF Mono (Default)</option>
-                        <option value="'Courier New', monospace" ${(settings.editorFontFamily || '').includes('Courier New') ? 'selected' : ''}>Courier New</option>
-                        <option value="'Consolas', monospace" ${(settings.editorFontFamily || '').includes('Consolas') ? 'selected' : ''}>Consolas</option>
-                        <option value="'Menlo', monospace" ${(settings.editorFontFamily || '').includes('Menlo') ? 'selected' : ''}>Menlo</option>
-                        <option value="'Source Code Pro', monospace" ${(settings.editorFontFamily || '').includes('Source Code Pro') ? 'selected' : ''}>Source Code Pro</option>
-                    </select>
-                    <div class="help-text">Monospace font family for consistent character spacing.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorLineHeight">Line height (px):</label>
-                    <input type="number" id="editorLineHeight" min="16" max="30" value="${settings.editorLineHeight || 20}">
-                    <div class="help-text">Height of each line in the editor for readability.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorBasesPerLine">Bases per line:</label>
-                    <input type="number" id="editorBasesPerLine" min="40" max="120" value="${settings.editorBasesPerLine || 80}">
-                    <div class="help-text">Number of DNA bases displayed per line for optimal viewing.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorTabSize">Tab size (spaces):</label>
-                    <input type="number" id="editorTabSize" min="2" max="8" value="${settings.editorTabSize || 4}">
-                    <div class="help-text">Number of spaces for tab indentation in annotations.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Editor Colors</h4>
-                <div class="form-group">
-                    <label for="editorBackgroundColor">Background color:</label>
-                    <input type="color" id="editorBackgroundColor" value="${settings.editorBackgroundColor || '#1e1e1e'}">
-                    <div class="help-text">Main background color of the editor.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorTextColor">Default text color:</label>
-                    <input type="color" id="editorTextColor" value="${settings.editorTextColor || '#d4d4d4'}">
-                    <div class="help-text">Default color for text and symbols.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorLineHighlightColor">Line highlight color:</label>
-                    <input type="color" id="editorLineHighlightColor" value="${settings.editorLineHighlightColor || '#2a2d2e'}">
-                    <div class="help-text">Background color for the current line highlight.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorSelectionColor">Selection color:</label>
-                    <input type="color" id="editorSelectionColor" value="${settings.editorSelectionColor || '#264f78'}">
-                    <div class="help-text">Background color for selected text regions.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorLineNumberColor">Line number color:</label>
-                    <input type="color" id="editorLineNumberColor" value="${settings.editorLineNumberColor || '#858585'}">
-                    <div class="help-text">Color of line numbers in the gutter.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>DNA Base Colors</h4>
-                <div class="form-group">
-                    <label for="editorBaseColorA">Adenine (A) color:</label>
-                    <input type="color" id="editorBaseColorA" value="${settings.editorBaseColorA || '#f92672'}">
-                    <div class="help-text">Color for adenine nucleotides.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorBaseColorT">Thymine (T) color:</label>
-                    <input type="color" id="editorBaseColorT" value="${settings.editorBaseColorT || '#66d9ef'}">
-                    <div class="help-text">Color for thymine nucleotides.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorBaseColorG">Guanine (G) color:</label>
-                    <input type="color" id="editorBaseColorG" value="${settings.editorBaseColorG || '#a6e22e'}">
-                    <div class="help-text">Color for guanine nucleotides.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorBaseColorC">Cytosine (C) color:</label>
-                    <input type="color" id="editorBaseColorC" value="${settings.editorBaseColorC || '#fd971f'}">
-                    <div class="help-text">Color for cytosine nucleotides.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorBaseColorN">Unknown (N) color:</label>
-                    <input type="color" id="editorBaseColorN" value="${settings.editorBaseColorN || '#75715e'}">
-                    <div class="help-text">Color for unknown or ambiguous nucleotides.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Gene-Based Coloring</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorUseGeneColors" ${settings.editorUseGeneColors === true ? 'checked' : ''}>
-                        Use gene colors for DNA bases
-                    </label>
-                    <div class="help-text">Color DNA bases according to the gene they belong to instead of nucleotide type.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorGeneColorCDS">CDS gene color:</label>
-                    <input type="color" id="editorGeneColorCDS" value="${settings.editorGeneColorCDS || '#4CAF50'}">
-                    <div class="help-text">Color for bases within CDS genes.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorGeneColorRNA">RNA gene color:</label>
-                    <input type="color" id="editorGeneColorRNA" value="${settings.editorGeneColorRNA || '#2196F3'}">
-                    <div class="help-text">Color for bases within RNA genes (tRNA, rRNA, mRNA).</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorGeneColorPromoter">Promoter color:</label>
-                    <input type="color" id="editorGeneColorPromoter" value="${settings.editorGeneColorPromoter || '#FF9800'}">
-                    <div class="help-text">Color for bases within promoter regions.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorGeneColorTerminator">Terminator color:</label>
-                    <input type="color" id="editorGeneColorTerminator" value="${settings.editorGeneColorTerminator || '#F44336'}">
-                    <div class="help-text">Color for bases within terminator regions.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorGeneColorIntergenic">Intergenic color:</label>
-                    <input type="color" id="editorGeneColorIntergenic" value="${settings.editorGeneColorIntergenic || '#9E9E9E'}">
-                    <div class="help-text">Color for bases in intergenic regions (between genes).</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Editing Features</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorEnableEditing" ${settings.editorEnableEditing !== false ? 'checked' : ''}>
-                        Enable local sequence editing
-                    </label>
-                    <div class="help-text">Allow direct editing of DNA sequence in the editor.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorAutoValidate" ${settings.editorAutoValidate !== false ? 'checked' : ''}>
-                        Auto-validate nucleotides
-                    </label>
-                    <div class="help-text">Automatically validate entered nucleotides (A, T, G, C, N only).</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowModifications" ${settings.editorShowModifications !== false ? 'checked' : ''}>
-                        Highlight modifications
-                    </label>
-                    <div class="help-text">Highlight bases that have been modified from the original sequence.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorModificationColor">Modification highlight color:</label>
-                    <input type="color" id="editorModificationColor" value="${settings.editorModificationColor || '#FFC107'}">
-                    <div class="help-text">Background color for modified bases.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorEnableUndo" ${settings.editorEnableUndo !== false ? 'checked' : ''}>
-                        Enable undo/redo
-                    </label>
-                    <div class="help-text">Support undo (Ctrl+Z) and redo (Ctrl+Y) operations.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Display Features</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowLineNumbers" ${settings.editorShowLineNumbers !== false ? 'checked' : ''}>
-                        Show line numbers
-                    </label>
-                    <div class="help-text">Display line numbers in the left gutter.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowRuler" ${settings.editorShowRuler !== false ? 'checked' : ''}>
-                        Show position ruler
-                    </label>
-                    <div class="help-text">Display genomic position ruler at the top.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowLineHighlight" ${settings.editorShowLineHighlight !== false ? 'checked' : ''}>
-                        Highlight current line
-                    </label>
-                    <div class="help-text">Highlight the line containing the cursor.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowCursorPosition" ${settings.editorShowCursorPosition !== false ? 'checked' : ''}>
-                        Show cursor position
-                    </label>
-                    <div class="help-text">[DEPRECATED] Display genomic position of cursor in status bar.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowFeatureBackgrounds" ${settings.editorShowFeatureBackgrounds === true ? 'checked' : ''}>
-                        Show gene backgrounds
-                    </label>
-                    <div class="help-text">Highlight gene regions with subtle background colors.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowMinimap" ${settings.editorShowMinimap === true ? 'checked' : ''}>
-                        Show minimap
-                    </label>
-                    <div class="help-text">Display miniature overview of the entire sequence.</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h4>Analysis Tools</h4>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowGCContent" ${settings.editorShowGCContent === true ? 'checked' : ''}>
-                        Show GC content per line
-                    </label>
-                    <div class="help-text">Display GC percentage for each line in the gutter.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorHighlightPalindrome" ${settings.editorHighlightPalindrome === true ? 'checked' : ''}>
-                        Highlight palindromes
-                    </label>
-                    <div class="help-text">Automatically detect and highlight palindromic sequences.</div>
-                </div>
-                <div class="form-group">
-                    <label for="editorMinPalindromeLength">Min palindrome length:</label>
-                    <input type="number" id="editorMinPalindromeLength" min="4" max="20" value="${settings.editorMinPalindromeLength || 6}">
-                    <div class="help-text">Minimum length for palindrome detection.</div>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="editorShowFrames" ${settings.editorShowFrames === true ? 'checked' : ''}>
-                        Show reading frames
-                    </label>
-                    <div class="help-text">Mark reading frame boundaries with subtle indicators.</div>
-                </div>
-            </div>
-        `;
-        
-        console.log('✏️ Edit mode content generated, length:', content.length);
-        return content;
-    }
+    // Edit Mode settings method removed - only using view mode
 
     /**
      * Create sequence track settings content with tabs for different view modes
@@ -11250,36 +10803,13 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     createSequenceSettingsContent(settings) {
         console.log('🔧 createSequenceSettingsContent called with settings:', settings);
         
-        // Determine current view mode from SequenceUtils
-        const currentViewMode = this.getCurrentSequenceViewMode();
-        console.log('📊 Current view mode:', currentViewMode);
-        
         const viewModeContent = this.createViewModeSettingsContent(settings);
         console.log('👁️ View mode content length:', viewModeContent.length);
         
-        const editModeContent = this.createEditModeSettingsContent(settings);
-        console.log('✏️ Edit mode content length:', editModeContent.length);
-        
+        // Only show view mode settings - no tabs needed
         const result = `
-            <div class="sequence-settings-tabs">
-                <div class="tab-buttons">
-                    <button class="tab-button ${currentViewMode === 'view' ? 'active' : ''}" data-tab="view-mode">
-                        <i class="fas fa-eye"></i> View Mode Settings
-                    </button>
-                    <button class="tab-button ${currentViewMode === 'edit' ? 'active' : ''}" data-tab="edit-mode">
-                        <i class="fas fa-edit"></i> Edit Mode Settings
-                    </button>
-                </div>
-                
-                <div class="tab-content">
-                    <div id="view-mode-tab" class="tab-panel ${currentViewMode === 'view' ? 'active' : ''}">
+            <div class="sequence-settings-content">
                         ${viewModeContent}
-                    </div>
-                    
-                    <div id="edit-mode-tab" class="tab-panel ${currentViewMode === 'edit' ? 'active' : ''}">
-                        ${editModeContent}
-                    </div>
-                </div>
             </div>
         `;
         
