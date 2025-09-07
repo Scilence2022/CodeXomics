@@ -98,21 +98,30 @@ class ExportManager {
 
         let cdsContent = '';
         const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
+        const processedFeatures = new Set(); // Track processed features to avoid duplicates
 
         chromosomes.forEach(chr => {
             const sequence = this.genomeBrowser.currentSequence[chr];
             const features = this.genomeBrowser.currentAnnotations[chr] || [];
             
             features.forEach(feature => {
-                if (feature.type === 'CDS' || feature.type === 'gene') {
-                    const cdsSequence = this.extractFeatureSequence(sequence, feature);
-                    const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                // Only process CDS features to avoid duplicates with gene features
+                if (feature.type === 'CDS') {
+                    // Create unique identifier to avoid duplicates
+                    const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
                     
-                    cdsContent += `>${header}\n`;
-                    
-                    // Split sequence into lines of 80 characters
-                    for (let i = 0; i < cdsSequence.length; i += 80) {
-                        cdsContent += cdsSequence.substring(i, i + 80) + '\n';
+                    if (!processedFeatures.has(featureId)) {
+                        processedFeatures.add(featureId);
+                        
+                        const cdsSequence = this.extractFeatureSequence(sequence, feature);
+                        const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+                        
+                        cdsContent += `>${header}\n`;
+                        
+                        // Split sequence into lines of 80 characters
+                        for (let i = 0; i < cdsSequence.length; i += 80) {
+                            cdsContent += cdsSequence.substring(i, i + 80) + '\n';
+                        }
                     }
                 }
             });
@@ -151,7 +160,7 @@ class ExportManager {
                         processedFeatures.add(featureId);
                         
                         const cdsSequence = this.extractFeatureSequence(sequence, feature);
-                        // Don't pass strand parameter since extractFeatureSequence already handles reverse complement
+                        // ExtractFeatureSequence already handles reverse complement, so translate directly
                         const proteinSequence = this.translateDNA(cdsSequence);
                         
                         // Remove trailing asterisks (stop codons) from protein sequence
@@ -273,7 +282,8 @@ class ExportManager {
         let featureSeq = sequence.substring(feature.start - 1, feature.end);
         
         // Reverse complement if on negative strand
-        if (feature.strand === '-') {
+        // Handle both string ('-') and numeric (-1) strand values
+        if (feature.strand === '-' || feature.strand === -1) {
             featureSeq = this.reverseComplement(featureSeq);
         }
         
@@ -331,11 +341,6 @@ class ExportManager {
         };
 
         let sequence = dnaSequence.toUpperCase();
-        
-        // Only perform reverse complement if strand is provided and sequence hasn't been processed yet
-        if (strand === -1 && !dnaSequence.includes('processed')) {
-            sequence = this.reverseComplement(sequence);
-        }
         
         let protein = '';
         for (let i = 0; i < sequence.length - 2; i += 3) {

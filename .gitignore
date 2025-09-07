@@ -272,3 +272,7 @@ design-3-data-helix.svg
 design-2-genetic-mind.svg
 design-1-intelligent-core.svg
 .cursor/rules/pjrl.mdc
+download_ecoli_operon_data.py
+ecoli_operons_20250907_191817.csv
+ecoli_operons_20250907_191817.json
+ecoli_operons_20250907_191817.txt
