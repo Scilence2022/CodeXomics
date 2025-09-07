@@ -15,7 +15,7 @@
     "version-validate": "node scripts/validate-versions.js",
     "prebuild": "npm run version-sync",
     "build": "electron-builder",
-    "build:mac": "electron-builder --mac && node scripts/fix-dmg-applications.js",
+    "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --mac --win --linux",
@@ -139,6 +139,12 @@
           "x": 140,
           "y": 180,
           "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
         }
       ],
       "background": null,
