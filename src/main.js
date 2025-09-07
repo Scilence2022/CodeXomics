@@ -1676,8 +1676,62 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
+// Function to set up environment variables for system command execution
+function setupEnvironmentVariables() {
+  console.log('Setting up environment variables for system command execution...');
+  
+  const os = require('os');
+  const path = require('path');
+  const fs = require('fs');
+  
+  // Get user's home directory
+  const homeDir = os.homedir();
+  
+  // Common BLAST+ installation paths
+  const commonBlastPaths = [
+    '/usr/local/bin',
+    '/usr/bin',
+    '/opt/homebrew/bin',
+    '/usr/local/blast+/bin',
+    path.join(homeDir, 'Applications', 'blast+', 'bin'),
+    path.join(homeDir, '.local', 'blast+', 'bin'),
+    path.join(homeDir, '.local', 'bin'),
+    '/opt/blast+/bin'
+  ];
+  
+  // Add common BLAST+ paths to PATH
+  const existingPath = process.env.PATH || '';
+  const additionalPaths = commonBlastPaths.filter(blastPath => {
+    try {
+      return fs.existsSync(blastPath);
+    } catch (error) {
+      return false;
+    }
+  });
+  
+  if (additionalPaths.length > 0) {
+    const newPath = additionalPaths.join(path.delimiter) + path.delimiter + existingPath;
+    process.env.PATH = newPath;
+    console.log('Added BLAST+ paths to environment:', additionalPaths);
+  }
+  
+  // Set BLASTDB environment variable if not already set
+  if (!process.env.BLASTDB) {
+    const blastDbPath = path.join(homeDir, 'blast', 'db');
+    process.env.BLASTDB = blastDbPath;
+    console.log('Set BLASTDB environment variable:', blastDbPath);
+  }
+  
+  // Log current environment for debugging
+  console.log('Current PATH:', process.env.PATH);
+  console.log('Current BLASTDB:', process.env.BLASTDB);
+}
+
 // App event listeners
 app.whenReady().then(() => {
+  // Set up environment variables for system command execution
+  setupEnvironmentVariables();
+  
   createWindow();
   createMenu();
 
@@ -3407,24 +3461,97 @@ ipcMain.handle('evo2-set-analysis-history', async (event, history) => {
 ipcMain.on('check-blast-installation', (event) => {
   console.log('IPC: Checking BLAST installation...');
   const { exec } = require('child_process');
+  const path = require('path');
+  const fs = require('fs');
+  const os = require('os');
   
-  exec('blastn -version', (error, stdout, stderr) => {
-    if (error) {
+  // Function to check BLAST+ at specific path
+  function checkBlastAtPath(blastPath) {
+    return new Promise((resolve) => {
+      const command = `"${blastPath}" -version`;
+      console.log('Checking BLAST at:', command);
+      
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          resolve({ found: false, error: error.message });
+        } else {
+          const versionMatch = stdout.match(/blastn: ([\d.]+)/);
+          const version = versionMatch ? versionMatch[1] : 'Unknown version';
+          resolve({ 
+            found: true, 
+            version: version, 
+            path: blastPath,
+            output: stdout 
+          });
+        }
+      });
+    });
+  }
+  
+  // Function to find BLAST+ executable
+  async function findBlastExecutable() {
+    const homeDir = os.homedir();
+    const commonPaths = [
+      '/usr/local/bin/blastn',
+      '/usr/bin/blastn',
+      '/opt/homebrew/bin/blastn',
+      '/usr/local/blast+/bin/blastn',
+      path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'),
+      path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'),
+      path.join(homeDir, '.local', 'bin', 'blastn'),
+      '/opt/blast+/bin/blastn'
+    ];
+    
+    // First try direct command execution (for PATH-based installations)
+    try {
+      const result = await checkBlastAtPath('blastn');
+      if (result.found) {
+        return result;
+      }
+    } catch (error) {
+      console.log('Direct blastn command failed, trying specific paths...');
+    }
+    
+    // Try specific paths
+    for (const blastPath of commonPaths) {
+      try {
+        if (fs.existsSync(blastPath)) {
+          const result = await checkBlastAtPath(blastPath);
+          if (result.found) {
+            return result;
+          }
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    return { found: false, error: 'BLAST+ not found in any common locations' };
+  }
+  
+  // Execute the search
+  findBlastExecutable().then(result => {
+    if (result.found) {
+      event.sender.send('blast-check-result', {
+        installed: true,
+        message: `BLAST+ installed successfully (version ${result.version})`,
+        version: result.version,
+        path: result.path,
+        output: result.output
+      });
+    } else {
       event.sender.send('blast-check-result', {
         installed: false,
         message: 'BLAST+ not found or not installed',
-        error: error.message
-      });
-    } else {
-      const versionMatch = stdout.match(/blastn: (\d+\.\d+\.\d+)/);
-      const version = versionMatch ? versionMatch[1] : 'Unknown version';
-      event.sender.send('blast-check-result', {
-        installed: true,
-        message: `BLAST+ installed successfully (version ${version})`,
-        version: version,
-        output: stdout
+        error: result.error
       });
     }
+  }).catch(error => {
+    event.sender.send('blast-check-result', {
+      installed: false,
+      message: 'Error checking BLAST+ installation',
+      error: error.message
+    });
   });
 });
 

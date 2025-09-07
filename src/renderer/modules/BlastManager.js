@@ -63,8 +63,7 @@ class BlastManager {
     async checkBlastInstallation() {
         console.log('BlastManager: Checking BLAST+ installation...');
         try {
-            // Use the same logic as Install BLAST+ Tools - check version directly
-            // This is more reliable than 'which' command, especially on Windows
+            // First try direct command execution
             const command = 'blastn -version';
             console.log('BlastManager: Running command:', command);
             const result = await this.runCommand(command);
@@ -95,11 +94,21 @@ class BlastManager {
         console.log('BlastManager: Trying fallback BLAST+ detection methods...');
         
         // Try common installation paths
+        const os = require('os');
+        const path = require('path');
+        const fs = require('fs');
+        
+        const homeDir = os.homedir();
         const commonPaths = [
             'blastn', // Already in PATH
             '/usr/local/bin/blastn', // Common Unix installation
             '/usr/bin/blastn', // System installation
-            '/opt/blast+/bin/blastn', // Custom installation
+            '/opt/homebrew/bin/blastn', // Homebrew on Apple Silicon
+            '/usr/local/blast+/bin/blastn', // Custom installation
+            path.join(homeDir, 'Applications', 'blast+', 'bin', 'blastn'), // User installation
+            path.join(homeDir, '.local', 'blast+', 'bin', 'blastn'), // Local installation
+            path.join(homeDir, '.local', 'bin', 'blastn'), // Local bin
+            '/opt/blast+/bin/blastn', // Alternative custom installation
             'C:\\Program Files\\NCBI\\blast+\\bin\\blastn.exe', // Windows default
             'C:\\blast+\\bin\\blastn.exe' // Windows alternative
         ];
@@ -107,6 +116,15 @@ class BlastManager {
         for (const blastPath of commonPaths) {
             try {
                 console.log(`BlastManager: Trying path: ${blastPath}`);
+                
+                // Check if file exists for absolute paths
+                if (blastPath.includes('/') || blastPath.includes('\\')) {
+                    if (!fs.existsSync(blastPath)) {
+                        console.debug(`BlastManager: Path ${blastPath} does not exist`);
+                        continue;
+                    }
+                }
+                
                 const command = `"${blastPath}" -version`;
                 const result = await this.runCommand(command);
                 
