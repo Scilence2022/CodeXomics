@@ -5539,9 +5539,13 @@ to {
   border-color: var(--color-primary);
 }
 
-#chatboxSettingsModal {
-  width: 600px !important;
+/* ChatBox Settings modal - width constraints removed to allow full background coverage */
+
+#chatboxSettingsModal .modal-content {
+  width: 900px !important;
   max-width: 90vw !important;
+  height: auto !important;
+  min-height: 500px !important;
 }
 
 #chatboxSettingsModal .llm-config-modal {
@@ -11094,10 +11098,7 @@ to {
   filter: brightness(1.2);
 }
 
-#chatboxSettingsModal {
-  width: 900px !important;
-  max-width: 90vw !important;
-}
+/* ChatBox Settings modal - duplicate width constraints removed */
 
 #chatboxSettingsModal .llm-config-modal {
   max-width: 900px;

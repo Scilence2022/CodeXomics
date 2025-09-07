@@ -991,7 +991,7 @@ class GenomeBrowser {
         });
 
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target.classList.contains('modal-close')) {
                 modal.classList.remove('show');
             }
         });
@@ -1204,9 +1204,9 @@ class GenomeBrowser {
                 });
             });
             
-            // Close modal when clicking outside
+            // Close modal only on close button click, not background
             addServerModal.addEventListener('click', (e) => {
-                if (e.target === addServerModal) {
+                if (e.target.classList.contains('modal-close')) {
                     addServerModal.classList.remove('show');
                 }
             });
@@ -1221,7 +1221,7 @@ class GenomeBrowser {
         
         // Close modal when clicking outside
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target.classList.contains('modal-close')) {
                 modal.classList.remove('show');
             }
         });
