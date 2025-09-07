@@ -88,20 +88,25 @@ class FileManager {
                 throw new Error(fileContent.error);
             }
 
+            console.log('📄 File content loaded successfully');
+            console.log('📄 Content length:', fileContent.data ? fileContent.data.length : 'undefined');
+            console.log('📄 Content preview:', fileContent.data ? fileContent.data.substring(0, 200) : 'undefined');
+
             // Parse operon data based on file extension
             const extension = fileInfo.info.extension.toLowerCase();
+            console.log('📄 File extension:', extension);
             let operonData;
             
             switch (extension) {
                 case '.json':
-                    operonData = this.parseOperonJSON(fileContent.content);
+                    operonData = this.parseOperonJSON(fileContent.data);
                     break;
                 case '.csv':
-                    operonData = this.parseOperonCSV(fileContent.content);
+                    operonData = this.parseOperonCSV(fileContent.data);
                     break;
                 case '.txt':
                 case '.operon':
-                    operonData = this.parseOperonTXT(fileContent.content);
+                    operonData = this.parseOperonTXT(fileContent.data);
                     break;
                 default:
                     throw new Error(`Unsupported operon file format: ${extension}`);
@@ -193,41 +198,73 @@ class FileManager {
     }
 
     parseOperonTXT(content) {
-        const lines = content.split('\n').filter(line => line.trim());
+        console.log('📝 Parsing TXT operon file...');
+        console.log('Content preview:', content.substring(0, 200));
+        
+        if (!content || typeof content !== 'string') {
+            console.error('❌ Invalid content for TXT parsing');
+            return [];
+        }
+        
+        const lines = content.split('\n');
         const operons = [];
         
+        console.log(`📊 Total lines: ${lines.length}`);
+        
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line || line.startsWith('#')) continue;
+            const line = lines[i];
+            
+            // Skip empty lines and comments
+            if (!line || !line.trim() || line.trim().startsWith('#')) {
+                continue;
+            }
+            
+            const trimmedLine = line.trim();
+            console.log(`🔍 Processing line ${i + 1}: ${trimmedLine.substring(0, 50)}...`);
 
             // Try different text formats
             let operon;
             
-            // Format: operon_name start end strand genes
-            const spaceSeparated = line.split(/\s+/);
-            if (spaceSeparated.length >= 4) {
-                operon = {
-                    name: spaceSeparated[0],
-                    start: parseInt(spaceSeparated[1]) || 0,
-                    end: parseInt(spaceSeparated[2]) || 0,
-                    strand: spaceSeparated[3] === '-' ? -1 : 1,
-                    genes: spaceSeparated.slice(4),
-                    chromosome: this.genomeBrowser.currentChromosome || 'unknown'
-                };
-            }
-            // Format: operon_name\tstart\tend\tstrand\tgenes
-            else {
-                const tabSeparated = line.split('\t');
+            // Check if line contains tabs (tab-separated format)
+            if (trimmedLine.includes('\t')) {
+                const tabSeparated = trimmedLine.split('\t');
+                console.log(`📋 Tab-separated fields: ${tabSeparated.length}`);
+                
                 if (tabSeparated.length >= 4) {
                     operon = {
-                        name: tabSeparated[0],
+                        name: tabSeparated[0].trim(),
                         start: parseInt(tabSeparated[1]) || 0,
                         end: parseInt(tabSeparated[2]) || 0,
-                        strand: tabSeparated[3] === '-' ? -1 : 1,
+                        strand: tabSeparated[3].trim() === '-' ? -1 : 1,
                         genes: tabSeparated[4] ? tabSeparated[4].split(',').map(g => g.trim()) : [],
-                        chromosome: tabSeparated[5] || this.genomeBrowser.currentChromosome || 'unknown'
+                        chromosome: tabSeparated[5] ? tabSeparated[5].trim() : (this.genomeBrowser.currentChromosome || 'unknown'),
+                        description: tabSeparated[6] ? tabSeparated[6].trim() : '',
+                        confidence: tabSeparated[7] ? parseFloat(tabSeparated[7]) : 1.0,
+                        source: tabSeparated[8] ? tabSeparated[8].trim() : 'user_loaded'
                     };
+                    console.log(`✅ Created operon from tab-separated: ${operon.name}`);
                 }
+            }
+            // Check if line contains spaces (space-separated format)
+            else if (trimmedLine.includes(' ')) {
+                const spaceSeparated = trimmedLine.split(/\s+/);
+                console.log(`📋 Space-separated fields: ${spaceSeparated.length}`);
+                
+                if (spaceSeparated.length >= 4) {
+                    operon = {
+                        name: spaceSeparated[0],
+                        start: parseInt(spaceSeparated[1]) || 0,
+                        end: parseInt(spaceSeparated[2]) || 0,
+                        strand: spaceSeparated[3] === '-' ? -1 : 1,
+                        genes: spaceSeparated.slice(4),
+                        chromosome: this.genomeBrowser.currentChromosome || 'unknown'
+                    };
+                    console.log(`✅ Created operon from space-separated: ${operon.name}`);
+                }
+            }
+            else {
+                console.warn(`⚠️ Skipping line ${i + 1}: unrecognized format`);
+                continue;
             }
 
             if (operon) {
@@ -235,6 +272,7 @@ class FileManager {
             }
         }
 
+        console.log(`📊 Parsed ${operons.length} operons from TXT file`);
         return operons;
     }
 
